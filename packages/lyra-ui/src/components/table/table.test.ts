@@ -81,3 +81,13 @@ it('is accessible', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('has part="head" on the thead element', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const thead = el.shadowRoot!.querySelector('[part="head"]');
+  expect(thead).to.exist;
+  expect(thead!.tagName).to.equal('THEAD');
+});

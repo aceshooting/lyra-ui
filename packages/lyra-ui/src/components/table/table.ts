@@ -59,7 +59,7 @@ export class LyraTable<T = unknown> extends LyraElement {
     return html`
       <div part="base">
         <table part="table" role="grid">
-          <thead>
+          <thead part="head">
             <tr role="row">
               ${this.columns.map((col) => {
                 const ariaSort =
