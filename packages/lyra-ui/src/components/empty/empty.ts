@@ -28,9 +28,22 @@ export class LyraEmpty extends LyraElement {
   @state() private hasIcon = false;
   @state() private hasActions = false;
 
+  protected willUpdate(): void {
+    // Set from light-DOM children before the first render so the initial
+    // paint is already correct — setting `hasIcon`/`hasActions` from
+    // `firstUpdated` (after the update completes) would schedule a second,
+    // wasted update (Lit's dev-mode "change-in-update" warning).
+    if (!this.hasUpdated) {
+      this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      this.hasActions = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+    }
+  }
+
   firstUpdated(): void {
-    // `slotchange` isn't guaranteed to fire for content already present at
-    // parse/upgrade time in every browser, so do an initial check here too.
+    // Fallback reconciliation against the fully-resolved slot assignment
+    // (handles slot-forwarding and any browser where `slotchange` doesn't
+    // fire for content present at parse/upgrade time). A no-op in the
+    // common case since `willUpdate` already set the correct value above.
     this.checkIconSlot(this.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement);
     this.checkActionsSlot(this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement);
   }

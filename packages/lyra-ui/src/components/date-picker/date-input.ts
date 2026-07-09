@@ -1,5 +1,5 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -41,7 +41,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
 
-  @state() private cleanupFn?: () => void;
+  private cleanupFn?: () => void;
 
   private get displayText(): string {
     const parts = this.value.split('/');

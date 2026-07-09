@@ -1,2 +1,4 @@
 packages:
   - 'packages/*'
+minimumReleaseAgeExclude:
+  - '@aceshooting/lyra-flags@0.1.0'
