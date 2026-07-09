@@ -36,11 +36,11 @@ export class LyraEmpty extends LyraElement {
   }
 
   private checkIconSlot(slot: HTMLSlotElement): void {
-    this.hasIcon = slot.assignedNodes({ flatten: true }).length > 0;
+    this.hasIcon = slot.assignedElements({ flatten: true }).length > 0;
   }
 
   private checkActionsSlot(slot: HTMLSlotElement): void {
-    this.hasActions = slot.assignedNodes({ flatten: true }).length > 0;
+    this.hasActions = slot.assignedElements({ flatten: true }).length > 0;
   }
 
   private onIconSlotChange = (e: Event): void => {

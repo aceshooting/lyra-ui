@@ -27,6 +27,15 @@ it('collapses the icon wrapper when no default-slot content is provided', async 
   expect(icon.hasAttribute('hidden')).to.be.true;
 });
 
+it('collapses the icon wrapper when only whitespace separates multi-line tags', async () => {
+  const el = (await fixture(
+    html`<lyra-empty heading="No results" description="Try a different search.">
+    </lyra-empty>`,
+  )) as LyraEmpty;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  expect(icon.hasAttribute('hidden')).to.be.true;
+});
+
 it('does not collapse the icon wrapper when icon content is slotted', async () => {
   const el = (await fixture(
     html`<lyra-empty heading="Nothing here"><span>icon</span></lyra-empty>`,
