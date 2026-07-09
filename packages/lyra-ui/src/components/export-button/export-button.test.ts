@@ -14,10 +14,12 @@ it('emits lyra-export then lyra-export-complete for a single format', async () =
   el.columns = columns;
   await el.updateComplete;
   const btn = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
-  setTimeout(() => btn.click());
-  const ev = await oneEvent(el, 'lyra-export');
+  const exportEvent = oneEvent(el, 'lyra-export');
+  const completeEvent = oneEvent(el, 'lyra-export-complete');
+  btn.click();
+  const ev = await exportEvent;
   expect(ev.detail.format).to.equal('csv');
-  await oneEvent(el, 'lyra-export-complete');
+  await completeEvent;
 });
 
 it('suppresses the built-in download when lyra-export is cancelled', async () => {
