@@ -3,3 +3,4 @@ dist/
 custom-elements.json
 coverage/
 .DS_Store
+.superpowers/
