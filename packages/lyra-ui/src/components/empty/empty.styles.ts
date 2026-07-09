@@ -19,7 +19,7 @@ export const styles = css`
     line-height: 1;
     color: var(--lyra-color-border);
   }
-  [part='icon']:empty {
+  [part='icon'][hidden] {
     display: none;
   }
   [part='heading'] {
@@ -36,5 +36,8 @@ export const styles = css`
   }
   [part='actions'] {
     margin-block-start: var(--lyra-space-s);
+  }
+  [part='actions'][hidden] {
+    display: none;
   }
 `;
