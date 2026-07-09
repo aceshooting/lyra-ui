@@ -83,13 +83,18 @@ it('supports vertical orientation with vertical arrow keys', async () => {
   expect(el.sizes[0]).to.be.greaterThan(before);
 });
 
-it('applies flex styles to panels with correct percentages', async () => {
+it('applies flex styles and interleaving order to panels', async () => {
   const el = (await fixture(
-    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
   )) as LyraSplit;
   await elementUpdated(el);
 
-  const panelA = el.children[0] as HTMLElement;
-  expect(panelA.getAttribute('part')).to.equal('panel');
-  expect(panelA.style.flex).to.include('50%');
+  const [panelA, panelB, panelC] = [...el.children] as HTMLElement[];
+  expect(panelA.style.flex).to.include('%');
+  // Panels sit at even order values (0, 2, 4…); dividers (rendered in the
+  // shadow root) take the odd slots (1, 3…) in between, so flexbox
+  // interleaves panel/divider/panel/divider/panel visually.
+  expect(panelA.style.order).to.equal('0');
+  expect(panelB.style.order).to.equal('2');
+  expect(panelC.style.order).to.equal('4');
 });

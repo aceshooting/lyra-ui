@@ -13,7 +13,7 @@ const KEYBOARD_STEP = 2;
  * @customElement lyra-split
  * @event lyra-resize - `detail: { sizes }`, fired on every drag step/release
  *   and every keyboard step.
- * @csspart base, panel, divider
+ * @csspart base, divider
  */
 export class LyraSplit extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -129,7 +129,7 @@ export class LyraSplit extends LyraElement {
     const panels = [...this.children] as HTMLElement[];
     panels.forEach((panel, i) => {
       panel.style.flex = `0 0 ${this.sizes[i] ?? 0}%`;
-      panel.setAttribute('part', 'panel');
+      panel.style.order = String(i * 2);
     });
   }
 

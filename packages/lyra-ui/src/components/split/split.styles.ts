@@ -14,9 +14,6 @@ export const styles = css`
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
   }
-  [part='panel'] {
-    overflow: auto;
-  }
   [part='divider'] {
     flex: 0 0 auto;
     inline-size: 3px;
