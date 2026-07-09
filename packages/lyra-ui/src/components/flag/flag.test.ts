@@ -1,28 +1,32 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './flag.js';
 import type { LyraFlag } from './flag.js';
 
+async function img(el: LyraFlag): Promise<HTMLImageElement> {
+  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render');
+  return el.shadowRoot!.querySelector('img')!;
+}
+
 it('renders an img for a country code', async () => {
   const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
-  const img = el.shadowRoot!.querySelector('img');
-  expect(img).to.exist;
-  expect(img!.getAttribute('src')).to.contain('fr.svg');
-  expect(img!.getAttribute('alt')).to.equal('FR');
+  const el2 = await img(el);
+  expect(el2.getAttribute('src')).to.contain('fr.png');
+  expect(el2.getAttribute('alt')).to.equal('FR');
 });
 
 it('resolves a language to a representative country flag', async () => {
   const el = (await fixture(html`<lyra-flag language="en"></lyra-flag>`)) as LyraFlag;
-  expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.contain('gb.svg');
+  expect((await img(el)).getAttribute('src')).to.contain('gb.png');
 });
 
 it('resolves a region subtag to its country', async () => {
   const el = (await fixture(html`<lyra-flag language="en-US"></lyra-flag>`)) as LyraFlag;
-  expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.contain('us.svg');
+  expect((await img(el)).getAttribute('src')).to.contain('us.png');
 });
 
 it('honors a custom label for accessibility', async () => {
   const el = (await fixture(html`<lyra-flag country="fr" label="Français"></lyra-flag>`)) as LyraFlag;
-  expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('Français');
+  expect((await img(el)).getAttribute('alt')).to.equal('Français');
 });
 
 it('renders nothing for unknown input', async () => {
@@ -32,5 +36,6 @@ it('renders nothing for unknown input', async () => {
 
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-flag country="de" label="Deutsch"></lyra-flag>`)) as LyraFlag;
+  await img(el);
   await expect(el).to.be.accessible();
 });

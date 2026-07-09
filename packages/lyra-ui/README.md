@@ -12,8 +12,9 @@ the components look native inside a WA app, and fully usable standalone.
 ## Install
 
 ```bash
-npm install lyra-ui
+npm install @aceshooting/lyra-ui
 # peer: Lit is bundled; Floating UI ships with the positioned components
+# optional peer: @aceshooting/lyra-flags, only needed for <lyra-flag>
 ```
 
 ## Usage
@@ -21,8 +22,8 @@ npm install lyra-ui
 Import just what you use (tree-shakeable, granular entry points):
 
 ```js
-import 'lyra-ui/components/combobox/combobox.js';
-import 'lyra-ui/components/combobox/option.js';
+import '@aceshooting/lyra-ui/components/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/combobox/option.js';
 ```
 
 ```html
@@ -35,13 +36,13 @@ import 'lyra-ui/components/combobox/option.js';
 …or pull the whole library:
 
 ```js
-import 'lyra-ui';
+import '@aceshooting/lyra-ui';
 ```
 
 Imperative toast (a drop-in for `react-hot-toast`):
 
 ```js
-import { toast } from 'lyra-ui';
+import { toast } from '@aceshooting/lyra-ui';
 toast({ message: 'Saved', variant: 'success' });
 ```
 
@@ -70,9 +71,9 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
-| `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers |
+| `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 
-**Roadmap** (survey-driven, see `docs/superpowers/specs/`)
+**Roadmap** (survey-driven, see `docs/superpowers/specs/` at the repo root)
 
 - **Dashboard atoms:** `lyra-table`, `lyra-stat`, `lyra-empty`, `lyra-skeleton`, `lyra-gauge`, `lyra-export-button`, `lyra-split`
 - **Temporal + graph:** `lyra-time-range` + `lyra-playback`, `lyra-heatmap`, `lyra-graph`, `lyra-tree`
@@ -81,13 +82,15 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Development
 
+Run from the repo root (this package is part of a pnpm workspace):
+
 ```bash
 pnpm install
 pnpm test        # @web/test-runner + Playwright (Chromium) + axe a11y
 pnpm lint        # tsc --noEmit
-pnpm build       # tsc → dist/ (ESM + .d.ts) + copies flag assets
+pnpm build       # tsc → dist/ (ESM + .d.ts)
 pnpm manifest    # custom-elements.json
-pnpm docs        # Vite playground
+pnpm docs        # Vite playground, demos this package + lyra-flags together
 ```
 
 ## License

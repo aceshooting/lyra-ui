@@ -1,0 +1,22 @@
+{
+  "name": "lyra-ui-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for @aceshooting/lyra-ui and its optional companion packages.",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test",
+    "lint": "pnpm -r --if-present run lint",
+    "manifest": "pnpm --filter @aceshooting/lyra-ui run manifest",
+    "dev": "vite --config docs/vite.config.ts",
+    "docs": "vite --config docs/vite.config.ts",
+    "docs:build": "vite build --config docs/vite.config.ts"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "@aceshooting/lyra-ui": "workspace:*",
+    "@aceshooting/lyra-flags": "workspace:*"
+  },
+  "packageManager": "pnpm@11.10.0"
+}

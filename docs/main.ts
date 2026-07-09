@@ -1,6 +1,6 @@
-import '../src/lyra.js';
-import { toast } from '../src/lyra.js';
-import type { LyraSparkline } from '../src/lyra.js';
+import '../packages/lyra-ui/src/lyra.js';
+import { toast } from '../packages/lyra-ui/src/lyra.js';
+import type { LyraSparkline } from '../packages/lyra-ui/src/lyra.js';
 
 const data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
 for (const id of ['spark-line', 'spark-area', 'spark-bar']) {

@@ -7,6 +7,20 @@ settings:
 importers:
 
   .:
+    devDependencies:
+      '@aceshooting/lyra-flags':
+        specifier: workspace:*
+        version: link:packages/lyra-flags
+      '@aceshooting/lyra-ui':
+        specifier: workspace:*
+        version: link:packages/lyra-ui
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@26.1.0)
+
+  packages/lyra-flags: {}
+
+  packages/lyra-ui:
     dependencies:
       '@floating-ui/dom':
         specifier: ^1.6.0
@@ -15,6 +29,9 @@ importers:
         specifier: ^3.2.0
         version: 3.3.3
     devDependencies:
+      '@aceshooting/lyra-flags':
+        specifier: workspace:*
+        version: link:../lyra-flags
       '@custom-elements-manifest/analyzer':
         specifier: ^0.10.0
         version: 0.10.10
@@ -33,9 +50,6 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
-      vite:
-        specifier: ^6.0.0
-        version: 6.4.3(@types/node@26.1.0)
 
 packages:
 
