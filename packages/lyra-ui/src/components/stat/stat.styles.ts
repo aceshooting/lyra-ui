@@ -52,11 +52,11 @@ export const styles = css`
   }
   [part='trend'][data-direction='up'] {
     color: var(--lyra-color-success);
-    background: color-mix(in srgb, var(--lyra-color-success) 15%, transparent);
+    background: color-mix(in srgb, var(--lyra-color-success) 8%, transparent);
   }
   [part='trend'][data-direction='down'] {
     color: var(--lyra-color-danger);
-    background: color-mix(in srgb, var(--lyra-color-danger) 15%, transparent);
+    background: color-mix(in srgb, var(--lyra-color-danger) 8%, transparent);
   }
   :host([variant='success']) [part='value'] {
     color: var(--lyra-color-success);
