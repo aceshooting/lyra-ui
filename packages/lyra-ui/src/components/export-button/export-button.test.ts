@@ -43,6 +43,18 @@ it('offers a format menu when multiple formats are configured', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="menu-item"]').length).to.equal(2);
 });
 
+it('reflects open as a host attribute so the menu becomes visible', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.hasAttribute('open')).to.be.true;
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  expect(getComputedStyle(menu).display).to.not.equal('none');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   await expect(el).to.be.accessible();

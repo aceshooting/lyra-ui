@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
@@ -28,8 +28,8 @@ export class LyraExportButton extends LyraElement {
   @property({ attribute: false }) formats: ExportFormat[] = ['csv'];
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property() label = 'Export';
+  @property({ type: Boolean, reflect: true }) open = false;
 
-  @state() private open = false;
   private cleanup?: () => void;
 
   disconnectedCallback(): void {
