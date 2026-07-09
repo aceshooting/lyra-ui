@@ -13,6 +13,12 @@ const RADIUS = 40;
 const CENTER = 50;
 const STROKE = 10;
 
+// Linear gauge: keep the bar thin and low in the 0..20 viewBox so the top
+// ~12 units are free for a value/label text row above it.
+const LINEAR_STROKE = 6;
+const LINEAR_BAR_Y = 15;
+const LINEAR_TEXT_Y = 8;
+
 function polarToCartesian(angleDeg: number): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
   return [CENTER + RADIUS * Math.cos(rad), CENTER + RADIUS * Math.sin(rad)];
@@ -59,7 +65,7 @@ export class LyraGauge extends LyraElement {
   private renderRadial(): TemplateResult {
     const endDeg = START_DEG + SWEEP_DEG * this.ratio;
     const text = this.valueLabel ?? String(this.value);
-    return html`<svg viewBox="0 0 100 100">
+    return html`<svg part="base" viewBox="0 0 100 100">
       <path part="track" stroke-width=${STROKE} d=${arcPath(START_DEG, START_DEG + SWEEP_DEG)}></path>
       <path part="fill" stroke-width=${STROKE} d=${arcPath(START_DEG, endDeg)}></path>
       <text part="value" x="50" y="52">${text}</text>
@@ -69,9 +75,12 @@ export class LyraGauge extends LyraElement {
 
   private renderLinear(): TemplateResult {
     const w = this.ratio * 100;
-    return html`<svg viewBox="0 0 100 20" preserveAspectRatio="none">
-      <line part="track" x1="0" y1="10" x2="100" y2="10" stroke-width=${STROKE}></line>
-      <line part="fill" x1="0" y1="10" x2=${w} y2="10" stroke-width=${STROKE}></line>
+    const text = this.valueLabel ?? String(this.value);
+    return html`<svg part="base" viewBox="0 0 100 20" preserveAspectRatio="none">
+      <line part="track" x1="0" y1=${LINEAR_BAR_Y} x2="100" y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
+      <line part="fill" x1="0" y1=${LINEAR_BAR_Y} x2=${w} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
+      ${this.label ? svg`<text part="label" x="0" y=${LINEAR_TEXT_Y}>${this.label}</text>` : ''}
+      <text part="value" x="100" y=${LINEAR_TEXT_Y}>${text}</text>
     </svg>`;
   }
 
