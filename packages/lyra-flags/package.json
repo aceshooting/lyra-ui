@@ -1,0 +1,38 @@
+{
+  "name": "@aceshooting/lyra-flags",
+  "version": "0.1.0",
+  "description": "Waving country/territory flag PNGs — optional companion asset package for <lyra-flag> in lyra-ui.",
+  "license": "SEE LICENSE IN README.md",
+  "type": "module",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-flags"
+  },
+  "homepage": "https://github.com/aceshooting/lyra-ui#readme",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "flags",
+    "index.js",
+    "index.d.ts"
+  ],
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./flags/*": "./flags/*"
+  },
+  "packageManager": "pnpm@11.10.0"
+}

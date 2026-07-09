@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lyra UI — Playground</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 60rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      section {
+        margin-block: 2.5rem;
+      }
+      h2 {
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 0.25rem;
+      }
+      .row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Lyra UI — Playground</h1>
+
+    <section>
+      <h2>Sparkline</h2>
+      <div class="row">
+        <lyra-sparkline id="spark-line"></lyra-sparkline>
+        <lyra-sparkline id="spark-area" type="area"></lyra-sparkline>
+        <lyra-sparkline id="spark-bar" type="bar"></lyra-sparkline>
+      </div>
+    </section>
+
+    <section>
+      <h2>Combobox</h2>
+      <lyra-combobox label="Fruit" placeholder="Pick one…" with-clear style="max-width: 20rem">
+        <lyra-option value="a">Apple</lyra-option>
+        <lyra-option value="b">Banana</lyra-option>
+        <lyra-option value="c">Cherry</lyra-option>
+        <lyra-option value="d">Date</lyra-option>
+      </lyra-combobox>
+    </section>
+
+    <section>
+      <h2>Date input &amp; picker</h2>
+      <div class="row" style="align-items: start">
+        <lyra-date-input label="Start date" with-clear style="max-width: 16rem"></lyra-date-input>
+        <lyra-date-picker mode="range" months="2"></lyra-date-picker>
+      </div>
+    </section>
+
+    <section>
+      <h2>Toast</h2>
+      <div class="row">
+        <button id="toast-info">Neutral</button>
+        <button id="toast-success">Success</button>
+        <button id="toast-danger">Danger + action</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Flags</h2>
+      <div class="row">
+        <lyra-flag country="fr" style="height: 1.5rem"></lyra-flag>
+        <lyra-flag language="en" style="height: 1.5rem"></lyra-flag>
+        <lyra-flag language="de" round style="height: 1.5rem"></lyra-flag>
+        <lyra-flag country="jp" round style="height: 1.5rem"></lyra-flag>
+      </div>
+    </section>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

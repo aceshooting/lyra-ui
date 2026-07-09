@@ -1,0 +1,65 @@
+{
+  "name": "@aceshooting/lyra-ui",
+  "version": "0.1.0",
+  "description": "Free, clean-room Lit web components — a companion to Web Awesome.",
+  "license": "MIT",
+  "type": "module",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-ui"
+  },
+  "homepage": "https://github.com/aceshooting/lyra-ui#readme",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/lyra.js",
+    "./components/*": "./dist/components/*",
+    "./internal/*": "./dist/internal/*"
+  },
+  "sideEffects": [
+    "**/components/**/*.js",
+    "./dist/lyra.js"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "wtr",
+    "test:watch": "wtr --watch",
+    "manifest": "cem analyze --litelement --outdir .",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "lit": "^3.2.0",
+    "@floating-ui/dom": "^1.6.0"
+  },
+  "peerDependencies": {
+    "@aceshooting/lyra-flags": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@aceshooting/lyra-flags": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@web/test-runner": "^0.19.0",
+    "@web/test-runner-playwright": "^0.11.0",
+    "@web/dev-server-esbuild": "^1.0.2",
+    "@open-wc/testing": "^4.0.0",
+    "@custom-elements-manifest/analyzer": "^0.10.0",
+    "@aceshooting/lyra-flags": "workspace:*"
+  },
+  "packageManager": "pnpm@11.10.0",
+  "customElements": "custom-elements.json"
+}

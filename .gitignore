@@ -1,0 +1,5 @@
+node_modules/
+dist/
+custom-elements.json
+coverage/
+.DS_Store
