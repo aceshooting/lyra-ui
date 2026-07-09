@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { srOnly } from '../../internal/a11y.js';
 import { styles } from './skeleton.styles.js';
 
 export type SkeletonVariant = 'text' | 'circle' | 'rect';
@@ -15,7 +16,7 @@ export type SkeletonEffect = 'pulse' | 'sheen';
  * @csspart base - The placeholder shape.
  */
 export class LyraSkeleton extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ reflect: true }) variant: SkeletonVariant = 'text';
   @property({ reflect: true }) effect: SkeletonEffect = 'pulse';
@@ -30,8 +31,16 @@ export class LyraSkeleton extends LyraElement {
     if (changed.has('width') || changed.has('height')) {
       const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
       if (!base) return;
-      if (this.width) base.style.setProperty('--lyra-skeleton-w', this.width);
-      if (this.height) base.style.setProperty('--lyra-skeleton-h', this.height);
+      if (this.width) {
+        base.style.setProperty('--lyra-skeleton-w', this.width);
+      } else {
+        base.style.removeProperty('--lyra-skeleton-w');
+      }
+      if (this.height) {
+        base.style.setProperty('--lyra-skeleton-h', this.height);
+      } else {
+        base.style.removeProperty('--lyra-skeleton-h');
+      }
     }
   }
 
