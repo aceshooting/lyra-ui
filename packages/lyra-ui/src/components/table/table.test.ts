@@ -91,3 +91,42 @@ it('has part="head" on the thead element', async () => {
   expect(thead).to.exist;
   expect(thead!.tagName).to.equal('THEAD');
 });
+
+it('renders lyra-empty when columns is empty, even with non-empty rows', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = [];
+  el.rows = rows;
+  await el.updateComplete;
+  const empty = el.shadowRoot!.querySelector('lyra-empty');
+  expect(empty).to.exist;
+  expect(empty!.getAttribute('heading')).to.equal('No columns configured');
+  expect(el.shadowRoot!.querySelector('table')).to.not.exist;
+});
+
+it('emits lyra-sort via keydown (Enter) on a sortable header, not just click', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const header = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+  header.focus();
+  setTimeout(() => header.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+  const ev = await oneEvent(el, 'lyra-sort');
+  expect(ev.detail.key).to.equal('score');
+});
+
+it('resolves the correct row via delegated click after a re-render (sort) reorders rows', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+  // Re-render with rows reordered — the delegated handler must resolve the
+  // *current* row object, not one captured in a stale per-render closure.
+  el.rows = [...rows].reverse();
+  await el.updateComplete;
+  const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  setTimeout(() => firstRow.click());
+  const ev = await oneEvent(el, 'lyra-row-click');
+  expect(ev.detail.row).to.deep.equal(rows[1]); // Beta, now first after reversing
+});

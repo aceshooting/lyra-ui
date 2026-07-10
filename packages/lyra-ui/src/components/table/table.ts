@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -15,9 +15,13 @@ export interface TableColumn<T> {
 }
 
 /**
- * `<lyra-table>` — a presentational, sort/select-aware data table. The host
- * owns actual sorting/filtering/pagination of `rows`; this component renders
- * and emits intents (`lyra-sort`, `lyra-row-click`, `lyra-load-more`).
+ * `<lyra-table>` — a presentational, sort/select-aware data table.
+ *
+ * Header/row activation is delegated: one `click` and one `keydown`
+ * listener on `<table>` resolve the target via `closest('[data-col-key]'
+ * | '[data-row-key]')` and a key→object lookup map, instead of allocating
+ * fresh per-column/per-row closures on every render (2026-07-10 audit,
+ * "dashboard-atoms" §lyra-table, Medium).
  *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
@@ -38,17 +42,65 @@ export class LyraTable<T = unknown> extends LyraElement {
   @property({ attribute: 'more-label' }) moreLabel = 'Load more';
   @property({ attribute: 'empty-heading' }) emptyHeading = 'No data';
   @property({ attribute: 'empty-description' }) emptyDescription = '';
+  @property({ attribute: 'no-columns-heading' }) noColumnsHeading = 'No columns configured';
+  @property({ attribute: 'no-columns-description' }) noColumnsDescription = '';
+
+  private rowsByKey = new Map<string, T>();
+  private columnsByKey = new Map<string, TableColumn<T>>();
 
   private keyOf(row: T, index: number): string | number {
     return this.rowKey ? this.rowKey(row) : index;
   }
 
-  private onHeaderClick(col: TableColumn<T>): void {
-    if (!col.sortable) return;
-    this.emit('lyra-sort', { key: col.key });
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('rows') || changed.has('rowKey')) {
+      this.rowsByKey = new Map(this.rows.map((row, i) => [String(this.keyOf(row, i)), row]));
+    }
+    if (changed.has('columns')) {
+      this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
+    }
   }
 
+  private activateColumn(key: string): void {
+    const col = this.columnsByKey.get(key);
+    if (col?.sortable) this.emit('lyra-sort', { key: col.key });
+  }
+
+  private activateRow(key: string): void {
+    const row = this.rowsByKey.get(key);
+    if (row !== undefined) this.emit('lyra-row-click', { row });
+  }
+
+  private onTableClick = (e: MouseEvent): void => {
+    const target = e.target as HTMLElement;
+    const th = target.closest('[data-col-key]') as HTMLElement | null;
+    if (th) return this.activateColumn(th.dataset.colKey!);
+    const tr = target.closest('[data-row-key]') as HTMLElement | null;
+    if (tr) this.activateRow(tr.dataset.rowKey!);
+  };
+
+  private onTableKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const target = e.target as HTMLElement;
+    const th = target.closest('[data-col-key]') as HTMLElement | null;
+    if (th) {
+      e.preventDefault();
+      return this.activateColumn(th.dataset.colKey!);
+    }
+    const tr = target.closest('[data-row-key]') as HTMLElement | null;
+    if (tr) {
+      e.preventDefault();
+      this.activateRow(tr.dataset.rowKey!);
+    }
+  };
+
   render(): TemplateResult {
+    if (this.columns.length === 0) {
+      return html`<lyra-empty
+        heading=${this.noColumnsHeading}
+        description=${this.noColumnsDescription}
+      ></lyra-empty>`;
+    }
     if (this.rows.length === 0) {
       return html`<lyra-empty
         heading=${this.emptyHeading}
@@ -58,7 +110,7 @@ export class LyraTable<T = unknown> extends LyraElement {
 
     return html`
       <div part="base">
-        <table part="table" role="grid">
+        <table part="table" role="grid" @click=${this.onTableClick} @keydown=${this.onTableKeyDown}>
           <thead part="head">
             <tr role="row">
               ${this.columns.map((col) => {
@@ -68,17 +120,11 @@ export class LyraTable<T = unknown> extends LyraElement {
                   part="header-cell"
                   role="columnheader"
                   scope="col"
+                  data-col-key=${col.key}
                   data-align=${col.align ?? 'start'}
                   ?data-sortable=${col.sortable}
                   aria-sort=${col.sortable ? ariaSort : nothing}
                   tabindex=${col.sortable ? '0' : '-1'}
-                  @click=${() => this.onHeaderClick(col)}
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      this.onHeaderClick(col);
-                    }
-                  }}
                 >
                   ${col.label}
                 </th>`;
@@ -95,15 +141,9 @@ export class LyraTable<T = unknown> extends LyraElement {
                 return html`<tr
                   part="row"
                   role="row"
+                  data-row-key=${String(key)}
                   aria-selected=${selected ? 'true' : 'false'}
                   tabindex="0"
-                  @click=${() => this.emit('lyra-row-click', { row })}
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      this.emit('lyra-row-click', { row });
-                    }
-                  }}
                 >
                   ${this.columns.map(
                     (col) =>
