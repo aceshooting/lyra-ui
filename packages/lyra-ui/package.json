@@ -44,10 +44,26 @@
     "lit": "^3.3.3"
   },
   "peerDependencies": {
-    "@aceshooting/lyra-flags": "^0.1.0"
+    "@aceshooting/lyra-flags": "^0.1.0",
+    "d3-force": "^3.0.0",
+    "d3-drag": "^3.0.0",
+    "d3-zoom": "^3.0.0",
+    "d3-selection": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "@aceshooting/lyra-flags": {
+      "optional": true
+    },
+    "d3-force": {
+      "optional": true
+    },
+    "d3-drag": {
+      "optional": true
+    },
+    "d3-zoom": {
+      "optional": true
+    },
+    "d3-selection": {
       "optional": true
     }
   },
@@ -55,9 +71,17 @@
     "@aceshooting/lyra-flags": "^0.1.0",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@open-wc/testing": "^4.0.0",
+    "@types/d3-drag": "^3.0.0",
+    "@types/d3-force": "^3.0.0",
+    "@types/d3-selection": "^3.0.0",
+    "@types/d3-zoom": "^3.0.0",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
+    "d3-drag": "^3.0.0",
+    "d3-force": "^3.0.0",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0",
     "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@11.10.0",
