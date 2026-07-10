@@ -6,6 +6,10 @@ import { styles } from './time-range.styles.js';
 
 type Handle = 'start' | 'end';
 
+function isArrowKey(key: string): boolean {
+  return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';
+}
+
 /**
  * `<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.
  * Callers map their own time axis to `[min, max]`; no date logic lives here
@@ -28,6 +32,16 @@ export class LyraTimeRange extends LyraElement {
 
   private dragging: Handle | null = null;
 
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    // Mirror lyra-split's cleanup: if the element is removed mid-drag (or a
+    // pointercancel/alt-tab means `pointerup` never reaches `window`), these
+    // window-level listeners — and the closure keeping this instance alive —
+    // would otherwise leak indefinitely.
+    window.removeEventListener('pointermove', this.onPointerMove);
+    window.removeEventListener('pointerup', this.onPointerUp);
+  }
+
   private percentOf(value: number): number {
     const span = this.max - this.min || 1;
     return ((value - this.min) / span) * 100;
@@ -49,6 +63,11 @@ export class LyraTimeRange extends LyraElement {
   }
 
   private onKeyDown = (handle: Handle, e: KeyboardEvent): void => {
+    // A handle that already has focus when the component becomes disabled
+    // must not still respond to arrow keys (pointer interaction is already
+    // blocked via `:host([disabled]) { pointer-events: none }` and
+    // `tabindex="-1"`, but a pre-existing focus can bypass both of those).
+    if (this.disabled) return;
     const current = handle === 'start' ? this.start : this.end;
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -59,15 +78,11 @@ export class LyraTimeRange extends LyraElement {
     }
   };
 
-  private static isArrowKey(key: string): boolean {
-    return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';
-  }
-
   private onKeyUp = (handle: Handle, e: KeyboardEvent): void => {
     // Only commit on release of the arrow keys that onKeyDown acts on —
     // releasing an unrelated key (Tab, Shift, ...) while a handle happens
     // to be focused must not emit a spurious lyra-change.
-    if (!LyraTimeRange.isArrowKey(e.key)) return;
+    if (this.disabled || !isArrowKey(e.key)) return;
     this.emit('lyra-change', { start: this.start, end: this.end });
     void handle;
   };

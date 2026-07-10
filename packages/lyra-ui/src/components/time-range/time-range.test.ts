@@ -82,6 +82,34 @@ it('does not emit lyra-change on keyup of a non-arrow key', async () => {
   expect(changeFired).to.be.false;
 });
 
+it('removes the window pointermove/pointerup listeners on disconnect so a detached drag cannot leak', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+
+  // Begin a drag (adds window-level pointermove/pointerup listeners), then
+  // remove the element from the DOM without ever delivering a pointerup —
+  // mirrors a pointercancel/alt-tab/parent-unmount mid-drag.
+  startHandle.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
+  );
+  const startBeforeDetach = el.start;
+  el.remove();
+
+  let inputFired = false;
+  el.addEventListener('lyra-input', () => (inputFired = true));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+
+  // If disconnectedCallback hadn't removed the window listeners, the stray
+  // pointermove above would still mutate `start` and emit `lyra-input` on
+  // the now-detached instance.
+  expect(inputFired).to.be.false;
+  expect(el.start).to.equal(startBeforeDetach);
+});
+
 it('drags the start handle with pointer events and emits lyra-input then lyra-change on release', async () => {
   const el = (await fixture(
     html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
