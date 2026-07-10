@@ -106,7 +106,7 @@ export class LyraChart extends LyraElement {
     return {
       label: s.label,
       data: s.points ?? s.data ?? [],
-      type: s.type ?? (this.type === 'scatter' ? 'scatter' : this.type),
+      type: s.type ?? this.type,
       fill: s.fill ?? this.area,
       borderWidth: s.width ?? 2,
       borderDash: s.dash ? [4, 4] : undefined,
