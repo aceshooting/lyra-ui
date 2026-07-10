@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './graph.styles.js';
 import type { Simulation, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
+import type { ZoomBehavior } from 'd3-zoom';
 
 export interface GraphNode {
   id: string;
@@ -94,10 +95,16 @@ export class LyraGraph extends LyraElement {
 
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
+  /** Current pan/zoom transform (SVG `transform` attribute syntax), driven by d3-zoom. */
   @state() private transform = '';
 
   private simulation?: Simulation<SimNode, SimLink>;
   private d3?: D3Modules;
+  /** The `<svg>` currently wired up with d3-zoom (guards a one-time bind). */
+  private zoomedEl?: SVGSVGElement;
+  /** Node `<circle>`s already wired up with d3-drag; cleared on every simulation rebuild
+   *  so DOM elements Lit reuses across a rebuild get rebound to their fresh datum. */
+  private boundNodeEls = new WeakSet<Element>();
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -125,11 +132,61 @@ export class LyraGraph extends LyraElement {
       this.simulation?.force('center', this.d3.forceCenter(this.width / 2, this.height / 2));
       this.simulation?.alpha(0.1).restart();
     }
+    this.applyInteractions();
+  }
+
+  /**
+   * Imperatively wires up d3-zoom (pan/zoom on the `<svg>`) and d3-drag
+   * (per-node drag) against the just-rendered DOM. Runs after every render:
+   * binding the `<svg>` is a one-time no-op guard (`zoomedEl`), and node
+   * `<circle>`s are skipped once bound (`boundNodeEls`) — a WeakSet reset on
+   * every `rebuildSimulation()` so DOM nodes Lit reuses across a rebuild get
+   * rebound against their new datum instead of a stale one.
+   */
+  private applyInteractions(): void {
+    if (!this.d3) return;
+
+    const svgEl = this.renderRoot.querySelector('svg');
+    if (svgEl && svgEl !== this.zoomedEl) {
+      this.zoomedEl = svgEl;
+      const zoomBehavior = this.d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
+        this.transform = event.transform.toString();
+      });
+      this.d3.select(svgEl).call(zoomBehavior);
+    }
+
+    const nodeEls = this.renderRoot.querySelectorAll('[part="node"]');
+    nodeEls.forEach((el, i) => {
+      if (this.boundNodeEls.has(el)) return;
+      const n = this.simNodes[i];
+      if (!n) return;
+      this.boundNodeEls.add(el);
+      this.d3!.select<Element, SimNode>(el).call(
+        this.d3!.drag<Element, SimNode>()
+          .on('start', (event) => {
+            // Keep a node drag from also triggering the svg's own pan gesture.
+            (event.sourceEvent as Event | undefined)?.stopPropagation();
+            if (!event.active) this.simulation?.alphaTarget(0.3).restart();
+            n.fx = n.x;
+            n.fy = n.y;
+          })
+          .on('drag', (event) => {
+            n.fx = event.x;
+            n.fy = event.y;
+          })
+          .on('end', (event) => {
+            if (!event.active) this.simulation?.alphaTarget(0);
+            n.fx = null;
+            n.fy = null;
+          }),
+      );
+    });
   }
 
   private rebuildSimulation(): void {
     if (!this.d3) return;
     this.simulation?.stop();
+    this.boundNodeEls = new WeakSet();
 
     const nodes: SimNode[] = this.nodes.map((n) => ({ ...n }));
     const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -169,7 +226,7 @@ export class LyraGraph extends LyraElement {
     return html`
       <div part="base">
         <svg part="svg" viewBox="0 0 ${this.width} ${this.height}">
-          <g style=${this.transform}>
+          <g transform=${this.transform}>
             ${this.simLinks.map((l) => {
               const source = l.source as SimNode;
               const target = l.target as SimNode;
@@ -196,7 +253,10 @@ export class LyraGraph extends LyraElement {
                   fill=${n.color ?? ''}
                   @click=${() => this.onNodeClick(n)}
                   @keydown=${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') this.onNodeClick(n);
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      this.onNodeClick(n);
+                    }
                   }}
                 ></circle>
                 ${n.label

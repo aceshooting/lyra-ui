@@ -1,4 +1,5 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { select } from 'd3-selection';
 import './graph.js';
 import type { LyraGraph } from './graph.js';
 
@@ -38,6 +39,38 @@ it('emits lyra-node-click when a node is activated', async () => {
     new MouseEvent('click', { bubbles: true }),
   );
   expect(detail).to.exist;
+});
+
+it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement;
+  expect(select(nodeEl).on('mousedown.drag')).to.be.a('function');
+});
+
+it('wires up d3-zoom pan/zoom on the svg (per the Interfaces spec)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+  expect(select(svgEl).on('wheel.zoom')).to.be.a('function');
+  expect(g.getAttribute('transform')).to.equal('');
+
+  svgEl.dispatchEvent(
+    new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100, clientX: 10, clientY: 10 }),
+  );
+  await el.updateComplete;
+  expect(g.getAttribute('transform')).to.match(/scale\(/);
 });
 
 it('is accessible', async () => {
