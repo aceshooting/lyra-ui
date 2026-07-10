@@ -61,6 +61,38 @@ it('expandAll()/collapseAll() toggle every parent node', async () => {
   expect(root.expanded).to.be.false;
 });
 
+it('preserves per-node expanded state when data is reassigned a new array with the same ids', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as any;
+  root.expanded = true;
+  await el.updateComplete;
+
+  // Simulate a re-fetch producing a brand-new array reference with identical ids/labels.
+  el.data = JSON.parse(JSON.stringify(data));
+  await el.updateComplete;
+
+  const rootAfter = el.querySelector('lyra-tree-node') as any;
+  expect(rootAfter).to.equal(root, 'the same node instance should be reused, not recreated');
+  expect(rootAfter.expanded).to.be.true;
+});
+
+it('reconciles added, removed, and reordered top-level items by id', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const [rootNode, leafNode] = [...el.querySelectorAll('lyra-tree-node')] as any[];
+
+  el.data = [{ id: '2', label: 'Leaf' }, { id: '3', label: 'New' }, ...data.slice(0, 1)];
+  await el.updateComplete;
+
+  const nodesAfter = [...el.querySelectorAll('lyra-tree-node')] as any[];
+  expect(nodesAfter.map((n) => n.item.id)).to.deep.equal(['2', '3', '1']);
+  expect(nodesAfter[0]).to.equal(leafNode, 'leaf node instance should be reused');
+  expect(nodesAfter[2]).to.equal(rootNode, 'root node instance should be reused');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
   el.data = data;

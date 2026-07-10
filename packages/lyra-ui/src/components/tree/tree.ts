@@ -24,10 +24,16 @@ export interface TreeItem {
  * this component's shadow root — that's what lets consumers, and this
  * component's own `expandAll()`/`collapseAll()`, reach them via the DOM.
  *
+ * Re-assigning `data` reconciles by `item.id` instead of tearing down and
+ * recreating every top-level node, so each `<lyra-tree-node>` instance (and
+ * the `expanded` state it owns) survives a re-fetch that produces a new
+ * array reference for the same items.
+ *
  * @customElement lyra-tree
  * @event lyra-node-toggle - `detail: { id, expanded }`, re-emitted from a child `<lyra-tree-node>`.
  * @event lyra-node-select - `detail: { id }`, re-emitted from a child `<lyra-tree-node>`.
  * @csspart base
+ * @slot - `<lyra-tree-node>` elements (top-level tree items).
  */
 export class LyraTree extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -47,13 +53,36 @@ export class LyraTree extends LyraElement {
     if (changed.has('data')) this.syncNodes();
   }
 
+  /**
+   * Reconcile the light-DOM `<lyra-tree-node>` children with `this.data` by
+   * `item.id`, reusing existing node instances (and therefore preserving the
+   * `expanded` state each one owns) instead of destroying and recreating
+   * every top-level node on each `data` reassignment.
+   */
   private syncNodes(): void {
-    for (const node of this.nodeElements) node.remove();
+    const existingById = new Map<string, LyraTreeNode>();
+    for (const node of this.nodeElements) {
+      if (node.item) existingById.set(node.item.id, node);
+    }
+
+    const seen = new Set<string>();
+    let previousSibling: LyraTreeNode | null = null;
     for (const item of this.data) {
-      const node = document.createElement('lyra-tree-node') as LyraTreeNode;
+      const reused = !seen.has(item.id) ? existingById.get(item.id) : undefined;
+      const node = reused ?? (document.createElement('lyra-tree-node') as LyraTreeNode);
       node.item = item;
       node.depth = 0;
-      this.appendChild(node);
+      seen.add(item.id);
+
+      const targetPosition: Element | null = previousSibling
+        ? previousSibling.nextElementSibling
+        : this.firstElementChild;
+      if (targetPosition !== node) this.insertBefore(node, targetPosition);
+      previousSibling = node;
+    }
+
+    for (const [id, node] of existingById) {
+      if (!seen.has(id)) node.remove();
     }
   }
 
