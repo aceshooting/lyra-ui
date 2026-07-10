@@ -85,6 +85,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   }
 
   protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('open')) {
       this.cleanupFn?.();
       this.cleanupFn = undefined;

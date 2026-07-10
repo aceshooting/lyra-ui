@@ -65,6 +65,22 @@ it('blocks a required, empty date input from submitting the form', async () => {
   expect(form.reportValidity()).to.be.false;
 });
 
+it('re-syncs ElementInternals validity when required is toggled after connection', async () => {
+  const form = (await fixture(
+    html`<form><lyra-date-input name="d"></lyra-date-input></form>`,
+  )) as HTMLFormElement;
+  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  expect(form.reportValidity()).to.be.true;
+
+  el.required = true;
+  await el.updateComplete;
+  expect(form.reportValidity()).to.be.false;
+
+  el.value = '2026-07-15';
+  await el.updateComplete;
+  expect(form.reportValidity()).to.be.true;
+});
+
 it('restores the constructed value (not blank) on form.reset()', async () => {
   const form = (await fixture(html`
     <form><lyra-date-input name="d" value="2026-07-15"></lyra-date-input></form>
