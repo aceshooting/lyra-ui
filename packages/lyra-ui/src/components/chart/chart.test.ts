@@ -126,3 +126,34 @@ it('lets `config.data` override generated data while the Chart instance picks up
   expect(config.data.labels).to.deep.equal(['Override']);
   expect((el as any).chart.data.labels).to.deep.equal(['Override']);
 });
+
+it('deep-merges a nested `config.options` key without clobbering the rest of the generated sibling object', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.yLabel = 'Revenue';
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  // Only sets `scales.y.min` — the rest of the generated `y` axis config
+  // (`beginAtZero`, `title`) must survive, and the generated `x`/`plugins`
+  // config must be untouched.
+  el.config = { options: { scales: { y: { min: 0 as never } } } };
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y.min).to.equal(0);
+  expect(config.options.scales.y.beginAtZero).to.equal(true);
+  expect(config.options.scales.y.title).to.deep.equal({ display: true, text: 'Revenue' });
+  expect(config.options.scales.x.type).to.equal('category');
+});
+
+it('applies `height` as `--lyra-chart-height` on the host, not on the shadow-tree [part=base] div', async () => {
+  const el = (await fixture(html`<lyra-chart height="500px"></lyra-chart>`)) as LyraChart;
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lyra-chart-height').trim()).to.equal('500px');
+  expect(getComputedStyle(el).height).to.equal('500px');
+
+  el.height = '640px';
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lyra-chart-height').trim()).to.equal('640px');
+  expect(getComputedStyle(el).height).to.equal('640px');
+});

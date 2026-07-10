@@ -24,6 +24,30 @@ export interface Series {
 export type LyraChartType = 'line' | 'bar' | 'scatter';
 
 /**
+ * Recursively merges `override` onto `base`, matching JSON-merge semantics:
+ * plain objects are merged key-by-key at every depth; arrays, functions, and
+ * any other value type are replaced wholesale by `override`'s value. Used to
+ * deep-merge the raw `config` passthrough over the `Series`-generated config
+ * in `buildConfig()` so a nested key (e.g. `config.options.scales.y`) only
+ * overrides the keys it sets, rather than clobbering the whole generated
+ * sibling object (e.g. the rest of the generated `y` axis config).
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function deepMerge<T>(base: T, override: unknown): T {
+  if (!isPlainObject(base) || !isPlainObject(override)) {
+    return (override === undefined ? base : (override as T)) as T;
+  }
+  const result: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(override)) {
+    result[key] = deepMerge((base as Record<string, unknown>)[key], override[key]);
+  }
+  return result as T;
+}
+
+/**
  * `<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag
  * subclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.
  *
@@ -63,10 +87,11 @@ export class LyraChart extends LyraElement {
 
   /**
    * Raw Chart.js configuration passthrough — mirrors `wa-chart`'s `config`
-   * property. Deep-merged over the `Series`-derived config in `buildConfig()`
-   * (`config.data`/`config.options` win per-key over the generated
-   * equivalents), for consumers who need full Chart.js control beyond the
-   * simplified `Series` shape.
+   * property. Recursively deep-merged over the `Series`-derived config in
+   * `buildConfig()` (any key at any nesting depth — e.g.
+   * `config.options.scales.y.min` — wins over the generated equivalent
+   * without discarding sibling keys the generated config set), for consumers
+   * who need full Chart.js control beyond the simplified `Series` shape.
    */
   @property({ attribute: false }) config?: Partial<ChartConfiguration>;
 
@@ -101,7 +126,15 @@ export class LyraChart extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
-    const onlyZoomChanged = changed.size === 1 && changed.has('zoomed' as never);
+    // `--lyra-chart-height` is read by `:host`'s `block-size` in
+    // `chart.styles.ts`. Custom properties only cascade downward (host ->
+    // shadow tree), never upward from a shadow-tree descendant back to the
+    // host, so this must be set on the host element itself, not on the
+    // `[part="base"]` div inside the shadow root.
+    if (changed.has('height')) {
+      this.style.setProperty('--lyra-chart-height', this.height);
+    }
+    const onlyZoomChanged = changed.size === 1 && changed.has('zoomed');
     if (!onlyZoomChanged) this.draw();
   }
 
@@ -176,15 +209,11 @@ export class LyraChart extends LyraElement {
     if (!this.config) return generated;
 
     // Raw Chart.js passthrough (mirrors `wa-chart`'s `config` property) —
-    // deep-merge `data`/`options` over the `Series`-derived config, letting
-    // consumers override or extend anything the simplified shape doesn't
-    // expose.
-    return {
-      ...generated,
-      ...this.config,
-      data: { ...generated.data, ...this.config.data },
-      options: { ...generated.options, ...this.config.options },
-    } as ChartConfiguration;
+    // deep-merge `config` over the `Series`-derived config at every nesting
+    // level (see `deepMerge` above), letting consumers override or extend a
+    // single nested key (e.g. `config.options.scales.y.min`) without
+    // clobbering the rest of the generated sibling object.
+    return deepMerge(generated, this.config);
   }
 
   private draw(): void {
@@ -212,7 +241,7 @@ export class LyraChart extends LyraElement {
   render(): TemplateResult {
     const label = this.datasets.map((d) => d.label).join(', ') || 'Chart';
     return html`
-      <div part="base" style=${`--lyra-chart-height:${this.height}`}>
+      <div part="base">
         <canvas part="canvas" role="img" aria-label=${label}></canvas>
         ${this.zoom && this.zoomed
           ? html`<button part="reset-zoom-button" type="button" @click=${() => this.resetZoom()}>
