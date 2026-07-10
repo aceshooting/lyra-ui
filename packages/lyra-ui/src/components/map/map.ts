@@ -1,7 +1,7 @@
 /// <reference types="geojson" />
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
-import type { Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
+import type { GeoJSONSource, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadMaplibre } from './map-loader.js';
@@ -53,7 +53,13 @@ export class LyraMap extends LyraElement {
 
   @query('[part="container"]') private containerEl?: HTMLElement;
   private _map?: MaplibreMap;
-  private maplibreModule?: typeof import('maplibre-gl');
+  // Tracks whether the style has fired its initial 'load' (i.e. addSource/
+  // addLayer/setPaintProperty are now safe to call), rather than re-querying
+  // `this._map.isStyleLoaded()`: that also reflects in-flight *tile* loading
+  // for every source, so it flips back to `false` as soon as the choropleth's
+  // own GeoJSON source is added — which would wrongly block subsequent
+  // choropleth updates from ever re-running.
+  private _styleLoaded = false;
 
   /** The raw `maplibregl.Map` instance — escape hatch for anything this wrapper doesn't expose. */
   get map(): MaplibreMap | undefined {
@@ -64,7 +70,6 @@ export class LyraMap extends LyraElement {
     super.connectedCallback();
     void loadMaplibre().then((mod) => {
       if (!mod || !this.containerEl) return;
-      this.maplibreModule = mod;
       this._map = new mod.Map({
         container: this.containerEl,
         style: this.mapStyle,
@@ -72,6 +77,7 @@ export class LyraMap extends LyraElement {
         zoom: this.zoom,
       });
       this._map.on('load', () => {
+        this._styleLoaded = true;
         this.applyChoropleth();
         this.emit('lyra-map-load');
       });
@@ -91,10 +97,11 @@ export class LyraMap extends LyraElement {
     super.disconnectedCallback();
     this._map?.remove();
     this._map = undefined;
+    this._styleLoaded = false;
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('choropleth') && this._map?.isStyleLoaded()) this.applyChoropleth();
+    if (changed.has('choropleth') && this._styleLoaded) this.applyChoropleth();
     if (changed.has('center') && this._map) this._map.setCenter(this.center);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.zoom);
   }
@@ -106,10 +113,13 @@ export class LyraMap extends LyraElement {
     const colorExpr: unknown[] = ['interpolate', ['linear'], ['get', field]];
     for (const [value, color] of stops) colorExpr.push(value, color);
 
-    if (this._map.getSource(sourceId)) {
-      (this._map.getSource(sourceId) as GeoJSON.FeatureCollection extends never ? never : any).setData(
-        geojson,
-      );
+    const existingSource = this._map.getSource(sourceId) as GeoJSONSource | undefined;
+    if (existingSource) {
+      // Re-apply both the data and the color expression: `field`/`stops` may have
+      // changed even though `sourceId` didn't (e.g. switching which metric colors
+      // the same GeoJSON), so the paint property must be refreshed too.
+      existingSource.setData(geojson);
+      this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
     } else {
       this._map.addSource(sourceId, { type: 'geojson', data: geojson, promoteId: 'id' });
       this._map.addLayer({
