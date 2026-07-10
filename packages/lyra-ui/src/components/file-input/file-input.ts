@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -58,7 +58,6 @@ export class LyraFileInput extends LyraElement {
   }
 
   private previewState(fileList: File[]): DragState {
-    if (!this.multiple && fileList.length > 1) return 'reject';
     const { rejected } = this.classify(fileList);
     return rejected.length > 0 ? 'reject' : 'accept';
   }
@@ -98,16 +97,30 @@ export class LyraFileInput extends LyraElement {
     if (files.length) this.emitFiles(files);
   };
 
+  private onKeyDown = (e: KeyboardEvent): void => {
+    if (this.disabled) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      // Prevent Space from scrolling the page, matching the `table.ts`
+      // sortable-header/row convention for role-based clickable elements.
+      e.preventDefault();
+      this.openPicker();
+    }
+  };
+
   render(): TemplateResult {
     return html`
       <div
         part="base"
+        role="button"
+        tabindex=${this.disabled ? '-1' : '0'}
+        aria-disabled=${this.disabled ? 'true' : nothing}
         data-drag-state=${this.dragState}
         @dragenter=${this.onDragEnter}
         @dragover=${this.onDragOver}
         @dragleave=${this.onDragLeave}
         @drop=${this.onDrop}
         @click=${() => !this.disabled && this.openPicker()}
+        @keydown=${this.onKeyDown}
       >
         <slot>${this.label}</slot>
       </div>
