@@ -54,6 +54,18 @@ it('auto-pauses on disconnect', async () => {
   expect(el.playing).to.be.false;
 });
 
+it('auto-pauses when the element becomes hidden', async () => {
+  const el = (await fixture(
+    html`<lyra-playback length="3" interval-ms="10"></lyra-playback>`,
+  )) as LyraPlayback;
+  el.play();
+  await el.updateComplete;
+  expect(el.playing).to.be.true;
+  el.hidden = true;
+  await el.updateComplete;
+  expect(el.playing).to.be.false;
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
   await expect(el).to.be.accessible();

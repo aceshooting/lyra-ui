@@ -24,6 +24,15 @@ export class LyraPlayback extends LyraElement {
   @property({ type: Boolean, reflect: true }) playing = false;
   @property({ type: Boolean }) loop = true;
 
+  /**
+   * Re-declared as a Lit reactive property (shadowing the inherited plain
+   * `HTMLElement.hidden` IDL property) so that setting `el.hidden = true` —
+   * or the `hidden` attribute — actually enters Lit's change-tracking system
+   * and the `willUpdate` auto-pause guard below can see it via `changed`.
+   * `reflect: true` preserves the native attribute-reflection behavior.
+   */
+  @property({ type: Boolean, reflect: true }) hidden = false;
+
   private timer?: number;
 
   disconnectedCallback(): void {
