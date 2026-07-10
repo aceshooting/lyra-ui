@@ -1,7 +1,9 @@
 import { property } from 'lit/decorators.js';
 import { LyraChart, type Series } from './chart.js';
+import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { binValues } from './histogram-bin.js';
+import { styles } from './histogram.styles.js';
 
 /**
  * `<lyra-histogram>` — bins `values` into `bins` equal-width buckets and
@@ -11,6 +13,12 @@ import { binValues } from './histogram-bin.js';
  * @customElement lyra-histogram
  */
 export class LyraHistogram extends LyraChart {
+  // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
+  // `histogram.styles.ts` re-exports the same `chart.styles.ts` sheet, so
+  // this is behaviorally identical, but it keeps the per-component styles
+  // file meaningful instead of dead weight.
+  static override styles = [LyraElement.styles, styles];
+
   override type = 'bar' as const;
 
   @property({ type: Number }) bins = 10;

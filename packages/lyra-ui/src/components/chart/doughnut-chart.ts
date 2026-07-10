@@ -2,7 +2,11 @@ import { LyraChart } from './chart.js';
 import { defineElement } from '../../internal/prefix.js';
 import type { LyraChartType } from './chart.js';
 
-/** `<lyra-doughnut-chart>` — `<lyra-chart>` with `type` locked to `"doughnut"`. */
+/**
+ * `<lyra-doughnut-chart>` — `<lyra-chart>` with `type` locked to `"doughnut"`.
+ *
+ * @customElement lyra-doughnut-chart
+ */
 export class LyraDoughnutChart extends LyraChart {
   override type = 'doughnut' as unknown as LyraChartType;
 }

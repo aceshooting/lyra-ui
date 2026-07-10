@@ -2,7 +2,11 @@ import { LyraChart } from './chart.js';
 import { defineElement } from '../../internal/prefix.js';
 import type { LyraChartType } from './chart.js';
 
-/** `<lyra-radar-chart>` — `<lyra-chart>` with `type` locked to `"radar"`. */
+/**
+ * `<lyra-radar-chart>` — `<lyra-chart>` with `type` locked to `"radar"`.
+ *
+ * @customElement lyra-radar-chart
+ */
 export class LyraRadarChart extends LyraChart {
   override type = 'radar' as unknown as LyraChartType;
 }

@@ -2,7 +2,15 @@ import { LyraChart } from './chart.js';
 import { defineElement } from '../../internal/prefix.js';
 import type { LyraChartType } from './chart.js';
 
-/** `<lyra-bubble-chart>` — `<lyra-chart>` with `type` locked to `"bubble"`. Feed points via `Series.points` (each needs an `r` radius field, added by the host as extra keys — Chart.js reads `x`/`y`/`r` off each point object). */
+/**
+ * `<lyra-bubble-chart>` — `<lyra-chart>` with `type` locked to `"bubble"`. Feed
+ * points via `Series.points`, each needing an `x`/`y`/`r` (radius) triple —
+ * cast the array through `as unknown as Series['points']` (or a local
+ * `BubblePoint` type) when constructing it, since `Series.points` itself is
+ * typed as `{ x; y; label? }[]` with no `r` field.
+ *
+ * @customElement lyra-bubble-chart
+ */
 export class LyraBubbleChart extends LyraChart {
   override type = 'bubble' as unknown as LyraChartType;
 }

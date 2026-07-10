@@ -1,7 +1,11 @@
 import { LyraChart } from './chart.js';
 import { defineElement } from '../../internal/prefix.js';
 
-/** `<lyra-bar-chart>` — `<lyra-chart>` with `type` locked to `"bar"`. */
+/**
+ * `<lyra-bar-chart>` — `<lyra-chart>` with `type` locked to `"bar"`.
+ *
+ * @customElement lyra-bar-chart
+ */
 export class LyraBarChart extends LyraChart {
   override type = 'bar' as const;
 }

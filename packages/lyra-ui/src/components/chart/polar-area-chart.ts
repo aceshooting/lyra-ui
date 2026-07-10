@@ -2,7 +2,11 @@ import { LyraChart } from './chart.js';
 import { defineElement } from '../../internal/prefix.js';
 import type { LyraChartType } from './chart.js';
 
-/** `<lyra-polar-area-chart>` — `<lyra-chart>` with `type` locked to `"polarArea"`. */
+/**
+ * `<lyra-polar-area-chart>` — `<lyra-chart>` with `type` locked to `"polarArea"`.
+ *
+ * @customElement lyra-polar-area-chart
+ */
 export class LyraPolarAreaChart extends LyraChart {
   override type = 'polarArea' as unknown as LyraChartType;
 }

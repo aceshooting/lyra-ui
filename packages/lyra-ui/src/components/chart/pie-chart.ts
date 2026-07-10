@@ -2,7 +2,12 @@ import { LyraChart } from './chart.js';
 import { defineElement } from '../../internal/prefix.js';
 import type { LyraChartType } from './chart.js';
 
-/** `<lyra-pie-chart>` — `<lyra-chart>` with `type` locked to `"pie"`. Single-series: one `Series` with `data: number[]` and `color: string[]` as the slice palette. */
+/**
+ * `<lyra-pie-chart>` — `<lyra-chart>` with `type` locked to `"pie"`. Single-series:
+ * one `Series` with `data: number[]` and `color: string[]` as the slice palette.
+ *
+ * @customElement lyra-pie-chart
+ */
 export class LyraPieChart extends LyraChart {
   override type = 'pie' as unknown as LyraChartType;
 }
