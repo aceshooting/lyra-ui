@@ -75,7 +75,11 @@ export class LyraChart extends LyraElement {
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: Chart;
   private chartJsModule?: typeof import('chart.js');
-  private builtType?: LyraChartType;
+  // Tracks the *effective* Chart.js type actually passed to `new Chart()` —
+  // i.e. `config.type` post-merge, not `this.type` — since `config.type` (the
+  // raw passthrough) can override the generated type in `buildConfig()`. See
+  // the deep-merge note on `buildConfig()` below.
+  private builtType?: ChartType;
 
   private onThemeChange = (): void => this.draw();
 
@@ -186,7 +190,8 @@ export class LyraChart extends LyraElement {
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
     const config = this.buildConfig();
-    if (this.chart && this.builtType === this.type) {
+    const effectiveType = config.type;
+    if (this.chart && this.builtType === effectiveType) {
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');
@@ -194,7 +199,7 @@ export class LyraChart extends LyraElement {
     }
     this.chart?.destroy();
     this.chart = new this.chartJsModule.Chart(this.canvasEl, config);
-    this.builtType = this.type;
+    this.builtType = effectiveType;
   }
 
   /** Reset any active zoom/pan back to the original view. */
@@ -208,7 +213,7 @@ export class LyraChart extends LyraElement {
     const label = this.datasets.map((d) => d.label).join(', ') || 'Chart';
     return html`
       <div part="base" style=${`--lyra-chart-height:${this.height}`}>
-        <canvas role="img" aria-label=${label}></canvas>
+        <canvas part="canvas" role="img" aria-label=${label}></canvas>
         ${this.zoom && this.zoomed
           ? html`<button part="reset-zoom-button" type="button" @click=${() => this.resetZoom()}>
               Reset zoom
