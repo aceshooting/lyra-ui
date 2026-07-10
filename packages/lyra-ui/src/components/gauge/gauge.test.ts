@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './gauge.js';
 import type { LyraGauge } from './gauge.js';
+import { styles } from './gauge.styles.js';
 
 it('reflects value/min/max as ARIA meter attributes', async () => {
   const el = (await fixture(
@@ -13,10 +14,66 @@ it('reflects value/min/max as ARIA meter attributes', async () => {
   expect(el.getAttribute('aria-label')).to.equal('CPU');
 });
 
-it('clamps the visual fill to [0,1] of the range', async () => {
+it('clamps the visual fill to [0,1] of the range and stops the arc at the sweep end', async () => {
   const el = (await fixture(html`<lyra-gauge value="200" max="100"></lyra-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement | HTMLElement;
   expect(fill).to.exist;
+  // ratio clamps to 1, so the dash pattern must be fully revealed (offset 0) —
+  // i.e. the fill arc actually stops at the sweep's end point, not just "exists".
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.equal(0);
+});
+
+it('drives the radial fill via a fixed-length dasharray with dashoffset derived from ratio', async () => {
+  const el = (await fixture(
+    html`<lyra-gauge value="0" min="0" max="100"></lyra-gauge>`,
+  )) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
+  const arcLength = (270 / 360) * 2 * Math.PI * 40;
+
+  // At ratio 0 the fill must be fully hidden (offset == full arc length).
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength, 0.001);
+  expect(Number(fill.getAttribute('stroke-dasharray'))).to.be.closeTo(arcLength, 0.001);
+
+  el.value = 50;
+  await el.updateComplete;
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength * 0.5, 0.001);
+  // the `d` geometry itself must stay constant across value updates —
+  // only stroke-dashoffset should change.
+  const dAtHalf = fill.getAttribute('d');
+
+  el.value = 90;
+  await el.updateComplete;
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength * 0.1, 0.001);
+  expect(fill.getAttribute('d')).to.equal(dAtHalf);
+});
+
+it('drives the linear fill via a fixed-length dasharray with dashoffset derived from ratio', async () => {
+  const el = (await fixture(
+    html`<lyra-gauge type="linear" value="0" min="0" max="100"></lyra-gauge>`,
+  )) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGLineElement;
+
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(100, 0.001);
+  expect(Number(fill.getAttribute('stroke-dasharray'))).to.be.closeTo(100, 0.001);
+
+  el.value = 25;
+  await el.updateComplete;
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(75, 0.001);
+  const x2AtQuarter = fill.getAttribute('x2');
+
+  el.value = 60;
+  await el.updateComplete;
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(40, 0.001);
+  // x2 stays fixed now — the dashoffset carries the animated progress instead.
+  expect(fill.getAttribute('x2')).to.equal(x2AtQuarter);
+});
+
+it('transitions the fill stroke-dashoffset using the shared transition token, disabled under reduced motion', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include('transition: stroke-dashoffset var(--lyra-transition-base);');
+  expect(css).to.include(
+    "@media (prefers-reduced-motion: reduce) { [part='fill'] { transition: none !important; } }",
+  );
 });
 
 it('renders a linear track when type is linear', async () => {

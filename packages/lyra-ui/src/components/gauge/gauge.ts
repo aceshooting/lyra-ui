@@ -18,6 +18,8 @@ const STROKE = 10;
 const LINEAR_STROKE = 6;
 const LINEAR_BAR_Y = 15;
 const LINEAR_TEXT_Y = 8;
+// Length of the x1=0 -> x2=100 horizontal fill/track line (Euclidean, y1==y2).
+const LINEAR_LENGTH = 100;
 
 function polarToCartesian(angleDeg: number): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
@@ -30,6 +32,14 @@ function arcPath(startDeg: number, endDeg: number): string {
   const largeArc = endDeg - startDeg > 180 ? 1 : 0;
   return `M ${sx} ${sy} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${ex} ${ey}`;
 }
+
+// The radial fill's `d` is fixed geometry (the full 270° sweep), built once —
+// a `d` rebuilt from `ratio` on every render is not reliably CSS-transitionable
+// across browsers. Animated progress instead rides stroke-dasharray/
+// stroke-dashoffset (always transitionable) over this constant path, the same
+// technique used for the linear variant's fill line below.
+const RADIAL_ARC_D = arcPath(START_DEG, START_DEG + SWEEP_DEG);
+const RADIAL_ARC_LENGTH = (SWEEP_DEG / 360) * 2 * Math.PI * RADIUS;
 
 /**
  * `<lyra-gauge>` — a radial or linear meter. First-party invention; no
@@ -63,22 +73,40 @@ export class LyraGauge extends LyraElement {
   }
 
   private renderRadial(): TemplateResult {
-    const endDeg = START_DEG + SWEEP_DEG * this.ratio;
     const text = this.valueLabel ?? String(this.value);
+    // Dashoffset counts down from the full arc length (nothing revealed) to 0
+    // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
+    // path" technique, which transitions smoothly via plain CSS.
+    const dashoffset = RADIAL_ARC_LENGTH * (1 - this.ratio);
     return html`<svg part="base" viewBox="0 0 100 100">
-      <path part="track" stroke-width=${STROKE} d=${arcPath(START_DEG, START_DEG + SWEEP_DEG)}></path>
-      <path part="fill" stroke-width=${STROKE} d=${arcPath(START_DEG, endDeg)}></path>
+      <path part="track" stroke-width=${STROKE} d=${RADIAL_ARC_D}></path>
+      <path
+        part="fill"
+        stroke-width=${STROKE}
+        d=${RADIAL_ARC_D}
+        stroke-dasharray=${RADIAL_ARC_LENGTH}
+        stroke-dashoffset=${dashoffset}
+      ></path>
       <text part="value" x="50" y="52">${text}</text>
       ${this.label ? svg`<text part="label" x="50" y="68">${this.label}</text>` : ''}
     </svg>`;
   }
 
   private renderLinear(): TemplateResult {
-    const w = this.ratio * 100;
     const text = this.valueLabel ?? String(this.value);
+    const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     return html`<svg part="base" viewBox="0 0 100 20" preserveAspectRatio="none">
       <line part="track" x1="0" y1=${LINEAR_BAR_Y} x2="100" y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
-      <line part="fill" x1="0" y1=${LINEAR_BAR_Y} x2=${w} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
+      <line
+        part="fill"
+        x1="0"
+        y1=${LINEAR_BAR_Y}
+        x2="100"
+        y2=${LINEAR_BAR_Y}
+        stroke-width=${LINEAR_STROKE}
+        stroke-dasharray=${LINEAR_LENGTH}
+        stroke-dashoffset=${dashoffset}
+      ></line>
       ${this.label ? svg`<text part="label" x="0" y=${LINEAR_TEXT_Y}>${this.label}</text>` : ''}
       <text part="value" x="100" y=${LINEAR_TEXT_Y}>${text}</text>
     </svg>`;

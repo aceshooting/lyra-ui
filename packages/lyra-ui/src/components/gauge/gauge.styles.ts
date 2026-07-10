@@ -24,6 +24,7 @@ export const styles = css`
     fill: none;
     stroke: var(--lyra-color-brand);
     stroke-linecap: round;
+    transition: stroke-dashoffset var(--lyra-transition-base);
   }
   [part='value'] {
     font-size: 1rem;
@@ -51,5 +52,10 @@ export const styles = css`
   }
   :host([type='linear']) [part='label'] {
     text-anchor: start;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='fill'] {
+      transition: none !important;
+    }
   }
 `;
