@@ -1,5 +1,5 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './tree.styles.js';
@@ -15,19 +15,14 @@ export interface TreeItem {
 
 /**
  * `<lyra-tree>` — an expand/collapse hierarchy for graph/document navigation.
- * First-party invention; no shared web-component seed existed across the
- * surveyed repos (only bespoke React equivalents).
  *
- * Top-level `<lyra-tree-node>` elements are created imperatively as real
- * light-DOM children (like `<lyra-toast>` creates `<lyra-toast-item>`s) so
- * they're projected through the default `<slot>` rather than living only in
- * this component's shadow root — that's what lets consumers, and this
- * component's own `expandAll()`/`collapseAll()`, reach them via the DOM.
- *
- * Re-assigning `data` reconciles by `item.id` instead of tearing down and
- * recreating every top-level node, so each `<lyra-tree-node>` instance (and
- * the `expanded` state it owns) survives a re-fetch that produces a new
- * array reference for the same items.
+ * Implements the WAI-ARIA treeitem keyboard pattern: a single roving
+ * `tabindex` (tracked here as `activeId`, pushed down to every
+ * `<lyra-tree-node>` — including nested ones, recursively) and
+ * ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated
+ * `keydown` listener. Native `KeyboardEvent`s are `composed: true` and
+ * bubble across shadow-DOM boundaries, so a press inside a deeply-nested
+ * `<lyra-tree-node>`'s own shadow root still reaches this listener.
  *
  * @customElement lyra-tree
  * @event lyra-node-toggle - `detail: { id, expanded }`, re-emitted from a child `<lyra-tree-node>`.
@@ -40,31 +35,64 @@ export class LyraTree extends LyraElement {
 
   @property({ attribute: false }) data: TreeItem[] = [];
 
+  @state() private activeId: string | null = null;
+
   private get nodeElements(): LyraTreeNode[] {
     return [...this.querySelectorAll('lyra-tree-node')] as LyraTreeNode[];
   }
 
-  /** A node's own recursive children live in *its* shadow root, not the light DOM. */
   private childrenOf(node: LyraTreeNode): LyraTreeNode[] {
     return [...(node.shadowRoot?.querySelectorAll('lyra-tree-node') ?? [])] as LyraTreeNode[];
   }
 
-  protected willUpdate(changed: PropertyValues): void {
-    if (changed.has('data')) this.syncNodes();
+  /** Every currently *visible* (ancestor-expanded) node, top-to-bottom. */
+  private visibleNodeElements(): LyraTreeNode[] {
+    const acc: LyraTreeNode[] = [];
+    const walk = (nodes: LyraTreeNode[]): void => {
+      for (const n of nodes) {
+        acc.push(n);
+        if (n.expanded) walk(this.childrenOf(n));
+      }
+    };
+    walk(this.nodeElements);
+    return acc;
   }
 
-  /**
-   * Reconcile the light-DOM `<lyra-tree-node>` children with `this.data` by
-   * `item.id`, reusing existing node instances (and therefore preserving the
-   * `expanded` state each one owns) instead of destroying and recreating
-   * every top-level node on each `data` reassignment.
-   */
+  private findItem(items: TreeItem[], id: string): TreeItem | undefined {
+    for (const item of items) {
+      if (item.id === id) return item;
+      const nested = item.children && this.findItem(item.children, id);
+      if (nested) return nested;
+    }
+    return undefined;
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('data')) {
+      this.syncNodes();
+      if (!this.activeId || !this.findItem(this.data, this.activeId)) {
+        this.activeId = this.data[0]?.id ?? null;
+      }
+    }
+  }
+
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('activeId') || changed.has('data')) {
+      const count = this.data.length;
+      this.nodeElements.forEach((node, i) => {
+        node.activeId = this.activeId;
+        node.setSize = count;
+        node.posInSet = i + 1;
+      });
+    }
+  }
+
+  /** Unchanged from the existing implementation — by-id reconciliation of top-level items. */
   private syncNodes(): void {
     const existingById = new Map<string, LyraTreeNode>();
     for (const node of this.nodeElements) {
       if (node.item) existingById.set(node.item.id, node);
     }
-
     const seen = new Set<string>();
     let previousSibling: LyraTreeNode | null = null;
     for (const item of this.data) {
@@ -73,20 +101,98 @@ export class LyraTree extends LyraElement {
       node.item = item;
       node.depth = 0;
       seen.add(item.id);
-
       const targetPosition: Element | null = previousSibling
         ? previousSibling.nextElementSibling
         : this.firstElementChild;
       if (targetPosition !== node) this.insertBefore(node, targetPosition);
       previousSibling = node;
     }
-
     for (const [id, node] of existingById) {
       if (!seen.has(id)) node.remove();
     }
   }
 
-  /** Expand every node in the tree, recursively. */
+  private focusNode(node: LyraTreeNode | undefined): void {
+    if (!node) return;
+    this.activeId = node.item.id;
+    node.focus();
+  }
+
+  /**
+   * `updated()` only pushes the new `activeId` to *top-level* nodes; a
+   * nested node only receives it once its ancestor chain's own renders
+   * cascade it down (one more pending update per depth level). Cascade
+   * `updateComplete` itself to match: awaiting `<lyra-tree>`'s (or any
+   * `<lyra-tree-node>`'s — see the matching override there) `updateComplete`
+   * now transitively waits for every visible descendant node's own update,
+   * not just this element's. Without this, `focusNode()`'s `.focus()` call
+   * can run while a nested target is still mid-cascade (no `tabindex`
+   * attribute committed yet), and `.focus()` on an element with no
+   * `tabindex` attribute at all is a silent no-op.
+   */
+  protected async getUpdateComplete(): Promise<boolean> {
+    const result = await super.getUpdateComplete();
+    await Promise.all(this.nodeElements.map((n) => n.updateComplete));
+    return result;
+  }
+
+  private onTreeKeyDown = (e: KeyboardEvent): void => {
+    const visible = this.visibleNodeElements();
+    if (visible.length === 0) return;
+    const currentIndex = visible.findIndex((n) => n.item.id === this.activeId);
+    const current = currentIndex >= 0 ? visible[currentIndex] : visible[0];
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        this.focusNode(visible[Math.min(visible.length - 1, currentIndex + 1)]);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        this.focusNode(visible[Math.max(0, currentIndex - 1)]);
+        break;
+      case 'Home':
+        e.preventDefault();
+        this.focusNode(visible[0]);
+        break;
+      case 'End':
+        e.preventDefault();
+        this.focusNode(visible[visible.length - 1]);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        if (!current.hasChildren) break;
+        if (!current.expanded) {
+          current.expand(); // focus stays put; a 2nd ArrowRight steps into the first child
+        } else {
+          const child = visible[currentIndex + 1];
+          if (child && child.depth > current.depth) this.focusNode(child);
+        }
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (current.hasChildren && current.expanded) {
+          current.collapse();
+        } else {
+          for (let i = currentIndex - 1; i >= 0; i--) {
+            if (visible[i].depth < current.depth) {
+              this.focusNode(visible[i]);
+              break;
+            }
+          }
+        }
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        current.select();
+        break;
+      default:
+        return;
+    }
+  };
+
+  /** Expand every node in the tree, recursively. (unchanged) */
   expandAll(): void {
     const setAll = (nodes: LyraTreeNode[]): void => {
       for (const n of nodes) {
@@ -97,7 +203,7 @@ export class LyraTree extends LyraElement {
     setAll(this.nodeElements);
   }
 
-  /** Collapse every node in the tree. */
+  /** Collapse every node in the tree. (unchanged) */
   collapseAll(): void {
     const setAll = (nodes: LyraTreeNode[]): void => {
       for (const n of nodes) {
@@ -110,7 +216,7 @@ export class LyraTree extends LyraElement {
 
   render(): TemplateResult {
     return html`
-      <div part="base" role="tree">
+      <div part="base" role="tree" @keydown=${this.onTreeKeyDown}>
         <slot></slot>
       </div>
     `;
