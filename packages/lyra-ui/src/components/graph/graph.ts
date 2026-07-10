@@ -4,7 +4,6 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './graph.styles.js';
 import type { Simulation, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
-import type { ZoomBehavior } from 'd3-zoom';
 
 export interface GraphNode {
   id: string;
@@ -109,7 +108,10 @@ export class LyraGraph extends LyraElement {
   connectedCallback(): void {
     super.connectedCallback();
     void loadD3().then((mods) => {
-      if (!mods) return;
+      // The element may have been removed from the DOM while the dynamic
+      // d3 imports were in flight — don't spin up a simulation for a
+      // detached instance (disconnectedCallback's cleanup already ran).
+      if (!mods || !this.isConnected) return;
       this.d3 = mods;
       this.rebuildSimulation();
     });
@@ -250,7 +252,7 @@ export class LyraGraph extends LyraElement {
                   r=${this.nodeRadius(n)}
                   cx=${n.x ?? 0}
                   cy=${n.y ?? 0}
-                  fill=${n.color ?? ''}
+                  style=${n.color ? `--lyra-node-fill:${n.color}` : ''}
                   @click=${() => this.onNodeClick(n)}
                   @keydown=${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {

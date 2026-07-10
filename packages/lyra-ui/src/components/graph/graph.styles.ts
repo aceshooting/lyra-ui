@@ -14,7 +14,12 @@ export const styles = css`
     fill: none;
   }
   [part='node'] {
-    fill: var(--lyra-color-brand);
+    /* --lyra-node-fill is set inline per-node (see graph.ts) from GraphNode.color;
+       falls back to the brand token when a node doesn't supply one. An inline
+       style declaration always wins the cascade over this selector, so setting
+       fill directly here (rather than via the presentation attribute) is what
+       lets a per-node color actually take effect. */
+    fill: var(--lyra-node-fill, var(--lyra-color-brand));
     cursor: pointer;
   }
   [part='node']:focus-visible {

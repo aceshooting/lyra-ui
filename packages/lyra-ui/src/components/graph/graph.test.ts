@@ -41,6 +41,25 @@ it('emits lyra-node-click when a node is activated', async () => {
   expect(detail).to.exist;
 });
 
+it('applies a per-node GraphNode.color as the actual rendered fill', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = [
+    { id: 'a', label: 'A', color: '#ff0000' },
+    { id: 'b', label: 'B' },
+  ];
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const [coloredEl, defaultEl] = [...el.shadowRoot!.querySelectorAll('[part="node"]')];
+  // A stylesheet rule always beats a bare presentation attribute in the SVG/CSS
+  // cascade, so this must actually change the computed fill (not just the
+  // attribute) to prove the per-node color isn't silently overridden.
+  expect(getComputedStyle(coloredEl).fill).to.equal('rgb(255, 0, 0)');
+  expect(getComputedStyle(coloredEl).fill).to.not.equal(getComputedStyle(defaultEl).fill);
+});
+
 it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;
