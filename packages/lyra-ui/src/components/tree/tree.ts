@@ -1,0 +1,97 @@
+import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
+import { LyraElement } from '../../internal/lyra-element.js';
+import { defineElement } from '../../internal/prefix.js';
+import { styles } from './tree.styles.js';
+import './tree-node.js';
+import type { LyraTreeNode } from './tree-node.js';
+
+export interface TreeItem {
+  id: string;
+  label: string;
+  children?: TreeItem[];
+  badge?: string | number;
+}
+
+/**
+ * `<lyra-tree>` — an expand/collapse hierarchy for graph/document navigation.
+ * First-party invention; no shared web-component seed existed across the
+ * surveyed repos (only bespoke React equivalents).
+ *
+ * Top-level `<lyra-tree-node>` elements are created imperatively as real
+ * light-DOM children (like `<lyra-toast>` creates `<lyra-toast-item>`s) so
+ * they're projected through the default `<slot>` rather than living only in
+ * this component's shadow root — that's what lets consumers, and this
+ * component's own `expandAll()`/`collapseAll()`, reach them via the DOM.
+ *
+ * @customElement lyra-tree
+ * @event lyra-node-toggle - `detail: { id, expanded }`, re-emitted from a child `<lyra-tree-node>`.
+ * @event lyra-node-select - `detail: { id }`, re-emitted from a child `<lyra-tree-node>`.
+ * @csspart base
+ */
+export class LyraTree extends LyraElement {
+  static styles = [LyraElement.styles, styles];
+
+  @property({ attribute: false }) data: TreeItem[] = [];
+
+  private get nodeElements(): LyraTreeNode[] {
+    return [...this.querySelectorAll('lyra-tree-node')] as LyraTreeNode[];
+  }
+
+  /** A node's own recursive children live in *its* shadow root, not the light DOM. */
+  private childrenOf(node: LyraTreeNode): LyraTreeNode[] {
+    return [...(node.shadowRoot?.querySelectorAll('lyra-tree-node') ?? [])] as LyraTreeNode[];
+  }
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('data')) this.syncNodes();
+  }
+
+  private syncNodes(): void {
+    for (const node of this.nodeElements) node.remove();
+    for (const item of this.data) {
+      const node = document.createElement('lyra-tree-node') as LyraTreeNode;
+      node.item = item;
+      node.depth = 0;
+      this.appendChild(node);
+    }
+  }
+
+  /** Expand every node in the tree, recursively. */
+  expandAll(): void {
+    const setAll = (nodes: LyraTreeNode[]): void => {
+      for (const n of nodes) {
+        n.expanded = true;
+        void n.updateComplete.then(() => setAll(this.childrenOf(n)));
+      }
+    };
+    setAll(this.nodeElements);
+  }
+
+  /** Collapse every node in the tree. */
+  collapseAll(): void {
+    const setAll = (nodes: LyraTreeNode[]): void => {
+      for (const n of nodes) {
+        setAll(this.childrenOf(n));
+        n.expanded = false;
+      }
+    };
+    setAll(this.nodeElements);
+  }
+
+  render(): TemplateResult {
+    return html`
+      <div part="base" role="tree">
+        <slot></slot>
+      </div>
+    `;
+  }
+}
+
+defineElement('tree', LyraTree);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lyra-tree': LyraTree;
+  }
+}
