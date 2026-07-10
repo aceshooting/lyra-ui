@@ -15,6 +15,7 @@ the components look native inside a WA app, and fully usable standalone.
 npm install @aceshooting/lyra-ui
 # peer: Lit is bundled; Floating UI ships with the positioned components
 # optional peer: @aceshooting/lyra-flags, only needed for <lyra-flag>
+# optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lyra-graph>
 ```
 
 ## Usage
@@ -79,10 +80,14 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-gauge>` | — (extra) | Radial or linear meter |
 | `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
 | `<lyra-split>` | — (extra) | Resizable panel layout |
+| `<lyra-time-range>` | — (extra) | Two-handle brush/scrubber over a numeric domain |
+| `<lyra-playback>` | — (extra) | Play/pause index stepper on a fixed interval |
+| `<lyra-heatmap>` | — (extra) | DPR-aware Canvas matrix heatmap |
+| `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
+| `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy for graph/document navigation |
 
 **Roadmap** (survey-driven, see `docs/superpowers/specs/` at the repo root)
 
-- **Temporal + graph:** `lyra-time-range` + `lyra-playback`, `lyra-heatmap`, `lyra-graph`, `lyra-tree`
 - **Charts** (mirror `wa-chart` family + box-plot/histogram; `chart.js` optional peer dep)
 - **Bigger tracks:** `lyra-map` (maplibre), `lyra-file-input`
 

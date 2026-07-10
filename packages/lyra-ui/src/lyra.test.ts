@@ -18,6 +18,12 @@ it('registers every component', () => {
     'gauge',
     'export-button',
     'split',
+    'time-range',
+    'playback',
+    'heatmap',
+    'graph',
+    'tree',
+    'tree-node',
   ];
   for (const t of tags) {
     expect(customElements.get(`lyra-${t}`), `lyra-${t}`).to.exist;

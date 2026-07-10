@@ -14,6 +14,12 @@ import './components/table/table.js';
 import './components/gauge/gauge.js';
 import './components/export-button/export-button.js';
 import './components/split/split.js';
+import './components/time-range/time-range.js';
+import './components/playback/playback.js';
+import './components/heatmap/heatmap.js';
+import './components/graph/graph.js';
+import './components/tree/tree.js';
+import './components/tree/tree-node.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -45,6 +51,15 @@ export type { ExportFormat } from './components/export-button/export-button.js';
 export { escapeCsvField, buildCsv, downloadBlob } from './components/export-button/csv.js';
 export type { CsvColumn } from './components/export-button/csv.js';
 export { LyraSplit } from './components/split/split.js';
+export { LyraTimeRange } from './components/time-range/time-range.js';
+export { LyraPlayback } from './components/playback/playback.js';
+export { LyraHeatmap } from './components/heatmap/heatmap.js';
+export { linearAlpha, sqrtStep } from './components/heatmap/heatmap-scale.js';
+export { LyraGraph } from './components/graph/graph.js';
+export type { GraphNode, GraphLink } from './components/graph/graph.js';
+export { LyraTree } from './components/tree/tree.js';
+export type { TreeItem } from './components/tree/tree.js';
+export { LyraTreeNode } from './components/tree/tree-node.js';
 
 export { LyraElement } from './internal/lyra-element.js';
 export { FormAssociated } from './internal/form-associated.js';

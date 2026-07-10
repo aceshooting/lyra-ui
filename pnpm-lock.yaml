@@ -14,6 +14,18 @@ importers:
       '@aceshooting/lyra-ui':
         specifier: workspace:*
         version: link:packages/lyra-ui
+      d3-drag:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-force:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-selection:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-zoom:
+        specifier: ^3.0.0
+        version: 3.0.0
       vite:
         specifier: ^8.1.3
         version: 8.1.3(@types/node@26.1.1)(esbuild@0.28.1)

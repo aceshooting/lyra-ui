@@ -130,6 +130,32 @@
       </div>
     </section>
 
+    <section>
+      <h2>Time range</h2>
+      <lyra-time-range id="demo-time-range" min="0" max="100" start="20" end="80"></lyra-time-range>
+      <p id="demo-time-range-readout"></p>
+    </section>
+
+    <section>
+      <h2>Playback</h2>
+      <lyra-playback id="demo-playback" length="10" interval-ms="500"></lyra-playback>
+    </section>
+
+    <section>
+      <h2>Heatmap</h2>
+      <lyra-heatmap id="demo-heatmap" cell-size="24" value-label="events"></lyra-heatmap>
+    </section>
+
+    <section>
+      <h2>Graph</h2>
+      <lyra-graph id="demo-graph" width="480" height="320" style="height: 20rem"></lyra-graph>
+    </section>
+
+    <section>
+      <h2>Tree</h2>
+      <lyra-tree id="demo-tree" style="max-width: 20rem"></lyra-tree>
+    </section>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
