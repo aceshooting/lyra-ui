@@ -105,6 +105,11 @@ export class LyraHeatmap extends LyraElement {
     return [lo, hi];
   }
 
+  /** Resolves the `--lyra-color-text-quiet` chrome token for axis labels. */
+  private labelColor(): string {
+    return getComputedStyle(this).getPropertyValue('--lyra-color-text-quiet').trim() || '#6b7280';
+  }
+
   private draw(): void {
     if (!this.canvas) return;
     const rows = this.rowLabels.length;
@@ -148,7 +153,7 @@ export class LyraHeatmap extends LyraElement {
       }
     }
 
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = this.labelColor();
     ctx.font = '10px sans-serif';
     this.rowLabels.forEach((label, r) => {
       ctx.fillText(label, 4, PAD_TOP + r * this.cellSize + this.cellSize / 2 + 3);
