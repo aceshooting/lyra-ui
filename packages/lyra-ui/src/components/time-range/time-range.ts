@@ -59,7 +59,15 @@ export class LyraTimeRange extends LyraElement {
     }
   };
 
-  private onKeyUp = (handle: Handle): void => {
+  private static isArrowKey(key: string): boolean {
+    return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';
+  }
+
+  private onKeyUp = (handle: Handle, e: KeyboardEvent): void => {
+    // Only commit on release of the arrow keys that onKeyDown acts on —
+    // releasing an unrelated key (Tab, Shift, ...) while a handle happens
+    // to be focused must not emit a spurious lyra-change.
+    if (!LyraTimeRange.isArrowKey(e.key)) return;
     this.emit('lyra-change', { start: this.start, end: this.end });
     void handle;
   };
@@ -89,8 +97,16 @@ export class LyraTimeRange extends LyraElement {
   };
 
   protected willUpdate(changed: PropertyValues): void {
+    // Keep start <= end regardless of which side changed (a controlled
+    // caller may set only `end`, e.g. two-way-binding an external store —
+    // see finding in 2026-07-09 tier2 review). The handle that just moved
+    // wins; the other side is pulled to meet it, mirroring the direction
+    // `clamp()` already uses during interactive dragging.
     if (changed.has('start') || changed.has('min') || changed.has('max')) {
       this.start = Math.min(this.start, this.end);
+    }
+    if (changed.has('end') || changed.has('min') || changed.has('max')) {
+      this.end = Math.max(this.end, this.start);
     }
   }
 
@@ -115,7 +131,7 @@ export class LyraTimeRange extends LyraElement {
           style=${`inset-inline-start:${startPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('start', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('start', e)}
-          @keyup=${() => this.onKeyUp('start')}
+          @keyup=${(e: KeyboardEvent) => this.onKeyUp('start', e)}
         ></div>
         <div
           part="handle-end"
@@ -128,7 +144,7 @@ export class LyraTimeRange extends LyraElement {
           style=${`inset-inline-start:${endPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('end', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('end', e)}
-          @keyup=${() => this.onKeyUp('end')}
+          @keyup=${(e: KeyboardEvent) => this.onKeyUp('end', e)}
         ></div>
       </div>
     `;
