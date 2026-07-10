@@ -51,7 +51,8 @@
     "d3-drag": "^3.0.0",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
-    "d3-zoom": "^3.0.0"
+    "d3-zoom": "^3.0.0",
+    "maplibre-gl": "^5.24.0"
   },
   "peerDependenciesMeta": {
     "@aceshooting/lyra-flags": {
@@ -77,6 +78,9 @@
     },
     "chartjs-plugin-zoom": {
       "optional": true
+    },
+    "maplibre-gl": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -97,6 +101,7 @@
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",
+    "maplibre-gl": "^5.24.0",
     "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@11.10.0",

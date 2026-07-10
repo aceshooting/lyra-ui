@@ -22,6 +22,25 @@ const hammerEsmInteropPlugin = {
   },
 };
 
+/**
+ * `maplibre-gl` (Task 1's `lyra-map`, optional peer dep) declares
+ * `"type": "module"` in its package.json but its `main` (`dist/maplibre-gl.js`)
+ * is actually a UMD bundle with no `export` statement — it just assigns
+ * `globalThis.maplibregl` when it detects no CJS/AMD loader. Same root cause
+ * as the hammerjs shim above: real consumers bundle with Vite/webpack/esbuild-
+ * bundle, which do this CJS/UMD interop automatically; `@web/test-runner`
+ * serves unbundled ESM, so this tiny plugin appends a synthetic named export
+ * once maplibre-gl.js has run and populated `globalThis.maplibregl`.
+ */
+const maplibreEsmInteropPlugin = {
+  name: 'maplibre-gl-esm-interop',
+  transform(context) {
+    if (context.response.is('js') && context.path.endsWith('/maplibre-gl/dist/maplibre-gl.js')) {
+      return `${context.body}\nexport const Map = globalThis.maplibregl.Map;\n`;
+    }
+  },
+};
+
 export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
@@ -29,5 +48,6 @@ export default {
   plugins: [
     esbuildPlugin({ ts: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
+    maplibreEsmInteropPlugin,
   ],
 };
