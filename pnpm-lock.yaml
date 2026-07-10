@@ -50,6 +50,9 @@ importers:
       '@open-wc/testing':
         specifier: ^4.0.0
         version: 4.0.0
+      '@sgratzl/chartjs-chart-boxplot':
+        specifier: ^4.4.0
+        version: 4.4.5(chart.js@4.5.1)
       '@types/d3-drag':
         specifier: ^3.0.0
         version: 3.0.7
@@ -715,6 +718,14 @@ packages:
     resolution: {integrity: sha512-BfzEnDJOt9T8M989/lA37EcJgat01wLRnoi5dQf3QzOH7jzpqTAzdDbVfRljVr5r+jzKqpbHeyOfAaXxAd0PAA==}
     cpu: [x64]
     os: [win32]
+
+  '@sgratzl/boxplots@2.0.0':
+    resolution: {integrity: sha512-XHQTNTk0OtDEZyT7v+BKNKt4OEXYhn4GtfI+iQ1eFiFsx8Aq/csz+mOJYbfpkiP8Popd/8Nky8vLh1zzkYn0gw==}
+
+  '@sgratzl/chartjs-chart-boxplot@4.4.5':
+    resolution: {integrity: sha512-hvHcUIPIyzNPRmvPNIbA/R68zZKv7XHUcNrYJZTB8QsVE0KKuuGuEK98yCeCy32vZXQBl/PrHGOYMXeuqZrU0w==}
+    peerDependencies:
+      chart.js: ^4.1.1
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
@@ -2840,6 +2851,13 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.2':
     optional: true
+
+  '@sgratzl/boxplots@2.0.0': {}
+
+  '@sgratzl/chartjs-chart-boxplot@4.4.5(chart.js@4.5.1)':
+    dependencies:
+      '@sgratzl/boxplots': 2.0.0
+      chart.js: 4.5.1
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 

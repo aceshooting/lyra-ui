@@ -45,6 +45,7 @@
   },
   "peerDependencies": {
     "@aceshooting/lyra-flags": "^0.1.0",
+    "@sgratzl/chartjs-chart-boxplot": "^4.4.0",
     "chart.js": "^4.5.0",
     "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
@@ -54,6 +55,9 @@
   },
   "peerDependenciesMeta": {
     "@aceshooting/lyra-flags": {
+      "optional": true
+    },
+    "@sgratzl/chartjs-chart-boxplot": {
       "optional": true
     },
     "d3-force": {
@@ -79,6 +83,7 @@
     "@aceshooting/lyra-flags": "^0.1.0",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@open-wc/testing": "^4.0.0",
+    "@sgratzl/chartjs-chart-boxplot": "^4.4.0",
     "@types/d3-drag": "^3.0.0",
     "@types/d3-force": "^3.0.0",
     "@types/d3-selection": "^3.0.0",
