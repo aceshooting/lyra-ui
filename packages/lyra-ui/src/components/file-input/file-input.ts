@@ -3,8 +3,14 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './file-input.styles.js';
+import { matchesAccept } from './accept.js';
 
 type DragState = 'default' | 'accept' | 'reject';
+
+export interface RejectedFile {
+  file: File;
+  reason: 'type' | 'count' | 'size';
+}
 
 /**
  * `<lyra-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
@@ -24,6 +30,7 @@ export class LyraFileInput extends LyraElement {
   @property() accept = '';
   @property({ attribute: false }) allowedMimeTypes: string[] = [];
   @property({ attribute: false }) forbiddenMimeTypes: string[] = [];
+  @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
   @property() label = 'Drop files here or click to browse';
 
   @state() private dragState: DragState = 'default';
@@ -31,19 +38,28 @@ export class LyraFileInput extends LyraElement {
 
   private dragCounter = 0;
 
-  private isAllowed(file: File): boolean {
-    if (this.forbiddenMimeTypes.includes(file.type)) return false;
-    if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(file.type)) return false;
-    return true;
+  private isAllowed(file: File): 'ok' | 'type' | 'size' {
+    if (this.forbiddenMimeTypes.includes(file.type)) return 'type';
+    if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(file.type)) return 'type';
+    if (this.accept && !matchesAccept(file, this.accept)) return 'type';
+    // `file.size` is `undefined` on the synthetic `DataTransferItem`-cast objects
+    // used during dragenter preview (real sizes aren't available until drop),
+    // so this naturally only takes effect for the real `classify()` call at drop time.
+    if (this.maxFileSize > 0 && file.size > this.maxFileSize) return 'size';
+    return 'ok';
   }
 
-  private classify(fileList: File[]): { files: File[]; rejected: File[] } {
+  private classify(fileList: File[]): { files: File[]; rejected: RejectedFile[] } {
     if (!this.multiple && fileList.length > 1) {
-      return { files: [], rejected: fileList };
+      return { files: [], rejected: fileList.map((file) => ({ file, reason: 'count' as const })) };
     }
     const files: File[] = [];
-    const rejected: File[] = [];
-    for (const f of fileList) (this.isAllowed(f) ? files : rejected).push(f);
+    const rejected: RejectedFile[] = [];
+    for (const f of fileList) {
+      const reason = this.isAllowed(f);
+      if (reason === 'ok') files.push(f);
+      else rejected.push({ file: f, reason });
+    }
     return { files, rejected };
   }
 

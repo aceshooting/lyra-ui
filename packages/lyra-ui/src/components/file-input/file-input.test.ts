@@ -6,6 +6,10 @@ function makeFile(name: string, type: string): File {
   return new File(['x'], name, { type });
 }
 
+function makeSizedFile(name: string, type: string, sizeBytes: number): File {
+  return new File([new Uint8Array(sizeBytes)], name, { type });
+}
+
 function dropWith(el: HTMLElement, files: File[]): void {
   const dt = new DataTransfer();
   for (const f of files) dt.items.add(f);
@@ -51,7 +55,7 @@ it('rejects files in forbiddenMimeTypes even when they would otherwise be allowe
   expect(ev.detail.files.length).to.equal(1);
   expect(ev.detail.files[0].name).to.equal('a.csv');
   expect(ev.detail.rejected.length).to.equal(1);
-  expect(ev.detail.rejected[0].name).to.equal('b.png');
+  expect(ev.detail.rejected[0].file.name).to.equal('b.png');
 });
 
 it('forbiddenMimeTypes takes precedence over allowedMimeTypes for the same type', async () => {
@@ -73,6 +77,43 @@ it('rejects a multi-file drop when multiple is false', async () => {
   const ev = await oneEvent(el, 'lyra-files');
   expect(ev.detail.files.length).to.equal(0);
   expect(ev.detail.rejected.length).to.equal(2);
+  expect(ev.detail.rejected[0].reason).to.equal('count');
+  expect(ev.detail.rejected[1].reason).to.equal('count');
+});
+
+it('enforces accept on the drop path, not just the native picker', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input accept=".csv,.xlsx"></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  setTimeout(() => dropWith(base, [makeFile('a.png', 'image/png')]));
+  const ev = await oneEvent(el, 'lyra-files');
+  expect(ev.detail.files.length).to.equal(0);
+  expect(ev.detail.rejected.length).to.equal(1);
+  expect(ev.detail.rejected[0].reason).to.equal('type');
+});
+
+it('matches an accept MIME wildcard on drop', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input accept="image/*"></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  setTimeout(() => dropWith(base, [makeFile('a.png', 'image/png')]));
+  const ev = await oneEvent(el, 'lyra-files');
+  expect(ev.detail.files.length).to.equal(1);
+  expect(ev.detail.rejected.length).to.equal(0);
+});
+
+it('rejects a file over maxFileSize with reason "size"', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input max-file-size="4"></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  setTimeout(() => dropWith(base, [makeSizedFile('a.csv', 'text/csv', 10)]));
+  const ev = await oneEvent(el, 'lyra-files');
+  expect(ev.detail.files.length).to.equal(0);
+  expect(ev.detail.rejected.length).to.equal(1);
+  expect(ev.detail.rejected[0].reason).to.equal('size');
 });
 
 it('does not accept drops while disabled', async () => {
