@@ -10,19 +10,31 @@ class Ctl extends FormAssociated(LyraElement) {
 }
 customElements.define(tag('demo-ctl'), Ctl);
 
-it('submits its value via the form and restores the default value on reset', async () => {
+it('submits its value via the form and restores the constructed default value on reset', async () => {
   const form = await fixture<HTMLFormElement>(html`
-    <form><lyra-demo-ctl name="x"></lyra-demo-ctl></form>
+    <form><lyra-demo-ctl name="x" value="hello"></lyra-demo-ctl></form>
   `);
   const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl;
-
-  ctl.value = 'hello'; // the first assignment becomes the form's default
   expect(new FormData(form).get('x')).to.equal('hello');
 
   ctl.value = 'changed';
   form.reset();
   expect(ctl.value).to.equal('hello');
   expect(new FormData(form).get('x')).to.equal('hello');
+});
+
+it('does not let a user/programmatic value change become the reset default (true native `defaultValue` semantics)', async () => {
+  // Regression for the 2026-07-10 review: only the *content attribute*
+  // (construction-time/declarative) feeds the reset default. Without a
+  // `value` attribute, no amount of later `.value =` assignment — however
+  // many, or however "first" — may become what `form.reset()` restores to,
+  // exactly like a plain native `<input>` with no `value` attribute.
+  const form = await fixture<HTMLFormElement>(html`<form><lyra-demo-ctl name="x"></lyra-demo-ctl></form>`);
+  const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl;
+  ctl.value = 'first-user-edit';
+  ctl.value = 'second-user-edit';
+  form.reset();
+  expect(ctl.value).to.equal('');
 });
 
 it('reflects disabled and required as attributes', async () => {
@@ -48,9 +60,10 @@ it('marks the control invalid via ElementInternals while required and empty, val
 });
 
 it('restores the constructed default value on form.reset(), not blank', async () => {
-  const form = await fixture<HTMLFormElement>(html`<form><lyra-demo-ctl name="x"></lyra-demo-ctl></form>`);
+  const form = await fixture<HTMLFormElement>(
+    html`<form><lyra-demo-ctl name="x" value="2026-07-15"></lyra-demo-ctl></form>`,
+  );
   const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl;
-  ctl.value = '2026-07-15'; // the first assignment becomes the form's default
   ctl.value = 'changed';
   form.reset();
   expect(ctl.value).to.equal('2026-07-15');

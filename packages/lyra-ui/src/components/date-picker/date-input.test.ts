@@ -90,3 +90,17 @@ it('restores the constructed value (not blank) on form.reset()', async () => {
   form.reset();
   expect(el.value).to.equal('2026-07-15');
 });
+
+it('does not let a typed-in value become the reset default when there is no `value` attribute', async () => {
+  // Regression for the 2026-07-10 review: previously the *first* assignment
+  // to `.value` after construction — even a user's own first edit of a
+  // blank required field — silently became the permanent reset default.
+  const form = (await fixture(
+    html`<form><lyra-date-input name="d"></lyra-date-input></form>`,
+  )) as HTMLFormElement;
+  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  el.value = 'first-user-edit';
+  el.value = 'second-user-edit';
+  form.reset();
+  expect(el.value).to.equal('');
+});

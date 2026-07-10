@@ -64,6 +64,14 @@ export class LyraCombobox extends LyraElement {
   private listId = nextId('combobox-list');
   private cleanup?: () => void;
   private _selected: string[] = [];
+  // What `form.reset()` restores to. Captured exactly once, from whatever
+  // `<lyra-option selected>` markup was present the first time slotted
+  // options are collected (mirrors native `<select><option selected>`) —
+  // never from the `value` setter, so a user picking an option (even the
+  // very first pick on an initially-unselected combobox) can't itself
+  // become the reset default (native `defaultValue`/`defaultSelected`
+  // semantics: only declarative/attribute state feeds the default, plain
+  // property assignment never does).
   private _defaultSelected: string[] = [];
   private _defaultCaptured = false;
 
@@ -84,10 +92,6 @@ export class LyraCombobox extends LyraElement {
   set value(next: string | string[]) {
     const old = this._selected;
     this._selected = Array.isArray(next) ? [...next] : next ? [next] : [];
-    if (!this._defaultCaptured) {
-      this._defaultSelected = [...this._selected];
-      this._defaultCaptured = true;
-    }
     this.syncFormValue();
     this.reflectSelected();
     this.updateValidity();
@@ -139,10 +143,17 @@ export class LyraCombobox extends LyraElement {
       .assignedElements({ flatten: true })
       .filter((el): el is LyraOption => el instanceof LyraOption);
     if (!this._defaultCaptured) {
-      // Seed the initial selection from declarative `<lyra-option selected>`
-      // markup — mirrors native `<select><option selected>` — the exact case
-      // the audit found silently ignored (forms-core §combobox, Medium).
+      this._defaultCaptured = true;
+      // Seed the initial selection — and the reset default — from
+      // declarative `<lyra-option selected>` markup — mirrors native
+      // `<select><option selected>` — the exact case the audit found
+      // silently ignored (forms-core §combobox, Medium). This is the only
+      // place `_defaultSelected` is set; picking an option later (the
+      // `value` setter) never redefines the reset default, so an
+      // initially-unselected combobox always resets back to empty even
+      // after the user has picked something.
       const declared = this.options.filter((o) => o.selected).map((o) => o.value);
+      this._defaultSelected = [...declared];
       if (declared.length) {
         this.value = this.multiple ? declared : declared[0];
         return; // `value=`'s setter already called reflectSelected()

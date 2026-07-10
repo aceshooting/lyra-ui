@@ -45,11 +45,16 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     required = false;
 
     private _value = '';
-    // The value at construction time (before any user interaction) — what
-    // native `defaultValue`/`form.reset()` restores to. Captured once, from
-    // whichever assignment (attribute-driven or programmatic) happens first.
+    // What native `defaultValue`/`form.reset()` restores to. Mirrors the
+    // `value` *content attribute* only (see `attributeChangedCallback`
+    // below) — exactly like native `<input>`: setting the `.value` IDL
+    // property (whether from a user typing, a picker commit, or a
+    // consumer's own script) never touches `defaultValue`, only
+    // `setAttribute('value', ...)`/declarative markup does. Using the
+    // property setter itself to capture "whichever assignment happens
+    // first" would wrongly let a user's first-ever edit become permanent
+    // (a required field could never be reset back to blank again).
     private _defaultValue = '';
-    private _defaultCaptured = false;
 
     constructor(...args: any[]) {
       super(...args);
@@ -63,13 +68,19 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     set value(next: string) {
       const old = this._value;
       this._value = next ?? '';
-      if (!this._defaultCaptured) {
-        this._defaultValue = this._value;
-        this._defaultCaptured = true;
-      }
       this.internals.setFormValue(this._value);
       this.updateValidity();
       this.requestUpdate('value', old);
+    }
+
+    attributeChangedCallback(name: string, old: string | null, value: string | null): void {
+      super.attributeChangedCallback(name, old, value);
+      if (name === 'value') {
+        // Runs after the base class has already applied the attribute to
+        // the `value` property (via the setter above), so `_value` here
+        // reflects the newly-parsed/assigned attribute value.
+        this._defaultValue = this._value;
+      }
     }
 
     /** Programmatically set the submitted value (alias kept for clarity). */

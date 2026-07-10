@@ -154,3 +154,23 @@ it('restores the declared default selection on form.reset()', async () => {
   form.reset();
   expect(el.value).to.equal('b');
 });
+
+it('does not let a user pick become the reset default when no option is declared selected', async () => {
+  // Regression for the 2026-07-10 review: previously the *first* pick on an
+  // initially-unselected combobox silently became the permanent reset
+  // default, so a later different pick could never reset back to empty.
+  const form = (await fixture(html`
+    <form>
+      <lyra-combobox name="fruit">
+        <lyra-option value="a">Apple</lyra-option>
+        <lyra-option value="b">Banana</lyra-option>
+      </lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+  await el.updateComplete;
+  el.value = 'a';
+  el.value = 'b';
+  form.reset();
+  expect(el.value).to.equal('');
+});
