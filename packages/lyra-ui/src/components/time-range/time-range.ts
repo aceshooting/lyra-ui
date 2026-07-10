@@ -78,13 +78,12 @@ export class LyraTimeRange extends LyraElement {
     }
   };
 
-  private onKeyUp = (handle: Handle, e: KeyboardEvent): void => {
+  private onKeyUp = (e: KeyboardEvent): void => {
     // Only commit on release of the arrow keys that onKeyDown acts on —
     // releasing an unrelated key (Tab, Shift, ...) while a handle happens
     // to be focused must not emit a spurious lyra-change.
     if (this.disabled || !isArrowKey(e.key)) return;
     this.emit('lyra-change', { start: this.start, end: this.end });
-    void handle;
   };
 
   private onPointerDown = (handle: Handle, e: PointerEvent): void => {
@@ -97,6 +96,16 @@ export class LyraTimeRange extends LyraElement {
 
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.dragging) return;
+    if (this.disabled) {
+      // setPointerCapture routes every subsequent pointer event for this
+      // pointerId to the handle regardless of
+      // `:host([disabled]) { pointer-events: none }`, so a drag already in
+      // progress would otherwise keep mutating start/end (and emitting
+      // lyra-input) after `disabled` flips true mid-drag. Abort the drag
+      // instead of continuing to process it.
+      this.endDrag(false);
+      return;
+    }
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
     const rect = base.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
@@ -105,13 +114,35 @@ export class LyraTimeRange extends LyraElement {
   };
 
   private onPointerUp = (): void => {
-    if (this.dragging) this.emit('lyra-change', { start: this.start, end: this.end });
+    this.endDrag(true);
+  };
+
+  /** Stop an in-progress drag, optionally committing a final lyra-change. */
+  private endDrag(commit: boolean): void {
+    if (this.dragging && commit) this.emit('lyra-change', { start: this.start, end: this.end });
     this.dragging = null;
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
-  };
+  }
 
   protected willUpdate(changed: PropertyValues): void {
+    if (
+      changed.has('start') ||
+      changed.has('end') ||
+      changed.has('min') ||
+      changed.has('max')
+    ) {
+      // Clamp both handles into the current [min, max] domain first — a
+      // caller narrowing the domain after mount (e.g. zooming the time
+      // axis via `el.max = 50`) must not leave a handle rendered outside
+      // the track, since percentOf() would otherwise produce <0%/>100%.
+      // Guard against a caller passing min > max so the bounds themselves
+      // stay well-formed.
+      const lo = Math.min(this.min, this.max);
+      const hi = Math.max(this.min, this.max);
+      this.start = Math.min(hi, Math.max(lo, this.start));
+      this.end = Math.min(hi, Math.max(lo, this.end));
+    }
     // Keep start <= end regardless of which side changed (a controlled
     // caller may set only `end`, e.g. two-way-binding an external store —
     // see finding in 2026-07-09 tier2 review). The handle that just moved
@@ -146,7 +177,7 @@ export class LyraTimeRange extends LyraElement {
           style=${`inset-inline-start:${startPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('start', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('start', e)}
-          @keyup=${(e: KeyboardEvent) => this.onKeyUp('start', e)}
+          @keyup=${(e: KeyboardEvent) => this.onKeyUp(e)}
         ></div>
         <div
           part="handle-end"
@@ -159,7 +190,7 @@ export class LyraTimeRange extends LyraElement {
           style=${`inset-inline-start:${endPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('end', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('end', e)}
-          @keyup=${(e: KeyboardEvent) => this.onKeyUp('end', e)}
+          @keyup=${(e: KeyboardEvent) => this.onKeyUp(e)}
         ></div>
       </div>
     `;

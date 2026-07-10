@@ -110,6 +110,91 @@ it('removes the window pointermove/pointerup listeners on disconnect so a detach
   expect(el.start).to.equal(startBeforeDetach);
 });
 
+it('re-clamps start/end into a narrower domain when min/max change after mount', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  // Narrowing `max` (e.g. zooming the time axis) must pull both handles
+  // back inside [min, max] instead of leaving `end` (and the range fill)
+  // rendered past 100%.
+  el.max = 50;
+  await el.updateComplete;
+  expect(el.start).to.be.within(el.min, el.max);
+  expect(el.end).to.be.within(el.min, el.max);
+  expect(el.end).to.equal(50);
+  expect(el.start).to.equal(20);
+
+  el.min = 30;
+  await el.updateComplete;
+  expect(el.start).to.be.within(el.min, el.max);
+  expect(el.end).to.be.within(el.min, el.max);
+  expect(el.start).to.equal(30);
+});
+
+it('does not let start/end render outside the track after a domain change', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  el.max = 50;
+  await el.updateComplete;
+  const range = el.shadowRoot!.querySelector('[part="range"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  expect(parseFloat(range.style.insetInlineStart)).to.be.at.least(0);
+  expect(parseFloat(range.style.insetInlineStart) + parseFloat(range.style.inlineSize)).to.be.at.most(100);
+  expect(parseFloat(startHandle.style.insetInlineStart)).to.be.within(0, 100);
+  expect(parseFloat(endHandle.style.insetInlineStart)).to.be.within(0, 100);
+});
+
+it('stops an in-progress drag without mutating start/end once disabled mid-drag', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  startHandle.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
+  );
+  // A drag is now in progress and window-level listeners are attached.
+  el.disabled = true;
+
+  let inputFired = false;
+  let changeFired = false;
+  el.addEventListener('lyra-input', () => (inputFired = true));
+  el.addEventListener('lyra-change', () => (changeFired = true));
+  const startBeforeMove = el.start;
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
+
+  // The already-captured pointer would otherwise keep mutating start/end
+  // (pointer capture bypasses `:host([disabled]) { pointer-events: none }`).
+  expect(inputFired).to.be.false;
+  expect(changeFired).to.be.false;
+  expect(el.start).to.equal(startBeforeMove);
+
+  // The drag should also be fully torn down: a further pointermove/up must
+  // be no-ops too, and the window listeners must be gone.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+  expect(inputFired).to.be.false;
+  expect(changeFired).to.be.false;
+});
+
 it('drags the start handle with pointer events and emits lyra-input then lyra-change on release', async () => {
   const el = (await fixture(
     html`<lyra-time-range min="0" max="100" start="20" end="80" step="1"></lyra-time-range>`,
