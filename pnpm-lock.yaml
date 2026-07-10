@@ -35,6 +35,9 @@ importers:
       d3-zoom:
         specifier: ^3.0.0
         version: 3.0.0
+      maplibre-gl:
+        specifier: ^5.24.0
+        version: 5.24.0
       vite:
         specifier: ^8.1.3
         version: 8.1.3(@types/node@26.1.1)(esbuild@0.28.1)

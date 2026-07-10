@@ -1,4 +1,7 @@
 import '../packages/lyra-ui/src/lyra.js';
+// <lyra-map>'s optional peer `maplibre-gl` ships its own CSS as a side-effect
+// import — consumers own this the same way chart.js/d3 consumers own theirs.
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { toast } from '../packages/lyra-ui/src/lyra.js';
 import type {
   LyraSparkline,
@@ -20,6 +23,8 @@ import type {
   LyraHistogram,
   Series,
   BoxPlotSeries,
+  LyraMap,
+  LyraFileInput,
 } from '../packages/lyra-ui/src/lyra.js';
 
 const data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
@@ -186,4 +191,35 @@ if (boxPlot) {
 const histogram = document.getElementById('demo-histogram') as LyraHistogram | null;
 if (histogram) {
   histogram.values = [2, 4, 4, 5, 6, 6, 6, 7, 8, 9, 9, 10, 11, 12, 12, 13, 15];
+}
+
+const map = document.getElementById('demo-map') as LyraMap | null;
+if (map) {
+  map.mapStyle = {
+    version: 8,
+    sources: {
+      demo: {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors',
+      },
+    },
+    layers: [{ id: 'demo', type: 'raster', source: 'demo' }],
+  };
+  map.center = [2.3522, 48.8566];
+  map.zoom = 4;
+  map.legend = [
+    { color: '#5b8def', label: 'Low' },
+    { color: '#e5484d', label: 'High' },
+  ];
+}
+
+const fileInput = document.getElementById('demo-file-input') as LyraFileInput | null;
+const fileInputReadout = document.getElementById('demo-file-input-readout');
+if (fileInput && fileInputReadout) {
+  fileInput.addEventListener('lyra-files', (e) => {
+    const { files, rejected } = (e as CustomEvent<{ files: File[]; rejected: File[] }>).detail;
+    fileInputReadout.textContent = `accepted: ${files.map((f) => f.name).join(', ') || '(none)'} — rejected: ${rejected.map((f) => f.name).join(', ') || '(none)'}`;
+  });
 }

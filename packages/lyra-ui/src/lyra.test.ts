@@ -35,6 +35,8 @@ it('registers every component', () => {
     'polar-area-chart',
     'box-plot',
     'histogram',
+    'map',
+    'file-input',
   ];
   for (const t of tags) {
     expect(customElements.get(`lyra-${t}`), `lyra-${t}`).to.exist;

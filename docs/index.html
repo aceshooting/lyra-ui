@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Lyra UI — Playground</title>
+    <!--
+      <lyra-map> needs the optional peer `maplibre-gl`. A real app must also
+      import `maplibre-gl/dist/maplibre-gl.css` once (this playground pulls
+      it in via docs/main.ts) — lyra-map only ships its own legend/popup CSS.
+    -->
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -169,6 +174,20 @@
         <lyra-box-plot id="demo-box-plot" height="16rem" style="width: 22rem"></lyra-box-plot>
         <lyra-histogram id="demo-histogram" bins="6" height="16rem" style="width: 22rem"></lyra-histogram>
       </div>
+    </section>
+
+    <section>
+      <h2>Map</h2>
+      <p>Optional peer dep: <code>maplibre-gl</code> (a real app must also import
+        <code>maplibre-gl/dist/maplibre-gl.css</code> once — this playground does so via <code>main.ts</code>).
+        Demoed with a raster demo style since a vector style needs an API key.</p>
+      <lyra-map id="demo-map" style="height: 20rem"></lyra-map>
+    </section>
+
+    <section>
+      <h2>File input</h2>
+      <lyra-file-input id="demo-file-input" multiple accept=".csv,.xlsx"></lyra-file-input>
+      <p id="demo-file-input-readout"></p>
     </section>
 
     <script type="module" src="./main.ts"></script>

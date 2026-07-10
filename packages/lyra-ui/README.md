@@ -18,6 +18,9 @@ npm install @aceshooting/lyra-ui
 # optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lyra-graph>
 # optional peer: chart.js, chartjs-plugin-zoom, only needed for the <lyra-*-chart>/<lyra-histogram> family
 # optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lyra-box-plot>
+# optional peer: maplibre-gl, only needed for <lyra-map> — also import
+#   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lyra-map only
+#   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet
 ```
 
 ## Usage
@@ -91,10 +94,8 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-bar-chart>`, `<lyra-line-chart>`, `<lyra-pie-chart>`, `<lyra-doughnut-chart>`, `<lyra-scatter-chart>`, `<lyra-bubble-chart>`, `<lyra-radar-chart>`, `<lyra-polar-area-chart>` | `wa-chart` | Typed `<lyra-chart>` subclasses with `type` locked — same optional peer deps as `<lyra-chart>` |
 | `<lyra-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
 | `<lyra-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lyra-chart>` |
-
-**Roadmap** (survey-driven, see `docs/superpowers/specs/` at the repo root)
-
-- **Bigger tracks:** `lyra-map` (maplibre), `lyra-file-input`
+| `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend + choropleth GeoJSON layer, plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above) |
+| `<lyra-file-input>` | — (extra) | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
 
 ## Development
 
