@@ -57,3 +57,20 @@ it('is accessible', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('blocks a required, empty date input from submitting the form', async () => {
+  const form = (await fixture(
+    html`<form><lyra-date-input name="d" required></lyra-date-input></form>`,
+  )) as HTMLFormElement;
+  expect(form.reportValidity()).to.be.false;
+});
+
+it('restores the constructed value (not blank) on form.reset()', async () => {
+  const form = (await fixture(html`
+    <form><lyra-date-input name="d" value="2026-07-15"></lyra-date-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  el.value = '2026-08-01';
+  form.reset();
+  expect(el.value).to.equal('2026-07-15');
+});

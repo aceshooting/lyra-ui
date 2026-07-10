@@ -64,10 +64,17 @@ export class LyraCombobox extends LyraElement {
   private listId = nextId('combobox-list');
   private cleanup?: () => void;
   private _selected: string[] = [];
+  private _defaultSelected: string[] = [];
+  private _defaultCaptured = false;
 
   constructor() {
     super();
     this.internals = this.attachInternals();
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.updateValidity();
   }
 
   /** The selected value(s): a string in single mode, a string[] in `multiple` mode. */
@@ -77,9 +84,22 @@ export class LyraCombobox extends LyraElement {
   set value(next: string | string[]) {
     const old = this._selected;
     this._selected = Array.isArray(next) ? [...next] : next ? [next] : [];
+    if (!this._defaultCaptured) {
+      this._defaultSelected = [...this._selected];
+      this._defaultCaptured = true;
+    }
     this.syncFormValue();
     this.reflectSelected();
+    this.updateValidity();
     this.requestUpdate('value', old);
+  }
+
+  private updateValidity(): void {
+    if (this.required && this._selected.length === 0) {
+      this.internals.setValidity({ valueMissing: true }, 'Please select an option.');
+    } else {
+      this.internals.setValidity({});
+    }
   }
 
   private syncFormValue(): void {
@@ -94,7 +114,7 @@ export class LyraCombobox extends LyraElement {
   }
 
   formResetCallback(): void {
-    this.value = [];
+    this.value = [...this._defaultSelected];
     this.query = '';
   }
   formDisabledCallback(disabled: boolean): void {
@@ -118,6 +138,16 @@ export class LyraCombobox extends LyraElement {
     this.options = slot
       .assignedElements({ flatten: true })
       .filter((el): el is LyraOption => el instanceof LyraOption);
+    if (!this._defaultCaptured) {
+      // Seed the initial selection from declarative `<lyra-option selected>`
+      // markup — mirrors native `<select><option selected>` — the exact case
+      // the audit found silently ignored (forms-core §combobox, Medium).
+      const declared = this.options.filter((o) => o.selected).map((o) => o.value);
+      if (declared.length) {
+        this.value = this.multiple ? declared : declared[0];
+        return; // `value=`'s setter already called reflectSelected()
+      }
+    }
     this.reflectSelected();
   };
 
@@ -173,6 +203,7 @@ export class LyraCombobox extends LyraElement {
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
       }
     }
+    if (changed.has('required')) this.updateValidity();
   }
 
   private pick(option: LyraOption): void {

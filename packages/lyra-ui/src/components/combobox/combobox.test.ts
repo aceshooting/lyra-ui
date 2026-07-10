@@ -116,3 +116,41 @@ it('is accessible', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('blocks a required, empty combobox from submitting the form', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-combobox name="fruit" required>
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  expect(form.reportValidity()).to.be.false;
+});
+
+it('seeds the initial selection from a declaratively-selected <lyra-option>', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox>
+      <lyra-option value="a">Apple</lyra-option>
+      <lyra-option value="b" selected>Banana</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.value).to.equal('b');
+});
+
+it('restores the declared default selection on form.reset()', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-combobox name="fruit">
+        <lyra-option value="a">Apple</lyra-option>
+        <lyra-option value="b" selected>Banana</lyra-option>
+      </lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+  await el.updateComplete;
+  el.value = 'a';
+  form.reset();
+  expect(el.value).to.equal('b');
+});

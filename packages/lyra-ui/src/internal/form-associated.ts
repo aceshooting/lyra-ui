@@ -1,4 +1,4 @@
-import type { LitElement } from 'lit';
+import type { LitElement, PropertyValues } from 'lit';
 
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -45,6 +45,11 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     required = false;
 
     private _value = '';
+    // The value at construction time (before any user interaction) — what
+    // native `defaultValue`/`form.reset()` restores to. Captured once, from
+    // whichever assignment (attribute-driven or programmatic) happens first.
+    private _defaultValue = '';
+    private _defaultCaptured = false;
 
     constructor(...args: any[]) {
       super(...args);
@@ -58,13 +63,32 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     set value(next: string) {
       const old = this._value;
       this._value = next ?? '';
+      if (!this._defaultCaptured) {
+        this._defaultValue = this._value;
+        this._defaultCaptured = true;
+      }
       this.internals.setFormValue(this._value);
+      this.updateValidity();
       this.requestUpdate('value', old);
     }
 
     /** Programmatically set the submitted value (alias kept for clarity). */
     setFormValue(next: string): void {
       this.value = next;
+    }
+
+    /**
+     * Recomputes `ElementInternals`'s validity state. Without this,
+     * `internals` defaults to permanently "valid" and `required` never
+     * blocks form submission — the single highest-leverage correctness gap
+     * the 2026-07-10 cross-repo audit found (forms-core §internal/, High).
+     */
+    protected updateValidity(): void {
+      if (this.required && this._value === '') {
+        this.internals.setValidity({ valueMissing: true }, 'Please fill out this field.');
+      } else {
+        this.internals.setValidity({});
+      }
     }
 
     checkValidity(): boolean {
@@ -76,11 +100,26 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
 
     formResetCallback(): void {
-      this.value = '';
+      // Restore the constructed default value (native `defaultValue`
+      // semantics) — previously this unconditionally blanked the field.
+      this.value = this._defaultValue;
     }
 
     formDisabledCallback(disabled: boolean): void {
       this.disabled = disabled;
+    }
+
+    connectedCallback(): void {
+      super.connectedCallback();
+      // `required` may already be set from an attribute by the time this
+      // runs; reflect validity from the start, not only after the first
+      // `value` write.
+      this.updateValidity();
+    }
+
+    protected updated(changed: PropertyValues): void {
+      super.updated(changed);
+      if (changed.has('required')) this.updateValidity();
     }
   }
 
