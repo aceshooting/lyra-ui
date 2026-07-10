@@ -16,7 +16,7 @@ export const styles = css`
   [part='icon'] {
     color: var(--lyra-color-text-quiet);
   }
-  [part='icon']:empty {
+  [part='icon'][hidden] {
     display: none;
   }
   [part='label'] {
@@ -50,11 +50,11 @@ export const styles = css`
     padding: 0.05rem 0.4rem;
     align-self: flex-start;
   }
-  [part='trend'][data-direction='up'] {
+  [part='trend'][data-polarity='good'] {
     color: var(--lyra-color-success);
     background: color-mix(in srgb, var(--lyra-color-success) 8%, transparent);
   }
-  [part='trend'][data-direction='down'] {
+  [part='trend'][data-polarity='bad'] {
     color: var(--lyra-color-danger);
     background: color-mix(in srgb, var(--lyra-color-danger) 8%, transparent);
   }
@@ -71,7 +71,7 @@ export const styles = css`
     font-size: 0.8125rem;
     color: var(--lyra-color-text-quiet);
   }
-  [part='caption']:empty {
+  [part='caption'][hidden] {
     display: none;
   }
 `;
