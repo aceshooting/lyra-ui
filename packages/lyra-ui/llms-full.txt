@@ -1,0 +1,1425 @@
+# @aceshooting/lyra-ui — LLM API Reference
+
+`@aceshooting/lyra-ui` is a library of free, clean-room [Lit](https://lit.dev) web components — a
+companion to [Web Awesome](https://webawesome.com) that reimplements several Web Awesome **Pro**
+components as open-source equivalents (same tag shape, attributes, slots, events, and CSS parts,
+under a `lyra-` prefix instead of `wa-`), plus a number of extras that have no Web Awesome
+counterpart at all (dashboard atoms, temporal/graph widgets, chart wrappers, a map component, a
+file dropzone). It is **token-compatible with Web Awesome**: every component's stylesheet resolves
+through Web Awesome's `--wa-*` design tokens first, falling back to its own `--lyra-*` tokens, so
+components read as native inside a Web Awesome-themed app and are equally usable standalone with no
+theme at all. This document is the complete, component-by-component API reference intended for
+coding assistants integrating the library; for install instructions, the full tag/tier table, and
+the `<wa-*>` → `<lyra-*>` migration notes, see the package [README](./README.md) — or the shorter
+curated index at [`llms.txt`](./llms.txt) if you just need the shape of the library before diving in
+here.
+
+## Contents
+
+- **Shared foundation** — `internal/` (base class, form-association mixin, positioning helper, design tokens)
+- **v1 core** — `lyra-combobox`/`lyra-option`, `lyra-date-picker`/`lyra-date-input`, `lyra-toast` family, `lyra-sparkline`, `lyra-flag`
+- **Dashboard atoms** — `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`, `lyra-split`
+- **Temporal & graph** — `lyra-time-range`, `lyra-playback`, `lyra-heatmap`, `lyra-graph`, `lyra-tree`/`lyra-tree-node`
+- **Chart family** — `lyra-chart` (core), typed subclasses, `lyra-histogram`, `lyra-box-plot`
+- **Map & file-input** — `lyra-map`, `lyra-file-input`
+- **Cross-cutting notes** — packaging and adoption caveats that apply across the whole library
+
+---
+
+## Shared foundation: `internal/`
+
+Not a custom element itself — infrastructure every `lyra-*` component in the library composes.
+
+- **`LyraElement`** (`internal/lyra-element.ts`) — base class every `lyra-*` component `extends`.
+  `static styles = [tokens]` (the design-token layer below); subclasses prepend `LyraElement.styles`
+  to their own `static styles` array to inherit it. Supplies
+  `protected emit<T>(name: string, detail?: T): CustomEvent<T>` — dispatches a
+  `{ bubbles: true, composed: true, cancelable: true }` `CustomEvent` and returns it, so callers can
+  do `const ev = this.emit('lyra-export', {...}); if (ev.defaultPrevented) return;`.
+- **`FormAssociated(Base)`** mixin (`internal/form-associated.ts`) — makes a `LitElement`
+  form-associated: `static formAssociated = true`, `attachInternals()` in the constructor. Adds
+  properties `name: string`, `value: string` (hand-written accessor via Lit's `noAccessor` so
+  `internals.setFormValue()` fires synchronously on assignment, not on the async update cycle),
+  `disabled: boolean` (reflected), `required: boolean` (reflected). Provides
+  `checkValidity()`/`reportValidity()` (delegate to `internals`), `formResetCallback()` (sets
+  `value = ''`), `formDisabledCallback(disabled)`. Only `lyra-date-input` uses this mixin;
+  `lyra-combobox` hand-rolls an equivalent independently (see its gotchas).
+- **`positioner.ts` → `place(anchor, popup, opts?): () => void`** — thin wrapper over
+  `@floating-ui/dom`'s `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (to match the
+  popup's own `position:fixed` CSS — otherwise it lands offset by the page scroll position),
+  middleware `offset(opts.offset ?? 4)`, `flip()`, `shift({ padding: 8 })`, default
+  `placement: 'bottom-start'`. Returns a cleanup function that stops the `autoUpdate` loop — call it
+  in `disconnectedCallback()`. Used by `lyra-combobox`, `lyra-date-input`, `lyra-export-button`.
+- **`tokens.styles.ts` → `tokens`** (a `css` template prepended to every component's stylesheet) —
+  the whole design-token layer. Every value chains through a `--wa-*` Web Awesome token first, with
+  a hard-coded fallback, e.g. `--lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da)`. Full
+  set: `--lyra-color-surface / -text / -text-quiet / -border / -brand / -brand-quiet / -success /
+  -warning / -danger`, `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
+  `--lyra-font`. Also sets `:host([hidden]) { display: none !important; }` and an inherited
+  `box-sizing: border-box` reset.
+- **`prefix.ts`** — `LYRA_PREFIX = 'lyra'`; `tag(name)` → `` `lyra-${name}` ``; `defineElement(name,
+  ctor)` — idempotent `customElements.define`, safe if a module is evaluated twice.
+- **`a11y.ts`** — `nextId(scope)`: monotonic id generator (e.g. `nextId('combobox-list')` →
+  `"lyra-combobox-list-3"`); `srOnly`: a visually-hidden-but-AT-visible CSS class (used by
+  `lyra-skeleton`'s "Loading…" text).
+
+**Known gotchas:**
+- **High** — `required` is currently inert for real validation. `FormAssociated` never calls
+  `internals.setValidity(...)`; `ElementInternals` defaults to "valid" until that's called.
+  `checkValidity()`/`reportValidity()` always return `true`. Concretely:
+  `<form><lyra-date-input name="d" required></lyra-date-input></form>`; `form.reportValidity()`
+  returns `true` and the form submits with the field empty — no native bubble, no
+  `:invalid`/`:user-invalid` match, no `aria-invalid`. This affects both `lyra-date-input` (via the
+  mixin) and `lyra-combobox` (via its own hand-rolled copy). **Do not rely on `required` for
+  constraint validation yet** — validate in application code until this is fixed.
+- **Medium** — `formResetCallback()` always resets to blank (`''` / `[]`), not the field's
+  originally-constructed value. `form.reset()` on `<lyra-date-input value="2026-07-15">` clears it
+  to `''` instead of restoring `"2026-07-15"` the way a native input's `defaultValue` would.
+- **Medium** — only `lyra-date-input` actually uses the shared mixin; `lyra-combobox` independently
+  hand-rolls the same internals/validity/reset logic (needed because its value can be an array in
+  `multiple` mode) — the two copies can silently diverge, and the `setValidity` gap above has to be
+  fixed in both places.
+- **Low** — no shared label/input association helper: `<label part="form-control-label">` in both
+  `lyra-combobox` and `lyra-date-input` is a DOM sibling of the input with no `id`/`for` pairing, so
+  clicking the visible label text doesn't focus the field the way a native `<label for>` would.
+
+---
+
+# v1 core: forms, toasts, sparkline, flag
+
+## `lyra-combobox` / `lyra-option`
+
+Filterable single/multi-select combining a text input with a listbox. Mirrors the core
+`<wa-combobox>` API under the `lyra-` prefix. **Form-associated** (hand-rolled internals, not the
+shared `FormAssociated` mixin — see gotchas).
+
+### `lyra-combobox`
+
+**Properties:**
+- `multiple: boolean = false` (reflected)
+- `placeholder: string = ''`
+- `disabled: boolean = false` (reflected)
+- `required: boolean = false` (reflected — **inert**, see gotchas)
+- `name: string = ''`
+- `label: string = ''`
+- `hint: string = ''`
+- `open: boolean = false` (reflected)
+- `withClear: boolean = false` (attribute **`with-clear`** — not `clearable`, see gotchas)
+- `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
+  show before collapsing to `+N`)
+- `emptyText: string = 'No results'` (attribute `empty-text`)
+- `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
+  matches `label`/`searchText` case-insensitively)
+- `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
+  `multiple` mode
+
+**Events:** `change` (native-style — selection changed), `input` (native-style — typed or selection
+changed), `lyra-show`, `lyra-hide`, `lyra-clear`
+
+**Slots:** default (`<lyra-option>` children), `label`, `hint`
+
+**CSS parts:** `form-control`, `form-control-label`, `combobox`, `tags`, `tag`,
+`tag__remove-button`, `combobox-input`, `clear-button`, `expand-icon`, `listbox`, `option`, `hint`
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+### `lyra-option`
+
+**Properties:**
+- `value: string = ''`
+- `disabled: boolean = false`
+- `selected: boolean = false` (reflected — set by the parent combobox)
+- `group: string = ''` (section header)
+- `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
+  visible label)
+- `label` is a **read-only getter**: explicit `label` attribute wins, else trimmed `textContent`.
+
+```html
+<lyra-combobox id="cb" label="Country" placeholder="Search…" with-clear>
+  <lyra-option value="fr">France</lyra-option>
+  <lyra-option value="de" search-text="deutschland">Germany</lyra-option>
+</lyra-combobox>
+<script type="module">
+  document.getElementById('cb').addEventListener('change', (e) => console.log(e.target.value));
+</script>
+```
+
+Multi-select submits as **repeated `FormData` entries** (not a joined string) —
+`new FormData(form).getAll(name)` behaves like a native multi-value control.
+
+**Known gotchas:**
+- **High** — `required` is declared but completely inert: never read for validity (see the shared
+  `internal/` gotchas above) **and** never reflected as `aria-required` onto the actual
+  `<input part="combobox-input">` — a screen-reader user gets zero indication the field is
+  mandatory even before the validity fix lands.
+- **Medium** — declaratively-selected options are **ignored on initial render**:
+  `<lyra-option value="b" selected>` in markup never seeds the combobox's selection — only the
+  combobox's own state pushes down to options, never the reverse. Set `.value` programmatically
+  after mount instead of relying on the `selected` attribute in markup.
+- **Low** — naming drift from Web Awesome parity: the shipped attribute is **`with-clear`**, not
+  `clearable` (which is what `<wa-combobox>` uses) — don't copy-paste WA docs assuming a 1:1
+  attribute name here.
+- **Low** — no `size` variant (small/medium/large) unlike sibling `lyra-toast-item`.
+- Full ARIA 1.2 combobox pattern (`role=combobox`, roving `aria-activedescendant`, real DOM focus
+  kept on the input) is implemented correctly — a genuine strength, safe to build on.
+
+---
+
+## `lyra-date-picker` / `lyra-date-input` (+ `calendar-core.ts`)
+
+Mirrors the core `<wa-date-picker>`/`<wa-date-input>` API under `lyra-`. **Value is always ISO
+8601**: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).
+
+### `lyra-date-picker`
+
+Inline month-grid calendar, not form-associated (used standalone or embedded inside
+`lyra-date-input`'s popover).
+
+**Properties:**
+- `value: string = ''`
+- `mode: 'single'|'range' = 'single'`
+- `min: string = ''`
+- `max: string = ''`
+- `disabled: boolean = false` (reflected)
+- `readonly: boolean = false` (reflected)
+- `months: 1|2 = 1`
+- `locale: string = ''`
+- `firstDayOfWeek: string = 'auto'` (attribute `first-day-of-week` — see gotchas)
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`)
+- `disablePast: boolean = false` (attribute `disable-past`)
+- `disableFuture: boolean = false` (attribute `disable-future`)
+- `withOutsideDays: boolean = false` (attribute `with-outside-days`)
+
+**Getters:** `selection: { from: Date|null; to: Date|null }`, `valueAsDate: Date | null` (single
+mode only)
+
+**Methods:** `clear()`, `goToToday()`, `goToDate(date: string | Date)`
+
+**Events:** `input` (during interaction — for range mode, fires after the first click of a pair),
+`change` (committed value)
+
+**Slots:** none.
+
+**CSS parts:** `base`, `month`, `header`, `title`, `previous`, `next`, `weekdays`, `weekday`,
+`grid`, `week`, `day`, `day-outside`, `day-today`, `day-selected`, `day-range-start`,
+`day-range-end`, `day-range-inner`, `day-placeholder`
+
+**Themeable custom properties:** `--lyra-cell-size` (default `2.25rem`, controls day-cell/grid-column
+size).
+
+**Optional peer deps:** none.
+
+### `lyra-date-input`
+
+Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
+`value`, `disabled`, `required` all inherited).
+
+**Properties (own):**
+- `mode: 'single'|'range' = 'single'`
+- `min: string = ''`
+- `max: string = ''`
+- `readonly: boolean = false` (reflected)
+- `open: boolean = false` (reflected)
+- `withClear: boolean = false` (attribute `with-clear`)
+- `label: string = ''`
+- `hint: string = ''`
+- `placeholder: string = ''`
+- `locale: string = ''`
+- `months: 1|2 = 1`
+- `firstDayOfWeek: string = 'auto'`
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'`
+
+**Methods:** `show()`, `hide()`, `clear()`
+
+**Events:** `input`, `change`, `lyra-show`, `lyra-hide`, `lyra-clear`
+
+**Slots:** `label`, `hint`
+
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `clear-button`,
+`expand-button`, `expand-icon`, `popup`, `date-picker`, `hint`
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-date-input id="di" label="Start date" with-clear name="start"></lyra-date-input>
+<script type="module">
+  const di = document.getElementById('di');
+  di.value = '2026-07-10';
+  di.addEventListener('change', () => console.log(di.value)); // ISO string
+</script>
+```
+
+`calendar-core.ts` exports the pure date math both components share (**internal — not re-exported
+from the package root**, but worth knowing when reasoning about behavior): `parseISO`, `formatISO`,
+`isSameDay`, `addMonths`, `clampDate`, `monthMatrix(year, month, firstDayOfWeek)`,
+`weekdayLabels(firstDayOfWeek, format, locale)`, `monthTitle(year, month, locale)`,
+`resolveFirstDayOfWeek(value)`.
+
+**Known gotchas:**
+- **Medium** — `first-day-of-week="auto"` does **not** derive from `locale` despite the name:
+  `resolveFirstDayOfWeek()` hardcodes `0` (Sunday) whenever the value is `'auto'`, even though
+  `locale` is already used elsewhere (weekday labels, month title). A French/German-locale user gets
+  a Sunday-first grid instead of the Monday-first layout their OS would show. **Workaround:** pass
+  an explicit `first-day-of-week="mon"` (accepted values: `sun`/`mon`/`tue`/`wed`/`thu`/`fri`/`sat`)
+  if you need locale-correct week starts.
+- **Medium** (date-input only) — the calendar popover has **no Escape-to-close**: only
+  `Alt+ArrowDown` opens it; there's no keydown handling to `hide()` on Escape, unlike `lyra-combobox`
+  in the same package. A keyboard user must Tab all the way through the grid/nav/clear buttons or
+  click elsewhere to dismiss it.
+- **Low** (date-input only) — opening the calendar doesn't move focus into it (`show()` only flips
+  `open`) — a keyboard user opening via `Alt+ArrowDown` lands on a visible popover with focus still
+  on the text input.
+- **Low** — one hardcoded, non-token color: selected/range-start/range-end day text is
+  `color: #fff` in `date-picker.styles.ts` — if you override
+  `--lyra-color-brand`/`--wa-color-brand-fill-loud` to something light, contrast on selected-day
+  text isn't guaranteed.
+- **Low** (date-input) — shares the mixin's reset-to-blank defect: `form.reset()` always clears to
+  `''` rather than restoring the originally-constructed `value`.
+- The grid keyboard pattern (Arrow/PageUp/PageDown/Home/End navigation with correct focus
+  sequencing) is implemented correctly and safe to rely on.
+
+---
+
+## `lyra-toast` / `lyra-toast-item` / `toast()`
+
+Stacking toast/notification region. Mirrors `<wa-toast>`/`<wa-toast-item>` under `lyra-`.
+
+### `lyra-toast`
+
+One per page recommended — the region.
+
+**Properties:**
+- `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
+  'bottom-start'|'bottom-center'|'bottom-end'`
+
+**Methods:** `async create(message: string, options?: ToastCreateOptions): Promise<LyraToastItem>` —
+`ToastCreateOptions = { variant?, duration?, size?, withIcon? }`
+
+**Events:** none.
+
+**Slots:** default (`<lyra-toast-item>` children)
+
+**CSS parts:** `stack`
+
+**Themeable custom properties:** `--gap` (default `var(--lyra-space-s)`), `--width` (default
+`28rem`) — set directly on the `<lyra-toast>` element (not `--lyra-`-prefixed, but overridable
+per-instance).
+
+**Optional peer deps:** none.
+
+### `lyra-toast-item`
+
+A single notification.
+
+**Properties:**
+- `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
+- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected)
+- `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
+- `withIcon: boolean = false` (attribute `with-icon`)
+
+**Methods:** `async hide(): Promise<void>` — plays the hide animation, then removes itself from the
+DOM.
+
+**Events:** `lyra-show`, `lyra-after-show`, `lyra-hide`, `lyra-after-hide`
+
+**Slots:** default (message), `icon`
+
+**CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`
+
+**Themeable custom properties:** `--accent-width` (4px), `--show-duration`/`--hide-duration` (250ms
+each), `--padding` (`var(--lyra-space-m)`), `--accent-color` (defaults to `--lyra-color-border`,
+auto-swapped per `variant` to `--lyra-color-brand/-success/-warning/-danger`).
+
+**Optional peer deps:** none.
+
+`role` is chosen automatically per `variant`: `"alert"` for `danger`/`warning`, `"status"`
+otherwise. Auto-dismiss timer **pauses** on `pointerenter`/`focusin`, **resumes** on
+`pointerleave`/`focusout`, with real elapsed-time bookkeeping (WCAG 2.2.1 timing-adjustable).
+
+### `toast()`
+
+From the `toaster` controller — the ergonomic entry point, no manual `<lyra-toast>` mounting
+needed:
+
+```ts
+import { toast } from '@aceshooting/lyra-ui';
+
+toast('Saved');
+toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: (item) => {/*...*/} } });
+```
+
+`toast(input: ToastOptions | string): ToastHandle` where
+`ToastOptions = ToastCreateOptions & { message: string; placement?: ToastPlacement; action?: { label: string; onClick: (item: LyraToastItem) => void } }`,
+and `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. Lazily mounts (and
+re-mounts if removed) a single `<lyra-toast>` region on `document.body`.
+
+```html
+<script type="module">
+  import { toast } from '@aceshooting/lyra-ui';
+  document.getElementById('save-btn').addEventListener('click', () => toast('Saved!'));
+</script>
+```
+
+**Known gotchas:**
+- **Low** — possible nested live-region double-announcement: the stack region is
+  `role="status" aria-live="polite"` **and** each `lyra-toast-item` independently self-assigns its
+  own `role` (`status`/`alert`) — nesting live regions can cause some screen readers to announce a
+  new toast twice. Plausible from the code, unverified against real AT.
+- **Low** — pause/resume-on-hover/focus (the component's main accessibility differentiator) has no
+  regression test coverage — don't assume a future refactor won't silently break it; test it
+  yourself if it's load-bearing for your app.
+- Prefer the `toast()` helper over manually creating `<lyra-toast>`/`<lyra-toast-item>` — it already
+  handles the singleton-region and remount-if-removed logic.
+
+---
+
+## `lyra-sparkline`
+
+Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`).
+
+**Properties:**
+- `values: number[] = []`
+- `type: 'line' | 'bar' | 'area' = 'line'`
+- `min?: number` (defaults to data minimum)
+- `max?: number` (defaults to data maximum)
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `line`, `area`, `bar`
+
+**Themeable custom properties:** `--lyra-color-brand` only — the single cleanest theming story in
+the reviewed family (pure CSS cascade, no JS/`getComputedStyle` bridging needed).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-sparkline type="area"></lyra-sparkline>
+<script>
+  document.querySelector('lyra-sparkline').values = [3, 5, 4, 8, 6, 9, 7];
+</script>
+```
+
+**Known gotchas:**
+- Auto-sets `role="img"` + a descriptive `aria-label` ("Trend of N values, last X" / "No data" when
+  empty) — good default, but still just a single summary sentence with no tabular fallback; fine for
+  a glance-value sparkline, worth reconsidering if it's ever the *sole* representation of a metric.
+- `min`/`max` overrides and the `bar`/`area` render types are lightly tested — no correctness
+  concerns found, just be aware coverage is thin there.
+
+---
+
+## `lyra-flag`
+
+Country/language flag image. Flag artwork ships in a **separate, optional peer package**
+(`@aceshooting/lyra-flags`) — importing `lyra-ui` core never pulls in flag image weight.
+
+**Properties:**
+- `country?: string` (ISO 3166-1 alpha-2, e.g. `"fr"` — takes precedence over `language`)
+- `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
+  via `languageToCountry()`)
+- `label?: string` (accessible name / `alt` text — **defaults to the bare uppercase code if
+  omitted**, see gotchas)
+- `round: boolean = false` (reflected — circular crop)
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `image`
+
+**Themeable custom properties:** `--lyra-flag-radius` (default `2px`, non-`round` corner radius).
+
+**Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
+image; without it, renders an empty template (see gotchas).
+
+Also exported from the package root:
+`languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
+table (region subtag wins, e.g. `en-US` → `us`; plain `en` → `gb`; override the table per-app if you
+need different defaults).
+
+```html
+<lyra-flag country="fr" label="France"></lyra-flag>
+<lyra-flag language="en-US" round></lyra-flag>
+```
+
+```bash
+pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> renders nothing
+```
+
+**Known gotchas:**
+- Requires the optional peer `@aceshooting/lyra-flags` to actually render an image; without it the
+  component renders an **empty template** plus a one-time `console.warn` (lazy `import()`, cached
+  module-wide so the warning fires only once per page even with many `<lyra-flag>` instances).
+- Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
+  resolver call, so there's a brief empty-render window on first paint/attribute change — don't
+  assume the `<img>` exists synchronously right after setting `country`/`language`.
+- **Low** — if `label` is omitted, the accessible name (`alt`) falls back to the **bare uppercase
+  ISO code** (e.g. `"FR"`, `"DE"`) — a screen reader will typically spell this out letter-by-letter
+  rather than announce a country name. Always pass an explicit `label` (e.g. `"France"`) if the flag
+  conveys real information rather than being purely decorative.
+
+---
+
+# Dashboard atoms
+
+## `lyra-empty`
+
+First-party "no data" state (no Web Awesome equivalent).
+
+**Properties:**
+- `heading: string = ''`
+- `description: string = ''`
+
+**Events:** none.
+
+**Slots:** default (icon/illustration), `actions` (buttons/links below the description)
+
+**CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
+
+**Themeable custom properties:** shared tokens only (`--lyra-space-s/-l`,
+`--lyra-color-text-quiet/-border/-text`).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-empty heading="No results" description="Try a different search.">
+  <svg slot="" ...></svg> <!-- default slot: any icon/illustration -->
+  <div slot="actions"><button>Clear filters</button></div>
+</lyra-empty>
+```
+
+**Known gotchas:**
+- **Medium** — no live-region semantics: a plain role-less `<div>`, so a list/table transitioning to
+  empty announces nothing to screen readers (unlike sibling `lyra-skeleton`'s `role="status"`).
+- **Low** — no compact/density variant; fixed `padding: var(--lyra-space-l)` and 2rem icon sizing
+  are tuned for full-page use, awkward embedded in a card or narrow container.
+- Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
+  inside can never match `:empty`) by tracking real slot assignment in JS (`hasIcon`/`hasActions`) —
+  `lyra-table` reuses this component for its own empty-rows state, but `lyra-stat` (below)
+  reintroduces the very bug this component avoids.
+
+---
+
+## `lyra-skeleton`
+
+Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
+
+**Properties:**
+- `variant: 'text'|'circle'|'rect' = 'text'` (reflected)
+- `effect: 'pulse'|'sheen' = 'pulse'` (reflected)
+- `width?: string`
+- `height?: string`
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`
+
+**Themeable custom properties:** `--lyra-skeleton-w`, `--lyra-skeleton-h` (set/cleared by the
+`width`/`height` properties; default `100%` / `1em`).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-skeleton variant="circle" width="3rem" height="3rem"></lyra-skeleton>
+<lyra-skeleton variant="text"></lyra-skeleton>
+```
+
+**Known gotchas:**
+- **Medium** — every instance is an independent, simultaneously-firing `role="status"` live region
+  (via `willUpdate` setting `role="status"` plus visually-hidden "Loading…" text). A realistic
+  loading state (e.g. a 10×5 skeleton table = 50 instances) mounts 50 separate live regions at
+  nearly the same tick — expect screen readers to announce "Loading…" dozens of times, not once.
+  There's no grouping primitive to dedupe this; if it matters, wrap your own single `role="status"`
+  region around a set of skeletons and mark the individual ones `aria-hidden`.
+- **Low** — no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
+  yourself.
+- Respects `prefers-reduced-motion` (both effects) — safe to leave as-is for that concern.
+
+---
+
+## `lyra-stat`
+
+KPI/stat card — value + unit + label + optional icon/trend/caption.
+
+**Properties:**
+- `label: string = ''`
+- `value: string = ''`
+- `unit: string = ''`
+- `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
+- `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
+  show it)
+- `caption: string = ''`
+
+**Events:** none.
+
+**Slots:** default (leading icon), `caption` (rich caption content — **see gotchas, it does not
+override the attribute**)
+
+**CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `caption`
+
+**Themeable custom properties:** shared tokens only (`--lyra-color-success/-warning/-danger` drive
+the `variant`-colored value text and up/down trend pill).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-stat label="Active users" value="1,204" trend="4.2" variant="success">
+  <svg slot="">...</svg>
+</lyra-stat>
+```
+
+**Known gotchas:**
+- **High** — icon/caption wrappers can never CSS-collapse: the stylesheet still relies on
+  `[part='icon']:empty` / `[part='caption']:empty { display: none }`, but both wrappers always
+  contain a literal `<slot>` child, so `:empty` never matches regardless of whether content is
+  provided. `<lyra-stat label="x" value="1">` with **no** icon/caption still lays out both empty
+  wrappers (visible gap/padding). This is the exact bug `lyra-empty` (above) correctly works around
+  via JS-tracked slot state — that fix has not been ported here.
+- **Medium** — the `caption` **slot does not override** the `caption` **attribute** despite the
+  intent implied by the docs: `render()` emits `${this.caption}<slot name="caption"></slot>`
+  unconditionally, so setting both concatenates rather than the slot replacing the attribute text.
+  Pick one or the other, don't set both.
+- **Medium** — `trend` polarity is hardcoded "higher is better": `trend > 0` always renders an
+  up-arrow in the success color, `trend < 0` always down/danger, with no invert flag. For metrics
+  where a *decrease* is good (cost, latency, error rate, churn), pre-negate the number yourself —
+  but that also flips the arrow direction misleadingly, so there's no fully correct workaround
+  today.
+- **Low** — the trend glyph (▲/▼/–) has no `aria-hidden`/accessible label, and there's no
+  `aria-live` for in-place `value`/`trend` updates.
+
+---
+
+## `lyra-table`
+
+Presentational, sort/select-aware data table. **The host owns actual sorting/filtering/pagination**
+of `rows` — this component only renders and emits intents.
+
+**Properties:**
+- `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, sortable?, align?:
+  'start'|'end', cell: (row) => unknown }`
+- `rows: T[] = []` (attribute: false)
+- `sortKey: string = ''` (attribute `sort-key`)
+- `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
+- `rowKey?: (row: T) => string | number` (attribute: false)
+- `selectedKey: string | number | null = null` (attribute: false) — **single**-selection only
+- `hasMore: boolean = false` (attribute `has-more`, reflected)
+- `moreLabel: string = 'Load more'` (attribute `more-label`)
+- `emptyHeading: string = 'No data'` (attribute `empty-heading`)
+- `emptyDescription: string = ''` (attribute `empty-description`)
+
+**Events:** `lyra-sort` (`detail: { key }`, fired on sortable-header activation), `lyra-row-click`
+(`detail: { row }`), `lyra-load-more` (fired on the "load more" button)
+
+**Slots:** none — content comes entirely from `columns`/`rows`.
+
+**CSS parts:** `base`, `table`, `head`, `header-cell`, `row`, `cell`, `more-button`
+
+**Themeable custom properties:** `--lyra-table-max-height` (default `none`; controls the scrollable
+body's `max-block-size`).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-table id="t" sort-key="name" sort-dir="asc"></lyra-table>
+<script type="module">
+  const t = document.getElementById('t');
+  t.columns = [
+    { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+    { key: 'value', label: 'Value', align: 'end', cell: (r) => r.value },
+  ];
+  t.rows = [{ name: 'Alpha', value: 1 }, { name: 'Beta', value: 2 }];
+  t.rowKey = (r) => r.name;
+  t.addEventListener('lyra-sort', (e) => console.log('sort by', e.detail.key));
+  t.addEventListener('lyra-row-click', (e) => console.log('clicked', e.detail.row));
+</script>
+```
+
+**Known gotchas:**
+- **Medium** — with `columns.length === 0` and non-empty `rows`, every `<tr role="row">` renders
+  with **zero** `<th>`/`<td>` children — an ARIA-invalid row that's still `tabindex="0"` and
+  clickable despite no visible/accessible content. Only the zero-**rows** case is handled (falls
+  back to `<lyra-empty>`); always pass at least one column.
+- **Medium** — a fresh `@click`/`@keydown` closure is allocated for every sortable header and every
+  row on **every render** — real, avoidable GC churn on wide/tall tables that re-render on each
+  sort.
+- **Medium** — only single-row selection is modeled (`selectedKey: string | number | null`);
+  there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
+  a `cell()` callback if you need multi-select.
+- **Low** — no `caption`/`aria-label` property, so the rendered `role="grid"` has no accessible name
+  distinguishing it from any other grid on the page.
+- Keyboard equivalents (Enter/Space) for both header-sort and row-activate are implemented and
+  solid — a genuine strength versus most siblings in this family.
+
+---
+
+## `lyra-gauge`
+
+Dependency-free SVG radial or linear meter (270°-sweep arc math, no charting library).
+
+**Properties:**
+- `value: number = 0`
+- `min: number = 0`
+- `max: number = 100`
+- `type: 'radial'|'linear' = 'radial'` (reflected)
+- `label: string = ''`
+- `valueLabel?: string` (attribute: false — overrides only the *visible* text, see gotchas)
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value`, `label`
+
+**Themeable custom properties:** `--lyra-color-brand` (fill color, shared token — no per-instance
+gauge-specific custom property exists).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-gauge value="72" min="0" max="100" label="CPU"></lyra-gauge>
+<lyra-gauge type="linear" value="0.4" max="1"></lyra-gauge>
+<script type="module">
+  document.querySelector('lyra-gauge').valueLabel = '72°F'; // changes displayed text only, see gotchas
+</script>
+```
+
+**Known gotchas:**
+- **Medium** — no `aria-valuetext`: setting `valueLabel` (e.g. `"72°F"`) changes the visible SVG
+  text but never reaches the accessibility tree — `aria-valuenow` always carries the bare numeric
+  `value`. A screen reader announces the raw number, not your formatted string.
+- **Medium** — the SVG `<text>` elements aren't `aria-hidden`, so they're exposed inside the same
+  `role="meter"` host that already carries `aria-valuenow`/`aria-label` — risks double/mismatched
+  announcements when `valueLabel` differs from the raw `value`.
+- **Low** — no color-threshold/variant support: a single fixed `--lyra-color-brand` fill regardless
+  of value (no amber/red-near-capacity idiom built in).
+- **Low** — no documented component-specific sizing custom property; host size is fixed em values
+  (`8em`/`12em` radial, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
+  element instead.
+- Divide-by-zero guarded (`max - min || 1`), and radial/linear share one component via the `type`
+  attribute.
+
+---
+
+## `lyra-export-button`
+
+CSV/JSON download button — either single-format (click exports immediately) or multi-format (click
+opens a small menu).
+
+**Properties:**
+- `rows: Record<string, unknown>[] = []` (attribute: false)
+- `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`
+- `filename: string = 'export'`
+- `formats: ExportFormat[] = ['csv']` (attribute: false; `ExportFormat = 'csv' | 'json'` **only** —
+  no XLSX despite the family sometimes being described as covering it)
+- `disabled: boolean = false` (reflected)
+- `label: string = 'Export'`
+- `open: boolean = false` (reflected)
+
+**Events:** `lyra-export` (`detail: { format }`, **cancelable** — call `preventDefault()` to
+substitute your own server-generated download instead of the built-in client-side one),
+`lyra-export-complete` (`detail: { format }`, fires after a non-cancelled download completes)
+
+**Slots:** none.
+
+**CSS parts:** `trigger`, `menu`, `menu-item`
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-export-button id="exp" filename="report" label="Export"></lyra-export-button>
+<script type="module">
+  const exp = document.getElementById('exp');
+  exp.rows = [{ name: 'Alpha', value: 1 }];
+  exp.columns = [{ key: 'name', label: 'Name' }, { key: 'value', label: 'Value' }];
+  exp.formats = ['csv', 'json']; // shows a format-choice menu instead of exporting immediately
+  exp.addEventListener('lyra-export', (e) => console.log('exporting', e.detail.format));
+</script>
+```
+
+Package-level CSV utilities (used internally, also exported for standalone use — `import {
+escapeCsvField, buildCsv, downloadBlob } from '@aceshooting/lyra-ui'`):
+```ts
+escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes formula-injection (=,+,-,@,tab,CR) with a leading apostrophe
+buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
+downloadBlob(content: string, filename: string, mime: string): void      // triggers a browser download
+```
+
+**Known gotchas:**
+- **High** — the format-choice menu breaks this library's own disclosure-menu conventions: unlike
+  `lyra-combobox`/`lyra-date-input` in the same package, it has **no outside-pointerdown dismissal,
+  no Escape-to-close**, and `[part="trigger"]` never gets `aria-haspopup`/`aria-expanded`. Clicking
+  elsewhere on the page does not close an open format menu — handle this yourself (e.g. close on
+  your own outside-click listener) until fixed upstream.
+- **Low** — XLSX isn't implemented (`ExportFormat` really is `'csv' | 'json'`) — don't pass
+  `'xlsx'` expecting it to work.
+- CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
+  cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
+
+---
+
+## `lyra-split`
+
+Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
+auto-inserted between each adjacent pair.
+
+**Properties:**
+- `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
+  omitted/mismatched)
+- `min: number = 10` (min % per panel)
+- `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected)
+- `storageKey?: string` (attribute `storage-key` — persists sizes to `localStorage` under
+  `` `lyra-split:${key}:${panelCount}` ``, scoped by panel count so a stale layout for a different
+  panel count is ignored)
+
+**Events:** `lyra-resize` (`detail: { sizes }`, fired on every drag step/release **and** every
+keyboard step)
+
+**Slots:** default (each direct child element is one panel).
+
+**CSS parts:** `base`, `divider`
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-split storage-key="dashboard-main" min="15">
+  <div>Panel A</div>
+  <div>Panel B</div>
+  <div>Panel C</div>
+</lyra-split>
+```
+
+Keyboard: focus a divider (`Tab`), then `ArrowRight`/`ArrowLeft` (horizontal) or
+`ArrowDown`/`ArrowUp` (vertical) to resize by a fixed 2% step.
+
+**Known gotchas:**
+- **Medium** — `panelCount` is computed **once**, in `connectedCallback()`, from
+  `this.children.length`. Adding/removing a panel after mount (e.g. conditionally showing a side
+  panel) leaves `panelCount`/`sizes`/divider count silently stale — there's no
+  `slotchange`/`MutationObserver` to react to it. If your panel set can change, re-create the
+  `<lyra-split>` rather than mutating its children live.
+- **Medium** — divider `aria-valuemax` (reported as `100 - min`) is only correct for exactly **two**
+  panels. With 3+ panels the real achievable max for divider `i` is `sizes[i] + sizes[i+1] - min`
+  (resizing only trades size between the adjacent pair) — e.g. three equal 33.3% panels with
+  `min=10` all report `aria-valuemax="90"` though the true achievable value is ~56.6. Don't trust
+  the reported max for 3+-panel layouts.
+- **Low** — no feasibility check on `min` vs. panel count (e.g. 3 panels with `min=40` is
+  unsatisfiable) — result is a silently frozen splitter with no warning.
+- **Low** — `localStorage.getItem`/`setItem` calls themselves are unguarded (only the `JSON.parse`
+  result is try/caught) — a blocked or quota-exceeded store can throw synchronously from inside a
+  `pointerup`/`keydown` handler.
+- Pointer-drag lifecycle (pointer capture, window-listener cleanup on both drag-end and
+  `disconnectedCallback`) is solid and safe to rely on.
+
+---
+
+# Temporal & graph
+
+## `lyra-time-range`
+
+A two-handle brush/scrubber over a numeric domain (no date logic — callers map their own time axis
+onto `[min, max]`).
+
+**Properties:**
+- `min: number = 0`
+- `max: number = 100`
+- `start: number = 0`
+- `end: number = 100`
+- `step: number = 1`
+- `disabled: boolean = false` (reflected)
+
+**Events:** `lyra-input` (fired continuously while dragging or on arrow-key press, `detail: {
+start, end }`), `lyra-change` (fired on pointer release / arrow-key-up — commit, `detail: { start,
+end }`)
+
+**Slots:** none.
+
+**CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`
+
+**Themeable custom properties:** shared tokens only — `--lyra-color-border`, `--lyra-color-brand`,
+`--lyra-color-surface`, `--lyra-shadow`. No component-local tokens.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-time-range min="0" max="1440" start="480" end="1020" step="15"></lyra-time-range>
+<script>
+  document.querySelector('lyra-time-range')
+    .addEventListener('lyra-change', (e) => console.log(e.detail.start, e.detail.end));
+</script>
+```
+
+**Known gotchas:**
+- Keyboard support is ArrowUp/Right and ArrowDown/Left only (moves by `step`) — no
+  Home/End/PageUp/PageDown, unlike native `<input type=range>` or the WAI-ARIA slider pattern it
+  otherwise follows.
+- A disabled handle loses `tabindex` but never gets `aria-disabled` — a screen-reader user
+  exploring by virtual cursor still hears it announced as a live, adjustable slider.
+- No `aria-valuetext`: only raw numeric `aria-valuenow` is exposed, no hook for a human-readable
+  (e.g. formatted date/time) equivalent of the mapped domain.
+- Handles a `min > max` domain and disabled-mid-drag/disconnect-mid-drag correctly (tested) — safe
+  to rely on those edge cases.
+
+---
+
+## `lyra-playback`
+
+Steps an index through `[0, length)` on a fixed interval — play/pause for time-series scrubbing.
+
+**Properties:**
+- `length: number = 0`
+- `index: number = 0`
+- `intervalMs: number = 900` (attribute `interval-ms`)
+- `playing: boolean = false` (reflected)
+- `loop: boolean = true`
+- `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
+  change-tracking sees it and auto-pauses on `hidden = true`)
+
+**Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`, `goTo(index: number)` — all
+idempotent/clamped; `length <= 1` is a no-op degenerate case.
+
+**Events:** `lyra-play`, `lyra-pause` (no detail), `lyra-step` (`detail: { index }`, fired on every
+tick and manual step)
+
+**Slots:** none.
+
+**CSS parts:** `base`, `play-button`, `slider`
+
+**Themeable custom properties:** shared tokens only — `--lyra-space-s`, `--lyra-color-border`,
+`--lyra-color-surface`, `--lyra-color-text`, `--lyra-color-brand`.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-playback length="24" interval-ms="500"></lyra-playback>
+<script>
+  const pb = document.querySelector('lyra-playback');
+  pb.addEventListener('lyra-step', (e) => renderFrame(e.detail.index));
+</script>
+```
+
+**Known gotchas:**
+- `index` is never re-clamped when `length` shrinks below it — e.g. setting `el.length = 2` while
+  `el.index = 7` leaves `index` out of range until the next `tick()`/`goTo()`/`next()`/`previous()`
+  call happens to correct it.
+- No `aria-valuetext`/visible "N of M" position label on the range input.
+- Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
+  announcement of the Play/Pause state change.
+
+---
+
+## `lyra-heatmap`
+
+A Canvas-rendered **matrix** heatmap (rows × cols grid) with a DPR-aware, resize-aware redraw loop.
+**Matrix layout only — despite the family sometimes being described as covering "matrix + calendar
+heatmap," no calendar/day-grid layout exists in the shipped source.** Do not assume a
+calendar-heatmap mode is available; it would need to be built as a new variant.
+
+**Properties:**
+- `rowLabels: string[] = []` (attribute: false)
+- `colLabels: string[] = []` (attribute: false)
+- `values: number[][] = []` (attribute: false) — `-1` is the "no data" sentinel; ragged/sparse rows
+  are safe (`?? -1`)
+- `cellSize: number = 22` (attribute `cell-size`)
+- `valueLabel: string = 'value'` (attribute `value-label`)
+- `scale: 'linear' | 'sqrt' = 'linear'`
+
+**Events:** none dispatched.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `canvas`, `legend`
+
+**Themeable custom properties:** `--lyra-heatmap-scale-lo` (default `#cde2fb`),
+`--lyra-heatmap-scale-hi` (default `#0969da`) — the sequential color-ramp endpoints, resolved via
+`getComputedStyle` each draw (any valid CSS color syntax — hex/rgb/hsl/oklch/named — works,
+resolved through a scratch canvas). Also consumes `--lyra-color-text-quiet` (axis label color) and
+`--lyra-space-xs`.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-heatmap value-label="requests"></lyra-heatmap>
+<script>
+  const hm = document.querySelector('lyra-heatmap');
+  hm.rowLabels = ['Mon', 'Tue', 'Wed'];
+  hm.colLabels = ['00h', '06h', '12h', '18h'];
+  hm.values = [[3, 8, 12, 4], [1, 2, 9, 5], [0, 4, 6, 2]];
+</script>
+```
+
+**Known gotchas:**
+- **High** — the `ResizeObserver` is wired but effectively inert: `draw()` always sizes the canvas
+  as `PAD_LEFT + cols * cellSize`, never from the host's measured width, so a container resize
+  redraws identical dimensions. The stylesheet's `canvas { inline-size: 100% }` is also dead code —
+  `draw()` unconditionally sets an inline `canvas.style.width/height` on every redraw, and inline
+  style always wins over that external rule.
+- **Medium** — `NaN`/non-finite cell values are **not** treated as no-data (only `-1` is): `NaN < 0`
+  is `false`, so it falls into the normal color-ramp branch, produces an invalid `fillStyle`, and
+  that cell silently keeps whatever color was left over from the previous loop iteration.
+- **Medium** — moving the browser window repeatedly across displays with different pixel ratios
+  leaks one stale `MediaQueryList` listener per DPR crossing (each `onDprChange` creates a new
+  listener without removing the previous one).
+- Per-cell values are not individually inspectable by assistive tech — the whole grid is one
+  `role="img"` with only a dimensions+range summary `aria-label`.
+
+---
+
+## `lyra-graph`
+
+A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
+
+**Properties:**
+- `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string; radius?:
+  number; color?: string }`
+- `links: GraphLink[] = []` (attribute: false) — `GraphLink { source: string; target: string;
+  width?: number }` (source/target are node ids; links whose endpoints don't resolve are silently
+  dropped)
+- `width: number = 800`
+- `height: number = 600`
+- `chargeStrength: number = -300` (attribute `charge-strength`)
+- `linkDistance: number = 100` (attribute `link-distance`)
+
+**Events:** `lyra-node-click` (`detail: { id }`), `lyra-link-click` (`detail: { source, target }`)
+
+**Slots:** none.
+
+**CSS parts:** `base`, `svg`, `node`, `link`, `label`
+
+**Themeable custom properties:** `--lyra-node-fill` (set inline per-node from `GraphNode.color`,
+falls back to `--lyra-color-brand`); also uses `--lyra-color-border`, `--lyra-color-text`.
+
+**Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
+together; lazy-`import()`ed once per page, `console.warn` once and renders empty if missing —
+install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
+
+```html
+<lyra-graph style="display:block;height:500px"></lyra-graph>
+<script>
+  const g = document.querySelector('lyra-graph');
+  g.nodes = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }];
+  g.links = [{ source: 'a', target: 'b' }];
+  g.addEventListener('lyra-node-click', (e) => console.log(e.detail.id));
+</script>
+```
+
+**Known gotchas:**
+- **High** — per-tick full re-render is expensive: every d3-force tick (up to ~300 by default,
+  continuously while dragging via `alphaTarget(0.3)`) replaces `simNodes`/`simLinks` with fresh
+  array references, forcing Lit to re-diff the entire node/link template and re-run
+  `applyInteractions()`. Noticeable cost for graphs of a few hundred+ nodes.
+- **Medium** — `chargeStrength`/`linkDistance` are **not** live-reactive: changing them post-mount
+  does nothing until `nodes`/`links` also change (only those two trigger `rebuildSimulation()`).
+- **Medium** — zoom has no `.scaleExtent(...)` (unbounded in/out); pan/zoom/drag are pointer-only
+  with no keyboard equivalent. Links (`<line part="link">`) are click-only — no
+  `role`/`tabindex`/`aria-label`, unlike nodes which are properly keyboard-operable
+  (`tabindex="0"`, `role="button"`, Enter/Space).
+- No visible fallback if the d3 peers fail to load — just a permanently empty `<svg>` plus a
+  one-time console warning.
+
+---
+
+## `lyra-tree` / `lyra-tree-node`
+
+An expand/collapse hierarchy (document/graph navigation tree). `lyra-tree` owns the data and
+imperatively creates/reconciles light-DOM `<lyra-tree-node>` children by `id`; `lyra-tree-node`
+recursively renders itself and its own nested children.
+
+### `lyra-tree`
+
+**Properties:**
+- `data: TreeItem[] = []` (attribute: false) — `TreeItem { id: string; label: string; children?:
+  TreeItem[]; badge?: string | number }`
+
+**Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
+cycle).
+
+**Events:** none dispatched directly (see `lyra-tree-node` below — they bubble up).
+
+**Slots:** default (holds the `<lyra-tree-node>` elements it manages).
+
+**CSS parts:** `base`
+
+**Themeable custom properties:** shared tokens `--lyra-space-xs`/`-s`, `--lyra-color-brand-quiet`,
+`--lyra-color-text-quiet`, `--lyra-color-border`, `--lyra-radius`.
+
+**Optional peer deps:** none.
+
+### `lyra-tree-node`
+
+Normally set internally by `lyra-tree`, but a public element.
+
+**Properties:**
+- `item: TreeItem` (required, attribute: false)
+- `depth: number = 0`
+- `expanded: boolean = false` (reflected)
+
+**Events:** `lyra-node-toggle` (`detail: { id, expanded }`), `lyra-node-select` (`detail: { id }`) —
+dispatched from `lyra-tree-node`, bubble/compose up through `lyra-tree`'s light DOM.
+
+**Slots:** none.
+
+**CSS parts:** `row`, `toggle`, `label`, `badge`
+
+**Themeable custom properties:** `--lyra-tree-depth` (internal, set inline per row for
+indentation), plus the shared tokens listed above.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-tree></lyra-tree>
+<script>
+  document.querySelector('lyra-tree').data = [
+    { id: '1', label: 'Root', children: [{ id: '1a', label: 'Child A' }, { id: '1b', label: 'Child B', badge: 3 }] },
+  ];
+</script>
+```
+
+**Known gotchas:**
+- **High** — the treeitem row has **zero keyboard interaction**: `role="treeitem"` has no
+  `tabindex` and no keydown handler, so it never enters the Tab order. The only keyboard-operable
+  control at all is the expand/collapse `<button>` — and that's removed (`tabindex="-1"`,
+  `aria-hidden`) for leaf nodes. `lyra-node-select` fires only from the label's `@click`, with no
+  keyboard equivalent, and there is no roving-tabindex/arrow-key navigation model.
+- **Medium** — `role="group"` (the expanded-children wrapper) is a shadow-DOM **sibling**, not a DOM
+  descendant, of its `role="treeitem"` row — violates the WAI-ARIA treeitem pattern's
+  DOM-containment expectation. (The library's own axe test does not catch this — axe's structural
+  rules accept a group as a valid child of `role="tree"` regardless of true ownership.)
+- **Medium** — by-id reconciliation (which preserves `expanded` state across data reassignment)
+  only applies at depth 0. Nested `children` arrays are rendered via a plain `.map()` with no keyed
+  `repeat()`, so reordering/inserting into a nested array can silently attach the wrong node's
+  `expanded` state.
+- `role="tree"` has no accessible name (`aria-label`/`aria-labelledby`).
+
+---
+
+# Chart family (`chart/`)
+
+## `lyra-chart` (core)
+
+Chart.js wrapper every other `lyra-*-chart` tag subclasses; supports both a simplified
+`Series`-based attribute surface and a raw Chart.js `config` passthrough (mirrors Web Awesome's
+`wa-chart` `config` property).
+
+**Properties:**
+- `type: LyraChartType = 'line'` — `LyraChartType = 'line' | 'bar' | 'scatter'` (narrow TS union;
+  other Chart.js type strings — `'pie'`, `'doughnut'`, etc. — work at runtime unchecked, which is
+  exactly how the typed subclasses below achieve their locked type)
+- `labels: string[] = []` (attribute: false)
+- `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
+  points?: {x,y,label?}[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
+  noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number; type?:
+  'line'|'bar' }`
+- `legend: boolean = false`
+- `area: boolean = false`
+- `zoom: boolean = false`
+- `height: string = '280px'`
+- `xLabel: string = ''` (attribute `x-label`)
+- `yLabel: string = ''` (attribute `y-label`)
+- `y2Label: string = ''` (attribute `y2-label`)
+- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
+  config; any nested key wins without clobbering sibling generated keys
+
+**Methods:** `resetZoom()`
+
+**Events:** `lyra-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
+`resetZoom()`)
+
+**Slots:** none.
+
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`
+
+**Themeable custom properties:** `--lyra-chart-height` (set programmatically on the host from the
+`height` property — must be read from the host, not a shadow-tree descendant, since custom
+properties only cascade downward); shared tokens `--lyra-space-xs`, `--lyra-color-border`,
+`--lyra-color-surface`, `--lyra-color-text`.
+
+**Optional peer deps:** `chart.js`, `chartjs-plugin-zoom` (lazy-loaded once per page via
+`chart-loader.ts`; registers only the tree-shaken controller/element/scale subset used).
+
+```html
+<lyra-chart type="line" x-label="Day" y-label="kWh" legend></lyra-chart>
+<script>
+  const c = document.querySelector('lyra-chart');
+  c.labels = ['Mon', 'Tue', 'Wed'];
+  c.datasets = [{ label: 'Production', data: [12, 19, 7], color: '#2563eb' }];
+</script>
+```
+
+**Known gotchas:**
+- **Medium** — "locked" `type` in the typed subclasses (below) is **not actually enforced**:
+  `<lyra-pie-chart type="bar">` or `el.type = 'bar'` at runtime silently turns it into a bar chart.
+  Conversely, `<lyra-chart type="pie">` already works today with no subclass needed at all —
+  `buildConfig()` passes `type` straight through unchecked.
+- **Medium** — the `lyra-theme` window-event listener (meant for re-theming on theme switch) is
+  dead code: nothing in the library ever dispatches that event, and even if it were dispatched, no
+  `--lyra-*`/`getComputedStyle` color resolution happens anywhere in this component — Chart.js
+  always renders grid/tick/legend/tooltip text with its own hardcoded palette, which can read as
+  low-contrast in dark mode.
+- **Medium** — generated `scales` config is cartesian (`x`/`y`/`y2`) only: for `lyra-radar-chart`/
+  `lyra-polar-area-chart` (which need a single radial `r` scale) and for `lyra-pie-chart`/
+  `lyra-doughnut-chart` (no scale at all), the inherited `xLabel`/`yLabel`/`beginAtZero`/`y2Label`
+  properties are silently inert with no warning. Reach the radial scale only via raw `config`.
+- No `chartjs-plugin-annotation` is registered by default — reachable only by importing it
+  separately and using the raw `config` passthrough (Chart.js's registry is a global singleton).
+
+---
+
+## Typed subclasses: `lyra-line-chart`, `lyra-bar-chart`, `lyra-pie-chart`, `lyra-doughnut-chart`, `lyra-radar-chart`, `lyra-polar-area-chart`, `lyra-bubble-chart`, `lyra-scatter-chart`
+
+Each is `LyraChart` with `type` overridden to a fixed value; all other properties/events/parts/tokens
+are identical to `lyra-chart` above. Same optional peer deps (`chart.js`, `chartjs-plugin-zoom`).
+
+```html
+<lyra-bar-chart legend></lyra-bar-chart>
+<lyra-pie-chart></lyra-pie-chart>
+<script>
+  document.querySelector('lyra-bar-chart').labels = ['A', 'B'];
+  document.querySelector('lyra-bar-chart').datasets = [{ label: 'Count', data: [4, 9] }];
+
+  document.querySelector('lyra-pie-chart').labels = ['A', 'B', 'C'];
+  document.querySelector('lyra-pie-chart').datasets = [{ label: 'Share', data: [30, 45, 25], color: ['#2563eb', '#16a34a', '#dc2626'] }];
+</script>
+```
+
+**Known gotchas (in addition to the core `lyra-chart` list above):**
+- `lyra-bubble-chart` needs `Series.points` entries with an `x`/`y`/`r` triple, but `Series.points`
+  is typed as `{x, y, label?}[]` with no `r` field — cast through `unknown` (or a local
+  `BubblePoint` type) when constructing bubble data.
+- Reading `chart.type` back in TypeScript for the 5 non-`line`/`bar`/`scatter` subclasses yields a
+  value that, by `LyraChartType`'s own declaration, is never a legal member of that type (each is
+  set via `as unknown as LyraChartType`).
+
+---
+
+## `lyra-histogram`
+
+Bins `values` into `bins` equal-width buckets and renders as a bar chart (extends `LyraChart`,
+`type` fixed to `'bar'`).
+
+**Properties:**
+- `bins: number = 10`
+- `values: number[] = []` (attribute: false)
+- `label: string = 'Frequency'`
+- `labels`/`datasets` are **derived, read-only** (installed as getter/setter pairs on the
+  prototype; direct writes are silently ignored) — computed from `values`/`bins`.
+- All other `LyraChart` properties (`legend`, `area`, `zoom`, `config`, `height`, etc.) are
+  inherited and usable.
+
+**Events/parts/tokens/peers:** identical to `lyra-chart`.
+
+```html
+<lyra-histogram bins="12"></lyra-histogram>
+<script>
+  document.querySelector('lyra-histogram').values = [1, 2, 2, 3, 5, 5, 5, 8, 13, 13];
+</script>
+```
+
+**Known gotchas:**
+- **High** — **`bins <= 0` crashes** on non-empty `values`: `bins=0` throws `TypeError` inside
+  `binValues()` (bucket index resolves to `-1`, `buckets[-1].count++` fails); negative `bins` throws
+  `RangeError` even earlier (`Array.from({length: -1})`). No guard exists anywhere in the chain —
+  **always pass `bins >= 1`.**
+
+---
+
+## `lyra-box-plot`
+
+Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
+browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
+
+**Properties:**
+- `labels: string[] = []` (attribute: false)
+- `boxes: BoxPlotSeries[] = []` (attribute: false) — `BoxPlotSeries { label: string; data:
+  BoxPlotPoint[]; color?: string }`, `BoxPlotPoint { min, q1, median, q3, max }`
+- `legend: boolean = false`
+- `height: string = '280px'`
+- `yLabel: string = ''` (attribute `y-label`)
+- `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `canvas`
+
+**Themeable custom properties:** `--lyra-chart-height` (same mechanism as `lyra-chart`; styles file
+is a re-export of `chart.styles.ts`).
+
+**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` (plus `chart.js` transitively, loaded
+independently of the base `chart-loader.ts`).
+
+```html
+<lyra-box-plot y-label="Latency (ms)"></lyra-box-plot>
+<script>
+  const bp = document.querySelector('lyra-box-plot');
+  bp.labels = ['Run A', 'Run B'];
+  bp.boxes = [{ label: 'p50–p99', data: [{ min: 10, q1: 20, median: 30, q3: 45, max: 90 }, { min: 12, q1: 18, median: 25, q3: 35, max: 60 }] }];
+</script>
+```
+
+**Known gotchas:**
+- **Medium** — no raw `config` passthrough (unlike every other chart tag) — limited to
+  `labels`/`boxes`/`legend`/`height`/`yLabel`/`beginAtZero`; can't reach the underlying
+  controller's own options (`itemRadius`, `outlierRadius`, `coef`).
+- The peer-dependency-missing failure path (`.catch()` → warn + resolve `null`) is untested —
+  verify it manually if shipping without the peer installed.
+
+---
+
+# Map & file-input
+
+## `lyra-map`
+
+A `maplibre-gl` wrapper with a declarative legend and a single choropleth GeoJSON fill layer, plus a
+raw `map` escape hatch for anything unexposed.
+
+**Properties:**
+- `center: [number, number] = [0, 0]`
+- `zoom: number = 2`
+- `mapStyle: StyleSpecification | string = DEFAULT_STYLE` (attribute: false) — default is a basic
+  OSM raster tile style
+- `legend: LegendEntry[] = []` (attribute: false) — `LegendEntry { color: string; label: string }`
+  (discrete swatch rows only, no continuous gradient bar)
+- `choropleth?: ChoroplethLayer` (attribute: false) — `ChoroplethLayer { sourceId: string; geojson:
+  GeoJSON.FeatureCollection; field: string; stops: [number, string][] }` (interpolated
+  fill-color expression from `field`'s value against `stops`)
+
+**Getters:** `map` → the raw `maplibregl.Map` instance.
+
+**Events:** `lyra-map-load` (fired once, after the underlying map's own `'load'`), `lyra-map-click`
+(`detail: { lngLat: [lng, lat], feature? }` — feature only populated if a choropleth fill layer
+exists and was hit)
+
+**Slots:** none.
+
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`
+
+**Themeable custom properties:** shared tokens only — `--lyra-space-s`, `--lyra-color-surface`,
+`--lyra-color-border`, `--lyra-shadow`, `--lyra-radius`.
+
+**Optional peer deps:** `maplibre-gl` (lazy-loaded; consumer must **separately** `import
+'maplibre-gl/dist/maplibre-gl.css'` once — the component does not do this for you).
+
+```html
+<lyra-map center="[2.35, 48.85]" zoom="10"></lyra-map>
+<script>
+  import 'maplibre-gl/dist/maplibre-gl.css';
+  const m = document.querySelector('lyra-map');
+  m.choropleth = {
+    sourceId: 'regions',
+    geojson: myGeoJson,
+    field: 'value',
+    stops: [[0, '#cde2fb'], [100, '#0969da']],
+  };
+  m.legend = [{ color: '#cde2fb', label: 'Low' }, { color: '#0969da', label: 'High' }];
+  m.addEventListener('lyra-map-click', (e) => console.log(e.detail.feature?.properties));
+</script>
+```
+
+**Known gotchas:**
+- **Medium** — clearing or swapping the choropleth **leaks the old layer**: `applyChoropleth()`
+  only ever adds or updates; setting `choropleth = undefined`, or changing `choropleth.sourceId` to
+  a different value, is a silent no-op — the previously added GeoJSON source and fill layer keep
+  rendering forever (there is no `removeLayer`/`removeSource` call anywhere).
+- **Medium** — `mapStyle` is reactive but changing it after construction is a **silent no-op** —
+  unlike `center`/`zoom`, which do call `setCenter`/`setZoom` on change, there's no `setStyle()`
+  call wired up.
+- No declarative point-marker API — only the single choropleth polygon-fill layer exists; placing
+  pins/points requires dropping to the `.map` escape hatch and calling `new maplibregl.Marker()`
+  manually.
+- No built-in popup rendering (despite sometimes being described as covering "legend/popup/
+  choropleth") — only the raw `lyra-map-click` event; hand-roll your own `maplibregl.Popup` on
+  click.
+- No click-select visual highlight on choropleth features (no `setFeatureState` call) — clicking
+  only fires the event, no built-in visual feedback.
+
+---
+
+## `lyra-file-input`
+
+A drag-drop + click-to-browse file dropzone. Emits raw `File[]` only — no client-side CSV/XLSX/etc.
+parsing (that's left entirely to the host).
+
+**Properties:**
+- `multiple: boolean = false` (reflected)
+- `disabled: boolean = false` (reflected)
+- `accept: string = ''` — **see gotchas: decorative on the drop path**
+- `allowedMimeTypes: string[] = []` (attribute: false) — exact MIME-string allowlist
+- `forbiddenMimeTypes: string[] = []` (attribute: false) — exact MIME-string denylist, checked
+  **before** (and takes precedence over) `allowedMimeTypes`
+- `label: string = 'Drop files here or click to browse'`
+
+**Methods:** `openPicker()` — programmatically opens the native file dialog.
+
+**Events:** `lyra-files` (`detail: { files: File[], rejected: File[] }`, fired on both drop and
+manual file-picker selection — `rejected` carries no reason code, just the raw rejected `File[]`)
+
+**Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
+provided.
+
+**CSS parts:** `base`, `input`
+
+**Themeable custom properties:** shared tokens only — `--lyra-space-xs`, `--lyra-space-l`,
+`--lyra-color-border`, `--lyra-radius`, `--lyra-color-surface`, `--lyra-color-text-quiet`,
+`--lyra-color-success` (drag-accept state), `--lyra-color-danger` (drag-reject state).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-file-input multiple accept=".csv,.xlsx" allowed-mime-types='["text/csv"]'></lyra-file-input>
+<script>
+  document.querySelector('lyra-file-input').addEventListener('lyra-files', (e) => {
+    console.log('accepted:', e.detail.files, 'rejected:', e.detail.rejected);
+  });
+</script>
+```
+
+Note: `allowedMimeTypes`/`forbiddenMimeTypes` are complex properties (`attribute: false`) — set
+them via JS (`el.allowedMimeTypes = [...]`), not as a JSON string attribute; the snippet above is
+illustrative of intent only.
+
+**Known gotchas:**
+- **High** — **`accept` only constrains the native file-picker dialog; it is silently ignored on
+  the drag-drop path.** `isAllowed()` checks only `allowedMimeTypes`/`forbiddenMimeTypes` (exact
+  MIME-string match — no extension or `image/*`-wildcard support like native `accept` has);
+  `this.accept` itself is never read anywhere else in the component. Concretely:
+  `<lyra-file-input accept=".csv,.xlsx">` with no `allowedMimeTypes` set will silently **accept** a
+  dropped `.png` (fires `lyra-files` with the png in `files`, not `rejected`) even though the UI
+  visually implies only CSV/XLSX are allowed. **To actually enforce type restriction on drop, you
+  must also set `allowedMimeTypes` (and/or `forbiddenMimeTypes`) — `accept` alone is not
+  sufficient.**
+- No max-file-size validation (no `maxFileSize` property) — a host wanting a byte-limit must
+  intercept `lyra-files` and re-filter itself.
+- No paste-from-clipboard support (no `paste`-event handling of `e.clipboardData.files`).
+- No `aria-live` announcement of the drag accept/reject state (`data-drag-state` attribute drives
+  border/background color only, invisible to screen readers mid-drag) — the click/keyboard-to-
+  browse path is unaffected and correctly operable (`role="button"`, `tabindex` 0/-1 by disabled,
+  `aria-disabled`, Enter/Space handling).
+- Dragged folders aren't specially detected (no `webkitGetAsEntry()` check) — likely surfaces as a
+  phantom zero-byte `File` with an empty MIME type rather than a clear rejection.
+
+---
+
+## Cross-cutting notes
+
+These apply across the whole library rather than to any one component:
+
+- **Packaging gap.** `custom-elements.json` is currently gitignored and missing from
+  `package.json`'s `files` allowlist, with no `prepack`/publish CI step regenerating it — so a
+  manifest-driven IDE/tooling integration (e.g. custom-elements-manifest-based autocomplete) may
+  not see it in a published tarball until that packaging gap is fixed.
+- **Adoption status.** Zero real-world adoption of `@aceshooting/lyra-ui` currently exists in any
+  consumer repo — treat any "battle-tested in production" framing with that caveat.

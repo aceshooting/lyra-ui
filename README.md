@@ -17,6 +17,14 @@ pnpm lint         # typechecks every package
 pnpm docs         # Vite playground demoing every component
 ```
 
+Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
+
+## Status
+
+Internally code-complete (198/198 tests), but real-world adoption is not yet validated in any
+consumer project. See the [post-audit roadmap addendum](./docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md)
+and the [full cross-repo audit](./.superpowers/sdd/2026-07-10-cross-repo-audit-report.md).
+
 ## License
 
 [MIT](./LICENSE) for the code. `packages/lyra-flags` ships third-party flag artwork with

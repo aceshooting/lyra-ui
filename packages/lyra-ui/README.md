@@ -52,6 +52,14 @@ import { toast } from '@aceshooting/lyra-ui';
 toast({ message: 'Saved', variant: 'success' });
 ```
 
+## For AI agents / LLMs
+
+- **Using this library from a consuming project?** See [`llms.txt`](./llms.txt) (short index) and
+  [`llms-full.txt`](./llms-full.txt) (full API reference) in this package directory — a
+  consumer-facing reference for coding assistants integrating `@aceshooting/lyra-ui`.
+- **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
+  contributor guide for agents working *on* lyra-ui, not the same document as the two above.
+
 ## Migrating from Web Awesome Pro
 
 Everything a consumer touches is mirrored 1:1 — only the prefix differs:
@@ -68,7 +76,12 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Components
 
-**v1 (this release)**
+All 34 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
+Tier 3, then a map/file-input batch). Grouped by the release that introduced each — see
+[`../../docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md`](../../docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md)
+for what's planned next.
+
+**v1 — form controls, toasts, sparkline**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
@@ -78,6 +91,11 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
+
+**Tier 1 — dashboard atoms**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
 | `<lyra-empty>` | — (extra) | Generic empty/no-data state |
 | `<lyra-skeleton>` | — (extra) | Loading placeholder (pulse/sheen) |
 | `<lyra-stat>` | — (extra) | KPI/stat card with trend pill |
@@ -85,17 +103,51 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-gauge>` | — (extra) | Radial or linear meter |
 | `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
 | `<lyra-split>` | — (extra) | Resizable panel layout |
+
+**Tier 2 — temporal & graph**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
 | `<lyra-time-range>` | — (extra) | Two-handle brush/scrubber over a numeric domain |
 | `<lyra-playback>` | — (extra) | Play/pause index stepper on a fixed interval |
-| `<lyra-heatmap>` | — (extra) | DPR-aware Canvas matrix heatmap |
+| `<lyra-heatmap>` | — (extra) | DPR-aware Canvas matrix heatmap (matrix layout only today — see Known limitations) |
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy for graph/document navigation |
+
+**Tier 3 — charts**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
 | `<lyra-chart>` | `wa-chart` | Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) — needs the optional peer deps `chart.js`, `chartjs-plugin-zoom` |
 | `<lyra-bar-chart>`, `<lyra-line-chart>`, `<lyra-pie-chart>`, `<lyra-doughnut-chart>`, `<lyra-scatter-chart>`, `<lyra-bubble-chart>`, `<lyra-radar-chart>`, `<lyra-polar-area-chart>` | `wa-chart` | Typed `<lyra-chart>` subclasses with `type` locked — same optional peer deps as `<lyra-chart>` |
 | `<lyra-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
 | `<lyra-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lyra-chart>` |
+
+**Map & file-input**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
 | `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend + choropleth GeoJSON layer, plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above) |
 | `<lyra-file-input>` | — (extra) | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
+
+## Known limitations
+
+A non-exhaustive list of gaps a new consumer should know about before adopting — full detail and
+fix status in
+[`.superpowers/sdd/2026-07-10-cross-repo-audit-report.md`](../../.superpowers/sdd/2026-07-10-cross-repo-audit-report.md)
+and
+[`docs/superpowers/plans/2026-07-10-lyra-ui-tier4-hardening.md`](../../docs/superpowers/plans/2026-07-10-lyra-ui-tier4-hardening.md):
+
+- `required` doesn't yet enforce constraint validation on `<lyra-date-input>`/`<lyra-combobox>` —
+  neither calls `internals.setValidity()`, so `form.reportValidity()`/`checkValidity()` always
+  return `true` regardless of whether a required field is empty.
+- `<lyra-tree>` has no keyboard interaction yet — only the expand/collapse button is focusable;
+  row selection and tree navigation (arrow keys, Home/End) have no keyboard path.
+- `<lyra-heatmap>` is matrix-only today, despite its description mentioning calendar layouts — a
+  calendar-heatmap rendering mode isn't implemented yet.
+- `<lyra-file-input>`'s `accept` attribute only constrains the native file-picker dialog; it has
+  no effect on the drag-drop path, so dropped files of a type `accept` would otherwise exclude are
+  silently accepted unless you also set `allowedMimeTypes`/`forbiddenMimeTypes`.
 
 ## Development
 

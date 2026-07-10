@@ -1,0 +1,47 @@
+# @aceshooting/lyra-ui
+
+> Free, clean-room Lit web components — a companion to Web Awesome that reimplements several
+> Web Awesome Pro components as open-source equivalents (same attributes/slots/events/CSS parts,
+> just a `lyra-` prefix instead of `wa-`) plus a number of extras with no Web Awesome counterpart.
+> Token-compatible with Web Awesome — every component resolves its styling through Web Awesome's
+> `--wa-*` design tokens first, with `--lyra-*` fallbacks — so it looks native inside a Web
+> Awesome-themed app and works standalone with no theme at all.
+
+## Docs
+
+- [llms-full.txt](./llms-full.txt): Complete component-by-component API reference (properties,
+  events, slots, CSS parts, themeable custom properties, optional peer deps, usage snippets, and
+  known gotchas) for every tag in the library — the primary resource for a coding assistant
+  integrating `@aceshooting/lyra-ui`.
+- [README.md](./README.md): Install instructions, the full tag/tier table, `<wa-*>` →
+  `<lyra-*>` migration notes, theming, and package-level development commands.
+
+## Component tiers
+
+The library shipped in five incremental batches; `llms-full.txt` is ordered the same way:
+
+- **v1 core** — form controls, toasts, sparkline, and flags: `lyra-combobox`/`lyra-option`,
+  `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`, `lyra-sparkline`,
+  `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
+- **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
+  `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`,
+  `lyra-split`.
+- **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
+  `lyra-playback`, `lyra-heatmap` (matrix layout only), `lyra-graph` (needs the optional peer deps
+  `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
+- **Chart family** — a Chart.js wrapper and its typed subclasses, plus two bespoke chart types:
+  `lyra-chart` (core) and its locked-`type` subclasses (`lyra-line-chart`, `lyra-bar-chart`,
+  `lyra-pie-chart`, `lyra-doughnut-chart`, `lyra-radar-chart`, `lyra-polar-area-chart`,
+  `lyra-bubble-chart`, `lyra-scatter-chart`), `lyra-histogram`, `lyra-box-plot` (needs
+  `@sgratzl/chartjs-chart-boxplot`) — the `lyra-chart` family needs the optional peer deps
+  `chart.js`/`chartjs-plugin-zoom`.
+- **Map & file-input** — `lyra-map` (`maplibre-gl` wrapper with legend + choropleth layer, needs
+  the optional peer `maplibre-gl`), `lyra-file-input` (drag-drop + click-to-browse dropzone,
+  emits raw `File[]`).
+
+## Also useful
+
+- Shared internals every tag builds on (`LyraElement` base class, the `FormAssociated` mixin, the
+  floating-ui `positioner`, and the `--lyra-*`/`--wa-*` design-token layer) are documented at the
+  top of `llms-full.txt`, along with cross-cutting notes on packaging and adoption status that
+  apply to the whole library.
