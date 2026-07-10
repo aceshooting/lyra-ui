@@ -31,9 +31,6 @@ export const styles = css`
     box-shadow: var(--lyra-shadow);
     font-size: 0.75rem;
   }
-  [part='legend']:empty {
-    display: none;
-  }
   .legend-row {
     display: flex;
     align-items: center;

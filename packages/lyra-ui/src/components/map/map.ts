@@ -1,5 +1,5 @@
 /// <reference types="geojson" />
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import type { GeoJSONSource, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -82,9 +82,15 @@ export class LyraMap extends LyraElement {
         this.emit('lyra-map-load');
       });
       this._map.on('click', (e) => {
-        const features = this.choropleth
-          ? this._map!.queryRenderedFeatures(e.point, { layers: [`${this.choropleth.sourceId}-fill`] })
-          : [];
+        // Guard on the fill layer actually existing, not just `this.choropleth` being
+        // set: applyChoropleth() only adds it once the style has finished loading, so
+        // a click landing in that window (choropleth set before the map's own 'load')
+        // would otherwise query a layer id maplibre-gl doesn't know about yet.
+        const fillLayerId = this.choropleth ? `${this.choropleth.sourceId}-fill` : undefined;
+        const features =
+          fillLayerId && this._map!.getLayer(fillLayerId)
+            ? this._map!.queryRenderedFeatures(e.point, { layers: [fillLayerId] })
+            : [];
         this.emit('lyra-map-click', {
           lngLat: [e.lngLat.lng, e.lngLat.lat],
           feature: features[0],
@@ -132,17 +138,24 @@ export class LyraMap extends LyraElement {
   }
 
   render(): TemplateResult {
+    // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
+    // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
+    // the panel is omitted from the template entirely when `legend` is empty
+    // (same `nothing` pattern `stat.ts` uses to omit its optional trend section)
+    // rather than relying on a CSS `:empty` selector that can never match.
     return html`
       <div part="base">
         <div part="container"></div>
-        <div part="legend">
-          ${this.legend.map(
-            (entry) => html`<div class="legend-row">
-              <span part="legend-swatch" style=${`background:${entry.color}`}></span>
-              <span>${entry.label}</span>
-            </div>`,
-          )}
-        </div>
+        ${this.legend.length
+          ? html`<div part="legend">
+              ${this.legend.map(
+                (entry) => html`<div class="legend-row">
+                  <span part="legend-swatch" style=${`background:${entry.color}`}></span>
+                  <span>${entry.label}</span>
+                </div>`,
+              )}
+            </div>`
+          : nothing}
       </div>
     `;
   }
