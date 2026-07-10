@@ -12,25 +12,94 @@ const RAMP_STEPS = 7;
 const FALLBACK_SCALE_LO = '#cde2fb';
 const FALLBACK_SCALE_HI = '#0969da';
 
-/** Parses a `#rgb` or `#rrggbb` hex string into an `[r, g, b]` triple. */
-function hexToRgb(hex: string): [number, number, number] {
+const HEX_RE = /^([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const RGB_RE = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i;
+
+/**
+ * Parses a strict `#rgb` or `#rrggbb` hex string into an `[r, g, b]` triple,
+ * or `null` if `hex` isn't one (rather than silently coercing an unparsable
+ * string to `0` via `Number.parseInt(..., 16)` returning `NaN`).
+ */
+export function hexToRgb(hex: string): [number, number, number] | null {
   const clean = hex.trim().replace('#', '');
-  const full = clean.length === 3
-    ? clean.split('').map((c) => c + c).join('')
-    : clean.padStart(6, '0');
+  if (!HEX_RE.test(clean)) return null;
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
   const num = Number.parseInt(full, 16);
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
 }
 
-/** Linearly interpolates between two hex colors at `t` in `[0, 1]`. */
-function mixColor(fromHex: string, toHex: string, t: number): string {
+function parseRgbString(value: string): [number, number, number] | null {
+  const match = RGB_RE.exec(value);
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+}
+
+let scratchCtx: CanvasRenderingContext2D | null | undefined;
+
+/** A detached 1x1 canvas used solely to normalize CSS color strings. */
+function getScratchCtx(): CanvasRenderingContext2D | null {
+  if (scratchCtx === undefined) {
+    scratchCtx = document.createElement('canvas').getContext('2d');
+  }
+  return scratchCtx;
+}
+
+const warnedInvalidColors = new Set<string>();
+
+function warnInvalidColor(color: string): void {
+  if (warnedInvalidColors.has(color)) return;
+  warnedInvalidColors.add(color);
+  console.warn(
+    `<lyra-heatmap> could not parse "${color}" (set via --lyra-heatmap-scale-lo/-hi) as a CSS ` +
+      'color; falling back to the default ramp endpoint.',
+  );
+}
+
+/**
+ * Resolves any syntactically valid CSS `<color>` — hex, `rgb()`, `hsl()`,
+ * `oklch()`, a named color, etc. — to an `[r, g, b]` triple.
+ *
+ * Hand-rolling a parser for every CSS color syntax is unnecessary and
+ * error-prone (a naive hex-only parser silently turns an unrecognized format
+ * into `NaN` -> `0`, i.e. solid black). The canvas 2D context already
+ * implements the full CSS color grammar via its `fillStyle` setter, so this
+ * normalizes through that instead. Assigning an unparsable string to
+ * `fillStyle` is a spec'd no-op (the previous value is kept, it never
+ * throws), so a sentinel round-trip is used to detect that case and fall
+ * back to `fallbackHex` (with a one-time `console.warn`) instead of
+ * silently drawing the wrong color.
+ */
+export function resolveRgb(color: string, fallbackHex: string): [number, number, number] {
+  const fallback = hexToRgb(fallbackHex) ?? [0, 0, 0];
+  const direct = hexToRgb(color);
+  if (direct) return direct;
+
+  const ctx = getScratchCtx();
+  if (!ctx) return fallback;
+
+  const sentinel = 'rgb(1, 2, 3)';
+  ctx.fillStyle = sentinel;
+  const sentinelNormalized = ctx.fillStyle;
+  ctx.fillStyle = color;
+  if (ctx.fillStyle === sentinelNormalized && color.trim() !== sentinel) {
+    warnInvalidColor(color);
+    return fallback;
+  }
+  const normalized = ctx.fillStyle;
+  return hexToRgb(normalized) ?? parseRgbString(normalized) ?? fallback;
+}
+
+/** Linearly interpolates between two already-resolved `[r, g, b]` triples at `t` in `[0, 1]`. */
+function mixRgb(from: [number, number, number], to: [number, number, number], t: number): string {
   const clamped = Math.min(1, Math.max(0, t));
-  const [r1, g1, b1] = hexToRgb(fromHex);
-  const [r2, g2, b2] = hexToRgb(toHex);
-  const r = Math.round(r1 + (r2 - r1) * clamped);
-  const g = Math.round(g1 + (g2 - g1) * clamped);
-  const b = Math.round(b1 + (b2 - b1) * clamped);
+  const r = Math.round(from[0] + (to[0] - from[0]) * clamped);
+  const g = Math.round(from[1] + (to[1] - from[1]) * clamped);
+  const b = Math.round(from[2] + (to[2] - from[2]) * clamped);
   return `rgb(${r}, ${g}, ${b})`;
+}
+
+/** Linearly interpolates between two CSS colors (any valid syntax) at `t` in `[0, 1]`. */
+export function mixColor(fromColor: string, toColor: string, t: number): string {
+  return mixRgb(resolveRgb(fromColor, FALLBACK_SCALE_LO), resolveRgb(toColor, FALLBACK_SCALE_HI), t);
 }
 
 /**
@@ -39,7 +108,8 @@ function mixColor(fromHex: string, toHex: string, t: number): string {
  * ramp's endpoints are read from the `--lyra-heatmap-scale-lo`/`-hi` custom
  * properties (declared in `heatmap.styles.ts`) so hosts can retheme it —
  * canvas can't consume `var()` directly, so they're resolved once per draw
- * via `getComputedStyle`.
+ * via `getComputedStyle`, then normalized to RGB by `resolveRgb()` (any
+ * valid CSS color syntax, not just hex — see its doc comment).
  *
  * @customElement lyra-heatmap
  * @csspart base, canvas, legend
@@ -131,9 +201,9 @@ export class LyraHeatmap extends LyraElement {
     const lo = flat.length ? Math.min(...flat) : 0;
     const hi = flat.length ? Math.max(...flat) : 1;
     const [scaleLo, scaleHi] = this.scaleEndpoints();
-    const ramp = Array.from({ length: RAMP_STEPS }, (_, i) =>
-      mixColor(scaleLo, scaleHi, i / (RAMP_STEPS - 1)),
-    );
+    const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
+    const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
+    const ramp = Array.from({ length: RAMP_STEPS }, (_, i) => mixRgb(loRgb, hiRgb, i / (RAMP_STEPS - 1)));
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -146,8 +216,12 @@ export class LyraHeatmap extends LyraElement {
           const step = sqrtStep(v, hi, RAMP_STEPS);
           ctx.fillStyle = step < 0 ? NO_DATA_FILL : ramp[step]!;
         } else {
+          // linearAlpha() returns a 0.1-1.0 ramp position; reused here as a
+          // mix ratio between the two ramp-endpoint colors (rather than as a
+          // literal canvas alpha channel) so the 'linear' scale also respects
+          // --lyra-heatmap-scale-lo/-hi.
           const t = linearAlpha(v, lo, hi);
-          ctx.fillStyle = mixColor(scaleLo, scaleHi, t);
+          ctx.fillStyle = mixRgb(loRgb, hiRgb, t);
         }
         ctx.fillRect(x, y, this.cellSize - 1, this.cellSize - 1);
       }
