@@ -16,6 +16,8 @@ npm install @aceshooting/lyra-ui
 # peer: Lit is bundled; Floating UI ships with the positioned components
 # optional peer: @aceshooting/lyra-flags, only needed for <lyra-flag>
 # optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lyra-graph>
+# optional peer: chart.js, chartjs-plugin-zoom, only needed for the <lyra-*-chart>/<lyra-histogram> family
+# optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lyra-box-plot>
 ```
 
 ## Usage
@@ -85,10 +87,13 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-heatmap>` | — (extra) | DPR-aware Canvas matrix heatmap |
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy for graph/document navigation |
+| `<lyra-chart>` | `wa-chart` | Core Chart.js wrapper (`Series`-based, plus raw `config` passthrough) — needs the optional peer deps `chart.js`, `chartjs-plugin-zoom` |
+| `<lyra-bar-chart>`, `<lyra-line-chart>`, `<lyra-pie-chart>`, `<lyra-doughnut-chart>`, `<lyra-scatter-chart>`, `<lyra-bubble-chart>`, `<lyra-radar-chart>`, `<lyra-polar-area-chart>` | `wa-chart` | Typed `<lyra-chart>` subclasses with `type` locked — same optional peer deps as `<lyra-chart>` |
+| `<lyra-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
+| `<lyra-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lyra-chart>` |
 
 **Roadmap** (survey-driven, see `docs/superpowers/specs/` at the repo root)
 
-- **Charts** (mirror `wa-chart` family + box-plot/histogram; `chart.js` optional peer dep)
 - **Bigger tracks:** `lyra-map` (maplibre), `lyra-file-input`
 
 ## Development

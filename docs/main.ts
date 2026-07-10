@@ -13,6 +13,13 @@ import type {
   GraphLink,
   LyraTree,
   TreeItem,
+  LyraBarChart,
+  LyraLineChart,
+  LyraPieChart,
+  LyraBoxPlot,
+  LyraHistogram,
+  Series,
+  BoxPlotSeries,
 } from '../packages/lyra-ui/src/lyra.js';
 
 const data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
@@ -132,4 +139,51 @@ if (tree) {
     { id: '2', label: 'Leaf' },
   ];
   tree.data = treeData;
+}
+
+const barChart = document.getElementById('demo-bar-chart') as LyraBarChart | null;
+if (barChart) {
+  barChart.labels = ['Q1', 'Q2', 'Q3', 'Q4'];
+  const barSeries: Series[] = [{ label: 'Revenue', data: [12, 19, 14, 22] }];
+  barChart.datasets = barSeries;
+}
+
+const lineChart = document.getElementById('demo-line-chart') as LyraLineChart | null;
+if (lineChart) {
+  lineChart.labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+  const lineSeries: Series[] = [
+    { label: 'Sessions', data: [4, 7, 6, 9, 12], fill: true },
+    { label: 'Errors', data: [1, 2, 1, 0, 3], color: '#e5484d' },
+  ];
+  lineChart.datasets = lineSeries;
+}
+
+const pieChart = document.getElementById('demo-pie-chart') as LyraPieChart | null;
+if (pieChart) {
+  pieChart.labels = ['Chrome', 'Firefox', 'Safari', 'Other'];
+  const pieSeries: Series[] = [
+    { label: 'Browsers', data: [58, 18, 15, 9], color: ['#5b8def', '#f7b955', '#59c19a', '#b6b8c3'] },
+  ];
+  pieChart.datasets = pieSeries;
+}
+
+const boxPlot = document.getElementById('demo-box-plot') as LyraBoxPlot | null;
+if (boxPlot) {
+  boxPlot.labels = ['K=2', 'K=3', 'K=4'];
+  const boxSeries: BoxPlotSeries[] = [
+    {
+      label: 'Loss',
+      data: [
+        { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+        { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+        { min: 1.5, q1: 2.5, median: 3.5, q3: 4.5, max: 6.5 },
+      ],
+    },
+  ];
+  boxPlot.boxes = boxSeries;
+}
+
+const histogram = document.getElementById('demo-histogram') as LyraHistogram | null;
+if (histogram) {
+  histogram.values = [2, 4, 4, 5, 6, 6, 6, 7, 8, 9, 9, 10, 11, 12, 12, 13, 15];
 }

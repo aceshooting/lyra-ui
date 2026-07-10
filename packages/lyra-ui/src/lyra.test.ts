@@ -24,6 +24,17 @@ it('registers every component', () => {
     'graph',
     'tree',
     'tree-node',
+    'chart',
+    'bar-chart',
+    'line-chart',
+    'pie-chart',
+    'doughnut-chart',
+    'scatter-chart',
+    'bubble-chart',
+    'radar-chart',
+    'polar-area-chart',
+    'box-plot',
+    'histogram',
   ];
   for (const t of tags) {
     expect(customElements.get(`lyra-${t}`), `lyra-${t}`).to.exist;

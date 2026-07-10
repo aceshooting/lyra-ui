@@ -156,6 +156,21 @@
       <lyra-tree id="demo-tree" style="max-width: 20rem"></lyra-tree>
     </section>
 
+    <section>
+      <h2>Charts</h2>
+      <p>Optional peer deps: <code>chart.js</code> + <code>chartjs-plugin-zoom</code> (all chart tags), plus
+        <code>@sgratzl/chartjs-chart-boxplot</code> for <code>&lt;lyra-box-plot&gt;</code>.</p>
+      <div class="row" style="align-items: start">
+        <lyra-bar-chart id="demo-bar-chart" height="16rem" style="width: 22rem"></lyra-bar-chart>
+        <lyra-line-chart id="demo-line-chart" height="16rem" style="width: 22rem"></lyra-line-chart>
+        <lyra-pie-chart id="demo-pie-chart" height="16rem" style="width: 16rem"></lyra-pie-chart>
+      </div>
+      <div class="row" style="align-items: start; margin-top: 1rem">
+        <lyra-box-plot id="demo-box-plot" height="16rem" style="width: 22rem"></lyra-box-plot>
+        <lyra-histogram id="demo-histogram" bins="6" height="16rem" style="width: 22rem"></lyra-histogram>
+      </div>
+    </section>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
