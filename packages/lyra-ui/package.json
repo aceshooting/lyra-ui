@@ -92,6 +92,7 @@
     "@types/d3-force": "^3.0.0",
     "@types/d3-selection": "^3.0.0",
     "@types/d3-zoom": "^3.0.0",
+    "@types/geojson": "^7946.0.16",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",

@@ -31,12 +31,18 @@ const hammerEsmInteropPlugin = {
  * bundle, which do this CJS/UMD interop automatically; `@web/test-runner`
  * serves unbundled ESM, so this tiny plugin appends a synthetic named export
  * once maplibre-gl.js has run and populated `globalThis.maplibregl`.
+ *
+ * The exported local binding is deliberately NOT named `Map` — an ES module's
+ * top-level `const Map = ...` would lexically shadow the native `Map`
+ * collection class for the *entire* module (this file's own minified bundle
+ * uses `new Map()` internally), corrupting maplibre-gl's own initialization.
+ * Bind to a private name and export-rename it to `Map` instead.
  */
 const maplibreEsmInteropPlugin = {
   name: 'maplibre-gl-esm-interop',
   transform(context) {
     if (context.response.is('js') && context.path.endsWith('/maplibre-gl/dist/maplibre-gl.js')) {
-      return `${context.body}\nexport const Map = globalThis.maplibregl.Map;\n`;
+      return `${context.body}\nconst __lyraMaplibreMap = globalThis.maplibregl.Map;\nexport { __lyraMaplibreMap as Map };\n`;
     }
   },
 };

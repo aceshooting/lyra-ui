@@ -74,6 +74,9 @@ importers:
       '@types/d3-zoom':
         specifier: ^3.0.0
         version: 3.0.8
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
       '@web/dev-server-esbuild':
         specifier: ^2.0.0
         version: 2.0.0
