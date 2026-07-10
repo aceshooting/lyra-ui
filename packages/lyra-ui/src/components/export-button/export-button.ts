@@ -35,6 +35,37 @@ export class LyraExportButton extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
+    document.removeEventListener('pointerdown', this.onDocPointer);
+  }
+
+  private onDocPointer = (e: PointerEvent): void => {
+    if (!e.composedPath().includes(this)) this.closeMenu();
+  };
+
+  private openMenu(): void {
+    if (this.open) return;
+    this.open = true;
+    document.addEventListener('pointerdown', this.onDocPointer);
+  }
+
+  private closeMenu(): void {
+    if (!this.open) return;
+    this.open = false;
+    document.removeEventListener('pointerdown', this.onDocPointer);
+  }
+
+  private onKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && this.open) {
+      e.preventDefault();
+      this.closeMenu();
+      (this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null)?.focus();
+    }
+  };
+
+  protected firstUpdated(): void {
+    // Single delegated listener catches Escape from the trigger button or
+    // any menu-item inside this shadow root.
+    this.renderRoot.addEventListener('keydown', this.onKeyDown as EventListener);
   }
 
   protected updated(changed: PropertyValues): void {
@@ -50,7 +81,7 @@ export class LyraExportButton extends LyraElement {
   }
 
   private doExport(format: ExportFormat): void {
-    this.open = false;
+    this.closeMenu();
     const ev = this.emit('lyra-export', { format });
     if (ev.defaultPrevented) return;
 
@@ -65,12 +96,19 @@ export class LyraExportButton extends LyraElement {
   private onTriggerClick(): void {
     if (this.disabled) return;
     if (this.formats.length <= 1) this.doExport(this.formats[0] ?? 'csv');
-    else this.open = !this.open;
+    else this.open ? this.closeMenu() : this.openMenu();
   }
 
   render(): TemplateResult {
     return html`
-      <button part="trigger" type="button" ?disabled=${this.disabled} @click=${() => this.onTriggerClick()}>
+      <button
+        part="trigger"
+        type="button"
+        ?disabled=${this.disabled}
+        aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
+        aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}
+        @click=${() => this.onTriggerClick()}
+      >
         ${this.label}
       </button>
       ${this.formats.length > 1

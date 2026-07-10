@@ -55,6 +55,53 @@ it('reflects open as a host attribute so the menu becomes visible', async () => 
   expect(getComputedStyle(menu).display).to.not.equal('none');
 });
 
+it('closes the menu on an outside pointerdown', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('closes on Escape and returns focus to the trigger', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.shadowRoot!.activeElement).to.equal(trigger);
+});
+
+it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(trigger.getAttribute('aria-expanded')).to.equal('false');
+  trigger.click();
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-expanded')).to.equal('true');
+
+  el.formats = ['csv'];
+  await el.updateComplete;
+  const singleTrigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(singleTrigger.hasAttribute('aria-haspopup')).to.be.false;
+  expect(singleTrigger.hasAttribute('aria-expanded')).to.be.false;
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   await expect(el).to.be.accessible();
