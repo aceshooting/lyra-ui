@@ -11,6 +11,13 @@ it('registers every component', () => {
     'date-picker',
     'date-input',
     'flag',
+    'empty',
+    'skeleton',
+    'stat',
+    'table',
+    'gauge',
+    'export-button',
+    'split',
   ];
   for (const t of tags) {
     expect(customElements.get(`lyra-${t}`), `lyra-${t}`).to.exist;

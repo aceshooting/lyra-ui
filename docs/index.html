@@ -76,6 +76,60 @@
       </div>
     </section>
 
+    <section>
+      <h2>Stat</h2>
+      <div class="row">
+        <lyra-stat label="Revenue" value="12.4" unit="k€" trend="3.2" variant="success"></lyra-stat>
+        <lyra-stat label="Errors" value="128" trend="-5.1" variant="danger"></lyra-stat>
+        <lyra-stat label="Sessions" value="9,204"></lyra-stat>
+      </div>
+    </section>
+
+    <section>
+      <h2>Table</h2>
+      <lyra-table id="demo-table"></lyra-table>
+    </section>
+
+    <section>
+      <h2>Gauge</h2>
+      <div class="row">
+        <lyra-gauge value="72" max="100" label="CPU"></lyra-gauge>
+        <lyra-gauge type="linear" value="40" max="100" label="Disk"></lyra-gauge>
+      </div>
+    </section>
+
+    <section>
+      <h2>Export button</h2>
+      <div class="row">
+        <lyra-export-button id="demo-export" filename="demo"></lyra-export-button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Split</h2>
+      <lyra-split style="height: 8rem; border: 1px solid #ddd">
+        <div style="padding: 0.5rem">Panel A</div>
+        <div style="padding: 0.5rem">Panel B</div>
+        <div style="padding: 0.5rem">Panel C</div>
+      </lyra-split>
+    </section>
+
+    <section>
+      <h2>Empty</h2>
+      <lyra-empty heading="No results" description="Try a different search.">
+        <span slot="actions"><button>Reset</button></span>
+      </lyra-empty>
+    </section>
+
+    <section>
+      <h2>Skeleton</h2>
+      <div class="row">
+        <lyra-skeleton width="10rem" height="1rem"></lyra-skeleton>
+        <lyra-skeleton variant="circle" width="3rem" height="3rem"></lyra-skeleton>
+        <lyra-skeleton variant="rect" effect="sheen" width="6rem" height="3rem"></lyra-skeleton>
+      </div>
+    </section>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

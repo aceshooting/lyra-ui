@@ -72,10 +72,16 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
+| `<lyra-empty>` | — (extra) | Generic empty/no-data state |
+| `<lyra-skeleton>` | — (extra) | Loading placeholder (pulse/sheen) |
+| `<lyra-stat>` | — (extra) | KPI/stat card with trend pill |
+| `<lyra-table>` | — (extra) | Presentational, sort/select-aware data table |
+| `<lyra-gauge>` | — (extra) | Radial or linear meter |
+| `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
+| `<lyra-split>` | — (extra) | Resizable panel layout |
 
 **Roadmap** (survey-driven, see `docs/superpowers/specs/` at the repo root)
 
-- **Dashboard atoms:** `lyra-table`, `lyra-stat`, `lyra-empty`, `lyra-skeleton`, `lyra-gauge`, `lyra-export-button`, `lyra-split`
 - **Temporal + graph:** `lyra-time-range` + `lyra-playback`, `lyra-heatmap`, `lyra-graph`, `lyra-tree`
 - **Charts** (mirror `wa-chart` family + box-plot/histogram; `chart.js` optional peer dep)
 - **Bigger tracks:** `lyra-map` (maplibre), `lyra-file-input`

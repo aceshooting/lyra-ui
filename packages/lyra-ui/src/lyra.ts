@@ -7,6 +7,13 @@ import './components/combobox/option.js';
 import './components/date-picker/date-picker.js';
 import './components/date-picker/date-input.js';
 import './components/flag/flag.js';
+import './components/empty/empty.js';
+import './components/skeleton/skeleton.js';
+import './components/stat/stat.js';
+import './components/table/table.js';
+import './components/gauge/gauge.js';
+import './components/export-button/export-button.js';
+import './components/split/split.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -24,6 +31,20 @@ export type { DateRange } from './components/date-picker/date-picker.js';
 export { LyraDateInput } from './components/date-picker/date-input.js';
 export { LyraFlag } from './components/flag/flag.js';
 export { LANGUAGE_TO_COUNTRY, languageToCountry } from './components/flag/language-map.js';
+export { LyraEmpty } from './components/empty/empty.js';
+export { LyraSkeleton } from './components/skeleton/skeleton.js';
+export type { SkeletonVariant, SkeletonEffect } from './components/skeleton/skeleton.js';
+export { LyraStat } from './components/stat/stat.js';
+export type { StatVariant } from './components/stat/stat.js';
+export { LyraTable } from './components/table/table.js';
+export type { TableColumn } from './components/table/table.js';
+export { LyraGauge } from './components/gauge/gauge.js';
+export type { GaugeType } from './components/gauge/gauge.js';
+export { LyraExportButton } from './components/export-button/export-button.js';
+export type { ExportFormat } from './components/export-button/export-button.js';
+export { escapeCsvField, buildCsv, downloadBlob } from './components/export-button/csv.js';
+export type { CsvColumn } from './components/export-button/csv.js';
+export { LyraSplit } from './components/split/split.js';
 
 export { LyraElement } from './internal/lyra-element.js';
 export { FormAssociated } from './internal/form-associated.js';
