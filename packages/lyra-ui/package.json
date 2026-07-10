@@ -21,7 +21,10 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "custom-elements.json",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "exports": {
     ".": "./dist/lyra.js",
@@ -37,7 +40,8 @@
     "test": "wtr",
     "test:watch": "wtr --watch",
     "manifest": "cem analyze --litelement --outdir .",
-    "lint": "tsc --noEmit -p tsconfig.json"
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "prepack": "pnpm run manifest"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
