@@ -18,6 +18,14 @@ function dropWith(el: HTMLElement, files: File[]): void {
   el.dispatchEvent(ev);
 }
 
+function dragEnterWith(el: HTMLElement, files: File[]): void {
+  const dt = new DataTransfer();
+  for (const f of files) dt.items.add(f);
+  const ev = new DragEvent('dragenter', { bubbles: true, cancelable: true });
+  Object.defineProperty(ev, 'dataTransfer', { value: dt });
+  el.dispatchEvent(ev);
+}
+
 it('renders the label text by default', async () => {
   const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
   expect(el.shadowRoot!.textContent).to.contain('Drop files here or click to browse');
@@ -91,6 +99,14 @@ it('enforces accept on the drop path, not just the native picker', async () => {
   expect(ev.detail.files.length).to.equal(0);
   expect(ev.detail.rejected.length).to.equal(1);
   expect(ev.detail.rejected[0].reason).to.equal('type');
+});
+
+it('does not throw on dragenter when accept has an extension pattern', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input accept=".csv,.xlsx"></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(() => dragEnterWith(base, [makeFile('a.png', 'image/png')])).to.not.throw();
 });
 
 it('matches an accept MIME wildcard on drop', async () => {

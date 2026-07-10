@@ -5,6 +5,11 @@
  * now also enforced on the drag-drop path (2026-07-10 audit,
  * "map-file-input" §lyra-file-input, High: previously `accept` only
  * constrained the native picker dialog and had no effect on drop).
+ *
+ * `file` may be a `DataTransferItem` cast as `File` (the dragenter-preview
+ * call site, before the drop payload has real `File` objects) - unlike
+ * `File`, `DataTransferItem` has no `.name`, only `.type`, so extension
+ * patterns (`.csv`) can't be evaluated pre-drop and never match.
  */
 export function matchesAccept(file: File, accept: string): boolean {
   const parts = accept
@@ -13,11 +18,11 @@ export function matchesAccept(file: File, accept: string): boolean {
     .filter(Boolean);
   if (parts.length === 0) return true;
 
-  const name = file.name.toLowerCase();
+  const name = file.name?.toLowerCase();
   const type = (file.type || '').toLowerCase();
 
   return parts.some((p) => {
-    if (p.startsWith('.')) return name.endsWith(p);
+    if (p.startsWith('.')) return name !== undefined && name.endsWith(p);
     if (p.endsWith('/*')) return type.startsWith(p.slice(0, -1));
     return type === p;
   });

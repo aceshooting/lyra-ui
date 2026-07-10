@@ -21,3 +21,12 @@ it('matches a MIME wildcard', () => {
 it('accepts anything when accept is empty', () => {
   expect(matchesAccept(file('a.exe', 'application/x-msdownload'), '')).to.be.true;
 });
+
+it('does not throw and does not match an extension pattern when name is unavailable', () => {
+  // Simulates a DataTransferItem cast as File (dragenter preview, pre-drop): has
+  // `.type` but no `.name`.
+  const nameless = { type: 'text/csv' } as File;
+  expect(() => matchesAccept(nameless, '.csv,.xlsx')).to.not.throw();
+  expect(matchesAccept(nameless, '.csv,.xlsx')).to.be.false;
+  expect(matchesAccept(nameless, 'text/csv')).to.be.true;
+});
