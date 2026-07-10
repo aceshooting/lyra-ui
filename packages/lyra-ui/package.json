@@ -45,10 +45,12 @@
   },
   "peerDependencies": {
     "@aceshooting/lyra-flags": "^0.1.0",
-    "d3-force": "^3.0.0",
+    "chart.js": "^4.5.0",
+    "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
-    "d3-zoom": "^3.0.0",
-    "d3-selection": "^3.0.0"
+    "d3-force": "^3.0.0",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "@aceshooting/lyra-flags": {
@@ -65,6 +67,12 @@
     },
     "d3-selection": {
       "optional": true
+    },
+    "chart.js": {
+      "optional": true
+    },
+    "chartjs-plugin-zoom": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -78,6 +86,8 @@
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
+    "chart.js": "^4.5.0",
+    "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
