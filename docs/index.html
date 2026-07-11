@@ -10,19 +10,47 @@
       it in via docs/main.ts) — lyra-map only ships its own legend/popup CSS.
     -->
     <style>
+      /*
+        This page is the library's own showcase, so its chrome mirrors the
+        light/dark fallback values that packages/lyra-ui/src/internal/tokens.styles.ts
+        defines inside each component's shadow-root :host (those --lyra-* custom
+        properties aren't visible out here in the light DOM, hence the --demo-*
+        mirrors instead of a direct var(--lyra-*) reference).
+      */
+      :root {
+        --demo-font: system-ui, sans-serif;
+        --demo-color-surface: #fff;
+        --demo-color-text: #1a1a1a;
+        --demo-color-text-quiet: #6b7280;
+        --demo-color-border: #8a8a90;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --demo-color-surface: #1a1a1a;
+          --demo-color-text: #f2f2f2;
+          --demo-color-text-quiet: #9aa1ac;
+          --demo-color-border: #4a4a52;
+        }
+      }
       body {
-        font-family: system-ui, sans-serif;
+        font-family: var(--demo-font);
         max-width: 60rem;
         margin: 2rem auto;
         padding: 0 1rem;
         line-height: 1.5;
+        background: var(--demo-color-surface);
+        color: var(--demo-color-text);
       }
       section {
         margin-block: 2.5rem;
       }
       h2 {
-        border-bottom: 1px solid #ddd;
+        border-bottom: 1px solid var(--demo-color-border);
         padding-bottom: 0.25rem;
+      }
+      .tagline {
+        color: var(--demo-color-text-quiet);
       }
       .row {
         display: flex;
@@ -34,6 +62,7 @@
   </head>
   <body>
     <h1>Lyra UI — Playground</h1>
+    <p class="tagline">Free, clean-room Lit web components — a companion to Web Awesome.</p>
 
     <section>
       <h2>Sparkline</h2>
