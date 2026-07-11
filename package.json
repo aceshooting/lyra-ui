@@ -4,6 +4,9 @@
   "private": true,
   "description": "Monorepo for @aceshooting/lyra-ui and its optional companion packages.",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "pnpm -r --if-present run build",
     "test": "pnpm -r --if-present run test",
