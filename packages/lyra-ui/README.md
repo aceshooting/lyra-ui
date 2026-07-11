@@ -79,9 +79,8 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 ## Components
 
 All 34 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
-Tier 3, then a map/file-input batch). Grouped by the release that introduced each — see
-[`../../docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md`](../../docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md)
-for what's planned next.
+Tier 3, then a map/file-input batch). Grouped by the release that introduced each. Planned
+follow-up work is tracked internally and not yet published as part of this repo's committed docs.
 
 **v1 — form controls, toasts, sparkline**
 
@@ -134,11 +133,8 @@ for what's planned next.
 
 ## Known limitations
 
-A non-exhaustive list of gaps a new consumer should know about before adopting — full detail and
-fix status in
-[`.superpowers/sdd/2026-07-10-cross-repo-audit-report.md`](../../.superpowers/sdd/2026-07-10-cross-repo-audit-report.md)
-and
-[`docs/superpowers/plans/2026-07-10-lyra-ui-tier4-hardening.md`](../../docs/superpowers/plans/2026-07-10-lyra-ui-tier4-hardening.md):
+A non-exhaustive list of gaps a new consumer should know about before adopting (tracked
+internally; fix status isn't yet published as a committed doc in this repo):
 
 - `required` doesn't yet enforce constraint validation on `<lyra-date-input>`/`<lyra-combobox>` —
   neither calls `internals.setValidity()`, so `form.reportValidity()`/`checkValidity()` always
