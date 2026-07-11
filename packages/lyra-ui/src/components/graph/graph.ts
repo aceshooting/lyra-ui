@@ -92,6 +92,8 @@ export class LyraGraph extends LyraElement {
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
   @property({ type: Number, attribute: 'link-distance' }) linkDistance = 100;
+  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.1;
+  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 8;
 
   /** True until the lazy-loaded d3 peer dependencies have settled (success or failure). */
   @state() private loading = true;
@@ -159,9 +161,12 @@ export class LyraGraph extends LyraElement {
     const svgEl = this.renderRoot.querySelector('svg');
     if (svgEl && svgEl !== this.zoomedEl) {
       this.zoomedEl = svgEl;
-      const zoomBehavior = this.d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
-        this.transform = event.transform.toString();
-      });
+      const zoomBehavior = this.d3
+        .zoom<SVGSVGElement, unknown>()
+        .scaleExtent([this.minZoom, this.maxZoom])
+        .on('zoom', (event) => {
+          this.transform = event.transform.toString();
+        });
       this.d3.select(svgEl).call(zoomBehavior);
     }
 
