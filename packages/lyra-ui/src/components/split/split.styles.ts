@@ -15,6 +15,7 @@ export const styles = css`
     flex-direction: column;
   }
   [part='divider'] {
+    position: relative;
     flex: 0 0 auto;
     inline-size: 3px;
     block-size: auto;
@@ -22,14 +23,30 @@ export const styles = css`
     cursor: col-resize;
     touch-action: none;
   }
+  /* Transparent hit-slop: widens the draggable/tappable box along the resize
+     axis only, without changing the divider's visible 3px width. Generated
+     content is part of the originating element's hit-test box, so pointer
+     events here still resolve e.target to [part="divider"] itself. */
+  [part='divider']::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline: -6px;
+  }
   :host([orientation='vertical']) [part='divider'] {
     inline-size: auto;
     block-size: 3px;
     cursor: row-resize;
   }
-  [part='divider']:hover,
-  [part='divider']:focus-visible {
+  :host([orientation='vertical']) [part='divider']::before {
+    inset-block: -6px;
+    inset-inline: 0;
+  }
+  [part='divider']:hover {
     background: var(--lyra-color-brand);
-    outline: none;
+  }
+  [part='divider']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 `;
