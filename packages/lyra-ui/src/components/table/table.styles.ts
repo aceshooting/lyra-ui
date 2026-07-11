@@ -45,15 +45,20 @@ export const styles = css`
     display: inline-block;
     margin-inline-start: var(--lyra-space-xs);
     vertical-align: middle;
+    transition: transform var(--lyra-transition-fast);
   }
   [part='sort-icon'] svg {
     display: block;
-    transition: transform var(--lyra-transition-fast);
   }
-  [part='sort-icon'][data-dir='asc'] svg {
+  /* Rotate the wrapping part element, not the svg — internal/icons.ts's
+     documented contract ("callers ... rotate the wrapping part element via
+     CSS transform: rotate(...), not the svg"). Design-review finding on
+     Task 3 (lyra-table sort indicator): this previously rotated the inner
+     <svg> directly. */
+  [part='sort-icon'][data-dir='asc'] {
     transform: rotate(-90deg);
   }
-  [part='sort-icon'][data-dir='desc'] svg {
+  [part='sort-icon'][data-dir='desc'] {
     transform: rotate(90deg);
   }
   [part='row']:hover {

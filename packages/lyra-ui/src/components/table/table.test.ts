@@ -159,6 +159,22 @@ it('flips the sort-icon rotation data-dir when sortDir changes from desc to asc'
   expect(icon!.getAttribute('data-dir')).to.equal('asc');
 });
 
+it('rotates the wrapping [part="sort-icon"] element, not the inner svg, per the icons.ts rotation contract', async () => {
+  // internal/icons.ts documents: "callers needing 'up'/'left'/'open' etc.
+  // rotate the wrapping part element via CSS transform: rotate(...), not the svg."
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.sortKey = 'score';
+  el.sortDir = 'desc';
+  await el.updateComplete;
+  const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1];
+  const icon = scoreHeader.querySelector('[part="sort-icon"]') as HTMLElement;
+  const svgEl = icon.querySelector('svg') as unknown as HTMLElement;
+  expect(getComputedStyle(icon).transform).to.not.equal('none');
+  expect(getComputedStyle(svgEl).transform).to.equal('none');
+});
+
 it('applies the shared focus-ring outline to a sortable header cell, a row, and the more-button on :focus-visible', async () => {
   const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
   el.columns = columns;
