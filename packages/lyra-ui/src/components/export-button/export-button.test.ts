@@ -52,7 +52,7 @@ it('reflects open as a host attribute so the menu becomes visible', async () => 
   await el.updateComplete;
   expect(el.hasAttribute('open')).to.be.true;
   const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
-  expect(getComputedStyle(menu).display).to.not.equal('none');
+  expect(getComputedStyle(menu).visibility).to.equal('visible');
 });
 
 it('closes the menu on an outside pointerdown', async () => {
@@ -113,8 +113,13 @@ it('animates the menu open/closed with an opacity+transform transition', async (
   expect(closedStyle.transitionDuration).to.not.equal('0s');
 
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  // visibility keeps the element in the render tree while opacity/transform
+  // are closed, so opening it now genuinely runs a transition instead of
+  // snapping instantly -- wait for it to finish before reading the end value.
+  const transitionEnd = oneEvent(menu, 'transitionend');
   trigger.click();
   await el.updateComplete;
+  await transitionEnd;
   expect(getComputedStyle(menu).opacity).to.equal('1');
 });
 

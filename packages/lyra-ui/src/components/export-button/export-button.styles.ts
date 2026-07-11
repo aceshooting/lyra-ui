@@ -29,7 +29,10 @@ export const styles = css`
     outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='menu'] {
-    display: none;
+    /* Closed state: invisible + slightly raised. visibility (not
+       display:none) so opacity/transform can actually transition; hit-testing
+       and a11y exposure stay off since this part is already position:fixed. */
+    visibility: hidden;
     position: fixed;
     z-index: 900;
     min-inline-size: 8rem;
@@ -42,10 +45,11 @@ export const styles = css`
     transform: translateY(-4px);
     transition:
       opacity var(--lyra-transition-fast),
-      transform var(--lyra-transition-fast);
+      transform var(--lyra-transition-fast),
+      visibility var(--lyra-transition-fast);
   }
   :host([open]) [part='menu'] {
-    display: block;
+    visibility: visible;
     opacity: 1;
     transform: none;
   }
