@@ -127,6 +127,7 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
     new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100000, clientX: 10, clientY: 10 }),
   );
   await el.updateComplete;
+  console.log('DEBUG transform:', g.getAttribute('transform'));
   const match = /scale\(([\d.]+)\)/.exec(g.getAttribute('transform') ?? '');
   expect(match).to.exist;
   expect(Number(match![1])).to.be.at.most(8);
