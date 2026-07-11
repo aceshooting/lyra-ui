@@ -1,5 +1,7 @@
 # Lyra UI
 
+[![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
+
 Free, clean-room [Lit](https://lit.dev) web components — a companion to
 [Web Awesome](https://webawesome.com) that provides open-source equivalents of several
 Web Awesome **Pro** components, plus a few extras. Token-compatible with Web Awesome, so
