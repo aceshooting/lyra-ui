@@ -64,9 +64,10 @@ export class LyraTimeRange extends LyraElement {
 
   private onKeyDown = (handle: Handle, e: KeyboardEvent): void => {
     // A handle that already has focus when the component becomes disabled
-    // must not still respond to arrow keys (pointer interaction is already
-    // blocked via `:host([disabled]) { pointer-events: none }` and
-    // `tabindex="-1"`, but a pre-existing focus can bypass both of those).
+    // must not still respond to arrow keys (new pointerdowns are already
+    // blocked by the `if (this.disabled) return;` guard in onPointerDown,
+    // and disabled handles carry `tabindex="-1"`, but a pre-existing focus
+    // can bypass both of those).
     if (this.disabled) return;
     const current = handle === 'start' ? this.start : this.end;
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
@@ -97,12 +98,14 @@ export class LyraTimeRange extends LyraElement {
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.dragging) return;
     if (this.disabled) {
-      // setPointerCapture routes every subsequent pointer event for this
-      // pointerId to the handle regardless of
-      // `:host([disabled]) { pointer-events: none }`, so a drag already in
-      // progress would otherwise keep mutating start/end (and emitting
-      // lyra-input) after `disabled` flips true mid-drag. Abort the drag
-      // instead of continuing to process it.
+      // These are window-level listeners driven by setPointerCapture, so
+      // they keep firing for this pointerId regardless of any CSS on the
+      // host (this was already true even back when the host used
+      // `pointer-events: none`, since that never governed an
+      // already-captured window listener) — a drag already in progress
+      // would otherwise keep mutating start/end (and emitting lyra-input)
+      // after `disabled` flips true mid-drag. Abort the drag instead of
+      // continuing to process it.
       this.endDrag(false);
       return;
     }

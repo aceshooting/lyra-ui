@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './time-range.js';
 import type { LyraTimeRange } from './time-range.js';
+import { styles } from './time-range.styles.js';
 
 it('reflects start/end as the range fill width', async () => {
   const el = (await fixture(
@@ -237,4 +238,41 @@ it('drags the start handle with pointer events and emits lyra-input then lyra-ch
   el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   expect(changeDetail!.start).to.equal(50);
+});
+
+it('widens the handle hit/drag area past the visible 14px dot via a transparent ::before', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  // The visible dot itself must stay 14px (unchanged design).
+  expect(getComputedStyle(startHandle).width).to.equal('14px');
+  // The actual hit/drag area (the ::before hit-slop) must be widened well
+  // past the visible dot, closer to the ~24-28px minimum touch target size.
+  const before = getComputedStyle(startHandle, '::before');
+  expect(before.content).to.not.equal('none');
+  expect(before.width).to.equal('28px');
+  expect(before.height).to.equal('28px');
+});
+
+it('uses cursor:not-allowed (not pointer-events:none) when disabled, matching every other lyra-* control', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80" disabled></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const hostStyle = getComputedStyle(el);
+  expect(hostStyle.pointerEvents).to.not.equal('none');
+  expect(hostStyle.cursor).to.equal('not-allowed');
+  expect(hostStyle.opacity).to.equal('0.5');
+  // [part^='handle'] sets `cursor: grab` unconditionally, so the
+  // disabled-cursor rule must be restated on the handle specifically for it
+  // to actually change there too, not just on the track.
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  expect(getComputedStyle(startHandle).cursor).to.equal('not-allowed');
+});
+
+it('references the shared focus-ring tokens on the handle focus-visible outline instead of hardcoded literals', () => {
+  expect(styles.cssText).to.include(
+    'outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color)',
+  );
+  expect(styles.cssText).to.include('outline-offset: var(--lyra-focus-ring-offset)');
 });

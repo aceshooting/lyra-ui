@@ -38,12 +38,42 @@ export const styles = css`
     cursor: grab;
     touch-action: none;
   }
+  /*
+   * The visible dot stays 14px by design, but that's well under the ~24px
+   * minimum touch target size despite \`touch-action: none\` signalling this
+   * is meant to be touch-dragged. Widen the actual hit/drag area with a
+   * transparent ::before instead of growing the handle box itself:
+   * onPointerMove (time-range.ts) never reads the handle's own
+   * getBoundingClientRect() — it only measures \`[part="base"]\`'s rect and
+   * e.clientX/e.clientY — and a pointerdown inside the ::before still
+   * reports \`e.target\` as the real handle element (pseudo-elements have no
+   * separate DOM node/event target), so this is purely additive and cannot
+   * change the drag math.
+   */
+  [part^='handle']::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 28px;
+    block-size: 28px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
   [part^='handle']:focus-visible {
-    outline: 2px solid var(--lyra-color-brand);
-    outline-offset: 2px;
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
   :host([disabled]) {
-    opacity: 0.5;
-    pointer-events: none;
+    opacity: var(--lyra-opacity-disabled);
+    cursor: not-allowed;
+  }
+  :host([disabled]) [part^='handle'] {
+    /* [part^='handle'] above sets \`cursor: grab\` unconditionally, which
+       would otherwise keep winning over the inherited :host cursor (it
+       isn't conditioned on [disabled]) — restate not-allowed here so the
+       cursor actually changes over the handles themselves, not just the
+       track/base. */
+    cursor: not-allowed;
   }
 `;
