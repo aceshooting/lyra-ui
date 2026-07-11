@@ -91,8 +91,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     /**
      * Recomputes `ElementInternals`'s validity state. Without this,
      * `internals` defaults to permanently "valid" and `required` never
-     * blocks form submission — the single highest-leverage correctness gap
-     * the 2026-07-10 cross-repo audit found (forms-core §internal/, High).
+     * blocks form submission.
      */
     protected updateValidity(): void {
       if (this.required && this._value === '') {

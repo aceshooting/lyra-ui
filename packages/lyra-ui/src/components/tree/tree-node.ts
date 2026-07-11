@@ -78,8 +78,8 @@ const styles = css`
  * the *host* element, not the internal `[part="row"]` div — that makes this
  * node's own nested children (rendered in *its own* shadow root as further
  * `role="group"` content) genuine DOM descendants of the treeitem, which is
- * what the WAI-ARIA treeitem pattern requires (2026-07-10 audit,
- * "temporal-graph" §lyra-tree, Medium — previously a shadow-root sibling).
+ * what the WAI-ARIA treeitem pattern requires (previously a shadow-root
+ * sibling).
  *
  * @customElement lyra-tree-node
  * @csspart row, toggle, label, badge

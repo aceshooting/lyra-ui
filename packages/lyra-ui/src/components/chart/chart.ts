@@ -66,7 +66,7 @@ function deepMerge<T>(base: T, override: unknown): T {
  * `<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag
  * subclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.
  *
- * **API mirror note (Task 0):** the real `wa-chart` docs page
+ * **API mirror note:** the real `wa-chart` docs page
  * (https://webawesome.com/docs/components/chart/) documents a `config:
  * ChartJS['config']` property alongside its simplified attributes — "a
  * flexible wrapper around Chart.js" supporting *both* simplified attributes

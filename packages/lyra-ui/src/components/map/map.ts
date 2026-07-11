@@ -75,10 +75,10 @@ export class LyraMap extends LyraElement {
   private _styleLoaded = false;
   // Tracks the currently-applied choropleth's sourceId/fillLayerId so a
   // clear (`choropleth = undefined`) or a sourceId change can remove the
-  // previous layer/source instead of leaking it (2026-07-12 gui-map parity
-  // study: gui-map avoids this class of bug entirely via a declarative
-  // light-DOM-children model where removing a child removes its layer —
-  // out of scope for this additive fix, tracked as a v2 option).
+  // previous layer/source instead of leaking it. A declarative light-DOM-
+  // children model (where removing a child removes its layer) would avoid
+  // this class of bug entirely, but that's a larger redesign — tracked as a
+  // possible v2 option.
   private _appliedChoroplethSourceId?: string;
   private _appliedFillLayerId?: string;
   private _maplibreModule: any;

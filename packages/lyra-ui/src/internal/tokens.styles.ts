@@ -23,7 +23,7 @@ export const tokens = css`
 
     /* Motion — every component that animates (popovers, gauge fill, toast)
        reads from these two instead of hand-rolling its own duration/easing,
-       so the library has one consistent rhythm (2026-07-10 design review). */
+       so the library has one consistent rhythm. */
     --lyra-transition-fast: var(--wa-transition-fast, 120ms ease-out);
     --lyra-transition-base: var(--wa-transition-normal, 180ms ease-out);
 
@@ -50,8 +50,8 @@ export const tokens = css`
   /* Standalone (no Web Awesome theme) dark-mode fallback. A real --wa-* value
      from a consumer's theme always wins — this only changes what a bare
      lyra-ui component renders when dropped, unstyled, onto a dark host page
-     (2026-07-10 design review: previously zero dark-mode adaptation existed
-     in the pure-fallback case). */
+     (previously zero dark-mode adaptation existed in the pure-fallback
+     case). */
   @media (prefers-color-scheme: dark) {
     :host {
       --lyra-color-surface: var(--wa-color-surface-default, #1a1a1a);

@@ -147,10 +147,10 @@ export class LyraTimeRange extends LyraElement {
       this.end = Math.min(hi, Math.max(lo, this.end));
     }
     // Keep start <= end regardless of which side changed (a controlled
-    // caller may set only `end`, e.g. two-way-binding an external store —
-    // see finding in 2026-07-09 tier2 review). The handle that just moved
-    // wins; the other side is pulled to meet it, mirroring the direction
-    // `clamp()` already uses during interactive dragging.
+    // caller may set only `end`, e.g. two-way-binding an external store).
+    // The handle that just moved wins; the other side is pulled to meet it,
+    // mirroring the direction `clamp()` already uses during interactive
+    // dragging.
     if (changed.has('start') || changed.has('min') || changed.has('max')) {
       this.start = Math.min(this.start, this.end);
     }

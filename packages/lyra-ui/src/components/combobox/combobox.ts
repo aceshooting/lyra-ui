@@ -171,10 +171,9 @@ export class LyraCombobox extends LyraElement {
       this._defaultCaptured = true;
       // Seed the initial selection — and the reset default — from
       // declarative `<lyra-option selected>` markup — mirrors native
-      // `<select><option selected>` — the exact case the audit found
-      // silently ignored (forms-core §combobox, Medium). This is the only
-      // place `_defaultSelected` is set; picking an option later (the
-      // `value` setter) never redefines the reset default, so an
+      // `<select><option selected>`, which was previously silently ignored.
+      // This is the only place `_defaultSelected` is set; picking an option
+      // later (the `value` setter) never redefines the reset default, so an
       // initially-unselected combobox always resets back to empty even
       // after the user has picked something.
       const declared = this.options.filter((o) => o.selected).map((o) => o.value);

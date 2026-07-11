@@ -6,7 +6,7 @@ import { svg, type SVGTemplateResult } from 'lit';
  * date-input calendar toggle) as literal Unicode/HTML-entity/emoji text
  * glyphs — font-dependent, non-recolorable beyond plain text color, and
  * inconsistent in weight/size across the OS/browser font stack a host page
- * happens to ship (2026-07-10 design review). These replace all of them.
+ * happens to ship. These replace all of them.
  *
  * Every icon shares one 24x24 viewBox and one stroke-width so the whole set
  * reads as one visual language; each renders at `1em` so it inherits the

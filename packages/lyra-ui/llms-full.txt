@@ -1399,5 +1399,3 @@ These apply across the whole library rather than to any one component:
   `package.json`'s `files` allowlist, with no `prepack`/publish CI step regenerating it — so a
   manifest-driven IDE/tooling integration (e.g. custom-elements-manifest-based autocomplete) may
   not see it in a published tarball until that packaging gap is fixed.
-- **Adoption status.** Zero real-world adoption of `@aceshooting/lyra-ui` currently exists in any
-  consumer repo — treat any "battle-tested in production" framing with that caveat.

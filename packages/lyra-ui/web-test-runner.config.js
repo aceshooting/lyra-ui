@@ -23,8 +23,8 @@ const hammerEsmInteropPlugin = {
 };
 
 /**
- * `maplibre-gl` (Task 1's `lyra-map`, optional peer dep) declares
- * `"type": "module"` in its package.json but its `main` (`dist/maplibre-gl.js`)
+ * `maplibre-gl` (an optional peer dep of `lyra-map`) declares `"type":
+ * "module"` in its package.json but its `main` (`dist/maplibre-gl.js`)
  * is actually a UMD bundle with no `export` statement — it just assigns
  * `globalThis.maplibregl` when it detects no CJS/AMD loader. Same root cause
  * as the hammerjs shim above: real consumers bundle with Vite/webpack/esbuild-

@@ -95,12 +95,16 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   manifest and the consumer-facing docs.
 - **Never reference internal process in code comments or shipped docs.** Comments, JSDoc, and
   the `llms.txt`/`llms-full.txt` reference must not cite internal audits or design reviews,
-  plan/spec/ledger docs, task or tier codenames (`§lyra-*`, `"dashboard-atoms"`, `Task 3`),
+  plan/spec/ledger docs, internal task/tier/project codenames, section-mark (`§`) references,
   audit severity ratings (`High`/`Medium`/`Low`), dated review findings, client/project names,
-  or adoption/"battle-tested" status. This source ships verbatim in the public npm tarball
-  (`dist/`, `custom-elements.json`, `llms*.txt` all carry these comments), so anything written
-  here is published. Keep the *technical* rationale ("previously X was broken, so we do Y") and
-  drop the provenance — a code comment explains the code, not who reviewed it.
+  local filesystem paths, or adoption/"battle-tested" status. This source ships verbatim in the
+  public npm tarball (`dist/`, `custom-elements.json`, `llms*.txt` all carry these comments), so
+  anything written here is published. Keep the *technical* rationale ("previously X was broken,
+  so we do Y") and drop the provenance — a code comment explains the code, not who reviewed it.
+  Internal planning dirs (`.superpowers/`, `docs/superpowers/` — any locally-generated planning
+  or agent-tooling output) must never be referenced by path from tracked files, and must stay
+  untracked (excluded via local `.git/info/exclude`, not the committed `.gitignore`, since the
+  exclude patterns themselves would otherwise hint at their contents).
 - License: MIT. TypeScript strict.
 
 ## Testing conventions

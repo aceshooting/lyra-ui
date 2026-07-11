@@ -21,8 +21,7 @@ export interface TableColumn<T> {
  * Header/row activation is delegated: one `click` and one `keydown`
  * listener on `<table>` resolve the target via `closest('[data-col-key]'
  * | '[data-row-key]')` and a key→object lookup map, instead of allocating
- * fresh per-column/per-row closures on every render (2026-07-10 audit,
- * "dashboard-atoms" §lyra-table, Medium).
+ * fresh per-column/per-row closures on every render.
  *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.

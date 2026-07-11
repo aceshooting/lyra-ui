@@ -79,8 +79,7 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 ## Components
 
 All 34 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
-Tier 3, then a map/file-input batch). Grouped by the release that introduced each — see
-internal planning docs (not tracked in this repository) for what's planned next.
+Tier 3, then a map/file-input batch). Grouped by the release that introduced each.
 
 **v1 — form controls, toasts, sparkline**
 
@@ -133,8 +132,7 @@ internal planning docs (not tracked in this repository) for what's planned next.
 
 ## Known limitations
 
-A non-exhaustive list of gaps a new consumer should know about before adopting (full detail and
-fix status tracked in internal planning docs, not in this repository):
+A non-exhaustive list of gaps a new consumer should know about before adopting:
 
 - `required` doesn't yet enforce constraint validation on `<lyra-date-input>`/`<lyra-combobox>` —
   neither calls `internals.setValidity()`, so `form.reportValidity()`/`checkValidity()` always

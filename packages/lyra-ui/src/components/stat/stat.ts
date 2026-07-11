@@ -32,8 +32,7 @@ export class LyraStat extends LyraElement {
 
   // Same fix `lyra-empty` already established: `[part]:empty` never matches
   // because the part always contains a literal `<slot>` child. Track real
-  // slot assignment in JS instead (2026-07-10 audit, "dashboard-atoms"
-  // §lyra-stat, High).
+  // slot assignment in JS instead.
   @state() private hasIcon = false;
   @state() private hasCaptionSlot = false;
 
@@ -56,10 +55,10 @@ export class LyraStat extends LyraElement {
     const hasTrend = !isNaN(this.trend);
     const rawDirection = this.trend > 0 ? 'up' : this.trend < 0 ? 'down' : 'flat';
     const isGood = rawDirection === 'flat' ? null : rawDirection === this.goodDirection;
-    // 2026-07-10 design review, "dashboard-atoms" §lyra-stat: the trend
-    // pill rendered literal ▲/▼ glyphs — font-dependent and inconsistent
-    // with the rest of the icon set — swapped for the shared chevronIcon(),
-    // rotated per direction via CSS on the wrapping [part='trend'].
+    // The trend pill previously rendered literal ▲/▼ glyphs — font-dependent
+    // and inconsistent with the rest of the icon set — swapped for the
+    // shared chevronIcon(), rotated per direction via CSS on the wrapping
+    // [part='trend'].
     const arrow = rawDirection === 'flat' ? '–' : chevronIcon();
     const hasCaption = this.hasCaptionSlot || this.caption.length > 0;
 

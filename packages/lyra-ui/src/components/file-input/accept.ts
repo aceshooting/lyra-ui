@@ -2,8 +2,7 @@
  * Parses a native-`accept`-style string (`".csv,.xlsx"`, `"text/csv"`,
  * `"image/*"`, or any mix, comma-separated) and reports whether `file`
  * matches it — the same three forms the browser's own file picker accepts,
- * now also enforced on the drag-drop path (2026-07-10 audit,
- * "map-file-input" §lyra-file-input, High: previously `accept` only
+ * now also enforced on the drag-drop path (previously `accept` only
  * constrained the native picker dialog and had no effect on drop).
  *
  * `file` may be a `DataTransferItem` cast as `File` (the dragenter-preview

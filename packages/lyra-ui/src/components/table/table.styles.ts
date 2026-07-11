@@ -52,9 +52,8 @@ export const styles = css`
   }
   /* Rotate the wrapping part element, not the svg — internal/icons.ts's
      documented contract ("callers ... rotate the wrapping part element via
-     CSS transform: rotate(...), not the svg"). Design-review finding on
-     Task 3 (lyra-table sort indicator): this previously rotated the inner
-     <svg> directly. */
+     CSS transform: rotate(...), not the svg"). This previously rotated the
+     inner <svg> directly. */
   [part='sort-icon'][data-dir='asc'] {
     transform: rotate(-90deg);
   }

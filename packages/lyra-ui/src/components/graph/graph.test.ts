@@ -110,6 +110,28 @@ it('wires up d3-zoom pan/zoom on the svg (per the Interfaces spec)', async () =>
   expect(g.getAttribute('transform')).to.match(/scale\(/);
 });
 
+it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+
+  // A single huge wheel delta would zoom far past any sane bound if
+  // scaleExtent isn't set.
+  svgEl.dispatchEvent(
+    new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100000, clientX: 10, clientY: 10 }),
+  );
+  await el.updateComplete;
+  const match = /scale\(([\d.]+)\)/.exec(g.getAttribute('transform') ?? '');
+  expect(match).to.exist;
+  expect(Number(match![1])).to.be.at.most(8);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;

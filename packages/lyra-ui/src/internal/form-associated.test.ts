@@ -24,8 +24,8 @@ it('submits its value via the form and restores the constructed default value on
 });
 
 it('does not let a user/programmatic value change become the reset default (true native `defaultValue` semantics)', async () => {
-  // Regression for the 2026-07-10 review: only the *content attribute*
-  // (construction-time/declarative) feeds the reset default. Without a
+  // Regression test: only the *content attribute* (construction-time/
+  // declarative) feeds the reset default. Without a
   // `value` attribute, no amount of later `.value =` assignment — however
   // many, or however "first" — may become what `form.reset()` restores to,
   // exactly like a plain native `<input>` with no `value` attribute.
