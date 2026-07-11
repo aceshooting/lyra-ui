@@ -55,6 +55,21 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
   },
 });
 
+// `type` is locked to `'bar'` the same way — the field initializer above is
+// just a default value, not an enforced lock, so without this a `type="line"`
+// attribute (or `el.type = 'line'`) would silently turn a histogram into a
+// line chart of its own bucket counts.
+Object.defineProperty(LyraHistogram.prototype, 'type', {
+  configurable: true,
+  enumerable: true,
+  get(): 'bar' {
+    return 'bar';
+  },
+  set(_v: 'bar') {
+    /* locked to 'bar'; direct writes are ignored */
+  },
+});
+
 defineElement('histogram', LyraHistogram);
 
 declare global {
