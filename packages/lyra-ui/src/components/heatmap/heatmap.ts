@@ -151,6 +151,11 @@ export class LyraHeatmap extends LyraElement {
   }
 
   private watchDpr(): void {
+    // A MediaQueryList's `matches` is fixed at creation time, so crossing the
+    // DPR threshold it was built for means building a fresh one for the new
+    // ratio — remove the previous instance's listener first, or it leaks
+    // (disconnectedCallback only ever cleans up whichever is current).
+    this.dprQuery?.removeEventListener('change', this.onDprChange);
     this.dprQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
     this.dprQuery.addEventListener('change', this.onDprChange);
   }

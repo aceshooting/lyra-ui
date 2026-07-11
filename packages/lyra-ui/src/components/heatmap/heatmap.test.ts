@@ -77,6 +77,46 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('removes the previous MediaQueryList change listener before attaching a new one on a DPR crossing', async () => {
+  const originalMatchMedia = window.matchMedia;
+  const created: Array<{
+    addCalls: EventListenerOrEventListenerObject[];
+    removeCalls: EventListenerOrEventListenerObject[];
+  }> = [];
+  window.matchMedia = ((query: string) => {
+    const addCalls: EventListenerOrEventListenerObject[] = [];
+    const removeCalls: EventListenerOrEventListenerObject[] = [];
+    created.push({ addCalls, removeCalls });
+    return {
+      matches: false,
+      media: query,
+      addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+        addCalls.push(listener);
+      },
+      removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+        removeCalls.push(listener);
+      },
+    } as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
+
+  try {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    expect(created.length).to.equal(1);
+    expect(created[0]!.addCalls.length).to.equal(1);
+
+    // Simulate a DPR crossing (the real trigger is a 'change' event on the
+    // MediaQueryList, which this fake doesn't dispatch, so invoke the
+    // private handler directly).
+    (el as unknown as { onDprChange: () => void }).onDprChange();
+
+    expect(created.length).to.equal(2);
+    // The first MediaQueryList's listener must have been removed, not leaked.
+    expect(created[0]!.removeCalls).to.deep.equal(created[0]!.addCalls);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
 it('derives cell size from the host width when fit-to-width is set', async () => {
   const el = (await fixture(
     html`<lyra-heatmap fit-to-width style="inline-size: 320px"></lyra-heatmap>`,
