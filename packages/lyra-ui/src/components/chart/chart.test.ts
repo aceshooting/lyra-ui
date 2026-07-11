@@ -161,6 +161,83 @@ it('deep-merges a nested `config.options` key without clobbering the rest of the
   expect(config.options.scales.x.type).to.equal('category');
 });
 
+it('omits the scales block for a pie chart (no cartesian or radial axis applies)', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'pie';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales).to.deep.equal({});
+});
+
+it('omits the scales block for a doughnut chart (no cartesian or radial axis applies)', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'doughnut';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales).to.deep.equal({});
+});
+
+it('builds a radial `r` scale (not cartesian x/y) for a radar chart', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'radar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.r).to.exist;
+  expect(config.options.scales.x).to.not.exist;
+  expect(config.options.scales.y).to.not.exist;
+});
+
+it('builds a radial `r` scale (not cartesian x/y) for a polarArea chart', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'polarArea';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.r).to.exist;
+  expect(config.options.scales.x).to.not.exist;
+  expect(config.options.scales.y).to.not.exist;
+});
+
+it('still builds the cartesian x/y scales block for a line chart', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x).to.exist;
+  expect(config.options.scales.y).to.exist;
+  expect(config.options.scales.r).to.not.exist;
+});
+
+it('does not let a `__proto__` key in the raw `config` passthrough pollute Object.prototype', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  const malicious = JSON.parse('{"options": {"__proto__": {"polluted": true}}}') as Partial<
+    LyraChart['config']
+  >;
+  el.config = malicious as never;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(({} as any).polluted).to.equal(undefined);
+  expect((config.options as any).polluted).to.equal(undefined);
+});
+
 it('applies `height` as `--lyra-chart-height` on the host, not on the shadow-tree [part=base] div', async () => {
   const el = (await fixture(html`<lyra-chart height="500px"></lyra-chart>`)) as LyraChart;
   await el.updateComplete;
