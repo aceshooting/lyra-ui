@@ -241,6 +241,31 @@ it('gives the clear button and expand icon a real touch target instead of collap
   await el.updateComplete;
   const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
   expect(clearBtn.getBoundingClientRect().height).to.be.greaterThan(24);
+  // WCAG 2.2 SC 2.5.8 requires a 24x24 CSS-px minimum target *in both
+  // dimensions* — a tall-but-narrow button still fails it.
+  expect(clearBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+
+  const expandIcon = el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement;
+  expect(expandIcon.getBoundingClientRect().width).to.be.greaterThan(24);
+});
+
+it('hides the error and hint parts when empty, shows them once populated', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+
+  const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  // Neither part can rely on `:empty` — each always contains a literal
+  // `<slot>` child element, so `:empty` never matches regardless of
+  // assigned/text content (same bug class fixed for lyra-stat).
+  expect(getComputedStyle(errorPart).display).to.equal('none');
+  expect(getComputedStyle(hintPart).display).to.equal('none');
+
+  el.errorText = 'Selection required';
+  el.hint = 'Pick a fruit';
+  await el.updateComplete;
+  expect(getComputedStyle(errorPart).display).to.not.equal('none');
+  expect(getComputedStyle(hintPart).display).to.not.equal('none');
 });
 
 it('renders errorText in var(--lyra-color-danger), distinct from and alongside the hint', async () => {

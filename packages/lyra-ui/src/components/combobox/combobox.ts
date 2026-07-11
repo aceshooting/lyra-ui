@@ -66,6 +66,12 @@ export class LyraCombobox extends LyraElement {
   // Set on the combobox input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
+  // `[part]:empty` never matches — the part always contains a literal
+  // `<slot>` child element regardless of assigned content — so real
+  // emptiness is tracked in JS instead (same fix as lyra-stat's
+  // icon/caption, commit 6c1004c) and reflected via `hidden`.
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
 
   private internals: ElementInternals;
   private listId = nextId('combobox-list');
@@ -90,6 +96,13 @@ export class LyraCombobox extends LyraElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+  }
+
+  protected willUpdate(): void {
+    if (!this.hasUpdated) {
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+    }
   }
 
   /** The selected value(s): a string in single mode, a string[] in `multiple` mode. */
@@ -266,6 +279,14 @@ export class LyraCombobox extends LyraElement {
     this.touched = true;
   };
 
+  private onHintSlotChange = (e: Event): void => {
+    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onErrorSlotChange = (e: Event): void => {
+    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private onKeyDown = (e: KeyboardEvent): void => {
     const opts = this.filtered.filter((o) => !o.disabled);
     switch (e.key) {
@@ -356,6 +377,8 @@ export class LyraCombobox extends LyraElement {
     const shownTags = this.multiple ? this._selected.slice(0, this.maxOptionsVisible) : [];
     const extra = this.multiple ? this._selected.length - shownTags.length : 0;
     const hasValue = this._selected.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
 
     return html`
       <div part="form-control">
@@ -416,8 +439,12 @@ export class LyraCombobox extends LyraElement {
             ? html`<div class="empty">${this.emptyText}</div>`
             : this.renderRows(filtered, activeId)}
         </div>
-        <div part="error">${this.errorText}<slot name="error"></slot></div>
-        <div part="hint">${this.hint}<slot name="hint"></slot></div>
+        <div part="error" ?hidden=${!hasError}>
+          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+        </div>
+        <div part="hint" ?hidden=${!hasHint}>
+          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        </div>
       </div>
       <slot @slotchange=${this.collectOptions} hidden></slot>
     `;

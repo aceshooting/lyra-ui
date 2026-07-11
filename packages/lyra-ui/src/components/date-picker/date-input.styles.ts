@@ -54,8 +54,12 @@ export const styles = css`
     cursor: pointer;
     color: var(--lyra-color-text-quiet);
     padding: var(--lyra-space-xs);
-    /* The row has no explicit min-block-size of its own (unlike combobox's
+    /* Real touch target in *both* dimensions (WCAG 2.2 SC 2.5.8 needs
+       24x24 CSS px, not just height — a design-review fix that only set
+       min-block-size left these buttons 24px tall but narrower than that).
+       The row has no explicit min-block-size of its own (unlike combobox's
        [part=combobox]), so it can grow to fit the full touch target. */
+    min-inline-size: var(--lyra-icon-button-size);
     min-block-size: var(--lyra-icon-button-size);
     line-height: 1;
     font-size: 1rem;
@@ -92,7 +96,11 @@ export const styles = css`
     font-size: 0.8125rem;
     color: var(--lyra-color-text-quiet);
   }
-  [part='hint']:empty {
+  /* :empty never matches here -- the part always contains a literal
+     slot child element regardless of assigned/text content -- so real
+     emptiness is tracked in JS (hasHintSlot/hasErrorSlot) and reflected via
+     the hidden attribute instead (same fix as lyra-stat's icon/caption). */
+  [part='hint'][hidden] {
     display: none;
   }
   [part='error'] {
@@ -100,7 +108,7 @@ export const styles = css`
     font-size: 0.8125rem;
     color: var(--lyra-color-danger);
   }
-  [part='error']:empty {
+  [part='error'][hidden] {
     display: none;
   }
 `;

@@ -141,6 +141,31 @@ it('gives the clear/expand buttons a real touch target instead of collapsing to 
   await el.updateComplete;
   const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
   expect(expandBtn.getBoundingClientRect().height).to.be.greaterThan(24);
+  // WCAG 2.2 SC 2.5.8 requires a 24x24 CSS-px minimum target *in both
+  // dimensions* — a tall-but-narrow button still fails it.
+  expect(expandBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
+  expect(clearBtn.getBoundingClientRect().width).to.be.greaterThan(24);
+});
+
+it('hides the error and hint parts when empty, shows them once populated', async () => {
+  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+
+  const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  // Neither part can rely on `:empty` — each always contains a literal
+  // `<slot>` child element, so `:empty` never matches regardless of
+  // assigned/text content (same bug class fixed for lyra-stat).
+  expect(getComputedStyle(errorPart).display).to.equal('none');
+  expect(getComputedStyle(hintPart).display).to.equal('none');
+
+  el.errorText = 'Invalid date';
+  el.hint = 'Use ISO format';
+  await el.updateComplete;
+  expect(getComputedStyle(errorPart).display).to.not.equal('none');
+  expect(getComputedStyle(hintPart).display).to.not.equal('none');
 });
 
 it('renders errorText in var(--lyra-color-danger), distinct from and alongside the hint', async () => {

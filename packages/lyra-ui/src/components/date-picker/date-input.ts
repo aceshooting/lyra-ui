@@ -48,6 +48,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   // Set on the date input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
+  // `[part]:empty` never matches — the part always contains a literal
+  // `<slot>` child element regardless of assigned content — so real
+  // emptiness is tracked in JS instead (same fix as lyra-stat's
+  // icon/caption, commit 6c1004c) and reflected via `hidden`.
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
 
   private get displayText(): string {
     const parts = this.value.split('/');
@@ -56,6 +62,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     if (!from) return '';
     const fmt = (d: Date) => d.toLocaleDateString(this.locale || undefined);
     return this.mode === 'range' && to ? `${fmt(from)} – ${fmt(to)}` : fmt(from);
+  }
+
+  protected willUpdate(): void {
+    if (!this.hasUpdated) {
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+    }
   }
 
   /** Open the calendar popover. */
@@ -133,6 +146,14 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     this.touched = true;
   };
 
+  private onHintSlotChange = (e: Event): void => {
+    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onErrorSlotChange = (e: Event): void => {
+    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private onPickerChange = (e: Event): void => {
     e.stopPropagation();
     const picker = e.target as LyraDatePicker;
@@ -144,6 +165,8 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
 
   render(): TemplateResult {
     const hasValue = this.value.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
     return html`
       <div part="form-control">
         <label part="form-control-label">${this.label}<slot name="label"></slot></label>
@@ -196,8 +219,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             @change=${this.onPickerChange}
           ></lyra-date-picker>
         </div>
-        <div part="error">${this.errorText}<slot name="error"></slot></div>
-        <div part="hint">${this.hint}<slot name="hint"></slot></div>
+        <div part="error" ?hidden=${!hasError}>
+          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+        </div>
+        <div part="hint" ?hidden=${!hasHint}>
+          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        </div>
       </div>
     `;
   }
