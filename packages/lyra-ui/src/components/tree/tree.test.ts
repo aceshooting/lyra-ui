@@ -208,3 +208,69 @@ it('preserves nested per-node expanded state when a nested children array is reo
   expect(after[0]).to.equal(childB, 'the "B" node instance should be reused after reordering');
   expect(after[0].expanded).to.be.true;
 });
+
+it('renders the toggle as an svg chevron rather than a text glyph', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as HTMLElement;
+  const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  expect(toggle.querySelector('svg')).to.exist;
+  expect(toggle.textContent?.trim()).to.equal('');
+});
+
+it('rotates the toggle chevron when the node is expanded', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as unknown as LyraTreeNode;
+  const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  expect(getComputedStyle(toggle).transform).to.equal('none');
+  root.expand();
+  await root.updateComplete;
+  expect(getComputedStyle(toggle).transform).to.not.equal('none');
+});
+
+it('gives the toggle a touch-friendly clickable box via padding, not just a bare 1rem glyph', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as HTMLElement;
+  const toggle = root.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  expect(parseFloat(getComputedStyle(toggle).paddingTop)).to.be.greaterThan(0);
+  const box = toggle.getBoundingClientRect();
+  expect(box.width).to.be.at.least(24); // >= 1.5rem
+  expect(box.height).to.be.at.least(24);
+});
+
+it('truncates a long label instead of overflowing, and caps indentation at depth', async () => {
+  const item = { id: 'deep', label: 'A very long label '.repeat(20) };
+  const el = (await fixture(
+    html`<lyra-tree-node .item=${item} .depth=${50}></lyra-tree-node>`,
+  )) as LyraTreeNode;
+  await el.updateComplete;
+
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const labelStyle = getComputedStyle(label);
+  expect(labelStyle.overflow).to.equal('hidden');
+  expect(labelStyle.textOverflow).to.equal('ellipsis');
+  expect(labelStyle.whiteSpace).to.equal('nowrap');
+  expect(labelStyle.minWidth).to.equal('0px');
+
+  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  // Depth 50 would be 50rem (800px) of indent uncapped; the cap holds it at
+  // 8rem plus the 0.5rem base (--lyra-space-s fallback) = 8.5rem = 136px.
+  expect(getComputedStyle(row).getPropertyValue('padding-inline-start')).to.equal('136px');
+});
+
+it('renders the badge with the higher-contrast text token instead of text-quiet', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as HTMLElement;
+  const badge = root.shadowRoot!.querySelector('[part="badge"]') as HTMLElement;
+  // --lyra-color-text falls back to #1a1a1a (rgb(26, 26, 26)) with no WA
+  // tokens loaded in the test env; --lyra-color-text-quiet falls back to
+  // #6b7280 (rgb(107, 114, 128)) — this pins the fix, not just "changed".
+  expect(getComputedStyle(badge).color).to.equal('rgb(26, 26, 26)');
+});
