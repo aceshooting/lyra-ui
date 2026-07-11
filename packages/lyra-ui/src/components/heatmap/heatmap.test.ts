@@ -77,6 +77,33 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('derives cell size from the host width when fit-to-width is set', async () => {
+  const el = (await fixture(
+    html`<lyra-heatmap fit-to-width style="inline-size: 320px"></lyra-heatmap>`,
+  )) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y', 'z', 'w'];
+  el.values = [[1, 2, 3, 4]];
+  await el.updateComplete;
+
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  expect(parseInt(canvas.style.width, 10)).to.equal(320);
+});
+
+it('ignores fit-to-width when it is not set (existing fixed-cellSize behavior)', async () => {
+  const el = (await fixture(
+    html`<lyra-heatmap cell-size="20" style="inline-size: 320px"></lyra-heatmap>`,
+  )) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y', 'z', 'w'];
+  el.values = [[1, 2, 3, 4]];
+  await el.updateComplete;
+
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  // PAD_LEFT (60) + 4 cols * 20px cellSize = 140, independent of host width.
+  expect(parseInt(canvas.style.width, 10)).to.equal(140);
+});
+
 describe('hexToRgb', () => {
   it('parses 3- and 6-digit hex strings', () => {
     expect(hexToRgb('#fff')).to.deep.equal([255, 255, 255]);

@@ -123,6 +123,15 @@ export class LyraHeatmap extends LyraElement {
   @property({ type: Number, attribute: 'cell-size' }) cellSize = 22;
   @property({ attribute: 'value-label' }) valueLabel = 'value';
   @property() scale: 'linear' | 'sqrt' = 'linear';
+  /**
+   * When set, `cellSize` is derived from the host's measured `clientWidth`
+   * on every draw (including ResizeObserver-triggered redraws) instead of
+   * the fixed `cell-size` attribute, so the grid actually fills the
+   * available width. Without this, canvas dimensions are computed purely
+   * from `PAD_LEFT + cols * cellSize`, so a resize-triggered redraw is a
+   * geometric no-op.
+   */
+  @property({ type: Boolean, attribute: 'fit-to-width' }) fitToWidth = false;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
@@ -185,8 +194,13 @@ export class LyraHeatmap extends LyraElement {
     if (!this.canvas) return;
     const rows = this.rowLabels.length;
     const cols = this.colLabels.length;
-    const w = PAD_LEFT + cols * this.cellSize;
-    const h = PAD_TOP + rows * this.cellSize;
+    let cellSize = this.cellSize;
+    if (this.fitToWidth && cols > 0) {
+      const hostWidth = this.clientWidth || PAD_LEFT + cols * this.cellSize;
+      cellSize = Math.max(4, (hostWidth - PAD_LEFT) / cols);
+    }
+    const w = PAD_LEFT + cols * cellSize;
+    const h = PAD_TOP + rows * cellSize;
     const dpr = window.devicePixelRatio || 1;
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
@@ -210,8 +224,8 @@ export class LyraHeatmap extends LyraElement {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const v = this.values[r]?.[c] ?? -1;
-        const x = PAD_LEFT + c * this.cellSize;
-        const y = PAD_TOP + r * this.cellSize;
+        const x = PAD_LEFT + c * cellSize;
+        const y = PAD_TOP + r * cellSize;
         if (v < 0 || !Number.isFinite(v)) {
           // `v < 0` alone is false for NaN, which would otherwise fall through to
           // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
@@ -229,17 +243,17 @@ export class LyraHeatmap extends LyraElement {
           const t = linearAlpha(v, lo, hi);
           ctx.fillStyle = mixRgb(loRgb, hiRgb, t);
         }
-        ctx.fillRect(x, y, this.cellSize - 1, this.cellSize - 1);
+        ctx.fillRect(x, y, cellSize - 1, cellSize - 1);
       }
     }
 
     ctx.fillStyle = this.labelColor();
     ctx.font = '10px sans-serif';
     this.rowLabels.forEach((label, r) => {
-      ctx.fillText(label, 4, PAD_TOP + r * this.cellSize + this.cellSize / 2 + 3);
+      ctx.fillText(label, 4, PAD_TOP + r * cellSize + cellSize / 2 + 3);
     });
     this.colLabels.forEach((label, c) => {
-      ctx.fillText(label, PAD_LEFT + c * this.cellSize + 2, PAD_TOP - 6);
+      ctx.fillText(label, PAD_LEFT + c * cellSize + 2, PAD_TOP - 6);
     });
   }
 
