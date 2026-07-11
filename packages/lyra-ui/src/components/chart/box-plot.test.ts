@@ -3,6 +3,24 @@ import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.js';
 import { styles } from './box-plot.styles.js';
 
+// Deliberately the first test in the file: `loadBoxPlotPlugin()`/`loadChartJs()`
+// memoize their resolved promise at module scope, so once any other test in
+// this file has driven a `<lyra-box-plot>` through a full load, later
+// `connectedCallback()`s resolve near-instantly and the initial "still
+// loading" render can no longer be observed.
+it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loads, then swaps to the canvas', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+});
+
 it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin load', async () => {
   const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
   el.labels = ['K=2', 'K=3'];
@@ -18,6 +36,31 @@ it('builds a boxplot Chart.js instance once both chart.js and the boxplot plugin
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, 'chart never initialized', { timeout: 2000 });
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+});
+
+it('updates in place (same Chart instance) when only boxes/labels change', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const instance = (el as any).chart;
+
+  el.boxes = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
+  await el.updateComplete;
+  expect((el as any).chart).to.equal(instance);
+});
+
+it('updates in place (same Chart instance) across a bare height change, instead of destroying and recreating the chart', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const instance = (el as any).chart;
+
+  el.height = '400px';
+  await el.updateComplete;
+  expect((el as any).chart).to.equal(instance);
 });
 
 it('is accessible', async () => {

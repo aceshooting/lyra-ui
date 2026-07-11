@@ -16,6 +16,10 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
   }
+  lyra-skeleton {
+    --lyra-skeleton-w: 100%;
+    --lyra-skeleton-h: 100%;
+  }
   canvas {
     inline-size: 100% !important;
     block-size: 100% !important;

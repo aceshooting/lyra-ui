@@ -1,10 +1,11 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import type { Chart, ChartConfiguration } from 'chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadChartJs } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
+import '../skeleton/skeleton.js';
 
 export interface BoxPlotPoint {
   min: number;
@@ -63,6 +64,13 @@ export class LyraBoxPlot extends LyraElement {
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
 
+  /**
+   * True until the lazy-loaded `chart.js` + `@sgratzl/chartjs-chart-boxplot`
+   * peer dependencies have settled (success or failure) — mirrors
+   * `LyraChart`'s `loading` state.
+   */
+  @state() private loading = true;
+
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: Chart;
   private chartJsModule?: typeof import('chart.js');
@@ -82,6 +90,7 @@ export class LyraBoxPlot extends LyraElement {
   private async onBoxPlotPluginLoaded(
     boxMod: typeof import('@sgratzl/chartjs-chart-boxplot') | null,
   ): Promise<void> {
+    this.loading = false;
     if (!boxMod) return;
     this.chartJsModule = (await loadChartJs()) ?? undefined;
     this.draw();
@@ -94,6 +103,9 @@ export class LyraBoxPlot extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    if (this.loading) this.setAttribute('aria-busy', 'true');
+    else this.removeAttribute('aria-busy');
+
     // `--lyra-chart-height` is read by `:host`'s `block-size` in
     // `chart.styles.ts` (shared with `lyra-chart`). Custom properties only
     // cascade downward (host -> shadow tree), so this must be set on the
@@ -127,13 +139,34 @@ export class LyraBoxPlot extends LyraElement {
     };
   }
 
+  // Mirrors `LyraChart.draw()`'s reuse-existing-instance-when-possible
+  // pattern: an update that doesn't need a new Chart.js instance (e.g. a
+  // bare `height` change, or new `boxes`/`labels` data) mutates the existing
+  // chart and does an incremental `.update('none')` instead of tearing down
+  // and rebuilding the whole canvas/instance on every reactive update. Unlike
+  // `LyraChart`, `LyraBoxPlot` has no raw `config` passthrough that could
+  // change the effective Chart.js type out from under `this.type`, so
+  // reusing whenever a chart already exists is always safe here.
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
-    this.chart?.destroy();
-    this.chart = new this.chartJsModule.Chart(this.canvasEl, this.buildConfig());
+    const config = this.buildConfig();
+    if (this.chart) {
+      this.chart.data = config.data;
+      this.chart.options = config.options ?? {};
+      this.chart.update('none');
+      return;
+    }
+    this.chart = new this.chartJsModule.Chart(this.canvasEl, config);
   }
 
   render(): TemplateResult {
+    if (this.loading) {
+      return html`
+        <div part="base">
+          <lyra-skeleton variant="rect"></lyra-skeleton>
+        </div>
+      `;
+    }
     const label = this.boxes.map((b) => b.label).join(', ') || 'Box plot';
     return html`
       <div part="base">
