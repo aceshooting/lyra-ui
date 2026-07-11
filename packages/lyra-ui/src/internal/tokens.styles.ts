@@ -7,7 +7,7 @@ export const tokens = css`
     --lyra-color-surface: var(--wa-color-surface-default, #fff);
     --lyra-color-text: var(--wa-color-text-normal, #1a1a1a);
     --lyra-color-text-quiet: var(--wa-color-text-quiet, #6b7280);
-    --lyra-color-border: var(--wa-color-neutral-fill-normal, #d4d4d8);
+    --lyra-color-border: var(--wa-color-neutral-fill-normal, #8a8a90);
     --lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da);
     --lyra-color-brand-quiet: var(--wa-color-brand-fill-quiet, #ddf4ff);
     --lyra-color-success: var(--wa-color-success-fill-loud, #1a7f37);
@@ -21,9 +21,49 @@ export const tokens = css`
     --lyra-shadow: var(--wa-shadow-m, 0 2px 8px rgb(0 0 0 / 0.15));
     --lyra-font: var(--wa-font-family-body, system-ui, sans-serif);
 
+    /* Motion — every component that animates (popovers, gauge fill, toast)
+       reads from these two instead of hand-rolling its own duration/easing,
+       so the library has one consistent rhythm (2026-07-10 design review). */
+    --lyra-transition-fast: var(--wa-transition-fast, 120ms ease-out);
+    --lyra-transition-base: var(--wa-transition-normal, 180ms ease-out);
+
+    /* Disabled state — one opacity value for every disabled control,
+       replacing three previously-independent hardcoded values (0.5/0.4/0.35). */
+    --lyra-opacity-disabled: var(--wa-opacity-disabled, 0.5);
+
+    /* Focus ring — every :focus-visible rule in the library should reference
+       these three instead of hardcoding its own width/color/offset. */
+    --lyra-focus-ring-width: 2px;
+    --lyra-focus-ring-color: var(--lyra-color-brand);
+    --lyra-focus-ring-offset: 2px;
+
+    /* Minimum tappable box for an icon-only button (close/dismiss/nav
+       controls). Visual icon size is unaffected; components pad out to this
+       via min-inline-size/min-block-size, not by growing the glyph itself. */
+    --lyra-icon-button-size: 2.5rem;
+
     font-family: var(--lyra-font);
     color: var(--lyra-color-text);
     box-sizing: border-box;
+  }
+
+  /* Standalone (no Web Awesome theme) dark-mode fallback. A real --wa-* value
+     from a consumer's theme always wins — this only changes what a bare
+     lyra-ui component renders when dropped, unstyled, onto a dark host page
+     (2026-07-10 design review: previously zero dark-mode adaptation existed
+     in the pure-fallback case). */
+  @media (prefers-color-scheme: dark) {
+    :host {
+      --lyra-color-surface: var(--wa-color-surface-default, #1a1a1a);
+      --lyra-color-text: var(--wa-color-text-normal, #f2f2f2);
+      --lyra-color-text-quiet: var(--wa-color-text-quiet, #9aa1ac);
+      --lyra-color-border: var(--wa-color-neutral-fill-normal, #4a4a52);
+      --lyra-color-brand: var(--wa-color-brand-fill-loud, #4d9fef);
+      --lyra-color-brand-quiet: var(--wa-color-brand-fill-quiet, #163650);
+      --lyra-color-success: var(--wa-color-success-fill-loud, #3fb950);
+      --lyra-color-warning: var(--wa-color-warning-fill-loud, #d29922);
+      --lyra-color-danger: var(--wa-color-danger-fill-loud, #f85149);
+    }
   }
   :host([hidden]) {
     display: none !important;
