@@ -16,6 +16,28 @@ it('sets an img role and a summarizing aria-label', async () => {
   expect(el.getAttribute('aria-label')).to.contain('2');
 });
 
+it('renders numeric min/max legend ticks', async () => {
+  const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y'];
+  el.values = [[3, 9]];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
+  expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent).to.equal('9');
+});
+
+it('shows empty legend ticks when there is no real data', async () => {
+  const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x'];
+  el.values = [[-1]];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent).to.equal('');
+});
+
 it('renders a canvas sized to the grid dimensions', async () => {
   const el = (await fixture(html`<lyra-heatmap cell-size="20"></lyra-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['a', 'b'];

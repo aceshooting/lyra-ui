@@ -168,14 +168,18 @@ export class LyraHeatmap extends LyraElement {
   protected willUpdate(): void {
     const rows = this.rowLabels.length;
     const cols = this.colLabels.length;
-    const flat = this.values.flat().filter((v) => Number.isFinite(v) && v >= 0);
-    const bounds = minMax(flat);
+    const bounds = this.valueRange();
     const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
     this.setAttribute('role', 'img');
     this.setAttribute(
       'aria-label',
       `Heatmap of ${rows} × ${cols} cells, ${this.valueLabel} range ${range}`,
     );
+  }
+
+  /** The real (non-no-data) value range across `values`, or `null` if there is none. Shared by `willUpdate()`, `draw()`, and the legend. */
+  private valueRange(): [number, number] | null {
+    return minMax(this.values.flat().filter((v) => Number.isFinite(v) && v >= 0));
   }
 
   protected updated(): void {
@@ -222,8 +226,7 @@ export class LyraHeatmap extends LyraElement {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const flat = this.values.flat().filter((v) => Number.isFinite(v) && v >= 0);
-    const bounds = minMax(flat);
+    const bounds = this.valueRange();
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
     const [scaleLo, scaleHi] = this.scaleEndpoints();
@@ -269,11 +272,14 @@ export class LyraHeatmap extends LyraElement {
   }
 
   render(): TemplateResult {
+    const range = this.valueRange();
     return html`
       <div part="base">
         <canvas part="canvas"></canvas>
         <div part="legend">
+          <span part="legend-lo">${range ? range[0] : ''}</span>
           <span class="bar"></span>
+          <span part="legend-hi">${range ? range[1] : ''}</span>
           <span>${this.valueLabel}</span>
         </div>
       </div>
