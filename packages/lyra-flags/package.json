@@ -34,5 +34,8 @@
     },
     "./flags/*": "./flags/*"
   },
-  "packageManager": "pnpm@11.10.0"
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=20"
+  }
 }

@@ -111,5 +111,8 @@
     "typescript": "^7.0.2"
   },
   "packageManager": "pnpm@11.10.0",
-  "customElements": "custom-elements.json"
+  "customElements": "custom-elements.json",
+  "engines": {
+    "node": ">=20"
+  }
 }
