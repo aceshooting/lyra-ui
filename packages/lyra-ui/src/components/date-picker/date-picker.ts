@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { chevronIcon } from '../../internal/icons.js';
 import { styles } from './date-picker.styles.js';
 import {
   monthMatrix,
@@ -252,12 +253,14 @@ export class LyraDatePicker extends LyraElement {
       <div part="header">
         ${isFirst
           ? html`<button part="previous" type="button" aria-label="Previous month" @click=${() => this.nav(-1)}>
-              ‹
+              ${chevronIcon()}
             </button>`
           : html`<span></span>`}
         <div part="title">${monthTitle(year, month, this.locale)}</div>
         ${isLast
-          ? html`<button part="next" type="button" aria-label="Next month" @click=${() => this.nav(1)}>›</button>`
+          ? html`<button part="next" type="button" aria-label="Next month" @click=${() => this.nav(1)}>
+              ${chevronIcon()}
+            </button>`
           : html`<span></span>`}
       </div>
       <div part="weekdays">${labels.map((l) => html`<span part="weekday">${l}</span>`)}</div>

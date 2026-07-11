@@ -39,6 +39,9 @@ export const styles = css`
   [part='next']:hover {
     background: var(--lyra-color-brand-quiet);
   }
+  [part='previous'] svg {
+    transform: rotate(180deg);
+  }
   [part='weekdays'] {
     display: grid;
     grid-template-columns: repeat(7, var(--lyra-cell-size));
@@ -72,6 +75,10 @@ export const styles = css`
   [part~='day-outside'] {
     color: var(--lyra-color-text-quiet);
   }
+  [part~='day-outside'][part~='day-range-inner'],
+  [part~='day-outside'][part~='day-range-inner']:hover {
+    color: var(--lyra-color-text);
+  }
   [part='day-placeholder'] {
     inline-size: var(--lyra-cell-size);
     block-size: var(--lyra-cell-size);
@@ -96,7 +103,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part~='day']:focus-visible {
-    outline: 2px solid var(--lyra-color-brand);
-    outline-offset: 1px;
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 `;

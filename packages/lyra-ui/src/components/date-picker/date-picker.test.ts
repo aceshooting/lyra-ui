@@ -67,3 +67,50 @@ it('is accessible', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('renders chevron icons for month navigation instead of text glyphs', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const previous = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
+  expect(previous.querySelector('svg')).to.exist;
+  expect(next.querySelector('svg')).to.exist;
+  expect(previous.textContent).to.not.contain('‹');
+  expect(next.textContent).to.not.contain('›');
+});
+
+it('gives an outside-month day inside a selected range normal text contrast, not the quiet outside color', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker
+      mode="range"
+      with-outside-days
+      value="2026-06-28/2026-07-05"
+    ></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  // Viewing June (from's month): June 28 → July 5 puts July 1–4 in the trailing
+  // "outside" days of the June grid, strictly between from/to, so they carry both
+  // day-outside and day-range-inner.
+  const overlapCell = el.shadowRoot!.querySelector(
+    '[part~="day-outside"][part~="day-range-inner"]',
+  ) as HTMLButtonElement;
+  expect(overlapCell, 'expected an outside day cell inside the selected range').to.exist;
+
+  const plainOutsideCell = el.shadowRoot!.querySelector(
+    '[part~="day-outside"]:not([part~="day-range-inner"])',
+  ) as HTMLButtonElement;
+  expect(plainOutsideCell, 'expected a plain outside day cell for comparison').to.exist;
+
+  const normalCell = el.shadowRoot!.querySelector(
+    '[part~="day"]:not([part~="day-outside"]):not([part~="day-selected"]):not([part~="day-range-start"]):not([part~="day-range-end"])',
+  ) as HTMLButtonElement;
+  expect(normalCell, 'expected a plain in-month day cell for comparison').to.exist;
+
+  const overlapColor = getComputedStyle(overlapCell).color;
+  const plainOutsideColor = getComputedStyle(plainOutsideCell).color;
+  const normalColor = getComputedStyle(normalCell).color;
+
+  expect(overlapColor).to.equal(normalColor);
+  expect(overlapColor).to.not.equal(plainOutsideColor);
+});
