@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './file-input.js';
 import type { LyraFileInput } from './file-input.js';
+import { styles } from './file-input.styles.js';
 
 function makeFile(name: string, type: string): File {
   return new File(['x'], name, { type });
@@ -181,6 +182,19 @@ it('removes the dropzone base from the tab order and ignores Enter/Space while d
   input.addEventListener('click', () => (clicked = true));
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   expect(clicked).to.be.false;
+});
+
+it('adds a :focus-visible outline to the dropzone base using the shared focus-ring tokens', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    "[part='base']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: var(--lyra-focus-ring-offset); }",
+  );
+});
+
+it('uses the shared --lyra-opacity-disabled token instead of a literal 0.5 for the disabled dropzone state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include('opacity: var(--lyra-opacity-disabled);');
+  expect(css).to.not.include('opacity: 0.5;');
 });
 
 it('is accessible', async () => {

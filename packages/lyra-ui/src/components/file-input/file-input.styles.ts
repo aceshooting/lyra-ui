@@ -27,8 +27,12 @@ export const styles = css`
     border-color: var(--lyra-color-danger);
     background: color-mix(in srgb, var(--lyra-color-danger) 8%, transparent);
   }
+  [part='base']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
   :host([disabled]) [part='base'] {
-    opacity: 0.5;
+    opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
   [part='input'] {
