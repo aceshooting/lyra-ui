@@ -5,7 +5,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './graph.styles.js';
 import '../skeleton/skeleton.js';
-import type { Simulation, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
+import type { ForceLink, ForceManyBody, Simulation, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
 
 export interface GraphNode {
   id: string;

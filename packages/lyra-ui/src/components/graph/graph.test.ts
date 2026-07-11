@@ -152,6 +152,25 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
   expect(Number(match![1])).to.be.at.most(8);
 });
 
+it('updates the charge/link forces in place when chargeStrength/linkDistance change after mount', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  el.chargeStrength = -900;
+  el.linkDistance = 250;
+  await el.updateComplete;
+
+  const chargeForce = (el as any).chargeForce as { strength: () => () => number };
+  const linkForce = (el as any).linkForce as { distance: () => () => number };
+  expect(chargeForce.strength()()).to.equal(-900);
+  expect(linkForce.distance()()).to.equal(250);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;
