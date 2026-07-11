@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # Interactive release script for @aceshooting/lyra-ui.
 #
-# Steps: prompt for new version -> upgrade all workspace deps to latest ->
-# lint -> test -> build -> manifest -> confirm -> pack -> npm publish ->
-# commit + tag -> push -> GitHub Release with artifacts.
+# Steps: prompt for new version -> (optionally) upgrade all workspace deps to
+# latest -> lint -> test -> build -> manifest -> confirm -> pack -> npm publish
+# -> commit + tag -> push -> GitHub Release with artifacts.
+#
+# Flags:
+#   --upgrade-deps   Run `pnpm -r up --latest` before releasing (opt-in; shows
+#                     the resulting package.json/lockfile diff and asks for a
+#                     separate confirmation). Without this flag, the release
+#                     uses whatever dependency versions are already committed
+#                     in package.json/pnpm-lock.yaml.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,6 +20,20 @@ PKG_NAME="@aceshooting/lyra-ui"
 TARBALL_STEM="$(node -p "'$PKG_NAME'.replace(/^@/, '').replace('/', '-')")"
 GH_HOSTNAME="github.com"
 GH_ACCOUNT="aceshooting"
+
+UPGRADE_DEPS=0
+for arg in "$@"; do
+  case "$arg" in
+    --upgrade-deps)
+      UPGRADE_DEPS=1
+      ;;
+    *)
+      echo "Error: unrecognized argument '$arg'." >&2
+      echo "Usage: $(basename "${BASH_SOURCE[0]}") [--upgrade-deps]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 cd "$ROOT_DIR"
 
@@ -60,9 +81,24 @@ if git rev-parse "$new_version" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo
-echo "==> Upgrading all workspace dependencies to latest"
-pnpm -r up --latest
+if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
+  echo
+  echo "==> Upgrading all workspace dependencies to latest (--upgrade-deps)"
+  pnpm -r up --latest
+
+  echo
+  echo "==> Dependency diff from the upgrade:"
+  git --no-pager diff -- pnpm-lock.yaml "$ROOT_DIR"/packages/*/package.json || true
+  echo
+  read -rp "Continue releasing with these upgraded dependencies? [y/N] " upgrade_confirm
+  if [[ "$upgrade_confirm" != "y" && "$upgrade_confirm" != "Y" ]]; then
+    echo "Aborted after dependency upgrade. Working tree left as-is; revert manually if unwanted (e.g. 'git checkout -- pnpm-lock.yaml packages/*/package.json')." >&2
+    exit 1
+  fi
+else
+  echo
+  echo "==> Skipping dependency upgrade (pass --upgrade-deps to opt in)"
+fi
 
 echo
 echo "==> Setting $PKG_NAME version to $new_version"
