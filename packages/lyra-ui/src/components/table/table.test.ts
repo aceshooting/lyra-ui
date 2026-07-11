@@ -130,3 +130,54 @@ it('resolves the correct row via delegated click after a re-render (sort) reorde
   const ev = await oneEvent(el, 'lyra-row-click');
   expect(ev.detail.row).to.deep.equal(rows[1]); // Beta, now first after reversing
 });
+
+it('renders a visual sort-direction chevron only in the active sort column, marked aria-hidden', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.sortKey = 'score';
+  el.sortDir = 'desc';
+  await el.updateComplete;
+  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
+  expect(nameHeader.querySelector('[part="sort-icon"]')).to.not.exist;
+  const icon = scoreHeader.querySelector('[part="sort-icon"]');
+  expect(icon).to.exist;
+  expect(icon!.getAttribute('aria-hidden')).to.equal('true');
+  expect(icon!.getAttribute('data-dir')).to.equal('desc');
+  expect(icon!.querySelector('svg')).to.exist;
+});
+
+it('flips the sort-icon rotation data-dir when sortDir changes from desc to asc', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.sortKey = 'score';
+  el.sortDir = 'asc';
+  await el.updateComplete;
+  const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1];
+  const icon = scoreHeader.querySelector('[part="sort-icon"]');
+  expect(icon!.getAttribute('data-dir')).to.equal('asc');
+});
+
+it('applies the shared focus-ring outline to a sortable header cell, a row, and the more-button on :focus-visible', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.hasMore = true;
+  await el.updateComplete;
+
+  const header = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[0] as HTMLElement;
+  header.focus();
+  expect(getComputedStyle(header).outlineStyle).to.equal('solid');
+  expect(getComputedStyle(header).outlineWidth).to.equal('2px');
+
+  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  row.focus();
+  expect(getComputedStyle(row).outlineStyle).to.equal('solid');
+  expect(getComputedStyle(row).outlineWidth).to.equal('2px');
+
+  const moreButton = el.shadowRoot!.querySelector('[part="more-button"]') as HTMLElement;
+  moreButton.focus();
+  expect(getComputedStyle(moreButton).outlineStyle).to.equal('solid');
+  expect(getComputedStyle(moreButton).outlineWidth).to.equal('2px');
+});

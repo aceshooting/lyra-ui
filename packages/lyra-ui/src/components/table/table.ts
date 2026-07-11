@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './table.styles.js';
+import { chevronIcon } from '../../internal/icons.js';
 import '../empty/empty.js';
 
 export interface TableColumn<T> {
@@ -27,7 +28,7 @@ export interface TableColumn<T> {
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
  * @event lyra-row-click - A row was activated. `detail: { row }`.
  * @event lyra-load-more - The "load more" control was activated.
- * @csspart base, table, head, header-cell, row, cell, more-button
+ * @csspart base, table, head, header-cell, row, cell, more-button, sort-icon
  */
 export class LyraTable<T = unknown> extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -114,8 +115,8 @@ export class LyraTable<T = unknown> extends LyraElement {
           <thead part="head">
             <tr role="row">
               ${this.columns.map((col) => {
-                const ariaSort =
-                  this.sortKey === col.key ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+                const active = Boolean(col.sortable) && this.sortKey === col.key;
+                const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
                 return html`<th
                   part="header-cell"
                   role="columnheader"
@@ -127,6 +128,11 @@ export class LyraTable<T = unknown> extends LyraElement {
                   tabindex=${col.sortable ? '0' : '-1'}
                 >
                   ${col.label}
+                  ${active
+                    ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
+                        >${chevronIcon()}</span
+                      >`
+                    : nothing}
                 </th>`;
               })}
             </tr>
