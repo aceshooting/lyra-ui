@@ -10,7 +10,13 @@ export const styles = css`
     font-size: 0.875rem;
     font-weight: 600;
   }
-  [part='form-control-label']:empty {
+  /* :empty never matches here -- the part always contains a literal slot
+     child element regardless of assigned/text content -- so real emptiness
+     is tracked in JS (hasLabelSlot) and reflected via the hidden attribute
+     instead (same fix as [part='hint']/[part='error'] below). Without this,
+     the required-asterisk ::after below (which attaches to this box)
+     renders a stray ' *' with nothing before it whenever label is unset. */
+  [part='form-control-label'][hidden] {
     display: none;
   }
   :host([required]) [part='form-control-label']::after {

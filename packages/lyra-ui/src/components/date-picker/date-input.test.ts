@@ -204,6 +204,19 @@ it('shows a required-field asterisk after the label', async () => {
   expect(after.content).to.contain('*');
 });
 
+it('does not render an orphaned asterisk when required but no label is provided', async () => {
+  const el = (await fixture(html`<lyra-date-input required></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+
+  // The label box always contains a literal `<slot name="label">` child,
+  // so `:empty` can never match it (same bug class already fixed for
+  // hint/error) -- real emptiness must be tracked in JS and reflected via
+  // `hidden`, or the required-asterisk `::after` (which attaches to this
+  // box) renders a stray ' *' with nothing before it.
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label).display).to.equal('none');
+});
+
 it('clamps the popup to the viewport width like the combobox listbox', () => {
   expect(styles.cssText).to.include('max-inline-size: min(92vw, 28rem)');
 });

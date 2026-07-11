@@ -51,9 +51,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   // `[part]:empty` never matches — the part always contains a literal
   // `<slot>` child element regardless of assigned content — so real
   // emptiness is tracked in JS instead (same fix as lyra-stat's
-  // icon/caption, commit 6c1004c) and reflected via `hidden`.
+  // icon/caption, commit 6c1004c) and reflected via `hidden`. Applies to
+  // `form-control-label` too: the required-asterisk `::after` attaches to
+  // that box, so leaving it always-visible orphans a stray ' *' when no
+  // `label` is set.
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  @state() private hasLabelSlot = false;
 
   private get displayText(): string {
     const parts = this.value.split('/');
@@ -68,6 +72,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
     }
   }
 
@@ -154,6 +159,10 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onLabelSlotChange = (e: Event): void => {
+    this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   private onPickerChange = (e: Event): void => {
     e.stopPropagation();
     const picker = e.target as LyraDatePicker;
@@ -167,9 +176,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     const hasValue = this.value.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const hasLabel = this.hasLabelSlot || this.label.length > 0;
     return html`
       <div part="form-control">
-        <label part="form-control-label">${this.label}<slot name="label"></slot></label>
+        <label part="form-control-label" ?hidden=${!hasLabel}>
+          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+        </label>
         <div part="input-wrapper">
           <input
             part="input"

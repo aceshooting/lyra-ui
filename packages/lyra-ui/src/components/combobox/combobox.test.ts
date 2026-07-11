@@ -309,6 +309,23 @@ it('shows a required-field asterisk after the label', async () => {
   expect(after.content).to.contain('*');
 });
 
+it('does not render an orphaned asterisk when required but no label is provided', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox required>
+      <lyra-option value="a">Apple</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+
+  // The label box always contains a literal `<slot name="label">` child,
+  // so `:empty` can never match it (same bug class already fixed for
+  // hint/error) -- real emptiness must be tracked in JS and reflected via
+  // `hidden`, or the required-asterisk `::after` (which attaches to this
+  // box) renders a stray ' *' with nothing before it.
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement;
+  expect(getComputedStyle(label).display).to.equal('none');
+});
+
 it('applies the shared focus-ring tokens to the clear and tag-remove buttons', () => {
   const css = styles.cssText;
   const clearFocusBlock = /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?tag__remove-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
