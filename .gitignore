@@ -5,3 +5,6 @@ coverage/
 .DS_Store
 .superpowers/
 .playwright-mcp/
+
+*storybook.log
+storybook-static
