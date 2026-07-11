@@ -13,6 +13,10 @@ export const styles = css`
   [part='form-control-label']:empty {
     display: none;
   }
+  :host([required]) [part='form-control-label']::after {
+    content: ' *';
+    color: var(--lyra-color-danger);
+  }
 
   [part='combobox'] {
     display: flex;
@@ -32,7 +36,9 @@ export const styles = css`
     outline: 2px solid transparent;
   }
   :host([disabled]) [part='combobox'] {
-    opacity: 0.5;
+    /* was a literal 0.5; now the shared library-wide disabled-state token
+       (still 0.5 by default fallback, so no visual change here). */
+    opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
 
@@ -69,16 +75,30 @@ export const styles = css`
   [part='clear-button'],
   [part='expand-icon'] {
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     background: none;
     cursor: pointer;
     color: var(--lyra-color-text-quiet);
-    padding: 0 var(--lyra-space-xs);
+    padding: var(--lyra-space-xs);
+    /* Real touch target: icon-button-size is the ceiling, but never grow
+       past what the [part=combobox] row's own 2.5rem min-block-size has
+       room for once its own block padding is subtracted. */
+    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
     line-height: 1;
+  }
+  [part='expand-icon'] svg {
+    transform: rotate(90deg);
+  }
+  [part='clear-button']:focus-visible,
+  [part='tag__remove-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 
   [part='listbox'] {
-    display: none;
     position: fixed;
     z-index: 900;
     box-sizing: border-box;
@@ -92,9 +112,26 @@ export const styles = css`
     border: 1px solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
+    /* Closed state: invisible + slightly raised. visibility (not
+       display:none) so opacity/transform can actually transition; hit-testing
+       and a11y exposure stay off since this part is already position:fixed. */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-0.25rem);
+    transition:
+      opacity var(--lyra-transition-fast),
+      transform var(--lyra-transition-fast),
+      visibility var(--lyra-transition-fast);
   }
   :host([open]) [part='listbox'] {
-    display: block;
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='listbox'] {
+      transition: none !important;
+    }
   }
 
   [part='option'] {
@@ -121,7 +158,9 @@ export const styles = css`
     font-weight: 600;
   }
   [part='option'][aria-disabled='true'] {
-    opacity: 0.4;
+    /* was a literal 0.4; unified with the rest of the library's single
+       disabled-state opacity token (intentionally changes 0.4 -> 0.5). */
+    opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
 
@@ -144,6 +183,14 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
   }
   [part='hint']:empty {
+    display: none;
+  }
+  [part='error'] {
+    margin-block-start: var(--lyra-space-xs);
+    font-size: 0.8125rem;
+    color: var(--lyra-color-danger);
+  }
+  [part='error']:empty {
     display: none;
   }
 `;

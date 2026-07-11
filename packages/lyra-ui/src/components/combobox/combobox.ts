@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
+import { chevronIcon, closeIcon } from '../../internal/icons.js';
 import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.js';
 import './option.js';
@@ -21,6 +22,7 @@ export type OptionFilter = (option: LyraOption, query: string) => boolean;
  * @slot - `<lyra-option>` elements.
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
+ * @slot error - Custom error content.
  * @event change - The selection changed.
  * @event input - The user typed in the filter or changed the selection.
  * @event lyra-show - The listbox opened.
@@ -34,6 +36,7 @@ export type OptionFilter = (option: LyraOption, query: string) => boolean;
  * @csspart tag - An individual selected tag.
  * @csspart clear-button - The clear button.
  * @csspart expand-icon - The dropdown indicator.
+ * @csspart error - The error message.
  */
 export class LyraCombobox extends LyraElement {
   static formAssociated = true;
@@ -50,6 +53,7 @@ export class LyraCombobox extends LyraElement {
   @property() name = '';
   @property() label = '';
   @property() hint = '';
+  @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
@@ -59,6 +63,9 @@ export class LyraCombobox extends LyraElement {
   @state() private query = '';
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
+  // Set on the combobox input's first `blur`; gates the `data-invalid`
+  // reflection below so validity styling never flashes on first render.
+  @state() private touched = false;
 
   private internals: ElementInternals;
   private listId = nextId('combobox-list');
@@ -215,6 +222,9 @@ export class LyraCombobox extends LyraElement {
       }
     }
     if (changed.has('required')) this.updateValidity();
+    if (changed.has('touched') || changed.has('required') || changed.has('value')) {
+      this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    }
   }
 
   private pick(option: LyraOption): void {
@@ -250,6 +260,10 @@ export class LyraCombobox extends LyraElement {
     this.activeIndex = -1;
     this.show();
     this.emit('input');
+  };
+
+  private onInputBlur = (): void => {
+    this.touched = true;
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -359,7 +373,7 @@ export class LyraCombobox extends LyraElement {
                     this.removeValue(v);
                   }}
                 >
-                  &times;</button
+                  ${closeIcon()}</button
                 ></span
               >`,
             )}
@@ -380,6 +394,7 @@ export class LyraCombobox extends LyraElement {
             @input=${this.onInput}
             @keydown=${this.onKeyDown}
             @focus=${() => this.show()}
+            @blur=${this.onInputBlur}
           />
           ${this.withClear && hasValue
             ? html`<button
@@ -391,16 +406,17 @@ export class LyraCombobox extends LyraElement {
                   this.clear();
                 }}
               >
-                &times;
+                ${closeIcon()}
               </button>`
             : ''}
-          <span part="expand-icon" aria-hidden="true">▾</span>
+          <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </div>
         <div part="listbox" id=${this.listId} role="listbox" aria-multiselectable=${this.multiple ? 'true' : 'false'}>
           ${filtered.length === 0
             ? html`<div class="empty">${this.emptyText}</div>`
             : this.renderRows(filtered, activeId)}
         </div>
+        <div part="error">${this.errorText}<slot name="error"></slot></div>
         <div part="hint">${this.hint}<slot name="hint"></slot></div>
       </div>
       <slot @slotchange=${this.collectOptions} hidden></slot>

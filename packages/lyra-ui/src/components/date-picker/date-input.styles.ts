@@ -13,6 +13,10 @@ export const styles = css`
   [part='form-control-label']:empty {
     display: none;
   }
+  :host([required]) [part='form-control-label']::after {
+    content: ' *';
+    color: var(--lyra-color-danger);
+  }
   [part='input-wrapper'] {
     display: flex;
     align-items: center;
@@ -28,6 +32,7 @@ export const styles = css`
   }
   :host([disabled]) [part='input-wrapper'] {
     opacity: 0.5;
+    cursor: not-allowed;
   }
   [part='input'] {
     flex: 1 1 auto;
@@ -41,21 +46,46 @@ export const styles = css`
   [part='clear-button'],
   [part='expand-button'] {
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     background: none;
     cursor: pointer;
     color: var(--lyra-color-text-quiet);
-    padding: 0 var(--lyra-space-xs);
+    padding: var(--lyra-space-xs);
+    /* The row has no explicit min-block-size of its own (unlike combobox's
+       [part=combobox]), so it can grow to fit the full touch target. */
+    min-block-size: var(--lyra-icon-button-size);
     line-height: 1;
     font-size: 1rem;
   }
+  [part='clear-button']:focus-visible,
+  [part='expand-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
   [part='popup'] {
-    display: none;
     position: fixed;
     z-index: 900;
+    max-inline-size: min(92vw, 28rem);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-0.25rem);
+    transition:
+      opacity var(--lyra-transition-fast),
+      transform var(--lyra-transition-fast),
+      visibility var(--lyra-transition-fast);
   }
   :host([open]) [part='popup'] {
-    display: block;
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='popup'] {
+      transition: none !important;
+    }
   }
   [part='hint'] {
     margin-block-start: var(--lyra-space-xs);
@@ -63,6 +93,14 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
   }
   [part='hint']:empty {
+    display: none;
+  }
+  [part='error'] {
+    margin-block-start: var(--lyra-space-xs);
+    font-size: 0.8125rem;
+    color: var(--lyra-color-danger);
+  }
+  [part='error']:empty {
     display: none;
   }
 `;

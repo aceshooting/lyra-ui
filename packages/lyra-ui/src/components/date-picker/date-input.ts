@@ -1,9 +1,10 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
+import { closeIcon, calendarIcon } from '../../internal/icons.js';
 import { parseISO, formatISO, type WeekdayFormat } from './calendar-core.js';
 import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.js';
@@ -22,7 +23,8 @@ import './date-picker.js';
  * @event change - Fired on committed date transitions.
  * @event lyra-show / lyra-hide - Calendar popover lifecycle.
  * @event lyra-clear - The clear button was used.
- * @csspart form-control, form-control-label, input-wrapper, input, clear-button, expand-button, popup, date-picker, hint
+ * @csspart form-control, form-control-label, input-wrapper, input, clear-button, expand-button, popup, date-picker, hint, error
+ * @slot error - Custom error content.
  */
 export class LyraDateInput extends FormAssociated(LyraElement) {
   static styles = [LyraElement.styles, styles];
@@ -35,6 +37,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property() label = '';
   @property() hint = '';
+  @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
   @property() locale = '';
   @property({ type: Number }) months: 1 | 2 = 1;
@@ -42,6 +45,9 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
 
   private cleanupFn?: () => void;
+  // Set on the date input's first `blur`; gates the `data-invalid`
+  // reflection below so validity styling never flashes on first render.
+  @state() private touched = false;
 
   private get displayText(): string {
     const parts = this.value.split('/');
@@ -95,6 +101,9 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
         if (anchor && popup) this.cleanupFn = place(anchor, popup);
       }
     }
+    if (changed.has('touched') || changed.has('required') || changed.has('value')) {
+      this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    }
   }
 
   private onInputChange = (e: Event): void => {
@@ -118,6 +127,10 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
       e.preventDefault();
       this.show();
     }
+  };
+
+  private onInputBlur = (): void => {
+    this.touched = true;
   };
 
   private onPickerChange = (e: Event): void => {
@@ -145,6 +158,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             ?readonly=${this.readonly}
             @change=${this.onInputChange}
             @keydown=${this.onInputKey}
+            @blur=${this.onInputBlur}
           />
           ${this.withClear && hasValue
             ? html`<button
@@ -153,7 +167,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
                 aria-label="Clear"
                 @click=${() => this.clear()}
               >
-                &times;
+                ${closeIcon()}
               </button>`
             : ''}
           <button
@@ -165,7 +179,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             ?disabled=${this.disabled || this.readonly}
             @click=${() => (this.open ? this.hide() : this.show())}
           >
-            <span part="expand-icon" aria-hidden="true">📅</span>
+            <span part="expand-icon" aria-hidden="true">${calendarIcon()}</span>
           </button>
         </div>
         <div part="popup" role="dialog" aria-label="Choose date">
@@ -182,6 +196,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             @change=${this.onPickerChange}
           ></lyra-date-picker>
         </div>
+        <div part="error">${this.errorText}<slot name="error"></slot></div>
         <div part="hint">${this.hint}<slot name="hint"></slot></div>
       </div>
     `;
