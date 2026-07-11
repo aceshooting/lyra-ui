@@ -7,7 +7,8 @@
 
 ## What this is
 
-`@aceshooting/lyra-ui` (v0.1.1) is a free, clean-room Lit 3 web-component library — an
+`@aceshooting/lyra-ui` (see `packages/lyra-ui/package.json` for the current version) is a free,
+clean-room Lit 3 web-component library — an
 open-source companion to Web Awesome that reimplements several Web Awesome **Pro**
 components plus original extras. Positioning, non-negotiable:
 
@@ -22,7 +23,8 @@ components plus original extras. Positioning, non-negotiable:
 - **Non-goals** (see the design spec, §3): not a WA fork, no `wa-` prefix or WA
   trademark/branding, no React wrappers (stack is unifying on Lit; custom elements work in
   React 19 anyway), Video/Video-Playlist deferred indefinitely.
-- Full rationale, goals, and the v1 API tables: `docs/superpowers/specs/2026-07-07-lyra-ui-component-library-design.md`.
+- Full rationale, goals, and the v1 API tables are tracked internally and not yet published as
+  a committed doc in this repo.
 
 ## Monorepo layout
 
@@ -145,30 +147,20 @@ spec into a plan doc first, then `superpowers:subagent-driven-development` (pref
 
 ## Current status & what's next
 
-**Internally code-complete, adoption unvalidated.** As of commit `fd7a032`: 198/198 tests
-green, all 34 custom-element tags present in a freshly regenerated `custom-elements.json`,
-lint/build/manifest all pass. But the design spec's own Section 9 success criterion — prove
-value by replacing a real hand-rolled component in a consumer repo — is **0-for-5**: all
-five swap attempts named across the roadmap and later plan docs ([client]'s
-`[component]`, `[client]`'s `[Component]`, `[client]`'s
+**Internally code-complete, adoption unvalidated.** See `package.json` for the current version
+and run `pnpm test` for the current test count/status — all 34 custom-element tags are present
+in a freshly regenerated `custom-elements.json`, and lint/build/manifest all pass. But the
+design spec's own Section 9 success criterion — prove value by replacing a real hand-rolled
+component in a consumer repo — is **0-for-5**: all five swap attempts named across the roadmap
+and later plan docs ([client]'s `[component]`, `[client]`'s `[Component]`, `[client]`'s
 `[component].ts`, `[client]`'s `[Component].tsx`, and [client]'s
 `[component]`/`[component].ts`) remain unattempted. A separate five-project survey
 ([client], [client], [client], [client], [client]) independently confirms zero
 adoption of `@aceshooting/lyra-ui` anywhere. "Roadmap complete" should not be read as
-"goal achieved" — see these artifacts before starting new work:
+"goal achieved."
 
-- Full findings: `.superpowers/sdd/2026-07-10-cross-repo-audit-report.md` — executive summary
-  (lines 3–11), roadmap/plan status + every verified known issue (lines 16–47), per-component
-  improvement opportunities across all 20 component directories incl. the High-severity
-  shared `FormAssociated.setValidity()` gap (lines 50–234), per-project survey findings
-  (lines 238–290), an 18-item missing-components wishlist ranked by cross-project signal
-  (lines 292–402), and recommended next steps ranked by impact (lines 405–414).
-- Roadmap addendum (post-audit plan of record):
-  `docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md`.
-- Two new implementation plans queued from the audit:
-  `docs/superpowers/plans/2026-07-10-lyra-ui-tier4-hardening.md` (fixes for the known
-  issues/accessibility gaps) and
-  `docs/superpowers/plans/2026-07-10-lyra-ui-tier5-priority-features.md` (top wishlist items).
-
-Before adding new components or features, check whether the audit already covers the gap —
-duplicating analysis there wastes a review cycle.
+A cross-repo audit (2026-07-10) covering roadmap status, per-component improvement
+opportunities (incl. the shared `FormAssociated.setValidity()` gap noted above), per-project
+survey findings, and a ranked missing-components wishlist exists but is tracked internally and
+not yet published as a committed doc in this repo. Before adding new components or features,
+ask whether that audit already covers the gap so you don't duplicate analysis.
