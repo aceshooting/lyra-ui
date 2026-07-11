@@ -23,7 +23,8 @@ export const styles = css`
     cursor: pointer;
   }
   [part='node']:focus-visible {
-    outline: 2px solid var(--lyra-color-brand);
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='label'] {
     font-size: 10px;

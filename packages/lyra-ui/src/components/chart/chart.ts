@@ -5,6 +5,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadChartJs } from './chart-loader.js';
 import { styles } from './chart.styles.js';
+import '../skeleton/skeleton.js';
 
 export interface Series {
   label: string;
@@ -95,6 +96,9 @@ export class LyraChart extends LyraElement {
    */
   @property({ attribute: false }) config?: Partial<ChartConfiguration>;
 
+  /** True until the lazy-loaded `chart.js` peer dependency has settled (success or failure). */
+  @state() private loading = true;
+
   @state() private zoomed = false;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
@@ -112,6 +116,7 @@ export class LyraChart extends LyraElement {
     super.connectedCallback();
     window.addEventListener('lyra-theme', this.onThemeChange);
     void loadChartJs().then((mod) => {
+      this.loading = false;
       if (!mod) return;
       this.chartJsModule = mod;
       this.draw();
@@ -126,6 +131,9 @@ export class LyraChart extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    if (this.loading) this.setAttribute('aria-busy', 'true');
+    else this.removeAttribute('aria-busy');
+
     // `--lyra-chart-height` is read by `:host`'s `block-size` in
     // `chart.styles.ts`. Custom properties only cascade downward (host ->
     // shadow tree), never upward from a shadow-tree descendant back to the
@@ -239,6 +247,13 @@ export class LyraChart extends LyraElement {
   }
 
   render(): TemplateResult {
+    if (this.loading) {
+      return html`
+        <div part="base">
+          <lyra-skeleton variant="rect"></lyra-skeleton>
+        </div>
+      `;
+    }
     const label = this.datasets.map((d) => d.label).join(', ') || 'Chart';
     return html`
       <div part="base">

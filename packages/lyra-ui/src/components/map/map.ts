@@ -1,11 +1,12 @@
 /// <reference types="geojson" />
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import type { GeoJSONSource, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadMaplibre } from './map-loader.js';
 import { styles } from './map.styles.js';
+import '../skeleton/skeleton.js';
 
 export interface LegendEntry {
   color: string;
@@ -51,6 +52,9 @@ export class LyraMap extends LyraElement {
   @property({ attribute: false }) legend: LegendEntry[] = [];
   @property({ attribute: false }) choropleth?: ChoroplethLayer;
 
+  /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
+  @state() private loading = true;
+
   @query('[part="container"]') private containerEl?: HTMLElement;
   private _map?: MaplibreMap;
   // Tracks whether the style has fired its initial 'load' (i.e. addSource/
@@ -68,8 +72,13 @@ export class LyraMap extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    void loadMaplibre().then((mod) => {
-      if (!mod || !this.containerEl) return;
+    void loadMaplibre().then(async (mod) => {
+      this.loading = false;
+      if (!mod) return;
+      // `[part="container"]` only exists once `loading` flips to `false` and
+      // Lit re-renders — wait for that render to land before querying it.
+      await this.updateComplete;
+      if (!this.containerEl) return;
       this._map = new mod.Map({
         container: this.containerEl,
         style: this.mapStyle,
@@ -107,6 +116,9 @@ export class LyraMap extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    if (this.loading) this.setAttribute('aria-busy', 'true');
+    else this.removeAttribute('aria-busy');
+
     if (changed.has('choropleth') && this._styleLoaded) this.applyChoropleth();
     if (changed.has('center') && this._map) this._map.setCenter(this.center);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.zoom);
@@ -145,7 +157,9 @@ export class LyraMap extends LyraElement {
     // rather than relying on a CSS `:empty` selector that can never match.
     return html`
       <div part="base">
-        <div part="container"></div>
+        ${this.loading
+          ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
+          : html`<div part="container"></div>`}
         ${this.legend.length
           ? html`<div part="legend">
               ${this.legend.map(

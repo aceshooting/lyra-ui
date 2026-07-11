@@ -2,6 +2,19 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './chart.js';
 import type { LyraChart } from './chart.js';
 
+it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+});
+
 it('renders a canvas and builds a Chart.js instance once chart.js loads', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'line';
@@ -43,6 +56,7 @@ it('exposes role=img with a dataset-label-derived aria-label', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(canvas.getAttribute('role')).to.equal('img');
   expect(canvas.getAttribute('aria-label')).to.contain('Revenue');
@@ -52,6 +66,7 @@ it('exposes part="canvas" on the canvas element, matching the documented @csspar
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(canvas.getAttribute('part')).to.equal('canvas');
 });

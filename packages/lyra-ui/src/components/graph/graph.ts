@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './graph.styles.js';
+import '../skeleton/skeleton.js';
 import type { Simulation, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
 
 export interface GraphNode {
@@ -92,6 +93,9 @@ export class LyraGraph extends LyraElement {
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
   @property({ type: Number, attribute: 'link-distance' }) linkDistance = 100;
 
+  /** True until the lazy-loaded d3 peer dependencies have settled (success or failure). */
+  @state() private loading = true;
+
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
   /** Current pan/zoom transform (SVG `transform` attribute syntax), driven by d3-zoom. */
@@ -108,6 +112,7 @@ export class LyraGraph extends LyraElement {
   connectedCallback(): void {
     super.connectedCallback();
     void loadD3().then((mods) => {
+      this.loading = false;
       // The element may have been removed from the DOM while the dynamic
       // d3 imports were in flight — don't spin up a simulation for a
       // detached instance (disconnectedCallback's cleanup already ran).
@@ -127,6 +132,9 @@ export class LyraGraph extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    if (this.loading) this.setAttribute('aria-busy', 'true');
+    else this.removeAttribute('aria-busy');
+
     if (!this.d3) return;
     if (changed.has('nodes') || changed.has('links')) {
       this.rebuildSimulation();
@@ -225,6 +233,16 @@ export class LyraGraph extends LyraElement {
   }
 
   render(): TemplateResult {
+    if (this.loading) {
+      return html`
+        <div part="base">
+          <lyra-skeleton
+            variant="rect"
+            style=${`--lyra-skeleton-w:${this.width}px;--lyra-skeleton-h:${this.height}px`}
+          ></lyra-skeleton>
+        </div>
+      `;
+    }
     return html`
       <div part="base">
         <svg part="svg" viewBox="0 0 ${this.width} ${this.height}">

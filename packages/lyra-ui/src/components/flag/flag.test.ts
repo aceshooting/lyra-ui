@@ -7,6 +7,18 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
   return el.shadowRoot!.querySelector('img')!;
 }
 
+it('shows a loading skeleton and aria-busy while the flag package loads, then swaps to the img', async () => {
+  const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+
+  await img(el);
+
+  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+});
+
 it('renders an img for a country code', async () => {
   const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
   const el2 = await img(el);

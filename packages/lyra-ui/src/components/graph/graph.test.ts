@@ -14,6 +14,24 @@ const links = [{ source: 'a', target: 'b' }];
 // concurrently — give it generous headroom so the full suite isn't flaky.
 const NODE_COUNT_TIMEOUT = 5000;
 
+it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('svg')).to.not.exist;
+
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('svg')).to.exist;
+});
+
 it('renders an svg with a circle per node once d3 loads', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;

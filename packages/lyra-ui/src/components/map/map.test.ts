@@ -14,6 +14,19 @@ const RASTER_STYLE = {
   layers: [{ id: 'demo', type: 'raster', source: 'demo' }],
 };
 
+it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps to the container', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="container"]')).to.not.exist;
+
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+
+  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+});
+
 it('constructs a maplibregl.Map and exposes it via the map getter', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;

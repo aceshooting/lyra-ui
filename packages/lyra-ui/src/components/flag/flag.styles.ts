@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    inline-size: auto;
+    aspect-ratio: 4 / 3;
     block-size: 1em;
     line-height: 0;
     vertical-align: middle;

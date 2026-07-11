@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './flag.styles.js';
 import { languageToCountry } from './language-map.js';
+import '../skeleton/skeleton.js';
 
 type FlagUrlResolver = (code: string) => string;
 
@@ -58,6 +59,9 @@ export class LyraFlag extends LyraElement {
 
   @state() private src?: string;
 
+  /** True while the lazy-loaded `@aceshooting/lyra-flags` peer resolver is in flight. */
+  @state() private loading = true;
+
   private get code(): string | undefined {
     if (this.country) return this.country.toLowerCase();
     if (this.language) return languageToCountry(this.language);
@@ -65,18 +69,33 @@ export class LyraFlag extends LyraElement {
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (!changed.has('country') && !changed.has('language')) return;
+    // `this.hasUpdated` (not just `changed`) forces this body to run once on
+    // the very first update even when neither `country` nor `language` is
+    // ever set: an unset optional property's first "assignment" is
+    // undefined -> undefined (no-op to Lit), so `changed.has('country')`
+    // would otherwise never become true for a `<lyra-flag>` that never
+    // receives a code, leaving `loading` stuck at its initial `true` forever.
+    if (this.hasUpdated && !changed.has('country') && !changed.has('language')) return;
     const code = this.code;
     if (!code) {
       this.src = undefined;
+      this.loading = false;
       return;
     }
+    this.loading = true;
     void loadFlagUrlResolver().then((resolve) => {
       this.src = resolve?.(code);
+      this.loading = false;
     });
   }
 
+  protected updated(): void {
+    if (this.loading) this.setAttribute('aria-busy', 'true');
+    else this.removeAttribute('aria-busy');
+  }
+
   render(): TemplateResult {
+    if (this.loading) return html`<lyra-skeleton variant="rect"></lyra-skeleton>`;
     if (!this.src) return html``;
     const alt = this.label ?? (this.code ?? '').toUpperCase();
     return html`<img part="image" src=${this.src} alt=${alt} loading="lazy" decoding="async" />`;
