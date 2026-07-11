@@ -14,7 +14,11 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
 
-  await waitUntil(() => (el as any).chart != null);
+  // `waitUntil`'s own default timeout (1000ms) is tighter than this codebase's
+  // established budget for async-peer-dep-loader races under concurrent-test
+  // resource contention (see graph.test.ts's NODE_COUNT_TIMEOUT = 5000, same
+  // root cause: Chromium tab throttling when many test files run in parallel).
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   expect(el.hasAttribute('aria-busy')).to.be.false;
   expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;

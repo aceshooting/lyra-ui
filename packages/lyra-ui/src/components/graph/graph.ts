@@ -1,5 +1,6 @@
 import { html, svg, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './graph.styles.js';
@@ -275,7 +276,7 @@ export class LyraGraph extends LyraElement {
                   r=${this.nodeRadius(n)}
                   cx=${n.x ?? 0}
                   cy=${n.y ?? 0}
-                  style=${n.color ? `--lyra-node-fill:${n.color}` : ''}
+                  style=${styleMap(n.color ? { '--lyra-node-fill': n.color } : {})}
                   @click=${() => this.onNodeClick(n)}
                   @keydown=${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {

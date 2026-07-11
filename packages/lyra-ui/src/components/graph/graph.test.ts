@@ -78,6 +78,26 @@ it('applies a per-node GraphNode.color as the actual rendered fill', async () =>
   expect(getComputedStyle(coloredEl).fill).to.not.equal(getComputedStyle(defaultEl).fill);
 });
 
+it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = [
+    { id: 'a', label: 'A', color: 'red; position: fixed; top: 0px' },
+    { id: 'b', label: 'B' },
+  ];
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const [coloredEl] = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGCircleElement[];
+  // Read the parsed inline style declaration directly (not getComputedStyle,
+  // which reports 'static' for SVG shape elements regardless of what's
+  // declared) — this is what actually detects a second CSS declaration
+  // having been injected into the style attribute via string concatenation.
+  expect(coloredEl.style.position).to.equal('');
+  expect(coloredEl.style.top).to.equal('');
+});
+
 it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;

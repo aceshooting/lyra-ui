@@ -43,5 +43,4 @@ The library shipped in five incremental batches; `llms-full.txt` is ordered the 
 
 - Shared internals every tag builds on (`LyraElement` base class, the `FormAssociated` mixin, the
   floating-ui `positioner`, and the `--lyra-*`/`--wa-*` design-token layer) are documented at the
-  top of `llms-full.txt`, along with cross-cutting notes on packaging and adoption status that
-  apply to the whole library.
+  top of `llms-full.txt`, along with cross-cutting packaging notes that apply to the whole library.
