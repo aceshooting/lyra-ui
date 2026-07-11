@@ -28,3 +28,10 @@ it('returns an empty array instead of throwing when binCount is 0', () => {
 it('returns an empty array instead of throwing when binCount is negative', () => {
   expect(binValues([1, 2, 3], -2)).to.deep.equal([]);
 });
+
+it('does not crash on a very large array (spreading it as call arguments would blow the call-stack size limit)', () => {
+  const values = Array.from({ length: 150_000 }, (_, i) => i);
+  const buckets = binValues(values, 10);
+  expect(buckets.length).to.equal(10);
+  expect(buckets.reduce((sum, b) => sum + b.count, 0)).to.equal(150_000);
+});
