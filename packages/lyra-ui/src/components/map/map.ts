@@ -64,6 +64,14 @@ export class LyraMap extends LyraElement {
   // own GeoJSON source is added — which would wrongly block subsequent
   // choropleth updates from ever re-running.
   private _styleLoaded = false;
+  // Tracks the currently-applied choropleth's sourceId/fillLayerId so a
+  // clear (`choropleth = undefined`) or a sourceId change can remove the
+  // previous layer/source instead of leaking it (2026-07-12 gui-map parity
+  // study: gui-map avoids this class of bug entirely via a declarative
+  // light-DOM-children model where removing a child removes its layer —
+  // out of scope for this additive fix, tracked as a v2 option).
+  private _appliedChoroplethSourceId?: string;
+  private _appliedFillLayerId?: string;
 
   /** The raw `maplibregl.Map` instance — escape hatch for anything this wrapper doesn't expose. */
   get map(): MaplibreMap | undefined {
@@ -95,11 +103,7 @@ export class LyraMap extends LyraElement {
         this.emit('lyra-map-load');
       });
       this._map.on('click', (e) => {
-        // Guard on the fill layer actually existing, not just `this.choropleth` being
-        // set: applyChoropleth() only adds it once the style has finished loading, so
-        // a click landing in that window (choropleth set before the map's own 'load')
-        // would otherwise query a layer id maplibre-gl doesn't know about yet.
-        const fillLayerId = this.choropleth ? `${this.choropleth.sourceId}-fill` : undefined;
+        const fillLayerId = this._appliedFillLayerId;
         const features =
           fillLayerId && this._map!.getLayer(fillLayerId)
             ? this._map!.queryRenderedFeatures(e.point, { layers: [fillLayerId] })
@@ -117,21 +121,47 @@ export class LyraMap extends LyraElement {
     this._map?.remove();
     this._map = undefined;
     this._styleLoaded = false;
+    this._appliedChoroplethSourceId = undefined;
+    this._appliedFillLayerId = undefined;
   }
 
   protected updated(changed: PropertyValues): void {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
-    if (changed.has('choropleth') && this._styleLoaded) this.applyChoropleth();
+    if (changed.has('mapStyle') && this._map) {
+      // A style change wipes every layer/source maplibre-gl knows about, so
+      // the previously-applied choropleth bookkeeping is stale the instant
+      // setStyle() is called — clear it and re-apply once the new style's
+      // own 'style.load' fires (mirrors the constructor's 'load' handshake).
+      this._styleLoaded = false;
+      this._appliedChoroplethSourceId = undefined;
+      this._appliedFillLayerId = undefined;
+      this._map.setStyle(this.mapStyle);
+      this._map.once('style.load', () => {
+        this._styleLoaded = true;
+        this.applyChoropleth();
+      });
+    } else if (changed.has('choropleth') && this._styleLoaded) {
+      this.applyChoropleth();
+    }
     if (changed.has('center') && this._map) this._map.setCenter(this.center);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.zoom);
   }
 
   private applyChoropleth(): void {
-    if (!this.choropleth || !this._map) return;
+    if (!this._map) return;
+    if (!this.choropleth) {
+      this.removeChoropleth();
+      return;
+    }
     const { sourceId, geojson, field, stops } = this.choropleth;
     const fillLayerId = `${sourceId}-fill`;
+
+    if (this._appliedChoroplethSourceId && this._appliedChoroplethSourceId !== sourceId) {
+      this.removeChoropleth();
+    }
+
     const colorExpr: unknown[] = ['interpolate', ['linear'], ['get', field]];
     for (const [value, color] of stops) colorExpr.push(value, color);
 
@@ -151,6 +181,21 @@ export class LyraMap extends LyraElement {
         paint: { 'fill-color': colorExpr as never, 'fill-opacity': 0.75 },
       });
     }
+    this._appliedChoroplethSourceId = sourceId;
+    this._appliedFillLayerId = fillLayerId;
+  }
+
+  /** Removes whatever choropleth layer/source is currently applied, if any. */
+  private removeChoropleth(): void {
+    if (!this._map || !this._appliedChoroplethSourceId) return;
+    if (this._appliedFillLayerId && this._map.getLayer(this._appliedFillLayerId)) {
+      this._map.removeLayer(this._appliedFillLayerId);
+    }
+    if (this._map.getSource(this._appliedChoroplethSourceId)) {
+      this._map.removeSource(this._appliedChoroplethSourceId);
+    }
+    this._appliedChoroplethSourceId = undefined;
+    this._appliedFillLayerId = undefined;
   }
 
   render(): TemplateResult {
