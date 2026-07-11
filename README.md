@@ -23,10 +23,8 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Status
 
-Internally code-complete (322/322 tests) including the post-audit Tier 4 hardening and design-quality
-hardening passes, but real-world adoption is not yet validated in any consumer project. Tier 5
-priority features and adoption-validation tracking are covered in internal planning docs
-(not tracked in this repository).
+Pre-1.0 and under active development. All packages build and pass their test suites; the
+public API may still change before a 1.0 release.
 
 ## License
 

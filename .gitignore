@@ -3,8 +3,6 @@ dist/
 custom-elements.json
 coverage/
 .DS_Store
-.superpowers/
-docs/superpowers/
 .playwright-mcp/
 
 *storybook.log

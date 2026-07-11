@@ -87,12 +87,20 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   keep new components' plain class modules free of top-level side effects or tree-shaking
   breaks for every consumer.
 - **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
-  built on `ElementInternals`) — known gap (see Current status below): it never calls
+  built on `ElementInternals`) — known gap: it never calls
   `internals.setValidity()`, so `required` is currently a no-op for constraint validation on
   every form-associated component. Don't copy that gap into new components without flagging it.
 - **JSDoc header** on the component class: `@customElement lyra-x`, `@slot`, `@csspart` tags
   (see any existing component, e.g. `components/empty/empty.ts`) — this feeds the generated
   manifest and the consumer-facing docs.
+- **Never reference internal process in code comments or shipped docs.** Comments, JSDoc, and
+  the `llms.txt`/`llms-full.txt` reference must not cite internal audits or design reviews,
+  plan/spec/ledger docs, task or tier codenames (`§lyra-*`, `"dashboard-atoms"`, `Task 3`),
+  audit severity ratings (`High`/`Medium`/`Low`), dated review findings, client/project names,
+  or adoption/"battle-tested" status. This source ships verbatim in the public npm tarball
+  (`dist/`, `custom-elements.json`, `llms*.txt` all carry these comments), so anything written
+  here is published. Keep the *technical* rationale ("previously X was broken, so we do Y") and
+  drop the provenance — a code comment explains the code, not who reviewed it.
 - License: MIT. TypeScript strict.
 
 ## Testing conventions
@@ -120,18 +128,3 @@ tasks with checkbox steps, file lists, and interfaces; each task is implemented 
 for spec compliance and quality, with fix rounds repeating until clean. These working docs
 (specs, plans, execution ledger) are intentionally kept out of version control — they aren't
 tracked in this repository.
-
-## Current status & what's next
-
-**Internally code-complete, adoption unvalidated.** See `pnpm test` output for the
-current test count and `pnpm manifest` for a freshly regenerated `custom-elements.json`
-covering every custom-element tag; `pnpm lint`/`pnpm build`/`pnpm manifest` all pass as of
-this writing. But proving value by replacing a real hand-rolled component in
-a consumer repo is **0-for-5**: five identified swap targets across internal consumer
-projects remain unattempted. A separate five-project survey independently confirms
-zero adoption of `@aceshooting/lyra-ui` anywhere. "Roadmap complete" should not be read as
-"goal achieved". A cross-repo audit found per-component improvement opportunities across all
-20 component directories (incl. a High-severity shared `FormAssociated.setValidity()` gap),
-per-project survey findings, an 18-item missing-components wishlist ranked by cross-project
-signal, and recommended next steps ranked by impact — check with the team before starting new
-work in case it's already covered by that internal audit.
