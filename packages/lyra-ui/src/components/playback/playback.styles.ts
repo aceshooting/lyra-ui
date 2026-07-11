@@ -27,6 +27,14 @@ export const styles = css`
   [part='play-button']:hover {
     border-color: var(--lyra-color-brand);
   }
+  [part='play-button']:disabled {
+    opacity: var(--lyra-opacity-disabled);
+    cursor: not-allowed;
+  }
+  [part='play-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
   [part='slider'] {
     accent-color: var(--lyra-color-brand);
   }

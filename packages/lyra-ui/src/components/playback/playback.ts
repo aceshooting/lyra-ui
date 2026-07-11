@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { playIcon, pauseIcon } from '../../internal/icons.js';
 import { styles } from './playback.styles.js';
 
 /**
@@ -109,7 +110,7 @@ export class LyraPlayback extends LyraElement {
           ?disabled=${this.length <= 1}
           @click=${() => this.toggle()}
         >
-          ${this.playing ? '❚❚' : '▶'}
+          ${this.playing ? pauseIcon() : playIcon()}
         </button>
         <input
           part="slider"
