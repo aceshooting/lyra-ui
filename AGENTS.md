@@ -7,7 +7,8 @@
 
 ## What this is
 
-`@aceshooting/lyra-ui` (v0.1.1) is a free, clean-room Lit 3 web-component library — an
+`@aceshooting/lyra-ui` (see `packages/lyra-ui/package.json` for the current published version) is
+a free, clean-room Lit 3 web-component library — an
 open-source companion to Web Awesome that reimplements several Web Awesome **Pro**
 components plus original extras. Positioning, non-negotiable:
 
