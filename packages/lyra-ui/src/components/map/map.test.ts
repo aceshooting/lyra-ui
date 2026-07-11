@@ -293,6 +293,76 @@ it('calls setStyle when mapStyle changes after the map has mounted', async () =>
   expect(calledWith).to.equal(NEXT_STYLE);
 });
 
+it('adds a maplibregl.Marker per entry in markers', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { id: 'a', lngLat: [10, 20], label: 'Station A' },
+    { id: 'b', lngLat: [11, 21], label: 'Station B' },
+  ];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(2);
+});
+
+it('removes markers no longer present and reuses markers that persist', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { id: 'a', lngLat: [10, 20] },
+    { id: 'b', lngLat: [11, 21] },
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(2);
+
+  el.markers = [{ id: 'a', lngLat: [10, 20] }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(1);
+});
+
+it('attaches an openable popup when label or html is provided', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'a', lngLat: [10, 20], label: 'Station A' }];
+  await el.updateComplete;
+
+  const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
+    'popup never opened',
+  );
+  expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain('Station A');
+});
+
+it('removes all marker DOM on disconnect', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+  el.markers = [{ id: 'a', lngLat: [10, 20] }];
+  await el.updateComplete;
+  const shadowRoot = el.shadowRoot!;
+  expect(shadowRoot.querySelectorAll('.maplibregl-marker').length).to.equal(1);
+
+  el.remove();
+
+  expect(shadowRoot.querySelectorAll('.maplibregl-marker').length).to.equal(0);
+});
+
 function choropleth(sourceId: string, stops: [number, string][]) {
   return {
     sourceId,
