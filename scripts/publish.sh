@@ -124,7 +124,11 @@ npm publish "$tarball_path" --access public
 echo
 echo "==> Committing version bump"
 git add pnpm-lock.yaml "$PKG_DIR/package.json" "$ROOT_DIR"/packages/*/package.json
-git commit -m "chore(release): $PKG_NAME@$new_version"
+if git diff --cached --quiet; then
+  echo "No local changes to commit (version/lockfile already up to date on this branch)."
+else
+  git commit -m "chore(release): $PKG_NAME@$new_version"
+fi
 
 echo
 echo "==> Tagging $new_version"

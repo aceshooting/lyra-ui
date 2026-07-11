@@ -38,8 +38,9 @@ lyra-ui/                          (repo root — this file lives here)
         components/<name>/        one dir per component family (see README's component table)
         lyra.ts                   barrel: side-effect imports (registers every tag) + re-exports
       llms.txt / llms-full.txt    CONSUMER-facing API reference (not this file's audience)
-    lyra-flags/                   optional companion pkg — waving flag PNGs for <lyra-flag>,
-                                   kept out of lyra-ui's default install (unverified art provenance)
+    lyra-flags/                   optional companion pkg — waving flag SVGs for <lyra-flag>,
+                                   kept out of lyra-ui's default install (vendored from Noto
+                                   Emoji, Public Domain — see its THIRD_PARTY_NOTICES.md)
   docs/                           Vite playground demoing every component (this pkg + lyra-flags)
     superpowers/
       specs/                      spec docs (design spec, post-audit roadmap addendum)

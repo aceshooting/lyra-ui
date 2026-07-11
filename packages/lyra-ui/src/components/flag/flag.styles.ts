@@ -11,7 +11,7 @@ export const styles = css`
   [part='image'] {
     display: block;
     block-size: 100%;
-    inline-size: auto;
+    inline-size: 100%;
     border-radius: var(--lyra-flag-radius, 2px);
     box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08) inset;
     object-fit: cover;
