@@ -145,6 +145,23 @@ describe('mixColor', () => {
   });
 });
 
+it('retheming --lyra-heatmap-no-data-fill changes the rendered no-data cell color', async () => {
+  const el = (await fixture(html`
+    <lyra-heatmap style="--lyra-heatmap-no-data-fill: rgb(0, 200, 0);"></lyra-heatmap>
+  `)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x'];
+  el.values = [[-1]];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const dpr = window.devicePixelRatio || 1;
+  const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+  expect(pixel[0]).to.equal(0);
+  expect(pixel[1]).to.equal(200);
+  expect(pixel[2]).to.equal(0);
+});
+
 it('retheming the ramp with a non-hex CSS color renders that color, not black', async () => {
   const el = (await fixture(html`
     <lyra-heatmap

@@ -10,6 +10,10 @@ export const styles = css`
        the ramp without raw hex leaking into the public API. */
     --lyra-heatmap-scale-lo: #cde2fb;
     --lyra-heatmap-scale-hi: #0969da;
+    /* No-data cell fill (the -1 sentinel / NaN case) — same resolve-via-
+       getComputedStyle pattern as the ramp endpoints above, so hosts can
+       retheme it instead of it being a hardcoded literal in heatmap.ts. */
+    --lyra-heatmap-no-data-fill: rgba(128, 128, 128, 0.25);
   }
   [part='base'] {
     display: flex;

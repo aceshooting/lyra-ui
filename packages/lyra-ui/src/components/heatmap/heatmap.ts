@@ -7,7 +7,7 @@ import { styles } from './heatmap.styles.js';
 
 const PAD_LEFT = 60;
 const PAD_TOP = 20;
-const NO_DATA_FILL = 'rgba(128,128,128,0.25)';
+const FALLBACK_NO_DATA_FILL = 'rgba(128,128,128,0.25)';
 const RAMP_STEPS = 7;
 const FALLBACK_SCALE_LO = '#cde2fb';
 const FALLBACK_SCALE_HI = '#0969da';
@@ -190,6 +190,11 @@ export class LyraHeatmap extends LyraElement {
     return getComputedStyle(this).getPropertyValue('--lyra-color-text-quiet').trim() || '#6b7280';
   }
 
+  /** Reads the customizable no-data cell fill off the host's computed style. */
+  private noDataFill(): string {
+    return getComputedStyle(this).getPropertyValue('--lyra-heatmap-no-data-fill').trim() || FALLBACK_NO_DATA_FILL;
+  }
+
   private draw(): void {
     if (!this.canvas) return;
     const rows = this.rowLabels.length;
@@ -220,6 +225,7 @@ export class LyraHeatmap extends LyraElement {
     const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
     const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
     const ramp = Array.from({ length: RAMP_STEPS }, (_, i) => mixRgb(loRgb, hiRgb, i / (RAMP_STEPS - 1)));
+    const noDataFill = this.noDataFill();
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -231,10 +237,10 @@ export class LyraHeatmap extends LyraElement {
           // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
           // fillStyle, and silently paint with whatever color the previous cell
           // left in `ctx.fillStyle` (canvas ignores unparsable assignments).
-          ctx.fillStyle = NO_DATA_FILL;
+          ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
           const step = sqrtStep(v, hi, RAMP_STEPS);
-          ctx.fillStyle = step < 0 ? NO_DATA_FILL : ramp[step]!;
+          ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
         } else {
           // linearAlpha() returns a 0.1-1.0 ramp position; reused here as a
           // mix ratio between the two ramp-endpoint colors (rather than as a
