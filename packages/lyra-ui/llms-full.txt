@@ -557,11 +557,14 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
 - `caption: string = ''`
+- `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts
+  as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
+  *decrease* is the win.
 
 **Events:** none.
 
-**Slots:** default (leading icon), `caption` (rich caption content — **see gotchas, it does not
-override the attribute**)
+**Slots:** default (leading icon), `caption` (rich caption content — overrides the `caption`
+attribute when slotted content is provided)
 
 **CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `caption`
 
@@ -577,23 +580,8 @@ the `variant`-colored value text and up/down trend pill).
 ```
 
 **Known gotchas:**
-- **High** — icon/caption wrappers can never CSS-collapse: the stylesheet still relies on
-  `[part='icon']:empty` / `[part='caption']:empty { display: none }`, but both wrappers always
-  contain a literal `<slot>` child, so `:empty` never matches regardless of whether content is
-  provided. `<lyra-stat label="x" value="1">` with **no** icon/caption still lays out both empty
-  wrappers (visible gap/padding). This is the exact bug `lyra-empty` (above) correctly works around
-  via JS-tracked slot state — that fix has not been ported here.
-- **Medium** — the `caption` **slot does not override** the `caption` **attribute** despite the
-  intent implied by the docs: `render()` emits `${this.caption}<slot name="caption"></slot>`
-  unconditionally, so setting both concatenates rather than the slot replacing the attribute text.
-  Pick one or the other, don't set both.
-- **Medium** — `trend` polarity is hardcoded "higher is better": `trend > 0` always renders an
-  up-arrow in the success color, `trend < 0` always down/danger, with no invert flag. For metrics
-  where a *decrease* is good (cost, latency, error rate, churn), pre-negate the number yourself —
-  but that also flips the arrow direction misleadingly, so there's no fully correct workaround
-  today.
-- **Low** — the trend glyph (▲/▼/–) has no `aria-hidden`/accessible label, and there's no
-  `aria-live` for in-place `value`/`trend` updates.
+- **Low** — no `aria-live` for in-place `value`/`trend` updates — a value/trend change after first
+  render is not announced to screen readers.
 
 ---
 
@@ -643,13 +631,6 @@ body's `max-block-size`).
 ```
 
 **Known gotchas:**
-- **Medium** — with `columns.length === 0` and non-empty `rows`, every `<tr role="row">` renders
-  with **zero** `<th>`/`<td>` children — an ARIA-invalid row that's still `tabindex="0"` and
-  clickable despite no visible/accessible content. Only the zero-**rows** case is handled (falls
-  back to `<lyra-empty>`); always pass at least one column.
-- **Medium** — a fresh `@click`/`@keydown` closure is allocated for every sortable header and every
-  row on **every render** — real, avoidable GC churn on wide/tall tables that re-render on each
-  sort.
 - **Medium** — only single-row selection is modeled (`selectedKey: string | number | null`);
   there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
   a `cell()` callback if you need multi-select.
@@ -755,11 +736,6 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 ```
 
 **Known gotchas:**
-- **High** — the format-choice menu breaks this library's own disclosure-menu conventions: unlike
-  `lyra-combobox`/`lyra-date-input` in the same package, it has **no outside-pointerdown dismissal,
-  no Escape-to-close**, and `[part="trigger"]` never gets `aria-haspopup`/`aria-expanded`. Clicking
-  elsewhere on the page does not close an open format menu — handle this yourself (e.g. close on
-  your own outside-click listener) until fixed upstream.
 - **Low** — XLSX isn't implemented (`ExportFormat` really is `'csv' | 'json'`) — don't pass
   `'xlsx'` expecting it to work.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
