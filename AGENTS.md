@@ -13,16 +13,15 @@ components plus original extras. Positioning, non-negotiable:
 
 - **Clean-room.** No Web Awesome Pro source was ever available or copied. Behavior is
   implemented originally, seeded only from this org's own pre-existing hand-rolled
-  components (named per-task in the plan docs under `docs/superpowers/plans/`).
+  components.
 - **API-mirroring method.** For components that *do* have a Web Awesome counterpart, the
   public surface (attributes, slots, events, parts, CSS custom properties) is mirrored 1:1
   under the `lyra-` prefix — migration is a mechanical `wa-` → `lyra-` rename. Components
   with no WA equivalent (most of Tier 1–3 and the "bigger own tracks") instead follow this
   library's own established conventions (see below) — there is no docs page to mirror.
-- **Non-goals** (see the design spec, §3): not a WA fork, no `wa-` prefix or WA
-  trademark/branding, no React wrappers (stack is unifying on Lit; custom elements work in
-  React 19 anyway), Video/Video-Playlist deferred indefinitely.
-- Full rationale, goals, and the v1 API tables: `docs/superpowers/specs/2026-07-07-lyra-ui-component-library-design.md`.
+- **Non-goals:** not a WA fork, no `wa-` prefix or WA trademark/branding, no React wrappers
+  (stack is unifying on Lit; custom elements work in React 19 anyway), Video/Video-Playlist
+  deferred indefinitely.
 
 ## Monorepo layout
 
@@ -42,10 +41,6 @@ lyra-ui/                          (repo root — this file lives here)
                                    kept out of lyra-ui's default install (vendored from Noto
                                    Emoji, Public Domain — see its THIRD_PARTY_NOTICES.md)
   docs/                           Vite playground demoing every component (this pkg + lyra-flags)
-    superpowers/
-      specs/                      spec docs (design spec, post-audit roadmap addendum)
-      plans/                      tier/feature implementation plans (see SDD Process below)
-  .superpowers/sdd/                 execution ledger + audit reports (progress.md, audit reports)
 ```
 
 ## Dev commands (run from repo root unless noted)
@@ -105,7 +100,7 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   `@open-wc/testing` (`fixture`, `expect`, `oneEvent`, and axe accessibility assertions via
   `expect(el).to.be.accessible()`).
 - **TDD, failing-test-first.** Every behavior change starts with a test that fails for the
-  right reason, per `superpowers:test-driven-development`. Commit after each green step.
+  right reason. Commit after each green step.
 - Test files are colocated siblings: `components/<name>/<name>.test.ts`.
 - Run via `pnpm test` from repo root (fans out to every package) or `packages/lyra-ui/` for
   just this package; `pnpm test:watch` for iteration.
@@ -115,61 +110,26 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
 - Every component gets at least one `it('is accessible', ...)` axe check in addition to
   behavior tests.
 
-## SDD process (spec -> plan -> task cycle) for multi-step work
+## Process for multi-step work
 
-This repo's non-trivial work (a new tier of components, a hardening pass, etc.) follows the
-`superpowers` skill family's spec-driven-development flow, evidenced by
-`.superpowers/sdd/progress.md`:
-
-1. **Spec** (`docs/superpowers/specs/YYYY-MM-DD-*.md`) — goals, non-goals, naming, success
-   criteria. Written/approved before any implementation plan.
-2. **Plan** (`docs/superpowers/plans/YYYY-MM-DD-*.md`) — one plan doc per tier/feature batch.
-   Each opens with a **"REQUIRED SUB-SKILL"** callout naming which skill to execute it with
-   (`superpowers:subagent-driven-development` recommended, or `superpowers:executing-plans`),
-   then a **Global Constraints** section (prefix rule, clean-room rule, token rule, event
-   rule, TDD rule — matching the Coding Conventions above), then numbered tasks with
-   checkbox (`- [ ]`) steps, file lists, and interfaces.
-3. **Per-task cycle**, run via `superpowers:subagent-driven-development`: a
-   task-N-brief.md is handed to an implementer subagent, which produces a
-   task-N-report.md; a separate reviewer subagent checks spec compliance and quality; fix
-   rounds repeat until clean. This is why `.superpowers/sdd/progress.md` records, per task,
-   the commit range and "review clean after N fix rounds" plus exactly what each fix round
-   found.
-4. **Ledger**: `.superpowers/sdd/progress.md` is the running execution log across the whole
-   roadmap — tier by tier, task by task, with commit ranges, fix-round counts, and root
-   causes. Read it in full before starting new SDD work so you don't re-litigate settled
-   decisions or duplicate a fix already applied elsewhere.
-
-When picking up new multi-step work in this repo, use `superpowers:writing-plans` to turn a
-spec into a plan doc first, then `superpowers:subagent-driven-development` (preferred) or
-`superpowers:executing-plans` to run it, and append to `progress.md` as you go.
+This repo's non-trivial work (a new tier of components, a hardening pass, etc.) follows a
+spec -> plan -> task execution cycle: a spec (goals, non-goals, naming, success criteria) is
+written and approved before any implementation plan; the plan breaks the work into numbered
+tasks with checkbox steps, file lists, and interfaces; each task is implemented then reviewed
+for spec compliance and quality, with fix rounds repeating until clean. These working docs
+(specs, plans, execution ledger) are intentionally kept out of version control — they aren't
+tracked in this repository.
 
 ## Current status & what's next
 
 **Internally code-complete, adoption unvalidated.** As of commit `fd7a032`: 198/198 tests
 green, all 34 custom-element tags present in a freshly regenerated `custom-elements.json`,
-lint/build/manifest all pass. But the design spec's own Section 9 success criterion — prove
-value by replacing a real hand-rolled component in a consumer repo — is **0-for-5**: all
-five swap attempts named across the roadmap and later plan docs ([client]'s
-`[component]`, `[client]`'s `[Component]`, `[client]`'s
-`[component].ts`, `[client]`'s `[Component].tsx`, and [client]'s
-`[component]`/`[component].ts`) remain unattempted. A separate five-project survey
-([client], [client], [client], [client], [client]) independently confirms zero
-adoption of `@aceshooting/lyra-ui` anywhere. "Roadmap complete" should not be read as
-"goal achieved" — see these artifacts before starting new work:
-
-- Full findings: `.superpowers/sdd/2026-07-10-cross-repo-audit-report.md` — executive summary
-  (lines 3–11), roadmap/plan status + every verified known issue (lines 16–47), per-component
-  improvement opportunities across all 20 component directories incl. the High-severity
-  shared `FormAssociated.setValidity()` gap (lines 50–234), per-project survey findings
-  (lines 238–290), an 18-item missing-components wishlist ranked by cross-project signal
-  (lines 292–402), and recommended next steps ranked by impact (lines 405–414).
-- Roadmap addendum (post-audit plan of record):
-  `docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md`.
-- Two new implementation plans queued from the audit:
-  `docs/superpowers/plans/2026-07-10-lyra-ui-tier4-hardening.md` (fixes for the known
-  issues/accessibility gaps) and
-  `docs/superpowers/plans/2026-07-10-lyra-ui-tier5-priority-features.md` (top wishlist items).
-
-Before adding new components or features, check whether the audit already covers the gap —
-duplicating analysis there wastes a review cycle.
+lint/build/manifest all pass. But proving value by replacing a real hand-rolled component in
+a consumer repo is **0-for-5**: five identified swap targets across internal consumer
+projects remain unattempted. A separate five-project survey independently confirms
+zero adoption of `@aceshooting/lyra-ui` anywhere. "Roadmap complete" should not be read as
+"goal achieved". A cross-repo audit found per-component improvement opportunities across all
+20 component directories (incl. a High-severity shared `FormAssociated.setValidity()` gap),
+per-project survey findings, an 18-item missing-components wishlist ranked by cross-project
+signal, and recommended next steps ranked by impact — check with the team before starting new
+work in case it's already covered by that internal audit.
