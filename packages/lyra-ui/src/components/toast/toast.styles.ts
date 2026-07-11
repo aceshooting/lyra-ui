@@ -16,7 +16,6 @@ export const styles = css`
     inline-size: var(--width);
     max-inline-size: calc(100vw - 2rem);
   }
-  [part='stack']::slotted(*),
   ::slotted(*) {
     pointer-events: auto;
   }

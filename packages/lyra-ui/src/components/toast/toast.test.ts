@@ -2,6 +2,7 @@ import { expect, waitUntil, fixture, html } from '@open-wc/testing';
 import { toast } from './toaster.js';
 import './toast.js';
 import type { LyraToast } from './toast.js';
+import { styles } from './toast.styles.js';
 
 it('mounts a singleton region and shows an item', async () => {
   const handle = toast({ message: 'hi', variant: 'success', duration: 0 });
@@ -43,4 +44,15 @@ it('create() on the region resolves to the item', async () => {
   const item = await region.create('direct', { variant: 'warning', duration: 0 });
   expect(item.variant).to.equal('warning');
   expect(item.textContent).to.contain('direct');
+});
+
+it('does not contain the dead `[part="stack"]::slotted(*)` selector', () => {
+  // `::slotted()` must be attached directly to a compound selector matching the
+  // <slot> element itself; `[part='stack']` matches the wrapping <div>, not the
+  // nested <slot>, so this compound selector can never match anything and is inert.
+  const cssText = Array.isArray(styles)
+    ? styles.map((s) => s.cssText).join('\n')
+    : (styles as { cssText: string }).cssText;
+  expect(cssText).to.not.match(/\[part=['"]?stack['"]?\]\s*::slotted/);
+  expect(cssText).to.match(/(^|\n)\s*::slotted\(\*\)\s*{/);
 });
