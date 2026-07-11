@@ -102,6 +102,48 @@ it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
   expect(singleTrigger.hasAttribute('aria-expanded')).to.be.false;
 });
 
+it('animates the menu open/closed with an opacity+transform transition', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+
+  const closedStyle = getComputedStyle(menu);
+  expect(closedStyle.opacity).to.equal('0');
+  expect(closedStyle.transitionDuration).to.not.equal('0s');
+
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(getComputedStyle(menu).opacity).to.equal('1');
+});
+
+it('shows a focus ring on the trigger via :focus-visible', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.focus();
+  await el.updateComplete;
+  const style = getComputedStyle(trigger);
+  expect(style.outlineWidth).to.equal('2px');
+  expect(style.outlineOffset).to.equal('2px');
+});
+
+it('shows a focus ring on menu items via :focus-visible', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  menuItem.focus();
+  await el.updateComplete;
+  const style = getComputedStyle(menuItem);
+  expect(style.outlineWidth).to.equal('2px');
+  expect(style.outlineOffset).to.equal('2px');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   await expect(el).to.be.accessible();

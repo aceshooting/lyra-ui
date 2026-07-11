@@ -21,8 +21,12 @@ export const styles = css`
     border-color: var(--lyra-color-brand);
   }
   [part='trigger']:disabled {
-    opacity: 0.5;
+    opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
+  }
+  [part='trigger']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='menu'] {
     display: none;
@@ -34,9 +38,21 @@ export const styles = css`
     border: 1px solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--lyra-transition-fast),
+      transform var(--lyra-transition-fast);
   }
   :host([open]) [part='menu'] {
     display: block;
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='menu'] {
+      transition: none;
+    }
   }
   [part='menu-item'] {
     display: block;
@@ -52,5 +68,9 @@ export const styles = css`
   }
   [part='menu-item']:hover {
     background: var(--lyra-color-brand-quiet);
+  }
+  [part='menu-item']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 `;
