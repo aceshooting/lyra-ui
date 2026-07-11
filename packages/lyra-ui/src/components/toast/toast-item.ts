@@ -2,12 +2,20 @@ import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { closeIcon } from '../../internal/icons.js';
 import { styles } from './toast-item.styles.js';
 
 export type ToastVariant = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
 export type ToastSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
-const ANIM_MS = 250;
+// Must stay in sync with --lyra-transition-base's 180ms fallback
+// (internal/tokens.styles.ts) — toast-item.styles.ts derives
+// --show-duration/--hide-duration from that same token. Kept as a literal
+// here rather than read via getComputedStyle() because the token's value is
+// a full transition shorthand ("180ms ease-out"), not a bare duration, and
+// parsing that back out in JS for a single setTimeout would be more fragile
+// than this documented literal.
+const ANIM_MS = 180;
 
 /**
  * `<lyra-toast-item>` — a single toast notification.
@@ -109,7 +117,7 @@ export class LyraToastItem extends LyraElement {
         ${this.withIcon ? html`<span part="icon"><slot name="icon"></slot></span>` : ''}
         <div part="content"><slot></slot></div>
         <button part="close-button" type="button" aria-label="Close" @click=${() => this.hide()}>
-          &times;
+          ${closeIcon()}
         </button>
       </div>
     `;

@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './toast-item.js';
 import type { LyraToastItem } from './toast-item.js';
+import { styles } from './toast-item.styles.js';
 
 it('emits lifecycle events and uses an assertive role for danger', async () => {
   const el = (await fixture(
@@ -37,4 +38,43 @@ it('is accessible', async () => {
   )) as LyraToastItem;
   await oneEvent(el, 'lyra-show');
   await expect(el).to.be.accessible();
+});
+
+it('renders the shared close icon svg instead of a literal times-entity glyph', async () => {
+  const el = (await fixture(
+    html`<lyra-toast-item duration="0">hi</lyra-toast-item>`,
+  )) as LyraToastItem;
+  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  expect(button.querySelector('svg')).to.exist;
+  expect(button.textContent?.trim()).to.equal('');
+});
+
+it('uses the shared 180ms transition-base duration for hide, not the old 250ms hardcode', async () => {
+  const el = (await fixture(
+    html`<lyra-toast-item duration="0">bye</lyra-toast-item>`,
+  )) as LyraToastItem;
+  await oneEvent(el, 'lyra-show');
+  const start = performance.now();
+  void el.hide();
+  await oneEvent(el, 'lyra-after-hide');
+  const elapsed = performance.now() - start;
+  expect(elapsed).to.be.greaterThan(150);
+  expect(elapsed).to.be.lessThan(230);
+});
+
+it('derives the CSS show/hide transition duration from --lyra-transition-base instead of a hardcoded 250ms', () => {
+  expect(styles.cssText).to.include('var(--lyra-transition-base');
+  expect(styles.cssText).to.not.include('250ms');
+});
+
+it('collapses the show/hide transition duration under prefers-reduced-motion', () => {
+  expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\)/);
+  expect(styles.cssText).to.match(/transition-duration:\s*0\.01ms/);
+});
+
+it('defines a focus-visible outline for the close button using the shared focus-ring tokens', () => {
+  expect(styles.cssText).to.match(/\[part=['"]close-button['"]\]:focus-visible/);
+  expect(styles.cssText).to.match(
+    /outline:\s*var\(--lyra-focus-ring-width\)\s*solid\s*var\(--lyra-focus-ring-color\)/,
+  );
 });

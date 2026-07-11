@@ -4,8 +4,8 @@ export const styles = css`
   :host {
     display: block;
     --accent-width: 4px;
-    --show-duration: 250ms;
-    --hide-duration: 250ms;
+    --show-duration: var(--lyra-transition-base, 180ms ease-out);
+    --hide-duration: var(--lyra-transition-base, 180ms ease-out);
     --padding: var(--lyra-space-m);
     --accent-color: var(--lyra-color-border);
   }
@@ -38,12 +38,17 @@ export const styles = css`
     opacity: 0;
     transform: translateY(-8px);
     transition:
-      opacity var(--show-duration) ease,
-      transform var(--show-duration) ease;
+      opacity var(--show-duration),
+      transform var(--show-duration);
   }
   :host([data-visible]) [part='toast-item'] {
     opacity: 1;
     transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='toast-item'] {
+      transition-duration: 0.01ms !important;
+    }
   }
 
   [part='accent'] {
@@ -78,5 +83,9 @@ export const styles = css`
   }
   [part='close-button']:hover {
     color: var(--lyra-color-text);
+  }
+  [part='close-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 `;
