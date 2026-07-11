@@ -75,6 +75,21 @@ const MIN_RADIUS = 6;
 const MAX_RADIUS = 24;
 
 /**
+ * Rejects a `GraphNode.color` that could break out of the single
+ * `--lyra-node-fill` custom-property declaration it's assigned to — `;`,
+ * `{`, and `}` are all a value needs to terminate that declaration and start
+ * another. This matters even though the node fill is set via Lit's
+ * `styleMap` directive (not raw string interpolation): `styleMap`'s first
+ * commit for a given attribute part serializes the whole `style` value as a
+ * single string (only later updates go through the safe
+ * `CSSStyleDeclaration.setProperty()` path), so an unsanitized value could
+ * still inject on that first render.
+ */
+function sanitizeNodeColor(color: string | undefined): string | undefined {
+  return color != null && !/[;{}]/.test(color) ? color : undefined;
+}
+
+/**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
  * Requires the optional peer deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`
  * (lazy-loaded; a consumer who never uses this component pays zero d3 cost).
@@ -266,8 +281,9 @@ export class LyraGraph extends LyraElement {
                 @click=${() => this.onLinkClick(l)}
               ></line>`;
             })}
-            ${this.simNodes.map(
-              (n) => svg`<g>
+            ${this.simNodes.map((n) => {
+              const fill = sanitizeNodeColor(n.color);
+              return svg`<g>
                 <circle
                   part="node"
                   role="button"
@@ -276,7 +292,7 @@ export class LyraGraph extends LyraElement {
                   r=${this.nodeRadius(n)}
                   cx=${n.x ?? 0}
                   cy=${n.y ?? 0}
-                  style=${styleMap(n.color ? { '--lyra-node-fill': n.color } : {})}
+                  style=${styleMap(fill ? { '--lyra-node-fill': fill } : {})}
                   @click=${() => this.onNodeClick(n)}
                   @keydown=${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -288,8 +304,8 @@ export class LyraGraph extends LyraElement {
                 ${n.label
                   ? svg`<text part="label" x=${(n.x ?? 0) + this.nodeRadius(n) + 2} y=${n.y ?? 0}>${n.label}</text>`
                   : ''}
-              </g>`,
-            )}
+              </g>`;
+            })}
           </g>
         </svg>
       </div>
