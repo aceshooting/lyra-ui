@@ -6,6 +6,25 @@ export function linearAlpha(value: number, lo: number, hi: number): number {
 }
 
 /**
+ * Computes `[min, max]` of `values` via a linear scan, or `null` for an
+ * empty array. Deliberately not `Math.min(...values)`/`Math.max(...values)`
+ * — spreading a large array as call arguments throws `RangeError: Maximum
+ * call stack size exceeded` once the engine's argument-list limit is
+ * exceeded (verified at ~150k+ elements).
+ */
+export function minMax(values: number[]): [number, number] | null {
+  if (values.length === 0) return null;
+  let lo = values[0]!;
+  let hi = values[0]!;
+  for (let i = 1; i < values.length; i++) {
+    const v = values[i]!;
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  return [lo, hi];
+}
+
+/**
  * Square-root-scaled bucket index in `[0, steps-1]`, or `-1` for no-data.
  * Compresses large counts so a single heavy cell doesn't wash out the rest
  * of a sequential color ramp.

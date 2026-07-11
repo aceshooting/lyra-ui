@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { linearAlpha, sqrtStep } from './heatmap-scale.js';
+import { linearAlpha, minMax, sqrtStep } from './heatmap-scale.js';
 
 it('linearAlpha maps the value range to a 0.1-1.0 alpha ramp', () => {
   expect(linearAlpha(0, 0, 10)).to.equal(0.1);
@@ -22,4 +22,23 @@ it('sqrtStep compresses large counts so one outlier does not dominate', () => {
   expect(stepAtMax).to.equal(6);
   // sqrt(25/100) = 0.5, so this should land roughly mid-scale, not near 0
   expect(stepAtQuarter).to.be.greaterThan(2);
+});
+
+describe('minMax', () => {
+  it('returns null for an empty array', () => {
+    expect(minMax([])).to.equal(null);
+  });
+
+  it('returns the [lo, hi] pair for a small array', () => {
+    expect(minMax([3, 1, 4, 1, 5, 9, 2, 6])).to.deep.equal([1, 9]);
+  });
+
+  it('handles a single-element array', () => {
+    expect(minMax([42])).to.deep.equal([42, 42]);
+  });
+
+  it('does not crash on a very large array (spreading it into Math.min/Math.max would blow the call stack)', () => {
+    const values = Array.from({ length: 150_000 }, (_, i) => i);
+    expect(minMax(values)).to.deep.equal([0, 149_999]);
+  });
 });

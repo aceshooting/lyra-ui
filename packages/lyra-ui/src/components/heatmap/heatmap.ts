@@ -2,7 +2,7 @@ import { html, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
-import { linearAlpha, sqrtStep } from './heatmap-scale.js';
+import { linearAlpha, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 
 const PAD_LEFT = 60;
@@ -154,8 +154,9 @@ export class LyraHeatmap extends LyraElement {
   protected willUpdate(): void {
     const rows = this.rowLabels.length;
     const cols = this.colLabels.length;
-    const flat = this.values.flat().filter((v) => v >= 0);
-    const range = flat.length ? `${Math.min(...flat)}–${Math.max(...flat)}` : 'no data';
+    const flat = this.values.flat().filter((v) => Number.isFinite(v) && v >= 0);
+    const bounds = minMax(flat);
+    const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
     this.setAttribute('role', 'img');
     this.setAttribute(
       'aria-label',
@@ -197,9 +198,10 @@ export class LyraHeatmap extends LyraElement {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const flat = this.values.flat().filter((v) => v >= 0);
-    const lo = flat.length ? Math.min(...flat) : 0;
-    const hi = flat.length ? Math.max(...flat) : 1;
+    const flat = this.values.flat().filter((v) => Number.isFinite(v) && v >= 0);
+    const bounds = minMax(flat);
+    const lo = bounds ? bounds[0] : 0;
+    const hi = bounds ? bounds[1] : 1;
     const [scaleLo, scaleHi] = this.scaleEndpoints();
     const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
     const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
@@ -210,7 +212,11 @@ export class LyraHeatmap extends LyraElement {
         const v = this.values[r]?.[c] ?? -1;
         const x = PAD_LEFT + c * this.cellSize;
         const y = PAD_TOP + r * this.cellSize;
-        if (v < 0) {
+        if (v < 0 || !Number.isFinite(v)) {
+          // `v < 0` alone is false for NaN, which would otherwise fall through to
+          // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
+          // fillStyle, and silently paint with whatever color the previous cell
+          // left in `ctx.fillStyle` (canvas ignores unparsable assignments).
           ctx.fillStyle = NO_DATA_FILL;
         } else if (this.scale === 'sqrt') {
           const step = sqrtStep(v, hi, RAMP_STEPS);

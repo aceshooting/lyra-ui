@@ -38,6 +38,36 @@ it('treats -1 as a no-data sentinel without throwing', async () => {
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
 });
 
+it('does not throw a RangeError computing the range label/draw for a very large grid (150k+ cells)', async () => {
+  const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  const cols = 400;
+  const rows = 400; // 160,000 cells — spreading this into Math.min/Math.max(...flat) blows the call stack.
+  el.rowLabels = Array.from({ length: rows }, (_, r) => `r${r}`);
+  el.colLabels = Array.from({ length: cols }, (_, c) => `c${c}`);
+  el.values = Array.from({ length: rows }, (_, r) =>
+    Array.from({ length: cols }, (_, c) => r * cols + c),
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  expect(el.getAttribute('aria-label')).to.contain(`${rows * cols - 1}`);
+});
+
+it('treats a NaN cell as no-data instead of leaking whatever color the previous cell painted', async () => {
+  const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y'];
+  el.values = [[5, NaN]];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const dpr = window.devicePixelRatio || 1;
+  // Second column (NaN): PAD_LEFT=60 + 1*cellSize(22) = 82, PAD_TOP=20.
+  const pixel = ctx.getImageData(Math.round(87 * dpr), Math.round(25 * dpr), 1, 1).data;
+  expect(pixel[0]).to.equal(128);
+  expect(pixel[1]).to.equal(128);
+  expect(pixel[2]).to.equal(128);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
   el.values = [[1, 2]];
