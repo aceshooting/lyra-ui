@@ -23,9 +23,10 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Status
 
-Internally code-complete (274/274 tests), but real-world adoption is not yet validated in any
-consumer project. See the [post-audit roadmap addendum](./docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md)
-and the [full cross-repo audit](./.superpowers/sdd/2026-07-10-cross-repo-audit-report.md).
+Internally code-complete (322/322 tests) including the post-audit Tier 4 hardening and design-quality
+hardening passes, but real-world adoption is not yet validated in any consumer project. See the
+[post-audit roadmap addendum](./docs/superpowers/specs/2026-07-10-lyra-ui-post-audit-roadmap.md) for
+the remaining Tier 5 priority features and adoption-validation tracking.
 
 ## License
 
