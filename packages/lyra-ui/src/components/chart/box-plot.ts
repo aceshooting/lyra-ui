@@ -69,10 +69,22 @@ export class LyraBoxPlot extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    void loadBoxPlotPlugin().then(async () => {
-      this.chartJsModule = (await loadChartJs()) ?? undefined;
-      this.draw();
-    });
+    void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod));
+  }
+
+  // Split out from `connectedCallback()` so the partial-peer-dependency-
+  // failure path (chart.js loads fine, `@sgratzl/chartjs-chart-boxplot`
+  // doesn't) is directly testable: `loadBoxPlotPlugin()` resolves to `null`
+  // without ever registering `BoxPlotController`/`BoxAndWiskers` in that
+  // case, so this must gate on its resolved value — mirroring the correct,
+  // established pattern in `LyraChart.connectedCallback()` — instead of
+  // unconditionally re-awaiting the already-cached `loadChartJs()` promise.
+  private async onBoxPlotPluginLoaded(
+    boxMod: typeof import('@sgratzl/chartjs-chart-boxplot') | null,
+  ): Promise<void> {
+    if (!boxMod) return;
+    this.chartJsModule = (await loadChartJs()) ?? undefined;
+    this.draw();
   }
 
   disconnectedCallback(): void {
