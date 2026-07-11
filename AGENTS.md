@@ -123,9 +123,10 @@ tracked in this repository.
 
 ## Current status & what's next
 
-**Internally code-complete, adoption unvalidated.** As of commit `fd7a032`: 198/198 tests
-green, all 34 custom-element tags present in a freshly regenerated `custom-elements.json`,
-lint/build/manifest all pass. But proving value by replacing a real hand-rolled component in
+**Internally code-complete, adoption unvalidated.** See `pnpm test` output for the
+current test count and `pnpm manifest` for a freshly regenerated `custom-elements.json`
+covering every custom-element tag; `pnpm lint`/`pnpm build`/`pnpm manifest` all pass as of
+this writing. But proving value by replacing a real hand-rolled component in
 a consumer repo is **0-for-5**: five identified swap targets across internal consumer
 projects remain unattempted. A separate five-project survey independently confirms
 zero adoption of `@aceshooting/lyra-ui` anywhere. "Roadmap complete" should not be read as
