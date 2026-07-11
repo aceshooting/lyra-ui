@@ -43,6 +43,19 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+if [[ "$current_branch" != "main" ]]; then
+  echo "Error: releases must be run from the 'main' branch (currently on '$current_branch')." >&2
+  exit 1
+fi
+
+echo "==> Fetching origin/main to verify local main is up to date"
+git fetch origin main --quiet
+if ! git merge-base --is-ancestor origin/main HEAD; then
+  echo "Error: local 'main' is not up to date with 'origin/main'. Pull/rebase before publishing." >&2
+  exit 1
+fi
+
 if ! command -v gh >/dev/null 2>&1; then
   echo "Error: gh CLI not found. Install it to create the GitHub Release." >&2
   exit 1
@@ -157,6 +170,33 @@ echo
 echo "==> Publishing $tarball_path to npm"
 npm publish "$tarball_path" --access public
 
+# From here on, npm already has $new_version published. If anything below
+# fails, print manual-recovery instructions rather than leaving the operator
+# to guess what state git/GitHub are in.
+publish_recovery_trap() {
+  echo >&2
+  echo "====================================================================" >&2
+  echo "ERROR: a step AFTER 'npm publish' failed." >&2
+  echo "$PKG_NAME@$new_version has ALREADY been published to npm -- do NOT" >&2
+  echo "re-run 'npm publish' for this version. Finish the remaining steps by hand:" >&2
+  echo >&2
+  echo "  1. Commit the version bump (if not already committed):" >&2
+  echo "       git add pnpm-lock.yaml \"$PKG_DIR/package.json\" \"$ROOT_DIR\"/packages/*/package.json" >&2
+  echo "       git commit -m \"chore(release): $PKG_NAME@$new_version\"" >&2
+  echo "  2. Tag the release (if not already tagged):" >&2
+  echo "       git tag -a $new_version -m \"Release $new_version\"" >&2
+  echo "  3. Push the commit and tag:" >&2
+  echo "       git push origin HEAD $new_version" >&2
+  echo "  4. Create the GitHub Release with artifacts:" >&2
+  echo "       gh release create $new_version \"$tarball_path\" \"$PKG_DIR/custom-elements.json\" \"$PKG_DIR/llms.txt\" \"$PKG_DIR/llms-full.txt\" \\" >&2
+  echo "         --title \"$PKG_NAME@$new_version\" --generate-notes" >&2
+  echo >&2
+  echo "Check 'git log', 'git tag', and the GitHub releases page first to see" >&2
+  echo "which of the above already succeeded before re-running a step." >&2
+  echo "====================================================================" >&2
+}
+trap publish_recovery_trap ERR
+
 echo
 echo "==> Committing version bump"
 git add pnpm-lock.yaml "$PKG_DIR/package.json" "$ROOT_DIR"/packages/*/package.json
@@ -186,6 +226,8 @@ done
 gh release create "$new_version" "${release_files[@]}" \
   --title "$PKG_NAME@$new_version" \
   --generate-notes
+
+trap - ERR
 
 echo
 echo "Published, tagged, and released $PKG_NAME@$new_version."
