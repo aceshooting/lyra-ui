@@ -13,11 +13,14 @@ import { defineElement } from '../../internal/prefix.js';
  * @customElement lyra-option
  */
 export class LyraOption extends LyraElement {
-  static styles = css`
-    :host {
-      display: none;
-    }
-  `;
+  static styles = [
+    LyraElement.styles,
+    css`
+      :host {
+        display: none;
+      }
+    `,
+  ];
 
   /** The selection key submitted with the form. */
   @property() value = '';
@@ -34,9 +37,10 @@ export class LyraOption extends LyraElement {
   /** Extra text the filter should match beyond the label. */
   @property({ attribute: 'search-text' }) searchText = '';
 
-  /** Resolved label: explicit `label` attribute wins, else trimmed text content. */
+  /** Resolved label: explicit non-empty `label` attribute wins, else trimmed text content. */
   get label(): string {
-    return (this.getAttribute('label') ?? this.textContent ?? '').trim();
+    const attr = this.getAttribute('label');
+    return (attr ? attr : (this.textContent ?? '')).trim();
   }
 
   render(): TemplateResult {
