@@ -73,6 +73,7 @@ export class LyraMap extends LyraElement {
   // out of scope for this additive fix, tracked as a v2 option).
   private _appliedChoroplethSourceId?: string;
   private _appliedFillLayerId?: string;
+  private _maplibreModule: any;
   private _markerInstances = new Map<string, import('maplibre-gl').Marker>();
 
   /** The raw `maplibregl.Map` instance — escape hatch for anything this wrapper doesn't expose. */
@@ -85,6 +86,7 @@ export class LyraMap extends LyraElement {
     void loadMaplibre().then(async (mod) => {
       this.loading = false;
       if (!mod) return;
+      this._maplibreModule = mod;
       // `[part="container"]` only exists once `loading` flips to `false` and
       // Lit re-renders — wait for that render to land before querying it.
       await this.updateComplete;
