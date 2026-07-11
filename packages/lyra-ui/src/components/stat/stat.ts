@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { chevronIcon } from '../../internal/icons.js';
 import { styles } from './stat.styles.js';
 
 export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
@@ -55,7 +56,11 @@ export class LyraStat extends LyraElement {
     const hasTrend = !isNaN(this.trend);
     const rawDirection = this.trend > 0 ? 'up' : this.trend < 0 ? 'down' : 'flat';
     const isGood = rawDirection === 'flat' ? null : rawDirection === this.goodDirection;
-    const arrow = rawDirection === 'up' ? '▲' : rawDirection === 'down' ? '▼' : '–';
+    // 2026-07-10 design review, "dashboard-atoms" §lyra-stat: the trend
+    // pill rendered literal ▲/▼ glyphs — font-dependent and inconsistent
+    // with the rest of the icon set — swapped for the shared chevronIcon(),
+    // rotated per direction via CSS on the wrapping [part='trend'].
+    const arrow = rawDirection === 'flat' ? '–' : chevronIcon();
     const hasCaption = this.hasCaptionSlot || this.caption.length > 0;
 
     return html`

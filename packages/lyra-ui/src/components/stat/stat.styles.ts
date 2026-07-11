@@ -43,12 +43,22 @@ export const styles = css`
   [part='trend'] {
     display: inline-flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: var(--lyra-space-xs);
     font-size: 0.8125rem;
     font-weight: 600;
     border-radius: var(--lyra-radius);
+    /* 0.05rem/0.4rem don't cleanly map to any --lyra-space-* step (the
+       smallest, --lyra-space-xs, is 0.25rem): rounding the vertical value
+       up to xs would 5x this chip's padding and blow out the compact
+       trend-chip look, so both stay literal here. */
     padding: 0.05rem 0.4rem;
     align-self: flex-start;
+  }
+  [part='trend'][data-direction='up'] svg {
+    transform: rotate(-90deg);
+  }
+  [part='trend'][data-direction='down'] svg {
+    transform: rotate(90deg);
   }
   [part='trend'][data-polarity='good'] {
     color: var(--lyra-color-success);

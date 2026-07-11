@@ -91,3 +91,51 @@ it('goodDirection="down" inverts polarity: the same negative trend renders data-
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.getAttribute('data-polarity')).to.equal('good');
 });
+
+it('renders a rotatable chevron icon for up/down trend, and a plain en dash for flat trend', async () => {
+  const el = (await fixture(
+    html`<lyra-stat label="x" value="1" trend="5"></lyra-stat>`,
+  )) as LyraStat;
+  let trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  expect(trend.querySelector('svg')).to.exist;
+  expect(trend.textContent).to.not.include('▲');
+
+  el.trend = -5;
+  await el.updateComplete;
+  trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  expect(trend.querySelector('svg')).to.exist;
+  expect(trend.textContent).to.not.include('▼');
+
+  el.trend = 0;
+  await el.updateComplete;
+  trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  expect(trend.querySelector('svg')).to.not.exist;
+  expect(trend.textContent).to.include('–');
+});
+
+it('rotates the trend chevron oppositely for up vs down via CSS on the wrapping part, not inline styles', async () => {
+  const el = (await fixture(
+    html`<lyra-stat label="x" value="1" trend="5"></lyra-stat>`,
+  )) as LyraStat;
+  const upSvg = el.shadowRoot!.querySelector('[part="trend"] svg') as SVGElement;
+  expect(upSvg.getAttribute('style')).to.be.null;
+  const upTransform = getComputedStyle(upSvg).transform;
+
+  el.trend = -5;
+  await el.updateComplete;
+  const downSvg = el.shadowRoot!.querySelector('[part="trend"] svg') as SVGElement;
+  expect(downSvg.getAttribute('style')).to.be.null;
+  const downTransform = getComputedStyle(downSvg).transform;
+
+  expect(upTransform).to.not.equal('none');
+  expect(downTransform).to.not.equal('none');
+  expect(upTransform).to.not.equal(downTransform);
+});
+
+it('uses the --lyra-space-xs token for the trend chip gap', async () => {
+  const el = (await fixture(
+    html`<lyra-stat label="x" value="1" trend="5"></lyra-stat>`,
+  )) as LyraStat;
+  const trend = el.shadowRoot!.querySelector('[part="trend"]') as HTMLElement;
+  expect(getComputedStyle(trend).gap).to.equal('4px');
+});
