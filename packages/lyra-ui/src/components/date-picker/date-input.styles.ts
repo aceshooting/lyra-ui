@@ -37,7 +37,7 @@ export const styles = css`
     border-color: var(--lyra-color-brand);
   }
   :host([disabled]) [part='input-wrapper'] {
-    opacity: 0.5;
+    opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
   [part='input'] {

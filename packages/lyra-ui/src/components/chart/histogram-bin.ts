@@ -5,7 +5,7 @@ export interface HistogramBucket {
 
 /** Splits `values` into `binCount` equal-width buckets and counts membership. */
 export function binValues(values: number[], binCount: number): HistogramBucket[] {
-  if (values.length === 0) return [];
+  if (values.length === 0 || binCount <= 0) return [];
   const lo = Math.min(...values);
   const hi = Math.max(...values);
   const span = hi - lo || 1;

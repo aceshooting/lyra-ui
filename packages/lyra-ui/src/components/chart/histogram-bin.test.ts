@@ -20,3 +20,11 @@ it('labels each bucket with its numeric range', () => {
 it('returns an empty array for empty input', () => {
   expect(binValues([], 5)).to.deep.equal([]);
 });
+
+it('returns an empty array instead of throwing when binCount is 0', () => {
+  expect(binValues([1, 2, 3], 0)).to.deep.equal([]);
+});
+
+it('returns an empty array instead of throwing when binCount is negative', () => {
+  expect(binValues([1, 2, 3], -2)).to.deep.equal([]);
+});

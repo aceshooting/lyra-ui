@@ -78,7 +78,11 @@ export class LyraMap extends LyraElement {
       // `[part="container"]` only exists once `loading` flips to `false` and
       // Lit re-renders — wait for that render to land before querying it.
       await this.updateComplete;
-      if (!this.containerEl) return;
+      // The element may have been removed from the DOM while the async
+      // loadMaplibre()/updateComplete window was in flight — don't spin up
+      // a maplibre Map (WebGL context + event listeners) for a detached
+      // instance (disconnectedCallback's cleanup already ran).
+      if (!this.containerEl || !this.isConnected) return;
       this._map = new mod.Map({
         container: this.containerEl,
         style: this.mapStyle,
