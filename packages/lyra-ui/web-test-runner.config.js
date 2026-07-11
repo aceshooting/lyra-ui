@@ -56,4 +56,14 @@ export default {
     hammerEsmInteropPlugin,
     maplibreEsmInteropPlugin,
   ],
+  testFramework: {
+    // Mocha's default 2000ms per-test timeout is shorter than the wait
+    // budgets some tests already declare on purpose (e.g. lyra-graph's
+    // NODE_COUNT_TIMEOUT = 5000ms, for d3-force's rAF-driven tick under
+    // Chromium's background-tab throttling when many test files run
+    // concurrently). Raise the default so those budgets can actually work.
+    config: {
+      timeout: '6000',
+    },
+  },
 };
