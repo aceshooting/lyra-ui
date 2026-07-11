@@ -6,8 +6,16 @@ export interface HistogramBucket {
 /** Splits `values` into `binCount` equal-width buckets and counts membership. */
 export function binValues(values: number[], binCount: number): HistogramBucket[] {
   if (values.length === 0 || binCount <= 0) return [];
-  const lo = Math.min(...values);
-  const hi = Math.max(...values);
+  // Spreading `values` as call arguments (`Math.min(...values)`) throws
+  // `RangeError: Maximum call stack size exceeded` once `values` is large
+  // enough to overflow the engine's argument-list limit — reduce manually
+  // instead so an arbitrarily large sample never crashes.
+  let lo = values[0];
+  let hi = values[0];
+  for (const v of values) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
   const span = hi - lo || 1;
   const width = span / binCount;
 

@@ -20,6 +20,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "files": [
     "dist",
     "custom-elements.json",
@@ -48,7 +51,7 @@
     "lit": "^3.3.3"
   },
   "peerDependencies": {
-    "@aceshooting/lyra-flags": "^0.1.0",
+    "@aceshooting/lyra-flags": "workspace:^0.1.0",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.0",
     "chart.js": "^4.5.0",
     "chartjs-plugin-zoom": "^2.2.0",
@@ -88,7 +91,7 @@
     }
   },
   "devDependencies": {
-    "@aceshooting/lyra-flags": "^0.1.0",
+    "@aceshooting/lyra-flags": "workspace:^0.1.0",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@open-wc/testing": "^4.0.0",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",

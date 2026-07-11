@@ -35,6 +35,20 @@ TARBALL_STEM="$(node -p "'$PKG_NAME'.replace(/^@/, '').replace('/', '-')")"
 GH_HOSTNAME="github.com"
 GH_ACCOUNT="aceshooting"
 
+UPGRADE_DEPS=0
+for arg in "$@"; do
+  case "$arg" in
+    --upgrade-deps)
+      UPGRADE_DEPS=1
+      ;;
+    *)
+      echo "Error: unrecognized argument '$arg'." >&2
+      echo "Usage: $(basename "${BASH_SOURCE[0]}") [--upgrade-deps]" >&2
+      exit 1
+      ;;
+  esac
+done
+
 cd "$ROOT_DIR"
 
 if [[ -n "$(git status --porcelain)" ]]; then

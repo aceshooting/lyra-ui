@@ -557,14 +557,14 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
 - `caption: string = ''`
-- `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts as
-  "good"; inverts the trend arrow/color polarity for cost/latency/error-rate-style metrics where a
-  *decrease* is the win
+- `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts
+  as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
+  *decrease* is the win.
 
 **Events:** none.
 
-**Slots:** default (leading icon), `caption` (rich caption content — **see gotchas, it does not
-override the attribute**)
+**Slots:** default (leading icon), `caption` (rich caption content — overrides the `caption`
+attribute when slotted content is provided)
 
 **CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `caption`
 
@@ -580,9 +580,8 @@ the `variant`-colored value text and up/down trend pill).
 ```
 
 **Known gotchas:**
-- **Low** — no `aria-live` region for in-place `value`/`trend` updates (the trend arrow itself is
-  `aria-hidden`, and the percentage text stays in the accessibility tree, but a screen reader user
-  won't be notified when `value`/`trend` change on an already-rendered card).
+- **Low** — no `aria-live` for in-place `value`/`trend` updates — a value/trend change after first
+  render is not announced to screen readers.
 
 ---
 

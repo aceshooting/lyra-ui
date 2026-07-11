@@ -1,0 +1,49 @@
+name: Publish
+
+# Fires ONLY when a semver tag is pushed -- this repo's release tags are bare
+# semver (e.g. `0.1.3`, not `v0.1.3`; see `git tag -l`). scripts/publish.sh
+# creates and pushes that tag as the last step of a local release. This
+# workflow does NOT run on ordinary pushes to main -- it is inert unless a
+# matching tag lands, so merging to main never triggers a publish.
+#
+# REQUIRES SETUP: this job publishes via npm's OIDC "trusted publisher" flow
+# (no NPM_TOKEN secret is used or needed). Before this workflow can actually
+# succeed, @aceshooting/lyra-ui must be configured on npmjs.com under
+# Package Settings -> Trusted Publisher, pointing at this repo and this
+# workflow file (aceshooting/lyra-ui, .github/workflows/publish.yml, ref
+# "publish"). See https://docs.npmjs.com/trusted-publishers. Until that's
+# configured, the `npm publish --provenance` step below will fail with an
+# auth/OIDC error -- that failure is expected and safe (nothing else in the
+# release has happened yet at that point).
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required for npm OIDC/provenance
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm install --frozen-lockfile
+      # npm >= 11.5.1 is required for OIDC trusted-publisher provenance.
+      # Node 22's bundled npm may be older than that, so pin it explicitly
+      # rather than relying on whatever actions/setup-node ships.
+      - run: npm install -g npm@^11
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
+      - run: pnpm --filter @aceshooting/lyra-ui run lint
+      - run: pnpm --filter @aceshooting/lyra-ui run test
+      - run: pnpm --filter @aceshooting/lyra-ui run build
+      - run: pnpm --filter @aceshooting/lyra-ui run manifest
+      - name: Publish to npm with provenance
+        working-directory: packages/lyra-ui
+        run: npm publish --provenance --access public

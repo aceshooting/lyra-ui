@@ -7,7 +7,7 @@ A pnpm workspace hosting `lyra-ui` and its optional companion packages.
 | Package | Description |
 |---|---|
 | [`packages/lyra-ui`](./packages/lyra-ui) | Free, clean-room Lit web components — a companion to Web Awesome. |
-| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag PNGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. |
+| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. |
 
 See each package's own README for install/usage. For local development:
 
@@ -23,13 +23,12 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Status
 
-Internally code-complete (322/322 tests) including the post-audit Tier 4 hardening and design-quality
-hardening passes, but real-world adoption is not yet validated in any consumer project. Remaining
-priority features and adoption-validation tracking are maintained internally and not yet published
-as part of this repo's committed docs.
+Pre-1.0 and under active development. All packages build and pass their test suites; the
+public API may still change before a 1.0 release.
 
 ## License
 
-[MIT](./LICENSE) for the code. `packages/lyra-flags` ships third-party flag artwork with
-unverified provenance — see [its README](./packages/lyra-flags/README.md#%EF%B8%8F-asset-provenance--license)
-before relying on it.
+[MIT](./LICENSE) for the code. `packages/lyra-flags` ships third-party flag artwork vendored
+from Google's Noto Emoji project (Public Domain / copyright-exempt) — see
+[its README](./packages/lyra-flags/README.md#asset-provenance--license) for the sourcing
+details and upstream license text.

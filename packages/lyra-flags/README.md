@@ -1,6 +1,6 @@
 # @aceshooting/lyra-flags
 
-Waving country/territory flag PNGs (249 codes) — the optional companion asset package for
+Waving country/territory flag SVGs (249 codes) — the optional companion asset package for
 `<lyra-flag>` in [`lyra-ui`](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui).
 
 ## Install
@@ -19,15 +19,22 @@ You normally never call this directly; `<lyra-flag>` resolves it internally. Dir
 ```js
 import { flagUrl } from '@aceshooting/lyra-flags';
 
-flagUrl('fr'); // -> resolved URL of flags/fr.png
+flagUrl('fr'); // -> resolved URL of flags/fr.svg
 ```
 
-## ⚠️ Asset provenance / license
+## Asset provenance / license
 
 The code in this package (`index.js`, `index.d.ts`) is MIT, © Aceshooting.
 
-**The flag artwork itself (`flags/*.png`) has unverified provenance.** These waving-flag PNGs
-were carried over from an internal asset folder with no attribution or license file attached.
-Before distributing this package publicly (or relying on it in a commercial product), verify
-the source and licensing terms of this artwork, or replace it with a flag set you can confirm
-the license for. Do not assume MIT applies to the images.
+The flag artwork (`flags/*.svg`) is vendored unmodified from Google's
+[**Noto Emoji**](https://github.com/googlefonts/noto-emoji) project
+(`third_party/region-flags/waved-svg/`), traced there after visually matching three flags
+(France, the US, the UK) pixel-for-pixel against that source. Per that directory's `LICENSE`:
+the flags were downloaded from Wikipedia/Wikimedia Commons and verified to be **Public Domain
+or otherwise exempt from Copyright**. Full upstream `LICENSE`/`AUTHORS`/`README.third_party`
+text, the exact source commit, and per-flag exceptions are reproduced in
+[`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+
+One caveat unrelated to copyright: some countries have laws restricting disrespectful or
+commercial use of the national flag/emblem itself — that applies to any flag artwork
+regardless of source, and re-sourcing doesn't change it.

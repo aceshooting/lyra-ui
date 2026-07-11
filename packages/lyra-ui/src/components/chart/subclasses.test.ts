@@ -27,4 +27,18 @@ for (const [tag, expectedType] of TAGS_WITH_TYPE) {
     await waitUntil(() => el.chart != null, `${tag} never initialized`, { timeout: 2000 });
     expect(el.chart.config.type).to.equal(expectedType);
   });
+
+  it(`${tag} locks .type — assigning a different value at runtime is a no-op`, async () => {
+    const el = (await fixture(`<${tag}></${tag}>`)) as any;
+    el.type = 'somethingElse';
+    expect(el.type).to.equal(expectedType);
+  });
+
+  it(`${tag} is accessible`, async () => {
+    const el = (await fixture(`<${tag}></${tag}>`)) as any;
+    el.datasets = [{ label: 'x', data: [1, 2, 3] }];
+    await el.updateComplete;
+    await waitUntil(() => el.chart != null, `${tag} never initialized`, { timeout: 2000 });
+    await expect(el).to.be.accessible();
+  });
 }

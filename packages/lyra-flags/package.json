@@ -1,7 +1,7 @@
 {
   "name": "@aceshooting/lyra-flags",
   "version": "0.1.0",
-  "description": "Waving country/territory flag PNGs — optional companion asset package for <lyra-flag> in lyra-ui.",
+  "description": "Waving country/territory flag SVGs — optional companion asset package for <lyra-flag> in lyra-ui.",
   "license": "SEE LICENSE IN README.md",
   "type": "module",
   "author": {
@@ -20,10 +20,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "files": [
     "flags",
     "index.js",
-    "index.d.ts"
+    "index.d.ts",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "main": "./index.js",
   "types": "./index.d.ts",

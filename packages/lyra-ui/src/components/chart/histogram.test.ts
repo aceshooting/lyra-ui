@@ -11,6 +11,12 @@ it('bins its values and renders a bar-chart Chart.js instance', async () => {
   expect((el as any).chart.data.labels.length).to.equal(5);
 });
 
+it('locks .type to "bar" — assigning a different value at runtime (e.g. via a `type="line"` attribute) is a no-op', async () => {
+  const el = (await fixture(html`<lyra-histogram></lyra-histogram>`)) as LyraHistogram;
+  (el as any).type = 'line';
+  expect(el.type).to.equal('bar');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-histogram></lyra-histogram>`)) as LyraHistogram;
   el.values = [1, 2, 3];

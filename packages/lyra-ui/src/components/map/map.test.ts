@@ -84,25 +84,6 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-function choropleth(sourceId: string, stops: [number, string][]) {
-  return {
-    sourceId,
-    field: 'value',
-    stops,
-    geojson: {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 1,
-          properties: { value: 5 },
-          geometry: { type: 'Point', coordinates: [0, 0] },
-        },
-      ],
-    },
-  } as unknown as import('./map.js').ChoroplethLayer;
-}
-
 it('adds a choropleth source + fill layer, and re-applies the color expression on update', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -237,3 +218,96 @@ it('does not query the choropleth fill layer on click before it has been added t
   expect(detail).to.exist;
   expect(detail!.feature).to.be.undefined;
 });
+
+it('removes the choropleth layer and source when choropleth is cleared', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  el.choropleth = choropleth('regions', [
+    [0, '#fff'],
+    [10, '#000'],
+  ]);
+  await el.updateComplete;
+  await waitUntil(() => el.map!.getLayer('regions-fill') != null, 'layer never added', {
+    timeout: 2000,
+  });
+
+  expect(el.map!.getLayer('regions-fill')).to.exist;
+  expect(el.map!.getSource('regions')).to.exist;
+
+  el.choropleth = undefined;
+  await el.updateComplete;
+
+  expect(el.map!.getLayer('regions-fill')).to.not.exist;
+  expect(el.map!.getSource('regions')).to.not.exist;
+});
+
+it('removes the old choropleth layer/source when sourceId changes', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  el.choropleth = choropleth('regions-a', [
+    [0, '#fff'],
+    [10, '#000'],
+  ]);
+  await el.updateComplete;
+  await waitUntil(() => el.map!.getLayer('regions-a-fill') != null, 'layer never added', {
+    timeout: 2000,
+  });
+
+  el.choropleth = choropleth('regions-b', [
+    [0, '#fff'],
+    [10, '#000'],
+  ]);
+  await el.updateComplete;
+
+  expect(el.map!.getLayer('regions-a-fill')).to.not.exist;
+  expect(el.map!.getSource('regions-a')).to.not.exist;
+  expect(el.map!.getLayer('regions-b-fill')).to.exist;
+  expect(el.map!.getSource('regions-b')).to.exist;
+});
+
+it('calls setStyle when mapStyle changes after the map has mounted', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  let calledWith: unknown;
+  el.map!.setStyle = ((style: unknown) => {
+    calledWith = style;
+    return el.map;
+  }) as typeof el.map.setStyle;
+
+  const NEXT_STYLE = { ...RASTER_STYLE, sources: { demo2: RASTER_STYLE.sources.demo } };
+  el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+  await el.updateComplete;
+
+  expect(calledWith).to.equal(NEXT_STYLE);
+});
+
+function choropleth(sourceId: string, stops: [number, string][]) {
+  return {
+    sourceId,
+    field: 'value',
+    stops,
+    geojson: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          id: 1,
+          properties: { value: 5 },
+          geometry: { type: 'Point', coordinates: [0, 0] },
+        },
+      ],
+    },
+  } as unknown as import('./map.js').ChoroplethLayer;
+}

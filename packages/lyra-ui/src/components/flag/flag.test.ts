@@ -22,18 +22,18 @@ it('shows a loading skeleton and aria-busy while the flag package loads, then sw
 it('renders an img for a country code', async () => {
   const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
   const el2 = await img(el);
-  expect(el2.getAttribute('src')).to.contain('fr.png');
+  expect(el2.getAttribute('src')).to.contain('fr.svg');
   expect(el2.getAttribute('alt')).to.equal('FR');
 });
 
 it('resolves a language to a representative country flag', async () => {
   const el = (await fixture(html`<lyra-flag language="en"></lyra-flag>`)) as LyraFlag;
-  expect((await img(el)).getAttribute('src')).to.contain('gb.png');
+  expect((await img(el)).getAttribute('src')).to.contain('gb.svg');
 });
 
 it('resolves a region subtag to its country', async () => {
   const el = (await fixture(html`<lyra-flag language="en-US"></lyra-flag>`)) as LyraFlag;
-  expect((await img(el)).getAttribute('src')).to.contain('us.png');
+  expect((await img(el)).getAttribute('src')).to.contain('us.svg');
 });
 
 it('honors a custom label for accessibility', async () => {

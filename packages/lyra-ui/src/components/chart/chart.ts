@@ -22,7 +22,15 @@ export interface Series {
   type?: 'line' | 'bar';
 }
 
-export type LyraChartType = 'line' | 'bar' | 'scatter';
+export type LyraChartType =
+  | 'line'
+  | 'bar'
+  | 'scatter'
+  | 'pie'
+  | 'doughnut'
+  | 'radar'
+  | 'polarArea'
+  | 'bubble';
 
 /**
  * Recursively merges `override` onto `base`, matching JSON-merge semantics:
@@ -37,12 +45,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Keys that would let a JSON-sourced `config` (e.g. parsed from an API
+// response) reach up through the merge and mutate `Object.prototype` —
+// skipped unconditionally regardless of `base`'s own shape.
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function deepMerge<T>(base: T, override: unknown): T {
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return (override === undefined ? base : (override as T)) as T;
   }
   const result: Record<string, unknown> = { ...base };
   for (const key of Object.keys(override)) {
+    if (UNSAFE_KEYS.has(key)) continue;
     result[key] = deepMerge((base as Record<string, unknown>)[key], override[key]);
   }
   return result as T;
@@ -110,11 +124,8 @@ export class LyraChart extends LyraElement {
   // the deep-merge note on `buildConfig()` below.
   private builtType?: ChartType;
 
-  private onThemeChange = (): void => this.draw();
-
   connectedCallback(): void {
     super.connectedCallback();
-    window.addEventListener('lyra-theme', this.onThemeChange);
     void loadChartJs().then((mod) => {
       this.loading = false;
       if (!mod) return;
@@ -125,7 +136,6 @@ export class LyraChart extends LyraElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    window.removeEventListener('lyra-theme', this.onThemeChange);
     this.chart?.destroy();
     this.chart = undefined;
   }
@@ -164,8 +174,43 @@ export class LyraChart extends LyraElement {
     };
   }
 
-  private buildConfig(): ChartConfiguration {
+  /**
+   * Builds `options.scales` for the effective chart type: no scale at all for
+   * pie/doughnut (a proportional-area chart has no axis), the single radial
+   * `r` scale Chart.js v4 uses for radar/polarArea, and the cartesian
+   * `x`/`y`(/`y2`) block for every other (line/bar/scatter/bubble) type.
+   */
+  private buildScales(): NonNullable<ChartConfiguration['options']>['scales'] {
+    if (this.type === 'pie' || this.type === 'doughnut') return {};
+
+    if (this.type === 'radar' || this.type === 'polarArea') {
+      return {
+        r: {
+          beginAtZero: this.beginAtZero,
+        },
+      };
+    }
+
     const hasY2 = this.datasets.some((s) => s.axis === 'y2');
+    return {
+      x: {
+        type: this.type === 'scatter' ? 'linear' : 'category',
+        title: { display: !!this.xLabel, text: this.xLabel },
+      },
+      y: { beginAtZero: this.beginAtZero, title: { display: !!this.yLabel, text: this.yLabel } },
+      ...(hasY2
+        ? {
+            y2: {
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              title: { display: !!this.y2Label, text: this.y2Label },
+            },
+          }
+        : {}),
+    };
+  }
+
+  private buildConfig(): ChartConfiguration {
     const generated: ChartConfiguration = {
       type: this.type as ChartType,
       data: {
@@ -195,22 +240,7 @@ export class LyraChart extends LyraElement {
               }
             : undefined,
         },
-        scales: {
-          x: {
-            type: this.type === 'scatter' ? 'linear' : 'category',
-            title: { display: !!this.xLabel, text: this.xLabel },
-          },
-          y: { beginAtZero: this.beginAtZero, title: { display: !!this.yLabel, text: this.yLabel } },
-          ...(hasY2
-            ? {
-                y2: {
-                  position: 'right',
-                  grid: { drawOnChartArea: false },
-                  title: { display: !!this.y2Label, text: this.y2Label },
-                },
-              }
-            : {}),
-        },
+        scales: this.buildScales(),
       },
     };
 

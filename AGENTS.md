@@ -7,24 +7,22 @@
 
 ## What this is
 
-`@aceshooting/lyra-ui` (see `packages/lyra-ui/package.json` for the current version) is a free,
-clean-room Lit 3 web-component library — an
+`@aceshooting/lyra-ui` (see `packages/lyra-ui/package.json` for the current published version) is
+a free, clean-room Lit 3 web-component library — an
 open-source companion to Web Awesome that reimplements several Web Awesome **Pro**
 components plus original extras. Positioning, non-negotiable:
 
 - **Clean-room.** No Web Awesome Pro source was ever available or copied. Behavior is
   implemented originally, seeded only from this org's own pre-existing hand-rolled
-  components (named per-task in the plan docs under `docs/superpowers/plans/`).
+  components.
 - **API-mirroring method.** For components that *do* have a Web Awesome counterpart, the
   public surface (attributes, slots, events, parts, CSS custom properties) is mirrored 1:1
   under the `lyra-` prefix — migration is a mechanical `wa-` → `lyra-` rename. Components
   with no WA equivalent (most of Tier 1–3 and the "bigger own tracks") instead follow this
   library's own established conventions (see below) — there is no docs page to mirror.
-- **Non-goals** (see the design spec, §3): not a WA fork, no `wa-` prefix or WA
-  trademark/branding, no React wrappers (stack is unifying on Lit; custom elements work in
-  React 19 anyway), Video/Video-Playlist deferred indefinitely.
-- Full rationale, goals, and the v1 API tables are tracked internally and not yet published as
-  a committed doc in this repo.
+- **Non-goals:** not a WA fork, no `wa-` prefix or WA trademark/branding, no React wrappers
+  (stack is unifying on Lit; custom elements work in React 19 anyway), Video/Video-Playlist
+  deferred indefinitely.
 
 ## Monorepo layout
 
@@ -40,13 +38,10 @@ lyra-ui/                          (repo root — this file lives here)
         components/<name>/        one dir per component family (see README's component table)
         lyra.ts                   barrel: side-effect imports (registers every tag) + re-exports
       llms.txt / llms-full.txt    CONSUMER-facing API reference (not this file's audience)
-    lyra-flags/                   optional companion pkg — waving flag PNGs for <lyra-flag>,
-                                   kept out of lyra-ui's default install (unverified art provenance)
+    lyra-flags/                   optional companion pkg — waving flag SVGs for <lyra-flag>,
+                                   kept out of lyra-ui's default install (vendored from Noto
+                                   Emoji, Public Domain — see its THIRD_PARTY_NOTICES.md)
   docs/                           Vite playground demoing every component (this pkg + lyra-flags)
-    superpowers/
-      specs/                      spec docs (design spec, post-audit roadmap addendum)
-      plans/                      tier/feature implementation plans (see SDD Process below)
-  .superpowers/sdd/                 execution ledger + audit reports (progress.md, audit reports)
 ```
 
 ## Dev commands (run from repo root unless noted)
@@ -92,12 +87,20 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   keep new components' plain class modules free of top-level side effects or tree-shaking
   breaks for every consumer.
 - **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
-  built on `ElementInternals`) — known gap (see Current status below): it never calls
+  built on `ElementInternals`) — known gap: it never calls
   `internals.setValidity()`, so `required` is currently a no-op for constraint validation on
   every form-associated component. Don't copy that gap into new components without flagging it.
 - **JSDoc header** on the component class: `@customElement lyra-x`, `@slot`, `@csspart` tags
   (see any existing component, e.g. `components/empty/empty.ts`) — this feeds the generated
   manifest and the consumer-facing docs.
+- **Never reference internal process in code comments or shipped docs.** Comments, JSDoc, and
+  the `llms.txt`/`llms-full.txt` reference must not cite internal audits or design reviews,
+  plan/spec/ledger docs, task or tier codenames (`§lyra-*`, `"dashboard-atoms"`, `Task 3`),
+  audit severity ratings (`High`/`Medium`/`Low`), dated review findings, client/project names,
+  or adoption/"battle-tested" status. This source ships verbatim in the public npm tarball
+  (`dist/`, `custom-elements.json`, `llms*.txt` all carry these comments), so anything written
+  here is published. Keep the *technical* rationale ("previously X was broken, so we do Y") and
+  drop the provenance — a code comment explains the code, not who reviewed it.
 - License: MIT. TypeScript strict.
 
 ## Testing conventions
@@ -106,7 +109,7 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   `@open-wc/testing` (`fixture`, `expect`, `oneEvent`, and axe accessibility assertions via
   `expect(el).to.be.accessible()`).
 - **TDD, failing-test-first.** Every behavior change starts with a test that fails for the
-  right reason, per `superpowers:test-driven-development`. Commit after each green step.
+  right reason. Commit after each green step.
 - Test files are colocated siblings: `components/<name>/<name>.test.ts`.
 - Run via `pnpm test` from repo root (fans out to every package) or `packages/lyra-ui/` for
   just this package; `pnpm test:watch` for iteration.
@@ -116,51 +119,12 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
 - Every component gets at least one `it('is accessible', ...)` axe check in addition to
   behavior tests.
 
-## SDD process (spec -> plan -> task cycle) for multi-step work
+## Process for multi-step work
 
-This repo's non-trivial work (a new tier of components, a hardening pass, etc.) follows the
-`superpowers` skill family's spec-driven-development flow, evidenced by
-`.superpowers/sdd/progress.md`:
-
-1. **Spec** (`docs/superpowers/specs/YYYY-MM-DD-*.md`) — goals, non-goals, naming, success
-   criteria. Written/approved before any implementation plan.
-2. **Plan** (`docs/superpowers/plans/YYYY-MM-DD-*.md`) — one plan doc per tier/feature batch.
-   Each opens with a **"REQUIRED SUB-SKILL"** callout naming which skill to execute it with
-   (`superpowers:subagent-driven-development` recommended, or `superpowers:executing-plans`),
-   then a **Global Constraints** section (prefix rule, clean-room rule, token rule, event
-   rule, TDD rule — matching the Coding Conventions above), then numbered tasks with
-   checkbox (`- [ ]`) steps, file lists, and interfaces.
-3. **Per-task cycle**, run via `superpowers:subagent-driven-development`: a
-   task-N-brief.md is handed to an implementer subagent, which produces a
-   task-N-report.md; a separate reviewer subagent checks spec compliance and quality; fix
-   rounds repeat until clean. This is why `.superpowers/sdd/progress.md` records, per task,
-   the commit range and "review clean after N fix rounds" plus exactly what each fix round
-   found.
-4. **Ledger**: `.superpowers/sdd/progress.md` is the running execution log across the whole
-   roadmap — tier by tier, task by task, with commit ranges, fix-round counts, and root
-   causes. Read it in full before starting new SDD work so you don't re-litigate settled
-   decisions or duplicate a fix already applied elsewhere.
-
-When picking up new multi-step work in this repo, use `superpowers:writing-plans` to turn a
-spec into a plan doc first, then `superpowers:subagent-driven-development` (preferred) or
-`superpowers:executing-plans` to run it, and append to `progress.md` as you go.
-
-## Current status & what's next
-
-**Internally code-complete, adoption unvalidated.** See `package.json` for the current version
-and run `pnpm test` for the current test count/status — all 34 custom-element tags are present
-in a freshly regenerated `custom-elements.json`, and lint/build/manifest all pass. But the
-design spec's own Section 9 success criterion — prove value by replacing a real hand-rolled
-component in a consumer repo — is **0-for-5**: all five swap attempts named across the roadmap
-and later plan docs ([client]'s `[component]`, `[client]`'s `[Component]`, `[client]`'s
-`[component].ts`, `[client]`'s `[Component].tsx`, and [client]'s
-`[component]`/`[component].ts`) remain unattempted. A separate five-project survey
-([client], [client], [client], [client], [client]) independently confirms zero
-adoption of `@aceshooting/lyra-ui` anywhere. "Roadmap complete" should not be read as
-"goal achieved."
-
-A cross-repo audit (2026-07-10) covering roadmap status, per-component improvement
-opportunities (incl. the shared `FormAssociated.setValidity()` gap noted above), per-project
-survey findings, and a ranked missing-components wishlist exists but is tracked internally and
-not yet published as a committed doc in this repo. Before adding new components or features,
-ask whether that audit already covers the gap so you don't duplicate analysis.
+This repo's non-trivial work (a new tier of components, a hardening pass, etc.) follows a
+spec -> plan -> task execution cycle: a spec (goals, non-goals, naming, success criteria) is
+written and approved before any implementation plan; the plan breaks the work into numbered
+tasks with checkbox steps, file lists, and interfaces; each task is implemented then reviewed
+for spec compliance and quality, with fix rounds repeating until clean. These working docs
+(specs, plans, execution ledger) are intentionally kept out of version control — they aren't
+tracked in this repository.
