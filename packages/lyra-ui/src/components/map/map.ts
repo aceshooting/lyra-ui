@@ -20,6 +20,14 @@ export interface ChoroplethLayer {
   stops: [number, string][];
 }
 
+export interface MapMarker {
+  id?: string;
+  lngLat: [number, number];
+  color?: string;
+  label?: string;
+  html?: string;
+}
+
 const DEFAULT_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -214,9 +222,11 @@ export class LyraMap extends LyraElement {
     for (const m of this.markers) {
       const key = m.id ?? `${m.lngLat[0]},${m.lngLat[1]}`;
       visible.add(key);
-      let marker = this._markerInstances.get(key);
-      if (!marker) {
-        marker = new (mod as any).Marker(m.color ? { color: m.color } : undefined).setLngLat(m.lngLat);
+      const existing = this._markerInstances.get(key);
+      if (!existing) {
+        const marker = new (mod as any).Marker(m.color ? { color: m.color } : undefined).setLngLat(
+          m.lngLat,
+        );
         if (m.html || m.label) {
           const popup = new (mod as any).Popup({ offset: 12 });
           if (m.html) popup.setHTML(m.html);
@@ -226,7 +236,7 @@ export class LyraMap extends LyraElement {
         marker.addTo(this._map);
         this._markerInstances.set(key, marker);
       } else {
-        marker.setLngLat(m.lngLat);
+        existing.setLngLat(m.lngLat);
       }
     }
     for (const [key, marker] of this._markerInstances) {
