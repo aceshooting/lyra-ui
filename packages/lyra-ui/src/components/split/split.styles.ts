@@ -8,6 +8,9 @@ export const styles = css`
   }
   [part='base'] {
     display: flex;
+    /* Anchor for the 'floating' collapse state's absolutely-positioned
+       overlay panel (set inline by split.ts's updated()). */
+    position: relative;
     inline-size: 100%;
     block-size: 100%;
   }
@@ -48,5 +51,32 @@ export const styles = css`
   [part='divider']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
+  }
+  /* The divider adjacent to a rail/floating-collapsed pane (see split.ts's
+     isDividerDisabled()) — geometry (position/inset/inline-size) for the
+     collapsing panel itself is set inline by updated(), same as the
+     pre-existing flex/order styling; this only covers the divider's own
+     drag/hover affordance and the floating panel's elevation, which read
+     more naturally as stylesheet rules than one-off inline styles. */
+  [part='divider'][aria-disabled='true'] {
+    cursor: default;
+    pointer-events: none;
+  }
+  /* The 'floating' collapse state's overlay "card" look -- geometry
+     (position/inset-*/inline-size) is set inline by split.ts's updated(),
+     matching how the ordinary flex/order styling is applied; only the
+     visual/stacking treatment lives here. */
+  ::slotted([data-collapse-state='floating']) {
+    z-index: 1;
+    background: var(--lyra-color-surface);
+    border-radius: var(--lyra-radius);
+    box-shadow: var(--lyra-shadow);
+  }
+  /* Rail-clamped content can easily overflow the fixed rail-width — clip it
+     rather than letting it blow out the layout; the panel's own content is
+     expected to adapt to the narrower width itself (e.g. via a container
+     query), this is just a safety net. */
+  ::slotted([data-collapse-state='rail']) {
+    overflow: hidden;
   }
 `;

@@ -14,6 +14,36 @@ function pointerMove(pointerId: number, x: number) {
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: x }));
 }
 
+/** Spies on the real `ResizeObserver` constructor so a test can manually
+ *  drive a component's collapse-state callback with a synthetic width,
+ *  instead of depending on real (viewport/layout-dependent, flaky) browser
+ *  resize timing -- same technique lite-chart.test.ts's reconnect test uses
+ *  for its own ResizeObserver-driven assertions. Restore in a `finally`. */
+function installResizeObserverSpy(): { callbacks: ResizeObserverCallback[]; restore: () => void } {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class SpyResizeObserver extends OriginalRO {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      callbacks.push(callback);
+    }
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = SpyResizeObserver;
+  return {
+    callbacks,
+    restore: () => {
+      (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+    },
+  };
+}
+
+function fireCollapseResize(callback: ResizeObserverCallback, width: number): void {
+  callback(
+    [{ contentBoxSize: [{ inlineSize: width, blockSize: 0 }] } as unknown as ResizeObserverEntry],
+    {} as ResizeObserver,
+  );
+}
+
 it('splits children evenly by default', async () => {
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
@@ -674,4 +704,314 @@ it('splits :hover and :focus-visible into separate divider rules with a token-dr
   expect(focusBody).to.include('var(--lyra-focus-ring-width)');
   expect(focusBody).to.include('var(--lyra-focus-ring-color)');
   expect(focusBody).to.include('outline-offset: var(--lyra-focus-ring-offset)');
+});
+
+// -- Responsive collapse (collapse="start"/"end") -------------------------
+
+it('defaults collapse to "none", leaving dividers/panels byte-for-byte unaffected (no data-collapse-state, no aria-disabled, tabindex="0")', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.collapse).to.equal('none');
+  expect(el.hasAttribute('data-collapse-state')).to.be.false;
+  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  expect(panelA.dataset.collapseState).to.equal(undefined);
+  expect(panelB.dataset.collapseState).to.equal(undefined);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  expect(divider.hasAttribute('aria-disabled')).to.be.false;
+  expect(divider.getAttribute('tabindex')).to.equal('0');
+});
+
+it('clamps the collapse="start" panel (index 0) to rail-width and marks it via dataset + host attribute once the container narrows into the rail range', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    expect(spy.callbacks.length).to.equal(1);
+
+    fireCollapseResize(spy.callbacks[0], 500); // between floatBreakpoint(400) and railBreakpoint(640)
+    await elementUpdated(el);
+
+    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    expect(el.collapseState).to.equal('rail');
+    expect(panelA.style.flex).to.equal('0 0 3.5rem');
+    expect(panelA.dataset.collapseState).to.equal('rail');
+    expect(panelB.dataset.collapseState).to.equal(undefined);
+    // The other pane fills whatever room the rail-clamped pane no longer takes.
+    expect(panelB.style.flex).to.include('1 0%');
+    expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('resolves collapse="end" to the LAST panel, including for 3+ panels', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="end"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 500);
+    await elementUpdated(el);
+
+    const [panelA, panelB, panelC] = [...el.children] as HTMLElement[];
+    expect(panelA.dataset.collapseState).to.equal(undefined);
+    expect(panelB.dataset.collapseState).to.equal(undefined);
+    expect(panelC.dataset.collapseState).to.equal('rail');
+    expect(panelC.style.flex).to.equal('0 0 3.5rem');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('resolves collapse="start"/"end" to the same physical panel indices (0 / last) under a simulated RTL host, since panel 0 already renders at the logical inline-start edge regardless of direction (same as the existing pointer-drag RTL behavior above)', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split dir="rtl" collapse="start"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 500);
+    await elementUpdated(el);
+    const [panelA, , panelC] = [...el.children] as HTMLElement[];
+    expect(panelA.dataset.collapseState).to.equal('rail');
+    expect(panelC.dataset.collapseState).to.equal(undefined);
+  } finally {
+    spy.restore();
+  }
+
+  const spyEnd = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split dir="rtl" collapse="end"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spyEnd.callbacks[0], 500);
+    await elementUpdated(el);
+    const [panelA, , panelC] = [...el.children] as HTMLElement[];
+    expect(panelA.dataset.collapseState).to.equal(undefined);
+    expect(panelC.dataset.collapseState).to.equal('rail');
+  } finally {
+    spyEnd.restore();
+  }
+});
+
+it('transitions collapseState across both breakpoints (wide -> rail -> floating) as the container width crosses them', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+
+    fireCollapseResize(spy.callbacks[0], 800); // >= railBreakpoint(640) -> wide
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('wide');
+    expect(el.hasAttribute('data-collapse-state')).to.be.false;
+
+    fireCollapseResize(spy.callbacks[0], 500); // floatBreakpoint(400) <= 500 < railBreakpoint(640) -> rail
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('rail');
+    expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+
+    fireCollapseResize(spy.callbacks[0], 300); // < floatBreakpoint(400) -> floating
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('floating');
+    expect(el.getAttribute('data-collapse-state')).to.equal('floating');
+
+    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    expect(panelA.style.position).to.equal('absolute');
+    // The browser normalizes a bare `0` length to `0px` in CSSOM.
+    expect(panelA.style.insetInlineStart).to.equal('0px');
+    expect(panelA.style.insetBlock).to.equal('0px');
+    // The other pane takes the full split width once the collapsing pane is
+    // lifted out of the flex flow entirely.
+    expect(panelB.style.flex).to.include('1 0%');
+
+    fireCollapseResize(spy.callbacks[0], 800); // back to wide
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('wide');
+    expect(panelA.style.position).to.equal('');
+    expect(panelA.style.flex).to.include('%');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('fires lyra-split-collapse-change only on an actual collapseState transition, not on every resize callback', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    // Establish a known baseline before attaching the listener, so this
+    // assertion doesn't depend on whatever real width the fixture happened
+    // to render at.
+    fireCollapseResize(spy.callbacks[0], 800);
+    await elementUpdated(el);
+
+    const events: string[] = [];
+    el.addEventListener('lyra-split-collapse-change', (e) =>
+      events.push((e as CustomEvent<{ state: string }>).detail.state),
+    );
+
+    fireCollapseResize(spy.callbacks[0], 500); // wide -> rail: transition
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 550); // still rail: no transition
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // rail -> floating: transition
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 350); // still floating: no transition
+    await elementUpdated(el);
+
+    expect(events).to.deep.equal(['rail', 'floating']);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('disables dragging (pointer and keyboard) on the divider adjacent to the collapsed pane', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+
+    const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+    expect(divider.getAttribute('aria-disabled')).to.equal('true');
+    expect(divider.getAttribute('tabindex')).to.equal('-1');
+
+    const before = [...el.sizes];
+    divider.setPointerCapture = () => {};
+    divider.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+    );
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150 }));
+    expect(el.sizes).to.deep.equal(before);
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await elementUpdated(el);
+    expect(el.sizes).to.deep.equal(before);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('leaves a non-adjacent divider fully draggable while a different pane is collapsed (3-panel case)', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating; panel 0 ("start") collapses
+    await elementUpdated(el);
+
+    const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
+    // divider[0] sits between panel0/panel1 -- adjacent to the collapsed panel0.
+    expect(dividers[0].getAttribute('aria-disabled')).to.equal('true');
+    // divider[1] sits between panel1/panel2 -- not adjacent, stays enabled.
+    expect(dividers[1].hasAttribute('aria-disabled')).to.be.false;
+
+    const before = el.sizes[1];
+    dividers[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await elementUpdated(el);
+    expect(el.sizes[1]).to.be.greaterThan(before);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('reverts to plain wide/percent styling and clears data-collapse-state when collapse is switched back to "none" at runtime', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+    expect(el.getAttribute('data-collapse-state')).to.equal('floating');
+
+    el.collapse = 'none';
+    await elementUpdated(el);
+
+    expect(el.hasAttribute('data-collapse-state')).to.be.false;
+    const [panelA] = [...el.children] as HTMLElement[];
+    expect(panelA.dataset.collapseState).to.equal(undefined);
+    expect(panelA.style.position).to.equal('');
+    expect(panelA.style.flex).to.include('%');
+
+    const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+    expect(divider.hasAttribute('aria-disabled')).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('anchors the floating overlay to inset-inline-end for collapse="end" (vs. inset-inline-start for collapse="start")', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="end"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+
+    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    expect(panelA.style.position).to.equal('');
+    expect(panelB.style.position).to.equal('absolute');
+    expect(panelB.style.insetInlineEnd).to.equal('0px');
+    expect(panelB.style.insetInlineStart).to.equal('');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('honors a custom rail-width for the rail state', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start" rail-width="4rem"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 500);
+    await elementUpdated(el);
+    const [panelA] = [...el.children] as HTMLElement[];
+    expect(panelA.style.flex).to.equal('0 0 4rem');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('honors custom rail-breakpoint/float-breakpoint attributes', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split
+        collapse="start"
+        rail-breakpoint="900"
+        float-breakpoint="600"
+      ><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.railBreakpoint).to.equal(900);
+    expect(el.floatBreakpoint).to.equal(600);
+
+    fireCollapseResize(spy.callbacks[0], 700); // between 600 and 900 -> rail
+    await elementUpdated(el);
+    expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+  } finally {
+    spy.restore();
+  }
 });
