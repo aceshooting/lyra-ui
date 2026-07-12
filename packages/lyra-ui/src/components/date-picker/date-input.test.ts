@@ -554,3 +554,22 @@ it('normalizes a typed reversed range into from-before-to order', async () => {
   input.dispatchEvent(new Event('change'));
   expect(el.value).to.equal('2026-05-01/2026-05-15');
 });
+
+it('still parses a non-zero-padded, year-first ISO-ish date -- a 4-digit first group is unambiguously a year', async () => {
+  // Regression test: parseOneDate used to route this through Date.parse()
+  // directly and it parsed fine ("2026-7-15" -> July 15, 2026). Once the
+  // ambiguous-date regex (\d{1,4} per group) was introduced to handle
+  // genuinely ambiguous locale-ordered dates like "15/07/2026", this
+  // non-padded-but-unambiguous year-first string started matching that same
+  // regex too and got misrouted through localeDateOrder()'s day/month/year
+  // guessing -- which, for a western field order, does not treat the first
+  // group as the year, and rejects the date. A 4-digit first group is
+  // unambiguously a year (this is exactly ISO 8601's own year-first
+  // convention, just without zero-padding) regardless of locale/separator,
+  // so it must be routed straight through parseISO() instead.
+  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '2026-7-15';
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-07-15');
+});

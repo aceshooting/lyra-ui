@@ -196,6 +196,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
    *  Intl.DateTimeFormat sample, see localeDateOrder()) rather than
    *  Date.parse()'s implementation-defined heuristics -- this is what prevents
    *  e.g. an en-GB "15/07/2026" from being silently misread as some other day.
+   *  A 4-digit first group (e.g. "2026-7-15") is never locale-guessed, though:
+   *  it's unambiguously a year regardless of locale/separator (ISO's own
+   *  year-first convention, just without zero-padding), so it's routed
+   *  straight through parseISO() instead -- this is what lets a non-padded
+   *  ISO-ish date keep parsing correctly (it did via Date.parse() before the
+   *  ambiguous-date regex below existed at all).
    *  Anything else (e.g. "July 15, 2026") still falls through to Date.parse(). */
   private parseOneDate(raw: string): Date | null {
     const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
@@ -203,8 +209,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
 
     const ambiguous = /^(\d{1,4})[/.-](\d{1,4})[/.-](\d{1,4})$/.exec(raw);
     if (ambiguous) {
+      const [, g1, g2, g3] = ambiguous;
+      if (g1.length === 4) {
+        return parseISO(`${g1}-${g2.padStart(2, '0')}-${g3.padStart(2, '0')}`);
+      }
       const order = localeDateOrder(this.locale);
-      const values = [Number(ambiguous[1]), Number(ambiguous[2]), Number(ambiguous[3])];
+      const values = [Number(g1), Number(g2), Number(g3)];
       const fields: Partial<Record<'day' | 'month' | 'year', number>> = {};
       order.forEach((type, i) => {
         fields[type] = values[i];
