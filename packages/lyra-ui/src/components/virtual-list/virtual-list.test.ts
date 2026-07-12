@@ -1,0 +1,419 @@
+import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import './virtual-list.js';
+import type { LyraVirtualList } from './virtual-list.js';
+import { styles } from './virtual-list.styles.js';
+
+/** Waits two animation frames -- enough for the component's rAF-coalesced
+ *  scroll handler *and* a queued ResizeObserver callback to have run. */
+async function nextFrame(): Promise<void> {
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
+const numberKey = (item: unknown) => item as number;
+const stringKey = (item: unknown) => item as string;
+const renderText = (item: unknown, index: number) => html`item ${item}#${index}`;
+
+it('is accessible with an empty items array', async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      .items=${[]}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible with a populated, windowed item list', async () => {
+  const items = Array.from({ length: 200 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await expect(el).to.be.accessible();
+});
+
+it('renders only a small window of DOM rows for a large items array, not every item', async () => {
+  const items = Array.from({ length: 2000 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
+  expect(rows.length).to.be.greaterThan(0);
+  expect(rows.length).to.be.lessThan(50);
+});
+
+it('uses role="list"/"listitem" (not listbox/option) and reflects the real item index via aria-setsize/aria-posinset', async () => {
+  const items = Array.from({ length: 100 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('role')).to.equal('list');
+
+  const rowsBefore = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(rowsBefore.length).to.be.greaterThan(0);
+  rowsBefore.forEach((r) => expect(r.getAttribute('role')).to.equal('listitem'));
+  // Full-array size, not the rendered-window size.
+  expect(rowsBefore[0].getAttribute('aria-setsize')).to.equal('100');
+  expect(rowsBefore[0].getAttribute('aria-posinset')).to.equal('1');
+
+  // Scroll 10 rows down (400px / 40px per row) -- the *first rendered* row's
+  // posinset must reflect its real index (11), not "1st DOM node".
+  base.scrollTop = 400;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+
+  const rowsAfter = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(rowsAfter[0].getAttribute('aria-posinset')).to.equal('11');
+  expect(rowsAfter[0].getAttribute('aria-setsize')).to.equal('100');
+});
+
+it('positions rows via translateY using exact cumulative offsets in fixed row-height mode', async () => {
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:120px"
+      row-height="40"
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(rows[0].style.transform).to.equal('translateY(0px)');
+  expect(rows[1].style.transform).to.equal('translateY(40px)');
+  expect(rows[2].style.transform).to.equal('translateY(80px)');
+
+  const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+  expect(spacer.style.height).to.equal('2000px'); // 50 * 40
+});
+
+it("falls back to the item's index as the row key when keyFunction is omitted", async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      .items=${['a', 'b', 'c']}
+      .renderItem=${renderText}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(rows.map((r) => r.dataset.rowKey)).to.deep.equal(['0', '1', '2']);
+});
+
+it("measures each row's real height via ResizeObserver in row-height='auto' mode instead of only using the fallback estimate", async () => {
+  const tallRender = () => html`<div style="block-size:100px;box-sizing:border-box;">row</div>`;
+  const items = Array.from({ length: 5 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:600px"
+      .items=${items}
+      .renderItem=${tallRender}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+  const measuredTotal = parseFloat(spacer.style.height);
+  // 5 * 100px measured vs. 5 * 48px (DEFAULT_ROW_ESTIMATE_PX) if measurement
+  // never kicked in -- assert well above the estimate-only figure.
+  expect(measuredTotal).to.be.greaterThan(400);
+});
+
+it('marks the row matching active-id with aria-current="true", not aria-selected', async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      active-id="b"
+      .items=${['a', 'b', 'c']}
+      .renderItem=${renderText}
+      .keyFunction=${stringKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  const active = rows.find((r) => r.dataset.rowKey === 'b')!;
+  expect(active.getAttribute('aria-current')).to.equal('true');
+  expect(active.hasAttribute('aria-selected')).to.be.false;
+  const others = rows.filter((r) => r.dataset.rowKey !== 'b');
+  others.forEach((r) => expect(r.hasAttribute('aria-current')).to.be.false);
+});
+
+it('does not scroll on initial mount even when active-id targets a row far outside the viewport', async () => {
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      active-id="40"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.scrollTop).to.equal(0);
+});
+
+it('scrolls the matching row into view once active-id changes after mount', async () => {
+  const originalMatchMedia = window.matchMedia;
+  // Forces the reduced-motion branch so the scroll lands synchronously
+  // instead of needing to wait out a real smooth-scroll animation.
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+
+  try {
+    const items = Array.from({ length: 50 }, (_, i) => i);
+    const el = (await fixture(
+      html`<lyra-virtual-list
+        style="--lyra-virtual-list-height:200px"
+        row-height="40"
+        overscan="0"
+        .items=${items}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.scrollTop).to.equal(0);
+
+    el.activeId = '40'; // row 40's top edge is 40*40=1600px, well past the 200px viewport
+    await el.updateComplete;
+    await nextFrame();
+
+    expect(base.scrollTop).to.be.greaterThan(1000);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it('emits lyra-visible-range-changed once the container is measured after mount', async () => {
+  const el = document.createElement('lyra-virtual-list') as LyraVirtualList;
+  el.setAttribute('style', '--lyra-virtual-list-height:200px');
+  el.setAttribute('row-height', '40');
+  el.items = Array.from({ length: 30 }, (_, i) => i);
+  el.renderItem = renderText;
+  el.keyFunction = numberKey;
+
+  const eventPromise = oneEvent(el, 'lyra-visible-range-changed');
+  document.body.appendChild(el);
+  const ev = await eventPromise;
+  expect(ev.detail.start).to.equal(0);
+  expect(ev.detail.end).to.be.greaterThan(0);
+  el.remove();
+});
+
+it('coalesces rapid scroll events into a single visible-range recompute per animation frame', async () => {
+  const items = Array.from({ length: 100 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  let count = 0;
+  el.addEventListener('lyra-visible-range-changed', () => count++);
+
+  base.scrollTop = 100;
+  base.dispatchEvent(new Event('scroll'));
+  base.scrollTop = 200;
+  base.dispatchEvent(new Event('scroll'));
+  base.scrollTop = 400;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(count, 'three rapid scroll events should coalesce to one recompute').to.equal(1);
+});
+
+it('fires lyra-load-more once when scrolling near the bottom while has-more is true and loading is false', async () => {
+  const items = Array.from({ length: 20 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      has-more
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const eventPromise = oneEvent(el, 'lyra-load-more');
+  base.scrollTop = base.scrollHeight; // jump to the bottom
+  base.dispatchEvent(new Event('scroll'));
+  await eventPromise; // resolves iff lyra-load-more fires
+});
+
+it('does not refire lyra-load-more while already loading, and re-arms after scrolling away and back', async () => {
+  const items = Array.from({ length: 20 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      has-more
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  let count = 0;
+  el.addEventListener('lyra-load-more', () => count++);
+
+  base.scrollTop = base.scrollHeight;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+  expect(count).to.equal(1);
+
+  // Still at the bottom, and loading -- must not refire.
+  el.loading = true;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+  expect(count, 'should not refire while loading').to.equal(1);
+
+  el.loading = false;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+  expect(count, 'should not refire just because loading finished while still at the same bottom approach').to.equal(
+    1,
+  );
+
+  // Scroll away from the bottom, then back -- a fresh approach re-arms it.
+  base.scrollTop = 0;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+
+  base.scrollTop = base.scrollHeight;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+  expect(count, 're-approaching the bottom after leaving it should fire again').to.equal(2);
+});
+
+it('never fires lyra-load-more when has-more is false', async () => {
+  const items = Array.from({ length: 20 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  let fired = false;
+  el.addEventListener('lyra-load-more', () => (fired = true));
+
+  base.scrollTop = base.scrollHeight;
+  base.dispatchEvent(new Event('scroll'));
+  await aTimeout(100);
+  expect(fired).to.be.false;
+});
+
+it('reflects loading via the loading attribute and aria-busy on the scroll container', async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      loading
+      .items=${[]}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  expect(el.hasAttribute('loading')).to.be.true;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-busy')).to.equal('true');
+});
+
+it('falls back to auto (measured) mode when row-height is neither "auto" nor a valid positive number', async () => {
+  const items = Array.from({ length: 5 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="not-a-number"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+  const height = parseFloat(spacer.style.height);
+  expect(height).to.be.greaterThan(0);
+  expect(Number.isNaN(height)).to.be.false;
+});
+
+it('positions rows via a transform instead of a padding-based spacer, so a new measurement only shifts later rows, not a page-wide reflow', () => {
+  expect(styles.cssText).to.match(/\[part=['"]row['"]\][^}]*position:\s*absolute/);
+  expect(styles.cssText).to.not.match(/padding-block-start|padding-top/);
+});

@@ -1,0 +1,108 @@
+import { fixture, expect, html } from '@open-wc/testing';
+import './typing-indicator.js';
+import type { LyraTypingIndicator } from './typing-indicator.js';
+import { styles } from './typing-indicator.styles.js';
+
+it('defaults to the dots variant, md size, and a "Thinking…" label', async () => {
+  const el = (await fixture(html`<lyra-typing-indicator></lyra-typing-indicator>`)) as LyraTypingIndicator;
+  expect(el.variant).to.equal('dots');
+  expect(el.size).to.equal('md');
+  expect(el.label).to.equal('Thinking…');
+});
+
+it('reflects variant and size onto the host attributes', async () => {
+  const el = (await fixture(
+    html`<lyra-typing-indicator variant="pulse" size="sm"></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.getAttribute('variant')).to.equal('pulse');
+  expect(el.getAttribute('size')).to.equal('sm');
+
+  el.variant = 'cursor';
+  el.size = 'md';
+  await el.updateComplete;
+  expect(el.getAttribute('variant')).to.equal('cursor');
+  expect(el.getAttribute('size')).to.equal('md');
+});
+
+it('exposes role="status" and aria-label derived from label on the host', async () => {
+  const el = (await fixture(html`<lyra-typing-indicator></lyra-typing-indicator>`)) as LyraTypingIndicator;
+  expect(el.getAttribute('role')).to.equal('status');
+  expect(el.getAttribute('aria-label')).to.equal('Thinking…');
+
+  el.label = 'Generating response…';
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Generating response…');
+});
+
+it('renders a visually-hidden text node carrying the label, independent of aria-label', async () => {
+  const el = (await fixture(
+    html`<lyra-typing-indicator label="Working on it…"></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  const srText = el.shadowRoot!.querySelector('.sr-only');
+  expect(srText).to.exist;
+  expect(srText!.textContent).to.equal('Working on it…');
+});
+
+it('marks the decorative shape aria-hidden and renders three dots for the dots variant', async () => {
+  const el = (await fixture(html`<lyra-typing-indicator></lyra-typing-indicator>`)) as LyraTypingIndicator;
+  const base = el.shadowRoot!.querySelector('[part="base"]');
+  expect(base).to.exist;
+  expect(base!.getAttribute('aria-hidden')).to.equal('true');
+  expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(3);
+  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+});
+
+it('renders a single pulse element for the pulse variant', async () => {
+  const el = (await fixture(
+    html`<lyra-typing-indicator variant="pulse"></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.not.exist;
+});
+
+it('renders a single cursor element for the cursor variant', async () => {
+  const el = (await fixture(
+    html`<lyra-typing-indicator variant="cursor"></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  expect(el.shadowRoot!.querySelectorAll('[part="dot"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="pulse"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="cursor"]')).to.exist;
+});
+
+it('gives every variant a looping animation that is disabled under reduced motion', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include("animation: lyra-typing-dot-bounce var(--lyra-transition-base) infinite;");
+  expect(css).to.include("animation: lyra-typing-pulse var(--lyra-transition-base) infinite;");
+  expect(css).to.include("animation: lyra-typing-cursor-blink var(--lyra-transition-base) infinite;");
+  expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
+});
+
+it('does not dispatch any lyra-* events (purely presentational)', async () => {
+  const el = (await fixture(html`<lyra-typing-indicator></lyra-typing-indicator>`)) as LyraTypingIndicator;
+  let sawEvent = false;
+  el.addEventListener('lyra-typing-indicator-change', () => (sawEvent = true));
+  el.variant = 'pulse';
+  await el.updateComplete;
+  el.size = 'sm';
+  await el.updateComplete;
+  expect(sawEvent).to.be.false;
+});
+
+it('is accessible in the default (dots) state', async () => {
+  const el = (await fixture(html`<lyra-typing-indicator></lyra-typing-indicator>`)) as LyraTypingIndicator;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible in the pulse and cursor states', async () => {
+  const pulse = (await fixture(
+    html`<lyra-typing-indicator variant="pulse" label="Generating response…"></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  await expect(pulse).to.be.accessible();
+
+  const cursor = (await fixture(
+    html`<lyra-typing-indicator variant="cursor" size="sm"></lyra-typing-indicator>`,
+  )) as LyraTypingIndicator;
+  await expect(cursor).to.be.accessible();
+});
