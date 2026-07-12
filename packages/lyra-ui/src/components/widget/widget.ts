@@ -68,6 +68,10 @@ function isRendered(el: HTMLElement): boolean {
  * @csspart fullscreen-button - The fullscreen toggle button.
  * @csspart body - The wrapper around the default slot (the panel body).
  * @csspart backdrop - The fullscreen scrim behind the panel.
+ *
+ * `fullscreen-inset` overrides the default `var(--lyra-space-l)` inset applied to `[part="base"]`
+ * and `[part="backdrop"]` while fullscreen (e.g. `"0 0 0 240px"` to leave a persistent sidebar
+ * visible). `compact` tightens header/body padding — same convention as `lyra-empty`'s `compact`.
  */
 export class LyraWidget extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -78,6 +82,12 @@ export class LyraWidget extends LyraElement {
   @property({ type: Boolean, reflect: true }) collapsed = false;
   @property({ type: Boolean, reflect: true }) expandable = false;
   @property({ type: Boolean, reflect: true }) fullscreen = false;
+  /** Raw CSS `inset` shorthand applied to the fullscreen panel and backdrop instead of the default
+   *  `var(--lyra-space-l)` on every side — e.g. `"0 0 0 240px"` to leave a 240px persistent sidebar
+   *  visible while fullscreen. */
+  @property({ attribute: 'fullscreen-inset' }) fullscreenInset = '';
+  /** Tighter header/body padding for constrained spaces. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   @state() private hasActionsSlot = false;
 
@@ -228,13 +238,20 @@ export class LyraWidget extends LyraElement {
     const hasLabel = this.label.length > 0;
     const hasSublabel = this.sublabel.length > 0;
     return html`
-      ${this.fullscreen ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}
+      ${this.fullscreen
+        ? html`<div
+            part="backdrop"
+            style=${this.fullscreenInset ? `--lyra-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
+            @click=${this.onBackdropClick}
+          ></div>`
+        : nothing}
       <div
         part="base"
         role=${this.fullscreen ? 'dialog' : nothing}
         aria-modal=${this.fullscreen ? 'true' : nothing}
         aria-label=${this.fullscreen ? (hasLabel ? this.label : 'Fullscreen panel') : nothing}
         tabindex=${this.fullscreen ? '-1' : nothing}
+        style=${this.fullscreenInset ? `--lyra-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
       >
         <div part="header">
           <div part="title">

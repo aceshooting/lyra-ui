@@ -7,6 +7,7 @@ export const styles = css`
        without a raw literal leaking into the public API (no shared
        --wa-*-overlay token exists in the design system to resolve through). */
     --lyra-widget-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-widget-fullscreen-inset: var(--lyra-space-l);
   }
   [part='base'] {
     display: flex;
@@ -78,19 +79,25 @@ export const styles = css`
   }
   [part='backdrop'] {
     position: fixed;
-    inset: 0;
+    inset: var(--lyra-widget-fullscreen-inset, 0);
     background: var(--lyra-widget-overlay-color);
     z-index: 999;
   }
   :host([fullscreen]) [part='base'] {
     position: fixed;
-    inset: var(--lyra-space-l);
+    inset: var(--lyra-widget-fullscreen-inset);
     z-index: 1000;
     box-shadow: var(--lyra-shadow);
   }
   :host([fullscreen]) [part='body'] {
     overflow: auto;
     block-size: 100%;
+  }
+  :host([compact]) [part='header'] {
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+  }
+  :host([compact]) [part='body'] {
+    padding: var(--lyra-space-s);
   }
   @media (prefers-reduced-motion: reduce) {
     [part='collapse-button'],

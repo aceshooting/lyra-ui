@@ -405,3 +405,24 @@ it('disables the collapse/fullscreen icon rotate transition under reduced motion
     "@media (prefers-reduced-motion: reduce) { [part='collapse-button'], [part='fullscreen-button'] { transition: none !important; } }",
   );
 });
+
+it('applies a custom fullscreen-inset while fullscreen', async () => {
+  const el = (await fixture(
+    html`<lyra-widget expandable fullscreen fullscreen-inset="0 0 0 240px"><p>Body</p></lyra-widget>`,
+  )) as LyraWidget;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.getPropertyValue('--lyra-widget-fullscreen-inset')).to.equal('0 0 0 240px');
+});
+
+it('falls back to the default inset when fullscreen-inset is unset', async () => {
+  const el = (await fixture(
+    html`<lyra-widget expandable fullscreen><p>Body</p></lyra-widget>`,
+  )) as LyraWidget;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.getPropertyValue('--lyra-widget-fullscreen-inset')).to.equal('');
+});
+
+it('reflects the compact attribute', async () => {
+  const el = (await fixture(html`<lyra-widget compact><p>Body</p></lyra-widget>`)) as LyraWidget;
+  expect(el.hasAttribute('compact')).to.be.true;
+});

@@ -45,3 +45,38 @@ export const FullscreenInitially: Story = {
     </lyra-widget>
   `,
 };
+
+export const FullscreenWithSidebarInset: Story = {
+  render: () => html`
+    <div style="position: relative;">
+      <div
+        style="position: fixed; inset: 0 auto 0 0; inline-size: 240px; background: #1e293b; color: #fff; padding: 1rem; z-index: 1001;"
+      >
+        Persistent sidebar (stays visible above the widget's fullscreen panel)
+      </div>
+      <lyra-widget
+        label="Load profile"
+        sublabel="Last 7 days"
+        expandable
+        fullscreen
+        fullscreen-inset="0 0 0 240px"
+        style="max-width: 28rem;"
+      >
+        <div style="padding: 1rem;">
+          <p style="margin: 0;">
+            Fullscreen with <code>fullscreen-inset="0 0 0 240px"</code> — the panel and backdrop leave
+            room for the 240px sidebar instead of covering it.
+          </p>
+        </div>
+      </lyra-widget>
+    </div>
+  `,
+};
+
+export const Compact: Story = {
+  render: () => html`
+    <lyra-widget label="Alerts" sublabel="3 active" compact collapsible expandable style="max-width: 28rem;">
+      <div style="padding: 0.5rem;">Tighter header/body padding for constrained spaces.</div>
+    </lyra-widget>
+  `,
+};
