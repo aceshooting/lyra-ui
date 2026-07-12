@@ -6,7 +6,7 @@ import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../skeleton/skeleton.js';
 
-type FlagUrlResolver = (code: string) => Promise<string | undefined>;
+type FlagUrlResolver = (code: string, options?: { variant?: 'detailed' }) => Promise<string | undefined>;
 
 /**
  * Resolves the optional peer dependency `@aceshooting/lyra-flags`'s `flagUrl`
@@ -78,10 +78,16 @@ function loadFlagUrlResolver(): Promise<FlagUrlResolver | null> {
  * `src` instead to skip the peer-package round trip (and its loading-skeleton
  * flash) entirely.
  *
+ * A handful of flags (e.g. `es`, `pt` — any whose design includes a detailed coat of
+ * arms/seal/emblem) ship a second, full-detail source SVG alongside the default icon-optimized
+ * one; set `detailed` to request it (e.g. for a hero-scale display where the extra illustrative
+ * detail is actually visible). A no-op for every other code — see `detailed`'s own doc.
+ *
  * @customElement lyra-flag
  * @example <lyra-flag country="fr"></lyra-flag>
  * @example <lyra-flag language="en" label="English"></lyra-flag>
  * @example <lyra-flag src=${frUrl} label="French"></lyra-flag>
+ * @example <lyra-flag country="es" detailed></lyra-flag>
  * @csspart image - The underlying <img>.
  */
 export class LyraFlag extends LyraElement {
@@ -117,6 +123,17 @@ export class LyraFlag extends LyraElement {
   /** Render as a circular flag. */
   @property({ type: Boolean, reflect: true }) round = false;
 
+  /**
+   * Requests the pristine, full-detail source SVG instead of the default icon-optimized one —
+   * only meaningful for the minority of `country`/`language` codes whose source art was large
+   * enough to need optimizing (e.g. `es`, `pt`, a national coat of arms/seal/emblem); for every
+   * other code this is a safe no-op (the default and detailed variants are the same file). Has no
+   * effect when `src` is set — a pre-resolved URL is used as-is regardless. Intended for rendering
+   * a flag larger than icon scale (e.g. a hero display) where the extra illustrative detail is
+   * actually visible.
+   */
+  @property({ type: Boolean, reflect: true }) detailed = false;
+
   @state() private resolvedSrc?: string;
 
   /** True while the lazy-loaded `@aceshooting/lyra-flags` peer resolver is in flight. */
@@ -145,7 +162,15 @@ export class LyraFlag extends LyraElement {
     // undefined -> undefined (no-op to Lit), so none of `changed.has(...)`
     // would otherwise ever become true for a `<lyra-flag>` that never
     // receives one, leaving `loading` stuck at its initial `true` forever.
-    if (this.hasUpdated && !changed.has('country') && !changed.has('language') && !changed.has('src')) return;
+    if (
+      this.hasUpdated &&
+      !changed.has('country') &&
+      !changed.has('language') &&
+      !changed.has('src') &&
+      !changed.has('detailed')
+    ) {
+      return;
+    }
     const token = ++this.resolveToken; // invalidates any in-flight peer resolution either way
     if (this.src) {
       this.resolvedSrc = undefined;
@@ -160,7 +185,7 @@ export class LyraFlag extends LyraElement {
     }
     this.loading = true;
     void loadFlagUrlResolver()
-      .then((resolve) => resolve?.(code))
+      .then((resolve) => resolve?.(code, this.detailed ? { variant: 'detailed' } : undefined))
       .then((url) => {
         if (token !== this.resolveToken) return; // superseded by a later country/language/src change
         this.resolvedSrc = url;

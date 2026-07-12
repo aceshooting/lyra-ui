@@ -68,6 +68,31 @@ it('country takes precedence over language when both are set', async () => {
   );
 });
 
+it('requests the detailed (pre-optimization) variant for a code that has one', async () => {
+  const el = (await fixture(html`<lyra-flag country="es" detailed></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('src')).to.contain('/detailed/es.svg');
+});
+
+it('falls back to the default variant when detailed is set but the code has none', async () => {
+  const el = (await fixture(html`<lyra-flag country="fr" detailed></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('src')).to.contain('fr.svg');
+  expect(image.getAttribute('src')).to.not.contain('/detailed/');
+});
+
+it('re-resolves to the detailed variant when detailed is toggled on an already-mounted element', async () => {
+  const el = (await fixture(html`<lyra-flag country="es"></lyra-flag>`)) as LyraFlag;
+  const first = await img(el);
+  expect(first.getAttribute('src')).to.not.contain('/detailed/');
+
+  el.detailed = true;
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('img')?.getAttribute('src')?.includes('/detailed/es.svg'),
+    'flag image should update to the detailed variant',
+  );
+});
+
 it('reflects the round attribute', async () => {
   const el = (await fixture(html`<lyra-flag country="fr" round></lyra-flag>`)) as LyraFlag;
   expect(el.round).to.be.true;
@@ -76,6 +101,16 @@ it('reflects the round attribute', async () => {
   el.round = false;
   await el.updateComplete;
   expect(el.hasAttribute('round')).to.be.false;
+});
+
+it('reflects the detailed attribute', async () => {
+  const el = (await fixture(html`<lyra-flag country="es" detailed></lyra-flag>`)) as LyraFlag;
+  expect(el.detailed).to.be.true;
+  expect(el.hasAttribute('detailed')).to.be.true;
+
+  el.detailed = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('detailed')).to.be.false;
 });
 
 it('resolves a language to a representative country flag', async () => {

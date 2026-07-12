@@ -599,6 +599,9 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
   name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
 - `round: boolean = false` (reflected — circular crop)
+- `detailed: boolean = false` (reflected — requests the pristine, pre-optimization source SVG
+  instead of the default icon-optimized one; a no-op for the majority of codes whose source art was
+  never large enough to need optimizing. Has no effect when `src` is set. See gotchas.)
 
 **Events:** none.
 
@@ -656,6 +659,13 @@ pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> r
   the flags actually requested at runtime (verified with a real Vite build — referencing 2 codes
   shipped ~28 KB total, not all 249). If you already have a flag's URL at build time, `src` skips
   the peer-package round trip (and its loading-skeleton flash) entirely.
+- 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
+  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship a second, pristine full-detail source SVG alongside
+  the default icon-optimized one (`flagUrl(code, { variant: 'detailed' })`, or `detailed` on
+  `<lyra-flag>`) — the default variant is the one `country`/`language` resolve to unless `detailed`
+  is set, and is what almost every consumer wants (an icon-scale rendering, ~65% smaller on average
+  for the 65 affected codes, no visible fidelity loss at that scale). `detailed` is a safe no-op for
+  the other 184 codes — same file either way.
 
 ---
 
