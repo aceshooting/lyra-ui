@@ -108,6 +108,12 @@ export class LyraCheckbox extends LyraElement {
   // and `<lyra-switch>`'s identical `_defaultChecked`.
   private _defaultChecked = false;
   private _defaultCaptured = false;
+  private _fieldsetDisabled = false;
+
+  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
 
   constructor() {
     super();
@@ -157,7 +163,8 @@ export class LyraCheckbox extends LyraElement {
     this.checked = this._defaultChecked;
   }
   formDisabledCallback(disabled: boolean): void {
-    this.disabled = disabled;
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
   }
   checkValidity(): boolean {
     return this.internals.checkValidity();
@@ -167,7 +174,7 @@ export class LyraCheckbox extends LyraElement {
   }
 
   private toggle(): void {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     this.checked = !this.checked;
     this.indeterminate = false;
     this.emit('lyra-change', { checked: this.checked });
@@ -178,7 +185,7 @@ export class LyraCheckbox extends LyraElement {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     // Space/Enter both activate, matching lyra-switch's onKeyDown (and
     // lyra-table's sortable-header/row convention) for role-based clickable
     // elements — bound to keydown, not keyup/native click-forwarding.
@@ -200,10 +207,10 @@ export class LyraCheckbox extends LyraElement {
       <span
         part="base"
         role="checkbox"
-        tabindex=${this.disabled ? '-1' : '0'}
+        tabindex=${this.effectiveDisabled ? '-1' : '0'}
         aria-checked=${mixed ? 'mixed' : this.checked ? 'true' : 'false'}
         aria-required=${this.required ? 'true' : nothing}
-        aria-disabled=${this.disabled ? 'true' : nothing}
+        aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
         aria-label=${this.getAttribute('aria-label') || nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}

@@ -229,19 +229,60 @@ it('formResetCallback clears value back to {} on form.reset()', async () => {
   expect(el.value).to.deep.equal({});
 });
 
-it('formDisabledCallback disables every field via a containing fieldset', async () => {
+it('temporarily disables every field through a fieldset without overwriting author state', async () => {
   const form = (await fixture(html`
     <form>
-      <fieldset disabled>
-        <lyra-tool-param-form name="args" .schema=${basicSchema}></lyra-tool-param-form>
+      <fieldset>
+        <lyra-tool-param-form
+          name="args"
+          .schema=${basicSchema}
+          .value=${{ city: 'Paris' }}
+        ></lyra-tool-param-form>
+        <lyra-tool-param-form
+          name="always-disabled"
+          disabled
+          .schema=${basicSchema}
+          .value=${{ city: 'London' }}
+        ></lyra-tool-param-form>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
-  await el.updateComplete;
-  expect(el.disabled).to.be.true;
-  const cityInput = field(el, 'city').querySelector('input') as HTMLInputElement;
-  expect(cityInput.disabled).to.be.true;
+  const explicitlyDisabled = form.querySelector('[name="always-disabled"]') as LyraToolParamForm;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  await Promise.all([el.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect(new FormData(form).has('args')).to.be.true;
+
+  fieldset.disabled = true;
+  await Promise.all([el.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled, 'fieldset state must not mutate the public property').to.be.false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(el.effectiveDisabled).to.be.true;
+  expect((field(el, 'city').querySelector('input') as HTMLInputElement).disabled).to.be.true;
+  expect((field(el, 'units').querySelector('lyra-select') as HTMLElement & { disabled: boolean }).disabled).to.be.true;
+  expect((field(el, 'days').querySelector('input') as HTMLInputElement).disabled).to.be.true;
+  expect(
+    (field(el, 'notify').querySelector('lyra-checkbox') as HTMLElement & { disabled: boolean }).disabled,
+  ).to.be.true;
+  expect(new FormData(form).get('args')).to.equal(null);
+
+  fieldset.disabled = false;
+  await Promise.all([el.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect((field(el, 'city').querySelector('input') as HTMLInputElement).disabled).to.be.false;
+  expect((field(el, 'units').querySelector('lyra-select') as HTMLElement & { disabled: boolean }).disabled).to.be.false;
+  expect((field(el, 'days').querySelector('input') as HTMLInputElement).disabled).to.be.false;
+  expect(
+    (field(el, 'notify').querySelector('lyra-checkbox') as HTMLElement & { disabled: boolean }).disabled,
+  ).to.be.false;
+  expect(new FormData(form).has('args')).to.be.true;
+
+  expect(explicitlyDisabled.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
+  expect(explicitlyDisabled.effectiveDisabled).to.be.true;
+  expect(new FormData(form).get('always-disabled')).to.equal(null);
 });
 
 it('is accessible in the empty-schema default state', async () => {

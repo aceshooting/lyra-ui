@@ -228,16 +228,48 @@ it('resets to unchecked via form.reset() when no default was declared', async ()
   expect(el.checked).to.be.false;
 });
 
-it('formDisabledCallback disables the control via a fieldset', async () => {
+it('temporarily disables through a fieldset without overwriting the author disabled state', async () => {
   const form = (await fixture(html`
     <form>
-      <fieldset disabled>
-        <lyra-checkbox name="notify">Notify me</lyra-checkbox>
+      <fieldset>
+        <lyra-checkbox name="notify" value="yes" checked>Notify me</lyra-checkbox>
+        <lyra-checkbox name="always-disabled" value="yes" checked disabled>Always disabled</lyra-checkbox>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
-  expect(el.disabled).to.be.true;
+  const explicitlyDisabled = form.querySelector('[name="always-disabled"]') as LyraCheckbox;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect(new FormData(form).get('notify')).to.equal('yes');
+
+  fieldset.disabled = true;
+  await Promise.all([el.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled, 'fieldset state must not mutate the public property').to.be.false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(el.effectiveDisabled).to.be.true;
+  expect(base.getAttribute('tabindex')).to.equal('-1');
+  expect(base.getAttribute('aria-disabled')).to.equal('true');
+  expect(getComputedStyle(base).cursor).to.equal('not-allowed');
+  expect(new FormData(form).get('notify')).to.equal(null);
+
+  base.click();
+  expect(el.checked, 'inherited disabled state blocks activation').to.be.true;
+
+  fieldset.disabled = false;
+  await Promise.all([el.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect(base.getAttribute('tabindex')).to.equal('0');
+  expect(base.hasAttribute('aria-disabled')).to.be.false;
+  expect(new FormData(form).get('notify')).to.equal('yes');
+
+  expect(explicitlyDisabled.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
+  expect(explicitlyDisabled.effectiveDisabled).to.be.true;
+  expect(new FormData(form).get('always-disabled')).to.equal(null);
 });
 
 it('does not emit lyra-change for a programmatic .checked assignment', async () => {

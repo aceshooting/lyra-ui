@@ -60,6 +60,12 @@ export class LyraSwitch extends LyraElement {
   // instead mirrors `<lyra-combobox>`'s `_defaultCaptured`/`_defaultSelected`.
   private _defaultChecked = false;
   private _defaultCaptured = false;
+  private _fieldsetDisabled = false;
+
+  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
 
   constructor() {
     super();
@@ -106,7 +112,8 @@ export class LyraSwitch extends LyraElement {
     this.checked = this._defaultChecked;
   }
   formDisabledCallback(disabled: boolean): void {
-    this.disabled = disabled;
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
   }
   checkValidity(): boolean {
     return this.internals.checkValidity();
@@ -116,7 +123,7 @@ export class LyraSwitch extends LyraElement {
   }
 
   private toggle(): void {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     this.checked = !this.checked;
     this.emit('lyra-change', { checked: this.checked });
   }
@@ -126,7 +133,7 @@ export class LyraSwitch extends LyraElement {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     // Space/Enter both activate, matching `<lyra-table>`'s sortable
     // header/row convention (`table.ts`'s `onHeaderKeyDown`/`onRowKeyDown`)
     // for role-based clickable elements — bound to `keydown` rather than
@@ -147,10 +154,10 @@ export class LyraSwitch extends LyraElement {
       <span
         part="base"
         role="switch"
-        tabindex=${this.disabled ? '-1' : '0'}
+        tabindex=${this.effectiveDisabled ? '-1' : '0'}
         aria-checked=${this.checked ? 'true' : 'false'}
         aria-required=${this.required ? 'true' : nothing}
-        aria-disabled=${this.disabled ? 'true' : nothing}
+        aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
         aria-label=${this.getAttribute('aria-label') || nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}

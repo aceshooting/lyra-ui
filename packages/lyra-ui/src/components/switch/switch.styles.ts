@@ -22,7 +22,7 @@ export const styles = css`
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
-  :host([disabled]) [part='base'] {
+  :host(:disabled) [part='base'] {
     cursor: not-allowed;
     opacity: var(--lyra-opacity-disabled);
   }

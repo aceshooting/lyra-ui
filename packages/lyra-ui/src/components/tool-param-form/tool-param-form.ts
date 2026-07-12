@@ -140,6 +140,7 @@ export class LyraToolParamForm extends LyraElement {
 
   private internals: ElementInternals;
   private baseId = nextId('tool-param-form');
+  private _fieldsetDisabled = false;
   // Guards lyra-validity-change so it only fires on an actual change, not on
   // every render — `undefined` guarantees the first computed state always
   // "changes" from it, so mounting with an unmet required field still
@@ -179,6 +180,11 @@ export class LyraToolParamForm extends LyraElement {
       }
     }
     return out;
+  }
+
+  /** Whether the form is disabled explicitly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
   }
 
   /**
@@ -231,7 +237,8 @@ export class LyraToolParamForm extends LyraElement {
     this.touchedFields = new Set();
   }
   formDisabledCallback(disabled: boolean): void {
-    this.disabled = disabled;
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -316,7 +323,7 @@ export class LyraToolParamForm extends LyraElement {
         aria-label=${errorMessage ? `${label}. ${errorMessage}` : label}
         .value=${typeof effective === 'string' ? effective : ''}
         ?required=${required}
-        ?disabled=${this.disabled}
+        ?disabled=${this.effectiveDisabled}
         @change=${(e: Event) => this.onSelectChange(key, e)}
       >
         ${prop.enum.map((v) => html`<lyra-option value=${v}>${v}</lyra-option>`)}
@@ -331,7 +338,7 @@ export class LyraToolParamForm extends LyraElement {
         aria-invalid=${errorMessage ? 'true' : nothing}
         .value=${typeof effective === 'string' ? effective : ''}
         ?required=${required}
-        ?disabled=${this.disabled}
+        ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onTextInput(key, e)}
       />`;
     }
@@ -346,7 +353,7 @@ export class LyraToolParamForm extends LyraElement {
         aria-invalid=${errorMessage ? 'true' : nothing}
         .value=${numValue}
         ?required=${required}
-        ?disabled=${this.disabled}
+        ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onNumberInput(key, e)}
       />`;
     }
@@ -360,7 +367,7 @@ export class LyraToolParamForm extends LyraElement {
         id=${fieldId}
         ?checked=${effective === true}
         ?required=${required}
-        ?disabled=${this.disabled}
+        ?disabled=${this.effectiveDisabled}
         @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
       >
         <span part="label">${label}</span>

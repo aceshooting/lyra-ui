@@ -294,22 +294,55 @@ it('restores the declared default value (initial value attribute) on form.reset(
   expect(el.value).to.equal('llama3.1');
 });
 
-it('disables the control when its containing fieldset is disabled', async () => {
+it('temporarily disables both modes through a fieldset without overwriting author state', async () => {
   const form = (await fixture(html`
     <form>
       <fieldset>
-        <lyra-model-select name="model" .catalog=${CATALOG}></lyra-model-select>
+        <lyra-model-select name="model" value="mistral" .catalog=${CATALOG}></lyra-model-select>
+        <lyra-model-select name="custom-model" value="custom" allow-custom .catalog=${CATALOG}></lyra-model-select>
+        <lyra-model-select name="always-disabled" value="llama3.1" disabled .catalog=${CATALOG}></lyra-model-select>
       </fieldset>
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lyra-model-select') as LyraModelSelect;
+  const freeText = form.querySelector('[name="custom-model"]') as LyraModelSelect;
+  const explicitlyDisabled = form.querySelector('[name="always-disabled"]') as LyraModelSelect;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
-  await el.updateComplete;
+  await Promise.all([el.updateComplete, freeText.updateComplete, explicitlyDisabled.updateComplete]);
   expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect(new FormData(form).get('model')).to.equal('mistral');
+  expect(new FormData(form).get('custom-model')).to.equal('custom');
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
 
   fieldset.disabled = true;
-  await el.updateComplete;
-  expect(el.disabled).to.be.true;
+  await Promise.all([el.updateComplete, freeText.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled, 'fieldset state must not mutate the public property').to.be.false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(el.effectiveDisabled).to.be.true;
+  expect(freeText.effectiveDisabled).to.be.true;
+  expect(trigger(el).disabled).to.be.true;
+  expect(input(freeText).disabled).to.be.true;
+  expect(el.open, 'disabling an open control closes its interactive popup').to.be.false;
+  expect(getComputedStyle(trigger(el)).cursor).to.equal('not-allowed');
+  expect(new FormData(form).get('model')).to.equal(null);
+  expect(new FormData(form).get('custom-model')).to.equal(null);
+
+  fieldset.disabled = false;
+  await Promise.all([el.updateComplete, freeText.updateComplete, explicitlyDisabled.updateComplete]);
+  expect(el.disabled).to.be.false;
+  expect(el.effectiveDisabled).to.be.false;
+  expect(freeText.effectiveDisabled).to.be.false;
+  expect(trigger(el).disabled).to.be.false;
+  expect(input(freeText).disabled).to.be.false;
+  expect(new FormData(form).get('model')).to.equal('mistral');
+  expect(new FormData(form).get('custom-model')).to.equal('custom');
+
+  expect(explicitlyDisabled.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
+  expect(explicitlyDisabled.effectiveDisabled).to.be.true;
+  expect(new FormData(form).get('always-disabled')).to.equal(null);
 });
 
 // -- Misc --------------------------------------------------------------

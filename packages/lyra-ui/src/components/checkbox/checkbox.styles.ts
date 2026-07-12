@@ -15,7 +15,7 @@ export const styles = css`
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
-  :host([disabled]) [part='base'] {
+  :host(:disabled) [part='base'] {
     cursor: not-allowed;
     opacity: var(--lyra-opacity-disabled);
   }
@@ -41,7 +41,7 @@ export const styles = css`
       background-color var(--lyra-transition-fast),
       border-color var(--lyra-transition-fast);
   }
-  :host(:not([disabled])) [part='base']:hover [part='box'] {
+  :host(:not(:disabled)) [part='base']:hover [part='box'] {
     border-color: var(--lyra-color-brand);
   }
   :host([checked]) [part='box'],

@@ -7,7 +7,7 @@ export const styles = css`
     inline-size: 100%;
     max-inline-size: 24rem;
   }
-  :host([disabled]) {
+  :host(:disabled) {
     cursor: not-allowed;
   }
 
@@ -41,8 +41,8 @@ export const styles = css`
   :host([open]) [part='trigger'] {
     border-color: var(--lyra-color-brand);
   }
-  :host([disabled]) [part='trigger'],
-  :host([disabled]) [part='combobox'] {
+  :host(:disabled) [part='trigger'],
+  :host(:disabled) [part='combobox'] {
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }

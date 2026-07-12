@@ -88,6 +88,7 @@ export class LyraModelSelect extends LyraElement {
   private controlId = nextId('model-select-control');
   private cleanup?: () => void;
   private _value = '';
+  private _fieldsetDisabled = false;
   // What `form.reset()` restores to — captured from the `value` *content
   // attribute* only, mirroring native `<input>`/`FormAssociated`'s
   // `_defaultValue` (see internal/form-associated.ts). There's no child
@@ -128,6 +129,11 @@ export class LyraModelSelect extends LyraElement {
     this.requestUpdate('value', old);
   }
 
+  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
+
   private updateValidity(): void {
     if (this.required && !this._value) {
       this.internals.setValidity({ valueMissing: true }, 'Please choose a model.');
@@ -140,7 +146,9 @@ export class LyraModelSelect extends LyraElement {
     this.value = this._defaultValue;
   }
   formDisabledCallback(disabled: boolean): void {
-    this.disabled = disabled;
+    this._fieldsetDisabled = disabled;
+    if (disabled) this.hide();
+    this.requestUpdate();
   }
   checkValidity(): boolean {
     return this.internals.checkValidity();
@@ -189,7 +197,7 @@ export class LyraModelSelect extends LyraElement {
   }
 
   private show(): void {
-    if (this.open || this.disabled) return;
+    if (this.open || this.effectiveDisabled) return;
     this.open = true;
   }
   private hide(): void {
@@ -247,7 +255,7 @@ export class LyraModelSelect extends LyraElement {
   // -- Closed-dropdown mode (trigger button) --------------------------------
 
   private onTriggerClick = (): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (): void => {
@@ -302,7 +310,7 @@ export class LyraModelSelect extends LyraElement {
   // -- Free-text mode (text input) ------------------------------------------
 
   private onComboMouseDown = (e: MouseEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     e.preventDefault();
     (this.renderRoot.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   };
@@ -374,6 +382,7 @@ export class LyraModelSelect extends LyraElement {
     if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
   };
   private onListboxClick = (e: MouseEvent): void => {
+    if (this.effectiveDisabled) return;
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
     const value = optionEl?.dataset.value;
     if (value === undefined) return;
@@ -433,7 +442,7 @@ export class LyraModelSelect extends LyraElement {
         aria-label=${this.getAttribute('aria-label') || this.placeholder || 'Model'}
         aria-required=${this.required ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-        ?disabled=${this.disabled}
+        ?disabled=${this.effectiveDisabled}
         @click=${this.onTriggerClick}
         @keydown=${this.onTriggerKeyDown}
         @blur=${this.onTriggerBlur}
@@ -468,7 +477,7 @@ export class LyraModelSelect extends LyraElement {
           autocomplete="off"
           .value=${this.open ? this.query : this.labelFor(this._value)}
           placeholder=${this.placeholder}
-          ?disabled=${this.disabled}
+          ?disabled=${this.effectiveDisabled}
           @input=${this.onInput}
           @keydown=${this.onInputKeyDown}
           @focus=${this.onInputFocus}
