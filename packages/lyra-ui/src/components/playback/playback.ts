@@ -31,12 +31,8 @@ export class LyraPlayback extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   static properties = {
-    length: { type: Number },
-    index: { type: Number },
-    intervalMs: { type: Number, attribute: 'interval-ms' },
     playing: { type: Boolean, reflect: true, noAccessor: true },
     loop: { type: Boolean },
-    hidden: { type: Boolean, reflect: true },
   };
 
   @property({ type: Number }) length = 0;
