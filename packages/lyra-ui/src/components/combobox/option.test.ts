@@ -22,3 +22,17 @@ it('falls back to text content when the label attribute is present but empty', a
   const el = (await fixture(html`<lyra-option value="a" label="">Alpha</lyra-option>`)) as LyraOption;
   expect(el.label).to.equal('Alpha');
 });
+
+it('exposes sub and dotColor properties, empty by default', async () => {
+  const el = (await fixture(html`<lyra-option value="a">A</lyra-option>`)) as LyraOption;
+  expect(el.sub).to.equal('');
+  expect(el.dotColor).to.equal('');
+});
+
+it('reflects sub and dot-color attributes onto their properties', async () => {
+  const el = (await fixture(
+    html`<lyra-option value="a" sub="Running" dot-color="green">A</lyra-option>`,
+  )) as LyraOption;
+  expect(el.sub).to.equal('Running');
+  expect(el.dotColor).to.equal('green');
+});

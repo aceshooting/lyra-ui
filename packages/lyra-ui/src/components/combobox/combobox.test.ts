@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
 import './combobox.js';
 import './option.js';
 import type { LyraCombobox } from './combobox.js';
@@ -332,4 +332,112 @@ it('applies the shared focus-ring tokens to the clear and tag-remove buttons', (
   expect(clearFocusBlock, 'expected a shared clear/tag-remove :focus-visible rule').to.not.equal(null);
   expect(clearFocusBlock![1]).to.include('var(--lyra-focus-ring-width)');
   expect(clearFocusBlock![1]).to.include('var(--lyra-focus-ring-color)');
+});
+
+it('renders sub and dot-color from light-DOM options', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox>
+      <lyra-option value="a" sub="Running" dot-color="green">Meter A</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="option-sub"]')!.textContent).to.equal('Running');
+  expect((el.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement).style.background).to.equal(
+    'green',
+  );
+});
+
+it('caps rendered rows at maxRender and shows an overflow indicator', async () => {
+  const el = (await fixture(html`<lyra-combobox max-render="3"></lyra-combobox>`)) as LyraCombobox;
+  for (let i = 0; i < 10; i++) {
+    const opt = document.createElement('lyra-option');
+    opt.value = `${i}`;
+    opt.textContent = `Item ${i}`;
+    el.appendChild(opt);
+  }
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(3);
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.contain('+7 more');
+});
+
+it('always keeps the current selection visible even when capped out', async () => {
+  const el = (await fixture(html`<lyra-combobox max-render="3"></lyra-combobox>`)) as LyraCombobox;
+  for (let i = 0; i < 10; i++) {
+    const opt = document.createElement('lyra-option');
+    opt.value = `${i}`;
+    opt.textContent = `Item ${i}`;
+    el.appendChild(opt);
+  }
+  el.value = '9';
+  el.open = true;
+  await el.updateComplete;
+
+  const rows = Array.from(el.shadowRoot!.querySelectorAll('[part="option"]'));
+  expect(rows.some((r) => r.textContent?.includes('Item 9'))).to.be.true;
+});
+
+it('calls source with the current query (debounced) and renders its rows', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  const calls: string[] = [];
+  el.source = async (query: string) => {
+    calls.push(query);
+    return [{ value: 'x', label: `Result for "${query}"` }];
+  };
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(calls).to.deep.equal(['']);
+  expect(el.shadowRoot!.querySelector('[part="option"] [part="option-label"]')!.textContent).to.contain(
+    'Result for ""',
+  );
+
+  await typeQuery(el, 'ban');
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(calls).to.deep.equal(['', 'ban']);
+});
+
+it('shows a loading row while an in-flight source call is pending', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  let resolve!: (rows: { value: string; label: string }[]) => void;
+  el.source = () => new Promise((r) => (resolve = r));
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.loading')).to.exist;
+
+  resolve([{ value: 'x', label: 'Found' }]);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.loading')).to.not.exist;
+});
+
+it('ignores a stale source response that resolves after a newer query', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  const resolvers: Array<(rows: { value: string; label: string }[]) => void> = [];
+  el.source = () => new Promise((r) => resolvers.push(r));
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+
+  await typeQuery(el, 'second');
+  await aTimeout(250);
+
+  expect(resolvers).to.have.length(2);
+  resolvers[0]([{ value: 'stale', label: 'Stale result' }]);
+  await el.updateComplete;
+  resolvers[1]([{ value: 'fresh', label: 'Fresh result' }]);
+  await el.updateComplete;
+
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) => n.textContent);
+  expect(labels).to.deep.equal(['Fresh result']);
 });

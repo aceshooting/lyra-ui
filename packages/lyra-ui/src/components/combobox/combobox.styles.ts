@@ -173,6 +173,27 @@ export const styles = css`
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
+  [part='option-dot'] {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  [part='option-label'] {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+  [part='option-sub'] {
+    font-size: 0.75rem;
+    color: var(--lyra-color-text-quiet);
+  }
+  [part='option-overflow'],
+  .loading {
+    padding: var(--lyra-space-s) var(--lyra-space-m);
+    font-size: 0.8125rem;
+    color: var(--lyra-color-text-quiet);
+  }
 
   .group-label {
     padding: var(--lyra-space-xs) var(--lyra-space-s) 0;

@@ -37,6 +37,12 @@ export class LyraOption extends LyraElement {
   /** Extra text the filter should match beyond the label. */
   @property({ attribute: 'search-text' }) searchText = '';
 
+  /** Optional secondary line rendered under the label (e.g. a status/date summary). */
+  @property() sub = '';
+
+  /** Optional color for a small leading status dot (any valid CSS color). */
+  @property({ attribute: 'dot-color' }) dotColor = '';
+
   /** Resolved label: explicit non-empty `label` attribute wins, else trimmed text content. */
   get label(): string {
     const attr = this.getAttribute('label');

@@ -11,6 +11,17 @@ import './option.js';
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
 
+export interface ComboboxSourceRow {
+  value: string;
+  label: string;
+  sub?: string;
+  dotColor?: string;
+  group?: string;
+  disabled?: boolean;
+}
+
+export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
+
 /**
  * `<lyra-combobox>` — a filterable single/multi select that combines a text
  * input with a listbox. Mirrors the core `<wa-combobox>` API under `lyra-`.
@@ -59,6 +70,8 @@ export class LyraCombobox extends LyraElement {
   @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
   @property({ attribute: 'empty-text' }) emptyText = 'No results';
   @property({ attribute: false }) filter: OptionFilter | null = null;
+  @property({ attribute: false }) source: ComboboxSource | null = null;
+  @property({ attribute: 'max-render', type: Number }) maxRender = 200;
 
   @state() private query = '';
   @state() private activeIndex = -1;
@@ -76,6 +89,11 @@ export class LyraCombobox extends LyraElement {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
+  @state() private loading = false;
+  @state() private asyncRows: ComboboxSourceRow[] = [];
+  private sourceTimer?: ReturnType<typeof setTimeout>;
+  private sourceToken = 0;
+  private _selectedLabelCache = new Map<string, string>();
 
   private internals: ElementInternals;
   private listId = nextId('combobox-list');
@@ -192,7 +210,35 @@ export class LyraCombobox extends LyraElement {
   }
 
   private labelFor(value: string): string {
-    return this.options.find((o) => o.value === value)?.label ?? value;
+    return this._selectedLabelCache.get(value) ?? this.options.find((o) => o.value === value)?.label ?? value;
+  }
+
+  /** The current row set in a source-agnostic shape, before capping. */
+  private get effectiveRows(): ComboboxSourceRow[] {
+    if (this.source) return this.asyncRows;
+    return this.filtered.map((o) => ({
+      value: o.value,
+      label: o.label,
+      sub: o.sub || undefined,
+      dotColor: o.dotColor || undefined,
+      group: o.group || undefined,
+      disabled: o.disabled,
+    }));
+  }
+
+  /** `effectiveRows` capped to `maxRender`, always keeping the current selection visible. */
+  private get renderedRows(): { rows: ComboboxSourceRow[]; overflow: number } {
+    const all = this.effectiveRows;
+    if (all.length <= this.maxRender) return { rows: all, overflow: 0 };
+    const capped = all.slice(0, this.maxRender);
+    const cappedValues = new Set(capped.map((r) => r.value));
+    for (const v of this._selected) {
+      if (!cappedValues.has(v)) {
+        const selectedRow = all.find((r) => r.value === v);
+        if (selectedRow) capped.push(selectedRow);
+      }
+    }
+    return { rows: capped, overflow: all.length - capped.length };
   }
 
   private get filtered(): LyraOption[] {
@@ -236,6 +282,11 @@ export class LyraCombobox extends LyraElement {
         const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
+        // Reacting to the `open` property itself (not just inside show())
+        // means this fires however `open` became true — via show()'s own
+        // user-interaction paths, or a consumer/test setting `el.open = true`
+        // directly, which bypasses show() entirely.
+        if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
       }
     }
     if (changed.has('required')) this.updateValidity();
@@ -244,15 +295,16 @@ export class LyraCombobox extends LyraElement {
     }
   }
 
-  private pick(option: LyraOption): void {
-    if (option.disabled) return;
+  private pickRow(row: ComboboxSourceRow): void {
+    if (row.disabled) return;
+    this._selectedLabelCache.set(row.value, row.label);
     if (this.multiple) {
       const set = new Set(this._selected);
-      set.has(option.value) ? set.delete(option.value) : set.add(option.value);
+      set.has(row.value) ? set.delete(row.value) : set.add(row.value);
       this.value = [...set];
       this.query = '';
     } else {
-      this.value = option.value;
+      this.value = row.value;
       this.query = '';
       this.hide();
     }
@@ -276,8 +328,26 @@ export class LyraCombobox extends LyraElement {
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
     this.show();
+    if (this.source) this.runSource(this.query);
     this.emit('input');
   };
+
+  private runSource(query: string): void {
+    if (!this.source) return;
+    clearTimeout(this.sourceTimer);
+    this.sourceTimer = setTimeout(() => {
+      const token = ++this.sourceToken;
+      this.loading = true;
+      this.source!(query)
+        .then((rows) => {
+          if (token !== this.sourceToken || !this.isConnected) return;
+          this.asyncRows = rows;
+        })
+        .finally(() => {
+          if (token === this.sourceToken) this.loading = false;
+        });
+    }, 200);
+  }
 
   private onInputBlur = (): void => {
     this.touched = true;
@@ -296,21 +366,21 @@ export class LyraCombobox extends LyraElement {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    const opts = this.filtered.filter((o) => !o.disabled);
+    const navigable = this.renderedRows.rows.filter((r) => !r.disabled);
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         if (!this.open) return this.show();
-        this.activeIndex = Math.min(opts.length - 1, this.activeIndex + 1);
+        this.activeIndex = Math.min(navigable.length - 1, this.activeIndex + 1);
         break;
       case 'ArrowUp':
         e.preventDefault();
         this.activeIndex = Math.max(0, this.activeIndex - 1);
         break;
       case 'Enter':
-        if (this.open && this.activeIndex >= 0 && opts[this.activeIndex]) {
+        if (this.open && this.activeIndex >= 0 && navigable[this.activeIndex]) {
           e.preventDefault();
-          this.pick(opts[this.activeIndex]);
+          this.pickRow(navigable[this.activeIndex]);
         }
         break;
       case 'Escape':
@@ -328,7 +398,7 @@ export class LyraCombobox extends LyraElement {
       case 'End':
         if (this.open) {
           e.preventDefault();
-          this.activeIndex = opts.length - 1;
+          this.activeIndex = navigable.length - 1;
         }
         break;
       case 'Backspace':
@@ -347,18 +417,17 @@ export class LyraCombobox extends LyraElement {
     this.show();
   };
 
-  private renderRows(filtered: LyraOption[], activeId: string): TemplateResult[] {
-    const rows: TemplateResult[] = [];
+  private renderRows(rows: ComboboxSourceRow[], activeId: string): TemplateResult[] {
+    const out: TemplateResult[] = [];
     let currentGroup: string | undefined;
-    let optIndex = 0;
-    filtered.forEach((o) => {
+    rows.forEach((o, i) => {
       if (o.group !== currentGroup) {
         currentGroup = o.group;
-        if (currentGroup) rows.push(html`<div class="group-label">${currentGroup}</div>`);
+        if (currentGroup) out.push(html`<div class="group-label">${currentGroup}</div>`);
       }
-      const id = `${this.listId}-opt-${optIndex++}`;
+      const id = `${this.listId}-opt-${i}`;
       const selected = this._selected.includes(o.value);
-      rows.push(
+      out.push(
         html`<div
           part="option"
           id=${id}
@@ -367,20 +436,24 @@ export class LyraCombobox extends LyraElement {
           aria-disabled=${o.disabled ? 'true' : 'false'}
           ?data-active=${id === activeId}
           @mousedown=${(e: Event) => e.preventDefault()}
-          @click=${() => this.pick(o)}
+          @click=${() => this.pickRow(o)}
         >
-          <span>${o.label}</span>
+          ${o.dotColor ? html`<span part="option-dot" style=${`background:${o.dotColor}`}></span>` : ''}
+          <span part="option-label">
+            <span>${o.label}</span>
+            ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
+          </span>
         </div>`,
       );
     });
-    return rows;
+    return out;
   }
 
   render(): TemplateResult {
-    const filtered = this.filtered;
-    const activeOpts = filtered.filter((o) => !o.disabled);
-    const active = this.activeIndex >= 0 ? activeOpts[this.activeIndex] : undefined;
-    const activeId = active ? `${this.listId}-opt-${filtered.indexOf(active)}` : '';
+    const { rows, overflow } = this.renderedRows;
+    const navigable = rows.filter((r) => !r.disabled);
+    const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
+    const activeId = active ? `${this.listId}-opt-${rows.indexOf(active)}` : '';
 
     const shownTags = this.multiple ? this._selected.slice(0, this.maxOptionsVisible) : [];
     const extra = this.multiple ? this._selected.length - shownTags.length : 0;
@@ -446,9 +519,14 @@ export class LyraCombobox extends LyraElement {
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </div>
         <div part="listbox" id=${this.listId} role="listbox" aria-multiselectable=${this.multiple ? 'true' : 'false'}>
-          ${filtered.length === 0
-            ? html`<div class="empty">${this.emptyText}</div>`
-            : this.renderRows(filtered, activeId)}
+          ${this.loading
+            ? html`<div class="loading">Loading…</div>`
+            : rows.length === 0
+              ? html`<div class="empty">${this.emptyText}</div>`
+              : html`${this.renderRows(rows, activeId)}
+                  ${overflow > 0
+                    ? html`<div part="option-overflow">+${overflow} more — refine your search</div>`
+                    : ''}`}
         </div>
         <div part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
