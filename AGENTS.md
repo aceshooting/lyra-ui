@@ -87,9 +87,12 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   keep new components' plain class modules free of top-level side effects or tree-shaking
   breaks for every consumer.
 - **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
-  built on `ElementInternals`) — known gap: it never calls
-  `internals.setValidity()`, so `required` is currently a no-op for constraint validation on
-  every form-associated component. Don't copy that gap into new components without flagging it.
+  built on `ElementInternals`) where the value fits a plain string (`lyra-date-input`); it calls
+  `internals.setValidity()` so `required` participates in native constraint validation
+  (`checkValidity()`/`reportValidity()`/`:invalid`). Components whose value isn't a single string
+  (e.g. `lyra-combobox`'s multi-select array) attach `ElementInternals` directly instead of using
+  the mixin, but must still call `setValidity()` themselves — see `combobox.ts`'s
+  `updateValidity()` for the pattern.
 - **JSDoc header** on the component class: `@customElement lyra-x`, `@slot`, `@csspart` tags
   (see any existing component, e.g. `components/empty/empty.ts`) — this feeds the generated
   manifest and the consumer-facing docs.
