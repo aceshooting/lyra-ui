@@ -8,6 +8,16 @@ import '../skeleton/skeleton.js';
 
 type FlagUrlResolver = (code: string) => string;
 
+/**
+ * ISO 3166-1 alpha-2 country code: exactly two letters, case-insensitive.
+ * The peer package `@aceshooting/lyra-flags` naively interpolates its `code`
+ * argument into a `new URL('./flags/${code}.svg', ...)` with no validation
+ * of its own — an unvalidated `country` containing `../` segments (e.g.
+ * `../../etc`) can escape the intended flags/ directory. Anything that
+ * doesn't match this shape is treated the same as an unknown/missing flag.
+ */
+const COUNTRY_CODE_RE = /^[a-z]{2}$/i;
+
 let flagUrlResolver: Promise<FlagUrlResolver | null> | undefined;
 
 /**
@@ -63,7 +73,9 @@ export class LyraFlag extends LyraElement {
   @state() private loading = true;
 
   private get code(): string | undefined {
-    if (this.country) return this.country.toLowerCase();
+    if (this.country) {
+      return COUNTRY_CODE_RE.test(this.country) ? this.country.toLowerCase() : undefined;
+    }
     if (this.language) return languageToCountry(this.language);
     return undefined;
   }
