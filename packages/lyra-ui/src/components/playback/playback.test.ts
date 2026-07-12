@@ -66,6 +66,27 @@ it('auto-pauses when the element becomes hidden', async () => {
   expect(el.playing).to.be.false;
 });
 
+it('auto-pauses when length is externally reduced to <= 1 while playing', async () => {
+  const el = (await fixture(
+    html`<lyra-playback length="3" interval-ms="10"></lyra-playback>`,
+  )) as LyraPlayback;
+  el.play();
+  await el.updateComplete;
+  expect(el.playing).to.be.true;
+
+  el.length = 1;
+  await el.updateComplete;
+
+  expect(el.playing).to.be.false;
+  // The play button must not be left as the only control that could stop a
+  // still-running timer — confirm the timer actually stopped, not just the
+  // `playing` flag, by waiting well past interval-ms and checking the index
+  // never advances again.
+  const indexAfterPause = el.index;
+  await aTimeout(60);
+  expect(el.index).to.equal(indexAfterPause);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
   await expect(el).to.be.accessible();

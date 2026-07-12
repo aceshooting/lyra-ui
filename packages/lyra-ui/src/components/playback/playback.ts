@@ -43,6 +43,11 @@ export class LyraPlayback extends LyraElement {
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('hidden') && this.hidden) this.pause();
+    // If length is externally reduced to <= 1 while playing, the timer would
+    // otherwise keep firing forever — and the play button (the only control
+    // that could stop it) becomes ?disabled at that point, leaving no way to
+    // stop it from the rendered UI.
+    if (changed.has('length') && this.length <= 1) this.pause();
   }
 
   /** Start playback; no-op if there's nothing to advance through. */
