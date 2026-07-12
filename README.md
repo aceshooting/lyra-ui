@@ -1,8 +1,13 @@
 # Lyra UI (monorepo)
 
 [![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
+[![license](https://img.shields.io/npm/l/%40aceshooting%2Flyra-ui)](./LICENSE)
 
 A pnpm workspace hosting `lyra-ui` and its optional companion packages.
+
+**[Browse the live docs site →](https://aceshooting.github.io/lyra-ui/)** — every component with
+a live example, source code, and API reference.
 
 | Package | Description |
 |---|---|
@@ -20,6 +25,27 @@ pnpm docs         # Storybook docs site demoing every component
 ```
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
+
+## Components
+
+35 tags across five component families — see the [live docs site](https://aceshooting.github.io/lyra-ui/)
+for every example, or [`packages/lyra-ui/README.md`](./packages/lyra-ui/README.md#components) for
+the full per-tag reference table.
+
+- **v1 — form controls, toasts, sparkline:** combobox, date picker/input, toast, sparkline, flag
+- **Dashboard atoms:** empty, skeleton, stat, table, gauge, export button, split, widget
+- **Temporal & graph:** time range, playback, heatmap, force-directed graph, tree
+- **Charts:** line/bar/pie/doughnut/radar/polar-area/scatter/bubble chart, histogram, box plot
+- **Map & file input:** maplibre-gl map with legend/choropleth, drag-drop file dropzone
+
+## Documentation
+
+- **Humans:** the [live docs site](https://aceshooting.github.io/lyra-ui/) (Storybook — every
+  component's canvas, source, and props/events/slots reference).
+- **AI agents integrating this library:** [`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt)
+  (short index) and [`llms-full.txt`](./packages/lyra-ui/llms-full.txt) (full API reference).
+- **Contributors working on this repo itself:** [`AGENTS.md`](./AGENTS.md) (AI agents) and
+  [`CONTRIBUTING.md`](./CONTRIBUTING.md) (humans).
 
 ## Status
 
