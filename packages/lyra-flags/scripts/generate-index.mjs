@@ -15,6 +15,11 @@
  *    (the pristine, pre-optimization original — see `scripts/optimize-flags.mjs`). Most codes have
  *    no detailed variant (`flags/<code>.svg` was never large enough to need optimizing), so
  *    `FLAG_LOADERS_DETAILED` only ever covers a subset of the full code list.
+ *  - `flags/compact/loaders/<code>.js` + `flags/generated-compact.js`/`.d.ts` — same lazy-loader
+ *    shape again, but scoped to whichever codes have a `flags/compact/<code>.webp` (the icon-scale
+ *    WebP raster — see `scripts/build-compact.mjs`), and pointing at a `.webp` asset rather than a
+ *    `.svg`. Same subset as the detailed set (the ~65 emblem flags), so `FLAG_LOADERS_COMPACT` also
+ *    only covers part of the full code list; `flagUrl(code, { variant: 'compact' })` checks it.
  *
  * Why `FLAG_URLS` is a *separate file*, not just a second export alongside `FLAG_LOADERS`: this
  * was tried first, and it doesn't work — Vite's asset-URL transform scans a module's source for
@@ -61,8 +66,11 @@ const flagsDir = path.join(scriptDir, '..', 'flags');
 const loadersDir = path.join(flagsDir, 'loaders');
 const detailedDir = path.join(flagsDir, 'detailed');
 const detailedLoadersDir = path.join(detailedDir, 'loaders');
+const compactDir = path.join(flagsDir, 'compact');
+const compactLoadersDir = path.join(compactDir, 'loaders');
 
 const SVG_RE = /\.svg$/;
+const WEBP_RE = /\.webp$/;
 
 // Every shipped code is a plain lowercase a-z string (verified below), which is always a valid
 // *unquoted* object-literal property name in JS — including ones that collide with reserved
@@ -111,6 +119,30 @@ function collectDetailedCodes(allCodes) {
       throw new Error(
         `flags/detailed/${code}.svg has no matching flags/${code}.svg — a detailed variant must ` +
           'pair with a compact base flag of the same code.',
+      );
+    }
+  }
+
+  return codes;
+}
+
+/** Codes with a compact icon-scale raster at `flags/compact/<code>.webp` — a subset of
+ *  `collectCodes()`'s full list, populated by `scripts/build-compact.mjs` (the ~65 emblem flags
+ *  whose vector art is far too heavy for icon use). Returns `[]` if `flags/compact/` doesn't exist
+ *  yet (no flag has ever needed a compact raster). */
+function collectCompactCodes(allCodes) {
+  if (!existsSync(compactDir)) return [];
+  const allCodeSet = new Set(allCodes);
+  const codes = readdirSync(compactDir)
+    .filter((name) => WEBP_RE.test(name))
+    .map((name) => name.replace(WEBP_RE, ''))
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const code of codes) {
+    if (!allCodeSet.has(code)) {
+      throw new Error(
+        `flags/compact/${code}.webp has no matching flags/${code}.svg — a compact variant must ` +
+          'pair with a standard base flag of the same code.',
       );
     }
   }
@@ -214,9 +246,42 @@ function renderGeneratedDetailedDts() {
   );
 }
 
+function renderCompactLoaderJs(code) {
+  return `${banner()}\nexport default new URL('../${code}.webp', import.meta.url).href;\n`;
+}
+
+function renderGeneratedCompactJs(codes) {
+  const loaderLines = codes
+    .map((code) => `  ${code}: () => import('./compact/loaders/${code}.js').then((m) => m.default),`)
+    .join('\n');
+
+  return (
+    `${banner()}\n` +
+    '/**\n' +
+    ' * Lazy map of ISO 3166-1 alpha-2 (or territory) code -> *compact* (icon-scale WebP raster)\n' +
+    ' * flag URL loader — a subset of FLAG_LOADERS, one entry per code that has a\n' +
+    " * flags/compact/<code>.webp. `flagUrl(code, { variant: 'compact' })` checks this map first,\n" +
+    ' * falling back to FLAG_LOADERS (the standard vector) for a code with no compact variant. See\n' +
+    ' * scripts/build-compact.mjs for how flags/compact/ is populated. Note the entries point at a\n' +
+    ' * .webp asset, not a .svg — the compact tier is a raster (see build-compact.mjs for why).\n' +
+    ' * @type {Record<string, () => Promise<string>>}\n' +
+    ' */\n' +
+    `export const FLAG_LOADERS_COMPACT = {\n${loaderLines}\n};\n`
+  );
+}
+
+function renderGeneratedCompactDts() {
+  return (
+    `${banner()}\n` +
+    '/** Lazy map of ISO 3166-1 alpha-2 (or territory) code -> compact flag WebP URL loader. */\n' +
+    'export declare const FLAG_LOADERS_COMPACT: Record<string, () => Promise<string>>;\n'
+  );
+}
+
 function main() {
   const codes = collectCodes();
   const detailedCodes = collectDetailedCodes(codes);
+  const compactCodes = collectCompactCodes(codes);
 
   mkdirSync(loadersDir, { recursive: true });
   for (const code of codes) {
@@ -234,10 +299,18 @@ function main() {
   writeFileSync(path.join(flagsDir, 'generated-detailed.js'), renderGeneratedDetailedJs(detailedCodes));
   writeFileSync(path.join(flagsDir, 'generated-detailed.d.ts'), renderGeneratedDetailedDts());
 
+  if (compactCodes.length > 0) mkdirSync(compactLoadersDir, { recursive: true });
+  for (const code of compactCodes) {
+    writeFileSync(path.join(compactLoadersDir, `${code}.js`), renderCompactLoaderJs(code));
+  }
+  writeFileSync(path.join(flagsDir, 'generated-compact.js'), renderGeneratedCompactJs(compactCodes));
+  writeFileSync(path.join(flagsDir, 'generated-compact.d.ts'), renderGeneratedCompactDts());
+
   console.log(
     `Generated flags/generated.js + flags/eager.js (+ .d.ts) + flags/loaders/*.js for ${codes.length} flag(s), ` +
       `plus flags/generated-detailed.js (+ .d.ts) + flags/detailed/loaders/*.js for ${detailedCodes.length} ` +
-      'detailed variant(s).',
+      `detailed variant(s), plus flags/generated-compact.js (+ .d.ts) + flags/compact/loaders/*.js for ` +
+      `${compactCodes.length} compact variant(s).`,
   );
 }
 

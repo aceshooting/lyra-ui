@@ -1,5 +1,6 @@
 import { FLAG_LOADERS } from './flags/generated.js';
 import { FLAG_LOADERS_DETAILED } from './flags/generated-detailed.js';
+import { FLAG_LOADERS_COMPACT } from './flags/generated-compact.js';
 
 /**
  * Resolves the URL of a flag SVG shipped in this package, fetching only that one flag.
@@ -32,14 +33,17 @@ import { FLAG_LOADERS_DETAILED } from './flags/generated-detailed.js';
  * unbundled (a plain browser `<script type="module">`, Node, `@web/test-runner`'s unbundled
  * ESM, ...): dynamic `import()` of a plain `.js` file, and `new URL()` of an adjacent asset, are
  * both native, loader-free platform behavior.
- * `options.variant: 'detailed'` requests the pristine, pre-optimization original instead of the
- * default icon-optimized SVG (see `scripts/optimize-flags.mjs`) — only meaningful for the minority
- * of codes whose source art was large enough to need optimizing (`code in FLAG_LOADERS_DETAILED`);
- * for every other code, the default and `detailed` variants are the same file, so this option is a
- * safe no-op rather than an error. Useful for a consumer rendering a flag larger than icon scale
- * (e.g. a hero display) that wants the full illustrative detail back.
+ * The default (no `variant`, or `'standard'`) is the icon-optimized vector for card/row sizes.
+ * `options.variant` picks a different fidelity tier for the ~65 codes whose source art embeds a
+ * coat of arms / seal / emblem (`code in FLAG_LOADERS_DETAILED`); for every other code all tiers
+ * resolve to the same standard file, so any variant is a safe no-op rather than an error:
+ *   - `'compact'` — a tiny WebP raster (`code in FLAG_LOADERS_COMPACT`, see `scripts/build-compact.mjs`)
+ *     for icon-scale use (menus, language selectors; ~12-28px), where the emblem detail is invisible
+ *     anyway. Falls back to the standard vector for a code with no compact raster.
+ *   - `'detailed'` — the pristine, pre-optimization original vector (`scripts/optimize-flags.mjs`),
+ *     for rendering larger than icon scale (e.g. a hero display) with the full illustrative detail.
  * @param {string} code ISO 3166-1 alpha-2 country/territory code, lowercase (e.g. `fr`, `us`).
- * @param {{ variant?: 'detailed' }} [options]
+ * @param {{ variant?: 'compact' | 'standard' | 'detailed' }} [options]
  * @returns {Promise<string | undefined>} The flag's URL. For a `code` with no matching shipped
  *   flag, resolves `undefined` (same non-crashing "no image" outcome as the old code's
  *   now-404ing URL, for `<lyra-flag>`'s `<img src>` use).
@@ -47,6 +51,9 @@ import { FLAG_LOADERS_DETAILED } from './flags/generated-detailed.js';
 export function flagUrl(code, options) {
   if (options?.variant === 'detailed' && FLAG_LOADERS_DETAILED[code]) {
     return FLAG_LOADERS_DETAILED[code]();
+  }
+  if (options?.variant === 'compact' && FLAG_LOADERS_COMPACT[code]) {
+    return FLAG_LOADERS_COMPACT[code]();
   }
   return FLAG_LOADERS[code]?.() ?? Promise.resolve(undefined);
 }
@@ -66,4 +73,4 @@ export async function flagUrls() {
   return (await import('./flags/eager.js')).FLAG_URLS;
 }
 
-export { FLAG_LOADERS, FLAG_LOADERS_DETAILED };
+export { FLAG_LOADERS, FLAG_LOADERS_DETAILED, FLAG_LOADERS_COMPACT };

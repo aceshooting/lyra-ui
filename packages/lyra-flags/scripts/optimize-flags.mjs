@@ -1,34 +1,33 @@
 #!/usr/bin/env node
 /**
- * One-time/maintenance job: for every `flags/<code>.svg` whose raw size exceeds
- * `SIZE_THRESHOLD_BYTES`, preserves the pristine vendored original at
- * `flags/detailed/<code>.svg` and overwrites `flags/<code>.svg` with an SVGO-optimized
- * (icon-scale-appropriate) replacement.
+ * Maintenance job: for every `flags/<code>.svg` whose source art is large enough to warrant it,
+ * preserves the pristine vendored original at `flags/detailed/<code>.svg` and (re)derives the
+ * `standard`-tier `flags/<code>.svg` from that original with an aggressive-but-geometry-lossless
+ * SVGO pass. The `standard` tier is what `<lyra-flag>` renders by default and targets card/row
+ * sizes (~28-96px); the pristine `flags/detailed/<code>.svg` backs `variant="detailed"` (hero
+ * scale), and a separate WebP raster (`scripts/build-compact.mjs`) backs `variant="compact"`
+ * (icon scale). See docs/superpowers/specs/2026-07-12-flag-icon-tiers-design.md.
  *
  * Why a size threshold rather than "optimize everything": 175 of 249 flags are already <= 10 KB
  * (median 2,572 bytes) — the package-wide problem is a minority of outliers whose source art
  * embeds full illustrative detail (a national coat of arms, seal, or emblem), not a uniform
- * "vector is big" baseline. 20 KB matches the threshold the consumer report that prompted this
- * job used to scope its own findings (65 of 249 flags exceed it).
+ * "vector is big" baseline. 20 KB scopes the job to those ~65 outliers.
  *
- * Why SVGO with this specific config, not the default preset: every flag's `viewBox="0 0 1000
- * 1000"` (1000 user-units for an icon typically rendered at 16-24px) means a rendered pixel spans
- * ~40 user-units, so `floatPrecision: 1` (0.1-unit coordinate rounding) is over 3 orders of
- * magnitude finer than anything visible at icon scale -- safe, not a visible simplification.
- * `mergePaths` combines same-style sibling `<path>` elements into one multi-subpath `d`, which is
- * a structural/encoding change, not a geometric one. Measured on the worst offender (`sv.svg`,
- * El Salvador, 1,533 paths): default SVGO preset alone only reaches -46% (759 KB -> 407 KB, still
- * far too large for an icon); this config reaches -75% (759 KB -> ~189 KB). That still isn't
- * "icon-ideal" (a simple 3-4-path flag like `fr.svg` is under 1 KB) -- reaching that would require
- * genuine path-geometry simplification (vertex/curve reduction), which risks visible artifacts per
- * flag and needs individual visual review, out of scope for this automated, zero-visual-risk pass.
- * The reduction here is still substantial and real (measured, not assumed) and ships with no
- * fidelity loss perceptible at the icon scale `<lyra-flag>` renders at.
+ * Why this SVGO config: every flag's `viewBox="0 0 1000 1000"` means one user-unit is 1/1000 of
+ * the flag width, so `floatPrecision: 0` (integer, 1-unit coordinate rounding) is still sub-pixel
+ * (<0.1px) at the ~96px top of the standard band -- and <0.2px even at 200px -- so it is an
+ * encoding change, not a visible geometric simplification. `mergePaths: { force: true }` merges
+ * sibling `<path>`s into one multi-subpath `d`; also structural, not geometric. No vertex/curve
+ * *count* reduction is done (that would risk visible artifacts and need per-flag review). Measured
+ * across all 65 outliers: this brings every one under 80 KB with no fidelity loss perceptible at
+ * the sizes the standard tier renders at -- worst cases `sv` (El Salvador) 741 KB pristine -> 75
+ * KB, `ec` 654 -> 67, `rs` 474 -> 66. Anyone needing crispness past ~96px uses `detailed`.
  *
- * Run via `pnpm --filter @aceshooting/lyra-flags run optimize`. Idempotent: re-running is a no-op
- * for a code that already has a `flags/detailed/<code>.svg` (the compact `flags/<code>.svg` is
- * never re-derived from an already-optimized file, which would compound precision loss). Follow
- * with `pnpm run generate` to pick up the new `flags/detailed/` entries into the generated index.
+ * Run via `pnpm --filter @aceshooting/lyra-flags run optimize`. Re-runnable: for a code that
+ * already has a `flags/detailed/<code>.svg`, the standard flag is re-derived *from that pristine
+ * original* (never from the already-optimized file, which would compound precision loss), so
+ * changing the SVGO config here and re-running cleanly re-optimizes rather than being a no-op.
+ * Follow with `pnpm run build-compact` (compact rasters) then `pnpm run generate` (index).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -48,9 +47,21 @@ const SIZE_THRESHOLD_BYTES = 20_000;
 const SVGO_CONFIG = {
   multipass: true,
   plugins: [
-    'preset-default',
-    { name: 'convertPathData', params: { floatPrecision: 1, transformPrecision: 2 } },
-    'mergePaths',
+    {
+      name: 'preset-default',
+      params: {
+        overrides: {
+          convertPathData: { floatPrecision: 0, transformPrecision: 1 },
+          cleanupNumericValues: { floatPrecision: 0 },
+          mergePaths: { force: true, floatPrecision: 0 },
+        },
+      },
+    },
+    // A second, standalone pass after the preset squeezes a little more: `applyTransforms` flattens
+    // any residual transforms into path data at precision 0, and a forced `mergePaths` re-coalesces
+    // paths the preset left separate. Both are still encoding-only (no vertex/curve count change).
+    { name: 'convertPathData', params: { floatPrecision: 0, transformPrecision: 1, applyTransforms: true } },
+    { name: 'mergePaths', params: { force: true, floatPrecision: 0 } },
   ],
 };
 
@@ -67,19 +78,22 @@ function main() {
     const svgPath = path.join(flagsDir, `${code}.svg`);
     const detailedPath = path.join(detailedDir, `${code}.svg`);
 
-    // Idempotency guard: a code that already has a preserved detailed original was already
-    // processed by a previous run -- flags/<code>.svg is already the optimized version, so
-    // re-running SVGO on it (instead of the pristine original) would compound lossy precision
-    // rounding on every re-run. Skip entirely rather than re-derive.
-    if (existsSync(detailedPath)) continue;
-
+    // Pick the pristine source to optimize FROM. A code that already has a preserved detailed
+    // original is re-derived from THAT (never from the already-optimized flags/<code>.svg, which
+    // would compound lossy precision rounding on every re-run), so re-running with a changed SVGO
+    // config cleanly re-optimizes. A code with no preserved original is only touched if it is
+    // large enough to be worth optimizing, and its pristine art is preserved first.
     const beforeSize = statSync(svgPath).size;
-    if (beforeSize <= SIZE_THRESHOLD_BYTES) continue;
+    let source;
+    if (existsSync(detailedPath)) {
+      source = readFileSync(detailedPath, 'utf8');
+    } else {
+      if (beforeSize <= SIZE_THRESHOLD_BYTES) continue;
+      source = readFileSync(svgPath, 'utf8');
+      writeFileSync(detailedPath, source);
+    }
 
-    const original = readFileSync(svgPath, 'utf8');
-    writeFileSync(detailedPath, original);
-
-    const result = optimize(original, { path: svgPath, ...SVGO_CONFIG });
+    const result = optimize(source, { path: svgPath, ...SVGO_CONFIG });
     writeFileSync(svgPath, result.data);
     const afterSize = Buffer.byteLength(result.data, 'utf8');
 
@@ -100,11 +114,27 @@ function main() {
       `${code.padEnd(6)} ${String(beforeSize).padStart(9)} B  ${String(afterSize).padStart(9)} B  -${reduction}%`,
     );
   }
+  const largest = rows.reduce((m, r) => (r.afterSize > m.afterSize ? r : m), rows[0]);
   console.log(
     `\n${rows.length} flag(s) optimized. Total: ${totalBefore} B -> ${totalAfter} B ` +
       `(-${(100 * (1 - totalAfter / totalBefore)).toFixed(1)}%). ` +
-      `Pristine originals preserved in flags/detailed/. Run \`pnpm run generate\` next.`,
+      `Largest standard flag: ${largest.code} at ${largest.afterSize} B. ` +
+      `Pristine originals preserved in flags/detailed/. ` +
+      'Run `pnpm run build-compact` then `pnpm run generate` next.',
   );
+
+  // Budget guard: the standard tier targets card/row sizes and must stay lightweight. Warn loudly
+  // (rather than silently ship) if a source bump ever pushes an optimized flag back over 80 KB --
+  // scripts/test.mjs asserts the same budget as a hard failure.
+  const STANDARD_BUDGET_BYTES = 80_000;
+  const over = rows.filter((r) => r.afterSize > STANDARD_BUDGET_BYTES);
+  if (over.length > 0) {
+    console.warn(
+      `\nWARNING: ${over.length} flag(s) still exceed the ${STANDARD_BUDGET_BYTES} B standard-tier ` +
+        `budget: ${over.map((r) => `${r.code} (${r.afterSize} B)`).join(', ')}. Consider tuning the ` +
+        'SVGO config or, as a last resort, genuine geometry simplification for these.',
+    );
+  }
 }
 
 main();

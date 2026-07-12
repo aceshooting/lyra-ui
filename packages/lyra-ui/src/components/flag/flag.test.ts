@@ -93,6 +93,44 @@ it('re-resolves to the detailed variant when detailed is toggled on an already-m
   );
 });
 
+it('requests the compact (WebP raster) variant for a code that has one', async () => {
+  const el = (await fixture(html`<lyra-flag country="es" variant="compact"></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('src')).to.contain('/compact/es.webp');
+});
+
+it('falls back to the standard variant when compact is set but the code has none', async () => {
+  const el = (await fixture(html`<lyra-flag country="fr" variant="compact"></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('src')).to.contain('fr.svg');
+  expect(image.getAttribute('src')).to.not.contain('/compact/');
+});
+
+it('variant="detailed" resolves the detailed vector, like the deprecated boolean', async () => {
+  const el = (await fixture(html`<lyra-flag country="es" variant="detailed"></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('src')).to.contain('/detailed/es.svg');
+});
+
+it('variant takes precedence over the deprecated detailed boolean', async () => {
+  const el = (await fixture(html`<lyra-flag country="es" variant="compact" detailed></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('src')).to.contain('/compact/es.webp');
+  expect(image.getAttribute('src')).to.not.contain('/detailed/');
+});
+
+it('re-resolves to the compact variant when variant is set on an already-mounted element', async () => {
+  const el = (await fixture(html`<lyra-flag country="es"></lyra-flag>`)) as LyraFlag;
+  const first = await img(el);
+  expect(first.getAttribute('src')).to.not.contain('/compact/');
+
+  el.variant = 'compact';
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('img')?.getAttribute('src')?.includes('/compact/es.webp'),
+    'flag image should update to the compact variant',
+  );
+});
+
 it('reflects the round attribute', async () => {
   const el = (await fixture(html`<lyra-flag country="fr" round></lyra-flag>`)) as LyraFlag;
   expect(el.round).to.be.true;

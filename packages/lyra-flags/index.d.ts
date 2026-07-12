@@ -3,13 +3,14 @@
  * genuinely code-split per code (see the JSDoc on this function in `index.js`), not just a
  * lookup into an eagerly-bundled map.
  * @param code ISO 3166-1 alpha-2 country/territory code, lowercase (e.g. `fr`, `us`).
- * @param options `variant: 'detailed'` requests the pristine, pre-optimization original SVG
- *   instead of the default icon-optimized one — a safe no-op for the majority of codes that were
- *   never large enough to need optimizing (same file either way).
+ * @param options `variant` picks a fidelity tier for the ~65 emblem codes (a safe no-op for every
+ *   other code — same file either way): `'compact'` = a tiny WebP raster for icon-scale use
+ *   (menus, language selectors), `'detailed'` = the pristine full-fidelity original for large/hero
+ *   display, default (`'standard'`) = the icon-optimized vector for card/row sizes.
  */
 export declare function flagUrl(
   code: string,
-  options?: { variant?: 'detailed' },
+  options?: { variant?: 'compact' | 'standard' | 'detailed' },
 ): Promise<string | undefined>;
 
 /**
@@ -34,3 +35,11 @@ export { FLAG_LOADERS } from './flags/generated.js';
  * 'detailed' })` checks this first.
  */
 export { FLAG_LOADERS_DETAILED } from './flags/generated-detailed.js';
+
+/**
+ * Lazy map of ISO 3166-1 alpha-2 (or territory) code -> *compact* (icon-scale WebP raster) flag
+ * URL loader — the same subset of codes as `FLAG_LOADERS_DETAILED` (the ~65 emblem flags), one
+ * entry per code with a `flags/compact/<code>.webp`. `flagUrl(code, { variant: 'compact' })`
+ * checks this first, falling back to `FLAG_LOADERS` for a code with no compact raster.
+ */
+export { FLAG_LOADERS_COMPACT } from './flags/generated-compact.js';

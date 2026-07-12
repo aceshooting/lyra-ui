@@ -6,7 +6,8 @@ import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../skeleton/skeleton.js';
 
-type FlagUrlResolver = (code: string, options?: { variant?: 'detailed' }) => Promise<string | undefined>;
+type FlagVariant = 'compact' | 'standard' | 'detailed';
+type FlagUrlResolver = (code: string, options?: { variant?: FlagVariant }) => Promise<string | undefined>;
 
 /**
  * Resolves the optional peer dependency `@aceshooting/lyra-flags`'s `flagUrl`
@@ -78,16 +79,19 @@ function loadFlagUrlResolver(): Promise<FlagUrlResolver | null> {
  * `src` instead to skip the peer-package round trip (and its loading-skeleton
  * flash) entirely.
  *
- * A handful of flags (e.g. `es`, `pt` — any whose design includes a detailed coat of
- * arms/seal/emblem) ship a second, full-detail source SVG alongside the default icon-optimized
- * one; set `detailed` to request it (e.g. for a hero-scale display where the extra illustrative
- * detail is actually visible). A no-op for every other code — see `detailed`'s own doc.
+ * The ~65 flags whose design includes a detailed coat of arms/seal/emblem (e.g. `es`, `pt`) ship
+ * three fidelity tiers; choose one with `variant`: `"compact"` (a tiny WebP raster for icon-scale
+ * use — menu items, language selectors, dense lists), the default `"standard"` (icon-optimized
+ * vector for card/row sizes), or `"detailed"` (the pristine full-detail vector for hero-scale
+ * display). A no-op for every other code — all tiers resolve to the same file. See `variant`'s own
+ * doc.
  *
  * @customElement lyra-flag
  * @example <lyra-flag country="fr"></lyra-flag>
  * @example <lyra-flag language="en" label="English"></lyra-flag>
  * @example <lyra-flag src=${frUrl} label="French"></lyra-flag>
- * @example <lyra-flag country="es" detailed></lyra-flag>
+ * @example <lyra-flag country="es" variant="compact"></lyra-flag>
+ * @example <lyra-flag country="es" variant="detailed"></lyra-flag>
  * @csspart image - The underlying <img>.
  */
 export class LyraFlag extends LyraElement {
@@ -124,15 +128,31 @@ export class LyraFlag extends LyraElement {
   @property({ type: Boolean, reflect: true }) round = false;
 
   /**
-   * Requests the pristine, full-detail source SVG instead of the default icon-optimized one —
-   * only meaningful for the minority of `country`/`language` codes whose source art was large
-   * enough to need optimizing (e.g. `es`, `pt`, a national coat of arms/seal/emblem); for every
-   * other code this is a safe no-op (the default and detailed variants are the same file). Has no
-   * effect when `src` is set — a pre-resolved URL is used as-is regardless. Intended for rendering
-   * a flag larger than icon scale (e.g. a hero display) where the extra illustrative detail is
-   * actually visible.
+   * Which fidelity tier to load, for the ~65 `country`/`language` codes whose source art embeds a
+   * coat of arms/seal/emblem (for every other code all tiers are the same file, so this is a safe
+   * no-op):
+   * - `"compact"` — a tiny WebP raster for icon-scale use (menu items, language selectors, dense
+   *   lists; ~12–28px), where the emblem detail is invisible anyway.
+   * - `"standard"` (default) — the icon-optimized vector, for card/row sizes (~28–96px).
+   * - `"detailed"` — the pristine, full-detail vector, for rendering larger than icon scale (e.g.
+   *   a hero display) where the extra illustrative detail is actually visible.
+   *
+   * Has no effect when `src` is set — a pre-resolved URL is used as-is regardless. Takes precedence
+   * over the deprecated `detailed` boolean.
+   */
+  @property() variant?: FlagVariant;
+
+  /**
+   * @deprecated Use `variant="detailed"` instead. Kept as an alias for one minor cycle; when
+   * `variant` is unset, `detailed` still maps to the detailed tier. Removed in the next major.
    */
   @property({ type: Boolean, reflect: true }) detailed = false;
+
+  /** The effective tier to request: an explicit `variant` wins; otherwise the deprecated
+   *  `detailed` boolean is honored; otherwise `"standard"`. */
+  private get effectiveVariant(): FlagVariant {
+    return this.variant ?? (this.detailed ? 'detailed' : 'standard');
+  }
 
   @state() private resolvedSrc?: string;
 
@@ -167,6 +187,7 @@ export class LyraFlag extends LyraElement {
       !changed.has('country') &&
       !changed.has('language') &&
       !changed.has('src') &&
+      !changed.has('variant') &&
       !changed.has('detailed')
     ) {
       return;
@@ -184,8 +205,9 @@ export class LyraFlag extends LyraElement {
       return;
     }
     this.loading = true;
+    const variant = this.effectiveVariant;
     void loadFlagUrlResolver()
-      .then((resolve) => resolve?.(code, this.detailed ? { variant: 'detailed' } : undefined))
+      .then((resolve) => resolve?.(code, variant === 'standard' ? undefined : { variant }))
       .then((url) => {
         if (token !== this.resolveToken) return; // superseded by a later country/language/src change
         this.resolvedSrc = url;
