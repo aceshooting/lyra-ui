@@ -811,6 +811,17 @@ it('re-syncs the submitted FormData when `name` changes after a value is already
   form.remove();
 });
 
+it('reflects `name` onto the attribute synchronously, with no await/microtask in between', async () => {
+  // `reflect: true` alone defers the attribute write to Lit's async update
+  // cycle (a microtask), not the property setter itself -- so
+  // `el.name = 'b'; new FormData(form)` (no `await` in between) could still
+  // observe the stale attribute. The hand-written `name` accessor must write
+  // the attribute inline, matching Task 2's `FormAssociated.name`.
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.name = 'b';
+  expect(el.getAttribute('name')).to.equal('b');
+});
+
 it('re-syncs FormData when switching between single and multiple mode', async () => {
   const form = document.createElement('form');
   const el = (await fixture(html`
@@ -818,10 +829,21 @@ it('re-syncs FormData when switching between single and multiple mode', async ()
   `)) as LyraCombobox;
   form.appendChild(el);
   document.body.appendChild(form);
+  // Force two entries into `_selected` while still in single mode (the
+  // `value` setter itself doesn't gate on `multiple`, so this doesn't
+  // require a second declared-`selected` option, which single mode would
+  // collapse down to just the last one anyway). This makes a two-entry
+  // `data.getAll('tags')` below only possible if switching `multiple` on
+  // actually re-ran `syncFormValue()`'s `FormData.append()` path -- the old
+  // single-value path (`setFormValue(this._selected[0] ?? '')`, still in
+  // effect from the most recent `value` assignment) can only ever produce
+  // one entry, so a stale sync would leave just `['x']`.
+  el.value = ['x', 'y'];
+  await el.updateComplete;
   el.multiple = true;
   await el.updateComplete;
   const data = new FormData(form);
-  expect(data.getAll('tags')).to.deep.equal(['x']);
+  expect(data.getAll('tags')).to.deep.equal(['x', 'y']);
   form.remove();
 });
 
@@ -844,38 +866,76 @@ it('restores its own explicit `disabled` after an ancestor fieldset re-enables',
   expect(el.disabled).to.be.true;
 });
 
-it('re-binds positioning and the outside-click listener after a disconnect+reconnect while open', async () => {
+it('resets `open` to false on disconnect so a reconnect never resumes half-open with stale positioning/listeners', async () => {
+  // The actual fix behavior: `disconnectedCallback()` sets `open = false`
+  // rather than leaving it `true` across the disconnect -- a naive assertion
+  // that `listbox.style.position` is non-empty after reconnect would pass
+  // regardless, since that inline style is set once on first open and never
+  // cleared, whether or not reconnect logic runs at all.
   const el = (await fixture(html`<lyra-combobox open><lyra-option value="x"></lyra-option></lyra-combobox>`)) as LyraCombobox;
   await el.updateComplete;
+  expect(el.open).to.be.true;
+
   const parent = el.parentElement!;
   el.remove();
   parent.appendChild(el);
   await el.updateComplete;
-  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
-  expect(listbox.style.position).to.not.equal('');
+  expect(el.open).to.be.false;
 });
 
 it('re-renders when an already-slotted option mutates its own label', async () => {
   const el = (await fixture(html`<lyra-combobox><lyra-option value="x">Old label</lyra-option></lyra-combobox>`)) as LyraCombobox;
-  await el.updateComplete;
-  const option = el.querySelector('lyra-option')!;
-  option.textContent = 'New label';
-  await el.updateComplete;
+  // Open *before* mutating the option's label so the `lyra-option-change`
+  // notification path (MutationObserver -> emit -> `onOptionChange()`
+  // reassigning `options`) is the only thing that can update the
+  // already-rendered row afterward -- opening *after* the mutation (the
+  // previous version of this test) forces an ordinary first-render read of
+  // live option data regardless of whether that path ever fired.
   el.open = true;
   await el.updateComplete;
-  const row = el.shadowRoot!.querySelector('[part="option"]')!;
-  expect(row.textContent).to.include('New label');
+  const row = () => el.shadowRoot!.querySelector('[part="option"]')!;
+  expect(row().textContent).to.include('Old label');
+
+  const option = el.querySelector('lyra-option')!;
+  option.textContent = 'New label';
+  // The MutationObserver callback (and the `lyra-option-change` ->
+  // `onOptionChange()` -> `requestUpdate()` chain it triggers) runs on its
+  // own microtask queue -- by the time this line reaches `updateComplete`,
+  // the getter may still capture the *previous*, already-settled update
+  // promise rather than the new one the mutation is about to schedule. Force
+  // a macrotask boundary first (same fix as the slotchange/async-source
+  // timing elsewhere in this file) so the new update is already pending (or
+  // done) by the time `updateComplete` is evaluated below.
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(row().textContent).to.include('New label');
 });
 
 it('recovers loading=false and does not throw when source() rejects', async () => {
   const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
-  el.source = async () => {
-    throw new Error('network failure');
+  // A bare `.finally()` (with no `.catch()`) would also reset `loading` back
+  // to `false` while leaving the rejection unhandled -- spy on
+  // `console.warn` to prove the `.catch()` handler itself specifically ran
+  // and consumed the rejection, not just that `loading` incidentally ended
+  // up `false` via a code path that was never actually broken.
+  const originalWarn = console.warn;
+  const warnCalls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => {
+    warnCalls.push(args);
   };
-  el.open = true;
-  await el.updateComplete;
-  await aTimeout(250);
-  expect((el as unknown as { loading: boolean }).loading).to.be.false;
+  try {
+    el.source = async () => {
+      throw new Error('network failure');
+    };
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(250);
+    expect((el as unknown as { loading: boolean }).loading).to.be.false;
+    expect(warnCalls.length).to.be.greaterThan(0);
+    expect(String(warnCalls[0][0])).to.include('rejected');
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 it('recovers loading=false when source() throws synchronously instead of returning a rejected promise', async () => {

@@ -63,18 +63,13 @@ export class LyraCombobox extends LyraElement {
 
   static properties = {
     value: { noAccessor: true },
+    name: { reflect: true, noAccessor: true },
   };
 
   @property({ type: Boolean, reflect: true }) multiple = false;
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) required = false;
-  // Reflected: a form-associated custom element's submitted entry name is
-  // resolved by the browser from the live `name` *content attribute* at
-  // FormData-construction/submit time (see `syncFormValue()` below) --
-  // without `reflect: true`, a property-only assignment (`el.name = 'b'`)
-  // would never update the attribute, so the old name would keep winning.
-  @property({ reflect: true }) name = '';
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -135,6 +130,16 @@ export class LyraCombobox extends LyraElement {
   private _defaultSelected: string[] = [];
   private _defaultCaptured = false;
 
+  // Hand-written accessor (mirrors the `value` accessor below, and Task 2's
+  // `FormAssociated.name` in `../../internal/form-associated.ts`): a
+  // form-associated custom element's submitted entry name is resolved by the
+  // browser from the live `name` *content attribute*, read synchronously at
+  // FormData-construction/submit time (see `syncFormValue()` below) -- Lit's
+  // async (microtask-deferred) `reflect: true` alone would leave a
+  // property-only assignment like `el.name = 'b'` invisible to a same-tick
+  // `new FormData(form)`/submit, so the attribute write happens here instead.
+  private _name = '';
+
   constructor() {
     super();
     this.internals = this.attachInternals();
@@ -156,6 +161,20 @@ export class LyraCombobox extends LyraElement {
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
     }
+  }
+
+  get name(): string {
+    return this._name;
+  }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) {
+      this.setAttribute('name', this._name);
+    } else {
+      this.removeAttribute('name');
+    }
+    this.requestUpdate('name', old);
   }
 
   /** The selected value(s): a string in single mode, a string[] in `multiple` mode. */
