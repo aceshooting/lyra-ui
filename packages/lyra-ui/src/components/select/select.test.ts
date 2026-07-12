@@ -284,11 +284,68 @@ it('disables the select when its containing fieldset is disabled', async () => {
   const el = form.querySelector('lyra-select') as LyraSelect;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await el.updateComplete;
-  expect(el.disabled).to.be.false;
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.false;
 
   fieldset.disabled = true;
   await el.updateComplete;
+  // `el.disabled` (the consumer-facing IDL property/attribute) is never
+  // mutated by fieldset cascading -- only the combined `effectiveDisabled`
+  // reflects it (mirrors lyra-combobox's identical `_fieldsetDisabled`/
+  // `effectiveDisabled` pattern).
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.disabled).to.be.false;
+});
+
+it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {
+  const el = (await fixture(html`<lyra-select disabled></lyra-select>`)) as LyraSelect;
+  (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(true);
+  (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(false);
+  await el.updateComplete;
   expect(el.disabled).to.be.true;
+});
+
+it('re-binds positioning after a disconnect+reconnect while open, ending up closed rather than half-open with no listeners', async () => {
+  const el = (await fixture(html`<lyra-select open><lyra-option value="x"></lyra-option></lyra-select>`)) as LyraSelect;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  // `disconnectedCallback()` resets `open` to `false` — asserting that directly
+  // (not an incidental side effect like a leftover inline `position` style,
+  // which is set once at first open and never cleared either way) is what
+  // actually distinguishes the fix from the pre-fix bug.
+  expect(el.open).to.be.false;
+});
+
+it('does not override an explicit `label` slot with the fallback aria-label', async () => {
+  const el = (await fixture(html`<lyra-select><span slot="label">Region</span></lyra-select>`)) as LyraSelect;
+  await el.updateComplete;
+  const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(triggerEl.getAttribute('aria-label')).to.not.equal('Select');
+});
+
+it('re-renders when an already-slotted option mutates its own label', async () => {
+  const el = (await fixture(html`<lyra-select><lyra-option value="x">Old label</lyra-option></lyra-select>`)) as LyraSelect;
+  // Open BEFORE mutating, with no further `open` toggle afterward — this is
+  // what makes the test discriminating: opening AFTER the mutation would
+  // force an ordinary re-render that reads the option's live (already-new)
+  // textContent regardless of whether the lyra-option-change/MutationObserver
+  // mechanism fired at all.
+  el.open = true;
+  await el.updateComplete;
+  const option = el.querySelector('lyra-option')!;
+  option.textContent = 'New label';
+  await new Promise((r) => setTimeout(r, 0)); // let the MutationObserver's microtask + onOptionChange's re-render land
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="option"]')!;
+  expect(row.textContent).to.include('New label');
+});
+
+it('reflects a property-assigned `name` synchronously, with no await, so same-tick FormData submission sees it', async () => {
+  const el = (await fixture(html`<lyra-select></lyra-select>`)) as LyraSelect;
+  el.name = 'region';
+  expect(el.getAttribute('name')).to.equal('region');
 });
 
 it('closes the listbox on a pointerdown outside the element', async () => {
