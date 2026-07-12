@@ -337,6 +337,36 @@ it('blocks a required, empty composer from submitting the form', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('focuses its textarea when direct or form submission validation fails', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button" id="sentinel">Before</button>
+      <lyra-chat-composer name="message" required></lyra-chat-composer>
+      <button type="submit">Submit</button>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const sentinel = form.querySelector('#sentinel') as HTMLButtonElement;
+
+  sentinel.focus();
+  expect(document.activeElement?.id).to.equal('sentinel');
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-chat-composer');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('textarea');
+
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+  sentinel.focus();
+  expect(document.activeElement?.id).to.equal('sentinel');
+  form.requestSubmit();
+  expect(submits).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-chat-composer');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('textarea');
+});
+
 it('restores the declared default value on form.reset()', async () => {
   const form = (await fixture(html`
     <form><lyra-chat-composer name="message" value="draft"></lyra-chat-composer></form>

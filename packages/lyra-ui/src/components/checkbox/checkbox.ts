@@ -2,6 +2,7 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './checkbox.styles.js';
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -99,6 +100,7 @@ export class LyraCheckbox extends LyraElement {
   @state() private hasLabelSlot = false;
 
   private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
   // What `form.reset()` restores to — captured once, from whatever `checked`
   // reads at first connect (i.e. whatever the declarative `checked`
   // attribute parsed to, since attribute parsing happens before
@@ -182,7 +184,13 @@ export class LyraCheckbox extends LyraElement {
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.renderRoot?.querySelector('[part="base"]') ?? null;
   }
 
   connectedCallback(): void {
@@ -206,9 +214,12 @@ export class LyraCheckbox extends LyraElement {
 
   private updateValidity(): void {
     if (this.required && !this.checked) {
-      this.internals.setValidity({ valueMissing: true }, 'Please check this box if you want to continue.');
+      this.validityController.setValidity(
+        { valueMissing: true },
+        'Please check this box if you want to continue.',
+      );
     } else {
-      this.internals.setValidity({});
+      this.validityController.setValidity({});
     }
   }
 

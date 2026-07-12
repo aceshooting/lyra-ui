@@ -5,6 +5,7 @@ import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './select.styles.js';
 import { LyraOption } from '../combobox/option.js';
 import '../combobox/option.js';
@@ -96,6 +97,7 @@ export class LyraSelect extends LyraElement {
   @state() private hasLabelSlot = false;
 
   private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
   // Tracked separately from the consumer's own `disabled` -- a native
   // `<input>`'s own `disabled` IDL property/attribute is never mutated by
   // fieldset cascading, so a consumer's explicit `disabled` must survive the
@@ -135,6 +137,12 @@ export class LyraSelect extends LyraElement {
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.renderRoot?.querySelector('[part="trigger"]') ?? null;
   }
 
   connectedCallback(): void {
@@ -206,9 +214,9 @@ export class LyraSelect extends LyraElement {
 
   private updateValidity(): void {
     if (this.required && !this._selected) {
-      this.internals.setValidity({ valueMissing: true }, 'Please select an option.');
+      this.validityController.setValidity({ valueMissing: true }, 'Please select an option.');
     } else {
-      this.internals.setValidity({});
+      this.validityController.setValidity({});
     }
   }
 

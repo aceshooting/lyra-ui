@@ -5,6 +5,7 @@ import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './model-select.styles.js';
 
 /** A catalog row: a selectable model, keyed by `id` with a display `label`. */
@@ -84,6 +85,7 @@ export class LyraModelSelect extends LyraElement {
   @state() private touched = false;
 
   private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
   private cleanup?: () => void;
@@ -102,6 +104,12 @@ export class LyraModelSelect extends LyraElement {
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.renderRoot?.querySelector('[part="trigger"], [part="combobox-input"]') ?? null;
   }
 
   connectedCallback(): void {
@@ -176,9 +184,9 @@ export class LyraModelSelect extends LyraElement {
 
   private updateValidity(): void {
     if (this.required && !this._value) {
-      this.internals.setValidity({ valueMissing: true }, 'Please choose a model.');
+      this.validityController.setValidity({ valueMissing: true }, 'Please choose a model.');
     } else {
-      this.internals.setValidity({});
+      this.validityController.setValidity({});
     }
   }
 

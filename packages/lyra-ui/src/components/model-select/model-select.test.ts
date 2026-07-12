@@ -325,6 +325,35 @@ it('allows a required model-select to submit once a value is set', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('rebinds the validity focus anchor when switching from trigger to free-text mode', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button">Before model select</button>
+      <lyra-model-select name="model" required .catalog=${CATALOG}></lyra-model-select>
+    </form>
+  `)) as HTMLFormElement;
+  const sentinel = form.querySelector('button') as HTMLButtonElement;
+  const el = form.querySelector('lyra-model-select') as LyraModelSelect;
+  let submitCount = 0;
+  form.addEventListener('submit', (event) => {
+    submitCount += 1;
+    event.preventDefault();
+  });
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-model-select');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+
+  el.allowCustom = true;
+  await el.updateComplete;
+  sentinel.focus();
+  form.requestSubmit();
+  expect(submitCount).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-model-select');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('combobox-input');
+});
+
 it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
   const form = (await fixture(html`
     <form><lyra-model-select name="model" .catalog=${CATALOG}></lyra-model-select></form>

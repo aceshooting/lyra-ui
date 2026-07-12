@@ -1,4 +1,9 @@
 import type { LitElement } from 'lit';
+import {
+  AnchoredValidityController,
+  SET_ANCHORED_VALIDITY,
+  VALIDITY_ANCHOR,
+} from './anchored-validity.js';
 
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -14,6 +19,8 @@ export interface FormAssociatedInterface {
   checkValidity(): boolean;
   reportValidity(): boolean;
   formResetCallback(): void;
+  /** @internal */
+  [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message?: string): void;
 }
 
 /**
@@ -41,6 +48,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     };
 
     internals: ElementInternals;
+    private validityController: AnchoredValidityController;
 
     private _fieldsetDisabled = false;
     private _disabled = false;
@@ -70,10 +78,27 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     constructor(...args: any[]) {
       super(...args);
       this.internals = this.attachInternals();
+      this.validityController = new AnchoredValidityController(
+        this,
+        this.internals,
+        () => this[VALIDITY_ANCHOR](),
+      );
       // Native <input> always has a submission value ("") from construction —
       // without this, a control whose `value` is never touched is entirely
       // absent from FormData instead of present as "".
       this.internals.setFormValue('');
+    }
+
+    /** @internal */
+    [VALIDITY_ANCHOR](): HTMLElement | null {
+      return this.renderRoot?.querySelector(
+        "input:not([type='hidden']), textarea, select, button, [tabindex]:not([tabindex='-1'])",
+      ) ?? null;
+    }
+
+    /** @internal */
+    [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message = ''): void {
+      this.validityController.setValidity(flags, message);
     }
 
     get name(): string {
@@ -157,9 +182,9 @@ export function FormAssociated<T extends Constructor<LitElement>>(
      */
     protected updateValidity(): void {
       if (this.required && this._value === '') {
-        this.internals.setValidity({ valueMissing: true }, 'Please fill out this field.');
+        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, 'Please fill out this field.');
       } else {
-        this.internals.setValidity({});
+        this[SET_ANCHORED_VALIDITY]({});
       }
     }
 

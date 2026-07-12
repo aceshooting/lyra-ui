@@ -170,6 +170,69 @@ it('reportValidity() reveals inline errors immediately and returns overall valid
   expect(el.reportValidity()).to.be.true;
 });
 
+it('focuses the first invalid nested or native field during direct and form validation', async () => {
+  const focusSchema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      mode: { type: 'string', enum: ['fast', 'careful'] },
+      city: { type: 'string' },
+      confirm: { type: 'boolean' },
+    },
+    required: ['mode', 'city', 'confirm'],
+  };
+  const form = (await fixture(html`
+    <form>
+      <button type="button" id="sentinel">Before</button>
+      <lyra-tool-param-form name="args" .schema=${focusSchema}></lyra-tool-param-form>
+      <button type="submit">Submit</button>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+  const sentinel = form.querySelector('#sentinel') as HTMLButtonElement;
+  const nestedSelect = field(el, 'mode').querySelector('lyra-select') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await nestedSelect.updateComplete;
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-tool-param-form');
+  expect(el.shadowRoot!.activeElement?.localName).to.equal('lyra-select');
+  expect(nestedSelect.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+  sentinel.focus();
+  form.requestSubmit();
+  expect(submits).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-tool-param-form');
+  expect(el.shadowRoot!.activeElement?.localName).to.equal('lyra-select');
+  expect(nestedSelect.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+
+  el.value = { mode: 'fast' };
+  await el.updateComplete;
+  const cityInput = field(el, 'city').querySelector('input') as HTMLInputElement;
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-tool-param-form');
+  expect(el.shadowRoot!.activeElement?.id).to.equal(cityInput.id);
+
+  el.value = { mode: 'fast', city: 'Paris' };
+  await el.updateComplete;
+  const nestedCheckbox = field(el, 'confirm').querySelector('lyra-checkbox') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await nestedCheckbox.updateComplete;
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-tool-param-form');
+  expect(el.shadowRoot!.activeElement?.localName).to.equal('lyra-checkbox');
+  expect(nestedCheckbox.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
 it('renders a boolean value=true field as satisfying required (checked counts as filled)', async () => {
   const requiredBoolSchema: ToolParamFormSchema = {
     type: 'object',

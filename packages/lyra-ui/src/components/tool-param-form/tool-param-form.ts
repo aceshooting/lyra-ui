@@ -3,6 +3,11 @@ import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { nextId } from '../../internal/a11y.js';
+import {
+  AnchoredValidityController,
+  resolveValidityAnchor,
+  VALIDITY_ANCHOR,
+} from '../../internal/anchored-validity.js';
 import { styles } from './tool-param-form.styles.js';
 import type { LyraSelect } from '../select/select.js';
 import '../select/select.js';
@@ -139,6 +144,7 @@ export class LyraToolParamForm extends LyraElement {
   @state() private touchedFields = new Set<string>();
 
   private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
   private baseId = nextId('tool-param-form');
   private _fieldsetDisabled = false;
   private _name = '';
@@ -154,7 +160,29 @@ export class LyraToolParamForm extends LyraElement {
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncInternals();
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | undefined {
+    const field = this.firstInvalidField();
+    if (!field) return undefined;
+    const input = field.querySelector<HTMLElement>('input.control');
+    if (input) return input;
+    for (const child of field.children) {
+      const anchor = resolveValidityAnchor(child);
+      if (anchor) return anchor;
+    }
+    return undefined;
+  }
+
+  private firstInvalidField(): HTMLElement | undefined {
+    const firstInvalidKey = Object.keys(this._errors)[0];
+    if (!firstInvalidKey || !this.renderRoot) return undefined;
+    return Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="field"]')).find(
+      (candidate) => candidate.dataset.key === firstInvalidKey,
+    );
   }
 
   connectedCallback(): void {
@@ -279,7 +307,7 @@ export class LyraToolParamForm extends LyraElement {
     if (Object.keys(errors).length > 0) {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(errors)]);
     }
-    return this.internals.checkValidity();
+    return this.internals.reportValidity();
   }
 
   formResetCallback(): void {
@@ -295,10 +323,10 @@ export class LyraToolParamForm extends LyraElement {
   private syncInternals(): void {
     this.internals.setFormValue(JSON.stringify(this.effectiveValue));
     if (Object.keys(this._errors).length === 0) {
-      this.internals.setValidity({});
+      this.validityController.setValidity({});
     } else {
       const firstMessage = Object.values(this._errors)[0] ?? 'Some required fields are empty.';
-      this.internals.setValidity({ valueMissing: true }, firstMessage);
+      this.validityController.setValidity({ valueMissing: true }, firstMessage);
     }
   }
 
@@ -314,6 +342,13 @@ export class LyraToolParamForm extends LyraElement {
       if (key !== this.lastValidityKey) {
         this.lastValidityKey = key;
         this.emit('lyra-validity-change', { valid, errors: { ...this._errors } });
+      }
+      const nestedUpdates = Array.from(this.firstInvalidField()?.children ?? [])
+        .filter((element) => typeof (element as unknown as Record<PropertyKey, unknown>)[VALIDITY_ANCHOR] === 'function')
+        .map((element) => (element as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete)
+        .filter((update): update is Promise<unknown> => update !== undefined);
+      if (nestedUpdates.length > 0) {
+        void Promise.all(nestedUpdates).then(() => this.validityController.refreshAnchor());
       }
     }
   }

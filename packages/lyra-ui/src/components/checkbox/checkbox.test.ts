@@ -266,6 +266,52 @@ it('blocks a required, unchecked checkbox from submitting the form', async () =>
   expect(form.reportValidity()).to.be.true;
 });
 
+it('focuses its inner control when direct or form submission validation fails', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button" id="sentinel">Before</button>
+      <lyra-checkbox name="terms" required>Agree</lyra-checkbox>
+      <button type="submit">Submit</button>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
+  const sentinel = form.querySelector('#sentinel') as HTMLButtonElement;
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-checkbox');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+  sentinel.focus();
+  form.requestSubmit();
+  expect(submits).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-checkbox');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('does not force focus when the native invalid event is canceled', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button" id="cancel-sentinel">Before</button>
+      <lyra-checkbox name="terms" required>Agree</lyra-checkbox>
+    </form>
+  `)) as HTMLFormElement;
+  const sentinel = form.querySelector('button') as HTMLButtonElement;
+  const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
+  el.addEventListener('invalid', (event) => event.preventDefault());
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('button');
+  expect((document.activeElement as HTMLElement | null)?.id).to.equal('cancel-sentinel');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal(undefined);
+});
+
 it('applies and removes explicit disabled form state synchronously', async () => {
   const form = (await fixture(html`
     <form>

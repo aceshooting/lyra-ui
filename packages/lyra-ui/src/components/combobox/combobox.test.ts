@@ -139,6 +139,35 @@ it('blocks a required, empty combobox from submitting the form', async () => {
   expect(form.reportValidity()).to.be.false;
 });
 
+it('focuses the inner input after direct and submit-driven validity reporting', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button">Before combobox</button>
+      <lyra-combobox name="fruit" required>
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const sentinel = form.querySelector('button') as HTMLButtonElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+  let submitCount = 0;
+  form.addEventListener('submit', (event) => {
+    submitCount += 1;
+    event.preventDefault();
+  });
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-combobox');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('combobox-input');
+
+  sentinel.focus();
+  form.requestSubmit();
+  expect(submitCount).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-combobox');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('combobox-input');
+});
+
 it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
 

@@ -213,6 +213,35 @@ it('allows a required select to submit once a value is selected', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('focuses the inner trigger after direct and submit-driven validity reporting', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button">Before select</button>
+      <lyra-select name="fruit" required>
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-select>
+    </form>
+  `)) as HTMLFormElement;
+  const sentinel = form.querySelector('button') as HTMLButtonElement;
+  const el = form.querySelector('lyra-select') as LyraSelect;
+  let submitCount = 0;
+  form.addEventListener('submit', (event) => {
+    submitCount += 1;
+    event.preventDefault();
+  });
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-select');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+
+  sentinel.focus();
+  form.requestSubmit();
+  expect(submitCount).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-select');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+});
+
 it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
   const el = (await fixture(html`
     <lyra-select>

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
+import { SET_ANCHORED_VALIDITY } from '../../internal/anchored-validity.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
@@ -185,7 +186,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
       // constraint-validation state (mirrors how `required` is already
       // wired via internals.setValidity(), see form-associated.ts).
       target.value = this.displayText;
-      this.internals.setValidity({ badInput: true }, 'Enter a valid date');
+      this[SET_ANCHORED_VALIDITY]({ badInput: true }, 'Enter a valid date');
     }
   };
 

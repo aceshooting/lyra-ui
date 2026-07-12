@@ -221,6 +221,33 @@ it('blocks a required, unchecked switch from submitting the form', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('focuses the inner switch after direct and submit-driven validity reporting', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button">Before switch</button>
+      <lyra-switch name="terms" required>Agree</lyra-switch>
+    </form>
+  `)) as HTMLFormElement;
+  const sentinel = form.querySelector('button') as HTMLButtonElement;
+  const el = form.querySelector('lyra-switch') as LyraSwitch;
+  let submitCount = 0;
+  form.addEventListener('submit', (event) => {
+    submitCount += 1;
+    event.preventDefault();
+  });
+
+  sentinel.focus();
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-switch');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+
+  sentinel.focus();
+  form.requestSubmit();
+  expect(submitCount).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-switch');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
 it('applies and removes explicit disabled form state synchronously', async () => {
   const form = (await fixture(html`
     <form>

@@ -200,6 +200,43 @@ it('blocks a required, empty date input from submitting the form', async () => {
   expect(form.reportValidity()).to.be.false;
 });
 
+it('focuses its input when typed bad-input validation fails directly or during form submission', async () => {
+  const form = (await fixture(html`
+    <form>
+      <button type="button" id="sentinel">Before</button>
+      <lyra-date-input name="d" value="2026-07-15"></lyra-date-input>
+      <button type="submit">Submit</button>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const sentinel = form.querySelector('#sentinel') as HTMLButtonElement;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  input.value = 'not a date';
+  input.dispatchEvent(new Event('change'));
+  await el.updateComplete;
+  expect(el.internals.validity.badInput).to.be.true;
+
+  sentinel.focus();
+  expect(document.activeElement?.id).to.equal('sentinel');
+  expect(el.reportValidity()).to.be.false;
+  expect(document.activeElement?.localName).to.equal('lyra-date-input');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
+
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits += 1;
+  });
+  sentinel.focus();
+  expect(document.activeElement?.id).to.equal('sentinel');
+  form.requestSubmit();
+  expect(submits).to.equal(0);
+  expect(document.activeElement?.localName).to.equal('lyra-date-input');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('input');
+});
+
 it('re-syncs ElementInternals validity when required is toggled after connection', async () => {
   const form = (await fixture(
     html`<form><lyra-date-input name="d"></lyra-date-input></form>`,

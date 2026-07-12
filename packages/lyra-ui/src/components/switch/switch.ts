@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './switch.styles.js';
 
 /**
@@ -51,6 +52,7 @@ export class LyraSwitch extends LyraElement {
   @state() private hasLabelSlot = false;
 
   private internals: ElementInternals;
+  private validityController: AnchoredValidityController;
   // What `form.reset()` restores to — captured once, from whatever the
   // `checked` property reads at first connect (i.e. whatever the declarative
   // `checked` attribute parsed to, since attribute parsing happens before
@@ -133,7 +135,13 @@ export class LyraSwitch extends LyraElement {
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.syncFormState();
+  }
+
+  /** @internal */
+  [VALIDITY_ANCHOR](): HTMLElement | null {
+    return this.renderRoot?.querySelector('[part="base"]') ?? null;
   }
 
   connectedCallback(): void {
@@ -157,9 +165,9 @@ export class LyraSwitch extends LyraElement {
 
   private updateValidity(): void {
     if (this.required && !this.checked) {
-      this.internals.setValidity({ valueMissing: true }, 'Please turn this on.');
+      this.validityController.setValidity({ valueMissing: true }, 'Please turn this on.');
     } else {
-      this.internals.setValidity({});
+      this.validityController.setValidity({});
     }
   }
 
