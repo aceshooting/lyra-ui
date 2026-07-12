@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-ui",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Free, clean-room Lit web components — a companion to Web Awesome.",
   "license": "MIT",
   "type": "module",
