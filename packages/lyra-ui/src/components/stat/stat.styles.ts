@@ -85,6 +85,13 @@ export const styles = css`
   [part='spark'][hidden] {
     display: none;
   }
+  [part='sub'] {
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  [part='sub'][hidden] {
+    display: none;
+  }
   [part='caption'] {
     font-size: 0.8125rem;
     color: var(--lyra-color-text-quiet);
@@ -127,5 +134,18 @@ export const styles = css`
      brand color when there's no status variant already claiming it. */
   :host([emphasis][variant='neutral']) [part='value'] {
     color: var(--lyra-color-brand);
+  }
+  :host([prose]) [part='value'] {
+    font-size: 0.9375rem;
+    font-weight: 400;
+    font-family: inherit;
+    color: var(--lyra-color-text-quiet);
+  }
+  :host([prose]) [part='unit'] {
+    display: none;
+  }
+  :host([compact]) [part='base'] {
+    padding: var(--lyra-space-s);
+    gap: 0.125rem;
   }
 `;

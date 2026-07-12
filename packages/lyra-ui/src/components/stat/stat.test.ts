@@ -362,3 +362,44 @@ it('does not let emphasis override a non-neutral variant value color', async () 
 
   expect(dangerEmphasizedColor).to.equal(dangerColor);
 });
+
+it('shows the exact value as a title tooltip on the headline value, and makes it focusable', async () => {
+  const el = (await fixture(
+    html`<lyra-stat value="$1.2K" exact-value="$1,204.37"></lyra-stat>`,
+  )) as LyraStat;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  expect(valueEl.getAttribute('title')).to.equal('$1,204.37');
+  expect(valueEl.getAttribute('tabindex')).to.equal('0');
+});
+
+it('does not make the value focusable when exact-value is unset', async () => {
+  const el = (await fixture(html`<lyra-stat value="42"></lyra-stat>`)) as LyraStat;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  expect(valueEl.hasAttribute('title')).to.be.false;
+  expect(valueEl.hasAttribute('tabindex')).to.be.false;
+});
+
+it('renders a sub line distinct from caption', async () => {
+  const el = (await fixture(
+    html`<lyra-stat value="42" sub="vs. last week" caption="Updated 2h ago"></lyra-stat>`,
+  )) as LyraStat;
+  expect(el.shadowRoot!.querySelector('[part="sub"]')!.textContent!.trim()).to.equal('vs. last week');
+  expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent!.trim()).to.equal(
+    'Updated 2h ago',
+  );
+});
+
+it('hides the sub part when unset', async () => {
+  const el = (await fixture(html`<lyra-stat value="42"></lyra-stat>`)) as LyraStat;
+  expect(el.shadowRoot!.querySelector('[part="sub"]')!.hasAttribute('hidden')).to.be.true;
+});
+
+it('reflects the prose attribute', async () => {
+  const el = (await fixture(html`<lyra-stat prose value="Loading…"></lyra-stat>`)) as LyraStat;
+  expect(el.hasAttribute('prose')).to.be.true;
+});
+
+it('reflects the compact attribute', async () => {
+  const el = (await fixture(html`<lyra-stat compact value="42"></lyra-stat>`)) as LyraStat;
+  expect(el.hasAttribute('compact')).to.be.true;
+});

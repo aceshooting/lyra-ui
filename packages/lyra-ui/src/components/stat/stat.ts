@@ -22,6 +22,7 @@ export interface StatRow {
  * @slot caption - Rich caption content (overrides the `caption` attribute).
  * @slot spark - A sparkline (e.g. `<lyra-sparkline>`) or other compact trend
  *   visual. `lyra-stat` only reserves the slot; it doesn't render one itself.
+ * @slot sub - Rich sub-line content (overrides the `sub` attribute).
  * @csspart base - The component's root wrapper.
  * @csspart icon - Container for the leading icon slot.
  * @csspart label - The label text.
@@ -29,6 +30,7 @@ export interface StatRow {
  * @csspart value - The value text.
  * @csspart unit - The unit text.
  * @csspart trend - The trend pill.
+ * @csspart sub - Container for the `sub` attribute/slot.
  * @csspart spark - Container for the `spark` slot.
  * @csspart caption - Container for the caption attribute/slot.
  * @csspart rows - Container for the `rows` breakdown list.
@@ -54,6 +56,18 @@ export class LyraStat extends LyraElement {
    *  the status `variant`; see the `[part='value']` selector below for how
    *  the two combine. */
   @property({ type: Boolean, reflect: true }) emphasis = false;
+  /** Exact value shown as a hover/focus tooltip on the headline `value` (e.g. `value="$1.2K"
+   *  exact-value="$1,204.37"`). Also makes `[part='value']` keyboard-focusable so the tooltip is
+   *  reachable without a pointer. */
+  @property({ attribute: 'exact-value' }) exactValue = '';
+  /** A secondary line distinct from `caption` (e.g. a comparison-period label), rendered between the
+   *  trend pill and the caption. */
+  @property() sub = '';
+  /** Renders `value` as smaller/lighter prose (e.g. a loading/status message) instead of the bold
+   *  numeric headline style, and hides `unit`. */
+  @property({ type: Boolean, reflect: true }) prose = false;
+  /** Tighter padding for constrained spaces — same convention as `lyra-empty`'s `compact`. */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   // Same fix `lyra-empty` already established: `[part]:empty` never matches
   // because the part always contains a literal `<slot>` child. Track real
@@ -61,12 +75,14 @@ export class LyraStat extends LyraElement {
   @state() private hasIcon = false;
   @state() private hasCaptionSlot = false;
   @state() private hasSparkSlot = false;
+  @state() private hasSubSlot = false;
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
       this.hasCaptionSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'caption');
       this.hasSparkSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'spark');
+      this.hasSubSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sub');
     }
   }
 
@@ -82,6 +98,10 @@ export class LyraStat extends LyraElement {
     this.hasSparkSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onSubSlotChange = (e: Event): void => {
+    this.hasSubSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   render(): TemplateResult {
     const hasTrend = !isNaN(this.trend);
     const rawDirection = this.trend > 0 ? 'up' : this.trend < 0 ? 'down' : 'flat';
@@ -92,6 +112,7 @@ export class LyraStat extends LyraElement {
     // [part='trend'].
     const arrow = rawDirection === 'flat' ? '–' : chevronIcon();
     const hasCaption = this.hasCaptionSlot || this.caption.length > 0;
+    const hasSub = this.hasSubSlot || this.sub.length > 0;
     // The visible pill only ever shows the icon rotation + color to convey
     // direction and good/bad polarity; both are invisible to screen readers,
     // so mirror them into a plain-language sr-only announcement.
@@ -109,7 +130,9 @@ export class LyraStat extends LyraElement {
         ></span>
         <span part="label">${this.label}</span>
         <div part="value-row">
-          <span part="value">${this.value}</span>
+          <span part="value" title=${this.exactValue || nothing} tabindex=${this.exactValue ? '0' : nothing}
+            >${this.value}</span
+          >
           <span part="unit">${this.unit}</span>
         </div>
         ${hasTrend
@@ -122,6 +145,9 @@ export class LyraStat extends LyraElement {
               <span class="sr-only">${trendAnnouncement}</span>
             </span>`
           : nothing}
+        <div part="sub" ?hidden=${!hasSub}>
+          ${this.sub}<slot name="sub" @slotchange=${this.onSubSlotChange}></slot>
+        </div>
         <div part="spark" ?hidden=${!this.hasSparkSlot}>
           <slot name="spark" @slotchange=${this.onSparkSlotChange}></slot>
         </div>

@@ -71,3 +71,21 @@ export const Emphasis: Story = {
     </div>
   `,
 };
+
+export const ExactValueSubProseCompact: Story = {
+  render: () => html`
+    <div class="flex flex-wrap gap-4">
+      <lyra-stat
+        label="Revenue"
+        value="$1.2K"
+        exact-value="$1,204.37"
+        sub="vs. last week"
+        caption="Updated 2h ago"
+        trend="3.2"
+        variant="success"
+      ></lyra-stat>
+      <lyra-stat label="Status" prose value="Waiting for the next sync…"></lyra-stat>
+      <lyra-stat label="Sessions" value="9,204" sub="+312 today" compact></lyra-stat>
+    </div>
+  `,
+};
