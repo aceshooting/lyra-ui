@@ -94,9 +94,15 @@ export class LyraCombobox extends LyraElement {
   private sourceTimer?: ReturnType<typeof setTimeout>;
   private sourceToken = 0;
   private _selectedLabelCache = new Map<string, string>();
+  // Rebuilt once per render (in render(), before renderRows()) from the
+  // currently-visible row set -- backs the delegated listbox click/mousedown
+  // handlers' data-value lookup below, instead of each option row closing
+  // over its own row object.
+  private _rowsByValue = new Map<string, ComboboxSourceRow>();
 
   private internals: ElementInternals;
   private listId = nextId('combobox-list');
+  private inputId = nextId('combobox-input');
   private cleanup?: () => void;
   private _selected: string[] = [];
   // What `form.reset()` restores to. Captured exactly once, from whatever
@@ -418,26 +424,41 @@ export class LyraCombobox extends LyraElement {
     this.show();
   };
 
+  // Delegated onto [part="listbox"] (see render()) rather than one closure
+  // pair allocated per option per render -- resolves the target row via
+  // closest('[part="option"]') + a data-value lookup into `_rowsByValue`.
+  private onListboxMouseDown = (e: MouseEvent): void => {
+    if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
+  };
+
+  private onListboxClick = (e: MouseEvent): void => {
+    const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
+    const value = optionEl?.dataset.value;
+    if (value === undefined) return;
+    const row = this._rowsByValue.get(value);
+    if (row) this.pickRow(row);
+  };
+
   private renderRows(rows: ComboboxSourceRow[], activeId: string): TemplateResult[] {
     const out: TemplateResult[] = [];
     let currentGroup: string | undefined;
+    const selectedSet = new Set(this._selected);
     rows.forEach((o, i) => {
       if (o.group !== currentGroup) {
         currentGroup = o.group;
         if (currentGroup) out.push(html`<div class="group-label">${currentGroup}</div>`);
       }
       const id = `${this.listId}-opt-${i}`;
-      const selected = this._selected.includes(o.value);
+      const selected = selectedSet.has(o.value);
       out.push(
         html`<div
           part="option"
           id=${id}
           role="option"
+          data-value=${o.value}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${o.disabled ? 'true' : 'false'}
           ?data-active=${id === activeId}
-          @mousedown=${(e: Event) => e.preventDefault()}
-          @click=${() => this.pickRow(o)}
         >
           ${o.dotColor ? html`<span part="option-dot" style=${`background:${o.dotColor}`}></span>` : ''}
           <span part="option-label">
@@ -452,6 +473,7 @@ export class LyraCombobox extends LyraElement {
 
   render(): TemplateResult {
     const { rows, overflow } = this.renderedRows;
+    this._rowsByValue = new Map(rows.map((r) => [r.value, r]));
     const navigable = rows.filter((r) => !r.disabled);
     const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active ? `${this.listId}-opt-${rows.indexOf(active)}` : '';
@@ -465,7 +487,7 @@ export class LyraCombobox extends LyraElement {
 
     return html`
       <div part="form-control">
-        <label part="form-control-label" ?hidden=${!hasLabel}>
+        <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="combobox" @mousedown=${this.onComboMouseDown}>
@@ -488,6 +510,7 @@ export class LyraCombobox extends LyraElement {
             ${extra > 0 ? html`<span part="tag">+${extra}</span>` : ''}
           </div>
           <input
+            id=${this.inputId}
             part="combobox-input"
             role="combobox"
             aria-label=${this.label || this.placeholder || 'Combobox'}
@@ -519,7 +542,14 @@ export class LyraCombobox extends LyraElement {
             : ''}
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </div>
-        <div part="listbox" id=${this.listId} role="listbox" aria-multiselectable=${this.multiple ? 'true' : 'false'}>
+        <div
+          part="listbox"
+          id=${this.listId}
+          role="listbox"
+          aria-multiselectable=${this.multiple ? 'true' : 'false'}
+          @mousedown=${this.onListboxMouseDown}
+          @click=${this.onListboxClick}
+        >
           ${this.loading
             ? html`<div class="loading">Loading…</div>`
             : rows.length === 0

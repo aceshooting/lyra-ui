@@ -344,6 +344,39 @@ it('applies the shared focus-ring tokens to the clear and tag-remove buttons', (
   expect(clearFocusBlock![1]).to.include('var(--lyra-focus-ring-color)');
 });
 
+it('renders a data-value on each option row for delegated click/mousedown handling', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  const first = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  expect(first.dataset.value).to.equal('a');
+});
+
+it('resolves the correct row via a delegated listbox listener after a re-render reorders options', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  // Force a re-render that changes row content (typing a filter) -- the
+  // delegated listbox listener must resolve *current* row data via its
+  // data-value lookup rather than any closure captured in an earlier render.
+  await typeQuery(el, 'a');
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  setTimeout(() => row.click());
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('a');
+});
+
+it('pairs the form-control label with the combobox input via for/id so clicking the label focuses it', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.label = 'Fruit';
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLLabelElement;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(label.htmlFor, 'label should have a for attribute').to.not.equal('');
+  expect(label.htmlFor).to.equal(input.id);
+});
+
 it('renders sub and dot-color from light-DOM options', async () => {
   const el = (await fixture(html`
     <lyra-combobox>
