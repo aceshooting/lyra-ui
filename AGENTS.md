@@ -41,7 +41,7 @@ lyra-ui/                          (repo root — this file lives here)
     lyra-flags/                   optional companion pkg — waving flag SVGs for <lyra-flag>,
                                    kept out of lyra-ui's default install (vendored from Noto
                                    Emoji, Public Domain — see its THIRD_PARTY_NOTICES.md)
-  docs/                           Vite playground demoing every component (this pkg + lyra-flags)
+  .storybook/                     Storybook config — the docs site (this pkg + lyra-flags)
 ```
 
 ## Dev commands (run from repo root unless noted)
@@ -52,7 +52,7 @@ pnpm build                  # -r: tsc -p tsconfig.json per package -> dist/ (ESM
 pnpm test                   # -r: @web/test-runner (wtr) per package
 pnpm lint                   # -r: tsc --noEmit per package
 pnpm manifest               # --filter @aceshooting/lyra-ui: cem analyze -> custom-elements.json
-pnpm docs                   # Vite playground (docs/vite.config.ts), demos every component live
+pnpm docs                   # Storybook (.storybook/), demos every component live at localhost:6006
 ```
 
 Package-local equivalents (from `packages/lyra-ui/`): `pnpm test:watch` also exists. CI

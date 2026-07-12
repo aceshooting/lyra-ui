@@ -12,9 +12,9 @@
     "test": "pnpm -r --if-present run test",
     "lint": "pnpm -r --if-present run lint",
     "manifest": "pnpm --filter @aceshooting/lyra-ui run manifest",
-    "dev": "vite --config docs/vite.config.ts",
-    "docs": "vite --config docs/vite.config.ts",
-    "docs:build": "vite build --config docs/vite.config.ts",
+    "dev": "storybook dev -p 6006",
+    "docs": "storybook dev -p 6006",
+    "docs:build": "storybook build -o storybook-static",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

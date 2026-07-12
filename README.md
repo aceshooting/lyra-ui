@@ -16,7 +16,7 @@ pnpm install
 pnpm build        # builds every package
 pnpm test         # tests every package
 pnpm lint         # typechecks every package
-pnpm docs         # Vite playground demoing every component
+pnpm docs         # Storybook docs site demoing every component
 ```
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
