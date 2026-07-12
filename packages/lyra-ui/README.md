@@ -52,6 +52,17 @@ import '@aceshooting/lyra-ui/components/combobox/option.js';
 import '@aceshooting/lyra-ui';
 ```
 
+This registers every component **except** `<lyra-chart>` and its typed subclasses,
+`<lyra-box-plot>`, `<lyra-histogram>`, `<lyra-map>`, and `<lyra-graph>` — each of those
+needs an optional peer dependency (see Install above), so they always require their
+own explicit subpath import, even when pulling the rest of the library in bulk:
+
+```js
+import '@aceshooting/lyra-ui/components/chart/chart.js';
+import '@aceshooting/lyra-ui/components/map/map.js';
+import '@aceshooting/lyra-ui/components/graph/graph.js';
+```
+
 Imperative toast (a drop-in for `react-hot-toast`):
 
 ```js

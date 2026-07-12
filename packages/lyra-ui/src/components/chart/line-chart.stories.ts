@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { Series } from '../../lyra.js';
+import type { Series } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Line',

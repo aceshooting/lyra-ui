@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ChoroplethLayer, LegendEntry, MapMarker } from '../../lyra.js';
+import type { ChoroplethLayer, LegendEntry, MapMarker } from './map.js';
 
 const legend: LegendEntry[] = [
   { color: '#5b8def', label: 'Low' },
