@@ -5940,6 +5940,225 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/empty/empty.stories.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "meta",
+          "type": {
+            "text": "Meta"
+          },
+          "default": "{ title: 'Empty', component: 'lyra-empty', tags: ['autodocs'], }"
+        },
+        {
+          "kind": "variable",
+          "name": "Default",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html` <lyra-empty heading=\"No results\" description=\"Try a different search.\"> <span slot=\"actions\"><button>Reset</button></span> </lyra-empty> `, }"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "meta",
+            "module": "src/components/empty/empty.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Default",
+          "declaration": {
+            "name": "Default",
+            "module": "src/components/empty/empty.stories.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/empty/empty.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-empty>` — a generic empty/no-data state. First-party invention (no\nWeb Awesome equivalent); fills a gap common to dashboard-style apps.",
+          "name": "LyraEmpty",
+          "cssParts": [
+            {
+              "description": "icon, heading, description, actions",
+              "name": "base,"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Custom icon or illustration (defaults to none).",
+              "name": ""
+            },
+            {
+              "description": "Buttons/links shown below the description.",
+              "name": "actions"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "heading",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Short heading, e.g. \"No results\".",
+              "attribute": "heading"
+            },
+            {
+              "kind": "field",
+              "name": "description",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Supporting copy, e.g. \"Try a different search.\"",
+              "attribute": "description"
+            },
+            {
+              "kind": "field",
+              "name": "hasIcon",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasActions",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "method",
+              "name": "checkIconSlot",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "slot",
+                  "type": {
+                    "text": "HTMLSlotElement"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "checkActionsSlot",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "slot",
+                  "type": {
+                    "text": "HTMLSlotElement"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "field",
+              "name": "onIconSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onActionsSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "heading",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Short heading, e.g. \"No results\".",
+              "fieldName": "heading"
+            },
+            {
+              "name": "description",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Supporting copy, e.g. \"Try a different search.\"",
+              "fieldName": "description"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-empty",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraEmpty",
+          "declaration": {
+            "name": "LyraEmpty",
+            "module": "src/components/empty/empty.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/file-input/accept.ts",
       "declarations": [
         {
@@ -6334,507 +6553,6 @@
           "declaration": {
             "name": "LyraFileInput",
             "module": "src/components/file-input/file-input.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/flag/flag.stories.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "meta",
-          "type": {
-            "text": "Meta"
-          },
-          "default": "{ title: 'Flag', component: 'lyra-flag', tags: ['autodocs'], }"
-        },
-        {
-          "kind": "variable",
-          "name": "Gallery",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html` <div style=\"display:flex; gap:1rem; align-items:center;\"> <lyra-flag country=\"fr\" label=\"France\" style=\"height: 1.5rem\"></lyra-flag> <lyra-flag language=\"en\" label=\"English\" style=\"height: 1.5rem\"></lyra-flag> <lyra-flag language=\"de\" label=\"German\" round style=\"height: 1.5rem\"></lyra-flag> <lyra-flag country=\"jp\" label=\"Japan\" round style=\"height: 1.5rem\"></lyra-flag> </div> `, }"
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "default",
-          "declaration": {
-            "name": "meta",
-            "module": "src/components/flag/flag.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Gallery",
-          "declaration": {
-            "name": "Gallery",
-            "module": "src/components/flag/flag.stories.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/flag/flag.ts",
-      "declarations": [
-        {
-          "kind": "class",
-          "description": "`<lyra-flag>` — a country/language flag.\n\nFlag images are shipped by the optional peer package `@aceshooting/lyra-flags`,\nnot bundled into lyra-ui itself, so importing the core library pulls zero flag\nweight. Give it a `country` (ISO 3166-1 alpha-2) or a `language` tag (mapped to\na representative country).",
-          "name": "LyraFlag",
-          "cssParts": [
-            {
-              "description": "The underlying <img>.",
-              "name": "image"
-            }
-          ],
-          "members": [
-            {
-              "kind": "field",
-              "name": "country",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`.",
-              "attribute": "country"
-            },
-            {
-              "kind": "field",
-              "name": "language",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "BCP-47-ish language tag (e.g. `en`, `en-US`) resolved to a country flag.",
-              "attribute": "language"
-            },
-            {
-              "kind": "field",
-              "name": "label",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "Accessible label / `alt` text. Defaults to the uppercase code.",
-              "attribute": "label"
-            },
-            {
-              "kind": "field",
-              "name": "round",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Render as a circular flag.",
-              "attribute": "round",
-              "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "src",
-              "type": {
-                "text": "string | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "loading",
-              "type": {
-                "text": "boolean"
-              },
-              "privacy": "private",
-              "default": "true",
-              "description": "True while the lazy-loaded `@aceshooting/lyra-flags` peer resolver is in flight."
-            },
-            {
-              "kind": "field",
-              "name": "code",
-              "type": {
-                "text": "string | undefined"
-              },
-              "privacy": "private",
-              "readonly": true
-            },
-            {
-              "kind": "method",
-              "name": "emit",
-              "privacy": "protected",
-              "return": {
-                "type": {
-                  "text": "CustomEvent<T>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "name",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
-                  "name": "detail",
-                  "optional": true,
-                  "type": {
-                    "text": "T"
-                  }
-                }
-              ],
-              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            }
-          ],
-          "attributes": [
-            {
-              "name": "country",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`.",
-              "fieldName": "country"
-            },
-            {
-              "name": "language",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "BCP-47-ish language tag (e.g. `en`, `en-US`) resolved to a country flag.",
-              "fieldName": "language"
-            },
-            {
-              "name": "label",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "Accessible label / `alt` text. Defaults to the uppercase code.",
-              "fieldName": "label"
-            },
-            {
-              "name": "round",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Render as a circular flag.",
-              "fieldName": "round"
-            }
-          ],
-          "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
-          },
-          "tagName": "lyra-flag",
-          "customElement": true
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LyraFlag",
-          "declaration": {
-            "name": "LyraFlag",
-            "module": "src/components/flag/flag.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/flag/language-map.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "LANGUAGE_TO_COUNTRY",
-          "type": {
-            "text": "Record<string, string>"
-          },
-          "default": "{ en: 'gb', fr: 'fr', de: 'de', es: 'es', it: 'it', pt: 'pt', nl: 'nl', ar: 'sa', zh: 'cn', ja: 'jp', ko: 'kr', ru: 'ru', pl: 'pl', tr: 'tr', sv: 'se', da: 'dk', fi: 'fi', no: 'no', nb: 'no', cs: 'cz', sk: 'sk', el: 'gr', he: 'il', hi: 'in', th: 'th', vi: 'vn', id: 'id', ms: 'my', uk: 'ua', ro: 'ro', hu: 'hu', bg: 'bg', hr: 'hr', sr: 'rs', sl: 'si', et: 'ee', lv: 'lv', lt: 'lt', fa: 'ir', ur: 'pk', bn: 'bd', ta: 'in', ca: 'es', }",
-          "description": "Default mapping from a language subtag to a representative country flag\n(ISO 3166-1 alpha-2). Languages don't map 1:1 to countries; these are the\nconventional choices for language pickers. Override per-app as needed."
-        },
-        {
-          "kind": "function",
-          "name": "languageToCountry",
-          "return": {
-            "type": {
-              "text": "string | undefined"
-            }
-          },
-          "parameters": [
-            {
-              "name": "language",
-              "type": {
-                "text": "string"
-              }
-            }
-          ],
-          "description": "Resolve a BCP-47-ish language tag to a flag country code.\nA region subtag wins (`en-US` → `us`); otherwise the base language is mapped."
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LANGUAGE_TO_COUNTRY",
-          "declaration": {
-            "name": "LANGUAGE_TO_COUNTRY",
-            "module": "src/components/flag/language-map.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "languageToCountry",
-          "declaration": {
-            "name": "languageToCountry",
-            "module": "src/components/flag/language-map.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/gauge/gauge.stories.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "meta",
-          "type": {
-            "text": "Meta"
-          },
-          "default": "{ title: 'Gauge', component: 'lyra-gauge', tags: ['autodocs'], }"
-        },
-        {
-          "kind": "variable",
-          "name": "Radial",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html`<lyra-gauge value=\"72\" max=\"100\" label=\"CPU\"></lyra-gauge>`, }"
-        },
-        {
-          "kind": "variable",
-          "name": "Linear",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html`<lyra-gauge type=\"linear\" value=\"40\" max=\"100\" label=\"Disk\"></lyra-gauge>`, }"
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "default",
-          "declaration": {
-            "name": "meta",
-            "module": "src/components/gauge/gauge.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Radial",
-          "declaration": {
-            "name": "Radial",
-            "module": "src/components/gauge/gauge.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Linear",
-          "declaration": {
-            "name": "Linear",
-            "module": "src/components/gauge/gauge.stories.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/gauge/gauge.ts",
-      "declarations": [
-        {
-          "kind": "class",
-          "description": "`<lyra-gauge>` — a radial or linear meter. First-party invention; no\ngeneric gauge widget exists in Web Awesome.",
-          "name": "LyraGauge",
-          "cssParts": [
-            {
-              "description": "track, fill, value, label",
-              "name": "base,"
-            }
-          ],
-          "members": [
-            {
-              "kind": "field",
-              "name": "value",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "attribute": "value"
-            },
-            {
-              "kind": "field",
-              "name": "min",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "attribute": "min"
-            },
-            {
-              "kind": "field",
-              "name": "max",
-              "type": {
-                "text": "number"
-              },
-              "default": "100",
-              "attribute": "max"
-            },
-            {
-              "kind": "field",
-              "name": "type",
-              "type": {
-                "text": "GaugeType"
-              },
-              "default": "'radial'",
-              "attribute": "type",
-              "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "label",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "attribute": "label"
-            },
-            {
-              "kind": "field",
-              "name": "valueLabel",
-              "type": {
-                "text": "string | undefined"
-              }
-            },
-            {
-              "kind": "field",
-              "name": "ratio",
-              "type": {
-                "text": "number"
-              },
-              "privacy": "private",
-              "readonly": true
-            },
-            {
-              "kind": "method",
-              "name": "renderRadial",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "TemplateResult"
-                }
-              }
-            },
-            {
-              "kind": "method",
-              "name": "renderLinear",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "TemplateResult"
-                }
-              }
-            },
-            {
-              "kind": "method",
-              "name": "emit",
-              "privacy": "protected",
-              "return": {
-                "type": {
-                  "text": "CustomEvent<T>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "name",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
-                  "name": "detail",
-                  "optional": true,
-                  "type": {
-                    "text": "T"
-                  }
-                }
-              ],
-              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            }
-          ],
-          "attributes": [
-            {
-              "name": "value",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "fieldName": "value"
-            },
-            {
-              "name": "min",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "fieldName": "min"
-            },
-            {
-              "name": "max",
-              "type": {
-                "text": "number"
-              },
-              "default": "100",
-              "fieldName": "max"
-            },
-            {
-              "name": "type",
-              "type": {
-                "text": "GaugeType"
-              },
-              "default": "'radial'",
-              "fieldName": "type"
-            },
-            {
-              "name": "label",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "fieldName": "label"
-            }
-          ],
-          "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
-          },
-          "tagName": "lyra-gauge",
-          "customElement": true
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LyraGauge",
-          "declaration": {
-            "name": "LyraGauge",
-            "module": "src/components/gauge/gauge.ts"
           }
         }
       ]
@@ -7958,6 +7676,507 @@
           "declaration": {
             "name": "LyraOption",
             "module": "src/components/combobox/option.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/gauge/gauge.stories.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "meta",
+          "type": {
+            "text": "Meta"
+          },
+          "default": "{ title: 'Gauge', component: 'lyra-gauge', tags: ['autodocs'], }"
+        },
+        {
+          "kind": "variable",
+          "name": "Radial",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html`<lyra-gauge value=\"72\" max=\"100\" label=\"CPU\"></lyra-gauge>`, }"
+        },
+        {
+          "kind": "variable",
+          "name": "Linear",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html`<lyra-gauge type=\"linear\" value=\"40\" max=\"100\" label=\"Disk\"></lyra-gauge>`, }"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "meta",
+            "module": "src/components/gauge/gauge.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Radial",
+          "declaration": {
+            "name": "Radial",
+            "module": "src/components/gauge/gauge.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Linear",
+          "declaration": {
+            "name": "Linear",
+            "module": "src/components/gauge/gauge.stories.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/gauge/gauge.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-gauge>` — a radial or linear meter. First-party invention; no\ngeneric gauge widget exists in Web Awesome.",
+          "name": "LyraGauge",
+          "cssParts": [
+            {
+              "description": "track, fill, value, label",
+              "name": "base,"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "value",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "attribute": "value"
+            },
+            {
+              "kind": "field",
+              "name": "min",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "attribute": "min"
+            },
+            {
+              "kind": "field",
+              "name": "max",
+              "type": {
+                "text": "number"
+              },
+              "default": "100",
+              "attribute": "max"
+            },
+            {
+              "kind": "field",
+              "name": "type",
+              "type": {
+                "text": "GaugeType"
+              },
+              "default": "'radial'",
+              "attribute": "type",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "valueLabel",
+              "type": {
+                "text": "string | undefined"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "ratio",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "method",
+              "name": "renderRadial",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderLinear",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "value",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "fieldName": "value"
+            },
+            {
+              "name": "min",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "fieldName": "min"
+            },
+            {
+              "name": "max",
+              "type": {
+                "text": "number"
+              },
+              "default": "100",
+              "fieldName": "max"
+            },
+            {
+              "name": "type",
+              "type": {
+                "text": "GaugeType"
+              },
+              "default": "'radial'",
+              "fieldName": "type"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "label"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-gauge",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraGauge",
+          "declaration": {
+            "name": "LyraGauge",
+            "module": "src/components/gauge/gauge.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/flag/flag.stories.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "meta",
+          "type": {
+            "text": "Meta"
+          },
+          "default": "{ title: 'Flag', component: 'lyra-flag', tags: ['autodocs'], }"
+        },
+        {
+          "kind": "variable",
+          "name": "Gallery",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html` <div style=\"display:flex; gap:1rem; align-items:center;\"> <lyra-flag country=\"fr\" label=\"France\" style=\"height: 1.5rem\"></lyra-flag> <lyra-flag language=\"en\" label=\"English\" style=\"height: 1.5rem\"></lyra-flag> <lyra-flag language=\"de\" label=\"German\" round style=\"height: 1.5rem\"></lyra-flag> <lyra-flag country=\"jp\" label=\"Japan\" round style=\"height: 1.5rem\"></lyra-flag> </div> `, }"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "meta",
+            "module": "src/components/flag/flag.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Gallery",
+          "declaration": {
+            "name": "Gallery",
+            "module": "src/components/flag/flag.stories.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/flag/flag.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-flag>` — a country/language flag.\n\nFlag images are shipped by the optional peer package `@aceshooting/lyra-flags`,\nnot bundled into lyra-ui itself, so importing the core library pulls zero flag\nweight. Give it a `country` (ISO 3166-1 alpha-2) or a `language` tag (mapped to\na representative country).",
+          "name": "LyraFlag",
+          "cssParts": [
+            {
+              "description": "The underlying <img>.",
+              "name": "image"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "country",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`.",
+              "attribute": "country"
+            },
+            {
+              "kind": "field",
+              "name": "language",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "BCP-47-ish language tag (e.g. `en`, `en-US`) resolved to a country flag.",
+              "attribute": "language"
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Accessible label / `alt` text. Defaults to the uppercase code.",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "round",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Render as a circular flag.",
+              "attribute": "round",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "true",
+              "description": "True while the lazy-loaded `@aceshooting/lyra-flags` peer resolver is in flight."
+            },
+            {
+              "kind": "field",
+              "name": "code",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "country",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`.",
+              "fieldName": "country"
+            },
+            {
+              "name": "language",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "BCP-47-ish language tag (e.g. `en`, `en-US`) resolved to a country flag.",
+              "fieldName": "language"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Accessible label / `alt` text. Defaults to the uppercase code.",
+              "fieldName": "label"
+            },
+            {
+              "name": "round",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Render as a circular flag.",
+              "fieldName": "round"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-flag",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraFlag",
+          "declaration": {
+            "name": "LyraFlag",
+            "module": "src/components/flag/flag.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/flag/language-map.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "LANGUAGE_TO_COUNTRY",
+          "type": {
+            "text": "Record<string, string>"
+          },
+          "default": "{ en: 'gb', fr: 'fr', de: 'de', es: 'es', it: 'it', pt: 'pt', nl: 'nl', ar: 'sa', zh: 'cn', ja: 'jp', ko: 'kr', ru: 'ru', pl: 'pl', tr: 'tr', sv: 'se', da: 'dk', fi: 'fi', no: 'no', nb: 'no', cs: 'cz', sk: 'sk', el: 'gr', he: 'il', hi: 'in', th: 'th', vi: 'vn', id: 'id', ms: 'my', uk: 'ua', ro: 'ro', hu: 'hu', bg: 'bg', hr: 'hr', sr: 'rs', sl: 'si', et: 'ee', lv: 'lv', lt: 'lt', fa: 'ir', ur: 'pk', bn: 'bd', ta: 'in', ca: 'es', }",
+          "description": "Default mapping from a language subtag to a representative country flag\n(ISO 3166-1 alpha-2). Languages don't map 1:1 to countries; these are the\nconventional choices for language pickers. Override per-app as needed."
+        },
+        {
+          "kind": "function",
+          "name": "languageToCountry",
+          "return": {
+            "type": {
+              "text": "string | undefined"
+            }
+          },
+          "parameters": [
+            {
+              "name": "language",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "Resolve a BCP-47-ish language tag to a flag country code.\nA region subtag wins (`en-US` → `us`); otherwise the base language is mapped."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LANGUAGE_TO_COUNTRY",
+          "declaration": {
+            "name": "LANGUAGE_TO_COUNTRY",
+            "module": "src/components/flag/language-map.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "languageToCountry",
+          "declaration": {
+            "name": "languageToCountry",
+            "module": "src/components/flag/language-map.ts"
           }
         }
       ]
@@ -9390,6 +9609,736 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/playback/playback.stories.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "meta",
+          "type": {
+            "text": "Meta"
+          },
+          "default": "{ title: 'Playback', component: 'lyra-playback', tags: ['autodocs'], }"
+        },
+        {
+          "kind": "variable",
+          "name": "Default",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html`<lyra-playback length=\"10\" interval-ms=\"500\" loop></lyra-playback>`, }"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "meta",
+            "module": "src/components/playback/playback.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Default",
+          "declaration": {
+            "name": "Default",
+            "module": "src/components/playback/playback.stories.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/playback/playback.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-playback>` — steps an index through `[0, length)` on a fixed\ninterval (play/pause), the common building block behind ad-hoc\nplay-timers in time-series dashboards.",
+          "name": "LyraPlayback",
+          "cssParts": [
+            {
+              "description": "play-button, slider",
+              "name": "base,"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "length",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "attribute": "length"
+            },
+            {
+              "kind": "field",
+              "name": "index",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "attribute": "index"
+            },
+            {
+              "kind": "field",
+              "name": "intervalMs",
+              "type": {
+                "text": "number"
+              },
+              "default": "900",
+              "attribute": "interval-ms"
+            },
+            {
+              "kind": "field",
+              "name": "playing",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "attribute": "playing",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "loop",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "attribute": "loop"
+            },
+            {
+              "kind": "field",
+              "name": "hidden",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Re-declared as a Lit reactive property (shadowing the inherited plain\n`HTMLElement.hidden` IDL property) so that setting `el.hidden = true` —\nor the `hidden` attribute — actually enters Lit's change-tracking system\nand the `willUpdate` auto-pause guard below can see it via `changed`.\n`reflect: true` preserves the native attribute-reflection behavior.",
+              "attribute": "hidden",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "timer",
+              "type": {
+                "text": "number | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "method",
+              "name": "play",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Start playback; no-op if there's nothing to advance through."
+            },
+            {
+              "kind": "method",
+              "name": "pause",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Stop playback."
+            },
+            {
+              "kind": "method",
+              "name": "toggle",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tick",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setIndex",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "i",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "next",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Advance one step without starting playback."
+            },
+            {
+              "kind": "method",
+              "name": "previous",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Go back one step without starting playback."
+            },
+            {
+              "kind": "method",
+              "name": "goTo",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "Jump to an explicit index, pausing playback."
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "lyra-play"
+            },
+            {
+              "name": "lyra-pause"
+            },
+            {
+              "description": "`detail: { index }`, fired on every tick and manual step.",
+              "name": "lyra-step"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "length",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "fieldName": "length"
+            },
+            {
+              "name": "index",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "fieldName": "index"
+            },
+            {
+              "name": "interval-ms",
+              "type": {
+                "text": "number"
+              },
+              "default": "900",
+              "fieldName": "intervalMs"
+            },
+            {
+              "name": "playing",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "fieldName": "playing"
+            },
+            {
+              "name": "loop",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "fieldName": "loop"
+            },
+            {
+              "name": "hidden",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Re-declared as a Lit reactive property (shadowing the inherited plain\n`HTMLElement.hidden` IDL property) so that setting `el.hidden = true` —\nor the `hidden` attribute — actually enters Lit's change-tracking system\nand the `willUpdate` auto-pause guard below can see it via `changed`.\n`reflect: true` preserves the native attribute-reflection behavior.",
+              "fieldName": "hidden"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-playback",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPlayback",
+          "declaration": {
+            "name": "LyraPlayback",
+            "module": "src/components/playback/playback.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/skeleton/skeleton.stories.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "meta",
+          "type": {
+            "text": "Meta"
+          },
+          "default": "{ title: 'Skeleton', component: 'lyra-skeleton', tags: ['autodocs'], }"
+        },
+        {
+          "kind": "variable",
+          "name": "Gallery",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html` <div style=\"display:flex; gap:1rem; align-items:center;\"> <lyra-skeleton width=\"10rem\" height=\"1rem\"></lyra-skeleton> <lyra-skeleton variant=\"circle\" width=\"3rem\" height=\"3rem\"></lyra-skeleton> <lyra-skeleton variant=\"rect\" effect=\"sheen\" width=\"6rem\" height=\"3rem\"></lyra-skeleton> </div> `, }"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "meta",
+            "module": "src/components/skeleton/skeleton.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Gallery",
+          "declaration": {
+            "name": "Gallery",
+            "module": "src/components/skeleton/skeleton.stories.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/skeleton/skeleton.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-skeleton>` — a loading placeholder. First-party invention, standing\nin for the bespoke `animate-pulse` div most dashboards hand-roll.",
+          "name": "LyraSkeleton",
+          "cssParts": [
+            {
+              "description": "The placeholder shape.",
+              "name": "base"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "variant",
+              "type": {
+                "text": "SkeletonVariant"
+              },
+              "default": "'text'",
+              "attribute": "variant",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effect",
+              "type": {
+                "text": "SkeletonEffect"
+              },
+              "default": "'pulse'",
+              "attribute": "effect",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "width",
+              "type": {
+                "text": "string | undefined"
+              },
+              "attribute": "width"
+            },
+            {
+              "kind": "field",
+              "name": "height",
+              "type": {
+                "text": "string | undefined"
+              },
+              "attribute": "height"
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "variant",
+              "type": {
+                "text": "SkeletonVariant"
+              },
+              "default": "'text'",
+              "fieldName": "variant"
+            },
+            {
+              "name": "effect",
+              "type": {
+                "text": "SkeletonEffect"
+              },
+              "default": "'pulse'",
+              "fieldName": "effect"
+            },
+            {
+              "name": "width",
+              "type": {
+                "text": "string | undefined"
+              },
+              "fieldName": "width"
+            },
+            {
+              "name": "height",
+              "type": {
+                "text": "string | undefined"
+              },
+              "fieldName": "height"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-skeleton",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraSkeleton",
+          "declaration": {
+            "name": "LyraSkeleton",
+            "module": "src/components/skeleton/skeleton.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/sparkline/sparkline.stories.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "meta",
+          "type": {
+            "text": "Meta"
+          },
+          "default": "{ title: 'Sparkline', component: 'lyra-sparkline', tags: ['autodocs'], }"
+        },
+        {
+          "kind": "variable",
+          "name": "Line",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html`<lyra-sparkline type=\"line\" .values=${DATA}></lyra-sparkline>`, }"
+        },
+        {
+          "kind": "variable",
+          "name": "Area",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html`<lyra-sparkline type=\"area\" .values=${DATA}></lyra-sparkline>`, }"
+        },
+        {
+          "kind": "variable",
+          "name": "Bar",
+          "type": {
+            "text": "Story"
+          },
+          "default": "{ render: () => html`<lyra-sparkline type=\"bar\" .values=${DATA}></lyra-sparkline>`, }"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "meta",
+            "module": "src/components/sparkline/sparkline.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Line",
+          "declaration": {
+            "name": "Line",
+            "module": "src/components/sparkline/sparkline.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Area",
+          "declaration": {
+            "name": "Area",
+            "module": "src/components/sparkline/sparkline.stories.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "Bar",
+          "declaration": {
+            "name": "Bar",
+            "module": "src/components/sparkline/sparkline.stories.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/sparkline/sparkline.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-sparkline>` — a zero-dependency inline SVG trend chart.\nMirrors the Web Awesome `<wa-sparkline>` API under the `lyra-` prefix.",
+          "name": "LyraSparkline",
+          "cssParts": [
+            {
+              "description": "The line path (type=\"line\").",
+              "name": "line"
+            },
+            {
+              "description": "The filled area under the line (type=\"area\").",
+              "name": "area"
+            },
+            {
+              "description": "Each bar rectangle (type=\"bar\").",
+              "name": "bar"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "values",
+              "type": {
+                "text": "number[]"
+              },
+              "default": "[]",
+              "description": "The data series to plot.",
+              "attribute": "values"
+            },
+            {
+              "kind": "field",
+              "name": "type",
+              "type": {
+                "text": "'line' | 'bar' | 'area'"
+              },
+              "default": "'line'",
+              "description": "Rendering style.",
+              "attribute": "type"
+            },
+            {
+              "kind": "field",
+              "name": "min",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "Lower bound of the value scale (defaults to the data minimum).",
+              "attribute": "min"
+            },
+            {
+              "kind": "field",
+              "name": "max",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "Upper bound of the value scale (defaults to the data maximum).",
+              "attribute": "max"
+            },
+            {
+              "kind": "method",
+              "name": "points",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "ReadonlyArray<readonly [number, number]>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "values",
+              "type": {
+                "text": "number[]"
+              },
+              "default": "[]",
+              "description": "The data series to plot.",
+              "fieldName": "values"
+            },
+            {
+              "name": "type",
+              "type": {
+                "text": "'line' | 'bar' | 'area'"
+              },
+              "default": "'line'",
+              "description": "Rendering style.",
+              "fieldName": "type"
+            },
+            {
+              "name": "min",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "Lower bound of the value scale (defaults to the data minimum).",
+              "fieldName": "min"
+            },
+            {
+              "name": "max",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "Upper bound of the value scale (defaults to the data maximum).",
+              "fieldName": "max"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-sparkline",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraSparkline",
+          "declaration": {
+            "name": "LyraSparkline",
+            "module": "src/components/sparkline/sparkline.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/date-picker/calendar-core.ts",
       "declarations": [
         {
@@ -10782,507 +11731,6 @@
     },
     {
       "kind": "javascript-module",
-      "path": "src/components/playback/playback.stories.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "meta",
-          "type": {
-            "text": "Meta"
-          },
-          "default": "{ title: 'Playback', component: 'lyra-playback', tags: ['autodocs'], }"
-        },
-        {
-          "kind": "variable",
-          "name": "Default",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html`<lyra-playback length=\"10\" interval-ms=\"500\" loop></lyra-playback>`, }"
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "default",
-          "declaration": {
-            "name": "meta",
-            "module": "src/components/playback/playback.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Default",
-          "declaration": {
-            "name": "Default",
-            "module": "src/components/playback/playback.stories.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/playback/playback.ts",
-      "declarations": [
-        {
-          "kind": "class",
-          "description": "`<lyra-playback>` — steps an index through `[0, length)` on a fixed\ninterval (play/pause), the common building block behind ad-hoc\nplay-timers in time-series dashboards.",
-          "name": "LyraPlayback",
-          "cssParts": [
-            {
-              "description": "play-button, slider",
-              "name": "base,"
-            }
-          ],
-          "members": [
-            {
-              "kind": "field",
-              "name": "length",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "attribute": "length"
-            },
-            {
-              "kind": "field",
-              "name": "index",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "attribute": "index"
-            },
-            {
-              "kind": "field",
-              "name": "intervalMs",
-              "type": {
-                "text": "number"
-              },
-              "default": "900",
-              "attribute": "interval-ms"
-            },
-            {
-              "kind": "field",
-              "name": "playing",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "attribute": "playing",
-              "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "loop",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "true",
-              "attribute": "loop"
-            },
-            {
-              "kind": "field",
-              "name": "hidden",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Re-declared as a Lit reactive property (shadowing the inherited plain\n`HTMLElement.hidden` IDL property) so that setting `el.hidden = true` —\nor the `hidden` attribute — actually enters Lit's change-tracking system\nand the `willUpdate` auto-pause guard below can see it via `changed`.\n`reflect: true` preserves the native attribute-reflection behavior.",
-              "attribute": "hidden",
-              "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "timer",
-              "type": {
-                "text": "number | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "method",
-              "name": "play",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "description": "Start playback; no-op if there's nothing to advance through."
-            },
-            {
-              "kind": "method",
-              "name": "pause",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "description": "Stop playback."
-            },
-            {
-              "kind": "method",
-              "name": "toggle",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              }
-            },
-            {
-              "kind": "method",
-              "name": "tick",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              }
-            },
-            {
-              "kind": "method",
-              "name": "setIndex",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "i",
-                  "type": {
-                    "text": "number"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
-              "name": "next",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "description": "Advance one step without starting playback."
-            },
-            {
-              "kind": "method",
-              "name": "previous",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "description": "Go back one step without starting playback."
-            },
-            {
-              "kind": "method",
-              "name": "goTo",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "index",
-                  "type": {
-                    "text": "number"
-                  }
-                }
-              ],
-              "description": "Jump to an explicit index, pausing playback."
-            },
-            {
-              "kind": "method",
-              "name": "emit",
-              "privacy": "protected",
-              "return": {
-                "type": {
-                  "text": "CustomEvent<T>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "name",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
-                  "name": "detail",
-                  "optional": true,
-                  "type": {
-                    "text": "T"
-                  }
-                }
-              ],
-              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            }
-          ],
-          "events": [
-            {
-              "name": "lyra-play"
-            },
-            {
-              "name": "lyra-pause"
-            },
-            {
-              "description": "`detail: { index }`, fired on every tick and manual step.",
-              "name": "lyra-step"
-            }
-          ],
-          "attributes": [
-            {
-              "name": "length",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "fieldName": "length"
-            },
-            {
-              "name": "index",
-              "type": {
-                "text": "number"
-              },
-              "default": "0",
-              "fieldName": "index"
-            },
-            {
-              "name": "interval-ms",
-              "type": {
-                "text": "number"
-              },
-              "default": "900",
-              "fieldName": "intervalMs"
-            },
-            {
-              "name": "playing",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "fieldName": "playing"
-            },
-            {
-              "name": "loop",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "true",
-              "fieldName": "loop"
-            },
-            {
-              "name": "hidden",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Re-declared as a Lit reactive property (shadowing the inherited plain\n`HTMLElement.hidden` IDL property) so that setting `el.hidden = true` —\nor the `hidden` attribute — actually enters Lit's change-tracking system\nand the `willUpdate` auto-pause guard below can see it via `changed`.\n`reflect: true` preserves the native attribute-reflection behavior.",
-              "fieldName": "hidden"
-            }
-          ],
-          "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
-          },
-          "tagName": "lyra-playback",
-          "customElement": true
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LyraPlayback",
-          "declaration": {
-            "name": "LyraPlayback",
-            "module": "src/components/playback/playback.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/skeleton/skeleton.stories.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "meta",
-          "type": {
-            "text": "Meta"
-          },
-          "default": "{ title: 'Skeleton', component: 'lyra-skeleton', tags: ['autodocs'], }"
-        },
-        {
-          "kind": "variable",
-          "name": "Gallery",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html` <div style=\"display:flex; gap:1rem; align-items:center;\"> <lyra-skeleton width=\"10rem\" height=\"1rem\"></lyra-skeleton> <lyra-skeleton variant=\"circle\" width=\"3rem\" height=\"3rem\"></lyra-skeleton> <lyra-skeleton variant=\"rect\" effect=\"sheen\" width=\"6rem\" height=\"3rem\"></lyra-skeleton> </div> `, }"
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "default",
-          "declaration": {
-            "name": "meta",
-            "module": "src/components/skeleton/skeleton.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Gallery",
-          "declaration": {
-            "name": "Gallery",
-            "module": "src/components/skeleton/skeleton.stories.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/skeleton/skeleton.ts",
-      "declarations": [
-        {
-          "kind": "class",
-          "description": "`<lyra-skeleton>` — a loading placeholder. First-party invention, standing\nin for the bespoke `animate-pulse` div most dashboards hand-roll.",
-          "name": "LyraSkeleton",
-          "cssParts": [
-            {
-              "description": "The placeholder shape.",
-              "name": "base"
-            }
-          ],
-          "members": [
-            {
-              "kind": "field",
-              "name": "variant",
-              "type": {
-                "text": "SkeletonVariant"
-              },
-              "default": "'text'",
-              "attribute": "variant",
-              "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "effect",
-              "type": {
-                "text": "SkeletonEffect"
-              },
-              "default": "'pulse'",
-              "attribute": "effect",
-              "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "width",
-              "type": {
-                "text": "string | undefined"
-              },
-              "attribute": "width"
-            },
-            {
-              "kind": "field",
-              "name": "height",
-              "type": {
-                "text": "string | undefined"
-              },
-              "attribute": "height"
-            },
-            {
-              "kind": "method",
-              "name": "emit",
-              "privacy": "protected",
-              "return": {
-                "type": {
-                  "text": "CustomEvent<T>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "name",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
-                  "name": "detail",
-                  "optional": true,
-                  "type": {
-                    "text": "T"
-                  }
-                }
-              ],
-              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            }
-          ],
-          "attributes": [
-            {
-              "name": "variant",
-              "type": {
-                "text": "SkeletonVariant"
-              },
-              "default": "'text'",
-              "fieldName": "variant"
-            },
-            {
-              "name": "effect",
-              "type": {
-                "text": "SkeletonEffect"
-              },
-              "default": "'pulse'",
-              "fieldName": "effect"
-            },
-            {
-              "name": "width",
-              "type": {
-                "text": "string | undefined"
-              },
-              "fieldName": "width"
-            },
-            {
-              "name": "height",
-              "type": {
-                "text": "string | undefined"
-              },
-              "fieldName": "height"
-            }
-          ],
-          "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
-          },
-          "tagName": "lyra-skeleton",
-          "customElement": true
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LyraSkeleton",
-          "declaration": {
-            "name": "LyraSkeleton",
-            "module": "src/components/skeleton/skeleton.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
       "path": "src/components/split/split.stories.ts",
       "declarations": [
         {
@@ -11608,454 +12056,6 @@
           "declaration": {
             "name": "LyraSplit",
             "module": "src/components/split/split.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/sparkline/sparkline.stories.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "meta",
-          "type": {
-            "text": "Meta"
-          },
-          "default": "{ title: 'Sparkline', component: 'lyra-sparkline', tags: ['autodocs'], }"
-        },
-        {
-          "kind": "variable",
-          "name": "Line",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html`<lyra-sparkline type=\"line\" .values=${DATA}></lyra-sparkline>`, }"
-        },
-        {
-          "kind": "variable",
-          "name": "Area",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html`<lyra-sparkline type=\"area\" .values=${DATA}></lyra-sparkline>`, }"
-        },
-        {
-          "kind": "variable",
-          "name": "Bar",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html`<lyra-sparkline type=\"bar\" .values=${DATA}></lyra-sparkline>`, }"
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "default",
-          "declaration": {
-            "name": "meta",
-            "module": "src/components/sparkline/sparkline.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Line",
-          "declaration": {
-            "name": "Line",
-            "module": "src/components/sparkline/sparkline.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Area",
-          "declaration": {
-            "name": "Area",
-            "module": "src/components/sparkline/sparkline.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Bar",
-          "declaration": {
-            "name": "Bar",
-            "module": "src/components/sparkline/sparkline.stories.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/sparkline/sparkline.ts",
-      "declarations": [
-        {
-          "kind": "class",
-          "description": "`<lyra-sparkline>` — a zero-dependency inline SVG trend chart.\nMirrors the Web Awesome `<wa-sparkline>` API under the `lyra-` prefix.",
-          "name": "LyraSparkline",
-          "cssParts": [
-            {
-              "description": "The line path (type=\"line\").",
-              "name": "line"
-            },
-            {
-              "description": "The filled area under the line (type=\"area\").",
-              "name": "area"
-            },
-            {
-              "description": "Each bar rectangle (type=\"bar\").",
-              "name": "bar"
-            }
-          ],
-          "members": [
-            {
-              "kind": "field",
-              "name": "values",
-              "type": {
-                "text": "number[]"
-              },
-              "default": "[]",
-              "description": "The data series to plot.",
-              "attribute": "values"
-            },
-            {
-              "kind": "field",
-              "name": "type",
-              "type": {
-                "text": "'line' | 'bar' | 'area'"
-              },
-              "default": "'line'",
-              "description": "Rendering style.",
-              "attribute": "type"
-            },
-            {
-              "kind": "field",
-              "name": "min",
-              "type": {
-                "text": "number | undefined"
-              },
-              "description": "Lower bound of the value scale (defaults to the data minimum).",
-              "attribute": "min"
-            },
-            {
-              "kind": "field",
-              "name": "max",
-              "type": {
-                "text": "number | undefined"
-              },
-              "description": "Upper bound of the value scale (defaults to the data maximum).",
-              "attribute": "max"
-            },
-            {
-              "kind": "method",
-              "name": "points",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "ReadonlyArray<readonly [number, number]>"
-                }
-              }
-            },
-            {
-              "kind": "method",
-              "name": "emit",
-              "privacy": "protected",
-              "return": {
-                "type": {
-                  "text": "CustomEvent<T>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "name",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
-                  "name": "detail",
-                  "optional": true,
-                  "type": {
-                    "text": "T"
-                  }
-                }
-              ],
-              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            }
-          ],
-          "attributes": [
-            {
-              "name": "values",
-              "type": {
-                "text": "number[]"
-              },
-              "default": "[]",
-              "description": "The data series to plot.",
-              "fieldName": "values"
-            },
-            {
-              "name": "type",
-              "type": {
-                "text": "'line' | 'bar' | 'area'"
-              },
-              "default": "'line'",
-              "description": "Rendering style.",
-              "fieldName": "type"
-            },
-            {
-              "name": "min",
-              "type": {
-                "text": "number | undefined"
-              },
-              "description": "Lower bound of the value scale (defaults to the data minimum).",
-              "fieldName": "min"
-            },
-            {
-              "name": "max",
-              "type": {
-                "text": "number | undefined"
-              },
-              "description": "Upper bound of the value scale (defaults to the data maximum).",
-              "fieldName": "max"
-            }
-          ],
-          "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
-          },
-          "tagName": "lyra-sparkline",
-          "customElement": true
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LyraSparkline",
-          "declaration": {
-            "name": "LyraSparkline",
-            "module": "src/components/sparkline/sparkline.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/empty/empty.stories.ts",
-      "declarations": [
-        {
-          "kind": "variable",
-          "name": "meta",
-          "type": {
-            "text": "Meta"
-          },
-          "default": "{ title: 'Empty', component: 'lyra-empty', tags: ['autodocs'], }"
-        },
-        {
-          "kind": "variable",
-          "name": "Default",
-          "type": {
-            "text": "Story"
-          },
-          "default": "{ render: () => html` <lyra-empty heading=\"No results\" description=\"Try a different search.\"> <span slot=\"actions\"><button>Reset</button></span> </lyra-empty> `, }"
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "default",
-          "declaration": {
-            "name": "meta",
-            "module": "src/components/empty/empty.stories.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "Default",
-          "declaration": {
-            "name": "Default",
-            "module": "src/components/empty/empty.stories.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/empty/empty.ts",
-      "declarations": [
-        {
-          "kind": "class",
-          "description": "`<lyra-empty>` — a generic empty/no-data state. First-party invention (no\nWeb Awesome equivalent); fills a gap common to dashboard-style apps.",
-          "name": "LyraEmpty",
-          "cssParts": [
-            {
-              "description": "icon, heading, description, actions",
-              "name": "base,"
-            }
-          ],
-          "slots": [
-            {
-              "description": "Custom icon or illustration (defaults to none).",
-              "name": ""
-            },
-            {
-              "description": "Buttons/links shown below the description.",
-              "name": "actions"
-            }
-          ],
-          "members": [
-            {
-              "kind": "field",
-              "name": "heading",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "description": "Short heading, e.g. \"No results\".",
-              "attribute": "heading"
-            },
-            {
-              "kind": "field",
-              "name": "description",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "description": "Supporting copy, e.g. \"Try a different search.\"",
-              "attribute": "description"
-            },
-            {
-              "kind": "field",
-              "name": "hasIcon",
-              "type": {
-                "text": "boolean"
-              },
-              "privacy": "private",
-              "default": "false"
-            },
-            {
-              "kind": "field",
-              "name": "hasActions",
-              "type": {
-                "text": "boolean"
-              },
-              "privacy": "private",
-              "default": "false"
-            },
-            {
-              "kind": "method",
-              "name": "checkIconSlot",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "slot",
-                  "type": {
-                    "text": "HTMLSlotElement"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
-              "name": "checkActionsSlot",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "slot",
-                  "type": {
-                    "text": "HTMLSlotElement"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "field",
-              "name": "onIconSlotChange",
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "onActionsSlotChange",
-              "privacy": "private"
-            },
-            {
-              "kind": "method",
-              "name": "emit",
-              "privacy": "protected",
-              "return": {
-                "type": {
-                  "text": "CustomEvent<T>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "name",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
-                  "name": "detail",
-                  "optional": true,
-                  "type": {
-                    "text": "T"
-                  }
-                }
-              ],
-              "description": "Dispatch a composed, bubbling `lyra-*` custom event.",
-              "inheritedFrom": {
-                "name": "LyraElement",
-                "module": "src/internal/lyra-element.ts"
-              }
-            }
-          ],
-          "attributes": [
-            {
-              "name": "heading",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "description": "Short heading, e.g. \"No results\".",
-              "fieldName": "heading"
-            },
-            {
-              "name": "description",
-              "type": {
-                "text": "string"
-              },
-              "default": "''",
-              "description": "Supporting copy, e.g. \"Try a different search.\"",
-              "fieldName": "description"
-            }
-          ],
-          "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
-          },
-          "tagName": "lyra-empty",
-          "customElement": true
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "LyraEmpty",
-          "declaration": {
-            "name": "LyraEmpty",
-            "module": "src/components/empty/empty.ts"
           }
         }
       ]
