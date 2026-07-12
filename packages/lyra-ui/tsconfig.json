@@ -8,6 +8,11 @@
     "useDefineForClassFields": false,
     "experimentalDecorators": true,
     "declaration": true,
+    // Strips `@internal`-tagged exports (e.g. flag.ts's test-only
+    // __setFlagUrlResolverForTesting seam) from the emitted .d.ts, so a
+    // consumer never sees them via autocomplete/type-checking even though
+    // the plain JS output still exports them at runtime.
+    "stripInternal": true,
     "outDir": "dist",
     "rootDir": "src",
     "skipLibCheck": true,
