@@ -35,3 +35,27 @@ it('does not crash on a very large array (spreading it as call arguments would b
   expect(buckets.length).to.equal(10);
   expect(buckets.reduce((sum, b) => sum + b.count, 0)).to.equal(150_000);
 });
+
+it('returns an empty array instead of throwing when binCount is NaN', () => {
+  expect(binValues([1, 2, 3], NaN)).to.deep.equal([]);
+});
+
+it('returns an empty array instead of throwing when binCount is Infinity', () => {
+  expect(binValues([1, 2, 3], Infinity)).to.deep.equal([]);
+});
+
+it('floors a fractional binCount instead of producing a mismatched bucket array', () => {
+  const buckets = binValues([0, 10], 3.9);
+  expect(buckets.length).to.equal(3);
+});
+
+it('drops non-finite samples instead of throwing', () => {
+  const buckets = binValues([1, 2, NaN, Infinity, -Infinity, 3], 2);
+  expect(buckets.reduce((sum, b) => sum + b.count, 0)).to.equal(3);
+});
+
+it('spreads constant data across the full bucket range instead of collapsing it into the last bucket alone', () => {
+  const buckets = binValues([5, 5, 5, 5], 4);
+  expect(buckets[0].count).to.equal(4);
+  expect(buckets.slice(1).every((b) => b.count === 0)).to.be.true;
+});
