@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { linearAlpha, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
+import { buildCalendarGrid, quartileBucket, type CalendarDay } from './calendar-grid.js';
 
 const PAD_LEFT = 60;
 const PAD_TOP = 20;
@@ -11,6 +12,10 @@ const FALLBACK_NO_DATA_FILL = 'rgba(128,128,128,0.25)';
 const RAMP_STEPS = 7;
 const FALLBACK_SCALE_LO = '#cde2fb';
 const FALLBACK_SCALE_HI = '#0969da';
+const CAL_PAD_LEFT = 28;
+const CAL_LABEL_H = 16;
+const CAL_CELL = 11;
+const CAL_GAP = 2;
 
 const HEX_RE = /^([0-9a-f]{3}|[0-9a-f]{6})$/i;
 const RGB_RE = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i;
@@ -132,6 +137,9 @@ export class LyraHeatmap extends LyraElement {
    * geometric no-op.
    */
   @property({ type: Boolean, attribute: 'fit-to-width' }) fitToWidth = false;
+  @property() mode: 'matrix' | 'calendar' = 'matrix';
+  @property({ attribute: false }) days: CalendarDay[] = [];
+  @property({ attribute: 'bucket-count', type: Number }) bucketCount = 5;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
@@ -166,20 +174,28 @@ export class LyraHeatmap extends LyraElement {
   };
 
   protected willUpdate(): void {
-    const rows = this.rowLabels.length;
-    const cols = this.colLabels.length;
     const bounds = this.valueRange();
     const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
     this.setAttribute('role', 'img');
-    this.setAttribute(
-      'aria-label',
-      `Heatmap of ${rows} × ${cols} cells, ${this.valueLabel} range ${range}`,
-    );
+    if (this.mode === 'calendar') {
+      this.setAttribute(
+        'aria-label',
+        `Calendar heatmap of ${this.days.length} days, ${this.valueLabel} range ${range}`,
+      );
+    } else {
+      const rows = this.rowLabels.length;
+      const cols = this.colLabels.length;
+      this.setAttribute(
+        'aria-label',
+        `Heatmap of ${rows} × ${cols} cells, ${this.valueLabel} range ${range}`,
+      );
+    }
   }
 
-  /** The real (non-no-data) value range across `values`, or `null` if there is none. Shared by `willUpdate()`, `draw()`, and the legend. */
+  /** The real (non-no-data) value range across `values` (or `days` in calendar mode), or `null` if there is none. Shared by `willUpdate()`, `draw()`, and the legend. */
   private valueRange(): [number, number] | null {
-    return minMax(this.values.flat().filter((v) => Number.isFinite(v) && v >= 0));
+    const source = this.mode === 'calendar' ? this.days.map((d) => d.value) : this.values.flat();
+    return minMax(source.filter((v) => Number.isFinite(v) && v >= 0));
   }
 
   protected updated(): void {
@@ -205,6 +221,59 @@ export class LyraHeatmap extends LyraElement {
   }
 
   private draw(): void {
+    if (this.mode === 'calendar') this.drawCalendar();
+    else this.drawMatrix();
+  }
+
+  private drawCalendar(): void {
+    if (!this.canvas) return;
+    const { cells, weekCount, monthLabels } = buildCalendarGrid(this.days);
+    const w = CAL_PAD_LEFT + Math.max(1, weekCount) * (CAL_CELL + CAL_GAP);
+    const h = CAL_LABEL_H + 7 * (CAL_CELL + CAL_GAP);
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const sortedValues = cells
+      .map((c) => c.value)
+      .filter((v) => Number.isFinite(v) && v >= 0)
+      .sort((a, b) => a - b);
+    const [scaleLo, scaleHi] = this.scaleEndpoints();
+    const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
+    const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
+    const buckets = Math.max(2, this.bucketCount);
+    const ramp = Array.from({ length: buckets }, (_, i) => mixRgb(loRgb, hiRgb, i / (buckets - 1)));
+    const noDataFill = this.noDataFill();
+
+    for (const cell of cells) {
+      const x = CAL_PAD_LEFT + cell.week * (CAL_CELL + CAL_GAP);
+      const y = CAL_LABEL_H + cell.weekday * (CAL_CELL + CAL_GAP);
+      ctx.fillStyle =
+        cell.value < 0 || !Number.isFinite(cell.value)
+          ? noDataFill
+          : ramp[quartileBucket(cell.value, sortedValues, buckets)]!;
+      ctx.fillRect(x, y, CAL_CELL, CAL_CELL);
+    }
+
+    ctx.fillStyle = this.labelColor();
+    ctx.font = '10px sans-serif';
+    for (const m of monthLabels) {
+      ctx.fillText(m.label, CAL_PAD_LEFT + m.week * (CAL_CELL + CAL_GAP), CAL_LABEL_H - 4);
+    }
+    const WEEKDAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+    WEEKDAY_LABELS.forEach((label, weekday) => {
+      if (label) ctx.fillText(label, 2, CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP) + CAL_CELL - 1);
+    });
+  }
+
+  private drawMatrix(): void {
     if (!this.canvas) return;
     const rows = this.rowLabels.length;
     const cols = this.colLabels.length;

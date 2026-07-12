@@ -166,6 +166,62 @@ it('ignores fit-to-width when it is not set (existing fixed-cellSize behavior)',
   expect(parseInt(canvas.style.width, 10)).to.equal(140);
 });
 
+it('calendar mode: renders a canvas sized by the week count', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  el.days = [
+    { date: '2026-03-01', value: 1 },
+    { date: '2026-03-08', value: 5 },
+  ];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  expect(canvas).to.exist;
+  expect(parseInt(canvas.style.width)).to.be.greaterThan(0);
+});
+
+it('calendar mode: sets an aria-label describing the day count and value range', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  el.days = [
+    { date: '2026-03-01', value: 1 },
+    { date: '2026-03-02', value: 9 },
+  ];
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Calendar heatmap of 2 days, value range 1–9');
+});
+
+it('calendar mode: shows "no data" in the aria-label with zero days', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Calendar heatmap of 0 days, value range no data');
+});
+
+it('calendar mode: renders numeric min/max legend ticks from days', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  el.days = [
+    { date: '2026-03-01', value: 2 },
+    { date: '2026-03-02', value: 8 },
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('2');
+  expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent).to.equal('8');
+});
+
+it('calendar mode: is accessible', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  el.days = [{ date: '2026-03-01', value: 1 }];
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('matrix mode (default): is unaffected by the new mode/days properties', async () => {
+  const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y'];
+  el.values = [[3, 9]];
+  await el.updateComplete;
+  expect(el.mode).to.equal('matrix');
+  expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
+});
+
 describe('hexToRgb', () => {
   it('parses 3- and 6-digit hex strings', () => {
     expect(hexToRgb('#fff')).to.deep.equal([255, 255, 255]);
