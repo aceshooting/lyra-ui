@@ -1,6 +1,6 @@
 export default {
   globs: ['src/components/**/*.ts', 'src/internal/lyra-element.ts'],
-  exclude: ['**/*.test.ts', '**/*.styles.ts'],
+  exclude: ['**/*.test.ts', '**/*.styles.ts', '**/*.stories.ts'],
   outdir: '.',
   litelement: true,
   plugins: [

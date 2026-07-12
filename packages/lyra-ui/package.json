@@ -41,12 +41,12 @@
     "./src/lyra.ts"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "test": "wtr",
     "test:watch": "wtr --watch",
     "manifest": "cem analyze --litelement --outdir .",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "prepack": "pnpm run manifest"
+    "prepack": "pnpm run build && pnpm run manifest"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
