@@ -7,6 +7,7 @@ import {
   addMonths,
   clampDate,
   weekdayLabels,
+  resolveFirstDayOfWeek,
 } from './calendar-core.js';
 
 it('builds a 6x7 month matrix', () => {
@@ -43,6 +44,22 @@ it('clamps to min/max', () => {
   expect(formatISO(clampDate(new Date(2026, 5, 1), min, max))).to.equal('2026-07-01');
   expect(formatISO(clampDate(new Date(2026, 7, 1), min, max))).to.equal('2026-07-31');
   expect(formatISO(clampDate(new Date(2026, 6, 15), min, max))).to.equal('2026-07-15');
+});
+
+it("resolves 'auto' to a locale-derived first day of week instead of hardcoding Sunday", () => {
+  // en-GB and fr-FR are both Monday-first locales.
+  expect(resolveFirstDayOfWeek('auto', 'en-GB')).to.equal(1);
+  expect(resolveFirstDayOfWeek('auto', 'fr-FR')).to.equal(1);
+  // en-US is Sunday-first.
+  expect(resolveFirstDayOfWeek('auto', 'en-US')).to.equal(0);
+});
+
+it("falls back to Sunday for 'auto' when no locale is given", () => {
+  expect(resolveFirstDayOfWeek('auto')).to.equal(0);
+});
+
+it('an explicit weekday name still wins over locale-derived auto resolution', () => {
+  expect(resolveFirstDayOfWeek('mon', 'en-US')).to.equal(1);
 });
 
 it('produces seven weekday labels', () => {

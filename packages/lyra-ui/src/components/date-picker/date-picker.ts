@@ -73,7 +73,7 @@ export class LyraDatePicker extends LyraElement {
   }
 
   private get fdow(): number {
-    return resolveFirstDayOfWeek(this.firstDayOfWeek);
+    return resolveFirstDayOfWeek(this.firstDayOfWeek, this.locale);
   }
 
   private isDisabled(d: Date): boolean {

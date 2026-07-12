@@ -74,8 +74,38 @@ export function monthTitle(year: number, month: number, locale?: string): string
 
 const FDOW: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 
-/** Resolve a `first-day-of-week` attribute (name or 'auto') to a 0–6 index. */
-export function resolveFirstDayOfWeek(value: string): number {
-  if (!value || value === 'auto') return 0;
+/**
+ * `Intl.Locale`'s week-info surface, still shifting between runtimes: some
+ * expose it as a `weekInfo` accessor, others as a `getWeekInfo()` method (the
+ * later stage of the same proposal); `firstDay` is ISO-numbered (1=Monday …
+ * 7=Sunday), unlike this module's own 0=Sunday … 6=Saturday convention.
+ */
+interface LocaleWithWeekInfo extends Intl.Locale {
+  weekInfo?: { firstDay: number };
+  getWeekInfo?: () => { firstDay: number };
+}
+
+/** Locale-derived first day of week (0=Sunday … 6=Saturday), or null if unsupported. */
+function localeFirstDayOfWeek(locale: string): number | null {
+  try {
+    const l = new Intl.Locale(locale) as LocaleWithWeekInfo;
+    const firstDay = l.weekInfo?.firstDay ?? l.getWeekInfo?.().firstDay;
+    if (!firstDay) return null;
+    return firstDay % 7; // ISO 1-7 (Mon-Sun) -> 0-6 (Sun-Sat)
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve a `first-day-of-week` attribute (name or 'auto') to a 0–6 index.
+ * `'auto'` derives the answer from `locale` via `Intl.Locale`'s week-info
+ * when the runtime supports it, falling back to Sunday otherwise.
+ */
+export function resolveFirstDayOfWeek(value: string, locale?: string): number {
+  if (!value || value === 'auto') {
+    const derived = locale ? localeFirstDayOfWeek(locale) : null;
+    return derived ?? 0;
+  }
   return FDOW[value.toLowerCase()] ?? 0;
 }
