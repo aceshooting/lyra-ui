@@ -1,5 +1,60 @@
 # Changelog
 
+## 2.0.0
+
+### Major Changes
+
+- 8b5f729: **Breaking:** the root `@aceshooting/lyra-ui` entry point no longer re-exports or
+  side-effect-registers the optional-peer-dependent component families — `<lyra-chart>`
+  and its typed subclasses, `<lyra-box-plot>`, `<lyra-histogram>`, `<lyra-map>`, and
+  `<lyra-graph>`. Import each of these directly from its own subpath instead (the README
+  already recommends granular subpath imports as the primary pattern):
+
+  ```js
+  import "@aceshooting/lyra-ui/components/chart/chart.js";
+  import "@aceshooting/lyra-ui/components/map/map.js";
+  ```
+
+  Why: the root barrel previously re-exported every component's public API from one
+  `lyra.ts` file, so TypeScript had to resolve `chart.js`/`maplibre-gl`/`d3-force`'s type
+  declarations even for a consumer who only imports an unrelated component (e.g.
+  `LyraEmpty`) from the package root — a hard compile error for anyone who hadn't
+  installed every optional peer. Splitting these families out of the root barrel means
+  importing `@aceshooting/lyra-ui` (or any of its remaining members) never requires an
+  optional peer's types to be resolvable.
+
+  Every other component (including `<lyra-lite-chart>`, which has zero peer
+  dependencies) is unaffected — the root barrel still re-exports/registers everything
+  else exactly as before.
+
+### Minor Changes
+
+- 144ad8f: Add a `compact` flag tier and expose three fidelity tiers via `variant`.
+
+  `@aceshooting/lyra-flags`: the ~65 emblem flags now ship a tiny WebP raster at
+  `flags/compact/<code>.webp` (~1–3 KB) alongside the standard vector and the pristine `detailed`
+  original. `flagUrl(code, { variant: 'compact' | 'standard' | 'detailed' })` selects a tier,
+  code-split per flag _and_ per tier so a bundled app ships only the tiers it actually uses. The
+  `standard` tier was also re-derived from the pristine originals so every flag is now under 80 KB
+  (no fidelity loss perceptible at card/row scale).
+
+  `@aceshooting/lyra-ui`: `<lyra-flag>` gains a `variant="compact" | "standard" | "detailed"`
+  property — a tiny raster for icon-scale use (menu items, language selectors), the default
+  icon-optimized vector for card/row sizes, or the pristine full-detail vector for hero display.
+  The `detailed` boolean is deprecated but kept working as an alias for `variant="detailed"`.
+
+- 2a7390d: Fix `lyra-heatmap` calendar mode's month/weekday axis labels to follow the runtime locale instead of hardcoded English, and add a `columnX` override so a calendar's week columns can be pixel-aligned with an external coordinate function.
+- 43864d6: Add `lyra-lite-chart` `layout="scroll"` (fixed-width, horizontally-scrollable bars via `barWidth`), `maxLabels` axis-label decimation, and a `barX` coordinate override for pixel-aligning bars with a sibling `lyra-heatmap`.
+- 043b7b0: Move `LyraSelectSize` above `<lyra-select>`'s class JSDoc block so `custom-elements.json` correctly documents `lyra-select` as a custom element.
+- 7bbe3d2: Add `lyra-split` opt-in responsive collapse (`collapse="start"|"end"`, `rail-width`, `rail-breakpoint`, `float-breakpoint`): below `rail-breakpoint` the chosen pane clamps to a fixed rail width, below `float-breakpoint` it becomes an absolutely-positioned floating overlay, both signaled via a `data-collapse-state` attribute/dataset marker and the new `lyra-split-collapse-change` event.
+- f14165f: `<lyra-stat>` breakdown rows (`StatRow`) gain an optional `exactValue` field, mirroring the headline value's tooltip: setting it renders a `title` tooltip and makes that row's `[part='row-value']` keyboard-focusable, independently per row.
+- d62725d: `lyra-table`'s `[part='reveal-columns-button']` now renders only when a `priority` column is actually hidden by the `@container` breakpoints (or `showAllColumns` force-visible mode is active), instead of whenever any column merely declares a `priority`; the new `columnsHidden` reactive property and `lyra-columns-hidden-change` event expose the same real-time state to consumers.
+
+### Patch Changes
+
+- Updated dependencies [144ad8f]
+  - @aceshooting/lyra-flags@1.3.0
+
 ## 1.3.0
 
 ### Minor Changes
