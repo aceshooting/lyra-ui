@@ -31,15 +31,17 @@
  * `import`ed directly here, no stubbing/rewriting needed.
  */
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { flagUrl, flagUrls, FLAG_LOADERS } from '../index.js';
+import { flagUrl, flagUrls, FLAG_LOADERS, FLAG_LOADERS_DETAILED } from '../index.js';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const pkgDir = path.join(scriptDir, '..');
 const flagsDir = path.join(pkgDir, 'flags');
 const loadersDir = path.join(flagsDir, 'loaders');
+const detailedDir = path.join(flagsDir, 'detailed');
+const detailedLoadersDir = path.join(detailedDir, 'loaders');
 
 const svgCodes = readdirSync(flagsDir)
   .filter((name) => name.endsWith('.svg'))
@@ -140,4 +142,60 @@ assert.equal(await flagUrl('zz-not-a-real-code'), undefined);
 assert.equal(urls['zz-not-a-real-code'], undefined);
 assert.equal(FLAG_LOADERS['zz-not-a-real-code'], undefined);
 
-console.log(`OK — ${svgCodes.length} flags verified; flagUrl()/FLAG_LOADERS agree with flagUrls()'s eager map.`);
+// --- Detailed-variant pipeline (scripts/optimize-flags.mjs / the `detailed` half of
+// --- generate-index.mjs) ---
+
+const detailedCodes = existsSync(detailedDir)
+  ? readdirSync(detailedDir)
+      .filter((name) => name.endsWith('.svg'))
+      .map((name) => name.replace(/\.svg$/, ''))
+      .sort((a, b) => a.localeCompare(b))
+  : [];
+
+assert.equal(
+  Object.keys(FLAG_LOADERS_DETAILED).length,
+  detailedCodes.length,
+  'FLAG_LOADERS_DETAILED entry count does not match flags/detailed/*.svg on disk — run `pnpm run generate`.',
+);
+for (const code of detailedCodes) {
+  assert.ok(code in FLAG_LOADERS, `flags/detailed/${code}.svg has no matching flags/${code}.svg`);
+  assert.ok(code in FLAG_LOADERS_DETAILED, `FLAG_LOADERS_DETAILED missing entry for '${code}'`);
+  // eslint-disable-next-line no-await-in-loop -- plain assertion script, sequential is fine here
+  const detailedUrl = await flagUrl(code, { variant: 'detailed' });
+  assert.ok(detailedUrl, `flagUrl('${code}', { variant: 'detailed' }) should resolve to a truthy URL`);
+  // eslint-disable-next-line no-await-in-loop
+  const defaultUrl = await flagUrl(code);
+  assert.notEqual(
+    detailedUrl,
+    defaultUrl,
+    `'${code}' has a detailed variant, so its default and detailed URLs must differ`,
+  );
+}
+
+if (existsSync(detailedLoadersDir)) {
+  const detailedLoaderFiles = readdirSync(detailedLoadersDir)
+    .filter((name) => name.endsWith('.js'))
+    .map((name) => name.replace(/\.js$/, ''))
+    .sort((a, b) => a.localeCompare(b));
+  assert.deepEqual(
+    detailedLoaderFiles,
+    detailedCodes,
+    'flags/detailed/loaders/*.js does not have exactly one file per flags/detailed/*.svg — run `pnpm run generate`.',
+  );
+}
+
+// A code with no detailed variant falls back to the same URL for both — requesting `detailed`
+// must never 404 or diverge just because a flag was never large enough to need optimizing.
+const nonDetailedCode = svgCodes.find((code) => !detailedCodes.includes(code));
+if (nonDetailedCode) {
+  assert.equal(
+    await flagUrl(nonDetailedCode, { variant: 'detailed' }),
+    await flagUrl(nonDetailedCode),
+    `'${nonDetailedCode}' has no detailed variant, so both flagUrl() calls must resolve identically`,
+  );
+}
+
+console.log(
+  `OK — ${svgCodes.length} flags verified (${detailedCodes.length} with a detailed variant); ` +
+    "flagUrl()/FLAG_LOADERS agree with flagUrls()'s eager map.",
+);

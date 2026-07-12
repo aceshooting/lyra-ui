@@ -36,16 +36,44 @@ import { flagUrls } from '@aceshooting/lyra-flags';
 const urls = await flagUrls(); // -> { ad: '...', ae: '...', ..., zw: '...' } — all 249 at once
 ```
 
+## Compact vs. detailed variants
+
+A minority of flags (65 of 249) include a detailed coat of arms, seal, or emblem in their source
+artwork (e.g. `es`, `pt`, `sv`) — full illustrative vector detail that isn't visually distinguishable
+at icon scale but costs real transfer bytes regardless (the worst case, `sv`, was 759 KB raw before
+optimization). Those 65 codes ship **two variants**:
+
+- **Default** (what `flagUrl(code)` and `<lyra-flag country="...">` resolve to) — an SVGO-optimized
+  version tuned for icon-scale rendering (16-24px), ~65% smaller on average for the 65 affected
+  codes, with no visible fidelity loss at that scale.
+- **Detailed** — the pristine, unmodified original — opt in with `flagUrl(code, { variant:
+  'detailed' })` or `<lyra-flag detailed>`, for a use case where the flag renders larger than icon
+  scale (e.g. a hero display) and the extra detail is actually visible.
+
+For the other 184 codes (already appropriately sized), `variant: 'detailed'`/`detailed` is a safe
+no-op — both resolve to the same file.
+
+```js
+await flagUrl('es'); // -> compact, icon-optimized (~118 KB, was ~425 KB)
+await flagUrl('es', { variant: 'detailed' }); // -> pristine original (~425 KB)
+```
+
+Maintainers: `pnpm run optimize` (idempotent — re-running is a no-op for a code already processed)
+regenerates the compact/detailed split for any newly-added oversized flag; follow with `pnpm run
+generate` to update the generated loader index.
+
 ## Asset provenance / license
 
 The code in this package (`index.js`, `index.d.ts`) is MIT, © Aceshooting.
 
-The flag artwork (`flags/*.svg`) is vendored unmodified from Google's
+The flag artwork (`flags/*.svg`, and every `flags/detailed/*.svg`) is vendored from Google's
 [**Noto Emoji**](https://github.com/googlefonts/noto-emoji) project
 (`third_party/region-flags/waved-svg/`), traced there after visually matching three flags
-(France, the US, the UK) pixel-for-pixel against that source. Per that directory's `LICENSE`:
-the flags were downloaded from Wikipedia/Wikimedia Commons and verified to be **Public Domain
-or otherwise exempt from Copyright**. Full upstream `LICENSE`/`AUTHORS`/`README.third_party`
+(France, the US, the UK) pixel-for-pixel against that source. `flags/detailed/*.svg` (65 codes) are
+unmodified; the corresponding `flags/*.svg` for those same 65 codes is an SVGO-optimized derivative
+(see "Compact vs. detailed variants" above) — every other `flags/*.svg` is unmodified. Per that
+directory's `LICENSE`: the flags were downloaded from Wikipedia/Wikimedia Commons and verified to be
+**Public Domain or otherwise exempt from Copyright**. Full upstream `LICENSE`/`AUTHORS`/`README.third_party`
 text, the exact source commit, and per-flag exceptions are reproduced in
 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
 

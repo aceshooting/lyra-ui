@@ -10,6 +10,11 @@
  *  - `flags/eager.js` + `flags/eager.d.ts` — exports `FLAG_URLS` (eager, `Record<string, string>`,
  *    one `new URL(...)` per code), for the opposite, legitimate case: a consumer that genuinely
  *    wants every flag up front (e.g. a flag-picker listing every country).
+ *  - `flags/detailed/loaders/<code>.js` + `flags/generated-detailed.js`/`.d.ts` — same lazy-loader
+ *    shape as the two above, but scoped to whichever codes have a `flags/detailed/<code>.svg`
+ *    (the pristine, pre-optimization original — see `scripts/optimize-flags.mjs`). Most codes have
+ *    no detailed variant (`flags/<code>.svg` was never large enough to need optimizing), so
+ *    `FLAG_LOADERS_DETAILED` only ever covers a subset of the full code list.
  *
  * Why `FLAG_URLS` is a *separate file*, not just a second export alongside `FLAG_LOADERS`: this
  * was tried first, and it doesn't work — Vite's asset-URL transform scans a module's source for
@@ -47,13 +52,15 @@
  * Run via `pnpm run generate` (wired into `prepack`, so it also runs before publish). The
  * generated files are committed — do not hand-edit them, re-run this script instead.
  */
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const flagsDir = path.join(scriptDir, '..', 'flags');
 const loadersDir = path.join(flagsDir, 'loaders');
+const detailedDir = path.join(flagsDir, 'detailed');
+const detailedLoadersDir = path.join(detailedDir, 'loaders');
 
 const SVG_RE = /\.svg$/;
 
@@ -81,6 +88,29 @@ function collectCodes() {
       throw new Error(
         `flags/${code}.svg: code '${code}' is not a plain lowercase a-z string — ` +
           'generate-index.mjs assumes every code is a safe, unquoted object-literal key.',
+      );
+    }
+  }
+
+  return codes;
+}
+
+/** Codes with a preserved pristine original at `flags/detailed/<code>.svg` — a subset of
+ *  `collectCodes()`'s full list, populated by `scripts/optimize-flags.mjs`. Returns `[]` if
+ *  `flags/detailed/` doesn't exist yet (no flag has ever needed optimizing). */
+function collectDetailedCodes(allCodes) {
+  if (!existsSync(detailedDir)) return [];
+  const allCodeSet = new Set(allCodes);
+  const codes = readdirSync(detailedDir)
+    .filter((name) => SVG_RE.test(name))
+    .map((name) => name.replace(SVG_RE, ''))
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const code of codes) {
+    if (!allCodeSet.has(code)) {
+      throw new Error(
+        `flags/detailed/${code}.svg has no matching flags/${code}.svg — a detailed variant must ` +
+          'pair with a compact base flag of the same code.',
       );
     }
   }
@@ -153,8 +183,40 @@ function renderEagerDts() {
   );
 }
 
+function renderDetailedLoaderJs(code) {
+  return `${banner()}\nexport default new URL('../${code}.svg', import.meta.url).href;\n`;
+}
+
+function renderGeneratedDetailedJs(codes) {
+  const loaderLines = codes
+    .map((code) => `  ${code}: () => import('./detailed/loaders/${code}.js').then((m) => m.default),`)
+    .join('\n');
+
+  return (
+    `${banner()}\n` +
+    '/**\n' +
+    ' * Lazy map of ISO 3166-1 alpha-2 (or territory) code -> *detailed* (pre-optimization,\n' +
+    ' * full-fidelity) flag SVG URL loader — a subset of FLAG_LOADERS, one entry per code that has\n' +
+    ' * a flags/detailed/<code>.svg. `flagUrl(code, { variant: \'detailed\' })` checks this map\n' +
+    ' * first, falling back to FLAG_LOADERS for a code with no detailed variant. See\n' +
+    ' * scripts/optimize-flags.mjs for how flags/detailed/ is populated.\n' +
+    ' * @type {Record<string, () => Promise<string>>}\n' +
+    ' */\n' +
+    `export const FLAG_LOADERS_DETAILED = {\n${loaderLines}\n};\n`
+  );
+}
+
+function renderGeneratedDetailedDts() {
+  return (
+    `${banner()}\n` +
+    '/** Lazy map of ISO 3166-1 alpha-2 (or territory) code -> detailed flag SVG URL loader. */\n' +
+    'export declare const FLAG_LOADERS_DETAILED: Record<string, () => Promise<string>>;\n'
+  );
+}
+
 function main() {
   const codes = collectCodes();
+  const detailedCodes = collectDetailedCodes(codes);
 
   mkdirSync(loadersDir, { recursive: true });
   for (const code of codes) {
@@ -165,8 +227,17 @@ function main() {
   writeFileSync(path.join(flagsDir, 'eager.js'), renderEagerJs(codes));
   writeFileSync(path.join(flagsDir, 'eager.d.ts'), renderEagerDts());
 
+  if (detailedCodes.length > 0) mkdirSync(detailedLoadersDir, { recursive: true });
+  for (const code of detailedCodes) {
+    writeFileSync(path.join(detailedLoadersDir, `${code}.js`), renderDetailedLoaderJs(code));
+  }
+  writeFileSync(path.join(flagsDir, 'generated-detailed.js'), renderGeneratedDetailedJs(detailedCodes));
+  writeFileSync(path.join(flagsDir, 'generated-detailed.d.ts'), renderGeneratedDetailedDts());
+
   console.log(
-    `Generated flags/generated.js + flags/eager.js (+ .d.ts) + flags/loaders/*.js for ${codes.length} flag(s).`,
+    `Generated flags/generated.js + flags/eager.js (+ .d.ts) + flags/loaders/*.js for ${codes.length} flag(s), ` +
+      `plus flags/generated-detailed.js (+ .d.ts) + flags/detailed/loaders/*.js for ${detailedCodes.length} ` +
+      'detailed variant(s).',
   );
 }
 

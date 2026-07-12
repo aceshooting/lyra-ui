@@ -1,4 +1,5 @@
 import { FLAG_LOADERS } from './flags/generated.js';
+import { FLAG_LOADERS_DETAILED } from './flags/generated-detailed.js';
 
 /**
  * Resolves the URL of a flag SVG shipped in this package, fetching only that one flag.
@@ -31,12 +32,22 @@ import { FLAG_LOADERS } from './flags/generated.js';
  * unbundled (a plain browser `<script type="module">`, Node, `@web/test-runner`'s unbundled
  * ESM, ...): dynamic `import()` of a plain `.js` file, and `new URL()` of an adjacent asset, are
  * both native, loader-free platform behavior.
+ * `options.variant: 'detailed'` requests the pristine, pre-optimization original instead of the
+ * default icon-optimized SVG (see `scripts/optimize-flags.mjs`) — only meaningful for the minority
+ * of codes whose source art was large enough to need optimizing (`code in FLAG_LOADERS_DETAILED`);
+ * for every other code, the default and `detailed` variants are the same file, so this option is a
+ * safe no-op rather than an error. Useful for a consumer rendering a flag larger than icon scale
+ * (e.g. a hero display) that wants the full illustrative detail back.
  * @param {string} code ISO 3166-1 alpha-2 country/territory code, lowercase (e.g. `fr`, `us`).
+ * @param {{ variant?: 'detailed' }} [options]
  * @returns {Promise<string | undefined>} The flag's URL. For a `code` with no matching shipped
  *   flag, resolves `undefined` (same non-crashing "no image" outcome as the old code's
  *   now-404ing URL, for `<lyra-flag>`'s `<img src>` use).
  */
-export function flagUrl(code) {
+export function flagUrl(code, options) {
+  if (options?.variant === 'detailed' && FLAG_LOADERS_DETAILED[code]) {
+    return FLAG_LOADERS_DETAILED[code]();
+  }
   return FLAG_LOADERS[code]?.() ?? Promise.resolve(undefined);
 }
 
@@ -55,4 +66,4 @@ export async function flagUrls() {
   return (await import('./flags/eager.js')).FLAG_URLS;
 }
 
-export { FLAG_LOADERS };
+export { FLAG_LOADERS, FLAG_LOADERS_DETAILED };

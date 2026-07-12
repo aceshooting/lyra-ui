@@ -26,6 +26,7 @@
   "sideEffects": false,
   "scripts": {
     "generate": "node scripts/generate-index.mjs",
+    "optimize": "node scripts/optimize-flags.mjs",
     "test": "node scripts/test.mjs",
     "prepack": "pnpm run generate"
   },
@@ -44,5 +45,8 @@
     },
     "./flags/*": "./flags/*"
   },
-  "packageManager": "pnpm@11.10.0"
+  "packageManager": "pnpm@11.10.0",
+  "devDependencies": {
+    "svgo": "^4.0.1"
+  }
 }
