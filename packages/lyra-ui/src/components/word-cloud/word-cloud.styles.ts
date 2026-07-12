@@ -21,6 +21,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lyra-space-xs);
+    block-size: 100%;
   }
   svg {
     display: block;

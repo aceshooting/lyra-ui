@@ -207,3 +207,18 @@ it('is accessible with no data', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('constrains its rendered SVG to a host-assigned height instead of overflowing', async () => {
+  const el = (await fixture(html`<lyra-word-cloud
+    style="height: 128px; display: block;"
+    .words=${[
+      { text: 'alpha', weight: 10 },
+      { text: 'beta', weight: 5 },
+    ]}
+  ></lyra-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  const hostRect = el.getBoundingClientRect();
+  const svg = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  const svgRect = svg.getBoundingClientRect();
+  expect(Math.round(svgRect.height)).to.equal(Math.round(hostRect.height));
+});
