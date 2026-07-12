@@ -53,10 +53,10 @@ export class LyraSwitch extends LyraElement {
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
-  // What `form.reset()` restores to — captured once, from whatever the
-  // `checked` property reads at first connect (i.e. whatever the declarative
-  // `checked` attribute parsed to, since attribute parsing happens before
-  // `connectedCallback`). `checked` reflects, so unlike
+  // What `form.reset()` restores to — captured once from the declarative
+  // `checked` content attribute at first connect. A pre-connect `.checked`
+  // property assignment changes live state but not the reset default, matching
+  // native `checked`/`defaultChecked` semantics. `checked` reflects, so unlike
   // `FormAssociated`'s non-reflecting `value` this can't be captured from
   // `attributeChangedCallback` alone — that would also fire (and wrongly
   // redefine the default) every time the property setter itself reflects a
@@ -148,7 +148,7 @@ export class LyraSwitch extends LyraElement {
     super.connectedCallback();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
-      this._defaultChecked = this.checked;
+      this._defaultChecked = this.hasAttribute('checked');
     }
     this.updateValidity();
   }

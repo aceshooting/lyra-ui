@@ -309,6 +309,19 @@ it('resets to unchecked via form.reset() when no default was declared', async ()
   expect(new FormData(form).get('notify')).to.equal(null);
 });
 
+it('does not turn a pre-connect checked property assignment into the reset default', async () => {
+  const form = document.createElement('form');
+  const el = document.createElement('lyra-switch') as LyraSwitch;
+  el.checked = true;
+  form.append(el);
+  document.body.append(form);
+  await el.updateComplete;
+
+  form.reset();
+  expect(el.checked).to.be.false;
+  form.remove();
+});
+
 it('temporarily disables through a fieldset without overwriting the author disabled state', async () => {
   const form = (await fixture(html`
     <form>
