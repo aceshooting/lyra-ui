@@ -98,6 +98,140 @@ it('uses the shared --lyra-color-on-brand token instead of a raw #fff for select
   expect(selectedBlock![1]).to.not.match(/color:\s*#fff/);
 });
 
+// onGridKey: the ARIA-grid keyboard navigation handler (roving focus across
+// ArrowLeft/Right/Up/Down, PageUp/PageDown, Home/End, Enter/Space).
+function dispatchGridKey(el: LyraDatePicker, key: string): void {
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+}
+
+it('moves roving focus one day left/right with ArrowLeft/ArrowRight', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowRight');
+  await el.updateComplete;
+  let focused = el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+
+  dispatchGridKey(el, 'ArrowLeft');
+  await el.updateComplete;
+  focused = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+});
+
+it('moves roving focus one week up/down with ArrowUp/ArrowDown', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowDown');
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.querySelector('[data-date="2026-07-22"]') as HTMLButtonElement).getAttribute('tabindex'),
+  ).to.equal('0');
+
+  dispatchGridKey(el, 'ArrowUp');
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement).getAttribute('tabindex'),
+  ).to.equal('0');
+});
+
+it('jumps a month with PageUp/PageDown, re-rendering the grid for the new month', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+
+  dispatchGridKey(el, 'PageDown');
+  await el.updateComplete;
+  expect(title()).to.contain('august');
+  expect(el.shadowRoot!.querySelector('[data-date="2026-08-15"]')).to.exist;
+
+  dispatchGridKey(el, 'PageUp');
+  await el.updateComplete;
+  expect(title()).to.contain('july');
+  expect(el.shadowRoot!.querySelector('[data-date="2026-07-15"]')).to.exist;
+});
+
+it('moves focus to the first/last day of the month with Home/End', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'Home');
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.querySelector('[data-date="2026-07-01"]') as HTMLButtonElement).getAttribute('tabindex'),
+  ).to.equal('0');
+
+  dispatchGridKey(el, 'End');
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.querySelector('[data-date="2026-07-31"]') as HTMLButtonElement).getAttribute('tabindex'),
+  ).to.equal('0');
+});
+
+it('commits the currently-focused day with Enter or Space', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowRight'); // focus moves to 2026-07-16, nothing committed yet
+  await el.updateComplete;
+  expect(el.value).to.equal('2026-07-15');
+
+  setTimeout(() => dispatchGridKey(el, 'Enter'));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('2026-07-16');
+
+  dispatchGridKey(el, 'ArrowLeft'); // focus moves to 2026-07-15
+  await el.updateComplete;
+  setTimeout(() => dispatchGridKey(el, ' ')); // Space also commits
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('2026-07-15');
+});
+
+it('keeps exactly one grid cell in the roving tab order after moving focus', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowRight');
+  await el.updateComplete;
+
+  const inTabOrder = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(inTabOrder.length).to.equal(1);
+  expect((inTabOrder[0] as HTMLElement).dataset.date).to.equal('2026-07-16');
+});
+
+it('crosses a month boundary when ArrowRight moves past the last day of the month', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-31"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowRight');
+  await el.updateComplete;
+
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+  expect(title).to.contain('august');
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-08-01"]') as HTMLButtonElement;
+  expect(focused, 'expected the next day, in August, to be rendered').to.exist;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+});
+
+it('crosses a month boundary backwards when ArrowLeft moves before the first day of the month', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-01"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowLeft');
+  await el.updateComplete;
+
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+  expect(title).to.contain('june');
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-06-30"]') as HTMLButtonElement;
+  expect(focused, 'expected the previous day, in June, to be rendered').to.exist;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
