@@ -115,7 +115,6 @@
     "@types/d3-force": "^3.0.10",
     "@types/d3-selection": "^3.0.11",
     "@types/d3-zoom": "^3.0.8",
-    "@types/geojson": "^7946.0.16",
     "@types/sinonjs__fake-timers": "^15.0.1",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
