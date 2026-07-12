@@ -9,6 +9,8 @@ import { styles } from './select.styles.js';
 import { LyraOption } from '../combobox/option.js';
 import '../combobox/option.js';
 
+export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+
 /**
  * `<lyra-select>` — a plain closed-list dropdown: a direct `<lyra-*>`
  * counterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text
@@ -61,8 +63,6 @@ import '../combobox/option.js';
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  */
-export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
-
 export class LyraSelect extends LyraElement {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];
