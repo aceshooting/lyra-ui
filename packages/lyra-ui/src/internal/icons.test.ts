@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { render } from 'lit';
-import { chevronIcon, closeIcon, playIcon, pauseIcon, calendarIcon } from './icons.js';
+import { chevronIcon, closeIcon, playIcon, pauseIcon, calendarIcon, expandIcon } from './icons.js';
 
 function renderIcon(tpl: ReturnType<typeof chevronIcon>): SVGElement {
   const container = document.createElement('div');
@@ -43,4 +43,12 @@ it('every icon shares the same viewBox and stroke-width for visual consistency',
   const strokeWidths = new Set(svgs.map((s) => s.getAttribute('stroke-width')));
   expect(viewBoxes.size, 'all icons should share one viewBox').to.equal(1);
   expect(strokeWidths.size, 'all icons should share one stroke-width').to.equal(1);
+});
+
+it('expandIcon renders an svg with the shared viewBox', () => {
+  const template = expandIcon();
+  const container = document.createElement('div');
+  render(template, container);
+  const svg = container.querySelector('svg')!;
+  expect(svg.getAttribute('viewBox')).to.equal('0 0 24 24');
 });
