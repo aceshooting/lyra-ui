@@ -503,6 +503,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const invalid = this.touched && !this.internals.validity.valid;
     const describedBy = [hasError ? 'date-input-error' : '', hasHint ? 'date-input-hint' : '']
       .filter(Boolean)
       .join(' ');
@@ -516,10 +517,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             id=${this.inputId}
             part="input"
             type="text"
-            aria-label=${hasLabel ? nothing : this.placeholder || 'Date'}
+            aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Date')}
             aria-describedby=${describedBy || nothing}
+            aria-required=${this.required ? 'true' : 'false'}
+            aria-invalid=${invalid ? 'true' : 'false'}
             .value=${this.displayText}
             placeholder=${this.placeholder}
+            ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
             @change=${this.onInputChange}

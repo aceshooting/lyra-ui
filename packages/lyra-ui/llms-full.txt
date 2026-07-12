@@ -449,12 +449,13 @@ from the package root**, but worth knowing when reasoning about behavior): `pars
   on the text input. Escape *does* close it from anywhere inside the form control (including the
   nested picker's own day/nav buttons), returning focus to the expand button.
 - (date-input only) — typing an unparseable string and blurring/committing sets `badInput` via
-  `internals.setValidity()` and reverts the displayed text to the last valid commit, but does not
-  reflect `aria-invalid` onto the visible `<input part="input">` itself (unlike `lyra-combobox`,
-  which does reflect `aria-invalid`/`aria-required` onto its own input) — rely on `data-invalid`
-  (a host attribute, toggled the same way) or `reportValidity()` rather than assuming the input's own
-  ARIA state. A parseable typed date outside an active bound is committed instead and reports the
-  precise `rangeUnderflow`/`rangeOverflow` state.
+  `internals.setValidity()` and reverts the displayed text to the last valid commit. The visible
+  `<input part="input">` mirrors `required` through native `required`/`aria-required` and exposes
+  touched outer validity through `aria-invalid`; this includes required, bad-input, and range
+  failures owned by the form-associated host. A host `aria-label` is forwarded to the input and
+  takes precedence over the component's label/placeholder fallback. A parseable typed date outside
+  an active bound is committed instead and reports the precise `rangeUnderflow`/`rangeOverflow`
+  state.
 - (date-input only) — declarative, IDL, reset, and restored values are sanitized to exact ISO dates:
   calendar-invalid or malformed strings become `''` (and therefore `valueMissing` when required),
   while valid dates outside `min`/`max` or `disable-past`/`disable-future` remain submitted and expose
@@ -3202,6 +3203,10 @@ built-in send/stop button. **Form-associated** via the shared `FormAssociated` m
 (reflected), `required: boolean = false` (reflected) are all inherited, along with
 `checkValidity()`/`reportValidity()`, so it participates in native `<form>` submission/validation/
 reset like any other text control.
+
+The inner textarea mirrors `required` through native `required`/`aria-required`. Its
+`aria-invalid` remains false until the textarea has been blurred, then follows the host's
+`ElementInternals` validity as `value` or `required` changes.
 
 **Properties (own):**
 - `placeholder: string = ''`

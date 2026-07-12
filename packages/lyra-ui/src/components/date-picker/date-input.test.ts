@@ -794,6 +794,44 @@ it('wires aria-describedby to the visible hint/error text', async () => {
   expect(describedBy).to.include('date-input-error');
 });
 
+it('forwards its accessible name and required validity state to the inner input', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input aria-label="Departure date" label="Ignored label" required></lyra-date-input>`,
+  )) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+
+  expect(input.getAttribute('aria-label')).to.equal('Departure date');
+  expect(input.required).to.be.true;
+  expect(input.getAttribute('aria-required')).to.equal('true');
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+
+  input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+
+  el.value = '2026-07-15';
+  await el.updateComplete;
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+
+  el.required = false;
+  await el.updateComplete;
+  expect(input.required).to.be.false;
+  expect(input.getAttribute('aria-required')).to.equal('false');
+});
+
+it('forwards custom bad-input validity to the inner input after it is touched', async () => {
+  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+
+  input.value = 'not a date';
+  input.dispatchEvent(new Event('change'));
+  input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+
+  expect(el.internals.validity.badInput).to.be.true;
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+});
+
 it("parses an ambiguous dd/mm/yyyy-style date according to the locale, not Date.parse()'s bias", async () => {
   const el = (await fixture(html`<lyra-date-input locale="en-GB"></lyra-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;

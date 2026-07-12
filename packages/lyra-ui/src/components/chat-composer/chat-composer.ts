@@ -108,6 +108,7 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
   @state() private hasLeadingSlot = false;
   @state() private hasChipsSlot = false;
   @state() private hasTrailingSlot = false;
+  @state() private touched = false;
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
 
@@ -219,6 +220,10 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
     this.hasTrailingSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onTextareaBlur = (): void => {
+    this.touched = true;
+  };
+
   private renderActionButton(): TemplateResult {
     const busy = this.status !== 'idle';
     return html`
@@ -247,12 +252,16 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
           <textarea
             part="textarea"
             aria-label=${this.placeholder || 'Message'}
+            aria-required=${this.required ? 'true' : 'false'}
+            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             .value=${this.value}
             placeholder=${this.placeholder}
             rows=${Math.max(1, this.minRows || 1)}
+            ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             @input=${this.onTextareaInput}
             @keydown=${this.onTextareaKeyDown}
+            @blur=${this.onTextareaBlur}
           ></textarea>
           <span part="trailing">
             <slot name="trailing" @slotchange=${this.onTrailingSlotChange}></slot>

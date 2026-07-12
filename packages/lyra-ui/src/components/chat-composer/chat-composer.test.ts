@@ -337,6 +337,28 @@ it('blocks a required, empty composer from submitting the form', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('forwards required and touched validity state to the textarea', async () => {
+  const el = (await fixture(html`<lyra-chat-composer required></lyra-chat-composer>`)) as LyraChatComposer;
+  const textarea = textareaOf(el);
+
+  expect(textarea.required).to.be.true;
+  expect(textarea.getAttribute('aria-required')).to.equal('true');
+  expect(textarea.getAttribute('aria-invalid')).to.equal('false');
+
+  textarea.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(textarea.getAttribute('aria-invalid')).to.equal('true');
+
+  el.value = 'Ready';
+  await el.updateComplete;
+  expect(textarea.getAttribute('aria-invalid')).to.equal('false');
+
+  el.required = false;
+  await el.updateComplete;
+  expect(textarea.required).to.be.false;
+  expect(textarea.getAttribute('aria-required')).to.equal('false');
+});
+
 it('focuses its textarea when direct or form submission validation fails', async () => {
   const form = (await fixture(html`
     <form>
