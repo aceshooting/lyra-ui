@@ -385,6 +385,50 @@ it('keeps sizes summing to 100 when two adjacent dividers are dragged concurrent
   expect(total).to.be.closeTo(100, 0.5);
 });
 
+it('composes two adjacent concurrent drags correctly when each pointer fires multiple moves (not just one move per pointer)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+  )) as LyraSplit;
+  el.sizes = [40, 30, 30];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200); // 1% == 2px, so requested deltas below are exact.
+  const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
+  dividers.forEach((d) => (d.setPointerCapture = () => {}));
+
+  // Pointer 1 drags divider 0 (the panel0/panel1 pair); pointer 2 drags
+  // divider 1 (the panel1/panel2 pair) -- panel1 is the shared panel. Both
+  // pointers start, then EACH fires two moves, interleaved, so pointer 1's
+  // own second move writes to the shared panel1 in between pointer 2's two
+  // moves -- exactly the sequence that contaminates pointer 2's `appliedDelta`
+  // under the buggy "absolute since drag-start" formula (round 1's fix),
+  // even though a single-move-per-pointer test never observes it.
+  pointerDown(dividers[0], 1, 100);
+  pointerDown(dividers[1], 2, 300);
+
+  pointerMove(1, 108); // pointer 1 requests +4%
+  pointerMove(2, 312); // pointer 2 requests +6%
+  pointerMove(1, 114); // pointer 1 requests +7% total (a further +3% own increment)
+  pointerMove(2, 322); // pointer 2 requests +11% total (a further +5% own increment)
+  await el.updateComplete;
+
+  // Nothing here saturates a bound, so the final sizes must equal simply
+  // composing each pointer's own *total* requested delta independently onto
+  // the starting sizes: panel0 only ever responds to pointer 1's requests
+  // (40 + 7 = 47), panel2 only ever responds to pointer 2's requests
+  // (30 - 11 = 19), and the shared panel1 absorbs both (30 - 7 + 11 = 34).
+  // The buggy formula instead yields [47, 38, 15] here -- still summing to
+  // 100 (so a "sums to 100" assertion alone would miss it), but wrong.
+  expect(el.sizes[0]).to.be.closeTo(47, 1e-9);
+  expect(el.sizes[1]).to.be.closeTo(34, 1e-9);
+  expect(el.sizes[2]).to.be.closeTo(19, 1e-9);
+  const total = el.sizes.reduce((s, n) => s + n, 0);
+  expect(total).to.be.closeTo(100, 1e-9);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
+});
+
 it('returns to the exact starting sizes after a drag saturates a bound and then reverses back to the start position (no drift from the clamped-away delta)', async () => {
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div></lyra-split>`,

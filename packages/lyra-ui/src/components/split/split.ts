@@ -16,7 +16,6 @@ const NO_MAX_PX = 1_000_000;
 interface DragState {
   index: number;
   startPos: number;
-  startSizes: number[];
   base: HTMLElement;
   /** Cumulative delta already folded into the live `sizes` so far this
    *  gesture — clamping against live sizes (see onPointerMove) means each
@@ -215,7 +214,6 @@ export class LyraSplit extends LyraElement {
     this.drags.set(e.pointerId, {
       index,
       startPos: this.orientation === 'vertical' ? e.clientY : e.clientX,
-      startSizes: [...this.sizes],
       base,
       appliedDelta: 0,
     });
@@ -248,19 +246,26 @@ export class LyraSplit extends LyraElement {
     // stay individually valid while their shared panel drifts past what either
     // pair alone would allow, letting the total exceed 100%. Since the clamp
     // basis is now the live, already-partially-applied `this.sizes` instead of
-    // `drag.startSizes`, only the *incremental* delta since the last move may
-    // be applied here (not the cumulative-since-drag-start delta a
+    // a fixed drag-start snapshot, only the *incremental* delta since the last
+    // move may be applied here (not the cumulative-since-drag-start delta a
     // snapshot-based clamp would use).
     const incremental = cumulativeDelta - drag.appliedDelta;
+    const priorValue = this.sizes[drag.index];
     const paired = this.clampPair(this.sizes, drag.index, incremental, total);
-    // Track the *realized* change relative to drag-start (post-clamp), not
-    // the raw requested cumulative delta -- clampPair can cap the actual
-    // move short of what was requested (e.g. a drag saturating a panel's
-    // min/panelConstraints bound). If appliedDelta assumed the full request
-    // had landed, the next move's incremental would silently lose track of
-    // the clamped-away portion, permanently drifting even after the pointer
-    // returns to its exact starting position.
-    drag.appliedDelta = paired[drag.index] - drag.startSizes[drag.index];
+    // Accumulate this move's own *realized* increment (post-clamp) onto the
+    // running total, rather than recomputing an absolute "total since
+    // drag-start" diff against a fixed startSizes snapshot. clampPair can
+    // cap the actual move short of what was requested (e.g. a drag
+    // saturating a panel's min/panelConstraints bound), so the realized
+    // portion still has to be tracked instead of the raw request -- that
+    // part of round 1's fix stands. But an absolute since-start diff also
+    // silently absorbs any change a DIFFERENT concurrent pointer's drag
+    // makes to this same shared panel between this pointer's own moves
+    // (adjacent dividers share one panel: divider i's index+1 panel is
+    // divider i+1's index panel), corrupting this pointer's next incremental
+    // calculation. Summing only this move's own delta (paired vs. the value
+    // immediately prior to *this* clamp) avoids both bugs at once.
+    drag.appliedDelta += paired[drag.index] - priorValue;
     // Merge only this drag's pair into the live sizes so a concurrent drag
     // on another divider (different pointerId) isn't clobbered.
     const next = [...this.sizes];
