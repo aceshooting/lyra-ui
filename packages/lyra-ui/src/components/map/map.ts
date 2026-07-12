@@ -360,7 +360,10 @@ export class LyraMap extends LyraElement {
       if (existing && this._markerColors.get(key) !== m.color) {
         // `color` is baked into the marker's SVG at construction time with
         // no way to mutate it afterwards -- fall through to the "no existing
-        // marker" branch below to reconstruct it instead.
+        // marker" branch below to reconstruct it instead. Note: this closes
+        // any popup the user currently has open on this marker (a fresh,
+        // closed Popup is built for the new instance) -- an accepted, narrow
+        // side effect of the reconstruction fallback, not a bug.
         existing.remove();
         this._markerInstances.delete(key);
         this._markerColors.delete(key);
