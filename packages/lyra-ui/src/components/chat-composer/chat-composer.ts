@@ -195,7 +195,7 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
   };
 
   private onActionClick = (): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     if (this.status === 'idle') {
       this.submit();
     } else {
@@ -226,7 +226,7 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
         part="action-button"
         type="button"
         aria-label=${busy ? 'Stop generating' : 'Send message'}
-        ?disabled=${this.disabled}
+        ?disabled=${this.effectiveDisabled}
         @click=${this.onActionClick}
       >
         ${busy ? stopIcon() : sendIcon()}
@@ -250,7 +250,7 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
             .value=${this.value}
             placeholder=${this.placeholder}
             rows=${Math.max(1, this.minRows || 1)}
-            ?disabled=${this.disabled}
+            ?disabled=${this.effectiveDisabled}
             @input=${this.onTextareaInput}
             @keydown=${this.onTextareaKeyDown}
           ></textarea>

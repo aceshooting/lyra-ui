@@ -179,7 +179,7 @@ export class LyraSlider extends FormAssociated(LyraElement) {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     const current = this.valueAsNumber;
     // Under RTL, physical ArrowRight moves toward inset-inline-start, i.e. a
     // lower value — swap which physical key counts as "forward", matching
@@ -219,12 +219,12 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // lyra-input) repeatedly but still commits only once, on the eventual
     // keyup — the same drag-like "continuous input, single final change"
     // shape a pointer drag has.
-    if (this.disabled || !isSliderKey(e.key)) return;
+    if (this.effectiveDisabled || !isSliderKey(e.key)) return;
     this.emit('lyra-change', { value: this.valueAsNumber });
   };
 
   private onPointerDown = (e: PointerEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     this.activePointers.add(e.pointerId);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
@@ -238,7 +238,7 @@ export class LyraSlider extends FormAssociated(LyraElement) {
 
   private onPointerMove = (e: PointerEvent): void => {
     if (!this.activePointers.has(e.pointerId)) return;
-    if (this.disabled) {
+    if (this.effectiveDisabled) {
       // These are window-level listeners driven by setPointerCapture, so
       // they keep firing for this pointerId regardless of the `disabled`
       // reflection — a drag already in progress would otherwise keep
@@ -317,13 +317,13 @@ export class LyraSlider extends FormAssociated(LyraElement) {
         <div
           part="thumb"
           role="slider"
-          tabindex=${this.disabled ? '-1' : '0'}
+          tabindex=${this.effectiveDisabled ? '-1' : '0'}
           aria-valuemin=${lo}
           aria-valuemax=${hi}
           aria-valuenow=${num}
           aria-valuetext=${text}
           aria-label=${ariaLabel}
-          aria-disabled=${this.disabled ? 'true' : nothing}
+          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           style=${`inset-inline-start:${pct}%`}
           @pointerdown=${this.onPointerDown}
           @keydown=${this.onKeyDown}

@@ -359,7 +359,12 @@ it('formDisabledCallback disables the control via a fieldset', async () => {
     </form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
-  expect(el.disabled).to.be.true;
+  // `el.disabled` (the consumer-facing IDL property/attribute) is never
+  // mutated by fieldset cascading -- only the combined `effectiveDisabled`
+  // reflects it (mirrors lyra-combobox/lyra-select's identical
+  // `_fieldsetDisabled`/`effectiveDisabled` pattern).
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.disabled).to.be.false;
 });
 
 it('is accessible in the default, empty state', async () => {
