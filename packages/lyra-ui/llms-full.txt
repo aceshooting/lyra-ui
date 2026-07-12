@@ -211,6 +211,9 @@ another unnamed combobox in the same form.
 - naming drift from Web Awesome parity: the shipped attribute is **`with-clear`**, not
   `clearable` (which is what `<wa-combobox>` uses) — don't copy-paste WA docs assuming a 1:1
   attribute name here.
+- a host-level `aria-label` attribute on `<lyra-combobox>` now takes priority over `label`/
+  `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
+  previously it was silently ignored. Matches the same fallback on `<lyra-select>`.
 - no `size` variant (small/medium/large) unlike sibling `lyra-toast-item`.
 - `aria-required` reflects `required` immediately; `aria-invalid`, by contrast, only reflects
   **after the field has been touched** (first `blur`) — a `required` field with a validity error
@@ -252,6 +255,8 @@ Single-select only, with no `filter`/`source`/`with-clear`/`max-options-visible`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
+- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lyra-toast-item`'s `size`, for
+  compact toolbar placements that don't fit the default trigger height)
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)
 
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
@@ -293,6 +298,9 @@ secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 - `aria-required` on the trigger reflects `required` immediately; `aria-invalid` only reflects once
   the trigger has been blurred (touched) at least once, mirroring `lyra-combobox`'s own input.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup.
+- The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling
+  back to `label`/`placeholder`/`"Select"` — a plain `aria-label` on `<lyra-select>` is no longer
+  silently ignored.
 
 ---
 
@@ -588,8 +596,8 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
   the small per-flag async hop when you already have the URL at build time, e.g. from
   `import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`. `label` is effectively required
   alongside `src` since there's no `country`/`language` to derive a fallback `alt` from.)
-- `label?: string` (accessible name / `alt` text — **defaults to the bare uppercase *resolved
-  country* code if omitted**, see gotchas)
+- `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
+  name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
 - `round: boolean = false` (reflected — circular crop)
 
 **Events:** none.
@@ -627,11 +635,12 @@ pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> r
 - Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
   resolver call, so there's a brief loading-skeleton window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.
-- if `label` is omitted, the accessible name (`alt`) falls back to the **bare uppercase resolved
-  country code** — for `language="en"` that's `"GB"` (the mapped country), not `"EN"` (the language
-  tag itself). A screen reader will typically spell this out letter-by-letter rather than announce a
-  country name. Always pass an explicit `label` (e.g. `"France"`) if the flag conveys real
-  information rather than being purely decorative.
+- if `label` is omitted, the accessible name (`alt`) falls back to a localized region name via
+  `Intl.DisplayNames([navigator.language], { type: 'region' })` (e.g. `"United Kingdom"`) instead of
+  a bare code — for `language="en"` that's derived from `"GB"` (the mapped country), not `"EN"` (the
+  language tag itself). Falls back further to the bare uppercase code if `Intl.DisplayNames` throws
+  for an unrecognized region or isn't available. You can still pass an explicit `label` (e.g.
+  `"France"`) to override the derived name.
 - an invalid `country` (anything not matching the ISO 3166-1 alpha-2 shape, e.g. containing `../`)
   is rejected before it ever reaches the peer's `flagUrl()` resolver — treated the same as an
   unknown/missing flag rather than being passed through. `languageToCountry()`'s region-subtag path
@@ -752,16 +761,27 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
   a brand-colored accent edge, orthogonal to the status `variant`; status semantics still win over
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
   `'neutral'`, never overriding an actual `success`/`warning`/`danger` value color
+- `exactValue: string = ''` (attribute `exact-value`) — rendered as a `title` attribute on
+  `[part="value"]` for a hover tooltip (e.g. `value="$1.2K" exact-value="$1,204.37"`); also gives
+  `[part="value"]` `tabindex="0"` (only when set) so the tooltip is reachable by keyboard focus, not
+  just hover
+- `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
+  rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
+- `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and
+  hides `[part="unit"]`, for rendering a loading/status message in place of a numeric value
+- `compact: boolean = false` (reflected) — tighter card padding; same convention as `lyra-empty`'s and
+  `lyra-widget`'s `compact`
 
 **Events:** none.
 
 **Slots:** default (leading icon), `caption` (rich caption content — overrides the `caption`
 attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lyra-sparkline
 slot="spark">`, or other compact trend visual — `lyra-stat` only reserves the slot and doesn't
-render one itself)
+render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
+is provided)
 
-**CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `spark`, `caption`,
-`rows`, `row`, `row-label`, `row-value`
+**CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
+`caption`, `rows`, `row`, `row-label`, `row-value`
 
 **Themeable custom properties:** shared tokens only (`--lyra-color-success/-warning/-danger` drive
 the `variant`-colored value text and up/down trend pill; `--lyra-color-brand` drives `emphasis`'s
@@ -1063,6 +1083,12 @@ position) survives the transition.
 - `collapsed: boolean = false` (reflected)
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
 - `fullscreen: boolean = false` (reflected)
+- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — raw CSS `inset` shorthand applied to
+  `[part="base"]` and `[part="backdrop"]` while fullscreen instead of the default
+  `var(--lyra-space-l)` on every side, e.g. `"0 0 0 240px"` to leave a 240px persistent
+  sidebar/toolbar visible during fullscreen
+- `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
+  `lyra-empty`'s `compact`
 
 **Events:** `lyra-collapse-change` (`detail: boolean`, the new `collapsed` state),
 `lyra-fullscreen-change` (`detail: boolean`, the new `fullscreen` state — also fired when fullscreen
@@ -1095,10 +1121,12 @@ to the panel's own focusable content (`actions` slot → collapse/fullscreen but
 matching visual tab order — resolved shadow-piercingly, so a slotted custom element's real
 focusable target inside its own shadow root is found too) so keyboard focus can't escape to page
 content hidden behind the backdrop. Escape or clicking the backdrop exits fullscreen and returns
-focus to whichever button triggered it.
+focus to whichever button triggered it. Set `fullscreen-inset` (e.g. `"0 0 0 240px"`) to reserve
+space for a persistent sidebar/toolbar that should stay visible instead of being covered by the
+fullscreen panel/backdrop — it overrides the default `var(--lyra-space-l)` inset on every side for
+both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/body padding.
 
 **Known gotchas:**
-- no size/density variant — header and body padding are fixed.
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) restores the
   scroll lock and the Tab-trap `keydown` listener if `fullscreen` was still `true` across the
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in between, so
@@ -1327,6 +1355,11 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
   `[part="legend-annotation"]` entry in the legend.
+- `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
+  formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
+  position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
+  Unset (the default) falls back to the built-in English "Row X, Col Y: value" / "Mon DD: value"
+  template — additive, not breaking.
 
 **Events:** `lyra-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode)
@@ -1387,16 +1420,19 @@ color) and `--lyra-space-xs`.
   since `draw()` unconditionally sets an inline `canvas.style.width/height` that wins over it.
   Calendar mode ignores `fit-to-width` entirely — its canvas is always sized from the computed
   `weekCount`.
-- the host itself is unconditionally `role="img"` with a dimensions+range summary `aria-label`
-  (calendar mode: a day-count + range summary instead), same as before — but `[part="canvas"]`
-  inside it is now a real focusable, keyboard-operable, per-cell-interactive control (roving
-  arrow-key focus, `[part="live-region"]` announcements, `lyra-cell-click`). `role="img"` is
-  documented (ARIA) to flatten its subtree to a single image for some assistive tech, which is in
-  tension with a focusable descendant inside it — plausible from the code, unverified against real
-  AT.
+- the host is `role="group"` (not `role="img"`) with a dimensions+range summary `aria-label`
+  (calendar mode: a day-count + range summary instead) — `[part="canvas"]` inside it is a real
+  focusable, keyboard-operable, per-cell-interactive control (roving arrow-key focus,
+  `[part="live-region"]` announcements, `lyra-cell-click`), and `role="img"` is documented (ARIA) to
+  flatten its subtree to a single image for some assistive tech, which conflicted with that
+  focusable descendant — fixed, matching `lyra-lite-chart`/`lyra-word-cloud`'s existing `role="group"`
+  pattern.
 - `NaN`/non-finite cell values in matrix mode are correctly treated as no-data now (alongside `-1`),
   and repeated DPR crossings (moving the window across displays with different pixel ratios) no
   longer leak a `MediaQueryList` listener per crossing — both previously-known issues are fixed.
+- calendar mode's date labels (used by the default `cellText` template and the tooltip/live-region
+  text) now format via the runtime locale (`toLocaleString(undefined, ...)`) instead of a hardcoded
+  `'en'` — fixed.
 
 ---
 
@@ -1416,7 +1452,7 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
-- `seed?: number` (attribute: false) — when set, seeds each node's initial x/y deterministically
+- `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
   `prefers-reduced-motion` has, see gotchas)
@@ -1533,6 +1569,11 @@ descendants of the treeitem, matching the WAI-ARIA treeitem pattern's containmen
 - `item: TreeItem` (required, attribute: false)
 - `depth: number = 0`
 - `expanded: boolean = false` (reflected)
+- `activeId: string | null = null` (attribute: false) — the id of the tree's roving-tabindex-focused
+  item, pushed down from `<lyra-tree>`; normally set internally, not by consumers
+- `setSize: number = 1`, `posInSet: number = 1` (attribute: false) — this node's `aria-setsize`/
+  `aria-posinset` values among its siblings, pushed down from `<lyra-tree>`; normally set internally,
+  not by consumers
 
 **Methods:** `expand()`, `collapse()` (each a no-op if already in that state, or a leaf), `select()`
 (fires `lyra-node-select`).
@@ -1667,6 +1708,14 @@ respectively; plus shared `--lyra-space-xs`.
   passthrough is deep-merged with `__proto__`/`constructor`/`prototype` keys skipped unconditionally,
   so a JSON-sourced `config` (e.g. parsed from an API response) can't reach up and pollute
   `Object.prototype` through the merge.
+- lazy-redraw + memoization: an `IntersectionObserver` gates `draw()` — while the host is scrolled
+  off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
+  single redraw fires once it re-enters the viewport). Independently, a content-signature check
+  (`type`, `labels`, `datasets`, `legend`, `area`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
+  `horizontal`, `stacked`, `config`) skips calling into Chart.js when none of those have actually
+  changed since the last draw (e.g. an unrelated property/state update, or a bare `requestUpdate()`).
+  `refreshTheme()` calls `draw()` directly and is unaffected by either gate — it always redraws, since
+  a theme change isn't reflected in any tracked property.
 
 ---
 
@@ -1691,10 +1740,21 @@ passthrough). Not a subclass of `LyraChart`.
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
 - `stacked: boolean = false` — sums each category's bars into one segmented bar instead of grouping
   them side by side; ignored for `type="line"`
+- `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
+  display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
+  Falls back to the built-in "nice numbers" formatter when unset.
 
 **Events:** `lyra-point-click` — fired when a bar/point is activated (click, or Enter/Space while
 focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
 | null }` — same shape as `lyra-chart`'s `lyra-point-click`.
+
+**Performance:** rendering is `IntersectionObserver`-gated and content-signature-memoized — `render()`
+skips recomputing the grid/marks (and reuses the previous `TemplateResult`) while the host is scrolled
+off-screen, or when none of the content-affecting properties (`type`, `labels`, `datasets`, `legend`,
+`xLabel`, `yLabel`, `beginAtZero`, `stacked`, or the measured plot size) have changed since the last
+render. A `tickFormat` identity change alone (with everything else unchanged) does not force a redraw —
+in practice `tickFormat` is stable across a component's lifetime, and any data change that would make a
+different `tickFormat` output visible already changes `datasets`/`labels` too.
 
 **Slots:** none.
 
