@@ -22,7 +22,12 @@ npm install @aceshooting/lyra-ui
 # optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lyra-box-plot>
 # optional peer: maplibre-gl, only needed for <lyra-map> — also import
 #   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lyra-map only
-#   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet
+#   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet.
+#   <lyra-map> falls back to OpenStreetMap's demo tile server when you don't
+#   set `mapStyle` — fine for local dev, but NOT for production (no capacity
+#   guarantees, requires an identifying User-Agent, subject to IP-blocking —
+#   see https://operations.osmfoundation.org/policies/tiles/). Production
+#   apps must supply their own `mapStyle`.
 ```
 
 ## Usage
@@ -127,7 +132,7 @@ Tier 3, then a map/file-input batch). Grouped by the release that introduced eac
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend + choropleth GeoJSON layer, plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above) |
+| `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend, choropleth GeoJSON layer, and point markers, plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above). Defaults to OpenStreetMap's demo tiles when `mapStyle` is unset — **production apps must supply their own `mapStyle`** (see Install above / Known limitations) |
 | `<lyra-file-input>` | — (extra) | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
 
 ## Known limitations
@@ -144,6 +149,11 @@ A non-exhaustive list of gaps a new consumer should know about before adopting:
 - `<lyra-file-input>`'s `accept` attribute only constrains the native file-picker dialog; it has
   no effect on the drag-drop path, so dropped files of a type `accept` would otherwise exclude are
   silently accepted unless you also set `allowedMimeTypes`/`forbiddenMimeTypes`.
+- `<lyra-map>`'s default `mapStyle` (used only when you don't set one) points at OpenStreetMap's
+  shared demo tile server — convenient for local development, but its usage policy forbids
+  bulk/production traffic and non-compliant clients are rate-limited or IP-blocked (see
+  https://operations.osmfoundation.org/policies/tiles/). Always pass your own `mapStyle` in
+  production (a hosted vector/raster style from a tile provider you have a plan with).
 
 ## Development
 

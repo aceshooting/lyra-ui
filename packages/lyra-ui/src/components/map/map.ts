@@ -28,6 +28,18 @@ export interface MapMarker {
   html?: string;
 }
 
+/**
+ * Fallback `mapStyle` used only when a consumer never sets one. Points at
+ * OpenStreetMap's shared **demo** tile server (`tile.openstreetmap.org`),
+ * which is explicitly NOT for production/bulk use: it has no capacity
+ * guarantees, requires an identifying `User-Agent`/`Referer`, and will
+ * rate-limit or IP-block non-compliant or high-volume clients per the OSM
+ * Foundation's tile usage policy
+ * (https://operations.osmfoundation.org/policies/tiles/). Convenient for
+ * local development and quick prototypes only — production apps MUST supply
+ * their own `mapStyle` (a hosted vector/raster style from a tile provider
+ * you have a plan with, or your own tile server).
+ */
 const DEFAULT_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -50,6 +62,11 @@ const DEFAULT_STYLE: StyleSpecification = {
  * @event lyra-map-load - Fired once the underlying maplibregl.Map loads.
  * @event lyra-map-click - `detail: { lngLat, feature? }`.
  * @csspart base, container, legend, legend-swatch
+ *
+ * ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile
+ * server, which is not suitable for production traffic — see the
+ * `DEFAULT_STYLE` doc comment in `map.ts`. Always pass an explicit
+ * `mapStyle` in production.
  */
 export class LyraMap extends LyraElement {
   static styles = [LyraElement.styles, styles];
