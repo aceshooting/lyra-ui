@@ -91,20 +91,8 @@ fi
 current_version="$(node -p "require('$PKG_JSON').version")"
 echo "Current $PKG_NAME version: $current_version"
 echo "Releasing as gh account: $(gh api user --jq .login)"
-read -rp "New version to publish: " new_version
-
-if [[ -z "$new_version" ]]; then
-  echo "Error: version cannot be empty." >&2
-  exit 1
-fi
-
-if ! [[ "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-  echo "Error: '$new_version' does not look like a valid semver version." >&2
-  exit 1
-fi
-
-if git rev-parse "$new_version" >/dev/null 2>&1; then
-  echo "Error: git tag '$new_version' already exists." >&2
+if ! ls .changeset/*.md >/dev/null 2>&1; then
+  echo "Error: no pending changesets found in .changeset/. Run 'pnpm changeset' first to describe this release's changes." >&2
   exit 1
 fi
 
@@ -128,14 +116,19 @@ else
 fi
 
 echo
-echo "==> Setting $PKG_NAME version to $new_version"
-node -e "
-const fs = require('fs');
-const path = '$PKG_JSON';
-const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
-pkg.version = '$new_version';
-fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
-"
+echo "==> Consuming changesets: bumping version(s) and generating CHANGELOG.md"
+pnpm changeset version
+
+new_version="$(node -p "require('$PKG_JSON').version")"
+if [[ "$new_version" == "$current_version" ]]; then
+  echo "Error: 'pnpm changeset version' did not change $PKG_NAME's version — check .changeset/ for a changeset targeting this package." >&2
+  exit 1
+fi
+
+if git rev-parse "$new_version" >/dev/null 2>&1; then
+  echo "Error: git tag '$new_version' already exists." >&2
+  exit 1
+fi
 
 echo
 echo "==> Installing to refresh lockfile"
@@ -226,7 +219,7 @@ git push origin HEAD "$new_version"
 
 echo
 echo "==> Creating GitHub Release"
-release_files=("$tarball_path" "$PKG_DIR/custom-elements.json" "$PKG_DIR/llms.txt" "$PKG_DIR/llms-full.txt")
+release_files=("$tarball_path" "$PKG_DIR/custom-elements.json" "$PKG_DIR/llms.txt" "$PKG_DIR/llms-full.txt" "$PKG_DIR/CHANGELOG.md")
 for f in "${release_files[@]}"; do
   if [[ ! -f "$f" ]]; then
     echo "Error: release artifact missing: $f" >&2
