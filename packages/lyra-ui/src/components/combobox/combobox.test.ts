@@ -74,6 +74,16 @@ it('clears the value with the clear button', async () => {
   expect(el.value).to.equal('');
 });
 
+it('opens the listbox on ArrowUp when closed, same as ArrowDown', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(el.open).to.be.false;
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+});
+
 it('selects with keyboard (ArrowDown + Enter)', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;

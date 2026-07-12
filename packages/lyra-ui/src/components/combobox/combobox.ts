@@ -375,6 +375,7 @@ export class LyraCombobox extends LyraElement {
         break;
       case 'ArrowUp':
         e.preventDefault();
+        if (!this.open) return this.show();
         this.activeIndex = Math.max(0, this.activeIndex - 1);
         break;
       case 'Enter':
