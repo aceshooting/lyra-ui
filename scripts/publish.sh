@@ -91,7 +91,7 @@ fi
 current_version="$(node -p "require('$PKG_JSON').version")"
 echo "Current $PKG_NAME version: $current_version"
 echo "Releasing as gh account: $(gh api user --jq .login)"
-if ! ls .changeset/*.md >/dev/null 2>&1; then
+if [[ -z "$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit)" ]]; then
   echo "Error: no pending changesets found in .changeset/. Run 'pnpm changeset' first to describe this release's changes." >&2
   exit 1
 fi
