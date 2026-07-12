@@ -385,6 +385,41 @@ it('keeps sizes summing to 100 when two adjacent dividers are dragged concurrent
   expect(total).to.be.closeTo(100, 0.5);
 });
 
+it('returns to the exact starting sizes after a drag saturates a bound and then reverses back to the start position (no drift from the clamped-away delta)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 100);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  // Push panel[0] well past the pair's max (90, since panel[1]'s default
+  // min=10 caps it) -- this saturates the clamp, discarding part of the
+  // requested delta (requested +50, only +40 actually realized).
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150 }));
+  expect(el.sizes[0]).to.equal(90);
+
+  // Reverse partway: still saturated, since the pointer hasn't crossed back
+  // under the threshold that would un-clamp it.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 145 }));
+  expect(el.sizes[0]).to.equal(90);
+
+  // Return the pointer to its exact starting position: the panel must land
+  // back on its exact starting size. A buggy `appliedDelta` that tracks the
+  // raw requested delta (instead of what was actually realized post-clamp)
+  // loses track of the clamped-away portion and drifts here instead.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
+  expect(el.sizes[0]).to.equal(50);
+  expect(el.sizes[1]).to.equal(50);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+});
+
 it('clears inline flex/order styles from a panel removed from the slot', async () => {
   const el = (await fixture(
     html`<lyra-split><div id="p1">a</div><div id="p2">b</div></lyra-split>`,

@@ -252,8 +252,15 @@ export class LyraSplit extends LyraElement {
     // be applied here (not the cumulative-since-drag-start delta a
     // snapshot-based clamp would use).
     const incremental = cumulativeDelta - drag.appliedDelta;
-    drag.appliedDelta = cumulativeDelta;
     const paired = this.clampPair(this.sizes, drag.index, incremental, total);
+    // Track the *realized* change relative to drag-start (post-clamp), not
+    // the raw requested cumulative delta -- clampPair can cap the actual
+    // move short of what was requested (e.g. a drag saturating a panel's
+    // min/panelConstraints bound). If appliedDelta assumed the full request
+    // had landed, the next move's incremental would silently lose track of
+    // the clamped-away portion, permanently drifting even after the pointer
+    // returns to its exact starting position.
+    drag.appliedDelta = paired[drag.index] - drag.startSizes[drag.index];
     // Merge only this drag's pair into the live sizes so a concurrent drag
     // on another divider (different pointerId) isn't clobbered.
     const next = [...this.sizes];
