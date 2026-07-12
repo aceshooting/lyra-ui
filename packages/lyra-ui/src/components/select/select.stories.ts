@@ -83,6 +83,31 @@ export const Disabled: Story = {
 };
 
 /**
+ * When exactly one `<lyra-option>` is enabled, the trigger auto-commits that
+ * option on click or Arrow Up/Down instead of opening a listbox — no chevron,
+ * no popup. Useful for "only one choice available" states that would
+ * otherwise force an unnecessary extra click.
+ */
+export const SingleOption: Story = {
+  render: () => html`
+    <lyra-select label="Region" style="max-width: 20rem">
+      <lyra-option value="us-east">US East</lyra-option>
+    </lyra-select>
+  `,
+};
+
+/** The same auto-commit behavior applies when only one *enabled* option remains among disabled ones. */
+export const SingleEnabledAmongDisabled: Story = {
+  render: () => html`
+    <lyra-select label="Plan" style="max-width: 20rem">
+      <lyra-option value="free" disabled>Free (unavailable)</lyra-option>
+      <lyra-option value="pro">Pro</lyra-option>
+      <lyra-option value="enterprise" disabled>Enterprise (unavailable)</lyra-option>
+    </lyra-select>
+  `,
+};
+
+/**
  * `required` blocks form submission while empty; `error-text` renders a
  * validation message alongside the shared `hint`.
  */

@@ -463,3 +463,105 @@ it('falls back to placeholder when no host aria-label or label is set', async ()
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
   expect(trigger.getAttribute('aria-label')).to.equal('Choose…');
 });
+
+describe('single-option auto-commit', () => {
+  const single = () => html`
+    <lyra-select>
+      <lyra-option value="a">Apple</lyra-option>
+    </lyra-select>
+  `;
+
+  it('renders the trigger as a plain button with no chevron/combobox ARIA when only one option is enabled', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    const btn = trigger(el);
+    expect(btn.getAttribute('role')).to.equal('button');
+    expect(btn.hasAttribute('aria-haspopup')).to.be.false;
+    expect(btn.hasAttribute('aria-expanded')).to.be.false;
+    expect(btn.hasAttribute('aria-controls')).to.be.false;
+    expect(btn.hasAttribute('aria-activedescendant')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.not.exist;
+  });
+
+  it('commits the sole option on click without ever opening the listbox', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    setTimeout(() => trigger(el).click());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('a');
+    expect(el.open).to.be.false;
+  });
+
+  it('commits the sole option on ArrowDown/ArrowUp', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    setTimeout(() =>
+      trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })),
+    );
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('a');
+    expect(el.open).to.be.false;
+  });
+
+  it('still opens normally (three-row combobox chrome, no auto-commit) once a second option is enabled', async () => {
+    const el = (await fixture(html`
+      <lyra-select>
+        <lyra-option value="a">Apple</lyra-option>
+        <lyra-option value="b">Banana</lyra-option>
+      </lyra-select>
+    `)) as LyraSelect;
+    const btn = trigger(el);
+    expect(btn.getAttribute('role')).to.equal('combobox');
+    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.exist;
+
+    btn.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(el.value).to.equal('');
+  });
+
+  it('treats a single ENABLED option among several disabled ones as single-option too', async () => {
+    const el = (await fixture(html`
+      <lyra-select>
+        <lyra-option value="a" disabled>Apple</lyra-option>
+        <lyra-option value="b">Banana</lyra-option>
+        <lyra-option value="c" disabled>Cherry</lyra-option>
+      </lyra-select>
+    `)) as LyraSelect;
+    const btn = trigger(el);
+    expect(btn.getAttribute('role')).to.equal('button');
+
+    setTimeout(() => btn.click());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('b');
+  });
+
+  it('does not auto-select on mount -- a required, unselected single-option select stays invalid', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lyra-select name="fruit" required>
+          <lyra-option value="a">Apple</lyra-option>
+        </lyra-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-select') as LyraSelect;
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(form.reportValidity()).to.be.false;
+  });
+
+  it('does not intercept click/keyboard when disabled, even with a single option', async () => {
+    const el = (await fixture(html`
+      <lyra-select disabled>
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-select>
+    `)) as LyraSelect;
+    trigger(el).click();
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+  });
+
+  it('is accessible with a single enabled option', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    el.label = 'Fruit';
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
