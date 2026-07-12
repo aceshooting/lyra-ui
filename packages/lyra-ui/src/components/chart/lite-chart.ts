@@ -13,6 +13,14 @@ export interface LiteSeries {
 
 export type LyraLiteChartType = 'bar' | 'line';
 
+/**
+ * `'fit'` (default) squeezes the whole plot into the measured host width,
+ * exactly as this component always behaved. `'scroll'` gives every bar a
+ * fixed `barWidth` instead and lets the plot's content width exceed the
+ * host's, making the host horizontally scrollable.
+ */
+export type LyraLiteChartLayout = 'fit' | 'scroll';
+
 // Colorblind-considered categorical palette, used round-robin when a Series
 // doesn't set its own `color` — same role as Chart.js's default dataset
 // colors for lyra-chart, just a fixed JS array instead of a peer dep's.
@@ -88,6 +96,17 @@ interface PointDetail {
  * `getComputedStyle()`-based re-theming step is needed the way `chart.ts`
  * needs one for its canvas.
  *
+ * By default (`layout="fit"`) the plot always squeezes to the measured host
+ * width. Three independent, opt-in escape hatches for dense/aligned data:
+ * `layout="scroll"` (+ `barWidth`) gives every bar a fixed pixel width and
+ * lets the plot overflow the host horizontally (scrollable) instead of
+ * squeezing; `maxLabels` decimates which x-axis text labels render (bars
+ * always still render) once there are more categories than that; and
+ * `barX` lets a consumer hand in its own per-category x-coordinate function
+ * — e.g. to pixel-align this chart's bars with a sibling `lyra-heatmap`'s
+ * calendar columns — overriding the internal slot math for both bars and
+ * their labels. All three are additive and no-ops when left unset.
+ *
  * @customElement lyra-lite-chart
  * @event lyra-point-click - Fired when a bar/point is activated (click, or
  *   Enter/Space while focused). `detail: { datasetIndex: number, index:
@@ -120,6 +139,27 @@ export class LyraLiteChart extends LyraElement {
   /** Formats a y-axis tick value for display (e.g. `(v) => \`$${v.toFixed(2)}\``). Falls back to the
    *  built-in nice-number formatter when unset. */
   @property({ attribute: false }) tickFormat?: (value: number) => string;
+  /** `'fit'` (default) squeezes the plot into the measured host width, unchanged from before this
+   *  property existed. `'scroll'` gives every bar a fixed `barWidth` instead, letting the plot's
+   *  content width exceed the host's — the host becomes horizontally scrollable
+   *  (`overflow-x: auto`) so every bar stays exactly `barWidth` wide regardless of category count.
+   *  Reflects to the `layout` attribute (e.g. for `:host([layout='scroll'])` host styling). */
+  @property({ reflect: true }) layout: LyraLiteChartLayout = 'fit';
+  /** Fixed per-category bar width in px, used only when `layout="scroll"`. Ignored (as before this
+   *  property existed) in `layout="fit"`, the default. */
+  @property({ type: Number, attribute: 'bar-width' }) barWidth = 32;
+  /** Caps how many x-axis category labels render text once `this.labels.length` exceeds it,
+   *  decimating roughly evenly while always keeping the first and last label. Bars themselves
+   *  always render regardless — only the axis text is decimated. Unset (the default) renders every
+   *  label, unchanged from before this property existed. Works in either `layout` mode. */
+  @property({ type: Number, attribute: 'max-labels' }) maxLabels?: number;
+  /** Overrides the x-origin `renderBars()`/the category labels would otherwise compute internally
+   *  for a given category index, for `type="bar"` only (bars and their axis labels stay
+   *  consistent with each other either way). Lets a consumer pixel-align this chart's bars with,
+   *  e.g., a sibling `lyra-heatmap`'s calendar columns by handing both components the same
+   *  coordinate function. Unset (the default) uses the existing internal per-category slot math,
+   *  unchanged from before this property existed. */
+  @property({ attribute: false }) barX?: (index: number) => number;
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
@@ -237,6 +277,14 @@ export class LyraLiteChart extends LyraElement {
       this.stacked,
       this.plotWidth,
       this.plotHeight,
+      this.layout,
+      this.barWidth,
+      this.maxLabels,
+      // `tickFormat`/`barX` are functions -- JSON.stringify() silently drops
+      // function-valued entries, so (matching tickFormat's existing,
+      // pre-this-change exclusion) they can't be included here anyway; a
+      // consumer swapping one in/out post-mount should also change some
+      // other signature input, same pre-existing caveat as tickFormat.
     ]);
   }
 
@@ -263,28 +311,39 @@ export class LyraLiteChart extends LyraElement {
     });
   }
 
-  private renderBars(plotX: number, plotY: number, plotW: number, plotH: number, lo: number, hi: number) {
+  /**
+   * `slot` is the per-category width to lay bars out against — either the
+   * measured-width-derived `plotW / n` (`layout="fit"`) or the fixed
+   * `barWidth` (`layout="scroll"`), computed once by the caller
+   * (`renderChart()`) and handed to both this method and the category-label
+   * x-position calc so the two can never drift apart from each other.
+   */
+  private renderBars(plotX: number, plotY: number, plotH: number, slot: number, lo: number, hi: number) {
     const span = hi - lo || 1;
     const n = this.labels.length;
-    const slot = n > 0 ? plotW / n : 0;
     const groupCount = this.stacked ? 1 : Math.max(1, this.datasets.length);
     const groupW = slot * (1 - BAR_GROUP_GAP);
     const barW = (groupW - BAR_GAP * slot * (groupCount - 1)) / groupCount;
 
     const bars: TemplateResult[] = [];
     for (let i = 0; i < n; i++) {
-      const slotStart = plotX + i * slot + (slot - groupW) / 2;
+      // `this.barX`, when set, overrides just the category's own x-origin
+      // (what an unset `barX` would compute as `plotX + i * slot`) -- the
+      // group-centering/per-dataset-offset math below still layers on top of
+      // it, same as it does on top of the internal formula.
+      const origin = this.barX ? this.barX(i) : plotX + i * slot;
+      const slotStart = origin + (slot - groupW) / 2;
       let stackPos = 0; // running positive-side offset (in value units) for stacked bars
       let stackNeg = 0; // running negative-side offset
       this.datasets.forEach((s, di) => {
         const v = s.data[i];
         if (v == null || !Number.isFinite(v)) return;
         const color = this.colorFor(di, s);
-        let barX: number;
+        let rectX: number;
         let barValLo: number;
         let barValHi: number;
         if (this.stacked) {
-          barX = slotStart;
+          rectX = slotStart;
           if (v >= 0) {
             barValLo = stackPos;
             barValHi = stackPos + v;
@@ -295,7 +354,7 @@ export class LyraLiteChart extends LyraElement {
             stackNeg += v;
           }
         } else {
-          barX = slotStart + di * (barW + BAR_GAP * slot);
+          rectX = slotStart + di * (barW + BAR_GAP * slot);
           const zeroClamped = Math.min(hi, Math.max(lo, 0));
           barValLo = Math.min(zeroClamped, v);
           barValHi = Math.max(zeroClamped, v);
@@ -306,7 +365,7 @@ export class LyraLiteChart extends LyraElement {
         bars.push(svg`
           <rect
             part="bar"
-            x=${barX}
+            x=${rectX}
             y=${y1}
             width=${Math.max(0, barW)}
             height=${Math.max(0, y2 - y1)}
@@ -374,28 +433,61 @@ export class LyraLiteChart extends LyraElement {
     return result;
   }
 
+  /**
+   * Step size for `maxLabels` decimation: 1 (show every label, today's
+   * unchanged default) when `maxLabels` is unset or already >= the label
+   * count, otherwise the ceil-divide spacing that lands close to
+   * `maxLabels` shown labels while always keeping index 0 and the last
+   * index (enforced by the caller, not here).
+   */
+  private labelStep(n: number): number {
+    const max = this.maxLabels;
+    if (max == null || n <= max) return 1;
+    return Math.max(1, Math.ceil((n - 1) / Math.max(1, max - 1)));
+  }
+
   private renderChart(): TemplateResult {
-    const w = this.plotWidth || 400;
+    const n = this.labels.length;
     const h = this.plotHeight || 200;
     const padLeft = PAD_LEFT + (this.yLabel ? AXIS_TITLE_SPACE : 0);
     const padBottom = PAD_BOTTOM + (this.xLabel ? AXIS_TITLE_SPACE : 0);
     const plotX = padLeft;
     const plotY = PAD_TOP;
-    const plotW = Math.max(0, w - padLeft - PAD_RIGHT);
     const plotH = Math.max(0, h - plotY - padBottom);
+
+    let w: number;
+    let plotW: number;
+    let slot: number;
+    if (this.layout === 'scroll') {
+      // Fixed-width bars: content width is driven by category count ×
+      // barWidth instead of the measured host width, and CAN exceed it --
+      // the svg gets an explicit inline-size below (not 100%) and
+      // `:host([layout='scroll']) [part='base']` (lite-chart.styles.ts)
+      // turns on `overflow-x: auto` so the host scrolls to reveal the rest.
+      slot = this.barWidth;
+      plotW = Math.max(0, n * slot);
+      w = plotX + plotW + PAD_RIGHT;
+    } else {
+      // 'fit' (default): squeeze to the measured host width, byte-for-byte
+      // the same computation as before `layout` existed.
+      w = this.plotWidth || 400;
+      plotW = Math.max(0, w - plotX - PAD_RIGHT);
+      slot = n > 0 ? plotW / n : 0;
+    }
     const { lo, hi, ticks } = this.domain();
 
     const grid = this.renderGrid(plotX, plotY, plotW, plotH, ticks, lo, hi);
     const marks =
       this.type === 'bar'
-        ? this.renderBars(plotX, plotY, plotW, plotH, lo, hi)
+        ? this.renderBars(plotX, plotY, plotH, slot, lo, hi)
         : this.renderLines(plotX, plotY, plotW, plotH, lo, hi);
 
+    const step = this.labelStep(n);
     const categoryLabels = this.labels.map((label, i) => {
-      const n = this.labels.length;
+      if (i !== 0 && i !== n - 1 && i % step !== 0) return nothing; // maxLabels decimation
       const x =
         this.type === 'bar' && n > 0
-          ? plotX + (i + 0.5) * (plotW / n) // matches renderBars()'s own per-category slot center
+          ? (this.barX ? this.barX(i) : plotX + i * slot) + slot / 2 // matches renderBars()'s own per-category slot center (or the barX override, when set)
           : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
       return svg`<text part="axis-label" x=${x} y=${plotY + plotH + 14} text-anchor="middle">${label}</text>`;
     });
@@ -404,7 +496,12 @@ export class LyraLiteChart extends LyraElement {
 
     return html`
       <div part="base">
-        <svg viewBox="0 0 ${w} ${h}" role="group" aria-label=${chartLabel}>
+        <svg
+          viewBox="0 0 ${w} ${h}"
+          style=${this.layout === 'scroll' ? `inline-size: ${w}px` : nothing}
+          role="group"
+          aria-label=${chartLabel}
+        >
           ${grid}
           ${categoryLabels}
           ${marks}

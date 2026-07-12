@@ -470,3 +470,147 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
   }
 });
+
+// --- layout="scroll" -------------------------------------------------------
+
+it('layout="scroll" gives every bar a fixed width and lets the plot exceed the host width via horizontal scroll', async () => {
+  const labels = Array.from({ length: 30 }, (_, i) => `C${i}`);
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    layout="scroll"
+    style="width: 120px"
+    .labels=${labels}
+    .datasets=${[{ label: 'S', data: labels.map((_, i) => i + 1) }]}
+  ></lyra-lite-chart>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const svgEl = el.shadowRoot!.querySelector('svg')!;
+  expect(getComputedStyle(base).overflowX).to.equal('auto');
+  const hostWidth = el.getBoundingClientRect().width;
+  const svgWidth = svgEl.getBoundingClientRect().width;
+  expect(hostWidth).to.be.closeTo(120, 2);
+  // 30 categories * the default 32px barWidth alone is already ~960px, far
+  // past the 120px host -- proves the plot isn't squeezed to fit.
+  expect(svgWidth).to.be.greaterThan(hostWidth + 100);
+  const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  expect(bars.length).to.equal(30);
+  // Single dataset: bar width = slot(32) * (1 - BAR_GROUP_GAP(0.2)) = 25.6.
+  expect(Number(bars[0].getAttribute('width'))).to.be.closeTo(25.6, 0.5);
+});
+
+it('barWidth (attribute "bar-width") sets the fixed per-bar width used by layout="scroll"', async () => {
+  const labels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    layout="scroll"
+    bar-width="50"
+    style="width: 80px"
+    .labels=${labels}
+    .datasets=${[{ label: 'S', data: labels.map(() => 1) }]}
+  ></lyra-lite-chart>`);
+  const svgEl = el.shadowRoot!.querySelector('svg')!;
+  const viewBoxW = Number(svgEl.getAttribute('viewBox')!.split(' ')[2]);
+  // w = plotX(36, no yLabel) + n(8)*barWidth(50) + PAD_RIGHT(8) = 444.
+  expect(viewBoxW).to.be.closeTo(444, 0.5);
+});
+
+it('keeps bars and their axis labels aligned in layout="scroll" (no drift between the two width models)', async () => {
+  const labels = ['x', 'y', 'z', 'w', 'v'];
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    layout="scroll"
+    style="width: 60px"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: [1, 2, 3, 4, 5] }]}
+  ></lyra-lite-chart>`);
+  const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')] as SVGTextElement[];
+  const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
+  const firstLabelX = Number(axisLabels.find((l) => l.textContent === 'x')!.getAttribute('x'));
+  expect(Math.abs(firstBarCenter - firstLabelX)).to.be.lessThan(1);
+});
+
+it('layout="fit" (the default) leaves the svg without an inline width override and the base container non-scrollable, unchanged from before layout existed', async () => {
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    .labels=${BAR_LABELS}
+    .datasets=${BAR_DATASETS}
+  ></lyra-lite-chart>`);
+  expect(el.layout).to.equal('fit');
+  expect(el.getAttribute('layout')).to.equal('fit'); // reflected attribute
+  const svgEl = el.shadowRoot!.querySelector('svg')!;
+  expect(svgEl.hasAttribute('style')).to.be.false;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).overflowX).to.equal('visible');
+});
+
+// --- maxLabels ---------------------------------------------------------------
+
+it('maxLabels decimates which axis-label text elements render, always keeping the first and last (bars are never decimated)', async () => {
+  const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    max-labels="5"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
+  ></lyra-lite-chart>`);
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+    (n) => n.textContent,
+  );
+  expect(axisLabels.length).to.be.lessThan(labels.length);
+  expect(axisLabels).to.include('L0');
+  expect(axisLabels).to.include('L19');
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
+});
+
+it('renders every label when maxLabels is unset, even for a long category list (regression)', async () => {
+  const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: labels.map((_, i) => i + 1) }]}
+  ></lyra-lite-chart>`);
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')];
+  expect(axisLabels.length).to.equal(20);
+});
+
+// --- barX coordinate override -------------------------------------------------
+
+it('barX overrides the internally computed per-category x-origin for both bars and their labels', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart
+      type="bar"
+      .labels=${['only']}
+      .datasets=${[{ label: 's', data: [5] }]}
+      .barX=${() => 500}
+    ></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const label = el.shadowRoot!.querySelector('[part="axis-label"][text-anchor="middle"]') as SVGTextElement;
+  const x = Number(rect.getAttribute('x'));
+  const labelX = Number(label.getAttribute('x'));
+  // Without the override, a single category's internal origin would be
+  // plotX (36) -- well below 490. The override pins it at 500 instead.
+  expect(x).to.be.greaterThan(490);
+  const slot = 300 - 36 - 8; // a single category spans the whole plot width
+  const groupW = slot * 0.8; // BAR_GROUP_GAP = 0.2, one dataset -> groupCount 1
+  expect(x).to.be.closeTo(500 + (slot - groupW) / 2, 0.5);
+  expect(labelX).to.be.closeTo(500 + slot / 2, 0.5);
+});
+
+it('leaves bar/label x-position at the internal per-category formula when barX is unset (regression)', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" .labels=${['x', 'y', 'z']} .datasets=${[{ label: 's', data: [1, 2, 3] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  const firstLabel = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].find(
+    (n) => n.textContent === 'x',
+  ) as SVGTextElement;
+  const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
+  expect(Math.abs(firstBarCenter - Number(firstLabel.getAttribute('x')))).to.be.lessThan(1);
+});

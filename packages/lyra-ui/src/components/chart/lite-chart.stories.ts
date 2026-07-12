@@ -122,3 +122,49 @@ export const CurrencyTickFormat: Story = {
     `;
   },
 };
+
+/** `layout="scroll"` gives every bar a fixed `bar-width` instead of squeezing them into the host
+ *  width -- with a long category list the plot overflows the (deliberately narrow) host, which
+ *  scrolls horizontally to reveal the rest, instead of cramming 40 skinny bars into one view. */
+export const ScrollLayout: Story = {
+  render: () => {
+    const labels = Array.from({ length: 40 }, (_, i) => `Day ${i + 1}`);
+    const series: LiteSeries[] = [{ label: 'Signups', data: labels.map((_, i) => 10 + ((i * 7) % 40)) }];
+    return html`
+      <lyra-lite-chart
+        type="bar"
+        layout="scroll"
+        bar-width="28"
+        height="16rem"
+        style="width: 24rem"
+        x-label="Day"
+        y-label="Signups"
+        .labels=${labels}
+        .datasets=${series}
+      ></lyra-lite-chart>
+    `;
+  },
+};
+
+/** `maxLabels` thins out which x-axis category labels render text (bars themselves always still
+ *  render) once there are more categories than that -- always keeping the first and last label,
+ *  spreading the rest roughly evenly, so a long category list stays legible in `layout="fit"`
+ *  instead of the axis text overlapping into an unreadable smear. */
+export const LabelDecimation: Story = {
+  render: () => {
+    const labels = Array.from({ length: 24 }, (_, i) => `Week ${i + 1}`);
+    const series: LiteSeries[] = [{ label: 'Throughput', data: labels.map((_, i) => 20 + ((i * 11) % 30)) }];
+    return html`
+      <lyra-lite-chart
+        type="bar"
+        max-labels="6"
+        height="16rem"
+        style="width: 26rem"
+        x-label="Week"
+        y-label="Throughput"
+        .labels=${labels}
+        .datasets=${series}
+      ></lyra-lite-chart>
+    `;
+  },
+};

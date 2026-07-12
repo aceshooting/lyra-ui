@@ -24,6 +24,15 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lyra-space-xs);
   }
+  /* layout="scroll": the svg below gets an explicit inline-size (its
+     computed content width, set inline per-render since it depends on
+     category count/barWidth) instead of the 100% below, and can end up
+     wider than this container -- scroll to reveal the rest instead of
+     squeezing. Scoped strictly to the reflected [layout='scroll'] attribute
+     so layout="fit" (the default) never triggers this rule. */
+  :host([layout='scroll']) [part='base'] {
+    overflow-x: auto;
+  }
   svg {
     flex: 1 1 auto;
     inline-size: 100%;
