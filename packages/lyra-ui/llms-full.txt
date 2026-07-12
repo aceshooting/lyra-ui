@@ -389,7 +389,8 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `mode: 'single'|'range' = 'single'`
 - `min: string = ''`
 - `max: string = ''`
-- `readonly: boolean = false` (reflected)
+- `readonly: boolean = false` (reflected; preserves the submitted value but bars required and
+  date-bound constraint validation until removed)
 - `open: boolean = false` (reflected)
 - `withClear: boolean = false` (attribute `with-clear`)
 - `label: string = ''`
@@ -452,7 +453,13 @@ from the package root**, but worth knowing when reasoning about behavior): `pars
   reflect `aria-invalid` onto the visible `<input part="input">` itself (unlike `lyra-combobox`,
   which does reflect `aria-invalid`/`aria-required` onto its own input) — rely on `data-invalid`
   (a host attribute, toggled the same way) or `reportValidity()` rather than assuming the input's own
-  ARIA state.
+  ARIA state. A parseable typed date outside an active bound is committed instead and reports the
+  precise `rangeUnderflow`/`rangeOverflow` state.
+- (date-input only) — declarative, IDL, reset, and restored values are sanitized to exact ISO dates:
+  calendar-invalid or malformed strings become `''` (and therefore `valueMissing` when required),
+  while valid dates outside `min`/`max` or `disable-past`/`disable-future` remain submitted and expose
+  `rangeUnderflow`/`rangeOverflow`. Changes to these constraints, `mode`, and `readonly` recompute
+  validity synchronously; range mode validates both endpoints.
 - The grid keyboard pattern (Arrow/PageUp/PageDown/Home/End navigation with correct focus
   sequencing) is implemented correctly and safe to rely on, as is the selected/range-day text color
   (`--lyra-color-on-brand`, not a hardcoded literal — safe to override `--lyra-color-brand` without

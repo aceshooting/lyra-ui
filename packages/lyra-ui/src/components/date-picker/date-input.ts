@@ -56,10 +56,15 @@ function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
 export class LyraDateInput extends FormAssociated(LyraElement) {
   static styles = [LyraElement.styles, styles];
 
-  @property() mode: 'single' | 'range' = 'single';
-  @property() min = '';
-  @property() max = '';
-  @property({ type: Boolean, reflect: true }) readonly = false;
+  static properties = {
+    mode: { noAccessor: true },
+    min: { noAccessor: true },
+    max: { noAccessor: true },
+    readonly: { type: Boolean, reflect: true, noAccessor: true },
+    disablePast: { type: Boolean, attribute: 'disable-past', noAccessor: true },
+    disableFuture: { type: Boolean, attribute: 'disable-future', noAccessor: true },
+  };
+
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property() label = '';
@@ -70,8 +75,6 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ type: Number }) months: 1 | 2 = 1;
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
-  @property({ type: Boolean, attribute: 'disable-past' }) disablePast = false;
-  @property({ type: Boolean, attribute: 'disable-future' }) disableFuture = false;
   @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
 
   private cleanupFn?: () => void;
@@ -90,6 +93,167 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
+
+  private _mode: 'single' | 'range' = 'single';
+  private _min = '';
+  private _max = '';
+  private _readonly = false;
+  private _disablePast = false;
+  private _disableFuture = false;
+  private typedBadInput = false;
+
+  get mode(): 'single' | 'range' {
+    return this._mode;
+  }
+
+  set mode(next: 'single' | 'range') {
+    const old = this._mode;
+    this._mode = next === 'range' ? 'range' : 'single';
+    this.updateValidity();
+    this.requestUpdate('mode', old);
+  }
+
+  get min(): string {
+    return this._min;
+  }
+
+  set min(next: string) {
+    const old = this._min;
+    this._min = next ?? '';
+    this.updateValidity();
+    this.requestUpdate('min', old);
+  }
+
+  get max(): string {
+    return this._max;
+  }
+
+  set max(next: string) {
+    const old = this._max;
+    this._max = next ?? '';
+    this.updateValidity();
+    this.requestUpdate('max', old);
+  }
+
+  get readonly(): boolean {
+    return this._readonly;
+  }
+
+  set readonly(next: boolean) {
+    const old = this._readonly;
+    this._readonly = Boolean(next);
+    this.toggleAttribute('readonly', this._readonly);
+    this.updateValidity();
+    this.requestUpdate('readonly', old);
+  }
+
+  get disablePast(): boolean {
+    return this._disablePast;
+  }
+
+  set disablePast(next: boolean) {
+    const old = this._disablePast;
+    this._disablePast = Boolean(next);
+    this.updateValidity();
+    this.requestUpdate('disablePast', old);
+  }
+
+  get disableFuture(): boolean {
+    return this._disableFuture;
+  }
+
+  set disableFuture(next: boolean) {
+    const old = this._disableFuture;
+    this._disableFuture = Boolean(next);
+    this.updateValidity();
+    this.requestUpdate('disableFuture', old);
+  }
+
+  get value(): string {
+    return super.value;
+  }
+
+  set value(next: string) {
+    this.setTypedBadInput(false);
+    super.value = this.normalizeCommittedValue(next ?? '');
+  }
+
+  private setTypedBadInput(next: boolean): void {
+    const old = this.typedBadInput;
+    this.typedBadInput = next;
+    if (old !== next) this.requestUpdate('typedBadInput', old);
+  }
+
+  private parseStrictISO(value: string): Date | null {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    return parseISO(value);
+  }
+
+  private normalizeCommittedValue(value: string): string {
+    if (value === '') return '';
+    const parts = value.split('/');
+    if (parts.length !== 1 && parts.length !== 2) return '';
+    const dates = parts.map((part) => this.parseStrictISO(part));
+    if (dates.some((date) => date === null)) return '';
+    if (parts.length === 2 && dates[0]! > dates[1]!) return `${parts[1]}/${parts[0]}`;
+    return value;
+  }
+
+  private valueDates(value: string): Date[] | null {
+    const parts = value.split('/');
+    const expectedParts = this.mode === 'range' ? 2 : 1;
+    if (parts.length !== expectedParts) return null;
+    const dates = parts.map((part) => this.parseStrictISO(part));
+    return dates.some((date) => date === null) ? null : (dates as Date[]);
+  }
+
+  protected updateValidity(): void {
+    if (this.readonly) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
+
+    const flags: ValidityStateFlags = {};
+    let underflowMessage = '';
+    let overflowMessage = '';
+    if (this.required && this.value === '') flags.valueMissing = true;
+    if (this.typedBadInput) flags.badInput = true;
+
+    if (this.value !== '') {
+      const dates = this.valueDates(this.value);
+      if (!dates) {
+        flags.badInput = true;
+      } else {
+        const min = this.parseStrictISO(this.min);
+        const max = this.parseStrictISO(this.max);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (min !== null && dates.some((date) => date < min)) {
+          flags.rangeUnderflow = true;
+          underflowMessage = `Date must be on or after ${this.min}.`;
+        }
+        if (this.disablePast && dates.some((date) => date < today)) {
+          flags.rangeUnderflow = true;
+          underflowMessage ||= 'Date cannot be in the past.';
+        }
+        if (max !== null && dates.some((date) => date > max)) {
+          flags.rangeOverflow = true;
+          overflowMessage = `Date must be on or before ${this.max}.`;
+        }
+        if (this.disableFuture && dates.some((date) => date > today)) {
+          flags.rangeOverflow = true;
+          overflowMessage ||= 'Date cannot be in the future.';
+        }
+      }
+    }
+
+    let message = '';
+    if (flags.badInput) message = 'Enter a valid date.';
+    else if (flags.rangeUnderflow) message = underflowMessage;
+    else if (flags.rangeOverflow) message = overflowMessage;
+    else if (flags.valueMissing) message = 'Please fill out this field.';
+    this[SET_ANCHORED_VALIDITY](flags, message);
+  }
 
   private get displayText(): string {
     const parts = this.value.split('/');
@@ -158,7 +322,18 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
         if (anchor && popup) this.cleanupFn = place(anchor, popup);
       }
     }
-    if (changed.has('touched') || changed.has('required') || changed.has('value')) {
+    if (
+      changed.has('touched') ||
+      changed.has('required') ||
+      changed.has('value') ||
+      changed.has('mode') ||
+      changed.has('min') ||
+      changed.has('max') ||
+      changed.has('readonly') ||
+      changed.has('disablePast') ||
+      changed.has('disableFuture') ||
+      changed.has('typedBadInput')
+    ) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
   }
@@ -175,18 +350,18 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
       return;
     }
     const parsed = this.mode === 'range' ? this.parseRangeText(raw) : this.parseSingleText(raw);
-    if (parsed && this.isWithinBounds(parsed)) {
+    if (parsed) {
       this.value = parsed;
       this.emit('input');
       this.emit('change');
     } else {
-      // Unparseable (or out-of-bounds) text: don't silently keep the
-      // committed value while the field still shows garbage -- revert the
-      // displayed text back to the last valid commit and flag the
-      // constraint-validation state (mirrors how `required` is already
-      // wired via internals.setValidity(), see form-associated.ts).
+      // Unparseable text: don't silently keep the committed value while the
+      // field still shows garbage -- revert the display to the last commit
+      // and flag bad input. Parseable dates outside an active bound instead
+      // commit above and expose their precise range validity state.
       target.value = this.displayText;
-      this[SET_ANCHORED_VALIDITY]({ badInput: true }, 'Enter a valid date');
+      this.setTypedBadInput(true);
+      this.updateValidity();
     }
   };
 
@@ -259,22 +434,6 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     return from <= to ? `${formatISO(from)}/${formatISO(to)}` : `${formatISO(to)}/${formatISO(from)}`;
   }
 
-  private isWithinBounds(isoValue: string): boolean {
-    const min = parseISO(this.min);
-    const max = parseISO(this.max);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return isoValue.split('/').every((part) => {
-      const d = parseISO(part);
-      if (!d) return false;
-      if (min && d < min) return false;
-      if (max && d > max) return false;
-      if (this.disablePast && d < today) return false;
-      if (this.disableFuture && d > today) return false;
-      return true;
-    });
-  }
-
   private onInputKey = (e: KeyboardEvent): void => {
     if (e.altKey && e.key === 'ArrowDown') {
       e.preventDefault();
@@ -297,6 +456,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   private onInputBlur = (): void => {
     this.touched = true;
   };
+
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.value = typeof state === 'string' ? state : '';
+  }
 
   private onHintSlotChange = (e: Event): void => {
     this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;

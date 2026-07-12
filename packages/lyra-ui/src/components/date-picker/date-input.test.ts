@@ -253,6 +253,228 @@ it('re-syncs ElementInternals validity when required is toggled after connection
   expect(form.reportValidity()).to.be.true;
 });
 
+describe('complete programmatic validity', () => {
+  it('retains an out-of-range declarative value and reports its precise bound failure', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lyra-date-input name="d" min="2026-01-01" max="2026-12-31" value="2027-01-01"></lyra-date-input>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-date-input') as LyraDateInput;
+
+    expect(el.value).to.equal('2027-01-01');
+    expect(new FormData(form).get('d')).to.equal('2027-01-01');
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('recomputes min and max validity synchronously for property and attribute changes', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+    )) as LyraDateInput;
+
+    el.min = '2026-08-01';
+    expect(el.internals.validity.rangeUnderflow).to.be.true;
+
+    el.min = '';
+    expect(el.checkValidity()).to.be.true;
+
+    el.setAttribute('max', '2026-06-30');
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+
+    el.removeAttribute('max');
+    expect(el.checkValidity()).to.be.true;
+
+    el.min = 'not-a-date';
+    el.max = '2026-99-99';
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('recomputes disable-past and disable-future validity synchronously', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2000-01-01"></lyra-date-input>`,
+    )) as LyraDateInput;
+
+    el.setAttribute('disable-past', '');
+    expect(el.internals.validity.rangeUnderflow).to.be.true;
+
+    el.removeAttribute('disable-past');
+    el.value = '2999-01-01';
+    el.disableFuture = true;
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+
+    el.disableFuture = false;
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('checks every range endpoint and can report underflow and overflow together', async () => {
+    const el = (await fixture(html`
+      <lyra-date-input
+        mode="range"
+        value="2025-12-31/2027-01-01"
+        min="2026-01-01"
+        max="2026-12-31"
+      ></lyra-date-input>
+    `)) as LyraDateInput;
+
+    expect(el.internals.validity.rangeUnderflow).to.be.true;
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+    expect(el.checkValidity()).to.be.false;
+  });
+
+  it('reports the explicit bound when it is stricter than a temporal bound', async () => {
+    const year = new Date().getFullYear();
+    const futureValue = `${year + 1}-01-01`;
+    const futureMin = `${year + 2}-01-01`;
+    const underflow = (await fixture(html`
+      <lyra-date-input disable-past value=${futureValue} min=${futureMin}></lyra-date-input>
+    `)) as LyraDateInput;
+    expect(underflow.internals.validity.rangeUnderflow).to.be.true;
+    expect(underflow.internals.validationMessage).to.contain(futureMin);
+
+    const pastValue = `${year - 1}-01-01`;
+    const pastMax = `${year - 2}-01-01`;
+    const overflow = (await fixture(html`
+      <lyra-date-input disable-future value=${pastValue} max=${pastMax}></lyra-date-input>
+    `)) as LyraDateInput;
+    expect(overflow.internals.validity.rangeOverflow).to.be.true;
+    expect(overflow.internals.validationMessage).to.contain(pastMax);
+  });
+
+  it('sanitizes calendar-invalid declarative, IDL, and restored values to empty', async () => {
+    const form = (await fixture(html`
+      <form><lyra-date-input name="d" value="2026-02-30"></lyra-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-date-input') as LyraDateInput;
+
+    expect(el.value).to.equal('');
+    expect(new FormData(form).get('d')).to.equal('');
+
+    el.value = 'not-an-iso-date';
+    expect(el.value).to.equal('');
+    expect(el.checkValidity()).to.be.true;
+
+    el.required = true;
+    el.value = 'still-not-an-iso-date';
+    expect(el.internals.validity.valueMissing).to.be.true;
+    expect(el.internals.validity.badInput).to.be.false;
+
+    (el as unknown as { formStateRestoreCallback(state: string): void }).formStateRestoreCallback('2026-13-01');
+    expect(el.value).to.equal('');
+  });
+
+  it('revalidates restored and reset values against the current constraints', async () => {
+    const form = (await fixture(html`
+      <form><lyra-date-input name="d" value="2026-07-15" max="2026-12-31"></lyra-date-input></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-date-input') as LyraDateInput;
+
+    (el as unknown as { formStateRestoreCallback(state: string): void }).formStateRestoreCallback('2027-01-01');
+    expect(el.value).to.equal('2027-01-01');
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+
+    el.max = '2026-06-30';
+    form.reset();
+    expect(el.value).to.equal('2026-07-15');
+    expect(el.internals.validity.rangeOverflow).to.be.true;
+  });
+
+  it('bars required and bound validation while readonly, then restores it synchronously', async () => {
+    const empty = (await fixture(
+      html`<lyra-date-input required></lyra-date-input>`,
+    )) as LyraDateInput;
+    expect(empty.checkValidity()).to.be.false;
+
+    empty.readonly = true;
+    expect(empty.checkValidity()).to.be.true;
+    expect(empty.internals.willValidate).to.be.false;
+
+    empty.readonly = false;
+    expect(empty.internals.willValidate).to.be.true;
+    expect(empty.internals.validity.valueMissing).to.be.true;
+
+    const bounded = (await fixture(
+      html`<lyra-date-input value="2027-01-01" max="2026-12-31"></lyra-date-input>`,
+    )) as LyraDateInput;
+    expect(bounded.internals.validity.rangeOverflow).to.be.true;
+    bounded.readonly = true;
+    expect(bounded.checkValidity()).to.be.true;
+  });
+
+  it('revalidates the committed ISO shape when mode changes', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+    )) as LyraDateInput;
+
+    el.mode = 'range';
+    expect(el.internals.validity.badInput).to.be.true;
+
+    el.mode = 'single';
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('normalizes a reversed programmatic range into canonical order', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input mode="range"></lyra-date-input>`,
+    )) as LyraDateInput;
+
+    el.value = '2026-07-20/2026-07-10';
+    expect(el.value).to.equal('2026-07-10/2026-07-20');
+    expect(el.checkValidity()).to.be.true;
+  });
+
+  it('preserves typed badInput across constraint changes and clears it on a committed value', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+
+    input.value = 'not a date';
+    input.dispatchEvent(new Event('change'));
+    expect(el.internals.validity.badInput).to.be.true;
+
+    el.max = '2026-12-31';
+    expect(el.internals.validity.badInput).to.be.true;
+
+    el.value = '2026-08-01';
+    expect(el.checkValidity()).to.be.true;
+    expect(el.internals.validity.badInput).to.be.false;
+  });
+
+  it('refreshes touched invalid styling after a constraint-only change', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.hasAttribute('data-invalid')).to.be.false;
+
+    el.max = '2026-06-30';
+    await el.updateComplete;
+    expect(el.hasAttribute('data-invalid')).to.be.true;
+
+    el.max = '';
+    await el.updateComplete;
+    expect(el.hasAttribute('data-invalid')).to.be.false;
+  });
+
+  it('refreshes touched invalid styling after a typed parse failure', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.hasAttribute('data-invalid')).to.be.false;
+
+    input.value = 'not a date';
+    input.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(el.hasAttribute('data-invalid')).to.be.true;
+  });
+});
+
 it('restores the constructed value (not blank) on form.reset()', async () => {
   const form = (await fixture(html`
     <form><lyra-date-input name="d" value="2026-07-15"></lyra-date-input></form>
@@ -484,23 +706,27 @@ it('also accepts a raw ISO range typed directly, as a convenience', async () => 
   expect(el.value).to.equal('2026-05-01/2026-05-15');
 });
 
-it('rejects a typed date outside min/max as invalid instead of silently accepting it', async () => {
+it('retains a typed date outside min/max and reports rangeOverflow rather than badInput', async () => {
   const el = (await fixture(
     html`<lyra-date-input min="2026-01-01" max="2026-12-31"></lyra-date-input>`,
   )) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2027-01-01';
   input.dispatchEvent(new Event('change'));
-  expect(el.value).to.equal('');
+  expect(el.value).to.equal('2027-01-01');
+  expect(el.internals.validity.rangeOverflow).to.be.true;
+  expect(el.internals.validity.badInput).to.be.false;
   expect(el.checkValidity()).to.be.false;
 });
 
-it('rejects a typed date before disable-past\'s today floor', async () => {
+it('retains a typed date before disable-past\'s today floor and reports rangeUnderflow', async () => {
   const el = (await fixture(html`<lyra-date-input disable-past></lyra-date-input>`)) as LyraDateInput;
   const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
   input.value = '2000-01-01';
   input.dispatchEvent(new Event('change'));
-  expect(el.value).to.equal('');
+  expect(el.value).to.equal('2000-01-01');
+  expect(el.internals.validity.rangeUnderflow).to.be.true;
+  expect(el.internals.validity.badInput).to.be.false;
   expect(el.checkValidity()).to.be.false;
 });
 
