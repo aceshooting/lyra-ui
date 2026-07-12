@@ -138,6 +138,7 @@ export class LyraSelect extends LyraElement {
     super();
     this.internals = this.attachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    this.syncFormValue();
   }
 
   /** @internal */

@@ -188,6 +188,20 @@ it('participates in a form: value reflects in FormData on submit', async () => {
   expect(new FormData(form).get('fruit')).to.equal('b');
 });
 
+it('submits an untouched empty value instead of omitting the named control', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-select name="fruit">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-select>
+    </form>
+  `)) as HTMLFormElement;
+
+  const data = new FormData(form);
+  expect(data.has('fruit')).to.be.true;
+  expect(data.get('fruit')).to.equal('');
+});
+
 it('blocks a required, empty select from submitting the form', async () => {
   const form = (await fixture(html`
     <form>
