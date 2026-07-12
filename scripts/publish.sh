@@ -13,20 +13,6 @@
 #                     can silently pull in unrelated major-version bumps.
 set -euo pipefail
 
-UPGRADE_DEPS=0
-for arg in "$@"; do
-  case "$arg" in
-    --upgrade-deps)
-      UPGRADE_DEPS=1
-      ;;
-    *)
-      echo "Error: unknown argument '$arg'." >&2
-      echo "Usage: $0 [--upgrade-deps]" >&2
-      exit 1
-      ;;
-  esac
-done
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PKG_DIR="$ROOT_DIR/packages/lyra-ui"
 PKG_JSON="$PKG_DIR/package.json"
