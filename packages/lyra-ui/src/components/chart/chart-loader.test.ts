@@ -14,11 +14,26 @@ it('caches the module — a second call returns the same promise result', async 
 });
 
 describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => {
+  it('does not import chartjs-plugin-zoom when the caller does not request it', async () => {
+    let zoomImportCalled = false;
+    const fakeChart = await import('chart.js');
+    await loadChartAndZoom(
+      () => Promise.resolve(fakeChart),
+      () => {
+        zoomImportCalled = true;
+        return import('chartjs-plugin-zoom');
+      },
+      false,
+    );
+    expect(zoomImportCalled).to.be.false;
+  });
+
   it('still resolves chart.js when the zoom plugin fails to load — a partial install (chart.js only, no zoom) must not break every chart', async () => {
     const zoomError = new Error('zoom boom');
     const result = await loadChartAndZoom(
       () => import('chart.js'),
       () => Promise.reject(zoomError),
+      true,
     );
     expect(result).to.not.be.null;
     expect(result!.mod.Chart).to.exist;
@@ -60,6 +75,7 @@ describe('loadChartAndZoom (independent chart.js / zoom-plugin loading)', () => 
       await loadChartAndZoom(
         () => import('chart.js'),
         () => Promise.reject(zoomError),
+        true,
       );
     } finally {
       console.warn = originalWarn;

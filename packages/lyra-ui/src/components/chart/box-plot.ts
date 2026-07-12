@@ -86,12 +86,20 @@ export class LyraBoxPlot extends LyraElement {
   // case, so this must gate on its resolved value — mirroring the correct,
   // established pattern in `LyraChart.connectedCallback()` — instead of
   // unconditionally re-awaiting the already-cached `loadChartJs()` promise.
+  //
+  // Also guards against a disconnect while either lazy peer import is still
+  // in flight: `this.isConnected` is re-checked after each `await` gap, so a
+  // `<lyra-box-plot>` removed before the load settles never constructs a
+  // `Chart` bound to a (possibly detached) canvas.
   private async onBoxPlotPluginLoaded(
     boxMod: typeof import('@sgratzl/chartjs-chart-boxplot') | null,
   ): Promise<void> {
+    if (!this.isConnected) return;
     this.loading = false;
     if (!boxMod) return;
-    this.chartJsModule = (await loadChartJs()) ?? undefined;
+    const chartMod = await loadChartJs();
+    if (!this.isConnected) return;
+    this.chartJsModule = chartMod ?? undefined;
     this.draw();
   }
 

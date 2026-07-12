@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './chart.js';
 import type { LyraChart } from './chart.js';
 import { styles } from './chart.styles.js';
@@ -552,4 +552,34 @@ it('does not stack a scatter chart\'s linear x scale even when `stacked` is true
   await waitUntil(() => (el as any).chart != null);
   const config = (el as any).buildConfig();
   expect(config.options.scales.x.stacked).to.equal(false);
+});
+
+it('builds scales for the config-overridden effective type, not the attribute type', async () => {
+  const el = (await fixture(
+    html`<lyra-chart type="line" .datasets=${[{ label: 'a', data: [1, 2] }]} .config=${{ type: 'radar' }}></lyra-chart>`,
+  )) as LyraChart;
+  await aTimeout(50);
+  const chart = (el as unknown as { chart?: { options: { scales?: Record<string, unknown> } } }).chart;
+  expect(chart?.options.scales?.r).to.exist;
+  expect(chart?.options.scales?.x).to.not.exist;
+});
+
+it('actually suppresses the tooltip for a noTooltip series via plugin-level filtering', async () => {
+  const el = (await fixture(
+    html`<lyra-chart type="line" .datasets=${[{ label: 'a', data: [1], noTooltip: true }, { label: 'b', data: [2] }]}></lyra-chart>`,
+  )) as LyraChart;
+  await aTimeout(50);
+  const chart = (el as unknown as { chart?: { options: { plugins?: { tooltip?: { filter?: (item: { datasetIndex: number }) => boolean } } } } }).chart;
+  const filter = chart?.options.plugins?.tooltip?.filter;
+  expect(filter?.({ datasetIndex: 0 })).to.be.false;
+  expect(filter?.({ datasetIndex: 1 })).to.be.true;
+});
+
+it('does not construct a Chart.js instance if disconnected before the lazy chart.js import settles', async () => {
+  const el = document.createElement('lyra-chart') as LyraChart;
+  el.datasets = [{ label: 'a', data: [1] }];
+  document.body.appendChild(el);
+  el.remove();
+  await aTimeout(100);
+  expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
 });

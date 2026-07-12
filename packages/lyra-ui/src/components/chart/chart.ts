@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
-import { loadChartJs } from './chart-loader.js';
+import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../skeleton/skeleton.js';
 
@@ -161,7 +161,9 @@ export class LyraChart extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    void loadChartJs().then((mod) => {
+    const load = this.zoom ? loadChartJsWithZoom() : loadChartJs();
+    void load.then((mod) => {
+      if (!this.isConnected) return;
       this.loading = false;
       if (!mod) return;
       this.chartJsModule = mod;
@@ -187,6 +189,11 @@ export class LyraChart extends LyraElement {
     if (changed.has('height')) {
       this.style.setProperty('--lyra-chart-height', this.height);
     }
+    // `zoom` can also turn on after connect (it was false at
+    // `connectedCallback()` time, so only the core `loadChartJs()` load was
+    // kicked off) — load the zoom plugin on demand now and redraw once it's
+    // registered.
+    if (changed.has('zoom') && this.zoom) void loadChartJsWithZoom().then(() => this.draw());
     const onlyZoomChanged = changed.size === 1 && changed.has('zoomed');
     if (!onlyZoomChanged) this.draw();
   }
@@ -196,7 +203,20 @@ export class LyraChart extends LyraElement {
     return {
       label: s.label,
       data: s.points ?? s.data ?? [],
-      type: s.type ?? this.type,
+      // Leave unset rather than defaulting to `this.type`: Chart.js already
+      // falls back to the chart-level (effective) type for any dataset that
+      // doesn't set its own `type`, and forcing `this.type` here unconditionally
+      // used to be harmless (it normally matched the effective type anyway) —
+      // but it actively breaks a `config.type` override to a different chart
+      // family (e.g. attribute `type="line"` + `config.type: 'radar'`): every
+      // dataset would carry an explicit `type: 'line'` under a chart whose
+      // scales are built for `radar` (a single radial `r` scale, no `x`/`y`),
+      // which Chart.js can't reconcile — it hangs the page trying to lay out
+      // a cartesian-scale controller against a radial-only scale set. Only
+      // `s.type` (an explicit per-series mixed-type override, e.g. a line
+      // series over a bar chart of the *same* effective family) is passed
+      // through.
+      type: s.type,
       fill: s.fill ?? this.area,
       borderWidth: s.width ?? 2,
       borderDash: s.dash ? [4, 4] : undefined,
@@ -205,7 +225,6 @@ export class LyraChart extends LyraElement {
       pointBackgroundColor: s.pointColors,
       pointRadius: s.pointRadius,
       yAxisID: s.axis === 'y2' ? 'y2' : 'y',
-      tooltip: s.noTooltip ? { enabled: false } : undefined,
     };
   }
 
@@ -240,10 +259,13 @@ export class LyraChart extends LyraElement {
    * scale's `ticks.color`/`grid.color`/axis `title.color` so grid lines and
    * labels retheme instead of sitting at Chart.js's own hardcoded defaults.
    */
-  private buildScales(theme: ThemeColors): NonNullable<import('chart.js').ChartConfiguration['options']>['scales'] {
-    if (this.type === 'pie' || this.type === 'doughnut') return {};
+  private buildScales(
+    effectiveType: import('chart.js').ChartType,
+    theme: ThemeColors,
+  ): NonNullable<import('chart.js').ChartConfiguration['options']>['scales'] {
+    if (effectiveType === 'pie' || effectiveType === 'doughnut') return {};
 
-    if (this.type === 'radar' || this.type === 'polarArea') {
+    if (effectiveType === 'radar' || effectiveType === 'polarArea') {
       return {
         r: {
           beginAtZero: this.beginAtZero,
@@ -259,10 +281,10 @@ export class LyraChart extends LyraElement {
     // `stacked` only applies to bar/line-family charts sharing a categorical
     // axis, per the design spec — scatter/bubble's linear x scale and the
     // radial r scale above are out of scope.
-    const stacked = this.stacked && (this.type === 'bar' || this.type === 'line');
+    const stacked = this.stacked && (effectiveType === 'bar' || effectiveType === 'line');
     return {
       x: {
-        type: this.type === 'scatter' || this.type === 'bubble' ? 'linear' : 'category',
+        type: effectiveType === 'scatter' || effectiveType === 'bubble' ? 'linear' : 'category',
         title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
         ticks: { color: theme.tick },
         grid: { color: theme.grid },
@@ -322,8 +344,16 @@ export class LyraChart extends LyraElement {
 
   private buildConfig(): import('chart.js').ChartConfiguration {
     const theme = this.themeColors();
+    // Resolve the effective type up front: `config.type` (if set) overrides
+    // the attribute `type` post-merge, so scales/interaction must be built
+    // for *that* type, not `this.type` — otherwise a config.type override
+    // (e.g. line -> radar) ships with the wrong axis shape (categorical x/y
+    // instead of a radial r scale).
+    const effectiveType =
+      (this.config?.type as import('chart.js').ChartType | undefined) ??
+      (this.type as import('chart.js').ChartType);
     const generated: import('chart.js').ChartConfiguration = {
-      type: this.type as import('chart.js').ChartType,
+      type: effectiveType,
       data: {
         labels: this.labels,
         datasets: this.datasets.map((s) => this.seriesToDataset(s)) as never,
@@ -341,7 +371,7 @@ export class LyraChart extends LyraElement {
         // canvas-internal animation loop, so `prefersReducedMotion()` is
         // checked here instead and fed into `options.animation`.
         animation: prefersReducedMotion() ? false : undefined,
-        interaction: { intersect: false, mode: this.type === 'scatter' ? 'nearest' : 'index' },
+        interaction: { intersect: false, mode: effectiveType === 'scatter' ? 'nearest' : 'index' },
         onClick: (event, _elements, chart) => this.handlePointClick(event, chart),
         plugins: {
           legend: { display: this.legend, labels: { color: theme.legend } },
@@ -349,6 +379,10 @@ export class LyraChart extends LyraElement {
             backgroundColor: theme.tooltipBg,
             titleColor: theme.tooltipText,
             bodyColor: theme.tooltipText,
+            // Chart.js's tooltip plugin has no per-dataset `tooltip.enabled`
+            // — `Series.noTooltip` is implemented here instead, via the one
+            // mechanism the core tooltip plugin actually reads.
+            filter: (item) => !this.datasets[item.datasetIndex]?.noTooltip,
           },
           zoom: this.zoom
             ? {
@@ -368,7 +402,7 @@ export class LyraChart extends LyraElement {
               }
             : undefined,
         },
-        scales: this.buildScales(theme),
+        scales: this.buildScales(effectiveType, theme),
       },
     };
 
