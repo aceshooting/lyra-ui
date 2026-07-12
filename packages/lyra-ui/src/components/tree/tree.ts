@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { defineElement } from '../../internal/prefix.js';
+import { defineElement, tag } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
@@ -44,11 +44,11 @@ export class LyraTree extends LyraElement {
   private pendingFocusId: string | null = null;
 
   private get nodeElements(): LyraTreeNode[] {
-    return [...this.querySelectorAll('lyra-tree-node')] as LyraTreeNode[];
+    return [...this.querySelectorAll(tag('tree-node'))] as LyraTreeNode[];
   }
 
   private childrenOf(node: LyraTreeNode): LyraTreeNode[] {
-    return [...(node.shadowRoot?.querySelectorAll('lyra-tree-node') ?? [])] as LyraTreeNode[];
+    return [...(node.shadowRoot?.querySelectorAll(tag('tree-node')) ?? [])] as LyraTreeNode[];
   }
 
   /**
@@ -128,7 +128,7 @@ export class LyraTree extends LyraElement {
     let previousSibling: LyraTreeNode | null = null;
     for (const item of this.data) {
       const reused = !seen.has(item.id) ? existingById.get(item.id) : undefined;
-      const node = reused ?? (document.createElement('lyra-tree-node') as LyraTreeNode);
+      const node = reused ?? (document.createElement(tag('tree-node')) as LyraTreeNode);
       node.item = item;
       node.depth = 0;
       seen.add(item.id);
