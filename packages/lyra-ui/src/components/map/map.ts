@@ -172,11 +172,16 @@ export class LyraMap extends LyraElement {
       this._styleLoaded = false;
       this._appliedChoroplethSourceId = undefined;
       this._appliedFillLayerId = undefined;
-      this._map.setStyle(this.mapStyle);
+      // Register the listener *before* calling setStyle(): maplibre-gl's
+      // diff-based style update path (small, incremental style changes) can
+      // fire 'style.load' synchronously from inside setStyle() itself —
+      // registering the listener afterwards would miss that emission and
+      // leave the choropleth (and `_styleLoaded`) never re-applied.
       this._map.once('style.load', () => {
         this._styleLoaded = true;
         this.applyChoropleth();
       });
+      this._map.setStyle(this.mapStyle);
     } else if (changed.has('choropleth') && this._styleLoaded) {
       this.applyChoropleth();
     }

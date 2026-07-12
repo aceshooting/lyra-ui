@@ -316,6 +316,42 @@ it('calls setStyle when mapStyle changes after the map has mounted', async () =>
   expect(calledWith).to.equal(NEXT_STYLE);
 });
 
+it('re-applies the choropleth once the new style finishes loading after a mapStyle change', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  el.choropleth = choropleth('style-reload', [
+    [0, '#000000'],
+    [10, '#ffffff'],
+  ]);
+  await el.updateComplete;
+  await waitUntil(() => el.map!.getLayer('style-reload-fill') != null, 'layer never added', {
+    timeout: 2000,
+  });
+
+  // A real setStyle() call wipes every layer/source maplibre-gl knows about;
+  // once its own 'style.load' fires, the previously-applied choropleth must
+  // be re-added rather than left missing. (Keeps the same "demo" source id
+  // so the new style itself is valid — only the raster layer's paint
+  // changes — unlike the sibling "calls setStyle..." test above, which
+  // stubs setStyle() out entirely and so never actually applies its
+  // mismatched source/layer ids.)
+  const NEXT_STYLE = {
+    ...RASTER_STYLE,
+    layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.9 } }],
+  };
+  el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+  await el.updateComplete;
+
+  await waitUntil(() => el.map!.getLayer('style-reload-fill') != null, 'choropleth never re-applied', {
+    timeout: 2000,
+  });
+  expect(el.map!.getSource('style-reload')).to.exist;
+});
+
 it('adds a maplibregl.Marker per entry in markers', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
