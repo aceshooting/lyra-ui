@@ -11,6 +11,10 @@ export type StatGoodDirection = 'up' | 'down';
 export interface StatRow {
   label: string;
   value: string;
+  /** Exact value shown as a hover/focus tooltip on this row's `row-value` (mirrors the headline
+   *  `exactValue`/`exact-value` behavior). Also makes this row's `[part='row-value']`
+   *  keyboard-focusable so the tooltip is reachable without a pointer. */
+  exactValue?: string;
 }
 
 /**
@@ -36,7 +40,8 @@ export interface StatRow {
  * @csspart rows - Container for the `rows` breakdown list.
  * @csspart row - A single breakdown row (one per `rows` entry).
  * @csspart row-label - The label text of a breakdown row.
- * @csspart row-value - The value text of a breakdown row.
+ * @csspart row-value - The value text of a breakdown row. Shows the row's `exactValue` (if any) as
+ *   a hover/focus tooltip, same as the headline `value`.
  */
 export class LyraStat extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -159,7 +164,12 @@ export class LyraStat extends LyraElement {
             (row) => html`
               <div part="row">
                 <span part="row-label">${row.label}</span>
-                <span part="row-value">${row.value}</span>
+                <span
+                  part="row-value"
+                  title=${row.exactValue || nothing}
+                  tabindex=${row.exactValue ? '0' : nothing}
+                  >${row.value}</span
+                >
               </div>
             `,
           )}

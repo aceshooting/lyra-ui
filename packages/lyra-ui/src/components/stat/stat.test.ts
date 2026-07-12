@@ -312,6 +312,42 @@ it('does not reflect rows onto an attribute', async () => {
   expect(el.hasAttribute('rows')).to.be.false;
 });
 
+it('shows a row exact value as a title tooltip, and makes that row focusable', async () => {
+  const el = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
+  el.rows = [{ label: 'Tokens', value: '1.2K', exactValue: '1,204' }];
+  await el.updateComplete;
+
+  const rowValue = el.shadowRoot!.querySelector('[part="row-value"]') as HTMLElement;
+  expect(rowValue.getAttribute('title')).to.equal('1,204');
+  expect(rowValue.getAttribute('tabindex')).to.equal('0');
+});
+
+it('does not make a row focusable when that row has no exactValue', async () => {
+  const el = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
+  el.rows = [{ label: 'Direct', value: '64%' }];
+  await el.updateComplete;
+
+  const rowValue = el.shadowRoot!.querySelector('[part="row-value"]') as HTMLElement;
+  expect(rowValue.hasAttribute('title')).to.be.false;
+  expect(rowValue.hasAttribute('tabindex')).to.be.false;
+});
+
+it('applies the exactValue tooltip/focusability independently per row', async () => {
+  const el = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
+  el.rows = [
+    { label: 'Direct', value: '64%' },
+    { label: 'Tokens', value: '1.2K', exactValue: '1,204' },
+    { label: 'Other', value: '15%' },
+  ];
+  await el.updateComplete;
+
+  const rowValues = Array.from(el.shadowRoot!.querySelectorAll('[part="row-value"]'));
+  expect(rowValues.map((el) => el.hasAttribute('title'))).to.deep.equal([false, true, false]);
+  expect(rowValues.map((el) => el.hasAttribute('tabindex'))).to.deep.equal([false, true, false]);
+  expect(rowValues[1].getAttribute('title')).to.equal('1,204');
+  expect(rowValues[1].getAttribute('tabindex')).to.equal('0');
+});
+
 it('reflects emphasis onto the host attribute and adds an accent border to the base part', async () => {
   const plain = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
   expect(plain.hasAttribute('emphasis')).to.be.false;

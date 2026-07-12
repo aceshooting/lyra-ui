@@ -63,6 +63,24 @@ export const BreakdownRows: Story = {
   },
 };
 
+export const BreakdownRowsWithExactValue: Story = {
+  render: () => html`
+    <div class="flex flex-wrap gap-4">
+      <lyra-stat label="Usage" value="12,480" caption="By model, this billing cycle"></lyra-stat>
+    </div>
+  `,
+  play: async ({ canvasElement }) => {
+    const el = canvasElement.querySelector('lyra-stat') as HTMLElement & {
+      rows: { label: string; value: string; exactValue?: string }[];
+    };
+    el.rows = [
+      { label: 'Sonnet tokens', value: '8.4K', exactValue: '8,412 tokens' },
+      { label: 'Haiku tokens', value: '3.1K', exactValue: '3,068 tokens' },
+      { label: 'Cache reads', value: '980' },
+    ];
+  },
+};
+
 export const Emphasis: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">
