@@ -7,8 +7,8 @@ import { styles } from './histogram.styles.js';
 
 /**
  * `<lyra-histogram>` — bins `values` into `bins` equal-width buckets and
- * renders them as a bar chart. No Chart.js histogram controller exists in
- * any surveyed seed; this composes `binValues()` with the plain `bar` type.
+ * renders them as a bar chart. Chart.js has no built-in histogram
+ * controller; this composes `binValues()` with the plain `bar` type.
  *
  * @customElement lyra-histogram
  */

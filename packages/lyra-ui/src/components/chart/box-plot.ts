@@ -49,7 +49,7 @@ function loadBoxPlotPlugin(): Promise<typeof import('@sgratzl/chartjs-chart-boxp
 /**
  * `<lyra-box-plot>` — a box-and-whisker chart from precomputed five-number
  * summaries (no raw sample data is shipped to the browser). Beyond Web
- * Awesome's chart set — heavily used across ML/clustering dashboards.
+ * Awesome's chart set — useful for summarizing distributions.
  *
  * @customElement lyra-box-plot
  * @csspart base, canvas

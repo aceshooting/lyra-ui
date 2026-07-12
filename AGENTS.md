@@ -101,10 +101,9 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   public npm tarball (`dist/`, `custom-elements.json`, `llms*.txt` all carry these comments), so
   anything written here is published. Keep the *technical* rationale ("previously X was broken,
   so we do Y") and drop the provenance — a code comment explains the code, not who reviewed it.
-  Internal planning dirs (`.superpowers/`, `docs/superpowers/` — any locally-generated planning
-  or agent-tooling output) must never be referenced by path from tracked files, and must stay
-  untracked (excluded via local `.git/info/exclude`, not the committed `.gitignore`, since the
-  exclude patterns themselves would otherwise hint at their contents).
+  Local-only planning/agent-tooling directories must never be referenced by path — by name or
+  otherwise — from any tracked file, and must stay untracked via local git exclude config rather
+  than the committed `.gitignore` (which would itself name them).
 - License: MIT. TypeScript strict.
 
 ## Testing conventions

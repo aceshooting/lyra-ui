@@ -6,7 +6,7 @@ import { styles } from './empty.styles.js';
 
 /**
  * `<lyra-empty>` — a generic empty/no-data state. First-party invention (no
- * Web Awesome equivalent); fills the gap identified across ~30 surveyed repos.
+ * Web Awesome equivalent); fills a gap common to dashboard-style apps.
  *
  * @customElement lyra-empty
  * @slot - Custom icon or illustration (defaults to none).

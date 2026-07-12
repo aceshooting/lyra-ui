@@ -131,6 +131,13 @@ export class LyraGraph extends LyraElement {
   /** Node `<circle>`s already wired up with d3-drag; cleared on every simulation rebuild
    *  so DOM elements Lit reuses across a rebuild get rebound to their fresh datum. */
   private boundNodeEls = new WeakSet<Element>();
+  /** Node/link/label DOM elements, index-aligned with simNodes/simLinks, cached
+   *  once per structural rebuild and written to directly by onTick() — this is
+   *  what lets ticks update positions without going through Lit's reactive
+   *  simNodes/simLinks properties (see rebuildSimulation()'s doc comment). */
+  private nodeEls: SVGCircleElement[] = [];
+  private nodeLabelEls: (SVGTextElement | null)[] = [];
+  private linkEls: SVGLineElement[] = [];
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -154,37 +161,57 @@ export class LyraGraph extends LyraElement {
     return n.radius ?? (MIN_RADIUS + MAX_RADIUS) / 2;
   }
 
+  protected willUpdate(changed: PropertyValues): void {
+    // rebuildSimulation() (re)assigns the simNodes/simLinks reactive
+    // properties — doing that from willUpdate() folds them into the render
+    // this same update is already about to perform. Doing it from updated()
+    // instead would set a reactive property *after* the update completed,
+    // which Lit schedules as a whole extra update pass (a dev-mode warning,
+    // and pointless work).
+    if (this.d3 && (changed.has('nodes') || changed.has('links'))) {
+      this.rebuildSimulation();
+    }
+  }
+
   protected updated(changed: PropertyValues): void {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
     if (!this.d3) return;
-    if (changed.has('nodes') || changed.has('links')) {
-      this.rebuildSimulation();
-    } else if (changed.has('width') || changed.has('height')) {
-      this.simulation?.force('center', this.d3.forceCenter(this.width / 2, this.height / 2));
-      this.simulation?.alpha(0.1).restart();
-    } else if (changed.has('chargeStrength') || changed.has('linkDistance')) {
-      // Without this branch, chargeStrength/linkDistance only took effect the
-      // next time nodes/links also changed (rebuildSimulation() reads them
-      // fresh) — retune the already-created force objects in place instead of
-      // rebuilding the whole simulation.
-      if (changed.has('chargeStrength')) this.chargeForce?.strength(this.chargeStrength);
-      if (changed.has('linkDistance')) this.linkForce?.distance(this.linkDistance);
-      this.simulation?.alpha(0.3).restart();
+    if (!changed.has('nodes') && !changed.has('links')) {
+      if (changed.has('width') || changed.has('height')) {
+        this.simulation?.force('center', this.d3.forceCenter(this.width / 2, this.height / 2));
+        this.simulation?.alpha(0.1).restart();
+      } else if (changed.has('chargeStrength') || changed.has('linkDistance')) {
+        // Without this branch, chargeStrength/linkDistance only took effect
+        // the next time nodes/links also changed (rebuildSimulation() reads
+        // them fresh) — retune the already-created force objects in place
+        // instead of rebuilding the whole simulation.
+        if (changed.has('chargeStrength')) this.chargeForce?.strength(this.chargeStrength);
+        if (changed.has('linkDistance')) this.linkForce?.distance(this.linkDistance);
+        this.simulation?.alpha(0.3).restart();
+      }
     }
-    this.applyInteractions();
+    // simNodes/simLinks only ever change once per structural rebuild (see
+    // rebuildSimulation()'s doc comment) — never on a tick — so gating the
+    // node/link querySelectorAll scan on that is equivalent to "structurally
+    // changed" without needing a separate flag.
+    this.applyInteractions(changed.has('simNodes') || changed.has('simLinks'));
   }
 
   /**
    * Imperatively wires up d3-zoom (pan/zoom on the `<svg>`) and d3-drag
-   * (per-node drag) against the just-rendered DOM. Runs after every render:
-   * binding the `<svg>` is a one-time no-op guard (`zoomedEl`), and node
-   * `<circle>`s are skipped once bound (`boundNodeEls`) — a WeakSet reset on
-   * every `rebuildSimulation()` so DOM nodes Lit reuses across a rebuild get
+   * (per-node drag) against the just-rendered DOM. The zoom bind is a
+   * one-time no-op guard (`zoomedEl`); the node-drag bind + node/link/label
+   * element caching for `onTick()` only run when `structural` is true (a
+   * fresh structural render just happened), not on every call — otherwise
+   * this would re-scan the DOM via `querySelectorAll` on every Lit update,
+   * which used to include every single simulation tick. `<circle>`s already
+   * bound are skipped (`boundNodeEls`) — a WeakSet reset on every
+   * `rebuildSimulation()` so DOM nodes Lit reuses across a rebuild get
    * rebound against their new datum instead of a stale one.
    */
-  private applyInteractions(): void {
+  private applyInteractions(structural: boolean): void {
     if (!this.d3) return;
 
     const svgEl = this.renderRoot.querySelector('svg');
@@ -199,7 +226,15 @@ export class LyraGraph extends LyraElement {
       this.d3.select(svgEl).call(zoomBehavior);
     }
 
-    const nodeEls = this.renderRoot.querySelectorAll('[part="node"]');
+    if (!structural) return;
+
+    const nodeEls = Array.from(this.renderRoot.querySelectorAll('[part="node"]')) as SVGCircleElement[];
+    this.nodeEls = nodeEls;
+    this.nodeLabelEls = nodeEls.map(
+      (el) => (el.parentElement?.querySelector('[part="label"]') as SVGTextElement | null) ?? null,
+    );
+    this.linkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"]')) as SVGLineElement[];
+
     nodeEls.forEach((el, i) => {
       if (this.boundNodeEls.has(el)) return;
       const n = this.simNodes[i];
@@ -227,6 +262,41 @@ export class LyraGraph extends LyraElement {
     });
   }
 
+  /**
+   * Runs on every d3-force simulation tick (up to ~300 while a graph settles
+   * on load, continuously while a node is being dragged via
+   * `alphaTarget(0.3)`). Writes positions straight to the already-rendered
+   * DOM via direct d3-selection `.attr()` calls instead of reassigning the
+   * reactive `simNodes`/`simLinks` properties, which would force a full Lit
+   * re-render (and, before the `structural` gate above, an unconditional
+   * `querySelectorAll` scan) on every single frame.
+   */
+  private onTick(): void {
+    if (!this.d3) return;
+    const d3 = this.d3;
+    this.simNodes.forEach((n, i) => {
+      const circle = this.nodeEls[i];
+      if (circle) d3.select(circle).attr('cx', n.x ?? 0).attr('cy', n.y ?? 0);
+      const label = this.nodeLabelEls[i];
+      if (label) {
+        d3.select(label)
+          .attr('x', (n.x ?? 0) + this.nodeRadius(n) + 2)
+          .attr('y', n.y ?? 0);
+      }
+    });
+    this.simLinks.forEach((l, i) => {
+      const line = this.linkEls[i];
+      if (!line) return;
+      const source = l.source as SimNode;
+      const target = l.target as SimNode;
+      d3.select(line)
+        .attr('x1', source.x ?? 0)
+        .attr('y1', source.y ?? 0)
+        .attr('x2', target.x ?? 0)
+        .attr('y2', target.y ?? 0);
+    });
+  }
+
   private rebuildSimulation(): void {
     if (!this.d3) return;
     this.simulation?.stop();
@@ -250,10 +320,18 @@ export class LyraGraph extends LyraElement {
         'collide',
         this.d3.forceCollide<SimNode>().radius((n) => this.nodeRadius(n) + 10),
       )
-      .on('tick', () => {
-        this.simNodes = [...nodes];
-        this.simLinks = [...links];
-      });
+      .on('tick', () => this.onTick());
+
+    // Assign these SAME array/object references (not copies) exactly once
+    // for this structural rebuild: forceSimulation(nodes) above already
+    // initialized their .x/.y synchronously, so this one Lit re-render
+    // creates the initial DOM with correct starting positions. Every
+    // subsequent tick mutates these same node/link objects in place and
+    // calls onTick() to write positions straight to the DOM — reassigning
+    // simNodes/simLinks on every tick (as before) would force a full Lit
+    // re-render up to ~300 times on load and continuously while dragging.
+    this.simNodes = nodes;
+    this.simLinks = links;
   }
 
   private onNodeClick(node: SimNode): void {

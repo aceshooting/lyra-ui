@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { select } from 'd3-selection';
 import './graph.js';
 import type { LyraGraph } from './graph.js';
@@ -169,6 +169,35 @@ it('updates the charge/link forces in place when chargeStrength/linkDistance cha
   const linkForce = (el as any).linkForce as { distance: () => () => number };
   expect(chargeForce.strength()()).to.equal(-900);
   expect(linkForce.distance()()).to.equal(250);
+});
+
+it('does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const simNodesRef = (el as any).simNodes;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const simLinksRef = (el as any).simLinks;
+  const initialCx = (el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement).getAttribute('cx');
+
+  // Let the simulation tick for a while.
+  await aTimeout(300);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).simNodes).to.equal(simNodesRef);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).simLinks).to.equal(simLinksRef);
+  // Positions still actually update (via direct DOM writes, not Lit
+  // re-renders) — this isn't a frozen simulation, ticks just no longer
+  // reassign the reactive simNodes/simLinks array references.
+  const laterCx = (el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement).getAttribute('cx');
+  expect(laterCx).to.not.equal(initialCx);
 });
 
 it('is accessible', async () => {

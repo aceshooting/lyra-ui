@@ -90,8 +90,8 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
     padding: var(--lyra-space-xs);
     /* Real touch target in *both* dimensions (WCAG 2.2 SC 2.5.8 needs
-       24x24 CSS px, not just height — a design-review fix that only set
-       min-block-size left these buttons ~21px wide). icon-button-size is
+       24x24 CSS px, not just height — min-block-size alone left these
+       buttons ~21px wide). icon-button-size is
        the ceiling, but never grow past what the [part=combobox] row's own
        2.5rem min-block-size has room for once its own block padding is
        subtracted. */

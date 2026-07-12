@@ -43,7 +43,7 @@ const RADIAL_ARC_LENGTH = (SWEEP_DEG / 360) * 2 * Math.PI * RADIUS;
 
 /**
  * `<lyra-gauge>` — a radial or linear meter. First-party invention; no
- * generic gauge widget was found across the surveyed repos.
+ * generic gauge widget exists in Web Awesome.
  *
  * @customElement lyra-gauge
  * @csspart base, track, fill, value, label

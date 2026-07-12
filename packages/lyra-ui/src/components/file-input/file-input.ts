@@ -14,8 +14,8 @@ export interface RejectedFile {
 
 /**
  * `<lyra-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
- * raw `File[]`; parsing (CSV/XLSX/etc.) is left to the host, matching every
- * surveyed upload seed (all of which upload raw files to a backend).
+ * raw `File[]`; parsing (CSV/XLSX/etc.) is left to the host, since that's
+ * where files ultimately get uploaded and processed anyway.
  *
  * @customElement lyra-file-input
  * @slot - Custom drop-zone content, overrides the `label` attribute.

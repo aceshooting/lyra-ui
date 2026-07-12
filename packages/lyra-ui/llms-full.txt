@@ -64,7 +64,7 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   `lyra-skeleton`'s "Loading…" text).
 
 **Known gotchas:**
-- **High** — `required` is currently inert for real validation. `FormAssociated` never calls
+- `required` is currently inert for real validation. `FormAssociated` never calls
   `internals.setValidity(...)`; `ElementInternals` defaults to "valid" until that's called.
   `checkValidity()`/`reportValidity()` always return `true`. Concretely:
   `<form><lyra-date-input name="d" required></lyra-date-input></form>`; `form.reportValidity()`
@@ -72,14 +72,14 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   `:invalid`/`:user-invalid` match, no `aria-invalid`. This affects both `lyra-date-input` (via the
   mixin) and `lyra-combobox` (via its own hand-rolled copy). **Do not rely on `required` for
   constraint validation yet** — validate in application code until this is fixed.
-- **Medium** — `formResetCallback()` always resets to blank (`''` / `[]`), not the field's
+- `formResetCallback()` always resets to blank (`''` / `[]`), not the field's
   originally-constructed value. `form.reset()` on `<lyra-date-input value="2026-07-15">` clears it
   to `''` instead of restoring `"2026-07-15"` the way a native input's `defaultValue` would.
-- **Medium** — only `lyra-date-input` actually uses the shared mixin; `lyra-combobox` independently
+- only `lyra-date-input` actually uses the shared mixin; `lyra-combobox` independently
   hand-rolls the same internals/validity/reset logic (needed because its value can be an array in
   `multiple` mode) — the two copies can silently diverge, and the `setValidity` gap above has to be
   fixed in both places.
-- **Low** — no shared label/input association helper: `<label part="form-control-label">` in both
+- no shared label/input association helper: `<label part="form-control-label">` in both
   `lyra-combobox` and `lyra-date-input` is a DOM sibling of the input with no `id`/`for` pairing, so
   clicking the visible label text doesn't focus the field the way a native `<label for>` would.
 
@@ -150,18 +150,18 @@ Multi-select submits as **repeated `FormData` entries** (not a joined string) �
 `new FormData(form).getAll(name)` behaves like a native multi-value control.
 
 **Known gotchas:**
-- **High** — `required` is declared but completely inert: never read for validity (see the shared
+- `required` is declared but completely inert: never read for validity (see the shared
   `internal/` gotchas above) **and** never reflected as `aria-required` onto the actual
   `<input part="combobox-input">` — a screen-reader user gets zero indication the field is
   mandatory even before the validity fix lands.
-- **Medium** — declaratively-selected options are **ignored on initial render**:
+- declaratively-selected options are **ignored on initial render**:
   `<lyra-option value="b" selected>` in markup never seeds the combobox's selection — only the
   combobox's own state pushes down to options, never the reverse. Set `.value` programmatically
   after mount instead of relying on the `selected` attribute in markup.
-- **Low** — naming drift from Web Awesome parity: the shipped attribute is **`with-clear`**, not
+- naming drift from Web Awesome parity: the shipped attribute is **`with-clear`**, not
   `clearable` (which is what `<wa-combobox>` uses) — don't copy-paste WA docs assuming a 1:1
   attribute name here.
-- **Low** — no `size` variant (small/medium/large) unlike sibling `lyra-toast-item`.
+- no `size` variant (small/medium/large) unlike sibling `lyra-toast-item`.
 - Full ARIA 1.2 combobox pattern (`role=combobox`, roving `aria-activedescendant`, real DOM focus
   kept on the input) is implemented correctly — a genuine strength, safe to build on.
 
@@ -260,24 +260,24 @@ from the package root**, but worth knowing when reasoning about behavior): `pars
 `resolveFirstDayOfWeek(value)`.
 
 **Known gotchas:**
-- **Medium** — `first-day-of-week="auto"` does **not** derive from `locale` despite the name:
+- `first-day-of-week="auto"` does **not** derive from `locale` despite the name:
   `resolveFirstDayOfWeek()` hardcodes `0` (Sunday) whenever the value is `'auto'`, even though
   `locale` is already used elsewhere (weekday labels, month title). A French/German-locale user gets
   a Sunday-first grid instead of the Monday-first layout their OS would show. **Workaround:** pass
   an explicit `first-day-of-week="mon"` (accepted values: `sun`/`mon`/`tue`/`wed`/`thu`/`fri`/`sat`)
   if you need locale-correct week starts.
-- **Medium** (date-input only) — the calendar popover has **no Escape-to-close**: only
+- (date-input only) — the calendar popover has **no Escape-to-close**: only
   `Alt+ArrowDown` opens it; there's no keydown handling to `hide()` on Escape, unlike `lyra-combobox`
   in the same package. A keyboard user must Tab all the way through the grid/nav/clear buttons or
   click elsewhere to dismiss it.
-- **Low** (date-input only) — opening the calendar doesn't move focus into it (`show()` only flips
+- (date-input only) — opening the calendar doesn't move focus into it (`show()` only flips
   `open`) — a keyboard user opening via `Alt+ArrowDown` lands on a visible popover with focus still
   on the text input.
-- **Low** — one hardcoded, non-token color: selected/range-start/range-end day text is
+- one hardcoded, non-token color: selected/range-start/range-end day text is
   `color: #fff` in `date-picker.styles.ts` — if you override
   `--lyra-color-brand`/`--wa-color-brand-fill-loud` to something light, contrast on selected-day
   text isn't guaranteed.
-- **Low** (date-input) — shares the mixin's reset-to-blank defect: `form.reset()` always clears to
+- (date-input only) — shares the mixin's reset-to-blank defect: `form.reset()` always clears to
   `''` rather than restoring the originally-constructed `value`.
 - The grid keyboard pattern (Arrow/PageUp/PageDown/Home/End navigation with correct focus
   sequencing) is implemented correctly and safe to rely on.
@@ -365,11 +365,11 @@ re-mounts if removed) a single `<lyra-toast>` region on `document.body`.
 ```
 
 **Known gotchas:**
-- **Low** — possible nested live-region double-announcement: the stack region is
+- possible nested live-region double-announcement: the stack region is
   `role="status" aria-live="polite"` **and** each `lyra-toast-item` independently self-assigns its
   own `role` (`status`/`alert`) — nesting live regions can cause some screen readers to announce a
   new toast twice. Plausible from the code, unverified against real AT.
-- **Low** — pause/resume-on-hover/focus (the component's main accessibility differentiator) has no
+- pause/resume-on-hover/focus (the component's main accessibility differentiator) has no
   regression test coverage — don't assume a future refactor won't silently break it; test it
   yourself if it's load-bearing for your app.
 - Prefer the `toast()` helper over manually creating `<lyra-toast>`/`<lyra-toast-item>` — it already
@@ -459,7 +459,7 @@ pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> r
 - Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
   resolver call, so there's a brief empty-render window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.
-- **Low** — if `label` is omitted, the accessible name (`alt`) falls back to the **bare uppercase
+- if `label` is omitted, the accessible name (`alt`) falls back to the **bare uppercase
   ISO code** (e.g. `"FR"`, `"DE"`) — a screen reader will typically spell this out letter-by-letter
   rather than announce a country name. Always pass an explicit `label` (e.g. `"France"`) if the flag
   conveys real information rather than being purely decorative.
@@ -495,9 +495,9 @@ First-party "no data" state (no Web Awesome equivalent).
 ```
 
 **Known gotchas:**
-- **Medium** — no live-region semantics: a plain role-less `<div>`, so a list/table transitioning to
+- no live-region semantics: a plain role-less `<div>`, so a list/table transitioning to
   empty announces nothing to screen readers (unlike sibling `lyra-skeleton`'s `role="status"`).
-- **Low** — no compact/density variant; fixed `padding: var(--lyra-space-l)` and 2rem icon sizing
+- no compact/density variant; fixed `padding: var(--lyra-space-l)` and 2rem icon sizing
   are tuned for full-page use, awkward embedded in a card or narrow container.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
   inside can never match `:empty`) by tracking real slot assignment in JS (`hasIcon`/`hasActions`) —
@@ -533,13 +533,13 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 ```
 
 **Known gotchas:**
-- **Medium** — every instance is an independent, simultaneously-firing `role="status"` live region
+- every instance is an independent, simultaneously-firing `role="status"` live region
   (via `willUpdate` setting `role="status"` plus visually-hidden "Loading…" text). A realistic
   loading state (e.g. a 10×5 skeleton table = 50 instances) mounts 50 separate live regions at
   nearly the same tick — expect screen readers to announce "Loading…" dozens of times, not once.
   There's no grouping primitive to dedupe this; if it matters, wrap your own single `role="status"`
   region around a set of skeletons and mark the individual ones `aria-hidden`.
-- **Low** — no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
+- no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
   yourself.
 - Respects `prefers-reduced-motion` (both effects) — safe to leave as-is for that concern.
 
@@ -580,7 +580,7 @@ the `variant`-colored value text and up/down trend pill).
 ```
 
 **Known gotchas:**
-- **Low** — no `aria-live` for in-place `value`/`trend` updates — a value/trend change after first
+- no `aria-live` for in-place `value`/`trend` updates — a value/trend change after first
   render is not announced to screen readers.
 
 ---
@@ -633,10 +633,10 @@ body's `max-block-size`).
 ```
 
 **Known gotchas:**
-- **Medium** — only single-row selection is modeled (`selectedKey: string | number | null`);
+- only single-row selection is modeled (`selectedKey: string | number | null`);
   there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
   a `cell()` callback if you need multi-select.
-- **Low** — no `caption`/`aria-label` property, so the rendered `role="grid"` has no accessible name
+- no `caption`/`aria-label` property, so the rendered `role="grid"` has no accessible name
   distinguishing it from any other grid on the page.
 - Keyboard equivalents (Enter/Space) for both header-sort and row-activate are implemented and
   solid — a genuine strength versus most siblings in this family.
@@ -675,15 +675,15 @@ gauge-specific custom property exists).
 ```
 
 **Known gotchas:**
-- **Medium** — no `aria-valuetext`: setting `valueLabel` (e.g. `"72°F"`) changes the visible SVG
+- no `aria-valuetext`: setting `valueLabel` (e.g. `"72°F"`) changes the visible SVG
   text but never reaches the accessibility tree — `aria-valuenow` always carries the bare numeric
   `value`. A screen reader announces the raw number, not your formatted string.
-- **Medium** — the SVG `<text>` elements aren't `aria-hidden`, so they're exposed inside the same
+- the SVG `<text>` elements aren't `aria-hidden`, so they're exposed inside the same
   `role="meter"` host that already carries `aria-valuenow`/`aria-label` — risks double/mismatched
   announcements when `valueLabel` differs from the raw `value`.
-- **Low** — no color-threshold/variant support: a single fixed `--lyra-color-brand` fill regardless
+- no color-threshold/variant support: a single fixed `--lyra-color-brand` fill regardless
   of value (no amber/red-near-capacity idiom built in).
-- **Low** — no documented component-specific sizing custom property; host size is fixed em values
+- no documented component-specific sizing custom property; host size is fixed em values
   (`8em`/`12em` radial, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
   element instead.
 - Divide-by-zero guarded (`max - min || 1`), and radial/linear share one component via the `type`
@@ -738,7 +738,7 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 ```
 
 **Known gotchas:**
-- **Low** — XLSX isn't implemented (`ExportFormat` really is `'csv' | 'json'`) — don't pass
+- XLSX isn't implemented (`ExportFormat` really is `'csv' | 'json'`) — don't pass
   `'xlsx'` expecting it to work.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
@@ -782,19 +782,19 @@ Keyboard: focus a divider (`Tab`), then `ArrowRight`/`ArrowLeft` (horizontal) or
 `ArrowDown`/`ArrowUp` (vertical) to resize by a fixed 2% step.
 
 **Known gotchas:**
-- **Medium** — `panelCount` is computed **once**, in `connectedCallback()`, from
+- `panelCount` is computed **once**, in `connectedCallback()`, from
   `this.children.length`. Adding/removing a panel after mount (e.g. conditionally showing a side
   panel) leaves `panelCount`/`sizes`/divider count silently stale — there's no
   `slotchange`/`MutationObserver` to react to it. If your panel set can change, re-create the
   `<lyra-split>` rather than mutating its children live.
-- **Medium** — divider `aria-valuemax` (reported as `100 - min`) is only correct for exactly **two**
+- divider `aria-valuemax` (reported as `100 - min`) is only correct for exactly **two**
   panels. With 3+ panels the real achievable max for divider `i` is `sizes[i] + sizes[i+1] - min`
   (resizing only trades size between the adjacent pair) — e.g. three equal 33.3% panels with
   `min=10` all report `aria-valuemax="90"` though the true achievable value is ~56.6. Don't trust
   the reported max for 3+-panel layouts.
-- **Low** — no feasibility check on `min` vs. panel count (e.g. 3 panels with `min=40` is
+- no feasibility check on `min` vs. panel count (e.g. 3 panels with `min=40` is
   unsatisfiable) — result is a silently frozen splitter with no warning.
-- **Low** — `localStorage.getItem`/`setItem` calls themselves are unguarded (only the `JSON.parse`
+- `localStorage.getItem`/`setItem` calls themselves are unguarded (only the `JSON.parse`
   result is try/caught) — a blocked or quota-exceeded store can throw synchronously from inside a
   `pointerup`/`keydown` handler.
 - Pointer-drag lifecycle (pointer capture, window-listener cleanup on both drag-end and
@@ -938,15 +938,15 @@ resolved through a scratch canvas). Also consumes `--lyra-color-text-quiet` (axi
 ```
 
 **Known gotchas:**
-- **High** — the `ResizeObserver` is wired but effectively inert: `draw()` always sizes the canvas
+- the `ResizeObserver` is wired but effectively inert: `draw()` always sizes the canvas
   as `PAD_LEFT + cols * cellSize`, never from the host's measured width, so a container resize
   redraws identical dimensions. The stylesheet's `canvas { inline-size: 100% }` is also dead code —
   `draw()` unconditionally sets an inline `canvas.style.width/height` on every redraw, and inline
   style always wins over that external rule.
-- **Medium** — `NaN`/non-finite cell values are **not** treated as no-data (only `-1` is): `NaN < 0`
+- `NaN`/non-finite cell values are **not** treated as no-data (only `-1` is): `NaN < 0`
   is `false`, so it falls into the normal color-ramp branch, produces an invalid `fillStyle`, and
   that cell silently keeps whatever color was left over from the previous loop iteration.
-- **Medium** — moving the browser window repeatedly across displays with different pixel ratios
+- moving the browser window repeatedly across displays with different pixel ratios
   leaks one stale `MediaQueryList` listener per DPR crossing (each `onDprChange` creates a new
   listener without removing the previous one).
 - Per-cell values are not individually inspectable by assistive tech — the whole grid is one
@@ -993,13 +993,13 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 ```
 
 **Known gotchas:**
-- **High** — per-tick full re-render is expensive: every d3-force tick (up to ~300 by default,
+- per-tick full re-render is expensive: every d3-force tick (up to ~300 by default,
   continuously while dragging via `alphaTarget(0.3)`) replaces `simNodes`/`simLinks` with fresh
   array references, forcing Lit to re-diff the entire node/link template and re-run
   `applyInteractions()`. Noticeable cost for graphs of a few hundred+ nodes.
-- **Medium** — `chargeStrength`/`linkDistance` are **not** live-reactive: changing them post-mount
+- `chargeStrength`/`linkDistance` are **not** live-reactive: changing them post-mount
   does nothing until `nodes`/`links` also change (only those two trigger `rebuildSimulation()`).
-- **Medium** — zoom has no `.scaleExtent(...)` (unbounded in/out); pan/zoom/drag are pointer-only
+- zoom has no `.scaleExtent(...)` (unbounded in/out); pan/zoom/drag are pointer-only
   with no keyboard equivalent. Links (`<line part="link">`) are click-only — no
   `role`/`tabindex`/`aria-label`, unlike nodes which are properly keyboard-operable
   (`tabindex="0"`, `role="button"`, Enter/Space).
@@ -1065,16 +1065,16 @@ indentation), plus the shared tokens listed above.
 ```
 
 **Known gotchas:**
-- **High** — the treeitem row has **zero keyboard interaction**: `role="treeitem"` has no
+- the treeitem row has **zero keyboard interaction**: `role="treeitem"` has no
   `tabindex` and no keydown handler, so it never enters the Tab order. The only keyboard-operable
   control at all is the expand/collapse `<button>` — and that's removed (`tabindex="-1"`,
   `aria-hidden`) for leaf nodes. `lyra-node-select` fires only from the label's `@click`, with no
   keyboard equivalent, and there is no roving-tabindex/arrow-key navigation model.
-- **Medium** — `role="group"` (the expanded-children wrapper) is a shadow-DOM **sibling**, not a DOM
+- `role="group"` (the expanded-children wrapper) is a shadow-DOM **sibling**, not a DOM
   descendant, of its `role="treeitem"` row — violates the WAI-ARIA treeitem pattern's
   DOM-containment expectation. (The library's own axe test does not catch this — axe's structural
   rules accept a group as a valid child of `role="tree"` regardless of true ownership.)
-- **Medium** — by-id reconciliation (which preserves `expanded` state across data reassignment)
+- by-id reconciliation (which preserves `expanded` state across data reassignment)
   only applies at depth 0. Nested `children` arrays are rendered via a plain `.map()` with no keyed
   `repeat()`, so reordering/inserting into a nested array can silently attach the wrong node's
   `expanded` state.
@@ -1137,16 +1137,16 @@ properties only cascade downward); shared tokens `--lyra-space-xs`, `--lyra-colo
 ```
 
 **Known gotchas:**
-- **Medium** — "locked" `type` in the typed subclasses (below) is **not actually enforced**:
+- "locked" `type` in the typed subclasses (below) is **not actually enforced**:
   `<lyra-pie-chart type="bar">` or `el.type = 'bar'` at runtime silently turns it into a bar chart.
   Conversely, `<lyra-chart type="pie">` already works today with no subclass needed at all —
   `buildConfig()` passes `type` straight through unchecked.
-- **Medium** — the `lyra-theme` window-event listener (meant for re-theming on theme switch) is
+- the `lyra-theme` window-event listener (meant for re-theming on theme switch) is
   dead code: nothing in the library ever dispatches that event, and even if it were dispatched, no
   `--lyra-*`/`getComputedStyle` color resolution happens anywhere in this component — Chart.js
   always renders grid/tick/legend/tooltip text with its own hardcoded palette, which can read as
   low-contrast in dark mode.
-- **Medium** — generated `scales` config is cartesian (`x`/`y`/`y2`) only: for `lyra-radar-chart`/
+- generated `scales` config is cartesian (`x`/`y`/`y2`) only: for `lyra-radar-chart`/
   `lyra-polar-area-chart` (which need a single radial `r` scale) and for `lyra-pie-chart`/
   `lyra-doughnut-chart` (no scale at all), the inherited `xLabel`/`yLabel`/`beginAtZero`/`y2Label`
   properties are silently inert with no warning. Reach the radial scale only via raw `config`.
@@ -1206,7 +1206,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 ```
 
 **Known gotchas:**
-- **High** — **`bins <= 0` crashes** on non-empty `values`: `bins=0` throws `TypeError` inside
+- **`bins <= 0` crashes** on non-empty `values`: `bins=0` throws `TypeError` inside
   `binValues()` (bucket index resolves to `-1`, `buckets[-1].count++` fails); negative `bins` throws
   `RangeError` even earlier (`Array.from({length: -1})`). No guard exists anywhere in the chain —
   **always pass `bins >= 1`.**
@@ -1249,7 +1249,7 @@ independently of the base `chart-loader.ts`).
 ```
 
 **Known gotchas:**
-- **Medium** — no raw `config` passthrough (unlike every other chart tag) — limited to
+- no raw `config` passthrough (unlike every other chart tag) — limited to
   `labels`/`boxes`/`legend`/`height`/`yLabel`/`beginAtZero`; can't reach the underlying
   controller's own options (`itemRadius`, `outlierRadius`, `coef`).
 - The peer-dependency-missing failure path (`.catch()` → warn + resolve `null`) is untested —
@@ -1308,11 +1308,11 @@ exists and was hit)
 ```
 
 **Known gotchas:**
-- **Medium** — clearing or swapping the choropleth **leaks the old layer**: `applyChoropleth()`
+- clearing or swapping the choropleth **leaks the old layer**: `applyChoropleth()`
   only ever adds or updates; setting `choropleth = undefined`, or changing `choropleth.sourceId` to
   a different value, is a silent no-op — the previously added GeoJSON source and fill layer keep
   rendering forever (there is no `removeLayer`/`removeSource` call anywhere).
-- **Medium** — `mapStyle` is reactive but changing it after construction is a **silent no-op** —
+- `mapStyle` is reactive but changing it after construction is a **silent no-op** —
   unlike `center`/`zoom`, which do call `setCenter`/`setZoom` on change, there's no `setStyle()`
   call wired up.
 - No declarative point-marker API — only the single choropleth polygon-fill layer exists; placing
@@ -1370,7 +1370,7 @@ them via JS (`el.allowedMimeTypes = [...]`), not as a JSON string attribute; the
 illustrative of intent only.
 
 **Known gotchas:**
-- **High** — **`accept` only constrains the native file-picker dialog; it is silently ignored on
+- **`accept` only constrains the native file-picker dialog; it is silently ignored on
   the drag-drop path.** `isAllowed()` checks only `allowedMimeTypes`/`forbiddenMimeTypes` (exact
   MIME-string match — no extension or `image/*`-wildcard support like native `accept` has);
   `this.accept` itself is never read anywhere else in the component. Concretely:

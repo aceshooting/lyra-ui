@@ -10,7 +10,7 @@ export type StatGoodDirection = 'up' | 'down';
 
 /**
  * `<lyra-stat>` — a KPI/stat card. First-party invention consolidating the
- * "metric row" / "KPI card" pattern reinvented in every surveyed repo.
+ * "metric row" / "KPI card" pattern common to dashboard UIs.
  *
  * @customElement lyra-stat
  * @slot - Leading icon.

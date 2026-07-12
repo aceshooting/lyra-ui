@@ -9,8 +9,8 @@ export type SkeletonVariant = 'text' | 'circle' | 'rect';
 export type SkeletonEffect = 'pulse' | 'sheen';
 
 /**
- * `<lyra-skeleton>` — a loading placeholder. First-party invention; every
- * surveyed repo reinvents this as a bespoke `animate-pulse` div.
+ * `<lyra-skeleton>` — a loading placeholder. First-party invention, standing
+ * in for the bespoke `animate-pulse` div most dashboards hand-roll.
  *
  * @customElement lyra-skeleton
  * @csspart base - The placeholder shape.

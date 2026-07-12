@@ -10,8 +10,8 @@ export type ExportFormat = 'csv' | 'json';
 
 /**
  * `<lyra-export-button>` — a CSV/JSON download button, single-format or a
- * format-choice menu. First-party invention; consolidates ad-hoc "export CSV"
- * buttons duplicated across surveyed repos.
+ * format-choice menu. First-party invention; consolidates the ad-hoc
+ * "export CSV" button pattern common across dashboard UIs.
  *
  * @customElement lyra-export-button
  * @event lyra-export - `detail: { format }`, cancelable — call `preventDefault()`

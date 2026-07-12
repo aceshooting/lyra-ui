@@ -7,8 +7,8 @@ import { styles } from './playback.styles.js';
 
 /**
  * `<lyra-playback>` — steps an index through `[0, length)` on a fixed
- * interval (play/pause), like the manual play-timers duplicated across
- * per-repo time-series dashboards.
+ * interval (play/pause), the common building block behind ad-hoc
+ * play-timers in time-series dashboards.
  *
  * @customElement lyra-playback
  * @event lyra-play
