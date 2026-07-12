@@ -28,7 +28,32 @@ export interface TableColumn<T> {
  *  actions-column button). Clicks/keydowns landing on one of these — or
  *  bubbling up through one — must not be re-interpreted as row/column
  *  activation by the table's own delegated listeners. */
-const INTERACTIVE_SELECTOR = 'button, a[href], input, select, textarea, [role="button"]';
+const INTERACTIVE_SELECTOR =
+  'button, a[href], input, select, textarea, [role="button"], [role="combobox"], [role="listbox"], [role="slider"]';
+
+/** Encodes a row/column identity key for use as a Map key or a DOM
+ *  `data-row-key` attribute value, preserving the distinction between a
+ *  numeric key and a string key that happen to stringify the same way
+ *  (`1` vs `"1"`) -- a bare `String(key)` would silently collide the two. */
+function encodeKey(key: string | number): string {
+  return `${typeof key}:${key}`;
+}
+
+/** Whether `target` (or an ancestor up to the delegated listener's own
+ *  `<table>`, exclusive) is a custom element — i.e. any tag containing a
+ *  hyphen, the one universal rule every custom element name must follow —
+ *  which is never itself matched by INTERACTIVE_SELECTOR's plain-HTML
+ *  selector list but should still own its own clicks/keydowns (e.g. a
+ *  `<lyra-select>`/`<lyra-combobox>` rendered by a `cell()` template)
+ *  instead of being re-interpreted as row/column activation. */
+function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element | null {
+  let el: Element | null = target;
+  while (el && el !== boundary) {
+    if (el.matches(INTERACTIVE_SELECTOR) || el.tagName.includes('-')) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
 
 /**
  * `<lyra-table>` — a presentational, sort/select-aware data table.
@@ -122,18 +147,61 @@ export class LyraTable<T = unknown> extends LyraElement {
       return this.activeRowKey;
     }
     if (this.selectedKey !== null) {
-      const selected = String(this.selectedKey);
+      const selected = encodeKey(this.selectedKey);
       if (this.rowsByKey.has(selected)) return selected;
     }
-    return this.rows.length > 0 ? String(this.keyOf(this.rows[0], 0)) : null;
+    return this.rows.length > 0 ? encodeKey(this.keyOf(this.rows[0], 0)) : null;
   }
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('rows') || changed.has('rowKey')) {
-      this.rowsByKey = new Map(this.rows.map((row, i) => [String(this.keyOf(row, i)), row]));
+      this.rowsByKey = new Map(this.rows.map((row, i) => [encodeKey(this.keyOf(row, i)), row]));
     }
     if (changed.has('columns')) {
       this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
+    }
+  }
+
+  /** Each sticky column's cumulative left offset — the sum of the *rendered
+   *  width* of every earlier sticky column — so multiple sticky columns
+   *  stack left-to-right instead of all pinning to inset-inline-start: 0 and
+   *  overlapping. Table columns are intrinsically sized (not fixed-width), so
+   *  this can't be computed in CSS alone; it requires measuring the actual
+   *  laid-out `offsetWidth` of each earlier sticky column's header cell. */
+  private stickyOffsets(): Map<string, number> {
+    const offsets = new Map<string, number>();
+    let running = 0;
+    for (const col of this.columns) {
+      if (!col.sticky) continue;
+      offsets.set(col.key, running);
+      const headerEl = this.renderRoot.querySelector<HTMLElement>(`th[data-col-key="${col.key}"]`);
+      running += headerEl?.offsetWidth ?? 0;
+    }
+    return offsets;
+  }
+
+  /** Applies stickyOffsets()'s measured per-column offsets as an inline
+   *  `--lyra-table-sticky-offset` custom property on every header cell and
+   *  body cell in that column (addressed by the shared `data-col-key`
+   *  attribute). This is a post-render DOM measurement — column widths
+   *  aren't known until after the browser has laid out this update's
+   *  render() output — so it runs from `updated()`, not `willUpdate()`,
+   *  intentionally kept as a separate pass from the rowsByKey/columnsByKey
+   *  rebuild above: those two must stay in `willUpdate()` so `render()`'s
+   *  own `focusedRowKey()` call sees the current update's identity maps
+   *  (e.g. a freshly-assigned `selectedKey` resolving to the correct
+   *  roving-tabindex row on the very first paint), whereas the sticky-offset
+   *  measurement can only run after that same paint has happened. Only runs
+   *  when `hasSticky` is true (opt-in) and simply recomputes on every
+   *  update; a future optimization pass could cache column widths instead of
+   *  re-querying every time — out of scope for this correctness fix. */
+  protected updated(): void {
+    if (this.columns.some((c) => c.sticky)) {
+      for (const [key, offset] of this.stickyOffsets()) {
+        this.renderRoot
+          .querySelectorAll<HTMLElement>(`[data-col-key="${key}"]`)
+          .forEach((el) => el.style.setProperty('--lyra-table-sticky-offset', `${offset}px`));
+      }
     }
   }
 
@@ -152,9 +220,11 @@ export class LyraTable<T = unknown> extends LyraElement {
   /** Header cells currently in the tab sequence — excludes columns hidden by
    *  a `priority`-driven `@container` rule (table.styles.ts), so Left/Right/
    *  Home/End never strand the roving tab stop on a `display: none` cell
-   *  that `.focus()` would silently no-op on. */
+   *  that `.focus()` would silently no-op on. Scoped to `th` — body `<td>`s
+   *  now carry the same `data-col-key` attribute (for the sticky-offset
+   *  measurement pass) but must never be treated as header cells here. */
   private visibleHeaders(): HTMLElement[] {
-    return [...this.renderRoot.querySelectorAll<HTMLElement>('[data-col-key]')].filter(
+    return [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].filter(
       (el) => el.offsetParent !== null,
     );
   }
@@ -177,11 +247,17 @@ export class LyraTable<T = unknown> extends LyraElement {
 
   private onTableClick = (e: MouseEvent): void => {
     const target = e.target as HTMLElement;
-    // A cell()-rendered button/link/input etc. owns its own click — don't let
-    // the delegated row/column resolution below re-interpret it as row or
-    // header activation.
-    if (target.closest(INTERACTIVE_SELECTOR)) return;
-    const th = target.closest('[data-col-key]') as HTMLElement | null;
+    const table = e.currentTarget as HTMLElement;
+    // A cell()-rendered button/link/input/custom-element etc. owns its own
+    // click — don't let the delegated row/column resolution below
+    // re-interpret it as row or header activation.
+    if (closestInteractive(target, table)) return;
+    // Scoped to `th` — body `<td>`s also carry `data-col-key` now (for the
+    // sticky-offset measurement pass), so an unscoped `[data-col-key]` would
+    // match the clicked cell itself and misroute a plain cell click to
+    // column-sort activation instead of falling through to the row check
+    // below.
+    const th = target.closest('th[data-col-key]') as HTMLElement | null;
     if (th) return this.activateColumn(th.dataset.colKey!);
     const tr = target.closest('[data-row-key]') as HTMLElement | null;
     if (tr) this.activateRow(tr.dataset.rowKey!);
@@ -189,11 +265,13 @@ export class LyraTable<T = unknown> extends LyraElement {
 
   private onTableKeyDown = (e: KeyboardEvent): void => {
     const target = e.target as HTMLElement;
+    const table = e.currentTarget as HTMLElement;
     // Same guard as onTableClick — also skips the table's own
     // preventDefault(), so a focused nested control keeps its native/own
     // Enter or Space activation instead of having it swallowed.
-    if (target.closest(INTERACTIVE_SELECTOR)) return;
-    const th = target.closest('[data-col-key]') as HTMLElement | null;
+    if (closestInteractive(target, table)) return;
+    // Same th-scoping rationale as onTableClick above.
+    const th = target.closest('th[data-col-key]') as HTMLElement | null;
     if (th) return this.onHeaderKeyDown(e, th);
     const tr = target.closest('[data-row-key]') as HTMLElement | null;
     if (tr) this.onRowKeyDown(e, tr);
@@ -332,15 +410,16 @@ export class LyraTable<T = unknown> extends LyraElement {
                 return html`<tr
                   part="row"
                   role="row"
-                  data-row-key=${String(key)}
+                  data-row-key=${encodeKey(key)}
                   aria-selected=${selected ? 'true' : 'false'}
-                  tabindex=${String(key) === focusedRow ? '0' : '-1'}
+                  tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
                 >
                   ${this.columns.map(
                     (col) =>
                       html`<td
                         part="cell"
                         role="gridcell"
+                        data-col-key=${col.key}
                         data-align=${col.align ?? 'start'}
                         data-priority=${col.priority ?? nothing}
                         ?data-sticky=${col.sticky}
