@@ -147,3 +147,20 @@ it('narrows bar width as bar count grows so bars do not overlap', async () => {
   const manyWidth = Number(many.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('width'));
   expect(manyWidth).to.be.lessThan(fewWidth);
 });
+
+it('scales against the full pre-decimation value range, not just whatever the sampled subset kept', async () => {
+  // 600 values, all 0 except a single huge spike at index 3 -- with a
+  // ~1.2 step size (600 values decimated to 500), index 3 is one of the
+  // indices decimation actually drops (round(3*1.2)=4, so index 3 never
+  // survives into the sampled set). If auto min/max were scanned AFTER
+  // decimating, the spike would vanish entirely and every rendered point
+  // would sit at the flat mid-line (span=0 fallback); scanning the full
+  // raw array first still finds it, correctly pulling every surviving
+  // (all-zero) point down toward the bottom of the plot instead.
+  const values = Array.from({ length: 600 }, () => 0);
+  values[3] = 1000;
+  const el = (await fixture(html`<lyra-sparkline type="bar" .values=${values}></lyra-sparkline>`)) as LyraSparkline;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const y = Number(bar.getAttribute('y'));
+  expect(y).to.be.closeTo(100, 1); // VIEW = 100; a 0 value against a real [0, 1000] range sits at the bottom
+});

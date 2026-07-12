@@ -44,15 +44,20 @@ export class LyraSparkline extends LyraElement {
   @property({ type: Number }) max?: number;
 
   private points(): ReadonlyArray<readonly [number, number]> {
-    const v = this.values.length > MAX_POINTS ? decimate(this.values, MAX_POINTS) : this.values;
-    let autoLo = v[0];
-    let autoHi = v[0];
-    for (const n of v) {
+    // Auto min/max is scanned from the full, pre-decimation `values` -- doing
+    // this after decimating would silently narrow the scale to whatever the
+    // sampled subset happens to contain, which can clip or misproportion a
+    // real extreme value that decimation happened to drop.
+    const raw = this.values;
+    let autoLo = raw[0];
+    let autoHi = raw[0];
+    for (const n of raw) {
       if (n < autoLo) autoLo = n;
       if (n > autoHi) autoHi = n;
     }
     const lo = this.min ?? autoLo;
     const hi = this.max ?? autoHi;
+    const v = raw.length > MAX_POINTS ? decimate(raw, MAX_POINTS) : raw;
     const span = hi - lo;
     return v.map((n, i) => {
       const x = v.length > 1 ? (i / (v.length - 1)) * VIEW : VIEW / 2;
