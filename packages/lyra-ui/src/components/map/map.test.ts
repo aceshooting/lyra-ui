@@ -35,6 +35,29 @@ it('constructs a maplibregl.Map and exposes it via the map getter', async () => 
   expect(el.map).to.exist;
 });
 
+it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async () => {
+  const el = document.createElement('lyra-map') as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  // Disconnect + reconnect synchronously, in the same tick as the initial
+  // connect — before the (cached) loadMaplibre() promise has any chance to
+  // settle — to reproduce a fast remount racing the lazy-loaded peer dep.
+  document.body.appendChild(el);
+  document.body.removeChild(el);
+  document.body.appendChild(el);
+
+  try {
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+    // Only the final (reconnected) attempt should have constructed a live
+    // maplibregl.Map/canvas — the superseded attempt(s) must never have
+    // constructed their own Map against the same container.
+    expect(el.shadowRoot!.querySelectorAll('.maplibregl-canvas').length).to.equal(1);
+  } finally {
+    el.remove();
+  }
+});
+
 it('fires lyra-map-load once the underlying map loads', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;

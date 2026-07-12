@@ -83,6 +83,17 @@ export class LyraMap extends LyraElement {
   private _appliedFillLayerId?: string;
   private _maplibreModule: any;
   private _markerInstances = new Map<string, import('maplibre-gl').Marker>();
+  // Bumped on every connectedCallback and captured by value in its
+  // loadMaplibre().then() closure below. A disconnect immediately followed
+  // by a reconnect (fast remounts, route/tab switches, etc.) before that
+  // cached promise settles would otherwise let *every* connect attempt's
+  // closure construct its own maplibregl.Map against the same container —
+  // only the last one written to `this._map` survives, and the earlier
+  // ones leak their WebGL context/canvas/event listeners forever. Each
+  // closure compares its captured generation against the current value
+  // before doing anything observable, and bails if a newer
+  // connectedCallback has since superseded it.
+  private _connectGeneration = 0;
 
   /** The raw `maplibregl.Map` instance — escape hatch for anything this wrapper doesn't expose. */
   get map(): MaplibreMap | undefined {
@@ -91,18 +102,27 @@ export class LyraMap extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    const generation = ++this._connectGeneration;
     void loadMaplibre().then(async (mod) => {
+      // A newer connectedCallback (disconnect + reconnect) already
+      // superseded this attempt while loadMaplibre()'s cached promise was
+      // in flight — bail before touching any state, let the newer attempt's
+      // own closure (already queued behind this one on the same promise)
+      // take over instead.
+      if (generation !== this._connectGeneration) return;
       this.loading = false;
       if (!mod) return;
       this._maplibreModule = mod;
       // `[part="container"]` only exists once `loading` flips to `false` and
       // Lit re-renders — wait for that render to land before querying it.
       await this.updateComplete;
-      // The element may have been removed from the DOM while the async
-      // loadMaplibre()/updateComplete window was in flight — don't spin up
-      // a maplibre Map (WebGL context + event listeners) for a detached
-      // instance (disconnectedCallback's cleanup already ran).
-      if (!this.containerEl || !this.isConnected) return;
+      // Re-check after the await: the element may have been removed from
+      // the DOM entirely while this loadMaplibre()/updateComplete window
+      // was in flight — don't spin up a maplibre Map (WebGL context + event
+      // listeners) for a detached instance (disconnectedCallback's cleanup
+      // already ran) — or superseded by yet another disconnect+reconnect
+      // cycle that happened during the `await` above.
+      if (generation !== this._connectGeneration || !this.containerEl || !this.isConnected) return;
       this._map = new mod.Map({
         container: this.containerEl,
         style: this.mapStyle,
