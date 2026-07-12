@@ -5,6 +5,17 @@ import { defineElement } from '../../internal/prefix.js';
 import { playIcon, pauseIcon } from '../../internal/icons.js';
 import { styles } from './playback.styles.js';
 
+const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
+
+let warnedInvalidInterval = false;
+function warnInvalidInterval(value: number): void {
+  if (warnedInvalidInterval) return;
+  warnedInvalidInterval = true;
+  console.warn(
+    `<lyra-playback> received a non-finite or non-positive interval-ms (${value}); clamping to ${MIN_INTERVAL_MS}ms.`,
+  );
+}
+
 /**
  * `<lyra-playback>` — steps an index through `[0, length)` on a fixed
  * interval (play/pause), the common building block behind ad-hoc
@@ -19,11 +30,23 @@ import { styles } from './playback.styles.js';
 export class LyraPlayback extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
+  static properties = {
+    length: { type: Number },
+    index: { type: Number },
+    intervalMs: { type: Number, attribute: 'interval-ms' },
+    playing: { type: Boolean, reflect: true, noAccessor: true },
+    loop: { type: Boolean },
+    hidden: { type: Boolean, reflect: true },
+  };
+
   @property({ type: Number }) length = 0;
   @property({ type: Number }) index = 0;
   @property({ type: Number, attribute: 'interval-ms' }) intervalMs = 900;
-  @property({ type: Boolean, reflect: true }) playing = false;
-  @property({ type: Boolean }) loop = true;
+  // `playing` is declared via `static properties` above (noAccessor) with a
+  // hand-written accessor below, so a direct `el.playing = true/false`
+  // assignment always drives the real timer — not just calls through
+  // play()/pause().
+  loop = true;
 
   /**
    * Re-declared as a Lit reactive property (shadowing the inherited plain
@@ -35,6 +58,29 @@ export class LyraPlayback extends LyraElement {
   @property({ type: Boolean, reflect: true }) hidden = false;
 
   private timer?: number;
+  private _playing = false;
+
+  get playing(): boolean {
+    return this._playing;
+  }
+  set playing(next: boolean) {
+    const old = this._playing;
+    if (next === old) return;
+    this._playing = next;
+    if (next) {
+      if (this.length <= 1) {
+        this._playing = false;
+        return;
+      }
+      this.emit('lyra-play');
+      this.scheduleTick();
+    } else {
+      window.clearTimeout(this.timer);
+      this.timer = undefined;
+      this.emit('lyra-pause');
+    }
+    this.requestUpdate('playing', old);
+  }
 
   /** Largest index reachable at the current `length` (never negative). */
   private get maxIndex(): number {
@@ -64,22 +110,17 @@ export class LyraPlayback extends LyraElement {
   play(): void {
     if (this.playing || this.length <= 1) return;
     this.playing = true;
-    this.emit('lyra-play');
-    this.scheduleTick();
   }
 
   /** Stop playback. */
   pause(): void {
     if (!this.playing) return;
-    window.clearTimeout(this.timer);
-    this.timer = undefined;
     this.playing = false;
-    this.emit('lyra-pause');
   }
 
   /** Toggle between playing and paused. */
   toggle(): void {
-    this.playing ? this.pause() : this.play();
+    this.playing = !this.playing;
   }
 
   // A self-rescheduling `setTimeout` (rather than one long-lived
@@ -88,10 +129,15 @@ export class LyraPlayback extends LyraElement {
   // `interval-ms` live takes effect on the very next step instead of only
   // after a pause/play cycle.
   private scheduleTick(): void {
+    let delay = this.intervalMs;
+    if (!Number.isFinite(delay) || delay < MIN_INTERVAL_MS) {
+      warnInvalidInterval(delay);
+      delay = MIN_INTERVAL_MS;
+    }
     this.timer = window.setTimeout(() => {
       this.tick();
       if (this.playing) this.scheduleTick();
-    }, this.intervalMs);
+    }, delay);
   }
 
   private tick(): void {

@@ -229,3 +229,30 @@ it('shows a focus ring on the slider when it receives keyboard/programmatic focu
   expect(style.outlineWidth).to.equal('2px');
   expect(style.outlineOffset).to.equal('2px');
 });
+
+it('starts the real timer when `playing` is set directly, not just via play()', async () => {
+  const el = (await fixture(html`<lyra-playback length="3" interval-ms="10"></lyra-playback>`)) as LyraPlayback;
+  el.playing = true;
+  await aTimeout(35);
+  expect(el.index).to.be.greaterThan(0);
+});
+
+it('stops the real timer when `playing` is set to false directly, not just via pause()', async () => {
+  const el = (await fixture(html`<lyra-playback length="5" interval-ms="10"></lyra-playback>`)) as LyraPlayback;
+  el.play();
+  await aTimeout(15);
+  el.playing = false;
+  const indexAfterStop = el.index;
+  await aTimeout(60);
+  expect(el.index).to.equal(indexAfterStop);
+});
+
+it('clamps a non-positive interval-ms instead of hammering a zero-delay tick loop', async () => {
+  const el = (await fixture(html`<lyra-playback length="1000" interval-ms="0"></lyra-playback>`)) as LyraPlayback;
+  el.play();
+  await aTimeout(50);
+  // With no clamp this would have ticked dozens/hundreds of times already;
+  // clamped to a sane minimum, only a handful of ticks land in 50ms.
+  expect(el.index).to.be.lessThan(20);
+  el.pause();
+});
