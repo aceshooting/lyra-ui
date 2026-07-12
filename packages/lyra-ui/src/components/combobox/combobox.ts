@@ -185,6 +185,7 @@ export class LyraCombobox extends LyraElement {
     } else {
       this.removeAttribute('name');
     }
+    this.syncFormValue();
     this.requestUpdate('name', old);
   }
 

@@ -915,6 +915,21 @@ it('reflects `name` onto the attribute synchronously, with no await/microtask in
   expect(el.getAttribute('name')).to.equal('b');
 });
 
+it('rebinds multiple FormData entries to a new name synchronously', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-combobox name="old" multiple .value=${['a', 'b']}></lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+
+  el.name = 'next';
+  const data = new FormData(form);
+
+  expect(data.has('old')).to.be.false;
+  expect(data.getAll('next')).to.deep.equal(['a', 'b']);
+});
+
 it('re-syncs FormData when switching between single and multiple mode', async () => {
   const form = document.createElement('form');
   const el = (await fixture(html`
