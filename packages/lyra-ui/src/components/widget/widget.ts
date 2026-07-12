@@ -41,9 +41,11 @@ export class LyraWidget extends LyraElement {
     if (changed.has('fullscreen')) {
       if (this.fullscreen) {
         this.releaseScrollLock = lockScroll();
+        document.addEventListener('keydown', this.onDocKeyDown);
       } else {
         this.releaseScrollLock?.();
         this.releaseScrollLock = undefined;
+        document.removeEventListener('keydown', this.onDocKeyDown);
       }
     }
   }
@@ -68,10 +70,7 @@ export class LyraWidget extends LyraElement {
     this.lastTrigger = e.currentTarget as HTMLElement;
     this.fullscreen = !this.fullscreen;
     this.emit('lyra-fullscreen-change', this.fullscreen);
-    if (this.fullscreen) {
-      document.addEventListener('keydown', this.onDocKeyDown);
-    } else {
-      document.removeEventListener('keydown', this.onDocKeyDown);
+    if (!this.fullscreen) {
       this.lastTrigger?.focus();
     }
   };
@@ -81,7 +80,6 @@ export class LyraWidget extends LyraElement {
       e.preventDefault();
       this.fullscreen = false;
       this.emit('lyra-fullscreen-change', false);
-      document.removeEventListener('keydown', this.onDocKeyDown);
       this.lastTrigger?.focus();
     }
   };

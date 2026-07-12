@@ -62,6 +62,18 @@ it('exits fullscreen on Escape and returns focus to the trigger button', async (
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="fullscreen-button"]'));
 });
 
+it('exits fullscreen on Escape even when entered by setting the fullscreen property directly (not via the button click)', async () => {
+  const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+  el.fullscreen = true;
+  await el.updateComplete;
+  expect(el.fullscreen).to.be.true;
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  await el.updateComplete;
+
+  expect(el.fullscreen).to.be.false;
+});
+
 it('exits fullscreen on backdrop click', async () => {
   const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
   (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
@@ -88,5 +100,11 @@ it('is accessible in both default and fullscreen-expandable states', async () =>
   const el = (await fixture(
     html`<lyra-widget label="Load profile" collapsible expandable>content</lyra-widget>`,
   )) as LyraWidget;
+  await expect(el).to.be.accessible();
+
+  (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.fullscreen).to.be.true;
+
   await expect(el).to.be.accessible();
 });
