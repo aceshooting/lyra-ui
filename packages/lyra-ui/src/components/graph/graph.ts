@@ -120,6 +120,11 @@ export class LyraGraph extends LyraElement {
   @state() private transform = '';
 
   private simulation?: Simulation<SimNode, SimLink>;
+  /** The live charge/link force objects, kept so chargeStrength/linkDistance
+   *  changes can retune them in place (see updated()) instead of requiring a
+   *  full rebuildSimulation(). */
+  private chargeForce?: ForceManyBody<SimNode>;
+  private linkForce?: ForceLink<SimNode, SimLink>;
   private d3?: D3Modules;
   /** The `<svg>` currently wired up with d3-zoom (guards a one-time bind). */
   private zoomedEl?: SVGSVGElement;
@@ -159,6 +164,14 @@ export class LyraGraph extends LyraElement {
     } else if (changed.has('width') || changed.has('height')) {
       this.simulation?.force('center', this.d3.forceCenter(this.width / 2, this.height / 2));
       this.simulation?.alpha(0.1).restart();
+    } else if (changed.has('chargeStrength') || changed.has('linkDistance')) {
+      // Without this branch, chargeStrength/linkDistance only took effect the
+      // next time nodes/links also changed (rebuildSimulation() reads them
+      // fresh) — retune the already-created force objects in place instead of
+      // rebuilding the whole simulation.
+      if (changed.has('chargeStrength')) this.chargeForce?.strength(this.chargeStrength);
+      if (changed.has('linkDistance')) this.linkForce?.distance(this.linkDistance);
+      this.simulation?.alpha(0.3).restart();
     }
     this.applyInteractions();
   }
@@ -225,13 +238,13 @@ export class LyraGraph extends LyraElement {
       .filter((l) => byId.has(l.source) && byId.has(l.target))
       .map((l) => ({ ...l, source: byId.get(l.source)!, target: byId.get(l.target)! }));
 
+    this.linkForce = this.d3.forceLink<SimNode, SimLink>(links).distance(this.linkDistance);
+    this.chargeForce = this.d3.forceManyBody<SimNode>().strength(this.chargeStrength);
+
     this.simulation = this.d3
       .forceSimulation(nodes)
-      .force(
-        'link',
-        this.d3.forceLink<SimNode, SimLink>(links).distance(this.linkDistance),
-      )
-      .force('charge', this.d3.forceManyBody().strength(this.chargeStrength))
+      .force('link', this.linkForce)
+      .force('charge', this.chargeForce)
       .force('center', this.d3.forceCenter(this.width / 2, this.height / 2))
       .force(
         'collide',
