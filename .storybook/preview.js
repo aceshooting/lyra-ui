@@ -12,6 +12,21 @@ import customElements from '../packages/lyra-ui/custom-elements.json';
 
 setCustomElementsManifest(customElements);
 
+// deploy-docs.yml redeploys on every push to main, fully replacing storybook-static's
+// content-hashed chunks. A tab that's had the docs open across a redeploy can still hold a
+// cached iframe bundle referencing a story chunk hash the new deploy already deleted, so the
+// dynamic import 404s ("Failed to fetch dynamically imported module"). Vite's preload-helper
+// (bundled into iframe.html) dispatches this event in exactly that case; reload once to pick up
+// the current build. Guarded via sessionStorage since reload re-executes this file from scratch,
+// so an in-memory flag would never survive the reload and could loop forever on a genuinely
+// broken deploy.
+window.addEventListener('vite:preloadError', () => {
+  if (!sessionStorage.getItem('lyra-docs-reloaded-after-preload-error')) {
+    sessionStorage.setItem('lyra-docs-reloaded-after-preload-error', '1');
+    window.location.reload();
+  }
+});
+
 /** @type { import('@storybook/web-components-vite').Preview } */
 const preview = {
   parameters: {

@@ -163,7 +163,7 @@ pnpm test        # @web/test-runner + Playwright (Chromium) + axe a11y
 pnpm lint        # tsc --noEmit
 pnpm build       # tsc → dist/ (ESM + .d.ts)
 pnpm manifest    # custom-elements.json
-pnpm docs        # Vite playground, demos this package + lyra-flags together
+pnpm docs        # Storybook docs site, demos this package + lyra-flags together
 ```
 
 ## License

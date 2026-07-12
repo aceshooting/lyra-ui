@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.2.0
+
+### Minor Changes
+
+- 6e832d5: `<lyra-chart>`: added `IntersectionObserver`-gated lazy redraw and content-signature memoization — a
+  chart skips calling into Chart.js while scrolled off-screen (redrawing once when it re-enters the
+  viewport) or when none of its content-affecting properties (`type`, `labels`, `datasets`, `legend`,
+  `area`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`, `horizontal`, `stacked`, `config`) have actually
+  changed since the last draw. `refreshTheme()` is unaffected and always redraws.
+- 9d36af5: `<lyra-combobox>`: the input's accessible name now checks a host-level `aria-label` attribute before
+  falling back to `label`/`placeholder`/`"Combobox"` — previously a plain `aria-label` on
+  `<lyra-combobox>` was silently ignored. Matches the same fix in `<lyra-select>`.
+- 0b3ea6c: `<lyra-flag>`: added a `detailed` boolean property that requests the pristine, full-detail source SVG
+  for the minority of flags whose default rendering was recently optimized for icon scale (e.g. `es`,
+  `pt`, `sv` — see the `@aceshooting/lyra-flags` changeset). A safe no-op for every other flag. Useful
+  for a flag rendered larger than icon scale (e.g. a hero display) where the extra illustrative detail
+  is actually visible.
+- 2027e3f: `<lyra-flag>`: the default accessible name (`alt`, used when `label` is unset) is now a human-readable
+  region name via `Intl.DisplayNames` (e.g. `language="en"` → `"United Kingdom"`) instead of the bare
+  uppercase country code (`"GB"`, previously read letter-by-letter by most screen readers).
+- 49569ed: `<lyra-heatmap>`: fixed `role="img"` conflicting with the canvas's own focusable, keyboard-interactive
+  descendant (arrow-key roving focus, Enter/Space activation) — now `role="group"`, matching
+  `lyra-lite-chart`/`lyra-word-cloud`'s existing pattern. Added `cellText?: (pos, value) => string`, a
+  formatter hook for the per-cell hover tooltip and keyboard live-region announcement (both draw from the
+  built-in English template by default; this is additive, not breaking). Also fixed calendar mode's date
+  label formatting, which hardcoded the literal `'en'` locale instead of the runtime locale.
+- ef74f4a: `<lyra-lite-chart>`: added `tickFormat?: (value: number) => string` to customize y-axis tick label
+  formatting (e.g. currency, duration) instead of the built-in nice-number formatter. Also added
+  `IntersectionObserver`-gated lazy rendering and content-signature memoization — a chart skips
+  recomputing its grid/marks while scrolled off-screen or when none of its content-affecting properties
+  (`type`, `labels`, `datasets`, `legend`, `xLabel`, `yLabel`, `beginAtZero`, `stacked`, plot size) have
+  actually changed since the last render.
+- 22cf001: `<lyra-select>`: added a `size` property (`xs`/`s`/`m`/`l`/`xl`, default `m`, same scale as
+  `lyra-toast-item`'s `size`) for compact toolbar placements that don't fit the default trigger height.
+  Also, the trigger's accessible name now checks a host-level `aria-label` attribute before falling back
+  to `label`/`placeholder`/`"Select"` — previously a plain `aria-label` on `<lyra-select>` was silently
+  ignored.
+- 4bf80aa: `<lyra-stat>`: added `exact-value` (shown as a hover/focus tooltip on the headline value, e.g.
+  `value="$1.2K" exact-value="$1,204.37"`), a `sub` property/slot (a secondary line distinct from
+  `caption`, e.g. a comparison-period label), a `prose` boolean (renders `value` as smaller/lighter text
+  with `unit` hidden, for a loading/status message in place of a numeric value), and a `compact` boolean
+  (tighter padding for constrained spaces — same convention as `lyra-empty`'s and `lyra-widget`'s
+  `compact`).
+- c8206f8: `<lyra-widget>`: added `fullscreen-inset` (a raw CSS `inset` shorthand, e.g. `"0 0 0 240px"`, applied to
+  the fullscreen panel and backdrop instead of the default `var(--lyra-space-l)` on every side — for apps
+  with a persistent sidebar/toolbar that should stay visible during fullscreen) and a `compact` boolean
+  (tighter header/body padding), matching `lyra-empty`'s existing `compact` convention.
+- a768a20: `<lyra-word-cloud>`: fixed the rendered `<svg>` not respecting a host-assigned height —
+  `[part='base']` had no `block-size` rule, so the internal `svg { block-size: 100% }` resolved against
+  an indefinite containing-block height and fell back to the spiral layout's own intrinsic size instead,
+  overflowing past the host's box. `[part='base']` now constrains to `block-size: 100%`, matching the
+  component's own documented `<lyra-word-cloud style="height: 20rem">` usage pattern.
+
+### Patch Changes
+
+- Updated dependencies [da766cb]
+  - @aceshooting/lyra-flags@1.2.0
+
 ## 1.1.0
 
 ### Minor Changes
