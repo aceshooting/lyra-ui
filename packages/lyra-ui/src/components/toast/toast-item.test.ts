@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
 import './toast-item.js';
 import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
@@ -30,6 +30,42 @@ it('auto-dismisses after its duration', async () => {
   )) as LyraToastItem;
   await oneEvent(el, 'lyra-after-hide');
   expect(el.isConnected).to.be.false;
+});
+
+it('does not auto-dismiss early after an interleaved pointer+focus pause/resume sequence', async () => {
+  // An earlier resumeTimer() call that isn't cleared before a later one
+  // orphans its own setTimeout -- that leaked timer keeps running even
+  // after a subsequent pauseTimer() call, and can fire hide() while the
+  // toast is still meant to be paused (hovering/focused).
+  const el = (await fixture(html`<lyra-toast-item duration="120">hi</lyra-toast-item>`)) as LyraToastItem;
+  await oneEvent(el, 'lyra-show');
+  const item = el.shadowRoot!.querySelector('[part="toast-item"]') as HTMLElement;
+
+  item.dispatchEvent(new PointerEvent('pointerenter'));
+  item.dispatchEvent(new FocusEvent('focusin'));
+  item.dispatchEvent(new PointerEvent('pointerleave')); // resume: schedules a timer
+  item.dispatchEvent(new FocusEvent('focusout')); // resume again, no pause between -- leaks the first one
+  item.dispatchEvent(new PointerEvent('pointerenter')); // pause: should cancel *every* pending timer
+
+  await aTimeout(300); // well past `duration`, and past any leaked timer's delay
+  expect(el.isConnected, 'toast should still be open -- it was paused again after the leak').to.be.true;
+});
+
+it('cancels the pending first-paint rAF when removed before it fires, so it cannot resurrect a detached toast', async () => {
+  const el = (await fixture(
+    html`<lyra-toast-item duration="0">gone before paint</lyra-toast-item>`,
+  )) as LyraToastItem;
+  await el.updateComplete; // firstUpdated ran and scheduled its rAF, which hasn't fired yet
+
+  let sawShow = false;
+  el.addEventListener('lyra-show', () => (sawShow = true));
+  el.remove(); // disconnect before the browser's next paint
+
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  await aTimeout(20);
+
+  expect(sawShow, 'lyra-show should not fire for a toast removed before first paint').to.be.false;
+  expect(el.hasAttribute('data-visible')).to.be.false;
 });
 
 it('is accessible', async () => {

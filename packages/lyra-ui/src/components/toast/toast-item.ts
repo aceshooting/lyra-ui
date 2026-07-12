@@ -52,11 +52,13 @@ export class LyraToastItem extends LyraElement {
   private timer?: number;
   private remaining = 0;
   private startedAt = 0;
+  private showRafId?: number;
 
   firstUpdated(): void {
     // Assertive for actionable severities, polite otherwise.
     this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
-    requestAnimationFrame(() => {
+    this.showRafId = requestAnimationFrame(() => {
+      this.showRafId = undefined;
       this.setAttribute('data-visible', '');
       this.emit('lyra-show');
       window.setTimeout(() => this.emit('lyra-after-show'), ANIM_MS);
@@ -66,6 +68,10 @@ export class LyraToastItem extends LyraElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    if (this.showRafId !== undefined) {
+      cancelAnimationFrame(this.showRafId);
+      this.showRafId = undefined;
+    }
     this.clearTimer();
   }
 
@@ -76,6 +82,16 @@ export class LyraToastItem extends LyraElement {
   }
 
   private resumeTimer = (): void => {
+    // Guard against an interleaved pointer+focus pause/resume sequence
+    // calling resumeTimer() twice without a pauseTimer() in between --
+    // without clearing here, the earlier setTimeout is orphaned (not
+    // tracked by `this.timer` anymore) and still fires on its own
+    // schedule, auto-dismissing the toast early even after it's paused
+    // again.
+    if (this.timer !== undefined) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
+    }
     if (!isFinite(this.duration) || this.duration <= 0 || this.remaining <= 0) return;
     this.startedAt = performance.now();
     this.timer = window.setTimeout(() => this.hide(), this.remaining);
