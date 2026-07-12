@@ -77,14 +77,23 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
  *
  * `columns[].priority` ('medium' | 'low') hides that column under
  * `[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`
- * (rendered whenever any column has a priority) forces them all back into
- * view. `columns[].sticky` pins a column's header/cells to the inline-start
- * edge while the table scrolls horizontally.
+ * forces them all back into view. Rather than a *static* check of whether any
+ * column merely declares a `priority`, the button (and the public
+ * `columnsHidden` property, see below) reflects whether a `priority` column
+ * is *actually* hidden right now — measured via `ResizeObserver` on
+ * `[part='base']` plus a post-render DOM check — or `showAllColumns`
+ * force-visible mode is currently active (so there's still a way to toggle
+ * it back off). `columns[].sticky` pins a column's header/cells to the
+ * inline-start edge while the table scrolls horizontally.
  *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
  * @event lyra-row-click - A row was activated. `detail: { row }`.
  * @event lyra-load-more - The "load more" control was activated.
+ * @event lyra-columns-hidden-change - `columnsHidden` actually changed value
+ *   (a `priority` column just became hidden/un-hidden by the `@container`
+ *   rules, or `showAllColumns` force-visible mode was toggled while a
+ *   `priority` column was hidden). `detail: { hidden: boolean }`.
  * @csspart base, table, head, header-cell, row, cell, more-button, sort-icon, reveal-columns-button
  */
 export class LyraTable<T = unknown> extends LyraElement {
@@ -112,6 +121,17 @@ export class LyraTable<T = unknown> extends LyraElement {
   @property({ attribute: 'reveal-columns-label' }) revealColumnsLabel = 'Show all columns';
   @property({ attribute: 'hide-columns-label' }) hideColumnsLabel = 'Show fewer columns';
 
+  /** Whether a `priority` column is *actually* hidden right now by
+   *  table.styles.ts's `@container` rules, or `showAllColumns` force-visible
+   *  mode is currently active — the same computed value that gates whether
+   *  `[part='reveal-columns-button']` renders at all (see `render()`), kept
+   *  in sync by `recomputeColumnsHidden()`. Computed/read-only by
+   *  convention: consumers may read it (and listen for
+   *  `lyra-columns-hidden-change`), but setting it directly has no lasting
+   *  effect, since it's recomputed on the very next render or
+   *  `[part='base']` resize. */
+  @property({ type: Boolean, attribute: 'columns-hidden', reflect: true }) columnsHidden = false;
+
   /** Forces `priority`-hidden columns back into view, overriding the
    *  `@container` hide rules in table.styles.ts. Toggled by
    *  `[part='reveal-columns-button']`. */
@@ -128,6 +148,68 @@ export class LyraTable<T = unknown> extends LyraElement {
 
   private rowsByKey = new Map<string, T>();
   private columnsByKey = new Map<string, TableColumn<T>>();
+
+  /** Watches `[part='base']`'s own inline-size — the `@container` query
+   *  container table.styles.ts's priority-hide rules react to — so a
+   *  `priority` column flipping hidden/visible from an *external* width
+   *  change (a window resize, an ancestor flex-layout reflow, ...) is caught
+   *  even though no Lit-tracked property changed. Mirrors
+   *  lite-chart.ts's connectedCallback()/disconnectedCallback() ResizeObserver
+   *  lifecycle. */
+  private resizeObserver?: ResizeObserver;
+  /** The `[part='base']` element `resizeObserver` is currently observing —
+   *  `render()`'s columns/rows-empty branches swap in `<lyra-empty>` instead,
+   *  a different template shape that gives `[part='base']` a fresh DOM
+   *  identity on the next non-empty render, so `updated()` re-observes
+   *  whenever this no longer matches the live element. */
+  private observedBase?: Element;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.resizeObserver = new ResizeObserver(() => this.recomputeColumnsHidden());
+    // A reconnect re-creates the observer above but the shadow root content
+    // survives across disconnect/reconnect (Lit doesn't tear down the shadow
+    // root) — re-observe [part='base'] here if it already exists from before
+    // the disconnect. On the very first mount connectedCallback() fires
+    // *before* Lit's first render, so [part='base'] doesn't exist yet and
+    // this is a no-op; updated() below (which always runs after render, first
+    // paint included) covers that case instead.
+    const base = this.renderRoot?.querySelector('[part="base"]');
+    if (base) this.observeBase(base);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.resizeObserver?.disconnect();
+    this.observedBase = undefined;
+  }
+
+  private observeBase(base: Element): void {
+    if (this.observedBase === base) return;
+    if (this.observedBase) this.resizeObserver?.unobserve(this.observedBase);
+    this.resizeObserver?.observe(base);
+    this.observedBase = base;
+  }
+
+  /** Recomputes `columnsHidden` from the live DOM (mirrors `visibleHeaders()`'s
+   *  own `offsetParent !== null` technique for detecting `@container`-hidden
+   *  cells) and dispatches `lyra-columns-hidden-change` only on a real
+   *  transition. Called from `updated()` (covers a change driven by
+   *  `columns`/`rows`/`showAllColumns` rather than a container resize) and
+   *  from the `ResizeObserver` callback (covers a container resize with no
+   *  Lit-tracked property change at all). */
+  private recomputeColumnsHidden(): void {
+    const hasPriorityColumns = this.columns.some((col) => col.priority);
+    const anyPriorityHidden =
+      hasPriorityColumns &&
+      [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-priority]')].some(
+        (el) => el.offsetParent === null,
+      );
+    const next = anyPriorityHidden || (hasPriorityColumns && this.showAllColumns);
+    if (this.columnsHidden === next) return;
+    this.columnsHidden = next;
+    this.emit('lyra-columns-hidden-change', { hidden: next });
+  }
 
   private keyOf(row: T, index: number): string | number {
     return this.rowKey ? this.rowKey(row) : index;
@@ -203,6 +285,13 @@ export class LyraTable<T = unknown> extends LyraElement {
           .forEach((el) => el.style.setProperty('--lyra-table-sticky-offset', `${offset}px`));
       }
     }
+    // Re-observe [part='base'] whenever this update's render() produced a
+    // fresh one (first mount, or a swap to/from the <lyra-empty> template
+    // shape) — observeBase() itself no-ops when it's the same element as
+    // already observed.
+    const base = this.renderRoot.querySelector('[part="base"]');
+    if (base) this.observeBase(base);
+    this.recomputeColumnsHidden();
   }
 
   private activateColumn(key: string): void {
@@ -366,7 +455,6 @@ export class LyraTable<T = unknown> extends LyraElement {
       ></lyra-empty>`;
     }
 
-    const hasPriorityColumns = this.columns.some((col) => col.priority);
     const focusedCol = this.focusedColKey();
     const focusedRow = this.focusedRowKey();
 
@@ -432,7 +520,7 @@ export class LyraTable<T = unknown> extends LyraElement {
             )}
           </tbody>
         </table>
-        ${hasPriorityColumns
+        ${this.columnsHidden
           ? html`<button
               part="reveal-columns-button"
               type="button"

@@ -80,6 +80,17 @@ export const PriorityAndSticky: Story = {
     </div>`,
 };
 
+// Same `priority` columns as PriorityAndSticky, but at a container width the
+// `@container` breakpoints never actually hide anything at — demonstrates
+// that `[part='reveal-columns-button']` correctly stays absent (rather than
+// rendering as a permanent no-op control) when nothing is really hidden.
+export const PriorityWideContainerNoButton: Story = {
+  render: () =>
+    html`<div style="max-width: 960px;">
+      <lyra-table .columns=${priorityColumns} .rows=${detailRows}></lyra-table>
+    </div>`,
+};
+
 // A <button> inside cell() must own its own click/Enter activation — the
 // table's row-click delegation must not intercept it (see table.ts's
 // INTERACTIVE_SELECTOR guard).
