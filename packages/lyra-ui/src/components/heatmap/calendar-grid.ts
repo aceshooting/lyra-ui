@@ -23,6 +23,13 @@ export function parseIsoDate(iso: string): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
+/** Whether `iso` (already run through parseIsoDate) actually round-trips —
+ *  Date.UTC silently rolls e.g. day 30 of a 28-day February into March. */
+function isCalendarValid(iso: string, parsed: Date): boolean {
+  const [y, m, d] = iso.split('-').map(Number);
+  return parsed.getUTCFullYear() === y && parsed.getUTCMonth() === m - 1 && parsed.getUTCDate() === d;
+}
+
 /**
  * Lays `days` out onto a GitHub-style Sunday-Saturday x week grid. `days`
  * need not be sorted or contiguous; the grid spans from the earliest to the
@@ -33,7 +40,10 @@ export function parseIsoDate(iso: string): Date {
  * string yields an `Invalid Date` (`getTime()` is `NaN`), and letting that
  * single `NaN` reach the min/max below would poison `firstWeekStart` (and
  * therefore every cell's `week`) for the whole grid instead of just the bad
- * entry.
+ * entry. Likewise, an entry whose `date` is numerically well-formed but
+ * calendar-invalid (e.g. `'2026-02-30'`, which `Date.UTC` silently rolls
+ * over into March) is dropped rather than silently renormalized — see
+ * `isCalendarValid()`.
  */
 export function buildCalendarGrid(days: CalendarDay[]): {
   cells: CalendarCell[];
@@ -43,7 +53,7 @@ export function buildCalendarGrid(days: CalendarDay[]): {
 } {
   const parsed = days
     .map((d) => ({ ...d, dateObj: parseIsoDate(d.date) }))
-    .filter((d) => !Number.isNaN(d.dateObj.getTime()));
+    .filter((d) => !Number.isNaN(d.dateObj.getTime()) && isCalendarValid(d.date, d.dateObj));
 
   if (parsed.length === 0) {
     return { cells: [], weekCount: 0, firstWeekStart: new Date(0), monthLabels: [] };
@@ -64,18 +74,21 @@ export function buildCalendarGrid(days: CalendarDay[]): {
 
   const weekCount = minMax(cells.map((c) => c.week))![1] + 1;
 
+  // Label every distinct (year, month) present in the data, not just months
+  // that happen to contain a Sunday-anchored cell — a sparse calendar (few
+  // days per month, none landing on a Sunday) would otherwise render zero
+  // month labels for months that do have data.
   const monthLabels: { week: number; label: string }[] = [];
-  let lastMonth = -1;
-  for (const cell of cells.slice().sort((a, b) => a.week - b.week)) {
+  const seenMonths = new Set<string>();
+  for (const cell of cells.slice().sort((a, b) => a.week - b.week || a.weekday - b.weekday)) {
     const cellDate = parseIsoDate(cell.date);
-    const month = cellDate.getUTCMonth();
-    if (cell.weekday === 0 && month !== lastMonth) {
-      lastMonth = month;
-      monthLabels.push({
-        week: cell.week,
-        label: cellDate.toLocaleString('en', { month: 'short', timeZone: 'UTC' }),
-      });
-    }
+    const key = `${cellDate.getUTCFullYear()}-${cellDate.getUTCMonth()}`;
+    if (seenMonths.has(key)) continue;
+    seenMonths.add(key);
+    monthLabels.push({
+      week: cell.week,
+      label: cellDate.toLocaleString('en', { month: 'short', timeZone: 'UTC' }),
+    });
   }
 
   return { cells, weekCount, firstWeekStart, monthLabels };

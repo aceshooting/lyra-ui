@@ -16,6 +16,14 @@ it('sets an img role and a summarizing aria-label', async () => {
   expect(el.getAttribute('aria-label')).to.contain('2');
 });
 
+it('does not overwrite an author-supplied role/aria-label', async () => {
+  const el = (await fixture(
+    html`<lyra-heatmap role="application" aria-label="Custom label" .rowLabels=${['a']} .colLabels=${['b']} .values=${[[1]]}></lyra-heatmap>`,
+  )) as LyraHeatmap;
+  expect(el.getAttribute('role')).to.equal('application');
+  expect(el.getAttribute('aria-label')).to.equal('Custom label');
+});
+
 it('renders numeric min/max legend ticks', async () => {
   const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['a'];
@@ -613,6 +621,19 @@ describe('per-cell hover/focus/click + accessible values', () => {
     el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
     canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(detail).to.deep.equal({ date: '2026-03-01', value: 5 });
+  });
+
+  it('does not re-activate a stale focused cell when clicking outside the grid', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap .rowLabels=${['a']} .colLabels=${['b']} .values=${[[1]]}></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    await el.updateComplete;
+    let detail: unknown;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: -1000, clientY: -1000 }));
+    expect(detail).to.be.undefined;
   });
 
   it('is accessible with a hovered tooltip and a focused cell', async () => {
