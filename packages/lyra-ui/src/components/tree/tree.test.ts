@@ -49,6 +49,40 @@ it('emits lyra-node-select when a node label is activated', async () => {
   expect(ev.detail).to.deep.equal({ id: '2' });
 });
 
+it('moves real DOM focus to a node when its row (not just the label text) is clicked', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const leaf = [...el.querySelectorAll('lyra-tree-node')].find(
+    (n) => (n as unknown as LyraTreeNode).item.id === '2',
+  ) as unknown as LyraTreeNode;
+  const row = (leaf as unknown as HTMLElement).shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+
+  row.click();
+  await el.updateComplete;
+
+  expect(deepActiveElement() === (leaf as unknown as Element)).to.equal(true);
+});
+
+it('a click on the toggle button does not also fire lyra-node-select via bubbling into the row', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as unknown as LyraTreeNode;
+  const toggle = (root as unknown as HTMLElement).shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+
+  let selectFired = false;
+  el.addEventListener('lyra-node-select', () => {
+    selectFired = true;
+  });
+
+  toggle.click();
+  await el.updateComplete;
+
+  expect(root.expanded).to.be.true;
+  expect(selectFired).to.be.false;
+});
+
 it('a mousedown on the toggle button focuses the host node rather than the hidden button itself', async () => {
   const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
   el.data = data;
@@ -125,6 +159,31 @@ it('expandAll()/collapseAll() toggle every parent node', async () => {
   el.collapseAll();
   await el.updateComplete;
   expect(root.expanded).to.be.false;
+});
+
+it('resolves an awaited expandAll() only once every descendant at every depth has actually expanded', async () => {
+  const deep = [
+    {
+      id: 'p',
+      label: 'P',
+      children: [{ id: 'p1', label: 'P1', children: [{ id: 'p1a', label: 'P1A' }] }],
+    },
+  ];
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = deep;
+  await el.updateComplete;
+
+  await el.expandAll();
+
+  const root = el.querySelector('lyra-tree-node') as unknown as LyraTreeNode;
+  expect(root.expanded).to.be.true;
+  const child = (root as unknown as HTMLElement).shadowRoot!.querySelector(
+    'lyra-tree-node',
+  ) as unknown as LyraTreeNode;
+  expect(child, 'the first-level child should already be rendered').to.exist;
+  expect(child.expanded).to.be.true;
+  const grandchild = (child as unknown as HTMLElement).shadowRoot!.querySelector('lyra-tree-node');
+  expect(grandchild, 'the second-level grandchild should already be rendered').to.exist;
 });
 
 it('collapseAll() leaves exactly one node with a roving tabindex of 0 after the active item was a nested descendant', async () => {

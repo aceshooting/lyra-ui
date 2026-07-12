@@ -252,6 +252,19 @@ export class LyraHeatmap extends LyraElement {
   @state() private focusedCell: CellPos | null = null;
   /** Text of the visually-hidden `aria-live="polite"` status announcement, refreshed on every focus move. */
   @state() private liveText = '';
+  /**
+   * Whether `role`/`aria-label` were present on the host *before* this
+   * element's own code ever wrote to them — snapshotted once, in the very
+   * first `willUpdate()` (guarded by `hasUpdated`, which Lit only flips to
+   * `true` after that first update commits). Re-checking `hasAttribute()` on
+   * every update instead would self-poison: once this element writes its own
+   * default `aria-label` on the first render, `hasAttribute('aria-label')`
+   * is permanently `true` afterwards, which would wrongly look like an
+   * author-supplied value and freeze the label instead of refreshing it as
+   * `values`/`days` change on later updates.
+   */
+  private authorSuppliedRole = false;
+  private authorSuppliedAriaLabel = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -294,22 +307,35 @@ export class LyraHeatmap extends LyraElement {
       this.hoverCell = null;
       this.liveText = '';
     }
+    if (!this.hasUpdated) {
+      this.authorSuppliedRole = this.hasAttribute('role');
+      this.authorSuppliedAriaLabel = this.hasAttribute('aria-label');
+    }
     this.cachedValueRange = this.computeValueRange();
     const bounds = this.cachedValueRange;
     const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
-    this.setAttribute('role', 'group');
-    if (this.mode === 'calendar') {
-      this.setAttribute(
-        'aria-label',
-        `Calendar heatmap of ${this.days.length} days, ${this.valueLabel} range ${range}`,
-      );
-    } else {
-      const rows = this.rowLabels.length;
-      const cols = this.colLabels.length;
-      this.setAttribute(
-        'aria-label',
-        `Heatmap of ${rows} × ${cols} cells, ${this.valueLabel} range ${range}`,
-      );
+    // Only default role/aria-label when the author hasn't already supplied
+    // one — the canvas is a genuinely focusable/interactive control
+    // (tabindex="0", click/keydown handlers) plus a live role="status"
+    // region, so unconditionally forcing a role here would tell assistive
+    // tech to flatten the whole subtree, hiding both from the accessibility
+    // tree; it would also silently overwrite any author-supplied
+    // role/aria-label on every update.
+    if (!this.authorSuppliedRole) this.setAttribute('role', 'group');
+    if (!this.authorSuppliedAriaLabel) {
+      if (this.mode === 'calendar') {
+        this.setAttribute(
+          'aria-label',
+          `Calendar heatmap of ${this.days.length} days, ${this.valueLabel} range ${range}`,
+        );
+      } else {
+        const rows = this.rowLabels.length;
+        const cols = this.colLabels.length;
+        this.setAttribute(
+          'aria-label',
+          `Heatmap of ${rows} × ${cols} cells, ${this.valueLabel} range ${range}`,
+        );
+      }
     }
   }
 
@@ -682,8 +708,24 @@ export class LyraHeatmap extends LyraElement {
     return { left: `${rect.x + rect.w / 2}px`, top: `${rect.y}px` };
   }
 
+  /**
+   * Value-equality check for a `CellPos`, since `hoverCell` is assigned a
+   * fresh object literal on every `pointermove` — Lit's `@state()`
+   * change-detection only no-ops an identical *reference*, so without this,
+   * `{row,col} !== {row,col}` by reference triggers a full canvas clear +
+   * redraw on every pixel of pointer movement, even within the same cell.
+   */
+  private samePos(a: CellPos | null, b: CellPos | null): boolean {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if ('week' in a && 'week' in b) return a.week === b.week && a.weekday === b.weekday;
+    if ('row' in a && 'row' in b) return a.row === b.row && a.col === b.col;
+    return false;
+  }
+
   private onPointerMove = (e: PointerEvent): void => {
-    this.hoverCell = this.hitTest(e.offsetX, e.offsetY);
+    const next = this.hitTest(e.offsetX, e.offsetY);
+    if (!this.samePos(this.hoverCell, next)) this.hoverCell = next;
   };
 
   private onPointerLeave = (): void => {
@@ -691,10 +733,11 @@ export class LyraHeatmap extends LyraElement {
   };
 
   private onCanvasClick = (e: MouseEvent): void => {
-    // Prefer the click's own position; fall back to whatever's already
-    // keyboard-focused (e.g. a synthetic click dispatched via
-    // HTMLElement.click(), which carries no real coordinates).
-    const pos = this.hitTest(e.offsetX, e.offsetY) ?? this.focusedCell;
+    // Only the click's own hit-tested position counts — a click that lands
+    // outside the grid (e.g. on the canvas's own padding) is a genuine
+    // out-of-grid click and should do nothing, not fall back to whatever
+    // cell happens to still be keyboard-focused from an earlier interaction.
+    const pos = this.hitTest(e.offsetX, e.offsetY);
     if (!pos) return;
     this.focusedCell = pos;
     this.announce(pos);

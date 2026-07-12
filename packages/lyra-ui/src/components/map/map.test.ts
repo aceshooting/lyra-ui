@@ -499,17 +499,17 @@ it('updates the reused marker popup when label changes for a persisting id', asy
   );
 });
 
-it('updates the reused marker popup when html changes for a persisting id', async () => {
+it('updates the reused marker popup when unsafeHtml changes for a persisting id', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
 
-  el.markers = [{ id: 'a', lngLat: [10, 20], html: '<strong>Station A</strong>' }];
+  el.markers = [{ id: 'a', lngLat: [10, 20], unsafeHtml: '<strong>Station A</strong>' }];
   await el.updateComplete;
 
-  el.markers = [{ id: 'a', lngLat: [10, 20], html: '<strong>Station A2</strong>' }];
+  el.markers = [{ id: 'a', lngLat: [10, 20], unsafeHtml: '<strong>Station A2</strong>' }];
   await el.updateComplete;
 
   const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
@@ -563,7 +563,7 @@ it('renders a colored marker and an html popup', async () => {
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
 
-  el.markers = [{ id: 'a', lngLat: [10, 20], color: '#ff0000', html: '<strong>Station A</strong>' }];
+  el.markers = [{ id: 'a', lngLat: [10, 20], color: '#ff0000', unsafeHtml: '<strong>Station A</strong>' }];
   await el.updateComplete;
 
   const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
@@ -601,6 +601,47 @@ it('does not throw or leave a dangling marker when the element disconnects while
   el.remove();
 
   await pending;
+});
+
+it("updates an existing marker's color when it changes", async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'a', lngLat: [0, 0], color: '#ff0000' }];
+  await el.updateComplete;
+  const instances = (
+    el as unknown as { _markerInstances: Map<string, { getElement(): HTMLElement }> }
+  )._markerInstances;
+  // Confirm the marker was actually constructed with the original color first,
+  // so the assertion below is verifying an in-place update rather than
+  // coincidentally matching a marker that was only ever created once.
+  expect(instances.get('a')!.getElement().innerHTML).to.include('ff0000');
+
+  el.markers = [{ id: 'a', lngLat: [0, 0], color: '#00ff00' }];
+  await el.updateComplete;
+  const marker = instances.get('a')!;
+  // maplibre-gl's default marker SVG carries the fill on its path -- assert the
+  // instance was told about the new color rather than left at construction-time red.
+  expect(marker.getElement().innerHTML).to.include('00ff00');
+});
+
+it('does not collide two id-less markers placed at the same coordinates', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { lngLat: [1, 1], label: 'first' },
+    { lngLat: [1, 1], label: 'second' },
+  ];
+  await el.updateComplete;
+  const instances = (el as unknown as { _markerInstances: Map<string, unknown> })._markerInstances;
+  expect(instances.size).to.equal(2);
 });
 
 function choropleth(sourceId: string, stops: [number, string][]) {

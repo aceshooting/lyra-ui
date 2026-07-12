@@ -44,7 +44,9 @@ export class LyraExportButton extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
+    this.cleanup = undefined;
     document.removeEventListener('pointerdown', this.onDocPointer);
+    this.open = false;
   }
 
   private onDocPointer = (e: PointerEvent): void => {

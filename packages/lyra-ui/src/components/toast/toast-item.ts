@@ -68,6 +68,7 @@ export class LyraToastItem extends LyraElement {
   private showRafId?: number;
   private showAnimTimer?: number;
   private hideAnimTimer?: number;
+  private resolvePendingHide?: () => void;
   private hovering = false;
   private focused = false;
   @state() private hiding = false;
@@ -83,11 +84,12 @@ export class LyraToastItem extends LyraElement {
     // `elapsedMs`/`duration` are re-read fresh every time the timer is
     // (re)scheduled, so a `duration` change while paused (hovering/focused)
     // or before the timer has ever started needs no action here -- the next
-    // resumeTimer()/startTimer() call already picks up the new value. Only a
-    // timer that's actively counting down right now is running against a
-    // setTimeout scheduled for the *old* duration, so that's the one case
-    // that needs an explicit reschedule.
-    if (changed.has('duration') && this.timerStarted && this.timer !== undefined) {
+    // resumeTimer()/startTimer() call already picks up the new value.
+    // Re-evaluate on any duration change once the show sequence has started,
+    // not only while a timer is already actively counting down -- this also
+    // covers duration flipping from disabled (0/Infinity) back to a positive
+    // value, which previously never had `this.timer !== undefined` to gate on.
+    if (changed.has('duration') && this.timerStarted && !this.hovering && !this.focused) {
       this.pauseTimer();
       this.resumeTimer();
     }
@@ -96,6 +98,10 @@ export class LyraToastItem extends LyraElement {
   firstUpdated(): void {
     this.showRafId = requestAnimationFrame(() => {
       this.showRafId = undefined;
+      // hide() may have already run synchronously before this frame fired
+      // (e.g. a caller creates the toast and immediately dismisses it) --
+      // don't resurrect the show sequence on top of an already-hiding item.
+      if (this.hiding) return;
       this.setAttribute('data-visible', '');
       this.emit('lyra-show');
       this.showAnimTimer = window.setTimeout(() => {
@@ -119,6 +125,12 @@ export class LyraToastItem extends LyraElement {
     if (this.hideAnimTimer !== undefined) {
       clearTimeout(this.hideAnimTimer);
       this.hideAnimTimer = undefined;
+      // hide()'s own promise is awaiting this timer firing to resolve() --
+      // a disconnect (e.g. the toast's ancestor is removed from the DOM,
+      // bypassing this.remove()) must still let that promise settle instead
+      // of leaving it pending forever.
+      this.resolvePendingHide?.();
+      this.resolvePendingHide = undefined;
     }
     this.clearTimer();
   }
@@ -142,7 +154,12 @@ export class LyraToastItem extends LyraElement {
     }
     if (!isFinite(this.duration) || this.duration <= 0) return;
     const remaining = this.duration - this.elapsedMs;
-    if (remaining <= 0) return;
+    // A duration shortened below the already-elapsed time must hide promptly,
+    // not silently never schedule anything.
+    if (remaining <= 0) {
+      void this.hide();
+      return;
+    }
     this.startedAt = performance.now();
     this.timer = window.setTimeout(() => this.hide(), remaining);
   };
@@ -216,11 +233,19 @@ export class LyraToastItem extends LyraElement {
     this.emit('lyra-hide');
     this.removeAttribute('data-visible');
     await new Promise<void>((resolve) => {
+      this.resolvePendingHide = resolve;
       this.hideAnimTimer = window.setTimeout(() => {
         this.hideAnimTimer = undefined;
+        this.resolvePendingHide = undefined;
         resolve();
       }, animMs());
     });
+    // An out-of-band disconnect (see disconnectedCallback) resolves this same
+    // promise so callers awaiting hide() never hang, but it does so *without*
+    // this having reached its normal completion -- guard against then still
+    // emitting a "finished hiding" event (and redundantly calling remove())
+    // for a node that's already been torn down some other way.
+    if (!this.isConnected) return;
     this.emit('lyra-after-hide');
     this.remove();
   }

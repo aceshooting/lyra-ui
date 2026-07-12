@@ -6,8 +6,6 @@ import { defineElement } from '../../internal/prefix.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
 import '../skeleton/skeleton.js';
-import type { ForceLink, ForceManyBody, Simulation, SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
-import type { ZoomBehavior } from 'd3-zoom';
 
 export interface GraphNode {
   id: string;
@@ -20,6 +18,15 @@ export interface GraphLink {
   target: string;
   width?: number;
 }
+
+// `interface ... extends` heritage clauses only accept an identifier/qualified-name
+// (not an inline `import('...').X` type query), so the lazy d3-force types are routed
+// through these local, non-exported aliases instead of a top-level `import type`. Since
+// SimNode/SimLink are themselves never exported (module-private, elided from the emitted
+// .d.ts entirely), this indirection doesn't reintroduce the barrel leak the inline
+// `import()` idiom elsewhere in this file exists to avoid.
+type SimulationNodeDatum = import('d3-force').SimulationNodeDatum;
+type SimulationLinkDatum<N extends SimulationNodeDatum> = import('d3-force').SimulationLinkDatum<N>;
 
 interface SimNode extends GraphNode, SimulationNodeDatum {}
 interface SimLink extends SimulationLinkDatum<SimNode> {
@@ -115,12 +122,12 @@ export class LyraGraph extends LyraElement {
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
 
-  private simulation?: Simulation<SimNode, SimLink>;
+  private simulation?: import('d3-force').Simulation<SimNode, SimLink>;
   /** The live charge/link force objects, kept so chargeStrength/linkDistance
    *  changes can retune them in place (see updated()) instead of requiring a
    *  full rebuildSimulation(). */
-  private chargeForce?: ForceManyBody<SimNode>;
-  private linkForce?: ForceLink<SimNode, SimLink>;
+  private chargeForce?: import('d3-force').ForceManyBody<SimNode>;
+  private linkForce?: import('d3-force').ForceLink<SimNode, SimLink>;
   private d3?: D3Modules;
   /** The `<svg>` currently wired up with d3-zoom (guards a one-time bind). */
   private zoomedEl?: SVGSVGElement;
@@ -131,7 +138,7 @@ export class LyraGraph extends LyraElement {
   /** The live zoom behavior, kept so minZoom/maxZoom changes can retune its
    *  scaleExtent in place (see applyInteractions()) instead of requiring the
    *  `<svg>` to be rebound. */
-  private zoomBehavior?: ZoomBehavior<SVGSVGElement, unknown>;
+  private zoomBehavior?: import('d3-zoom').ZoomBehavior<SVGSVGElement, unknown>;
   /** Node `<circle>`s already wired up with d3-drag; cleared on every simulation rebuild
    *  so DOM elements Lit reuses across a rebuild get rebound to their fresh datum. */
   private boundNodeEls = new WeakSet<Element>();

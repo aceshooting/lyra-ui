@@ -65,6 +65,19 @@ const RADIUS_STEP_PER_RADIAN = 3;
  *  generous enough that only a pathological input (e.g. one giant word
  *  repeated many times) ever exhausts it. */
 const MAX_RADIUS_AREA_FACTOR = 6;
+/** Fallback used by `resolveFontSizeBounds()` for any non-finite/non-positive
+ *  `minFontSize`/`maxFontSize` input. */
+const MIN_SANE_FONT_SIZE = 1;
+
+/** Normalizes possibly-invalid minFontSize/maxFontSize into a finite,
+ *  positive, correctly-ordered pair — non-finite/negative inputs fall back
+ *  to MIN_SANE_FONT_SIZE, and a reversed pair (max < min) is swapped rather
+ *  than left to invert the weight-to-size mapping. */
+function resolveFontSizeBounds(minFontSize: number, maxFontSize: number): [number, number] {
+  const min = Number.isFinite(minFontSize) && minFontSize > 0 ? minFontSize : MIN_SANE_FONT_SIZE;
+  const max = Number.isFinite(maxFontSize) && maxFontSize > 0 ? maxFontSize : MIN_SANE_FONT_SIZE;
+  return min <= max ? [min, max] : [max, min];
+}
 
 /** Clamps a (possibly negative/non-finite) input weight for scale math only —
  *  never fed back to callers, who should still see their own original `weight`. */
@@ -98,7 +111,8 @@ function rectsOverlap(
  * any word already placed). Deterministic given a deterministic `random`.
  */
 export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayoutOptions): WordCloudLayoutResult {
-  const { minFontSize, maxFontSize, scale, orientations, measureText } = options;
+  const { scale, orientations, measureText } = options;
+  const [minFontSize, maxFontSize] = resolveFontSizeBounds(options.minFontSize, options.maxFontSize);
   const random = options.random ?? Math.random;
 
   const skipped: WordCloudWord[] = [];

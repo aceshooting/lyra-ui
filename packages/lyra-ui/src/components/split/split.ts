@@ -16,8 +16,12 @@ const NO_MAX_PX = 1_000_000;
 interface DragState {
   index: number;
   startPos: number;
-  startSizes: number[];
   base: HTMLElement;
+  /** Cumulative delta already folded into the live `sizes` so far this
+   *  gesture — clamping against live sizes (see onPointerMove) means each
+   *  move must apply only the *incremental* delta since the last move, not
+   *  the total-since-drag-start delta a snapshot-based clamp would use. */
+  appliedDelta: number;
 }
 
 /** A fixed-pixel-range constraint for one panel; index-aligned with `sizes`/
@@ -56,6 +60,11 @@ export class LyraSplit extends LyraElement {
   // Keyed by pointerId so an interrupted or concurrent (multi-touch) drag on
   // one divider never reads or clobbers another pointer's drag state.
   private drags = new Map<number, DragState>();
+  // Panels `updated()` last applied inline flex/order styles to — tracked so
+  // a panel removed from the slot (e.g. a DOM node later reused elsewhere)
+  // gets those lyra-split-authored styles cleared instead of carrying them
+  // around stale forever.
+  private stylizedPanels = new Set<HTMLElement>();
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -205,8 +214,8 @@ export class LyraSplit extends LyraElement {
     this.drags.set(e.pointerId, {
       index,
       startPos: this.orientation === 'vertical' ? e.clientY : e.clientX,
-      startSizes: [...this.sizes],
       base,
+      appliedDelta: 0,
     });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
@@ -224,13 +233,39 @@ export class LyraSplit extends LyraElement {
     if (!drag) return;
     const total = this.orientation === 'vertical' ? drag.base.clientHeight : drag.base.clientWidth;
     const pos = this.orientation === 'vertical' ? e.clientY : e.clientX;
-    let deltaPercent = ((pos - drag.startPos) / total) * 100;
+    let cumulativeDelta = ((pos - drag.startPos) / total) * 100;
     // Panels are ordered along the inline axis via CSS `order`, so under RTL
     // `flex-direction: row` already renders panel[i] to the *right* of
     // panel[i+1] — a physically-rightward drag has to shrink index instead
     // of growing it to keep matching the visible panel under the pointer.
-    if (this.orientation === 'horizontal' && isRtl(this)) deltaPercent = -deltaPercent;
-    const paired = this.clampPair(drag.startSizes, drag.index, deltaPercent, total);
+    if (this.orientation === 'horizontal' && isRtl(this)) cumulativeDelta = -cumulativeDelta;
+    // Clamp against the *current* live sizes, not this pointer's own drag-start
+    // snapshot -- two adjacent dividers dragged concurrently share one panel
+    // between them, and each clamp pass must see whatever the other pointer's
+    // move has *just* written, or the two independently-clamped pairs can each
+    // stay individually valid while their shared panel drifts past what either
+    // pair alone would allow, letting the total exceed 100%. Since the clamp
+    // basis is now the live, already-partially-applied `this.sizes` instead of
+    // a fixed drag-start snapshot, only the *incremental* delta since the last
+    // move may be applied here (not the cumulative-since-drag-start delta a
+    // snapshot-based clamp would use).
+    const incremental = cumulativeDelta - drag.appliedDelta;
+    const priorValue = this.sizes[drag.index];
+    const paired = this.clampPair(this.sizes, drag.index, incremental, total);
+    // Accumulate this move's own *realized* increment (post-clamp) onto the
+    // running total, rather than recomputing an absolute "total since
+    // drag-start" diff against a fixed startSizes snapshot. clampPair can
+    // cap the actual move short of what was requested (e.g. a drag
+    // saturating a panel's min/panelConstraints bound), so the realized
+    // portion still has to be tracked instead of the raw request -- that
+    // part of round 1's fix stands. But an absolute since-start diff also
+    // silently absorbs any change a DIFFERENT concurrent pointer's drag
+    // makes to this same shared panel between this pointer's own moves
+    // (adjacent dividers share one panel: divider i's index+1 panel is
+    // divider i+1's index panel), corrupting this pointer's next incremental
+    // calculation. Summing only this move's own delta (paired vs. the value
+    // immediately prior to *this* clamp) avoids both bugs at once.
+    drag.appliedDelta += paired[drag.index] - priorValue;
     // Merge only this drag's pair into the live sizes so a concurrent drag
     // on another divider (different pointerId) isn't clobbered.
     const next = [...this.sizes];
@@ -269,6 +304,17 @@ export class LyraSplit extends LyraElement {
   protected updated(changed: PropertyValues): void {
     if (changed.has('sizes') || this.sizes.length === 0) this.ensureSizes();
     const panels = [...this.children] as HTMLElement[];
+    const current = new Set(panels);
+    // A panel that dropped out of the slot (removed from the light DOM)
+    // still carries whatever inline flex/order this method last applied to
+    // it — clear those before that DOM node potentially gets reused
+    // elsewhere (e.g. re-slotted into another split/container).
+    for (const stale of this.stylizedPanels) {
+      if (!current.has(stale)) {
+        stale.style.removeProperty('flex');
+        stale.style.removeProperty('order');
+      }
+    }
     panels.forEach((panel, i) => {
       const percent = this.sizes[i] ?? 0;
       const constraint = this.panelConstraints[i];
@@ -281,6 +327,7 @@ export class LyraSplit extends LyraElement {
           : `0 0 ${percent}%`;
       panel.style.order = String(i * 2);
     });
+    this.stylizedPanels = current;
   }
 
   render(): TemplateResult {

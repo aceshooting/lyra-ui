@@ -79,6 +79,19 @@ describe('buildCalendarGrid', () => {
     expect(cells).to.have.length(150_000);
     expect(weekCount).to.be.greaterThan(0);
   });
+
+  it('drops a calendar-invalid date (rolled-over day) instead of silently normalizing it', () => {
+    const { cells } = buildCalendarGrid([{ date: '2026-02-30', value: 1 }]);
+    expect(cells.length).to.equal(0);
+  });
+
+  it('labels every month that has data, even in a sparse calendar with no Sunday entries', () => {
+    const { monthLabels } = buildCalendarGrid([
+      { date: '2026-01-15', value: 1 },
+      { date: '2026-02-10', value: 1 },
+    ]);
+    expect(monthLabels.length).to.equal(2);
+  });
 });
 
 describe('quartileBucket', () => {

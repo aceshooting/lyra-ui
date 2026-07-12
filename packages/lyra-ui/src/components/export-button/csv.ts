@@ -2,7 +2,7 @@
 // reliably trigger spreadsheet formula evaluation) — guarding it forces text rendering on
 // ordinary negative numbers/currency. Per OWASP CSV-injection guidance, '-' is intentionally
 // excluded here.
-const UNSAFE_LEADING = /^[=+@\t\r]/;
+const UNSAFE_LEADING = /^[=+@\t\r\n]/;
 const NEEDS_QUOTING = /[",\r\n]/;
 
 /** Escapes a CSV field: quotes as needed, guards against formula injection. */

@@ -69,12 +69,12 @@ export class LyraSelect extends LyraElement {
 
   static properties = {
     value: { noAccessor: true },
+    name: { reflect: true, noAccessor: true },
   };
 
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) required = false;
-  @property() name = '';
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -96,6 +96,11 @@ export class LyraSelect extends LyraElement {
   @state() private hasLabelSlot = false;
 
   private internals: ElementInternals;
+  // Tracked separately from the consumer's own `disabled` -- a native
+  // `<input>`'s own `disabled` IDL property/attribute is never mutated by
+  // fieldset cascading, so a consumer's explicit `disabled` must survive the
+  // fieldset re-enabling (see `formDisabledCallback` below).
+  private _fieldsetDisabled = false;
   private listId = nextId('select-list');
   private triggerId = nextId('select-trigger');
   private cleanup?: () => void;
@@ -114,6 +119,16 @@ export class LyraSelect extends LyraElement {
   // "ba" instead of restarting the search on every keystroke.
   private typeAheadBuffer = '';
   private typeAheadTimer?: ReturnType<typeof setTimeout>;
+
+  // Hand-written accessor (mirrors the `value` accessor below, and Task 2's
+  // `FormAssociated.name` in `../../internal/form-associated.ts`): a
+  // form-associated custom element's submitted entry name is resolved by the
+  // browser from the live `name` *content attribute*, read synchronously at
+  // FormData-construction/submit time (see `syncFormValue()` below) -- Lit's
+  // async (microtask-deferred) `reflect: true` alone would leave a
+  // property-only assignment like `el.name = 'b'` invisible to a same-tick
+  // `new FormData(form)`/submit, so the attribute write happens here instead.
+  private _name = '';
 
   constructor() {
     super();
@@ -136,6 +151,20 @@ export class LyraSelect extends LyraElement {
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
     }
+  }
+
+  get name(): string {
+    return this._name;
+  }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) {
+      this.setAttribute('name', this._name);
+    } else {
+      this.removeAttribute('name');
+    }
+    this.requestUpdate('name', old);
   }
 
   /** The selected value: a single string (empty when nothing is selected). */
@@ -163,11 +192,25 @@ export class LyraSelect extends LyraElement {
     this.internals.setFormValue(this._selected);
   }
 
+  /** Effective disabled state: this element's own `disabled` OR an ancestor
+   *  `<fieldset disabled>`'s inherited state -- mirrors native `<input>`, whose
+   *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
+
   formResetCallback(): void {
     this.value = this._defaultSelected;
   }
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>` toggles.
+   * Tracked separately from the consumer's own `disabled` (see
+   * `effectiveDisabled`) so a consumer's explicit `disabled` survives the
+   * fieldset re-enabling instead of being permanently overwritten.
+   */
   formDisabledCallback(disabled: boolean): void {
-    this.disabled = disabled;
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
   }
   checkValidity(): boolean {
     return this.internals.checkValidity();
@@ -179,8 +222,15 @@ export class LyraSelect extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
+    this.cleanup = undefined;
     clearTimeout(this.typeAheadTimer);
     document.removeEventListener('pointerdown', this.onDocPointer);
+    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
+    // `updated()`'s `open`-driven branch -- without this, `open` stays
+    // `true` across the disconnect/reconnect and `changed.has('open')` never
+    // fires again, leaving the listbox rendered open with no positioning and
+    // no outside-click listener.
+    this.open = false;
   }
 
   private collectOptions = (e: Event): void => {
@@ -239,8 +289,18 @@ export class LyraSelect extends LyraElement {
     return navigable.length === 1 ? navigable[0] : undefined;
   }
 
+  // Fired by `option.ts`'s `lyra-option-change` (a MutationObserver on the
+  // option's own light-DOM content/attributes) when an already-slotted
+  // `<lyra-option>` mutates its own data in place -- `collectOptions()` only
+  // re-runs on `slotchange`, which never fires for such a mutation, so
+  // without this the rendered listbox row would go stale. Reassigning (not
+  // mutating) `options` gives Lit a new array reference to diff against.
+  private onOptionChange = (): void => {
+    this.options = [...this.options];
+  };
+
   private show(): void {
-    if (this.open || this.disabled) return;
+    if (this.open || this.effectiveDisabled) return;
     this.open = true;
   }
   private hide(): void {
@@ -290,7 +350,7 @@ export class LyraSelect extends LyraElement {
   }
 
   private onTriggerClick = (): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     if (this.onlyOption) return this.selectOption(this.onlyOption);
     this.open ? this.hide() : this.show();
   };
@@ -486,10 +546,10 @@ export class LyraSelect extends LyraElement {
           aria-expanded=${isSingleOption ? nothing : this.open ? 'true' : 'false'}
           aria-controls=${isSingleOption ? nothing : this.listId}
           aria-activedescendant=${isSingleOption ? nothing : activeId}
-          aria-label=${this.getAttribute('aria-label') || this.label || this.placeholder || 'Select'}
+          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Select')}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-          ?disabled=${this.disabled}
+          ?disabled=${this.effectiveDisabled}
           @click=${this.onTriggerClick}
           @keydown=${this.onKeyDown}
           @blur=${this.onTriggerBlur}
@@ -515,7 +575,7 @@ export class LyraSelect extends LyraElement {
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
-      <slot @slotchange=${this.collectOptions} hidden></slot>
+      <slot @slotchange=${this.collectOptions} @lyra-option-change=${this.onOptionChange} hidden></slot>
     `;
   }
 }

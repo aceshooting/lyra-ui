@@ -178,12 +178,30 @@ it('removes the document pointerdown listener on disconnect', async () => {
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  el.remove();
+  // Spy on document.removeEventListener directly -- checking `el.open` alone
+  // is no longer a valid proxy for "was the listener removed" now that
+  // disconnectedCallback() also resets `open` to `false` itself (that reset
+  // would make closeMenu()'s own `if (!this.open) return;` guard mask a
+  // leaked listener, since `open` is already false before any dispatch).
+  const originalRemove = document.removeEventListener.bind(document);
+  let removedPointerdown = false;
+  document.removeEventListener = ((
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ) => {
+    if (type === 'pointerdown') removedPointerdown = true;
+    return originalRemove(type, listener, options);
+  }) as typeof document.removeEventListener;
 
-  // If disconnectedCallback failed to remove the document listener, this
-  // pointerdown would still reach onDocPointer and flip `open` back to false.
-  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
-  expect(el.open).to.be.true;
+  try {
+    el.remove();
+  } finally {
+    document.removeEventListener = originalRemove;
+  }
+
+  expect(removedPointerdown).to.be.true;
+  expect(el.open).to.be.false;
 });
 
 it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
@@ -324,6 +342,31 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
   );
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+});
+
+it('resets to closed on disconnect and re-binds the outside-click listener when reopened after reconnect', async () => {
+  const el = (await fixture(
+    html`<lyra-export-button open .formats=${['csv', 'json']}></lyra-export-button>`,
+  )) as LyraExportButton;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  // The real, discriminating check: a leftover inline `position` style is set
+  // once on first open and never cleared either way, so it can't tell a fixed
+  // reconnect apart from the pre-fix bug (which left `open` stuck `true`
+  // across the whole cycle). `open` itself is what the fix actually resets.
+  expect(el.open).to.be.false;
+
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  // Confirms the outside-click listener was genuinely re-armed by this fresh
+  // open, not left stale/leaked from before the reconnect.
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  expect(el.open).to.be.false;
 });
 
 it('is accessible', async () => {

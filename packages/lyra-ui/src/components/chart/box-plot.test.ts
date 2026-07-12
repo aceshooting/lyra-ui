@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.js';
 import { styles } from './box-plot.styles.js';
@@ -102,6 +102,15 @@ it('does not wire up chart.js when the boxplot plugin fails to load, even though
 
 it('does not bundle lyra-chart\'s unused reset-zoom-button styles', () => {
   expect(styles.cssText).to.not.contain('reset-zoom-button');
+});
+
+it('does not construct a Chart.js instance if disconnected before the lazy peer import settles', async () => {
+  const el = document.createElement('lyra-box-plot') as LyraBoxPlot;
+  el.boxes = [{ label: 'a', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+  document.body.appendChild(el);
+  el.remove();
+  await aTimeout(100);
+  expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
 });
 
 it('connectedCallback() routes the resolved boxplot-plugin module into the loaded handler instead of ignoring it', async () => {

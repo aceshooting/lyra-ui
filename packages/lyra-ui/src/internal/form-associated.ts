@@ -1,4 +1,4 @@
-import type { LitElement, PropertyValues } from 'lit';
+import type { LitElement } from 'lit';
 
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -9,6 +9,7 @@ export interface FormAssociatedInterface {
   value: string;
   disabled: boolean;
   required: boolean;
+  readonly effectiveDisabled: boolean;
   setFormValue(next: string): void;
   checkValidity(): boolean;
   reportValidity(): boolean;
@@ -32,17 +33,25 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     static formAssociated = true;
 
     static properties = {
-      name: {},
+      name: { reflect: true, noAccessor: true },
       value: { noAccessor: true },
       disabled: { type: Boolean, reflect: true },
-      required: { type: Boolean, reflect: true },
+      required: { type: Boolean, reflect: true, noAccessor: true },
     };
 
     internals: ElementInternals;
 
-    name = '';
     disabled = false;
-    required = false;
+
+    private _fieldsetDisabled = false;
+
+    // Hand-written accessor (mirrors `value`/`required` below): native form
+    // submission for a form-associated custom element keys its `FormData`
+    // entry off the `name` *content attribute*, read synchronously at
+    // submission time — an async (Lit-scheduled) reflection would leave a
+    // property-only assignment like `el.name = 'foo'` invisible to a
+    // same-tick `new FormData(form)`/submit.
+    private _name = '';
 
     private _value = '';
     // What native `defaultValue`/`form.reset()` restores to. Mirrors the
@@ -56,9 +65,30 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     // (a required field could never be reset back to blank again).
     private _defaultValue = '';
 
+    private _required = false;
+
     constructor(...args: any[]) {
       super(...args);
       this.internals = this.attachInternals();
+      // Native <input> always has a submission value ("") from construction —
+      // without this, a control whose `value` is never touched is entirely
+      // absent from FormData instead of present as "".
+      this.internals.setFormValue('');
+    }
+
+    get name(): string {
+      return this._name;
+    }
+
+    set name(next: string) {
+      const old = this._name;
+      this._name = next ?? '';
+      if (this._name) {
+        this.setAttribute('name', this._name);
+      } else {
+        this.removeAttribute('name');
+      }
+      this.requestUpdate('name', old);
     }
 
     get value(): string {
@@ -71,6 +101,25 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this.internals.setFormValue(this._value);
       this.updateValidity();
       this.requestUpdate('value', old);
+    }
+
+    get required(): boolean {
+      return this._required;
+    }
+
+    set required(next: boolean) {
+      const old = this._required;
+      this._required = next;
+      this.toggleAttribute('required', next);
+      this.updateValidity();
+      this.requestUpdate('required', old);
+    }
+
+    /** Effective disabled state: this element's own `disabled` OR an ancestor
+     *  `<fieldset disabled>`'s inherited state — mirrors native `<input>`, whose
+     *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
+    get effectiveDisabled(): boolean {
+      return this.disabled || this._fieldsetDisabled;
     }
 
     attributeChangedCallback(name: string, old: string | null, value: string | null): void {
@@ -115,8 +164,16 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this.value = this._defaultValue;
     }
 
-    formDisabledCallback(disabled: boolean): void {
-      this.disabled = disabled;
+    /**
+     * Called by the browser when an ancestor `<fieldset disabled>` toggles.
+     * Tracked separately from the consumer's own `disabled` (see
+     * `effectiveDisabled`) — a native `<input>`'s own `disabled` IDL
+     * property/attribute is never mutated by fieldset cascading, so a
+     * consumer's explicit `disabled` must survive the fieldset re-enabling.
+     */
+    formDisabledCallback(fieldsetDisabled: boolean): void {
+      this._fieldsetDisabled = fieldsetDisabled;
+      this.requestUpdate();
     }
 
     connectedCallback(): void {
@@ -125,11 +182,6 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // runs; reflect validity from the start, not only after the first
       // `value` write.
       this.updateValidity();
-    }
-
-    protected updated(changed: PropertyValues): void {
-      super.updated(changed);
-      if (changed.has('required')) this.updateValidity();
     }
   }
 

@@ -1,6 +1,5 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import type { Chart, ChartConfiguration } from 'chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadChartJs } from './chart-loader.js';
@@ -72,7 +71,7 @@ export class LyraBoxPlot extends LyraElement {
   @state() private loading = true;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
-  private chart?: Chart;
+  private chart?: import('chart.js').Chart;
   private chartJsModule?: typeof import('chart.js');
 
   connectedCallback(): void {
@@ -87,12 +86,20 @@ export class LyraBoxPlot extends LyraElement {
   // case, so this must gate on its resolved value — mirroring the correct,
   // established pattern in `LyraChart.connectedCallback()` — instead of
   // unconditionally re-awaiting the already-cached `loadChartJs()` promise.
+  //
+  // Also guards against a disconnect while either lazy peer import is still
+  // in flight: `this.isConnected` is re-checked after each `await` gap, so a
+  // `<lyra-box-plot>` removed before the load settles never constructs a
+  // `Chart` bound to a (possibly detached) canvas.
   private async onBoxPlotPluginLoaded(
     boxMod: typeof import('@sgratzl/chartjs-chart-boxplot') | null,
   ): Promise<void> {
+    if (!this.isConnected) return;
     this.loading = false;
     if (!boxMod) return;
-    this.chartJsModule = (await loadChartJs()) ?? undefined;
+    const chartMod = await loadChartJs();
+    if (!this.isConnected) return;
+    this.chartJsModule = chartMod ?? undefined;
     this.draw();
   }
 
@@ -117,7 +124,7 @@ export class LyraBoxPlot extends LyraElement {
     this.draw();
   }
 
-  private buildConfig(): ChartConfiguration {
+  private buildConfig(): import('chart.js').ChartConfiguration {
     return {
       // boxplot isn't in chart.js's static ChartType union — same cast the seed uses.
       type: 'boxplot' as never,

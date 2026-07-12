@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './chart.js';
 import type { LyraChart } from './chart.js';
 import { styles } from './chart.styles.js';
@@ -606,4 +606,61 @@ it('refreshTheme() always redraws regardless of the signature gate', async () =>
   const dataRef = (el as any).chart.data;
   el.refreshTheme();
   expect((el as any).chart.data).to.not.equal(dataRef);
+});
+
+it('builds scales for the config-overridden effective type, not the attribute type', async () => {
+  const el = (await fixture(
+    html`<lyra-chart type="line" .datasets=${[{ label: 'a', data: [1, 2] }]} .config=${{ type: 'radar' }}></lyra-chart>`,
+  )) as LyraChart;
+  await aTimeout(50);
+  const chart = (el as unknown as { chart?: { options: { scales?: Record<string, unknown> } } }).chart;
+  expect(chart?.options.scales?.r).to.exist;
+  expect(chart?.options.scales?.x).to.not.exist;
+});
+
+it('actually suppresses the tooltip for a noTooltip series via plugin-level filtering', async () => {
+  const el = (await fixture(
+    html`<lyra-chart type="line" .datasets=${[{ label: 'a', data: [1], noTooltip: true }, { label: 'b', data: [2] }]}></lyra-chart>`,
+  )) as LyraChart;
+  await aTimeout(50);
+  const chart = (el as unknown as { chart?: { options: { plugins?: { tooltip?: { filter?: (item: { datasetIndex: number }) => boolean } } } } }).chart;
+  const filter = chart?.options.plugins?.tooltip?.filter;
+  expect(filter?.({ datasetIndex: 0 })).to.be.false;
+  expect(filter?.({ datasetIndex: 1 })).to.be.true;
+});
+
+it('does not construct a Chart.js instance if disconnected before the lazy chart.js import settles', async () => {
+  const el = document.createElement('lyra-chart') as LyraChart;
+  el.datasets = [{ label: 'a', data: [1] }];
+  document.body.appendChild(el);
+  el.remove();
+  await aTimeout(100);
+  expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
+});
+
+it('does not leak a Chart instance bound to a detached canvas when zoom turns on and the element disconnects before loadChartJsWithZoom() resolves', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const instanceBeforeZoom = (el as any).chart;
+
+  // Turn zoom on and disconnect in the same synchronous tick — before the
+  // dynamic import inside loadChartJsWithZoom() (real, un-mocked) can
+  // possibly resolve — matching the `connectedCallback()` disconnect-guard
+  // test above.
+  el.zoom = true;
+  el.remove();
+  await aTimeout(200);
+
+  // The chart that existed before disconnect must have been torn down by
+  // disconnectedCallback() and never replaced by a new instance bound to the
+  // now-detached canvas. `instanceBeforeZoom.canvas` itself is nulled out by
+  // Chart.js's own `destroy()` (see chart.js's `Chart#destroy()`), so check
+  // `config` (untouched by `destroy()`) instead, just to confirm this really
+  // was a real, built Chart instance and not e.g. `undefined` all along.
+  expect((el as any).chart).to.be.undefined;
+  expect(instanceBeforeZoom.config.type).to.equal('line');
 });

@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './table.js';
+import '../select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
 
 interface Row {
@@ -577,6 +578,61 @@ it('moves focus from the header into the body row with ArrowDown', async () => {
   await el.updateComplete;
   const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
   expect(el.shadowRoot!.activeElement).to.equal(firstRow);
+});
+
+it('offsets a second sticky column past the first instead of overlapping at inset 0', async () => {
+  const stickyColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: true, cell: (r) => r.name },
+    { key: 'score', label: 'Score', sticky: true, cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = stickyColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  const cells = el.shadowRoot!.querySelectorAll('[part="header-cell"][data-sticky]');
+  const first = getComputedStyle(cells[0]).insetInlineStart;
+  const second = getComputedStyle(cells[1]).insetInlineStart;
+  expect(first).to.not.equal(second);
+});
+
+it('does not treat a custom interactive element inside a cell as a row-activation target', async () => {
+  const actionColumns: TableColumn<Row>[] = [
+    ...columns,
+    { key: 'actions', label: '', cell: () => html`<lyra-select data-testid="cell-select"></lyra-select>` },
+  ];
+  let rowClicked = false;
+  const el = (await fixture(
+    html`<lyra-table
+      .columns=${actionColumns}
+      .rows=${rows}
+      @lyra-row-click=${() => (rowClicked = true)}
+    ></lyra-table>`,
+  )) as LyraTable<Row>;
+  await el.updateComplete;
+  const select = el.shadowRoot!.querySelector('lyra-select')!;
+  select.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  expect(rowClicked).to.be.false;
+});
+
+it('keeps a numeric-key row and a string-key row distinct instead of colliding', async () => {
+  const mixedRows = [
+    { id: 1, name: 'Numeric', email: 'n@example.com' },
+    { id: '1', name: 'String', email: 's@example.com' },
+  ];
+  const mixedColumns: TableColumn<(typeof mixedRows)[number]>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+  ];
+  const el = (await fixture(
+    html`<lyra-table
+      .columns=${mixedColumns}
+      .rows=${mixedRows}
+      .rowKey=${(r: (typeof mixedRows)[number]) => r.id}
+    ></lyra-table>`,
+  )) as LyraTable<(typeof mixedRows)[number]>;
+  await el.updateComplete;
+  const rowEls = el.shadowRoot!.querySelectorAll('[data-row-key]');
+  const keys = new Set(Array.from(rowEls).map((r) => r.getAttribute('data-row-key')));
+  expect(keys.size).to.equal(2);
 });
 
 it('does not trigger row activation or preventDefault when Enter is pressed on a focused button inside a cell()', async () => {

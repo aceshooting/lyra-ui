@@ -222,3 +222,50 @@ it('constrains its rendered SVG to a host-assigned height instead of overflowing
   const svgRect = svg.getBoundingClientRect();
   expect(Math.round(svgRect.height)).to.equal(Math.round(hostRect.height));
 });
+
+it('relays out when the font-family theme token changes', async () => {
+  const el = (await fixture(
+    html`<lyra-word-cloud
+      .words=${[
+        { text: 'alpha', weight: 5 },
+        { text: 'beta', weight: 1 },
+      ]}
+    ></lyra-word-cloud>`,
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const before = el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox');
+  el.style.setProperty('--lyra-font', 'monospace');
+  el.words = [...el.words];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.not.equal(before);
+});
+
+it('calls refreshTheme() alone to re-measure and re-layout for font-family change', async () => {
+  const el = (await fixture(
+    html`<lyra-word-cloud
+      .words=${[
+        { text: 'alpha', weight: 5 },
+        { text: 'beta', weight: 1 },
+      ]}
+    ></lyra-word-cloud>`,
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const before = el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox');
+  el.style.setProperty('--lyra-font', 'monospace');
+  el.refreshTheme();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.not.equal(before);
+});
+
+it('announces the count of words actually rendered, not the raw input count', async () => {
+  const el = (await fixture(
+    html`<lyra-word-cloud
+      .words=${[
+        { text: '', weight: 1 },
+        { text: 'ok', weight: 2 },
+      ]}
+    ></lyra-word-cloud>`,
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.include('1 word');
+});

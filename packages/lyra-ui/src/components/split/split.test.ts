@@ -7,6 +7,13 @@ function mockWidth(el: HTMLElement, width: number): void {
   Object.defineProperty(el, 'clientWidth', { value: width, configurable: true });
 }
 
+function pointerDown(el: HTMLElement, pointerId: number, x: number) {
+  el.dispatchEvent(new PointerEvent('pointerdown', { pointerId, clientX: x, bubbles: true }));
+}
+function pointerMove(pointerId: number, x: number) {
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: x }));
+}
+
 it('splits children evenly by default', async () => {
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
@@ -358,6 +365,125 @@ it('keeps two concurrent pointer drags on different dividers independent (scoped
 
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
+});
+
+it('keeps sizes summing to 100 when two adjacent dividers are dragged concurrently', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>a</div><div>b</div><div>c</div></lyra-split>`,
+  )) as LyraSplit;
+  await el.updateComplete;
+  const dividers = el.shadowRoot!.querySelectorAll('[part="divider"]') as NodeListOf<HTMLElement>;
+  Object.defineProperty(el.shadowRoot!.querySelector('[part="base"]')!, 'clientWidth', { value: 300, configurable: true });
+  (dividers[0] as unknown as { setPointerCapture(id: number): void }).setPointerCapture = () => {};
+  (dividers[1] as unknown as { setPointerCapture(id: number): void }).setPointerCapture = () => {};
+  pointerDown(dividers[0], 1, 100);
+  pointerDown(dividers[1], 2, 200);
+  pointerMove(1, 130); // drag divider 0 right, growing panel 1
+  pointerMove(2, 170); // drag divider 1 left, also growing panel 1
+  await el.updateComplete;
+  const total = el.sizes.reduce((s, n) => s + n, 0);
+  expect(total).to.be.closeTo(100, 0.5);
+});
+
+it('composes two adjacent concurrent drags correctly when each pointer fires multiple moves (not just one move per pointer)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+  )) as LyraSplit;
+  el.sizes = [40, 30, 30];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200); // 1% == 2px, so requested deltas below are exact.
+  const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
+  dividers.forEach((d) => (d.setPointerCapture = () => {}));
+
+  // Pointer 1 drags divider 0 (the panel0/panel1 pair); pointer 2 drags
+  // divider 1 (the panel1/panel2 pair) -- panel1 is the shared panel. Both
+  // pointers start, then EACH fires two moves, interleaved, so pointer 1's
+  // own second move writes to the shared panel1 in between pointer 2's two
+  // moves -- exactly the sequence that contaminates pointer 2's `appliedDelta`
+  // under the buggy "absolute since drag-start" formula (round 1's fix),
+  // even though a single-move-per-pointer test never observes it.
+  pointerDown(dividers[0], 1, 100);
+  pointerDown(dividers[1], 2, 300);
+
+  pointerMove(1, 108); // pointer 1 requests +4%
+  pointerMove(2, 312); // pointer 2 requests +6%
+  pointerMove(1, 114); // pointer 1 requests +7% total (a further +3% own increment)
+  pointerMove(2, 322); // pointer 2 requests +11% total (a further +5% own increment)
+  await el.updateComplete;
+
+  // Nothing here saturates a bound, so the final sizes must equal simply
+  // composing each pointer's own *total* requested delta independently onto
+  // the starting sizes: panel0 only ever responds to pointer 1's requests
+  // (40 + 7 = 47), panel2 only ever responds to pointer 2's requests
+  // (30 - 11 = 19), and the shared panel1 absorbs both (30 - 7 + 11 = 34).
+  // The buggy formula instead yields [47, 38, 15] here -- still summing to
+  // 100 (so a "sums to 100" assertion alone would miss it), but wrong.
+  expect(el.sizes[0]).to.be.closeTo(47, 1e-9);
+  expect(el.sizes[1]).to.be.closeTo(34, 1e-9);
+  expect(el.sizes[2]).to.be.closeTo(19, 1e-9);
+  const total = el.sizes.reduce((s, n) => s + n, 0);
+  expect(total).to.be.closeTo(100, 1e-9);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
+});
+
+it('returns to the exact starting sizes after a drag saturates a bound and then reverses back to the start position (no drift from the clamped-away delta)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 100);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  // Push panel[0] well past the pair's max (90, since panel[1]'s default
+  // min=10 caps it) -- this saturates the clamp, discarding part of the
+  // requested delta (requested +50, only +40 actually realized).
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150 }));
+  expect(el.sizes[0]).to.equal(90);
+
+  // Reverse partway: still saturated, since the pointer hasn't crossed back
+  // under the threshold that would un-clamp it.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 145 }));
+  expect(el.sizes[0]).to.equal(90);
+
+  // Return the pointer to its exact starting position: the panel must land
+  // back on its exact starting size. A buggy `appliedDelta` that tracks the
+  // raw requested delta (instead of what was actually realized post-clamp)
+  // loses track of the clamped-away portion and drifts here instead.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
+  expect(el.sizes[0]).to.equal(50);
+  expect(el.sizes[1]).to.equal(50);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+});
+
+it('clears inline flex/order styles from a panel removed from the slot', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div id="p1">a</div><div id="p2">b</div></lyra-split>`,
+  )) as LyraSplit;
+  await el.updateComplete;
+  const p1 = el.querySelector('#p1') as HTMLElement;
+  expect(p1.style.flex).to.not.equal('');
+  // Removal only drives a re-render (and thus updated()'s cleanup pass) once
+  // the light-DOM mutation's async `slotchange` fires and flips reactive
+  // state (panelCount/sizes) -- awaiting `el.updateComplete` alone races
+  // that, since it can resolve against an already-settled promise from the
+  // *previous* render before slotchange has had a chance to queue the next
+  // one. Same pattern the other slotchange-driven tests in this file use.
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  p1.remove();
+  await slotChanged;
+  await el.updateComplete;
+  expect(p1.style.flex).to.equal('');
+  expect(p1.style.order).to.equal('');
 });
 
 it('ignores a stray pointermove/pointerup/pointercancel after the element is disconnected mid-drag', async () => {

@@ -722,11 +722,16 @@ it('disables the combobox when its containing fieldset is disabled', async () =>
   const el = form.querySelector('lyra-combobox') as LyraCombobox;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await el.updateComplete;
-  expect(el.disabled).to.be.false;
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.false;
 
   fieldset.disabled = true;
   await el.updateComplete;
-  expect(el.disabled).to.be.true;
+  // `el.disabled` (the consumer-facing IDL property/attribute) is never
+  // mutated by fieldset cascading -- only the combined `effectiveDisabled`
+  // reflects it (mirrors native `<input>` and the Task 2 FormAssociated
+  // mixin's own `_fieldsetDisabled`/`effectiveDisabled` pattern).
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.disabled).to.be.false;
 });
 
 it('is accessible while showing the loading state (async source pending)', async () => {
@@ -803,4 +808,157 @@ it('falls back to placeholder when no host aria-label or label is set', async ()
   const el = (await fixture(html`<lyra-combobox placeholder="Search…"></lyra-combobox>`)) as LyraCombobox;
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLElement;
   expect(input.getAttribute('aria-label')).to.equal('Search…');
+});
+
+it('re-syncs the submitted FormData when `name` changes after a value is already set', async () => {
+  const form = document.createElement('form');
+  const el = (await fixture(html`
+    <lyra-combobox name="a"><lyra-option value="x" selected></lyra-option></lyra-combobox>
+  `)) as LyraCombobox;
+  form.appendChild(el);
+  document.body.appendChild(form);
+  el.name = 'b';
+  await el.updateComplete;
+  const data = new FormData(form);
+  expect(data.has('a')).to.be.false;
+  expect(data.get('b')).to.equal('x');
+  form.remove();
+});
+
+it('reflects `name` onto the attribute synchronously, with no await/microtask in between', async () => {
+  // `reflect: true` alone defers the attribute write to Lit's async update
+  // cycle (a microtask), not the property setter itself -- so
+  // `el.name = 'b'; new FormData(form)` (no `await` in between) could still
+  // observe the stale attribute. The hand-written `name` accessor must write
+  // the attribute inline, matching Task 2's `FormAssociated.name`.
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.name = 'b';
+  expect(el.getAttribute('name')).to.equal('b');
+});
+
+it('re-syncs FormData when switching between single and multiple mode', async () => {
+  const form = document.createElement('form');
+  const el = (await fixture(html`
+    <lyra-combobox name="tags"><lyra-option value="x" selected></lyra-option></lyra-combobox>
+  `)) as LyraCombobox;
+  form.appendChild(el);
+  document.body.appendChild(form);
+  // Force two entries into `_selected` while still in single mode (the
+  // `value` setter itself doesn't gate on `multiple`, so this doesn't
+  // require a second declared-`selected` option, which single mode would
+  // collapse down to just the last one anyway). This makes a two-entry
+  // `data.getAll('tags')` below only possible if switching `multiple` on
+  // actually re-ran `syncFormValue()`'s `FormData.append()` path -- the old
+  // single-value path (`setFormValue(this._selected[0] ?? '')`, still in
+  // effect from the most recent `value` assignment) can only ever produce
+  // one entry, so a stale sync would leave just `['x']`.
+  el.value = ['x', 'y'];
+  await el.updateComplete;
+  el.multiple = true;
+  await el.updateComplete;
+  const data = new FormData(form);
+  expect(data.getAll('tags')).to.deep.equal(['x', 'y']);
+  form.remove();
+});
+
+it('keeps the clear and tag-remove buttons disabled while the combobox is disabled', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox disabled multiple with-clear><lyra-option value="x" selected></lyra-option></lyra-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
+  const removeBtn = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLButtonElement | null;
+  expect(clearBtn?.disabled).to.be.true;
+  expect(removeBtn?.disabled).to.be.true;
+});
+
+it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {
+  const el = (await fixture(html`<lyra-combobox disabled></lyra-combobox>`)) as LyraCombobox;
+  (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(true);
+  (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(false);
+  await el.updateComplete;
+  expect(el.disabled).to.be.true;
+});
+
+it('resets `open` to false on disconnect so a reconnect never resumes half-open with stale positioning/listeners', async () => {
+  // The actual fix behavior: `disconnectedCallback()` sets `open = false`
+  // rather than leaving it `true` across the disconnect -- a naive assertion
+  // that `listbox.style.position` is non-empty after reconnect would pass
+  // regardless, since that inline style is set once on first open and never
+  // cleared, whether or not reconnect logic runs at all.
+  const el = (await fixture(html`<lyra-combobox open><lyra-option value="x"></lyra-option></lyra-combobox>`)) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('re-renders when an already-slotted option mutates its own label', async () => {
+  const el = (await fixture(html`<lyra-combobox><lyra-option value="x">Old label</lyra-option></lyra-combobox>`)) as LyraCombobox;
+  // Open *before* mutating the option's label so the `lyra-option-change`
+  // notification path (MutationObserver -> emit -> `onOptionChange()`
+  // reassigning `options`) is the only thing that can update the
+  // already-rendered row afterward -- opening *after* the mutation (the
+  // previous version of this test) forces an ordinary first-render read of
+  // live option data regardless of whether that path ever fired.
+  el.open = true;
+  await el.updateComplete;
+  const row = () => el.shadowRoot!.querySelector('[part="option"]')!;
+  expect(row().textContent).to.include('Old label');
+
+  const option = el.querySelector('lyra-option')!;
+  option.textContent = 'New label';
+  // The MutationObserver callback (and the `lyra-option-change` ->
+  // `onOptionChange()` -> `requestUpdate()` chain it triggers) runs on its
+  // own microtask queue -- by the time this line reaches `updateComplete`,
+  // the getter may still capture the *previous*, already-settled update
+  // promise rather than the new one the mutation is about to schedule. Force
+  // a macrotask boundary first (same fix as the slotchange/async-source
+  // timing elsewhere in this file) so the new update is already pending (or
+  // done) by the time `updateComplete` is evaluated below.
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(row().textContent).to.include('New label');
+});
+
+it('recovers loading=false and does not throw when source() rejects', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  // A bare `.finally()` (with no `.catch()`) would also reset `loading` back
+  // to `false` while leaving the rejection unhandled -- spy on
+  // `console.warn` to prove the `.catch()` handler itself specifically ran
+  // and consumed the rejection, not just that `loading` incidentally ended
+  // up `false` via a code path that was never actually broken.
+  const originalWarn = console.warn;
+  const warnCalls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => {
+    warnCalls.push(args);
+  };
+  try {
+    el.source = async () => {
+      throw new Error('network failure');
+    };
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(250);
+    expect((el as unknown as { loading: boolean }).loading).to.be.false;
+    expect(warnCalls.length).to.be.greaterThan(0);
+    expect(String(warnCalls[0][0])).to.include('rejected');
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+it('recovers loading=false when source() throws synchronously instead of returning a rejected promise', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.source = (() => {
+    throw new Error('synchronous failure');
+  }) as unknown as (query: string) => Promise<import('./combobox.js').ComboboxSourceRow[]>;
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  expect((el as unknown as { loading: boolean }).loading).to.be.false;
 });

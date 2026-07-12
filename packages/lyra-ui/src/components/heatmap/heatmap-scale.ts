@@ -28,9 +28,15 @@ export function minMax(values: number[]): [number, number] | null {
  * Square-root-scaled bucket index in `[0, steps-1]`, or `-1` for no-data.
  * Compresses large counts so a single heavy cell doesn't wash out the rest
  * of a sequential color ramp.
+ *
+ * Only a negative `count` means "no data" here — the true no-data sentinel
+ * (`v < 0 || !Number.isFinite(v)`) is already filtered out by the caller
+ * (`drawMatrix()`) before `sqrtStep` is ever invoked, so a real `count === 0`
+ * (e.g. "zero events that day") reaches this function and must bucket to the
+ * lowest ramp step like any other legitimate value, not render as no-data.
  */
 export function sqrtStep(count: number, max: number, steps: number): number {
-  if (count <= 0 || max <= 0) return -1;
+  if (count < 0 || max <= 0) return -1;
   const ratio = Math.sqrt(count) / Math.sqrt(max);
   return Math.min(steps - 1, Math.floor(ratio * steps));
 }

@@ -96,6 +96,23 @@ export class LyraDatePicker extends LyraElement {
     return false;
   }
 
+  /** The first enabled day at/after the first visible month's start, scanning
+   *  forward across all visible months -- used as the sole focusable day when
+   *  there's no selection and no prior keyboard focus, so the empty-grid case
+   *  never defaults to a possibly-disabled day 1. Returns null if every
+   *  visible day is disabled (pathological but possible with a very narrow
+   *  min/max window). */
+  private firstEnabledDate(min: Date | null, max: Date | null, today: Date): Date | null {
+    let d = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const lastVisibleMonth = addMonths(d, this.months - 1);
+    const boundEnd = new Date(lastVisibleMonth.getFullYear(), lastVisibleMonth.getMonth() + 1, 0);
+    for (let i = 0; i < 732 && d <= boundEnd; i++) {
+      if (!this.isDisabled(d, min, max, today)) return d;
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    }
+    return null;
+  }
+
   private commit(from: Date | null, to: Date | null, fire: boolean): void {
     const next =
       this.mode === 'range'
@@ -163,32 +180,54 @@ export class LyraDatePicker extends LyraElement {
   }
 
   private onGridKey = (e: KeyboardEvent): void => {
-    const current = this.focusedDate ?? this.selection.from ?? new Date();
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const current =
+      this.focusedDate ??
+      this.selection.from ??
+      this.firstEnabledDate(min, max, today) ??
+      new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const step = (base: Date, days: number): Date => new Date(base.getFullYear(), base.getMonth(), base.getDate() + days);
+    // Walks in the requested direction until an enabled day is found, bounded
+    // by a step cap (366 days -- more than a year) so an all-disabled range
+    // (e.g. min/max entirely in the past with disable-past set) can't loop
+    // forever; returns null rather than landing focus on a disabled cell,
+    // whose `.focus()` would be a silent no-op anyway.
+    const firstEnabledFrom = (base: Date, dayStep: number): Date | null => {
+      let d = base;
+      for (let i = 0; i < 366; i++) {
+        if (!this.isDisabled(d, min, max, today)) return d;
+        d = step(d, dayStep);
+      }
+      return null;
+    };
     let next: Date | null = null;
     switch (e.key) {
       case 'ArrowLeft':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() - 1);
+        next = firstEnabledFrom(step(current, -1), -1);
         break;
       case 'ArrowRight':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+        next = firstEnabledFrom(step(current, 1), 1);
         break;
       case 'ArrowUp':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() - 7);
+        next = firstEnabledFrom(step(current, -7), -1);
         break;
       case 'ArrowDown':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 7);
+        next = firstEnabledFrom(step(current, 7), 1);
         break;
       case 'PageUp':
-        next = new Date(current.getFullYear(), current.getMonth() - 1, current.getDate());
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() - 1, current.getDate()), 1);
         break;
       case 'PageDown':
-        next = new Date(current.getFullYear(), current.getMonth() + 1, current.getDate());
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() + 1, current.getDate()), 1);
         break;
       case 'Home':
-        next = new Date(current.getFullYear(), current.getMonth(), 1);
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth(), 1), 1);
         break;
       case 'End':
-        next = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() + 1, 0), -1);
         break;
       case 'Enter':
       case ' ':
@@ -199,6 +238,7 @@ export class LyraDatePicker extends LyraElement {
         return;
     }
     e.preventDefault();
+    if (!next) return;
     this.focusedDate = next;
     this.viewDate = this.viewDateForFocus(next);
     this.focusPending = true;
@@ -236,6 +276,7 @@ export class LyraDatePicker extends LyraElement {
     max: Date | null,
     today: Date,
     rowHasVisibleDay: boolean,
+    fallbackFocusDate: Date | null,
   ): TemplateResult {
     const outside = date.getMonth() !== shownMonth;
     // Outside-month days are empty placeholders by default (matches WA), keeping the
@@ -259,8 +300,20 @@ export class LyraDatePicker extends LyraElement {
     const isEnd = to && isSameDay(date, to);
     const selected = this.mode === 'single' ? isStart : isStart || isEnd;
     const inRange = this.mode === 'range' && from && to && date > from && date < to;
+    // Falls back to the first *enabled* day across the visible month(s) (see
+    // firstEnabledDate()) when there's neither a focusedDate nor a selection,
+    // so the grid always has exactly one tabbable cell -- otherwise every
+    // cell computes `false` and keyboard users tabbing into an empty picker
+    // land nowhere. Must not just be "day 1 of the shown month" unconditionally:
+    // day 1 can itself be disabled (e.g. disable-past opened on any day other
+    // than the 1st), which would land the sole tabindex="0" cell on a button
+    // that can never actually receive focus.
     const focused =
-      this.focusedDate && isSameDay(date, this.focusedDate) ? true : !this.focusedDate && isStart;
+      this.focusedDate != null
+        ? isSameDay(date, this.focusedDate)
+        : isStart
+          ? true
+          : !from && fallbackFocusDate != null && isSameDay(date, fallbackFocusDate);
 
     const parts = ['day'];
     if (outside) parts.push('day-outside');
@@ -297,6 +350,7 @@ export class LyraDatePicker extends LyraElement {
     today: Date,
     fdow: number,
     labels: string[],
+    fallbackFocusDate: Date | null,
   ): TemplateResult {
     const base = addMonths(this.viewDate, offset);
     const year = base.getFullYear();
@@ -308,13 +362,25 @@ export class LyraDatePicker extends LyraElement {
     return html`<div part="month">
       <div part="header">
         ${isFirst
-          ? html`<button part="previous" type="button" aria-label="Previous month" @click=${() => this.nav(-1)}>
+          ? html`<button
+              part="previous"
+              type="button"
+              aria-label="Previous month"
+              ?disabled=${this.disabled || this.readonly}
+              @click=${() => this.nav(-1)}
+            >
               ${chevronIcon()}
             </button>`
           : html`<span></span>`}
         <div part="title">${monthTitle(year, month, this.locale)}</div>
         ${isLast
-          ? html`<button part="next" type="button" aria-label="Next month" @click=${() => this.nav(1)}>
+          ? html`<button
+              part="next"
+              type="button"
+              aria-label="Next month"
+              ?disabled=${this.disabled || this.readonly}
+              @click=${() => this.nav(1)}
+            >
               ${chevronIcon()}
             </button>`
           : html`<span></span>`}
@@ -324,7 +390,7 @@ export class LyraDatePicker extends LyraElement {
         ${matrix.map((week) => {
           const rowHasVisibleDay = week.some((d) => d.getMonth() === month);
           return html`<div part="week" role="row">${week.map((d) =>
-            this.renderDay(d, month, selection, min, max, today, rowHasVisibleDay),
+            this.renderDay(d, month, selection, min, max, today, rowHasVisibleDay, fallbackFocusDate),
           )}</div>`;
         })}
       </div>
@@ -339,9 +405,14 @@ export class LyraDatePicker extends LyraElement {
     today.setHours(0, 0, 0, 0);
     const fdow = this.fdow;
     const labels = weekdayLabels(fdow, this.weekdayFormat, this.locale);
+    // Only bother scanning for a fallback focus day when it's actually
+    // needed: there's no point walking the visible days if a focusedDate or
+    // an existing selection already determines the sole tabbable cell.
+    const fallbackFocusDate =
+      this.focusedDate || selection.from ? null : this.firstEnabledDate(min, max, today);
     const monthEls: TemplateResult[] = [];
     for (let i = 0; i < this.months; i++) {
-      monthEls.push(this.renderMonth(i, selection, min, max, today, fdow, labels));
+      monthEls.push(this.renderMonth(i, selection, min, max, today, fdow, labels, fallbackFocusDate));
     }
     return html`<div part="base">${monthEls}</div>`;
   }

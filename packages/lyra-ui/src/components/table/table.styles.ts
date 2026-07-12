@@ -116,7 +116,12 @@ export const styles = css`
   [part='header-cell'][data-sticky],
   [part='cell'][data-sticky] {
     position: sticky;
-    inset-inline-start: 0;
+    /* Set per-column by table.ts's stickyOffsets()/updated(), which measures
+       each earlier sticky column's rendered width so multiple sticky columns
+       stack left-to-right instead of all pinning to the same edge and
+       overlapping. Falls back to 0 for the first sticky column (or before
+       the first measurement pass has run). */
+    inset-inline-start: var(--lyra-table-sticky-offset, 0);
     z-index: 1;
     background: var(--lyra-color-surface);
     box-shadow: 1px 0 0 0 var(--lyra-color-border);

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { GraphNode, GraphLink } from '../../lyra.js';
+import type { GraphNode, GraphLink } from './graph.js';
 
 const nodes: GraphNode[] = [
   { id: 'a', label: 'A' },

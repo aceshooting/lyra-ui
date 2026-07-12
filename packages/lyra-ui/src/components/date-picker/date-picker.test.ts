@@ -476,6 +476,83 @@ it('clamps goToDate() to min/max instead of navigating to an out-of-range date',
   expect(el.shadowRoot!.activeElement).to.equal(focused);
 });
 
+it('has at least one focusable day cell when nothing is selected yet', async () => {
+  const el = (await fixture(html`<lyra-date-picker></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(focusable.length).to.be.at.least(1);
+});
+
+it('does not let the empty-grid fallback focus land on a disabled day 1', async () => {
+  // Regression test: renderDay()'s fallback focus calculation, when there's
+  // no focusedDate and no selection, used to unconditionally fall back to
+  // "day 1 of the currently-shown month" as the sole tabindex="0" cell, with
+  // no isDisabled() check at all. A realistic `disable-past` picker opened on
+  // any day other than the 1st has day 1 disabled while today is enabled --
+  // yet the old fallback still assigned tabindex="0" to disabled day 1.
+  // `min` is set a few days past the 1st of the current month so day 1 is
+  // guaranteed out-of-range regardless of which day of the month the test
+  // actually runs on (no system-clock mocking needed).
+  const today = new Date();
+  const min = new Date(today.getFullYear(), today.getMonth(), 1);
+  min.setDate(min.getDate() + 3);
+  const el = (await fixture(
+    html`<lyra-date-picker disable-past min=${iso(min)}></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(focusable.length, 'expected exactly one focusable day cell').to.equal(1);
+  const focused = focusable[0] as HTMLButtonElement;
+  expect(focused.disabled, 'the fallback focus must never land on a disabled day').to.be.false;
+});
+
+it('never lands keyboard focus on a disabled day', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker min="2026-01-15" value="2026-01-15"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  const focused = el.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement;
+  expect(focused.disabled).to.be.false;
+});
+
+it('skips over a run of disabled days to find the next enabled one', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker min="2026-01-10" value="2026-01-10"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  // From Jan 10 (the min), ArrowLeft would naively land on Jan 9 -- and every
+  // day before the 10th is disabled -- so focus must skip clear past all of
+  // them to the closest enabled day in that direction, if any exists; here
+  // none exists in January, so focus should not move onto a disabled cell.
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  const focused = el.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement;
+  expect(focused.disabled).to.be.false;
+});
+
+it('disables the prev/next nav buttons when the picker itself is disabled', async () => {
+  const el = (await fixture(html`<lyra-date-picker disabled></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const prev = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
+  expect(prev.disabled).to.be.true;
+  expect(next.disabled).to.be.true;
+});
+
+it('disables the prev/next nav buttons when the picker is readonly', async () => {
+  const el = (await fixture(html`<lyra-date-picker readonly></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const prev = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
+  expect(prev.disabled).to.be.true;
+  expect(next.disabled).to.be.true;
+});
+
 it('hides outside-month placeholders from the accessibility tree only in rows that also have a real visible day', async () => {
   // July 2026 (Sunday-first, the default) has a mixed leading row (June 28-30
   // outside, July 1-4 inside) and a fully-outside trailing row (Aug 2-8) --

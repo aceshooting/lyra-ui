@@ -38,10 +38,11 @@ export const styles = css`
     font-weight: 600;
     text-anchor: middle;
     dominant-baseline: middle;
-    transition: opacity var(--lyra-transition-fast);
+    transition: text-decoration-color var(--lyra-transition-fast);
+    text-decoration: underline transparent;
   }
   [part='word']:hover {
-    opacity: 0.75;
+    text-decoration-color: currentColor;
   }
   [part='focus-ring'] {
     fill: none;

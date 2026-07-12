@@ -266,16 +266,25 @@ export class LyraTree extends LyraElement {
     }
   };
 
-  /** Expand every node in the tree, recursively. */
-  expandAll(): void {
-    const setAll = (nodes: LyraTreeNode[]): void => {
-      for (const n of nodes) {
-        n.expanded = true;
-        this.invalidateVisibleCache();
-        void n.updateComplete.then(() => setAll(this.childrenOf(n)));
-      }
+  /**
+   * Expand every node in the tree, recursively. Resolves once every
+   * descendant has actually finished expanding (not just had `expanded` set)
+   * -- callers that immediately read `visibleNodeElements()`-derived state
+   * (or call `collapseAll()` right after) should `await` this instead of
+   * firing it and moving on.
+   */
+  async expandAll(): Promise<void> {
+    const setAll = async (nodes: LyraTreeNode[]): Promise<void> => {
+      await Promise.all(
+        nodes.map(async (n) => {
+          n.expanded = true;
+          this.invalidateVisibleCache();
+          await n.updateComplete;
+          await setAll(this.childrenOf(n));
+        }),
+      );
     };
-    setAll(this.nodeElements);
+    await setAll(this.nodeElements);
   }
 
   /**

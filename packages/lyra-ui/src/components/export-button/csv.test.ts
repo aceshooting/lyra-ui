@@ -36,6 +36,11 @@ it('does not guard a bare leading "-": negative numbers/currency are not formula
   expect(escapeCsvField(-5)).to.equal('-5');
 });
 
+it('prefixes a leading line-feed the same as a leading carriage-return', () => {
+  const result = escapeCsvField('\n=cmd|/c calc');
+  expect(result.replace(/^"|"$/g, '')).to.match(/^'/);
+});
+
 it('builds a header + data CSV joined by CRLF', () => {
   const csv = buildCsv(
     [{ id: 'a', name: 'Alpha' }],
