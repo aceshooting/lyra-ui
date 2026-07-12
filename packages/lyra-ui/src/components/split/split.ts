@@ -49,7 +49,13 @@ export class LyraSplit extends LyraElement {
   private loadPersisted(): void {
     const key = this.storageFullKey;
     if (!key) return;
-    const raw = localStorage.getItem(key);
+    let raw: string | null;
+    try {
+      raw = localStorage.getItem(key);
+    } catch {
+      /* localStorage unavailable (private browsing, sandboxed iframe, etc.) */
+      return;
+    }
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as number[];
@@ -61,7 +67,12 @@ export class LyraSplit extends LyraElement {
 
   private persist(): void {
     const key = this.storageFullKey;
-    if (key) localStorage.setItem(key, JSON.stringify(this.sizes));
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(this.sizes));
+    } catch {
+      /* ignore persistence failures (e.g. quota exceeded, private browsing) */
+    }
   }
 
   private ensureSizes(): void {
@@ -69,6 +80,11 @@ export class LyraSplit extends LyraElement {
     const equal = 100 / Math.max(1, this.panelCount);
     this.sizes = Array.from({ length: this.panelCount }, () => equal);
   }
+
+  private onSlotChange = (): void => {
+    this.panelCount = this.children.length;
+    this.ensureSizes();
+  };
 
   private clampPair(sizes: number[], i: number, delta: number): number[] {
     const next = [...sizes];
@@ -136,20 +152,24 @@ export class LyraSplit extends LyraElement {
   render(): TemplateResult {
     const dividers: TemplateResult[] = [];
     for (let i = 0; i < this.panelCount - 1; i++) {
+      // The achievable max for this divider is bounded by its two adjacent
+      // panels, not the whole track — pushing past it would starve a panel
+      // further down the line even though this pair still has room.
+      const valueMax = (this.sizes[i] ?? 0) + (this.sizes[i + 1] ?? 0) - this.min;
       dividers.push(html`<div
         part="divider"
         role="separator"
         aria-orientation=${this.orientation === 'vertical' ? 'horizontal' : 'vertical'}
         aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
         aria-valuemin=${this.min}
-        aria-valuemax=${100 - this.min}
+        aria-valuemax=${Math.round(valueMax)}
         tabindex="0"
         style=${`order:${i * 2 + 1}`}
         @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, i)}
         @keydown=${(e: KeyboardEvent) => this.onDividerKeyDown(e, i)}
       ></div>`);
     }
-    return html`<div part="base"><slot></slot>${dividers}</div>`;
+    return html`<div part="base"><slot @slotchange=${this.onSlotChange}></slot>${dividers}</div>`;
   }
 }
 

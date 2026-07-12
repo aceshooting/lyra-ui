@@ -1,4 +1,4 @@
-import { fixture, expect, html, elementUpdated } from '@open-wc/testing';
+import { fixture, expect, html, elementUpdated, oneEvent } from '@open-wc/testing';
 import './split.js';
 import type { LyraSplit } from './split.js';
 import { styles } from './split.styles.js';
@@ -136,6 +136,81 @@ it('widens the vertical divider hit area along the block axis instead', async ()
   expect(parseFloat(before.bottom)).to.be.lessThan(0);
   expect(before.left).to.equal('0px');
   expect(before.right).to.equal('0px');
+});
+
+it('reconciles panelCount and sizes when a panel is added after connect (slotchange)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.sizes.length).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(1);
+
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  const panelC = document.createElement('div');
+  panelC.textContent = 'C';
+  el.appendChild(panelC);
+  await slotChanged;
+  await elementUpdated(el);
+
+  expect(el.sizes.length).to.equal(3);
+  expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(2);
+});
+
+it('reconciles panelCount and sizes when a panel is removed after connect (slotchange)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.sizes.length).to.equal(3);
+  expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(2);
+
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  el.removeChild(el.lastElementChild!);
+  await slotChanged;
+  await elementUpdated(el);
+
+  expect(el.sizes.length).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(1);
+});
+
+it('computes aria-valuemax per divider from its two adjacent panels for 3+ panels', async () => {
+  const el = (await fixture(
+    html`<lyra-split min="10"><div>A</div><div>B</div><div>C</div></lyra-split>`,
+  )) as LyraSplit;
+  el.sizes = [50, 30, 20];
+  await elementUpdated(el);
+  const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
+  expect(dividers.length).to.equal(2);
+  // divider 0 sits between panels 0 and 1: max = 50 + 30 - 10 = 70 (not 100 - 10 = 90)
+  expect(dividers[0].getAttribute('aria-valuemax')).to.equal('70');
+  // divider 1 sits between panels 1 and 2: max = 30 + 20 - 10 = 40 (not 90)
+  expect(dividers[1].getAttribute('aria-valuemax')).to.equal('40');
+});
+
+it('does not throw when localStorage.getItem/setItem are unavailable (e.g. blocked or quota-exceeded)', async () => {
+  const originalGetItem = localStorage.getItem;
+  const originalSetItem = localStorage.setItem;
+  localStorage.getItem = () => {
+    throw new DOMException('blocked', 'SecurityError');
+  };
+  localStorage.setItem = () => {
+    throw new DOMException('blocked', 'SecurityError');
+  };
+  try {
+    const el = (await fixture(
+      html`<lyra-split storage-key="blocked-test"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await elementUpdated(el);
+  } finally {
+    localStorage.getItem = originalGetItem;
+    localStorage.setItem = originalSetItem;
+  }
 });
 
 it('splits :hover and :focus-visible into separate divider rules with a token-driven outline', () => {
