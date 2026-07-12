@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
+import { nextId } from '../../internal/a11y.js';
 import { closeIcon, calendarIcon } from '../../internal/icons.js';
 import { parseISO, formatISO, type WeekdayFormat } from './calendar-core.js';
 import { styles } from './date-input.styles.js';
@@ -45,6 +46,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
 
   private cleanupFn?: () => void;
+  private inputId = nextId('date-input');
   // Set on the date input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
@@ -190,11 +192,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     return html`
       <div part="form-control">
-        <label part="form-control-label" ?hidden=${!hasLabel}>
+        <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="input-wrapper">
           <input
+            id=${this.inputId}
             part="input"
             type="text"
             aria-label=${this.label || this.placeholder || 'Date'}

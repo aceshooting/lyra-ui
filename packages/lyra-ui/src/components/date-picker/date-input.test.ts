@@ -261,6 +261,17 @@ it('shows a not-allowed cursor on the disabled input wrapper', async () => {
   expect(getComputedStyle(wrapper).cursor).to.equal('not-allowed');
 });
 
+it('pairs the form-control label with the date input via for/id so clicking the label focuses it', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input label="Start date" value="2026-07-15"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLLabelElement;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  expect(label.htmlFor, 'label should have a for attribute').to.not.equal('');
+  expect(label.htmlFor).to.equal(input.id);
+});
+
 it('applies the shared focus-ring tokens to the clear and expand buttons', () => {
   const css = styles.cssText;
   const focusBlock = /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?expand-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
