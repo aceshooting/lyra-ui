@@ -7,14 +7,16 @@ import { styles } from './sparkline.styles.js';
 const VIEW = 100;
 
 // A <rect> per bar doesn't collapse into one path the way line/area do, so an
-// unbounded `values` array turns directly into that many shadow-DOM nodes.
-// Capping it keeps worst-case DOM size bounded without affecting any
-// realistically-sized bar chart.
-const MAX_BARS = 500;
+// unbounded `values` array turns directly into that many shadow-DOM nodes --
+// and an uncapped line/area path string grows without bound too. Capping the
+// point count up front (shared by every render type) keeps worst-case
+// DOM/compute bounded without affecting any realistically-sized chart.
+const MAX_POINTS = 500; // shared point-count cap for every render type (line/area/bar)
 
 function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
-  const step = arr.length / max;
-  return Array.from({ length: max }, (_, i) => arr[Math.floor(i * step)]);
+  if (arr.length <= max) return [...arr];
+  const step = (arr.length - 1) / (max - 1); // anchors both the first AND last sample exactly
+  return Array.from({ length: max }, (_, i) => arr[Math.round(i * step)]);
 }
 
 /**
@@ -42,7 +44,7 @@ export class LyraSparkline extends LyraElement {
   @property({ type: Number }) max?: number;
 
   private points(): ReadonlyArray<readonly [number, number]> {
-    const v = this.values;
+    const v = this.values.length > MAX_POINTS ? decimate(this.values, MAX_POINTS) : this.values;
     let autoLo = v[0];
     let autoHi = v[0];
     for (const n of v) {
@@ -77,10 +79,16 @@ export class LyraSparkline extends LyraElement {
     const pts = this.points();
 
     if (this.type === 'bar') {
-      const barPts = pts.length > MAX_BARS ? decimate(pts, MAX_BARS) : pts;
-      const bars = barPts.map(([x, y]) => {
+      // Narrow the bar width as the (already decimated-to-MAX_POINTS) point
+      // count grows, so bars stop overlapping once there are more than a
+      // handful -- VIEW / pts.length is each bar's full "slot" width; keep a
+      // small gap between slots by drawing at 70% of it, floored at 1px and
+      // capped at the original fixed 4px for small point counts.
+      const slot = VIEW / pts.length;
+      const barWidth = Math.min(4, Math.max(1, slot * 0.7));
+      const bars = pts.map(([x, y]) => {
         const barY = Math.min(y, VIEW);
-        return svg`<rect part="bar" x="${x - 2}" y="${barY}" width="4" height="${VIEW - barY}"></rect>`;
+        return svg`<rect part="bar" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${VIEW - barY}"></rect>`;
       });
       return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
         ${bars}
