@@ -3,7 +3,7 @@ import './heatmap.js';
 import type { LyraHeatmap } from './heatmap.js';
 import { hexToRgb, mixColor, resolveRgb } from './heatmap.js';
 
-it('sets an img role and a summarizing aria-label', async () => {
+it('sets a group role (not img, which conflicts with the canvas\'s focusable descendant) and a summarizing aria-label', async () => {
   const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['Mon', 'Tue'];
   el.colLabels = ['0h', '1h'];
@@ -12,7 +12,7 @@ it('sets an img role and a summarizing aria-label', async () => {
     [3, 4],
   ];
   await el.updateComplete;
-  expect(el.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('role')).to.equal('group');
   expect(el.getAttribute('aria-label')).to.contain('2');
 });
 
@@ -693,5 +693,65 @@ describe('annotation/overlay affordance', () => {
     await el.updateComplete;
     const entries = el.shadowRoot!.querySelectorAll('[part="legend-annotation"]');
     expect(entries.length).to.equal(2);
+  });
+});
+
+describe('role="group" fix + cellText formatter + locale bug fix', () => {
+  it('sets role="group" instead of role="img" (canvas has a focusable, keyboard-interactive descendant)', async () => {
+    const el = (await fixture(html`<lyra-heatmap
+      .rowLabels=${['R1']}
+      .colLabels=${['C1']}
+      .values=${[[5]]}
+    ></lyra-heatmap>`)) as LyraHeatmap;
+    expect(el.getAttribute('role')).to.equal('group');
+  });
+
+  it('uses a custom cellText formatter for the tooltip and live-region text when provided', async () => {
+    const el = (await fixture(html`<lyra-heatmap
+      .rowLabels=${['R1']}
+      .colLabels=${['C1']}
+      .values=${[[5]]}
+      .cellText=${(pos: { row?: number; col?: number }, value: number) =>
+        `custom ${pos.row},${pos.col}: ${value}`}
+    ></lyra-heatmap>`)) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]');
+    expect(live!.textContent).to.equal('custom 0,0: 5');
+  });
+
+  it('falls back to the built-in English template without cellText', async () => {
+    const el = (await fixture(html`<lyra-heatmap
+      .rowLabels=${['R1']}
+      .colLabels=${['C1']}
+      .values=${[[5]]}
+    ></lyra-heatmap>`)) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]');
+    expect(live!.textContent).to.equal('Row R1, Col C1: 5');
+  });
+
+  it('formats calendar date labels using the runtime locale, not a hardcoded "en"', async () => {
+    // 2026-01-18 is a Sunday, so the grid's single week/weekday-0 cell (the
+    // one the first arrow keypress focuses, per onCalendarKeyDown) matches
+    // this day exactly — unlike a mid-week date, which would land the first
+    // keypress on an earlier, data-less Sunday instead.
+    const el = (await fixture(html`<lyra-heatmap
+      mode="calendar"
+      .days=${[{ date: '2026-01-18', value: 3 }]}
+    ></lyra-heatmap>`)) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]');
+    const expected = new Date(Date.UTC(2026, 0, 18)).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+    expect(live!.textContent).to.equal(`${expected}: 3`);
   });
 });

@@ -206,7 +206,9 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * @customElement lyra-heatmap
  * @event lyra-cell-click - Fired on click, or Enter/Space on the
  * focused/hovered cell. `detail: { row, col, value }` in matrix mode,
- * `detail: { date, value }` in calendar mode.
+ * `detail: { date, value }` in calendar mode. `cellText` overrides the
+ * built-in English "Row X, Col Y: value" / "Mon DD: value" template used for
+ * both the hover tooltip and the keyboard live-region announcement.
  * @csspart base, canvas, tooltip, live-region, legend, legend-lo, legend-hi, legend-annotation
  */
 export class LyraHeatmap extends LyraElement {
@@ -232,6 +234,10 @@ export class LyraHeatmap extends LyraElement {
   @property({ attribute: 'bucket-count', type: Number }) bucketCount = DEFAULT_BUCKET_COUNT;
   /** Cells to ring-highlight — `row`/`col` in matrix mode, `date` in calendar mode. See `HeatmapAnnotation`. */
   @property({ attribute: false }) annotations: HeatmapAnnotation[] = [];
+  /** Formats the per-cell tooltip and keyboard live-region text — receives the cell position
+   *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its value. Falls back to
+   *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
+  @property({ attribute: false }) cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
@@ -291,7 +297,7 @@ export class LyraHeatmap extends LyraElement {
     this.cachedValueRange = this.computeValueRange();
     const bounds = this.cachedValueRange;
     const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
-    this.setAttribute('role', 'img');
+    this.setAttribute('role', 'group');
     if (this.mode === 'calendar') {
       this.setAttribute(
         'aria-label',
@@ -621,9 +627,10 @@ export class LyraHeatmap extends LyraElement {
   /**
    * Human-readable "<label>: <value>" text for a cell — shared by the hover
    * tooltip and the keyboard-focus live-region announcement, so both always
-   * describe a cell the same way.
+   * describe a cell the same way. This is the built-in English fallback used
+   * when `cellText` isn't set — see `resolveCellText()`.
    */
-  private cellText(pos: CellPos): string {
+  private defaultCellText(pos: CellPos): string {
     return 'week' in pos ? this.calendarCellText(pos) : this.matrixCellText(pos);
   }
 
@@ -637,14 +644,26 @@ export class LyraHeatmap extends LyraElement {
 
   private calendarCellText(pos: CalendarCellPos): string {
     const { date, value } = this.calendarCellAt(pos);
-    const label = parseIsoDate(date).toLocaleString('en', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    const label = parseIsoDate(date).toLocaleString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
     const valueText = value < 0 || !Number.isFinite(value) ? 'no data' : String(value);
     return `${label}: ${valueText}`;
   }
 
+  /** The raw numeric value at a cell position, in either mode — shared by `resolveCellText()`
+   *  so a custom `cellText` formatter receives the same value the built-in template would use. */
+  private valueAt(pos: CellPos): number {
+    if ('week' in pos) return this.calendarCellAt(pos).value;
+    return this.values[pos.row]?.[pos.col] ?? -1;
+  }
+
+  /** Dispatches to the host-provided `cellText` formatter when set, otherwise the built-in template. */
+  private resolveCellText(pos: CellPos): string {
+    return this.cellText ? this.cellText(pos, this.valueAt(pos)) : this.defaultCellText(pos);
+  }
+
   /** Refreshes the visually-hidden live-region text for a newly-focused cell. */
   private announce(pos: CellPos): void {
-    this.liveText = this.cellText(pos);
+    this.liveText = this.resolveCellText(pos);
   }
 
   private emitCellClick(pos: CellPos): void {
@@ -762,7 +781,7 @@ export class LyraHeatmap extends LyraElement {
           ?hidden=${!this.hoverCell}
           style=${styleMap(this.hoverCell ? this.tooltipStyle(this.hoverCell) : {})}
         >
-          ${this.hoverCell ? this.cellText(this.hoverCell) : ''}
+          ${this.hoverCell ? this.resolveCellText(this.hoverCell) : ''}
         </div>
         <div part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
         <div part="legend">

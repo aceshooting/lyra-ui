@@ -141,6 +141,32 @@ export const Annotations: Story = {
   `,
 };
 
+/**
+ * `cellText` overrides the built-in English tooltip/live-region template —
+ * here with a French translation — for both matrix and calendar modes.
+ */
+export const CustomCellText: Story = {
+  render: () => html`
+    <lyra-heatmap
+      cell-size="28"
+      value-label="évènements"
+      .rowLabels=${['Lun', 'Mar', 'Mer']}
+      .colLabels=${['0h', '6h', '12h']}
+      .values=${[
+        [1, 4, 9],
+        [0, 2, 6],
+        [-1, 1, 4],
+      ]}
+      .cellText=${(pos: { row?: number; col?: number }, value: number) => {
+        const rows = ['Lun', 'Mar', 'Mer'];
+        const cols = ['0h', '6h', '12h'];
+        const valueText = value < 0 ? 'aucune donnée' : String(value);
+        return `Ligne ${rows[pos.row!]}, Col ${cols[pos.col!]} : ${valueText}`;
+      }}
+    ></lyra-heatmap>
+  `,
+};
+
 /** `annotations` in calendar mode match by ISO `date` instead of `row`/`col`. */
 export const CalendarAnnotations: Story = {
   render: () => {
