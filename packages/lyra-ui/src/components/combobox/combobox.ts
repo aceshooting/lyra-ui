@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -69,7 +69,12 @@ export class LyraCombobox extends LyraElement {
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) required = false;
-  @property() name = '';
+  // Reflected: a form-associated custom element's submitted entry name is
+  // resolved by the browser from the live `name` *content attribute* at
+  // FormData-construction/submit time (see `syncFormValue()` below) --
+  // without `reflect: true`, a property-only assignment (`el.name = 'b'`)
+  // would never update the attribute, so the old name would keep winning.
+  @property({ reflect: true }) name = '';
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -109,6 +114,11 @@ export class LyraCombobox extends LyraElement {
   private _rowsByValue = new Map<string, ComboboxSourceRow>();
 
   private internals: ElementInternals;
+  // Tracked separately from the consumer's own `disabled` -- a native
+  // `<input>`'s own `disabled` IDL property/attribute is never mutated by
+  // fieldset cascading, so a consumer's explicit `disabled` must survive the
+  // fieldset re-enabling (see `formDisabledCallback` below).
+  private _fieldsetDisabled = false;
   private listId = nextId('combobox-list');
   private inputId = nextId('combobox-input');
   private cleanup?: () => void;
@@ -189,12 +199,26 @@ export class LyraCombobox extends LyraElement {
     }
   }
 
+  /** Effective disabled state: this element's own `disabled` OR an ancestor
+   *  `<fieldset disabled>`'s inherited state -- mirrors native `<input>`, whose
+   *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
+
   formResetCallback(): void {
     this.value = [...this._defaultSelected];
     this.query = '';
   }
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>` toggles.
+   * Tracked separately from the consumer's own `disabled` (see
+   * `effectiveDisabled`) so a consumer's explicit `disabled` survives the
+   * fieldset re-enabling instead of being permanently overwritten.
+   */
   formDisabledCallback(disabled: boolean): void {
-    this.disabled = disabled;
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
   }
   checkValidity(): boolean {
     return this.internals.checkValidity();
@@ -206,8 +230,15 @@ export class LyraCombobox extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
+    this.cleanup = undefined;
     clearTimeout(this.sourceTimer);
     document.removeEventListener('pointerdown', this.onDocPointer);
+    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
+    // `updated()`'s `open`-driven branch -- without this, `open` stays
+    // `true` across the disconnect/reconnect and `changed.has('open')` never
+    // fires again, leaving the listbox rendered open with no positioning and
+    // no outside-click listener.
+    this.open = false;
   }
 
   private collectOptions = (e: Event): void => {
@@ -246,6 +277,15 @@ export class LyraCombobox extends LyraElement {
       }
     }
     this.reflectSelected();
+  };
+
+  private onOptionChange = (): void => {
+    // Touch the `options` array reference so Lit's change-detection sees a
+    // "new" value and re-renders `renderRows()`/`filtered`/`labelFor()` off
+    // the options' now-current data -- the *set* of options is unchanged,
+    // only one member's own properties are, so this skips
+    // collectOptions()'s selection-seeding logic entirely.
+    this.options = [...this.options];
   };
 
   private reflectSelected(): void {
@@ -302,7 +342,7 @@ export class LyraCombobox extends LyraElement {
   }
 
   private show(): void {
-    if (this.open || this.disabled) return;
+    if (this.open || this.effectiveDisabled) return;
     this.open = true;
   }
   private hide(): void {
@@ -339,6 +379,7 @@ export class LyraCombobox extends LyraElement {
       }
     }
     if (changed.has('required')) this.updateValidity();
+    if (changed.has('name') || changed.has('multiple')) this.syncFormValue();
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
@@ -393,10 +434,20 @@ export class LyraCombobox extends LyraElement {
     this.sourceTimer = setTimeout(() => {
       const token = ++this.sourceToken;
       this.loading = true;
-      this.source!(query)
+      // `Promise.resolve().then(() => this.source!(query))` moves the call
+      // itself inside a `.then()` callback, so a *synchronous* throw from
+      // `this.source(query)` becomes a normal promise rejection the
+      // following `.catch()` handles, instead of escaping this `setTimeout`
+      // callback as an uncaught exception.
+      Promise.resolve()
+        .then(() => this.source!(query))
         .then((rows) => {
           if (token !== this.sourceToken || !this.isConnected) return;
           this.asyncRows = rows;
+        })
+        .catch((err) => {
+          if (token !== this.sourceToken || !this.isConnected) return;
+          console.warn('<lyra-combobox> source() rejected:', err);
         })
         .finally(() => {
           if (token === this.sourceToken) this.loading = false;
@@ -472,7 +523,7 @@ export class LyraCombobox extends LyraElement {
   };
 
   private onComboMouseDown = (e: MouseEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     (this.renderRoot.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
@@ -539,6 +590,7 @@ export class LyraCombobox extends LyraElement {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const describedBy = [hasError ? 'combobox-error' : '', hasHint ? 'combobox-hint' : ''].filter(Boolean).join(' ');
 
     return html`
       <div part="form-control">
@@ -552,6 +604,7 @@ export class LyraCombobox extends LyraElement {
                 >${this.labelFor(v)}<button
                   part="tag__remove-button"
                   type="button"
+                  ?disabled=${this.effectiveDisabled}
                   aria-label="Remove ${this.labelFor(v)}"
                   @click=${(e: Event) => {
                     e.stopPropagation();
@@ -568,7 +621,8 @@ export class LyraCombobox extends LyraElement {
             id=${this.inputId}
             part="combobox-input"
             role="combobox"
-            aria-label=${this.label || this.placeholder || 'Combobox'}
+            aria-label=${hasLabel ? nothing : this.placeholder || 'Combobox'}
+            aria-describedby=${describedBy || nothing}
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}
@@ -578,7 +632,7 @@ export class LyraCombobox extends LyraElement {
             autocomplete="off"
             .value=${this.displayValue}
             placeholder=${hasValue && !this.multiple ? '' : this.placeholder}
-            ?disabled=${this.disabled}
+            ?disabled=${this.effectiveDisabled}
             @input=${this.onInput}
             @keydown=${this.onKeyDown}
             @focus=${() => this.show()}
@@ -588,6 +642,7 @@ export class LyraCombobox extends LyraElement {
             ? html`<button
                 part="clear-button"
                 type="button"
+                ?disabled=${this.effectiveDisabled}
                 aria-label="Clear"
                 @click=${(e: Event) => {
                   e.stopPropagation();
@@ -616,14 +671,14 @@ export class LyraCombobox extends LyraElement {
                     ? html`<div part="option-overflow">+${overflow} more — refine your search</div>`
                     : ''}`}
         </div>
-        <div part="error" ?hidden=${!hasError}>
+        <div id="combobox-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
-        <div part="hint" ?hidden=${!hasHint}>
+        <div id="combobox-hint" part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
-      <slot @slotchange=${this.collectOptions} hidden></slot>
+      <slot @slotchange=${this.collectOptions} @lyra-option-change=${this.onOptionChange} hidden></slot>
     `;
   }
 }

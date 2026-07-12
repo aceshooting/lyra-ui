@@ -722,11 +722,16 @@ it('disables the combobox when its containing fieldset is disabled', async () =>
   const el = form.querySelector('lyra-combobox') as LyraCombobox;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   await el.updateComplete;
-  expect(el.disabled).to.be.false;
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.false;
 
   fieldset.disabled = true;
   await el.updateComplete;
-  expect(el.disabled).to.be.true;
+  // `el.disabled` (the consumer-facing IDL property/attribute) is never
+  // mutated by fieldset cascading -- only the combined `effectiveDisabled`
+  // reflects it (mirrors native `<input>` and the Task 2 FormAssociated
+  // mixin's own `_fieldsetDisabled`/`effectiveDisabled` pattern).
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.disabled).to.be.false;
 });
 
 it('is accessible while showing the loading state (async source pending)', async () => {
@@ -789,4 +794,97 @@ it('ignores a mousedown on the combobox container while disabled', async () => {
   await el.updateComplete;
 
   expect(el.open).to.be.false;
+});
+
+it('re-syncs the submitted FormData when `name` changes after a value is already set', async () => {
+  const form = document.createElement('form');
+  const el = (await fixture(html`
+    <lyra-combobox name="a"><lyra-option value="x" selected></lyra-option></lyra-combobox>
+  `)) as LyraCombobox;
+  form.appendChild(el);
+  document.body.appendChild(form);
+  el.name = 'b';
+  await el.updateComplete;
+  const data = new FormData(form);
+  expect(data.has('a')).to.be.false;
+  expect(data.get('b')).to.equal('x');
+  form.remove();
+});
+
+it('re-syncs FormData when switching between single and multiple mode', async () => {
+  const form = document.createElement('form');
+  const el = (await fixture(html`
+    <lyra-combobox name="tags"><lyra-option value="x" selected></lyra-option></lyra-combobox>
+  `)) as LyraCombobox;
+  form.appendChild(el);
+  document.body.appendChild(form);
+  el.multiple = true;
+  await el.updateComplete;
+  const data = new FormData(form);
+  expect(data.getAll('tags')).to.deep.equal(['x']);
+  form.remove();
+});
+
+it('keeps the clear and tag-remove buttons disabled while the combobox is disabled', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox disabled multiple with-clear><lyra-option value="x" selected></lyra-option></lyra-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
+  const removeBtn = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLButtonElement | null;
+  expect(clearBtn?.disabled).to.be.true;
+  expect(removeBtn?.disabled).to.be.true;
+});
+
+it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {
+  const el = (await fixture(html`<lyra-combobox disabled></lyra-combobox>`)) as LyraCombobox;
+  (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(true);
+  (el as unknown as { formDisabledCallback(d: boolean): void }).formDisabledCallback(false);
+  await el.updateComplete;
+  expect(el.disabled).to.be.true;
+});
+
+it('re-binds positioning and the outside-click listener after a disconnect+reconnect while open', async () => {
+  const el = (await fixture(html`<lyra-combobox open><lyra-option value="x"></lyra-option></lyra-combobox>`)) as LyraCombobox;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  expect(listbox.style.position).to.not.equal('');
+});
+
+it('re-renders when an already-slotted option mutates its own label', async () => {
+  const el = (await fixture(html`<lyra-combobox><lyra-option value="x">Old label</lyra-option></lyra-combobox>`)) as LyraCombobox;
+  await el.updateComplete;
+  const option = el.querySelector('lyra-option')!;
+  option.textContent = 'New label';
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="option"]')!;
+  expect(row.textContent).to.include('New label');
+});
+
+it('recovers loading=false and does not throw when source() rejects', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.source = async () => {
+    throw new Error('network failure');
+  };
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  expect((el as unknown as { loading: boolean }).loading).to.be.false;
+});
+
+it('recovers loading=false when source() throws synchronously instead of returning a rejected promise', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.source = (() => {
+    throw new Error('synchronous failure');
+  }) as unknown as (query: string) => Promise<import('./combobox.js').ComboboxSourceRow[]>;
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  expect((el as unknown as { loading: boolean }).loading).to.be.false;
 });
