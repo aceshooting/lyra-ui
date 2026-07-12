@@ -241,3 +241,39 @@ it('is accessible', async () => {
   ></lyra-lite-chart>`);
   await expect(el).to.be.accessible();
 });
+
+it('uses tickFormat for y-axis labels when provided', async () => {
+  const el = (await fixture(html`<lyra-lite-chart
+    .labels=${['a', 'b']}
+    .datasets=${[{ label: 'S', data: [10, 20] }]}
+    .tickFormat=${(v: number) => `$${v.toFixed(2)}`}
+  ></lyra-lite-chart>`)) as LyraLiteChart;
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).map(
+    (n) => n.textContent,
+  );
+  expect(labels.some((t) => t?.startsWith('$'))).to.be.true;
+});
+
+it('falls back to the default nice-number formatter without tickFormat', async () => {
+  const el = (await fixture(html`<lyra-lite-chart
+    .labels=${['a', 'b']}
+    .datasets=${[{ label: 'S', data: [10, 20] }]}
+  ></lyra-lite-chart>`)) as LyraLiteChart;
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).map(
+    (n) => n.textContent,
+  );
+  expect(labels.some((t) => t?.startsWith('$'))).to.be.false;
+});
+
+it('skips recompute when the content signature is unchanged', async () => {
+  const el = (await fixture(html`<lyra-lite-chart
+    .labels=${['a', 'b']}
+    .datasets=${[{ label: 'S', data: [10, 20] }]}
+  ></lyra-lite-chart>`)) as LyraLiteChart;
+  await el.updateComplete;
+  const before = (el as unknown as { lastResult?: unknown }).lastResult;
+  el.requestUpdate();
+  await el.updateComplete;
+  const after = (el as unknown as { lastResult?: unknown }).lastResult;
+  expect(after).to.equal(before);
+});

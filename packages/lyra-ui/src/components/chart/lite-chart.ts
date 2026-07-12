@@ -117,12 +117,19 @@ export class LyraLiteChart extends LyraElement {
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
   /** Stacks each category's bars into one segmented bar. Ignored for `type="line"`. */
   @property({ type: Boolean }) stacked = false;
+  /** Formats a y-axis tick value for display (e.g. `(v) => \`$${v.toFixed(2)}\``). Falls back to the
+   *  built-in nice-number formatter when unset. */
+  @property({ attribute: false }) tickFormat?: (value: number) => string;
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
+  @state() private visible = true;
 
   @query('svg') private svgEl?: SVGSVGElement;
   private resizeObserver?: ResizeObserver;
+  private intersectionObserver?: IntersectionObserver;
+  private lastSignature = '';
+  private lastResult?: TemplateResult;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -139,11 +146,18 @@ export class LyraLiteChart extends LyraElement {
         }
       }
     });
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        this.visible = entries[0]?.isIntersecting ?? true;
+      });
+      this.intersectionObserver.observe(this);
+    }
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
+    this.intersectionObserver?.disconnect();
   }
 
   protected firstUpdated(): void {
@@ -194,6 +208,21 @@ export class LyraLiteChart extends LyraElement {
     return niceDomain(lo, hi, this.beginAtZero, TICK_COUNT);
   }
 
+  private computeSignature(): string {
+    return JSON.stringify([
+      this.type,
+      this.labels,
+      this.datasets,
+      this.legend,
+      this.xLabel,
+      this.yLabel,
+      this.beginAtZero,
+      this.stacked,
+      this.plotWidth,
+      this.plotHeight,
+    ]);
+  }
+
   private emitPoint(datasetIndex: number, index: number): void {
     const label = this.labels[index];
     const value = this.datasets[datasetIndex]?.data[index] ?? null;
@@ -212,7 +241,7 @@ export class LyraLiteChart extends LyraElement {
       const y = plotY + plotH - ((t - lo) / span) * plotH;
       return svg`
         <line part="grid-line" x1=${plotX} y1=${y} x2=${plotX + plotW} y2=${y}></line>
-        <text part="axis-label" x=${plotX - 6} y=${y} text-anchor="end" dominant-baseline="middle">${formatTick(t)}</text>
+        <text part="axis-label" x=${plotX - 6} y=${y} text-anchor="end" dominant-baseline="middle">${this.tickFormat ? this.tickFormat(t) : formatTick(t)}</text>
       `;
     });
   }
@@ -311,6 +340,16 @@ export class LyraLiteChart extends LyraElement {
   }
 
   render(): TemplateResult {
+    if (!this.visible && this.lastResult) return this.lastResult;
+    const signature = this.computeSignature();
+    if (signature === this.lastSignature && this.lastResult) return this.lastResult;
+    this.lastSignature = signature;
+    const result = this.renderChart();
+    this.lastResult = result;
+    return result;
+  }
+
+  private renderChart(): TemplateResult {
     const w = this.plotWidth || 400;
     const h = this.plotHeight || 200;
     const padLeft = PAD_LEFT + (this.yLabel ? AXIS_TITLE_SPACE : 0);

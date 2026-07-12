@@ -105,3 +105,20 @@ export const ClickToFilter: Story = {
     `;
   },
 };
+
+/** `tickFormat` customizes y-axis tick labels (e.g. currency) instead of the built-in nice-number formatter. */
+export const CurrencyTickFormat: Story = {
+  render: () => {
+    const series: LiteSeries[] = [{ label: 'Revenue', data: [1204.37, 1890.5, 1420.1, 2260.75] }];
+    return html`
+      <lyra-lite-chart
+        type="bar"
+        height="16rem"
+        style="width: 22rem"
+        .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+        .datasets=${series}
+        .tickFormat=${(v: number) => `$${v.toFixed(2)}`}
+      ></lyra-lite-chart>
+    `;
+  },
+};
