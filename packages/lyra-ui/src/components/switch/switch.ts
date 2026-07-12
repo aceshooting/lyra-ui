@@ -188,12 +188,18 @@ export class LyraSwitch extends LyraElement {
   }
 
   private syncFormState(): void {
-    this.internals.setFormValue(this.checked ? this.value : null);
+    this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
     this.updateValidity();
   }
 
   formResetCallback(): void {
     this.checked = this._defaultChecked;
+  }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.checked = state === 'checked';
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;

@@ -243,12 +243,18 @@ export class LyraCheckbox extends LyraElement {
     // A native checkbox submits its `value` content attribute (default
     // "on") only while checked, and contributes nothing at all — not even
     // an empty string — while unchecked.
-    this.internals.setFormValue(this.checked ? this.value : null);
+    this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
     this.updateValidity();
   }
 
   formResetCallback(): void {
     this.checked = this._defaultChecked;
+  }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.checked = state === 'checked';
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;

@@ -2403,6 +2403,10 @@ Form-associated via a directly-attached `ElementInternals` (not the shared `Form
 whose `value` accessor assumes a plain string default flow) with its own hand-rolled
 `updateValidity()` — same shape as `<lyra-combobox>`'s and `<lyra-switch>`'s direct-`ElementInternals`
 handling.
+Session-history/autofill restoration uses an explicit `checked`/`unchecked` state token, so an
+unchecked control stays distinguishable from a checked control whose legal submitted value is an
+empty string. Restoration updates `checked`, form data, and validity synchronously without firing
+`lyra-change`.
 
 **Known gotchas:**
 - `formResetCallback()` restores `checked` to whatever the declarative `checked` attribute parsed to
@@ -2461,6 +2465,8 @@ Form-associated the same way as `<lyra-checkbox>`: a directly-attached `ElementI
 hand-rolled `updateValidity()`, not the shared `FormAssociated` mixin. The thumb animates the
 logical `inset-inline-start` property (not a physical `transform: translateX()`), so the slide
 direction mirrors correctly under `dir="rtl"`.
+Session-history/autofill restoration uses the same explicit `checked`/`unchecked` state tokens as
+checkbox and does not emit `lyra-change`.
 
 **Known gotchas:**
 - `formResetCallback()` restores `checked` to the value captured from the declarative `checked`

@@ -74,3 +74,33 @@ for (const testCase of cases) {
     expect(control.willValidate).to.be.false;
   });
 }
+
+for (const tagName of ['lyra-checkbox', 'lyra-switch'] as const) {
+  it(`${tagName} restores checked state independently of its submitted value`, async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        ${tagName === 'lyra-checkbox'
+          ? html`<lyra-checkbox name="toggle" value="yes" required>Toggle</lyra-checkbox>`
+          : html`<lyra-switch name="toggle" value="yes" required>Toggle</lyra-switch>`}
+      </form>
+    `);
+    const control = form.querySelector(tagName) as HTMLElement & {
+      checked: boolean;
+      checkValidity(): boolean;
+      formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+    };
+    let changes = 0;
+    control.addEventListener('lyra-change', () => changes++);
+
+    control.formStateRestoreCallback('checked', 'restore');
+    expect(control.checked).to.be.true;
+    expect(new FormData(form).get('toggle')).to.equal('yes');
+    expect(control.checkValidity()).to.be.true;
+
+    control.formStateRestoreCallback('unchecked', 'restore');
+    expect(control.checked).to.be.false;
+    expect(new FormData(form).has('toggle')).to.be.false;
+    expect(control.checkValidity()).to.be.false;
+    expect(changes).to.equal(0);
+  });
+}
