@@ -7,6 +7,13 @@ function mockWidth(el: HTMLElement, width: number): void {
   Object.defineProperty(el, 'clientWidth', { value: width, configurable: true });
 }
 
+function pointerDown(el: HTMLElement, pointerId: number, x: number) {
+  el.dispatchEvent(new PointerEvent('pointerdown', { pointerId, clientX: x, bubbles: true }));
+}
+function pointerMove(pointerId: number, x: number) {
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: x }));
+}
+
 it('splits children evenly by default', async () => {
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
@@ -358,6 +365,46 @@ it('keeps two concurrent pointer drags on different dividers independent (scoped
 
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
+});
+
+it('keeps sizes summing to 100 when two adjacent dividers are dragged concurrently', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>a</div><div>b</div><div>c</div></lyra-split>`,
+  )) as LyraSplit;
+  await el.updateComplete;
+  const dividers = el.shadowRoot!.querySelectorAll('[part="divider"]') as NodeListOf<HTMLElement>;
+  Object.defineProperty(el.shadowRoot!.querySelector('[part="base"]')!, 'clientWidth', { value: 300, configurable: true });
+  (dividers[0] as unknown as { setPointerCapture(id: number): void }).setPointerCapture = () => {};
+  (dividers[1] as unknown as { setPointerCapture(id: number): void }).setPointerCapture = () => {};
+  pointerDown(dividers[0], 1, 100);
+  pointerDown(dividers[1], 2, 200);
+  pointerMove(1, 130); // drag divider 0 right, growing panel 1
+  pointerMove(2, 170); // drag divider 1 left, also growing panel 1
+  await el.updateComplete;
+  const total = el.sizes.reduce((s, n) => s + n, 0);
+  expect(total).to.be.closeTo(100, 0.5);
+});
+
+it('clears inline flex/order styles from a panel removed from the slot', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div id="p1">a</div><div id="p2">b</div></lyra-split>`,
+  )) as LyraSplit;
+  await el.updateComplete;
+  const p1 = el.querySelector('#p1') as HTMLElement;
+  expect(p1.style.flex).to.not.equal('');
+  // Removal only drives a re-render (and thus updated()'s cleanup pass) once
+  // the light-DOM mutation's async `slotchange` fires and flips reactive
+  // state (panelCount/sizes) -- awaiting `el.updateComplete` alone races
+  // that, since it can resolve against an already-settled promise from the
+  // *previous* render before slotchange has had a chance to queue the next
+  // one. Same pattern the other slotchange-driven tests in this file use.
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  p1.remove();
+  await slotChanged;
+  await el.updateComplete;
+  expect(p1.style.flex).to.equal('');
+  expect(p1.style.order).to.equal('');
 });
 
 it('ignores a stray pointermove/pointerup/pointercancel after the element is disconnected mid-drag', async () => {
