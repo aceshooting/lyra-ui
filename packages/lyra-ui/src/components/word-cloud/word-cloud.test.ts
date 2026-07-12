@@ -225,6 +225,23 @@ it('relays out when the font-family theme token changes', async () => {
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.not.equal(before);
 });
 
+it('calls refreshTheme() alone to re-measure and re-layout for font-family change', async () => {
+  const el = (await fixture(
+    html`<lyra-word-cloud
+      .words=${[
+        { text: 'alpha', weight: 5 },
+        { text: 'beta', weight: 1 },
+      ]}
+    ></lyra-word-cloud>`,
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  const before = el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox');
+  el.style.setProperty('--lyra-font', 'monospace');
+  el.refreshTheme();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.not.equal(before);
+});
+
 it('announces the count of words actually rendered, not the raw input count', async () => {
   const el = (await fixture(
     html`<lyra-word-cloud
