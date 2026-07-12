@@ -69,6 +69,22 @@ it('closes the menu on an outside pointerdown', async () => {
   expect(el.open).to.be.false;
 });
 
+it('closes on an outside pointerdown even when opened via the `open` property directly', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+
+  // Bypasses openMenu()/the trigger click entirely -- `open` is a public,
+  // reflect: true property, so setting it directly is valid API surface.
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
 it('closes on Escape and returns focus to the trigger', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];

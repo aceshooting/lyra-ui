@@ -45,13 +45,11 @@ export class LyraExportButton extends LyraElement {
   private openMenu(): void {
     if (this.open) return;
     this.open = true;
-    document.addEventListener('pointerdown', this.onDocPointer);
   }
 
   private closeMenu(): void {
     if (!this.open) return;
     this.open = false;
-    document.removeEventListener('pointerdown', this.onDocPointer);
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -72,10 +70,17 @@ export class LyraExportButton extends LyraElement {
     if (changed.has('open')) {
       this.cleanup?.();
       this.cleanup = undefined;
+      // Reacting to the `open` property itself (not just inside
+      // openMenu()) means this fires however `open` became true -- via
+      // openMenu()'s own click path, or a consumer/test setting
+      // `el.open = true` directly (valid API on a `reflect: true`
+      // property), which bypasses openMenu() entirely.
+      document.removeEventListener('pointerdown', this.onDocPointer);
       if (this.open) {
         const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
         const menu = this.renderRoot.querySelector('[part="menu"]') as HTMLElement | null;
         if (anchor && menu) this.cleanup = place(anchor, menu);
+        document.addEventListener('pointerdown', this.onDocPointer);
       }
     }
   }
