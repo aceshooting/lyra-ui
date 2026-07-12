@@ -163,32 +163,51 @@ export class LyraDatePicker extends LyraElement {
   }
 
   private onGridKey = (e: KeyboardEvent): void => {
-    const current = this.focusedDate ?? this.selection.from ?? new Date();
+    const current =
+      this.focusedDate ?? this.selection.from ?? new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const step = (base: Date, days: number): Date => new Date(base.getFullYear(), base.getMonth(), base.getDate() + days);
+    // Walks in the requested direction until an enabled day is found, bounded
+    // by a step cap (366 days -- more than a year) so an all-disabled range
+    // (e.g. min/max entirely in the past with disable-past set) can't loop
+    // forever; returns null rather than landing focus on a disabled cell,
+    // whose `.focus()` would be a silent no-op anyway.
+    const firstEnabledFrom = (base: Date, dayStep: number): Date | null => {
+      let d = base;
+      for (let i = 0; i < 366; i++) {
+        if (!this.isDisabled(d, min, max, today)) return d;
+        d = step(d, dayStep);
+      }
+      return null;
+    };
     let next: Date | null = null;
     switch (e.key) {
       case 'ArrowLeft':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() - 1);
+        next = firstEnabledFrom(step(current, -1), -1);
         break;
       case 'ArrowRight':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+        next = firstEnabledFrom(step(current, 1), 1);
         break;
       case 'ArrowUp':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() - 7);
+        next = firstEnabledFrom(step(current, -7), -1);
         break;
       case 'ArrowDown':
-        next = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 7);
+        next = firstEnabledFrom(step(current, 7), 1);
         break;
       case 'PageUp':
-        next = new Date(current.getFullYear(), current.getMonth() - 1, current.getDate());
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() - 1, current.getDate()), 1);
         break;
       case 'PageDown':
-        next = new Date(current.getFullYear(), current.getMonth() + 1, current.getDate());
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() + 1, current.getDate()), 1);
         break;
       case 'Home':
-        next = new Date(current.getFullYear(), current.getMonth(), 1);
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth(), 1), 1);
         break;
       case 'End':
-        next = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() + 1, 0), -1);
         break;
       case 'Enter':
       case ' ':
@@ -199,6 +218,7 @@ export class LyraDatePicker extends LyraElement {
         return;
     }
     e.preventDefault();
+    if (!next) return;
     this.focusedDate = next;
     this.viewDate = this.viewDateForFocus(next);
     this.focusPending = true;
@@ -259,8 +279,16 @@ export class LyraDatePicker extends LyraElement {
     const isEnd = to && isSameDay(date, to);
     const selected = this.mode === 'single' ? isStart : isStart || isEnd;
     const inRange = this.mode === 'range' && from && to && date > from && date < to;
+    // Falls back to "first non-outside day of the currently-shown month"
+    // when there's neither a focusedDate nor a selection, so the grid always
+    // has exactly one tabbable cell -- otherwise every cell computes `false`
+    // and keyboard users tabbing into an empty picker land nowhere.
     const focused =
-      this.focusedDate && isSameDay(date, this.focusedDate) ? true : !this.focusedDate && isStart;
+      this.focusedDate != null
+        ? isSameDay(date, this.focusedDate)
+        : isStart
+          ? true
+          : !from && date.getMonth() === shownMonth && date.getDate() === 1;
 
     const parts = ['day'];
     if (outside) parts.push('day-outside');
@@ -308,13 +336,25 @@ export class LyraDatePicker extends LyraElement {
     return html`<div part="month">
       <div part="header">
         ${isFirst
-          ? html`<button part="previous" type="button" aria-label="Previous month" @click=${() => this.nav(-1)}>
+          ? html`<button
+              part="previous"
+              type="button"
+              aria-label="Previous month"
+              ?disabled=${this.disabled || this.readonly}
+              @click=${() => this.nav(-1)}
+            >
               ${chevronIcon()}
             </button>`
           : html`<span></span>`}
         <div part="title">${monthTitle(year, month, this.locale)}</div>
         ${isLast
-          ? html`<button part="next" type="button" aria-label="Next month" @click=${() => this.nav(1)}>
+          ? html`<button
+              part="next"
+              type="button"
+              aria-label="Next month"
+              ?disabled=${this.disabled || this.readonly}
+              @click=${() => this.nav(1)}
+            >
               ${chevronIcon()}
             </button>`
           : html`<span></span>`}

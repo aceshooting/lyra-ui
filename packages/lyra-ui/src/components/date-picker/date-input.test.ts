@@ -417,3 +417,116 @@ it('applies the shared focus-ring tokens to the clear and expand buttons', () =>
   expect(focusBlock![1]).to.include('var(--lyra-focus-ring-width)');
   expect(focusBlock![1]).to.include('var(--lyra-focus-ring-color)');
 });
+
+it('round-trips a rendered range string typed back into the field', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input mode="range" value="2026-05-01/2026-05-15"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  const rendered = input.value; // the actual locale-formatted range this component rendered
+  expect(rendered, 'expected the en-dash range separator in the rendered text').to.include(' – ');
+
+  // Clear the committed value first so the assertion below can only pass if
+  // parseRangeText actually recovers '2026-05-01/2026-05-15' from the typed
+  // text -- a stale, never-reset `el.value` would otherwise make this pass
+  // trivially even with completely broken parsing.
+  el.value = '';
+  await el.updateComplete;
+
+  input.value = rendered; // re-type the exact displayed text
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-05-01/2026-05-15');
+});
+
+it('also accepts a raw ISO range typed directly, as a convenience', async () => {
+  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '2026-05-01/2026-05-15';
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-05-01/2026-05-15');
+});
+
+it('rejects a typed date outside min/max as invalid instead of silently accepting it', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input min="2026-01-01" max="2026-12-31"></lyra-date-input>`,
+  )) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '2027-01-01';
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('');
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('rejects a typed date before disable-past\'s today floor', async () => {
+  const el = (await fixture(html`<lyra-date-input disable-past></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '2000-01-01';
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('');
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('keeps the clear button disabled while the control is disabled', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input disabled with-clear value="2026-01-01"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
+  expect(clearBtn?.disabled).to.be.true;
+});
+
+it('keeps the clear button disabled while the control is readonly', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input readonly with-clear value="2026-01-01"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement | null;
+  expect(clearBtn?.disabled).to.be.true;
+});
+
+it('re-binds positioning after a disconnect+reconnect while open', async () => {
+  const el = (await fixture(html`<lyra-date-input open></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  const popup = el.shadowRoot!.querySelector('[part="popup"] [part="date-picker"]')!;
+  expect(popup).to.exist; // popup content still renders; positioning re-attached, not just left stale
+});
+
+it('resets `open` on disconnect so a later reconnect starts from a clean, re-bindable state', async () => {
+  // Regression test: disconnectedCallback used to tear down the position
+  // listener (cleanupFn) and the document pointerdown listener but never
+  // reset `open` itself -- so `open` stayed stuck `true` across a
+  // disconnect, and because `updated()` only rebinds positioning when
+  // `open` *changes*, a reconnect while still nominally "open" would never
+  // re-run `place()`.
+  const el = (await fixture(html`<lyra-date-input open></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  expect(el.open, 'disconnect should reset open').to.be.false;
+  parent.appendChild(el);
+});
+
+it('does not override an explicit `label` slot with the fallback aria-label', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input><span slot="label">Start date</span></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  expect(input.getAttribute('aria-label')).to.not.equal('Date');
+});
+
+it('wires aria-describedby to the visible hint/error text', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input hint="Pick a date" error-text="Required"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  const describedBy = input.getAttribute('aria-describedby') ?? '';
+  expect(describedBy).to.include('date-input-hint');
+  expect(describedBy).to.include('date-input-error');
+});

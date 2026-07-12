@@ -476,6 +476,59 @@ it('clamps goToDate() to min/max instead of navigating to an out-of-range date',
   expect(el.shadowRoot!.activeElement).to.equal(focused);
 });
 
+it('has at least one focusable day cell when nothing is selected yet', async () => {
+  const el = (await fixture(html`<lyra-date-picker></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(focusable.length).to.be.at.least(1);
+});
+
+it('never lands keyboard focus on a disabled day', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker min="2026-01-15" value="2026-01-15"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  const focused = el.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement;
+  expect(focused.disabled).to.be.false;
+});
+
+it('skips over a run of disabled days to find the next enabled one', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker min="2026-01-10" value="2026-01-10"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  // From Jan 10 (the min), ArrowLeft would naively land on Jan 9 -- and every
+  // day before the 10th is disabled -- so focus must skip clear past all of
+  // them to the closest enabled day in that direction, if any exists; here
+  // none exists in January, so focus should not move onto a disabled cell.
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  const focused = el.shadowRoot!.querySelector('[part~="day"][tabindex="0"]') as HTMLButtonElement;
+  expect(focused.disabled).to.be.false;
+});
+
+it('disables the prev/next nav buttons when the picker itself is disabled', async () => {
+  const el = (await fixture(html`<lyra-date-picker disabled></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const prev = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
+  expect(prev.disabled).to.be.true;
+  expect(next.disabled).to.be.true;
+});
+
+it('disables the prev/next nav buttons when the picker is readonly', async () => {
+  const el = (await fixture(html`<lyra-date-picker readonly></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const prev = el.shadowRoot!.querySelector('[part="previous"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
+  expect(prev.disabled).to.be.true;
+  expect(next.disabled).to.be.true;
+});
+
 it('hides outside-month placeholders from the accessibility tree only in rows that also have a real visible day', async () => {
   // July 2026 (Sunday-first, the default) has a mixed leading row (June 28-30
   // outside, July 1-4 inside) and a fully-outside trailing row (Aug 2-8) --

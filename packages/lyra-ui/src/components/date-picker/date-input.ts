@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
@@ -113,7 +113,14 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupFn?.();
+    this.cleanupFn = undefined;
     document.removeEventListener('pointerdown', this.onDocPointer);
+    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
+    // `updated()`'s `open`-driven branch -- without this, `open` stays
+    // stuck `true` across the disconnect, `updated()` never sees it
+    // *change*, and `place()` never gets called again to re-bind
+    // positioning to the (possibly relocated) anchor.
+    this.open = false;
   }
 
   protected updated(changed: PropertyValues): void {
@@ -143,27 +150,65 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
       this.emit('change');
       return;
     }
-    // A string that already looks like strict ISO (YYYY-MM-DD) must be judged
-    // by parseISO alone: it validates calendar correctness (rejects e.g.
-    // "2026-02-30"), but Date.parse() doesn't -- falling through to it for an
-    // ISO-shaped string would silently resurrect the same rollover parseISO
-    // guards against (Date.parse('2026-02-30') also normalizes to March 2).
-    const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
-    const parsed = looksLikeISO ? parseISO(raw) : isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw));
-    if (parsed) {
-      this.value = formatISO(parsed);
+    const parsed = this.mode === 'range' ? this.parseRangeText(raw) : this.parseSingleText(raw);
+    if (parsed && this.isWithinBounds(parsed)) {
+      this.value = parsed;
       this.emit('input');
       this.emit('change');
     } else {
-      // Unparseable text: don't silently keep the committed value while the
-      // field still shows garbage -- revert the displayed text back to the
-      // last valid commit and flag the constraint-validation state (mirrors
-      // how `required` is already wired via internals.setValidity(), see
-      // form-associated.ts).
+      // Unparseable (or out-of-bounds) text: don't silently keep the
+      // committed value while the field still shows garbage -- revert the
+      // displayed text back to the last valid commit and flag the
+      // constraint-validation state (mirrors how `required` is already
+      // wired via internals.setValidity(), see form-associated.ts).
       target.value = this.displayText;
       this.internals.setValidity({ badInput: true }, 'Enter a valid date');
     }
   };
+
+  /** Parses one date, ISO-first (so a calendar-invalid ISO string like
+   *  "2026-02-30" is rejected rather than silently rolled over by Date.parse). */
+  private parseOneDate(raw: string): Date | null {
+    const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
+    return looksLikeISO ? parseISO(raw) : isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw));
+  }
+
+  private parseSingleText(raw: string): string | null {
+    const parsed = this.parseOneDate(raw);
+    return parsed ? formatISO(parsed) : null;
+  }
+
+  /** Only round-trips the exact `displayText` shape this component itself
+   *  renders (`"<locale from> – <locale to>"`) — a raw ISO range typed
+   *  directly (`"2026-05-01/2026-05-15"`) is also accepted as a convenience. */
+  private parseRangeText(raw: string): string | null {
+    if (/^\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [a, b] = raw.split('/');
+      return parseISO(a) && parseISO(b) ? raw : null;
+    }
+    const separator = ' – '; // matches displayText's ` – ` join exactly
+    const idx = raw.indexOf(separator);
+    if (idx === -1) return null;
+    const from = this.parseOneDate(raw.slice(0, idx).trim());
+    const to = this.parseOneDate(raw.slice(idx + separator.length).trim());
+    return from && to ? `${formatISO(from)}/${formatISO(to)}` : null;
+  }
+
+  private isWithinBounds(isoValue: string): boolean {
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return isoValue.split('/').every((part) => {
+      const d = parseISO(part);
+      if (!d) return false;
+      if (min && d < min) return false;
+      if (max && d > max) return false;
+      if (this.disablePast && d < today) return false;
+      if (this.disableFuture && d > today) return false;
+      return true;
+    });
+  }
 
   private onInputKey = (e: KeyboardEvent): void => {
     if (e.altKey && e.key === 'ArrowDown') {
@@ -227,6 +272,9 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const describedBy = [hasError ? 'date-input-error' : '', hasHint ? 'date-input-hint' : '']
+      .filter(Boolean)
+      .join(' ');
     return html`
       <div part="form-control" @keydown=${this.onFormControlKey}>
         <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
@@ -237,7 +285,8 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             id=${this.inputId}
             part="input"
             type="text"
-            aria-label=${this.label || this.placeholder || 'Date'}
+            aria-label=${hasLabel ? nothing : this.placeholder || 'Date'}
+            aria-describedby=${describedBy || nothing}
             .value=${this.displayText}
             placeholder=${this.placeholder}
             ?disabled=${this.effectiveDisabled}
@@ -250,6 +299,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             ? html`<button
                 part="clear-button"
                 type="button"
+                ?disabled=${this.effectiveDisabled || this.readonly}
                 aria-label="Clear"
                 @click=${() => this.clear()}
               >
@@ -289,10 +339,10 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             @change=${this.onPickerChange}
           ></lyra-date-picker>
         </div>
-        <div part="error" ?hidden=${!hasError}>
+        <div id="date-input-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
-        <div part="hint" ?hidden=${!hasHint}>
+        <div id="date-input-hint" part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>
