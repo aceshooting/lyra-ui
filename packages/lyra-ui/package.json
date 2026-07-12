@@ -36,7 +36,9 @@
   },
   "sideEffects": [
     "**/components/**/*.js",
-    "./dist/lyra.js"
+    "**/components/**/*.ts",
+    "./dist/lyra.js",
+    "./src/lyra.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
