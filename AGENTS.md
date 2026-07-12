@@ -124,6 +124,41 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   hangs — always set up the `oneEvent()` listener *before* triggering the dispatch.
 - Every component gets at least one `it('is accessible', ...)` axe check in addition to
   behavior tests.
+- **A failed `expect(x).to.equal(y)` where `x`/`y` are DOM elements can hang the whole test file**
+  under `wtr`'s Playwright-controlled browser (chai/loupe's diff-formatting for a DOM node appears
+  to deadlock the automated reporting pipeline specifically — the same assertion fails instantly
+  and prints normally in a plain, uncontrolled browser tab). The file reports `0 passed, 0 failed`
+  and times out at `testsFinishTimeout` with no per-test detail, which reads exactly like an
+  unrelated environment/resource-contention issue and is easy to misdiagnose as one. If a test file
+  hangs with no informative output: bisect it (binary-split the `it()` blocks into scratch files
+  until you isolate the one test), then either fix the underlying wrong expectation or restructure
+  the assertion to compare something other than the DOM elements directly (e.g. an id/attribute).
+  Two concrete traps that produce this: comparing `document.activeElement` against an element that
+  actually lives inside a shadow root (`document.activeElement` never drills into an *open* shadow
+  root — compare against `theHost.shadowRoot.activeElement` instead, walking one `.shadowRoot`
+  level per nesting depth); and asserting `outerShadowRoot.activeElement` equals an element that is
+  itself nested *two* shadow roots deep (an outer component's own `shadowRoot.activeElement` only
+  resolves as far as the *host* of a further-nested shadow tree, never the real focused descendant
+  inside it — only `document.activeElement` walked all the way down, or a component's own
+  shadow-piercing `getActiveElement()`-style helper, sees the true target).
+- **A `?bool-attr=${false}` (or a literal `bool-attr="false"`) binding can never set a reactive
+  boolean property back to `false` once that property's own default is `true`** — Lit's boolean-
+  attribute binding only *toggles the attribute's presence*, and removing an attribute that was
+  never present in the first place fires no `attributeChangedCallback`, so the property stays at
+  its constructor default. The only way to assign `false` to a `true`-defaulting boolean property
+  from a template is a **property** binding: `.boolProp=${false}`. This bit both a shipped
+  component's own test suite and its Storybook stories in this family (search for `submitOnEnter`/
+  `editable` in `git log` for the two real instances) — grep for `?` bindings against any property
+  whose class-field default is `true` before trusting a `?attr=${false}` test setup at face value.
+- `@sinonjs/fake-timers` is a `devDependency` but **does not currently work in this test
+  environment** — it's CJS-only with no ESM build and no browser `exports` condition, so importing
+  it throws `ReferenceError: require is not defined` under `wtr`'s esbuild-based pipeline (unlike
+  `hammerjs`/`maplibre-gl`, no CJS-interop shim exists for it in `web-test-runner.config.js`).
+  Timer/interval-driven components (stall detection, coalescing, elapsed-time ticks) use real
+  timers with short, generously-margined thresholds instead — see `stream-status.test.ts` or
+  `generation-status.test.ts` for the pattern. Fixing this properly (adding a shim, or swapping to
+  an ESM-compatible fake-timer library) is open — do it if a future test genuinely can't be written
+  reliably with real timers, but don't reach for `@sinonjs/fake-timers` assuming it already works.
 
 ## Process for multi-step work
 

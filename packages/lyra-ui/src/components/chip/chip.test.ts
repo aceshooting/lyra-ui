@@ -1,0 +1,134 @@
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import './chip.js';
+import type { LyraChip } from './chip.js';
+
+it('defaults to tone="neutral", removable=false, and value=undefined', async () => {
+  const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+  expect(el.tone).to.equal('neutral');
+  expect(el.getAttribute('tone')).to.equal('neutral');
+  expect(el.removable).to.be.false;
+  expect(el.value).to.be.undefined;
+});
+
+it('reflects tone and removable changes onto host attributes', async () => {
+  const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+  el.tone = 'danger';
+  el.removable = true;
+  await el.updateComplete;
+  expect(el.getAttribute('tone')).to.equal('danger');
+  expect(el.hasAttribute('removable')).to.be.true;
+});
+
+it('renders the default slot as the label', async () => {
+  const el = (await fixture(html`<lyra-chip>research</lyra-chip>`)) as LyraChip;
+  // [part="label"] only wraps a <slot> -- its own shadow-tree textContent
+  // never includes the projected light-DOM content, only the slot's own
+  // (unused) fallback text. Assert against the slot's assigned nodes instead.
+  const slot = el.shadowRoot!.querySelector('[part="label"] slot') as HTMLSlotElement;
+  const text = slot
+    .assignedNodes({ flatten: true })
+    .map((n) => n.textContent ?? '')
+    .join('')
+    .trim();
+  expect(text).to.equal('research');
+});
+
+describe('icon slot', () => {
+  it('hides [part="icon"] when nothing is slotted', async () => {
+    const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hidden).to.be.true;
+  });
+
+  it('shows [part="icon"] once an element is slotted with slot="icon"', async () => {
+    const el = (await fixture(html`<lyra-chip><span slot="icon">●</span>Tag</lyra-chip>`)) as LyraChip;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hidden).to.be.false;
+  });
+
+  it('reacts to the icon slot being populated after first render', async () => {
+    const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hidden).to.be.true;
+
+    const dot = document.createElement('span');
+    dot.setAttribute('slot', 'icon');
+    dot.textContent = '●';
+    el.appendChild(dot);
+    // slotchange fires asynchronously
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(icon.hidden).to.be.false;
+  });
+});
+
+describe('remove affordance', () => {
+  it('is not rendered by default (removable=false)', async () => {
+    const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.not.exist;
+  });
+
+  it('renders once removable is true', async () => {
+    const el = (await fixture(html`<lyra-chip removable>Tag</lyra-chip>`)) as LyraChip;
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.exist;
+  });
+
+  it('has an aria-label of "Remove {label text}" derived from the default slot', async () => {
+    const el = (await fixture(html`<lyra-chip removable>research</lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research');
+  });
+
+  it('excludes icon-slot text from the computed remove-button label', async () => {
+    const el = (await fixture(
+      html`<lyra-chip removable><span slot="icon">●</span>research</lyra-chip>`,
+    )) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research');
+  });
+
+  it('falls back to the bare "Remove" label when the default slot has no text', async () => {
+    const el = (await fixture(html`<lyra-chip removable><span slot="icon">●</span></lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove');
+  });
+
+  it('emits lyra-remove with { value: undefined } when value was never set', async () => {
+    const el = (await fixture(html`<lyra-chip removable>Tag</lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
+    setTimeout(() => btn.click());
+    const ev = await oneEvent(el, 'lyra-remove');
+    expect(ev.detail).to.deep.equal({ value: undefined });
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+
+  it('emits lyra-remove with the set value', async () => {
+    const el = (await fixture(html`<lyra-chip removable value="tag-1">Tag</lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
+    setTimeout(() => btn.click());
+    const ev = await oneEvent(el, 'lyra-remove');
+    expect(ev.detail).to.deep.equal({ value: 'tag-1' });
+  });
+
+  it('does not remove itself from the DOM on click -- it is a controlled component', async () => {
+    const el = (await fixture(html`<lyra-chip removable>Tag</lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;
+    setTimeout(() => btn.click());
+    await oneEvent(el, 'lyra-remove');
+    expect(el.isConnected).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]')).to.exist;
+  });
+});
+
+it('is accessible in the default (non-removable, no icon) state', async () => {
+  const el = (await fixture(html`<lyra-chip>Filter: active</lyra-chip>`)) as LyraChip;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible in a populated removable state with an icon and a non-neutral tone', async () => {
+  const el = (await fixture(html`
+    <lyra-chip tone="danger" removable value="scope-1"><span slot="icon">●</span>Overdue</lyra-chip>
+  `)) as LyraChip;
+  await expect(el).to.be.accessible();
+});

@@ -1,0 +1,209 @@
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { html as litHtml } from 'lit';
+import './tool-result-view.js';
+import type { LyraToolResultView } from './tool-result-view.js';
+import {
+  registerToolRenderer,
+  clearToolRenderers,
+  type ToolRendererDefinition,
+  type ToolRendererRegistry,
+} from './registry.js';
+
+afterEach(() => {
+  clearToolRenderers();
+});
+
+function base(el: LyraToolResultView): HTMLElement {
+  return el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+}
+
+it('defaults to fallback="json" and falls back to lyra-json-viewer when nothing is registered', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-view tool-name="unregistered" .result=${{ ok: true }}></lyra-tool-result-view>`,
+  )) as LyraToolResultView;
+  expect(el.fallback).to.equal('json');
+  expect(el.getAttribute('fallback')).to.equal('json');
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+});
+
+it('emits lyra-render-error (with the tool name and an Error) before falling back when no renderer matches', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  el.toolName = 'unregistered_tool';
+  el.result = { ok: true };
+  const eventPromise = oneEvent(el, 'lyra-render-error');
+  container.appendChild(el);
+
+  const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
+  expect(event.detail.toolName).to.equal('unregistered_tool');
+  expect(event.detail.error).to.be.instanceOf(Error);
+
+  await el.updateComplete;
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+});
+
+it('renders the exact tool-name match, handing it both result and args', async () => {
+  let seen: { result: unknown; args: unknown } | undefined;
+  registerToolRenderer('get_weather', {
+    render: (result, args) => {
+      seen = { result, args };
+      return litHtml`<span class="weather">${JSON.stringify(result)}</span>`;
+    },
+  });
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view
+      tool-name="get_weather"
+      .result=${{ tempC: 19 }}
+      .args=${{ location: 'Brussels' }}
+    ></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+
+  expect(base(el).querySelector('.weather')).to.exist;
+  expect(base(el).querySelector('lyra-json-viewer')).to.not.exist;
+  expect(seen).to.deep.equal({ result: { tempC: 19 }, args: { location: 'Brussels' } });
+});
+
+it('falls back to shape-based matches() dispatch when no exact tool-name entry exists', async () => {
+  registerToolRenderer('search_renderer', {
+    render: () => litHtml`<span class="search-result">hits</span>`,
+    matches: (payload) => typeof payload === 'object' && payload !== null && 'results' in payload,
+  });
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="web_search" .result=${{ results: ['a', 'b'] }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+
+  expect(base(el).querySelector('.search-result')).to.exist;
+});
+
+it('re-resolves (and re-dispatches) when result changes shape under shape-based matching', async () => {
+  registerToolRenderer('search_renderer', {
+    render: () => litHtml`<span class="search-result">hits</span>`,
+    matches: (payload) => typeof payload === 'object' && payload !== null && 'results' in payload,
+  });
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="web_search" .result=${{ results: ['a'] }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  expect(base(el).querySelector('.search-result')).to.exist;
+
+  el.result = { somethingElse: true };
+  await el.updateComplete;
+  expect(base(el).querySelector('.search-result')).to.not.exist;
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+});
+
+it('accepts a custom registry prop instead of dispatching against the module-level default', async () => {
+  registerToolRenderer('get_weather', { render: () => litHtml`<span class="default-registry">nope</span>` });
+  const custom: ToolRendererRegistry = new Map([
+    ['get_weather', { render: () => litHtml`<span class="custom-registry">yes</span>` } as ToolRendererDefinition],
+  ]);
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="get_weather" .result=${{}} .registry=${custom}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+
+  expect(base(el).querySelector('.custom-registry')).to.exist;
+  expect(base(el).querySelector('.default-registry')).to.not.exist;
+});
+
+it('emits lyra-render-error and falls back when a matched renderer throws synchronously', async () => {
+  registerToolRenderer('boom_tool', {
+    render: () => {
+      throw new Error('render exploded');
+    },
+  });
+
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  el.toolName = 'boom_tool';
+  el.result = { x: 1 };
+  const eventPromise = oneEvent(el, 'lyra-render-error');
+  container.appendChild(el);
+
+  const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
+  expect(event.detail.toolName).to.equal('boom_tool');
+  expect((event.detail.error as Error).message).to.equal('render exploded');
+
+  await el.updateComplete;
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+});
+
+it('shows a lyra-skeleton while an async load() is pending, then renders its resolved output', async () => {
+  let resolveLoad!: (mod: { default: ToolRendererDefinition }) => void;
+  const loadPromise = new Promise<{ default: ToolRendererDefinition }>((resolve) => {
+    resolveLoad = resolve;
+  });
+  registerToolRenderer('slow_tool', { load: () => loadPromise });
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+
+  expect(base(el).querySelector('lyra-skeleton')).to.exist;
+
+  resolveLoad({ default: { render: (result) => litHtml`<span class="loaded">${(result as { a: number }).a}</span>` } });
+  await waitUntil(() => base(el).querySelector('lyra-skeleton') === null);
+
+  expect(base(el).querySelector('.loaded')!.textContent).to.equal('1');
+});
+
+it('emits lyra-render-error and falls back when load() rejects', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  registerToolRenderer('failing_load_tool', { load: () => Promise.reject(new Error('network down')) });
+
+  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  el.toolName = 'failing_load_tool';
+  el.result = {};
+  const eventPromise = oneEvent(el, 'lyra-render-error');
+  container.appendChild(el);
+
+  const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
+  expect((event.detail.error as Error).message).to.equal('network down');
+
+  await el.updateComplete;
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+});
+
+it('ignores a stale load() resolution superseded by a newer tool-name before it settles', async () => {
+  let resolveSlow!: (mod: { default: ToolRendererDefinition }) => void;
+  const slowPromise = new Promise<{ default: ToolRendererDefinition }>((resolve) => {
+    resolveSlow = resolve;
+  });
+  registerToolRenderer('slow_tool', { load: () => slowPromise });
+  registerToolRenderer('fast_tool', { render: () => litHtml`<span class="fast">fast</span>` });
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="slow_tool" .result=${{}}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  expect(base(el).querySelector('lyra-skeleton')).to.exist;
+
+  el.toolName = 'fast_tool';
+  await el.updateComplete;
+  expect(base(el).querySelector('.fast')).to.exist;
+
+  resolveSlow({ default: { render: () => litHtml`<span class="stale">stale</span>` } });
+  await slowPromise;
+  await el.updateComplete;
+
+  expect(base(el).querySelector('.fast'), 'the newer resolution must not be clobbered by the stale one').to.exist;
+  expect(base(el).querySelector('.stale')).to.not.exist;
+});
+
+it('is accessible in the default, empty (no renderer registered) state', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-view tool-name="anything"></lyra-tool-result-view>`,
+  )) as LyraToolResultView;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible once a matched renderer has populated content', async () => {
+  registerToolRenderer('get_weather', {
+    render: () => litHtml`<p>It is 19°C in Brussels.</p>`,
+  });
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="get_weather" .result=${{ tempC: 19 }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  await expect(el).to.be.accessible();
+});

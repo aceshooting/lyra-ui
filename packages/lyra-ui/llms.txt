@@ -21,7 +21,7 @@
 
 ## Component tiers
 
-The library shipped in five incremental batches; `llms-full.txt` is ordered the same way:
+The library shipped in six incremental batches; `llms-full.txt` is ordered the same way:
 
 - **v1 core** — form controls, toasts, sparkline, and flags: `lyra-combobox`/`lyra-option`,
   `lyra-select` (a closed-list, button-trigger single-select sharing `lyra-option` with
@@ -44,6 +44,21 @@ The library shipped in five incremental batches; `llms-full.txt` is ordered the 
 - **Map & file-input** — `lyra-map` (`maplibre-gl` wrapper with legend + choropleth layer + point
   markers, needs the optional peer `maplibre-gl`), `lyra-file-input` (drag-drop + click-to-browse
   dropzone, emits raw `File[]`).
+- **Conversation & Agent UI** — chat/tool-call/agent-config building blocks for streaming AI
+  interfaces: `lyra-dialog`/`confirm()`, `lyra-tabs`, `lyra-checkbox`, `lyra-switch`,
+  `lyra-json-viewer`, `lyra-live-region` (+ `internal/announcer.ts`'s throttled `Announcer`),
+  `lyra-markdown` (needs the optional peers `marked`/`dompurify`), `lyra-chat-message`,
+  `lyra-typing-indicator`, `lyra-tool-call-chip`, `lyra-tool-result-view` (+ its
+  `registerToolRenderer()` renderer registry), `lyra-tool-result-dialog`, `lyra-chat-composer`
+  (form-associated), `lyra-attachment-chip`, `lyra-stream-status`, `lyra-virtual-list`,
+  `lyra-conversation-item`, `lyra-model-select`, `lyra-slider` (form-associated),
+  `lyra-tool-select-dialog`, `lyra-citation-badge`, `lyra-source-list`/`lyra-source-card`,
+  `lyra-app-rail`, `lyra-responsive-panel`, `lyra-mention-popover`, `lyra-streaming-text`,
+  `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block` (needs the optional peer
+  `shiki`), `lyra-tool-approval-dialog`, `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`,
+  `lyra-chip`/`lyra-chip-group`, `lyra-model-settings-panel`, `lyra-context-meter`,
+  `lyra-dock-panel`, `lyra-document-preview`, `lyra-media-card`, `lyra-attachment-trigger`,
+  `lyra-kbd`, `lyra-result-card`/`lyra-result-field`.
 
 ## Also useful
 

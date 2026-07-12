@@ -28,7 +28,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-38 tags across five component families — see the [live docs site](https://aceshooting.github.io/lyra-ui/)
+83 tags across six component families — see the [live docs site](https://aceshooting.github.io/lyra-ui/)
 for every example, or [`packages/lyra-ui/README.md`](./packages/lyra-ui/README.md#components) for
 the full per-tag reference table.
 
@@ -37,6 +37,13 @@ the full per-tag reference table.
 - **Temporal & graph:** time range, playback, heatmap, force-directed graph, tree
 - **Charts:** line/bar/pie/doughnut/radar/polar-area/scatter/bubble chart, histogram, box plot
 - **Map & file input:** maplibre-gl map with legend/choropleth, drag-drop file dropzone
+- **Conversation & Agent UI:** dialog, tabs, checkbox, switch, JSON viewer, live region, markdown,
+  chat message, typing indicator, tool call chip, tool result view, tool result dialog, chat
+  composer, attachment chip, stream status, virtual list, conversation item, model select, slider,
+  tool select dialog, citation badge, source list/card, app rail, responsive panel, mention popover,
+  streaming text, thinking panel, generation status, code block, tool approval dialog, tool param
+  form, menu/menu item, chip/chip group, model settings panel, context meter, dock panel, document
+  preview, media card, attachment trigger, kbd, result card/field
 
 ## Documentation
 
