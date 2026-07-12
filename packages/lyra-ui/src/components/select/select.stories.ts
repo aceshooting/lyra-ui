@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraSelectSize } from './select.js';
 
 const meta: Meta = {
   title: 'Select',
@@ -51,6 +52,25 @@ export const RichRows: Story = {
       </lyra-option>
     </lyra-select>
   `,
+};
+
+/** `size` spans the same `xs`–`xl` scale as `lyra-toast-item`, default `m`. */
+export const Sizes: Story = {
+  render: () => {
+    const sizes: LyraSelectSize[] = ['xs', 's', 'm', 'l', 'xl'];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+        ${sizes.map(
+          (size) => html`
+            <lyra-select size=${size} placeholder=${`Size "${size}"`}>
+              <lyra-option value="a">Apple</lyra-option>
+              <lyra-option value="b">Banana</lyra-option>
+            </lyra-select>
+          `,
+        )}
+      </div>
+    `;
+  },
 };
 
 export const Disabled: Story = {

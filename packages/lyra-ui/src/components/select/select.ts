@@ -50,6 +50,8 @@ import '../combobox/option.js';
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  */
+export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+
 export class LyraSelect extends LyraElement {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];
@@ -66,6 +68,8 @@ export class LyraSelect extends LyraElement {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
+  /** Visual size — same `xs`–`xl` scale as `lyra-toast-item`'s `size`. */
+  @property({ reflect: true }) size: LyraSelectSize = 'm';
 
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
@@ -446,7 +450,7 @@ export class LyraSelect extends LyraElement {
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}
-          aria-label=${this.label || this.placeholder || 'Select'}
+          aria-label=${this.getAttribute('aria-label') || this.label || this.placeholder || 'Select'}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           ?disabled=${this.disabled}

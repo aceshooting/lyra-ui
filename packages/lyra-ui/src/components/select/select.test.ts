@@ -438,3 +438,28 @@ it('is accessible while open', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('applies a size attribute that reflects to the host', async () => {
+  const el = (await fixture(html`<lyra-select size="s"></lyra-select>`)) as LyraSelect;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.size).to.equal('s');
+});
+
+it('defaults to size "m"', async () => {
+  const el = (await fixture(html`<lyra-select></lyra-select>`)) as LyraSelect;
+  expect(el.size).to.equal('m');
+});
+
+it('prefers a host-level aria-label over label/placeholder for the trigger', async () => {
+  const el = (await fixture(
+    html`<lyra-select aria-label="Sort order" placeholder="Choose…"></lyra-select>`,
+  )) as LyraSelect;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(trigger.getAttribute('aria-label')).to.equal('Sort order');
+});
+
+it('falls back to placeholder when no host aria-label or label is set', async () => {
+  const el = (await fixture(html`<lyra-select placeholder="Choose…"></lyra-select>`)) as LyraSelect;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(trigger.getAttribute('aria-label')).to.equal('Choose…');
+});

@@ -3,6 +3,29 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-s);
+    --lyra-select-trigger-min-height: 2.5rem;
+    --lyra-select-font-size: 1rem;
+  }
+  :host([size='xs']) {
+    --lyra-select-trigger-padding: 0.125rem var(--lyra-space-xs);
+    --lyra-select-trigger-min-height: 1.5rem;
+    --lyra-select-font-size: 0.75rem;
+  }
+  :host([size='s']) {
+    --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-xs);
+    --lyra-select-trigger-min-height: 1.875rem;
+    --lyra-select-font-size: 0.8125rem;
+  }
+  :host([size='l']) {
+    --lyra-select-trigger-padding: var(--lyra-space-s) var(--lyra-space-m);
+    --lyra-select-trigger-min-height: 3rem;
+    --lyra-select-font-size: 1.125rem;
+  }
+  :host([size='xl']) {
+    --lyra-select-trigger-padding: var(--lyra-space-m) var(--lyra-space-l);
+    --lyra-select-trigger-min-height: 3.5rem;
+    --lyra-select-font-size: 1.25rem;
   }
   [part='form-control-label'] {
     display: block;
@@ -31,13 +54,14 @@ export const styles = css`
     justify-content: space-between;
     gap: var(--lyra-space-xs);
     inline-size: 100%;
-    min-block-size: 2.5rem;
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    min-block-size: var(--lyra-select-trigger-min-height);
+    padding: var(--lyra-select-trigger-padding);
     border: 1px solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: inherit;
     font: inherit;
+    font-size: var(--lyra-select-font-size);
     text-align: start;
     cursor: pointer;
   }
