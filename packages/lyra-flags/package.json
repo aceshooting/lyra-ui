@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-flags",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Waving country/territory flag SVGs — optional companion asset package for <lyra-flag> in lyra-ui.",
   "license": "SEE LICENSE IN README.md",
   "type": "module",
@@ -38,8 +38,5 @@
     },
     "./flags/*": "./flags/*"
   },
-  "packageManager": "pnpm@11.10.0",
-  "engines": {
-    "node": ">=20"
-  }
+  "packageManager": "pnpm@11.10.0"
 }
