@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-flags": major
+"@aceshooting/lyra-flags": minor
 "@aceshooting/lyra-ui": minor
 ---
 
