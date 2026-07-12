@@ -119,7 +119,8 @@ export const Choropleth: Story = {
 
 /**
  * `markers` renders a pin per entry, each with an optional colored tint and
- * an openable popup built from `label` (plain text) or `html` (raw markup).
+ * an openable popup built from `label` (plain text) or `unsafeHtml` (raw
+ * markup -- only ever pass trusted content).
  */
 export const Markers: Story = {
   render: () => {
@@ -129,7 +130,7 @@ export const Markers: Story = {
         id: 'louvre',
         lngLat: [2.3364, 48.8606],
         color: '#e5484d',
-        html: '<strong>Louvre</strong><br>Museum',
+        unsafeHtml: '<strong>Louvre</strong><br>Museum',
       },
     ];
     return html`

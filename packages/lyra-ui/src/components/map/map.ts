@@ -38,10 +38,12 @@ export interface MapMarker {
   /**
    * Rendered as the marker's popup content via maplibre-gl's
    * `Popup.setHTML()` -- parsed as raw markup, inline event handlers
-   * included. Only ever pass trusted content; sanitize anything derived
-   * from user input before assigning it here.
+   * included. This is the library's one explicit unsafe-HTML escape hatch:
+   * only ever pass trusted content, and sanitize anything derived from user
+   * input before assigning it here. Prefer `label` (rendered via the safe
+   * `Popup.setText()`) whenever the content is plain text.
    */
-  html?: string;
+  unsafeHtml?: string;
 }
 
 /**
@@ -146,6 +148,14 @@ export class LyraMap extends LyraElement {
   // re-awaiting the (already-settled) loadMaplibre() promise.
   private _maplibreModule?: typeof import('maplibre-gl');
   private _markerInstances = new Map<string, import('maplibre-gl').Marker>();
+  // The installed maplibre-gl's `Marker` class has no `setColor()` (verified
+  // against its shipped `.d.ts` -- `color` is only ever consumed by the
+  // constructor), so an id-matched marker whose `color` changes can't be
+  // mutated in place; it has to be torn down and reconstructed instead. This
+  // tracks the color each currently-live marker instance was last
+  // constructed with, keyed the same as `_markerInstances`, so `applyMarkers`
+  // can detect that mismatch without re-deriving it from the DOM.
+  private _markerColors = new Map<string, string | undefined>();
   // Bumped on every connectedCallback and captured by value in its
   // loadMaplibre().then() closure below. A disconnect immediately followed
   // by a reconnect (fast remounts, route/tab switches, etc.) before that
@@ -221,6 +231,7 @@ export class LyraMap extends LyraElement {
     this._appliedFillLayerId = undefined;
     for (const marker of this._markerInstances.values()) marker.remove();
     this._markerInstances.clear();
+    this._markerColors.clear();
   }
 
   protected updated(changed: PropertyValues): void {
@@ -329,26 +340,49 @@ export class LyraMap extends LyraElement {
     const mod = this._maplibreModule;
     if (!map || !mod) return;
     const visible = new Set<string>();
+    // Markers with no `id` used to key solely by `lngLat`, so two different
+    // id-less markers placed at the exact same coordinates collided onto one
+    // `_markerInstances` entry. An occurrence index (reset per render, per
+    // coordinate) makes same-coordinate id-less markers distinct while
+    // staying stable/consistent across re-renders as long as their relative
+    // order in `this.markers` doesn't change.
+    const coordCounts = new Map<string, number>();
     for (const m of this.markers) {
-      const key = m.id ?? `${m.lngLat[0]},${m.lngLat[1]}`;
+      let key = m.id;
+      if (key == null) {
+        const coordKey = `${m.lngLat[0]},${m.lngLat[1]}`;
+        const occurrence = coordCounts.get(coordKey) ?? 0;
+        coordCounts.set(coordKey, occurrence + 1);
+        key = `${coordKey}#${occurrence}`;
+      }
       visible.add(key);
-      const existing = this._markerInstances.get(key);
+      let existing = this._markerInstances.get(key);
+      if (existing && this._markerColors.get(key) !== m.color) {
+        // `color` is baked into the marker's SVG at construction time with
+        // no way to mutate it afterwards -- fall through to the "no existing
+        // marker" branch below to reconstruct it instead.
+        existing.remove();
+        this._markerInstances.delete(key);
+        this._markerColors.delete(key);
+        existing = undefined;
+      }
       if (!existing) {
         const marker = new mod.Marker(m.color ? { color: m.color } : undefined).setLngLat(m.lngLat);
-        if (m.html || m.label) {
+        if (m.unsafeHtml || m.label) {
           const popup = new mod.Popup({ offset: 12 });
-          if (m.html) popup.setHTML(m.html);
+          if (m.unsafeHtml) popup.setHTML(m.unsafeHtml);
           else if (m.label) popup.setText(m.label);
           marker.setPopup(popup);
         }
         marker.addTo(map);
         this._markerInstances.set(key, marker);
+        this._markerColors.set(key, m.color);
       } else {
         existing.setLngLat(m.lngLat);
         const popup = existing.getPopup();
-        if (m.html) {
-          if (popup) popup.setHTML(m.html);
-          else existing.setPopup(new mod.Popup({ offset: 12 }).setHTML(m.html));
+        if (m.unsafeHtml) {
+          if (popup) popup.setHTML(m.unsafeHtml);
+          else existing.setPopup(new mod.Popup({ offset: 12 }).setHTML(m.unsafeHtml));
         } else if (m.label) {
           if (popup) popup.setText(m.label);
           else existing.setPopup(new mod.Popup({ offset: 12 }).setText(m.label));
@@ -361,6 +395,7 @@ export class LyraMap extends LyraElement {
       if (!visible.has(key)) {
         marker.remove();
         this._markerInstances.delete(key);
+        this._markerColors.delete(key);
       }
     }
   }
