@@ -71,15 +71,21 @@ export class LyraGauge extends LyraElement {
   protected willUpdate(): void {
     this.setAttribute('role', 'meter');
     const finiteTrio = Number.isFinite(this.value) && Number.isFinite(this.min) && Number.isFinite(this.max);
+    // Normalize a reversed min > max domain the same way `ratio` does, so the
+    // announced aria-value* trio always agrees with the visual fill instead
+    // of aria-valuenow pinning to one bound regardless of `value` (and
+    // aria-valuemin/valuemax reporting an inverted, invalid ARIA range).
+    const lo = Number.isFinite(this.min) && Number.isFinite(this.max) ? Math.min(this.min, this.max) : this.min;
+    const hi = Number.isFinite(this.min) && Number.isFinite(this.max) ? Math.max(this.min, this.max) : this.max;
     if (finiteTrio) {
-      const clamped = Math.min(this.max, Math.max(this.min, this.value));
+      const clamped = Math.min(hi, Math.max(lo, this.value));
       this.setAttribute('aria-valuenow', String(clamped));
     } else {
       this.removeAttribute('aria-valuenow');
     }
-    if (Number.isFinite(this.min)) this.setAttribute('aria-valuemin', String(this.min));
+    if (Number.isFinite(lo)) this.setAttribute('aria-valuemin', String(lo));
     else this.removeAttribute('aria-valuemin');
-    if (Number.isFinite(this.max)) this.setAttribute('aria-valuemax', String(this.max));
+    if (Number.isFinite(hi)) this.setAttribute('aria-valuemax', String(hi));
     else this.removeAttribute('aria-valuemax');
     if (this.label) this.setAttribute('aria-label', this.label);
     else this.removeAttribute('aria-label');

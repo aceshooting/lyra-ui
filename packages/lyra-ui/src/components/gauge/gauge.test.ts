@@ -14,6 +14,22 @@ it('reflects value/min/max as ARIA meter attributes', async () => {
   expect(el.getAttribute('aria-label')).to.equal('CPU');
 });
 
+it('normalizes a reversed min > max domain in aria-value* so it agrees with the visual fill instead of pinning aria-valuenow', async () => {
+  const lowValue = (await fixture(
+    html`<lyra-gauge value="5" min="100" max="0"></lyra-gauge>`,
+  )) as LyraGauge;
+  expect(lowValue.getAttribute('aria-valuemin')).to.equal('0');
+  expect(lowValue.getAttribute('aria-valuemax')).to.equal('100');
+  expect(lowValue.getAttribute('aria-valuenow')).to.equal('5');
+
+  const highValue = (await fixture(
+    html`<lyra-gauge value="70" min="100" max="0"></lyra-gauge>`,
+  )) as LyraGauge;
+  // Previously pinned to `max` (0) regardless of `value` -- now tracks the
+  // normalized domain, matching `ratio`'s own normalization.
+  expect(highValue.getAttribute('aria-valuenow')).to.equal('70');
+});
+
 it('clamps the visual fill to [0,1] of the range and stops the arc at the sweep end', async () => {
   const el = (await fixture(html`<lyra-gauge value="200" max="100"></lyra-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement | HTMLElement;
