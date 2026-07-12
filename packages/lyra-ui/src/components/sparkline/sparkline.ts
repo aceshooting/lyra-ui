@@ -6,12 +6,23 @@ import { styles } from './sparkline.styles.js';
 
 const VIEW = 100;
 
+// A <rect> per bar doesn't collapse into one path the way line/area do, so an
+// unbounded `values` array turns directly into that many shadow-DOM nodes.
+// Capping it keeps worst-case DOM size bounded without affecting any
+// realistically-sized bar chart.
+const MAX_BARS = 500;
+
+function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
+  const step = arr.length / max;
+  return Array.from({ length: max }, (_, i) => arr[Math.floor(i * step)]);
+}
+
 /**
  * `<lyra-sparkline>` — a zero-dependency inline SVG trend chart.
  * Mirrors the Web Awesome `<wa-sparkline>` API under the `lyra-` prefix.
  *
  * @customElement lyra-sparkline
- * @csspart line - The line path (type="line").
+ * @csspart line - The stroked line path (type="line" and type="area").
  * @csspart area - The filled area under the line (type="area").
  * @csspart bar - Each bar rectangle (type="bar").
  */
@@ -32,12 +43,18 @@ export class LyraSparkline extends LyraElement {
 
   private points(): ReadonlyArray<readonly [number, number]> {
     const v = this.values;
-    const lo = this.min ?? Math.min(...v);
-    const hi = this.max ?? Math.max(...v);
-    const span = hi - lo || 1;
+    let autoLo = v[0];
+    let autoHi = v[0];
+    for (const n of v) {
+      if (n < autoLo) autoLo = n;
+      if (n > autoHi) autoHi = n;
+    }
+    const lo = this.min ?? autoLo;
+    const hi = this.max ?? autoHi;
+    const span = hi - lo;
     return v.map((n, i) => {
       const x = v.length > 1 ? (i / (v.length - 1)) * VIEW : VIEW / 2;
-      const y = VIEW - ((n - lo) / span) * VIEW;
+      const y = span === 0 ? VIEW / 2 : VIEW - ((n - lo) / span) * VIEW;
       return [x, y] as const;
     });
   }
@@ -53,22 +70,31 @@ export class LyraSparkline extends LyraElement {
 
   render(): TemplateResult {
     const v = this.values;
-    if (!v.length) return html`<svg viewBox="0 0 ${VIEW} ${VIEW}"></svg>`;
+    if (!v.length) {
+      return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" aria-hidden="true"></svg>`;
+    }
 
     const pts = this.points();
-    const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ');
 
-    const shape =
-      this.type === 'bar'
-        ? pts.map(
-            ([x, y]) =>
-              svg`<rect part="bar" x="${x - 2}" y="${y}" width="4" height="${VIEW - y}"></rect>`,
-          )
-        : svg`<path part="line" d="${d}"></path>`;
+    if (this.type === 'bar') {
+      const barPts = pts.length > MAX_BARS ? decimate(pts, MAX_BARS) : pts;
+      const bars = barPts.map(([x, y]) => {
+        const barY = Math.min(y, VIEW);
+        return svg`<rect part="bar" x="${x - 2}" y="${barY}" width="4" height="${VIEW - barY}"></rect>`;
+      });
+      return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
+        ${bars}
+      </svg>`;
+    }
 
-    return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none">
+    const d =
+      pts.length > 1
+        ? pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ')
+        : `M${pts[0][0]},${pts[0][1]} L${pts[0][0]},${pts[0][1]}`;
+
+    return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
       ${this.type === 'area' ? svg`<path part="area" d="${d} L${VIEW},${VIEW} L0,${VIEW} Z"></path>` : ''}
-      ${shape}
+      <path part="line" d="${d}"></path>
     </svg>`;
   }
 }

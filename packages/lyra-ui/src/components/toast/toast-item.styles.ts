@@ -7,6 +7,7 @@ export const styles = css`
     --show-duration: var(--lyra-transition-base, 180ms ease-out);
     --hide-duration: var(--lyra-transition-base, 180ms ease-out);
     --padding: var(--lyra-space-m);
+    --font-size: 1rem;
     --accent-color: var(--lyra-color-border);
   }
   :host([variant='brand']) {
@@ -21,6 +22,26 @@ export const styles = css`
   :host([variant='danger']) {
     --accent-color: var(--lyra-color-danger);
   }
+  :host([size='xs']) {
+    --padding: var(--lyra-space-xs);
+    --font-size: 0.75rem;
+  }
+  :host([size='s']) {
+    --padding: var(--lyra-space-s);
+    --font-size: 0.875rem;
+  }
+  :host([size='m']) {
+    --padding: var(--lyra-space-m);
+    --font-size: 1rem;
+  }
+  :host([size='l']) {
+    --padding: var(--lyra-space-l);
+    --font-size: 1.125rem;
+  }
+  :host([size='xl']) {
+    --padding: calc(var(--lyra-space-l) * 1.5);
+    --font-size: 1.25rem;
+  }
 
   [part='toast-item'] {
     position: relative;
@@ -30,6 +51,7 @@ export const styles = css`
     inline-size: 100%;
     padding: var(--padding);
     padding-inline-start: calc(var(--padding) + var(--accent-width));
+    font-size: var(--font-size);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     border: 1px solid var(--lyra-color-border);
@@ -76,13 +98,17 @@ export const styles = css`
     border: none;
     cursor: pointer;
     color: var(--lyra-color-text-quiet);
-    font-size: 1rem;
+    font-size: 1em;
     line-height: 1;
     padding: var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
   }
-  [part='close-button']:hover {
+  [part='close-button']:hover:not([aria-disabled='true']) {
     color: var(--lyra-color-text);
+  }
+  [part='close-button'][aria-disabled='true'] {
+    opacity: var(--lyra-opacity-disabled);
+    cursor: not-allowed;
   }
   [part='close-button']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

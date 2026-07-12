@@ -35,3 +35,44 @@ export const Default: Story = {
     ></lyra-graph>
   `,
 };
+
+export const TunedForces: Story = {
+  render: () => html`
+    <lyra-graph
+      width="480"
+      height="320"
+      style="height: 20rem"
+      charge-strength="-900"
+      link-distance="200"
+      .nodes=${nodes}
+      .links=${links}
+    ></lyra-graph>
+  `,
+};
+
+export const BoundedZoom: Story = {
+  render: () => html`
+    <lyra-graph
+      width="480"
+      height="320"
+      style="height: 20rem"
+      min-zoom="1"
+      max-zoom="2"
+      .nodes=${nodes}
+      .links=${links}
+    ></lyra-graph>
+  `,
+};
+
+export const SeededLayout: Story = {
+  render: () => html`
+    <p>
+      Both graphs below share <code>seed="42"</code> — reload the page or diff a screenshot across builds and their
+      node positions are bit-identical, unlike the non-seeded <code>Default</code> story above.
+    </p>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap">
+      <lyra-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lyra-graph>
+      <lyra-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lyra-graph>
+    </div>
+  `,
+};

@@ -1,3 +1,5 @@
+import { minMax } from './heatmap-scale.js';
+
 export interface CalendarDay {
   /** ISO `yyyy-mm-dd` date string. */
   date: string;
@@ -25,6 +27,13 @@ export function parseIsoDate(iso: string): Date {
  * Lays `days` out onto a GitHub-style Sunday-Saturday x week grid. `days`
  * need not be sorted or contiguous; the grid spans from the earliest to the
  * latest date present, anchored at the Sunday on/before the earliest date.
+ *
+ * An entry whose `date` doesn't parse to a valid calendar date (e.g. `''` or
+ * `'2026-03'`) is dropped rather than included: `parseIsoDate` on a malformed
+ * string yields an `Invalid Date` (`getTime()` is `NaN`), and letting that
+ * single `NaN` reach the min/max below would poison `firstWeekStart` (and
+ * therefore every cell's `week`) for the whole grid instead of just the bad
+ * entry.
  */
 export function buildCalendarGrid(days: CalendarDay[]): {
   cells: CalendarCell[];
@@ -32,13 +41,16 @@ export function buildCalendarGrid(days: CalendarDay[]): {
   firstWeekStart: Date;
   monthLabels: { week: number; label: string }[];
 } {
-  if (days.length === 0) {
+  const parsed = days
+    .map((d) => ({ ...d, dateObj: parseIsoDate(d.date) }))
+    .filter((d) => !Number.isNaN(d.dateObj.getTime()));
+
+  if (parsed.length === 0) {
     return { cells: [], weekCount: 0, firstWeekStart: new Date(0), monthLabels: [] };
   }
 
-  const parsed = days.map((d) => ({ ...d, dateObj: parseIsoDate(d.date) }));
-  const minTime = Math.min(...parsed.map((d) => d.dateObj.getTime()));
-  const min = new Date(minTime);
+  const timeBounds = minMax(parsed.map((d) => d.dateObj.getTime()))!;
+  const min = new Date(timeBounds[0]);
   const firstWeekStart = new Date(
     Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - min.getUTCDay()),
   );
@@ -50,7 +62,7 @@ export function buildCalendarGrid(days: CalendarDay[]): {
     return { date: d.date, value: d.value, week, weekday };
   });
 
-  const weekCount = Math.max(...cells.map((c) => c.week)) + 1;
+  const weekCount = minMax(cells.map((c) => c.week))![1] + 1;
 
   const monthLabels: { week: number; label: string }[] = [];
   let lastMonth = -1;
@@ -72,8 +84,15 @@ export function buildCalendarGrid(days: CalendarDay[]): {
 /** Splits `value`'s rank within `sorted` (ascending, pre-sorted by the caller) into `bucketCount` quartile-style buckets. */
 export function quartileBucket(value: number, sorted: number[], bucketCount: number): number {
   if (sorted.length === 0) return 0;
-  let count = 0;
-  for (const v of sorted) if (v <= value) count++;
-  const rank = count / sorted.length;
+  // `sorted` is ascending, so the count of elements <= value is found via an
+  // upper-bound binary search (O(log n)) instead of scanning the whole array.
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid]! <= value) lo = mid + 1;
+    else hi = mid;
+  }
+  const rank = lo / sorted.length;
   return Math.min(bucketCount - 1, Math.floor(rank * bucketCount));
 }

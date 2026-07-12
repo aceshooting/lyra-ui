@@ -1,5 +1,5 @@
-import { html, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { closeIcon } from '../../internal/icons.js';
@@ -16,6 +16,18 @@ export type ToastSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 // parsing that back out in JS for a single setTimeout would be more fragile
 // than this documented literal.
 const ANIM_MS = 180;
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+// toast-item.styles.ts already collapses the CSS transition itself to ~0 under
+// reduced motion; this keeps the lyra-after-show/lyra-after-hide events (and
+// the DOM removal in hide()) from still waiting out the full duration of an
+// animation nothing is visibly playing.
+function animMs(): number {
+  return prefersReducedMotion() ? 0 : ANIM_MS;
+}
 
 /**
  * `<lyra-toast-item>` — a single toast notification.
@@ -50,18 +62,46 @@ export class LyraToastItem extends LyraElement {
   @property({ type: Boolean, attribute: 'with-icon' }) withIcon = false;
 
   private timer?: number;
-  private remaining = 0;
+  private elapsedMs = 0;
   private startedAt = 0;
+  private timerStarted = false;
   private showRafId?: number;
+  private showAnimTimer?: number;
+  private hideAnimTimer?: number;
+  private hovering = false;
+  private focused = false;
+  @state() private hiding = false;
+
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('variant')) {
+      // Assertive for actionable severities, polite otherwise. Re-evaluated
+      // on every `variant` change (not just the first render) so a toast
+      // reassigned to `danger`/`warning` after creation is announced as an
+      // interruption instead of keeping its original, now-stale role.
+      this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
+    }
+    // `elapsedMs`/`duration` are re-read fresh every time the timer is
+    // (re)scheduled, so a `duration` change while paused (hovering/focused)
+    // or before the timer has ever started needs no action here -- the next
+    // resumeTimer()/startTimer() call already picks up the new value. Only a
+    // timer that's actively counting down right now is running against a
+    // setTimeout scheduled for the *old* duration, so that's the one case
+    // that needs an explicit reschedule.
+    if (changed.has('duration') && this.timerStarted && this.timer !== undefined) {
+      this.pauseTimer();
+      this.resumeTimer();
+    }
+  }
 
   firstUpdated(): void {
-    // Assertive for actionable severities, polite otherwise.
-    this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
     this.showRafId = requestAnimationFrame(() => {
       this.showRafId = undefined;
       this.setAttribute('data-visible', '');
       this.emit('lyra-show');
-      window.setTimeout(() => this.emit('lyra-after-show'), ANIM_MS);
+      this.showAnimTimer = window.setTimeout(() => {
+        this.showAnimTimer = undefined;
+        this.emit('lyra-after-show');
+      }, animMs());
       this.startTimer();
     });
   }
@@ -72,12 +112,20 @@ export class LyraToastItem extends LyraElement {
       cancelAnimationFrame(this.showRafId);
       this.showRafId = undefined;
     }
+    if (this.showAnimTimer !== undefined) {
+      clearTimeout(this.showAnimTimer);
+      this.showAnimTimer = undefined;
+    }
+    if (this.hideAnimTimer !== undefined) {
+      clearTimeout(this.hideAnimTimer);
+      this.hideAnimTimer = undefined;
+    }
     this.clearTimer();
   }
 
   private startTimer(): void {
-    if (!isFinite(this.duration) || this.duration <= 0) return;
-    this.remaining = this.duration;
+    this.timerStarted = true;
+    this.elapsedMs = 0;
     this.resumeTimer();
   }
 
@@ -92,16 +140,18 @@ export class LyraToastItem extends LyraElement {
       clearTimeout(this.timer);
       this.timer = undefined;
     }
-    if (!isFinite(this.duration) || this.duration <= 0 || this.remaining <= 0) return;
+    if (!isFinite(this.duration) || this.duration <= 0) return;
+    const remaining = this.duration - this.elapsedMs;
+    if (remaining <= 0) return;
     this.startedAt = performance.now();
-    this.timer = window.setTimeout(() => this.hide(), this.remaining);
+    this.timer = window.setTimeout(() => this.hide(), remaining);
   };
 
   private pauseTimer = (): void => {
     if (this.timer !== undefined) {
       clearTimeout(this.timer);
       this.timer = undefined;
-      this.remaining -= performance.now() - this.startedAt;
+      this.elapsedMs += performance.now() - this.startedAt;
     }
   };
 
@@ -110,12 +160,67 @@ export class LyraToastItem extends LyraElement {
     this.timer = undefined;
   }
 
+  // Hover and focus are tracked as independent pause reasons so that
+  // releasing one (e.g. Shift-Tabbing focus away) only resumes the timer
+  // once *neither* modality still holds the toast paused -- otherwise a
+  // pointer resting on the toast would see it auto-dismiss out from under
+  // it the moment focus alone moved away, or vice versa.
+  private onPointerEnter = (): void => {
+    this.hovering = true;
+    this.pauseTimer();
+  };
+
+  private onPointerLeave = (): void => {
+    this.hovering = false;
+    if (!this.focused) this.resumeTimer();
+  };
+
+  private onFocusIn = (): void => {
+    this.focused = true;
+    this.pauseTimer();
+  };
+
+  private onFocusOut = (): void => {
+    this.focused = false;
+    if (!this.hovering) this.resumeTimer();
+  };
+
+  // A stack of several simultaneously-open toasts otherwise gives every
+  // close button the same bare "Close" label, so screen-reader/switch-access
+  // users can't tell which toast a given button dismisses without first
+  // activating it. Deriving the label from the toast's own message content
+  // mirrors combobox's per-item "Remove X" labeling for the same reason.
+  //
+  // Only direct Text-node children are considered -- the message is always
+  // assigned as plain text (`create()` sets `textContent`), whereas anything
+  // else appended to the host (an action `<button>`, a `slot="icon"` element
+  // and its own descendant text) is a sibling *element*, not a top-level text
+  // node, so it's excluded without needing to know about those features here.
+  private get closeLabel(): string {
+    const text = Array.from(this.childNodes)
+      .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent ?? '')
+      .join('')
+      .trim()
+      .replace(/\s+/g, ' ');
+    if (!text) return 'Close';
+    const snippet = text.length > 40 ? `${text.slice(0, 40)}…` : text;
+    return `Close: ${snippet}`;
+  }
+
   /** Hide with animation, then remove from the DOM. */
   async hide(): Promise<void> {
+    if (this.hiding) return;
+    this.hiding = true;
     this.clearTimer();
     this.emit('lyra-hide');
     this.removeAttribute('data-visible');
-    await new Promise((r) => window.setTimeout(r, ANIM_MS));
+    await new Promise<void>((resolve) => {
+      this.hideAnimTimer = window.setTimeout(() => {
+        this.hideAnimTimer = undefined;
+        resolve();
+      }, animMs());
+    });
     this.emit('lyra-after-hide');
     this.remove();
   }
@@ -124,15 +229,30 @@ export class LyraToastItem extends LyraElement {
     return html`
       <div
         part="toast-item"
-        @pointerenter=${this.pauseTimer}
-        @pointerleave=${this.resumeTimer}
-        @focusin=${this.pauseTimer}
-        @focusout=${this.resumeTimer}
+        @pointerenter=${this.onPointerEnter}
+        @pointerleave=${this.onPointerLeave}
+        @focusin=${this.onFocusIn}
+        @focusout=${this.onFocusOut}
       >
         <span part="accent" aria-hidden="true"></span>
         ${this.withIcon ? html`<span part="icon"><slot name="icon"></slot></span>` : ''}
         <div part="content"><slot></slot></div>
-        <button part="close-button" type="button" aria-label="Close" @click=${() => this.hide()}>
+        <button
+          part="close-button"
+          type="button"
+          aria-label=${this.closeLabel}
+          aria-disabled=${this.hiding ? 'true' : 'false'}
+          @click=${(e: Event) => {
+            // Reflect the disabled state on the DOM node synchronously, not
+            // just via the reactive binding above -- Lit's re-render from
+            // `this.hiding = true` (inside hide()) lands on the next
+            // microtask, which is too late for a screen reader (or a second
+            // rapid click) that inspects the attribute right after this
+            // handler returns.
+            (e.currentTarget as HTMLElement).setAttribute('aria-disabled', 'true');
+            void this.hide();
+          }}
+        >
           ${closeIcon()}
         </button>
       </div>

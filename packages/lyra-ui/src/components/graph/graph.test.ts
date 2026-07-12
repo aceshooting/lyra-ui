@@ -13,6 +13,13 @@ const links = [{ source: 'a', target: 'b' }];
 // throttles heavily on backgrounded tabs when many test files run
 // concurrently — give it generous headroom so the full suite isn't flaky.
 const NODE_COUNT_TIMEOUT = 5000;
+// forceSimulation()'s *default* alphaDecay/alphaMin (unconfigured here, so
+// this is the real production default) needs ~300 ticks to decay from
+// alpha=1 to alphaMin — at rAF's nominal ~16.7ms/tick that's already ~5000ms
+// with zero slack, so waiting for a full settle (as opposed to just the
+// first paint NODE_COUNT_TIMEOUT above covers) needs its own, larger budget
+// or it fails on every run, not just loaded ones.
+const ALPHA_SETTLE_TIMEOUT = 15_000;
 
 it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
@@ -57,6 +64,90 @@ it('emits lyra-node-click when a node is activated', async () => {
     new MouseEvent('click', { bubbles: true }),
   );
   expect(detail).to.exist;
+});
+
+it('emits lyra-link-click with the source/target ids when a link is activated', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  let detail: { source: string; target: string } | undefined;
+  el.addEventListener('lyra-link-click', (e) => (detail = (e as CustomEvent).detail));
+  (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
+    new MouseEvent('click', { bubbles: true }),
+  );
+  expect(detail).to.deep.equal({ source: 'a', target: 'b' });
+});
+
+it('emits lyra-node-click when a node is activated via keyboard (Enter/Space)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  let detail: { id: string } | undefined;
+  el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+  (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+  );
+  expect(detail).to.deep.equal({ id: 'a' });
+});
+
+it('emits lyra-link-click when a link is activated via keyboard (Enter/Space)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  let detail: { source: string; target: string } | undefined;
+  el.addEventListener('lyra-link-click', (e) => (detail = (e as CustomEvent).detail));
+  (el.shadowRoot!.querySelector('[part="link"]') as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
+  );
+  expect(detail).to.deep.equal({ source: 'a', target: 'b' });
+});
+
+it('gives the svg an accessible name summarizing the diagram, and hides duplicate node labels from assistive tech', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  expect(svgEl.getAttribute('aria-label')).to.match(/2 nodes/);
+  const label = el.shadowRoot!.querySelector('[part="label"]') as SVGTextElement;
+  expect(label.getAttribute('aria-hidden')).to.equal('true');
+});
+
+it('preserves existing node positions across an incremental nodes/links update instead of restarting the whole layout', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // Let a few ticks run so node 'a' settles away from its initial random start.
+  await aTimeout(200);
+  const beforeA = (el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement).getAttribute('cx');
+
+  // Append a new node — e.g. a live/streaming data feed pushing one incremental update.
+  el.nodes = [...nodes, { id: 'c', label: 'C' }];
+  el.links = [...links, { source: 'a', target: 'c' }];
+  await el.updateComplete;
+
+  const afterA = (el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement).getAttribute('cx');
+  expect(afterA).to.equal(beforeA);
 });
 
 it('applies a per-node GraphNode.color as the actual rendered fill', async () => {
@@ -152,6 +243,35 @@ it('bounds zoom to a sane scaleExtent instead of zooming in unbounded', async ()
   expect(Number(match![1])).to.be.at.most(8);
 });
 
+it('retunes the live zoom scaleExtent when minZoom/maxZoom change after the svg has already been bound', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // The svg is already bound to d3-zoom (with the default 0.1–8 scaleExtent)
+  // by this point — this is the post-mount case that used to be a no-op.
+  el.minZoom = 1;
+  el.maxZoom = 2;
+  await el.updateComplete;
+
+  const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+  const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+
+  // A huge wheel delta would zoom well past 2 if the live scaleExtent hadn't
+  // actually been retuned.
+  svgEl.dispatchEvent(
+    new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100000, clientX: 10, clientY: 10 }),
+  );
+  await el.updateComplete;
+  const match = /scale\(([^)]+)\)/.exec(g.getAttribute('transform') ?? '');
+  expect(match).to.exist;
+  expect(Number(match![1])).to.be.at.most(2);
+});
+
 it('updates the charge/link forces in place when chargeStrength/linkDistance change after mount', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;
@@ -169,6 +289,61 @@ it('updates the charge/link forces in place when chargeStrength/linkDistance cha
   const linkForce = (el as any).linkForce as { distance: () => () => number };
   expect(chargeForce.strength()()).to.equal(-900);
   expect(linkForce.distance()()).to.equal(250);
+});
+
+it('still retunes chargeStrength/linkDistance when width/height change in the same update batch', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // Setting both in the same synchronous batch used to mean only the
+  // width/height branch ran (they were joined with `else if`), silently
+  // dropping the chargeStrength retune.
+  el.width = 1000;
+  el.chargeStrength = -900;
+  await el.updateComplete;
+
+  const chargeForce = (el as any).chargeForce as { strength: () => () => number };
+  expect(chargeForce.strength()()).to.equal(-900);
+});
+
+it('recenters the simulation and bumps alpha when width/height change post-mount', async function () {
+  // Waiting for a *full* default-alphaDecay settle (ALPHA_SETTLE_TIMEOUT
+  // below) genuinely takes close to 5s on its own -- raise this test's own
+  // Mocha timeout (web-test-runner.config.js sets a 6s default for every
+  // test) so that wait isn't cut off by the runner before it gets the
+  // chance to finish.
+  this.timeout(20_000);
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const simulation = (el as any).simulation as {
+    alpha: () => number;
+    alphaMin: () => number;
+    force: (name: string) => { x: () => number; y: () => number };
+  };
+  // Let the initial settle finish so the alpha bump below is unambiguous.
+  await waitUntil(() => simulation.alpha() <= simulation.alphaMin(), undefined, {
+    timeout: ALPHA_SETTLE_TIMEOUT,
+  });
+
+  el.width = 1000;
+  el.height = 400;
+  await el.updateComplete;
+
+  const center = simulation.force('center');
+  expect(center.x()).to.equal(500);
+  expect(center.y()).to.equal(200);
+  expect(simulation.alpha()).to.be.greaterThan(simulation.alphaMin());
 });
 
 it('does not reassign simNodes/simLinks references on tick, only positions (avoids a full Lit re-render every animation frame)', async () => {
@@ -198,6 +373,196 @@ it('does not reassign simNodes/simLinks references on tick, only positions (avoi
   // reassign the reactive simNodes/simLinks array references.
   const laterCx = (el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement).getAttribute('cx');
   expect(laterCx).to.not.equal(initialCx);
+});
+
+it('skips the settle animation under prefers-reduced-motion (jumps straight to a converged layout)', async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+
+  try {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    const simulation = (el as any).simulation as { alpha: () => number; alphaMin: () => number };
+    expect(simulation.alpha()).to.be.at.most(simulation.alphaMin());
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it('seeded layout: two separate instances with the same nodes/links/seed converge to bit-identical final positions', async () => {
+  const seededNodes = [
+    { id: 'a', label: 'A' },
+    { id: 'b', label: 'B' },
+    { id: 'c', label: 'C' },
+  ];
+  const seededLinks = [
+    { source: 'a', target: 'b' },
+    { source: 'b', target: 'c' },
+  ];
+
+  const positionsOf = (el: LyraGraph) =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part="node"]')).map((n) => ({
+      cx: n.getAttribute('cx'),
+      cy: n.getAttribute('cy'),
+    }));
+
+  const elA = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  elA.nodes = seededNodes;
+  elA.links = seededLinks;
+  await elA.updateComplete;
+  await waitUntil(() => elA.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const elB = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  // Deliberately reorder the nodes array between the two instances — a
+  // reproducible seeded layout must be keyed by node id, not array index.
+  elB.nodes = [seededNodes[2], seededNodes[0], seededNodes[1]];
+  elB.links = seededLinks;
+  await elB.updateComplete;
+  await waitUntil(() => elB.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // Match up positions by node id (not DOM order, since elB's nodes were
+  // supplied in a different order) via the aria-label, which is set to the
+  // node's label/id.
+  const byLabel = (el: LyraGraph) => {
+    const map = new Map<string, { cx: string | null; cy: string | null }>();
+    el.shadowRoot!.querySelectorAll('[part="node"]').forEach((n) => {
+      map.set(n.getAttribute('aria-label')!, { cx: n.getAttribute('cx'), cy: n.getAttribute('cy') });
+    });
+    return map;
+  };
+  const mapA = byLabel(elA);
+  const mapB = byLabel(elB);
+  expect(mapA.size).to.equal(3);
+  for (const [label, posA] of mapA) {
+    const posB = mapB.get(label);
+    expect(posB, `missing node ${label} in elB`).to.exist;
+    expect(posB).to.deep.equal(posA);
+  }
+  // Sanity: positions actually recorded, this isn't vacuously true.
+  expect(positionsOf(elA).every((p) => p.cx != null && p.cy != null)).to.be.true;
+});
+
+it('seeded layout: different seeds produce different final positions', async () => {
+  const seededNodes = [
+    { id: 'a', label: 'A' },
+    { id: 'b', label: 'B' },
+    { id: 'c', label: 'C' },
+  ];
+  const seededLinks = [
+    { source: 'a', target: 'b' },
+    { source: 'b', target: 'c' },
+  ];
+
+  const elA = (await fixture(html`<lyra-graph seed="1"></lyra-graph>`)) as LyraGraph;
+  elA.nodes = seededNodes;
+  elA.links = seededLinks;
+  await elA.updateComplete;
+  await waitUntil(() => elA.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const elB = (await fixture(html`<lyra-graph seed="2"></lyra-graph>`)) as LyraGraph;
+  elB.nodes = seededNodes;
+  elB.links = seededLinks;
+  await elB.updateComplete;
+  await waitUntil(() => elB.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const posA = Array.from(elA.shadowRoot!.querySelectorAll('[part="node"]')).map((n) => [
+    n.getAttribute('cx'),
+    n.getAttribute('cy'),
+  ]);
+  const posB = Array.from(elB.shadowRoot!.querySelectorAll('[part="node"]')).map((n) => [
+    n.getAttribute('cx'),
+    n.getAttribute('cy'),
+  ]);
+  expect(posA).to.not.deep.equal(posB);
+});
+
+it('seeded layout: settles synchronously (like prefers-reduced-motion) so the layout is reproducible without waiting on animation frames', async () => {
+  const el = (await fixture(html`<lyra-graph seed="7"></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const simulation = (el as any).simulation as { alpha: () => number; alphaMin: () => number };
+  expect(simulation.alpha()).to.be.at.most(simulation.alphaMin());
+});
+
+it('seed unset: layout is unaffected (still uses forceSimulation()s own random initial start, not the deterministic PRNG)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // Without a seed, the simulation still animates its settle instead of
+  // jumping straight to alphaMin — the existing (pre-seed-feature) behavior.
+  const simulation = (el as any).simulation as { alpha: () => number; alphaMin: () => number };
+  expect(simulation.alpha()).to.be.greaterThan(simulation.alphaMin());
+});
+
+it('user-initiated drag still works normally after a seeded synchronous settle', async () => {
+  const el = (await fixture(html`<lyra-graph seed="7"></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement;
+  expect(select(nodeEl).on('mousedown.drag')).to.be.a('function');
+});
+
+it('stops the force simulation on disconnect so a detached instance stops ticking', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const simulation = (el as any).simulation;
+  let stopped = false;
+  const originalStop = simulation.stop.bind(simulation);
+  simulation.stop = (...args: unknown[]) => {
+    stopped = true;
+    return originalStop(...args);
+  };
+
+  el.remove();
+  expect(stopped, 'disconnectedCallback should call simulation.stop()').to.be.true;
+
+  // With the timer actually stopped, alpha can no longer decay via further
+  // ticks — a still-running simulation would keep animating a detached
+  // instance indefinitely.
+  const alphaAfterDisconnect = simulation.alpha();
+  await aTimeout(200);
+  expect(simulation.alpha()).to.equal(alphaAfterDisconnect);
 });
 
 it('is accessible', async () => {

@@ -24,8 +24,10 @@ import './date-picker.js';
  * @event change - Fired on committed date transitions.
  * @event lyra-show / lyra-hide - Calendar popover lifecycle.
  * @event lyra-clear - The clear button was used.
- * @csspart form-control, form-control-label, input-wrapper, input, clear-button, expand-button, popup, date-picker, hint, error
+ * @csspart form-control, form-control-label, input-wrapper, input, clear-button, expand-button, expand-icon, popup, date-picker, hint, error
+ * @slot label - Custom label content.
  * @slot error - Custom error content.
+ * @slot hint - Custom hint content.
  */
 export class LyraDateInput extends FormAssociated(LyraElement) {
   static styles = [LyraElement.styles, styles];
@@ -44,9 +46,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ type: Number }) months: 1 | 2 = 1;
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
+  @property({ type: Boolean, attribute: 'disable-past' }) disablePast = false;
+  @property({ type: Boolean, attribute: 'disable-future' }) disableFuture = false;
+  @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
 
   private cleanupFn?: () => void;
   private inputId = nextId('date-input');
+  private popupId = nextId('date-popup');
   // Set on the date input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
@@ -137,7 +143,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
       this.emit('change');
       return;
     }
-    const parsed = parseISO(raw) ?? (isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw)));
+    // A string that already looks like strict ISO (YYYY-MM-DD) must be judged
+    // by parseISO alone: it validates calendar correctness (rejects e.g.
+    // "2026-02-30"), but Date.parse() doesn't -- falling through to it for an
+    // ISO-shaped string would silently resurrect the same rollover parseISO
+    // guards against (Date.parse('2026-02-30') also normalizes to March 2).
+    const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
+    const parsed = looksLikeISO ? parseISO(raw) : isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw));
     if (parsed) {
       this.value = formatISO(parsed);
       this.emit('input');
@@ -160,6 +172,18 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     }
   };
 
+  // Attached to the whole form-control, not just the text input, so Escape
+  // closes the popover from anywhere inside it -- including the nested
+  // picker's own day/nav buttons, which take real DOM focus (roving
+  // tabindex) rather than the input keeping focus throughout.
+  private onFormControlKey = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && this.open) {
+      e.preventDefault();
+      this.hide();
+      (this.renderRoot.querySelector('[part="expand-button"]') as HTMLElement | null)?.focus();
+    }
+  };
+
   private onInputBlur = (): void => {
     this.touched = true;
   };
@@ -176,13 +200,26 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private onPickerChange = (e: Event): void => {
+  // The nested picker's `input` event isn't wired anywhere else, so without
+  // this listener it bubbles+composes straight through this shadow boundary
+  // (LyraElement.emit always dispatches bubbles:true, composed:true) and
+  // fires on this host a *second* time, on top of the explicit emit below.
+  private onPickerInput = (e: Event): void => {
     e.stopPropagation();
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
     this.emit('input');
+  };
+
+  private onPickerChange = (e: Event): void => {
+    e.stopPropagation();
+    const picker = e.target as LyraDatePicker;
+    this.value = picker.value;
     this.emit('change');
-    if (this.mode === 'single') this.hide();
+    // The picker only fires `change` once a selection is finalized (a single
+    // pick, or the second click of a range), so this is always the right
+    // moment to close, in either mode.
+    this.hide();
   };
 
   render(): TemplateResult {
@@ -191,7 +228,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     return html`
-      <div part="form-control">
+      <div part="form-control" @keydown=${this.onFormControlKey}>
         <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
@@ -225,13 +262,14 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             aria-label="Open calendar"
             aria-haspopup="dialog"
             aria-expanded=${this.open ? 'true' : 'false'}
+            aria-controls=${this.popupId}
             ?disabled=${this.disabled || this.readonly}
             @click=${() => (this.open ? this.hide() : this.show())}
           >
             <span part="expand-icon" aria-hidden="true">${calendarIcon()}</span>
           </button>
         </div>
-        <div part="popup" role="dialog" aria-label="Choose date">
+        <div id=${this.popupId} part="popup" role="dialog" aria-label="Choose date">
           <lyra-date-picker
             part="date-picker"
             .value=${this.value}
@@ -242,8 +280,12 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             .locale=${this.locale}
             .disabled=${this.disabled}
             .readonly=${this.readonly}
+            .disablePast=${this.disablePast}
+            .disableFuture=${this.disableFuture}
+            .withOutsideDays=${this.withOutsideDays}
             first-day-of-week=${this.firstDayOfWeek}
             weekday-format=${this.weekdayFormat}
+            @input=${this.onPickerInput}
             @change=${this.onPickerChange}
           ></lyra-date-picker>
         </div>

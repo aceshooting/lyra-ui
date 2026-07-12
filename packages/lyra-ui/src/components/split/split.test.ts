@@ -3,6 +3,10 @@ import './split.js';
 import type { LyraSplit } from './split.js';
 import { styles } from './split.styles.js';
 
+function mockWidth(el: HTMLElement, width: number): void {
+  Object.defineProperty(el, 'clientWidth', { value: width, configurable: true });
+}
+
 it('splits children evenly by default', async () => {
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
@@ -28,6 +32,56 @@ it('resizes via keyboard on a divider and emits lyra-resize', async () => {
   await elementUpdated(el);
   expect(el.sizes[0]).to.be.greaterThan(before);
   expect(detail!.sizes[0]).to.equal(el.sizes[0]);
+});
+
+it('mirrors ArrowRight/ArrowLeft under dir="rtl", since panels reorder visually via flex order', async () => {
+  const el = (await fixture(
+    html`<lyra-split dir="rtl"><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const before = el.sizes[0];
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.be.lessThan(before);
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(before);
+});
+
+it('does not swap ArrowUp/ArrowDown for vertical orientation under dir="rtl" (direction only affects the horizontal inline axis)', async () => {
+  const el = (await fixture(
+    html`<lyra-split dir="rtl" orientation="vertical"><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  const before = el.sizes[0];
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.be.greaterThan(before);
+});
+
+it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under the pointer', async () => {
+  const el = (await fixture(
+    html`<lyra-split dir="rtl"><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  Object.defineProperty(base, 'clientWidth', { value: 200, configurable: true });
+  divider.setPointerCapture = () => {};
+
+  const before = el.sizes[0];
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  // Physically-rightward drag under RTL shrinks panel[0] (rendered on the
+  // right via flex `order`), the mirror image of the LTR case.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 150 }));
+  expect(el.sizes[0]).to.be.lessThan(before);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
 });
 
 it('clamps panel sizes to the configured minimum', async () => {
@@ -211,6 +265,267 @@ it('does not throw when localStorage.getItem/setItem are unavailable (e.g. block
     localStorage.getItem = originalGetItem;
     localStorage.setItem = originalSetItem;
   }
+});
+
+it('lets a keyboard resize climb out of a sub-min starting size instead of getting stuck', async () => {
+  const el = (await fixture(
+    html`<lyra-split min="10"><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  // Simulates the equal-split-across-many-panels case (e.g. 20 panels at 5%
+  // each with the default min=10): a panel starts below `min`.
+  el.sizes = [5, 95];
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await elementUpdated(el);
+  // Clamps straight to `min` instead of leaving the panel stuck at 5+2=7.
+  expect(el.sizes[0]).to.equal(10);
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(12);
+});
+
+it('rejects a stale persisted layout that violates a since-raised min, falling back to an equal split', async () => {
+  const storageKey = 'test-split-min-raise-' + Math.random();
+  localStorage.setItem(`lyra-split:${storageKey}:2`, JSON.stringify([5, 95]));
+
+  const el = (await fixture(
+    html`<lyra-split storage-key=${storageKey} min="10"><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+
+  expect(el.sizes[0]).to.equal(50);
+  expect(el.sizes[1]).to.equal(50);
+});
+
+it('preserves and restores custom panel proportions across an appended-then-removed panel', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div><div>D</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  el.sizes = [10, 40, 30, 20];
+  await elementUpdated(el);
+
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  let slotChanged = oneEvent(slot, 'slotchange');
+  const panelE = document.createElement('div');
+  panelE.textContent = 'E';
+  el.appendChild(panelE);
+  await slotChanged;
+  await elementUpdated(el);
+
+  expect(el.sizes.length).to.equal(5);
+  const existingTotal = el.sizes.slice(0, 4).reduce((a, b) => a + b, 0);
+  const ratios = el.sizes.slice(0, 4).map((s) => Math.round((s / existingTotal) * 1000));
+  // Relative proportions of the original 4 panels are preserved (10:40:30:20),
+  // not reset to a flat 20% each.
+  expect(ratios).to.deep.equal([100, 400, 300, 200]);
+
+  slotChanged = oneEvent(slot, 'slotchange');
+  el.removeChild(panelE);
+  await slotChanged;
+  await elementUpdated(el);
+
+  expect(el.sizes.length).to.equal(4);
+  const original = [10, 40, 30, 20];
+  el.sizes.forEach((s, i) => expect(s).to.be.closeTo(original[i], 0.001));
+});
+
+it('keeps two concurrent pointer drags on different dividers independent (scoped by pointerId)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div><div>D</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  Object.defineProperty(base, 'clientWidth', { value: 400, configurable: true });
+  const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
+  dividers.forEach((d) => (d.setPointerCapture = () => {}));
+
+  dividers[0].dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  dividers[2].dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 300 }),
+  );
+
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 140 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 2, clientX: 340 }));
+
+  expect(el.sizes[0]).to.be.greaterThan(25);
+  expect(el.sizes[2]).to.be.greaterThan(25);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
+});
+
+it('ignores a stray pointermove/pointerup/pointercancel after the element is disconnected mid-drag', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  const sizesAtDisconnect = [...el.sizes];
+
+  el.remove();
+
+  expect(() => {
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 200 }));
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+  }).to.not.throw();
+  expect(el.sizes).to.deep.equal(sizesAtDisconnect);
+});
+
+it('persists sizes to localStorage on pointerup, not just via keyboard commit', async () => {
+  const storageKey = 'test-split-pointer-persist-' + Math.random();
+  localStorage.clear();
+
+  const el = (await fixture(
+    html`<lyra-split storage-key=${storageKey}><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  Object.defineProperty(base, 'clientWidth', { value: 200, configurable: true });
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 140 }));
+  expect(localStorage.getItem(`lyra-split:${storageKey}:2`)).to.be.null;
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+
+  const stored = localStorage.getItem(`lyra-split:${storageKey}:2`);
+  expect(stored).to.not.be.null;
+  expect(JSON.parse(stored!)).to.deep.equal(el.sizes);
+});
+
+it('gives each divider a distinguishing accessible name', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  const dividers = [...el.shadowRoot!.querySelectorAll('[part="divider"]')] as HTMLElement[];
+  const labels = dividers.map((d) => d.getAttribute('aria-label'));
+  expect(labels.every((l) => !!l)).to.be.true;
+  expect(new Set(labels).size).to.equal(labels.length);
+});
+
+it('renders a clamp()-based flex-basis for a panel with panelConstraints, leaving unconstrained panels bare-percent', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  el.sizes = [30, 70];
+  el.panelConstraints = [{ minPx: 40, maxPx: 200 }, null];
+  await elementUpdated(el);
+  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  expect(panelA.style.flex).to.equal('0 0 clamp(40px, 30%, 200px)');
+  expect(panelB.style.flex).to.equal('0 0 70%');
+});
+
+it('falls back to sentinel px bounds when a constraint only specifies one side', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  el.sizes = [30, 70];
+  el.panelConstraints = [{ minPx: 40 }];
+  await elementUpdated(el);
+  const [panelA] = [...el.children] as HTMLElement[];
+  // The browser may re-serialize a large px literal (e.g. `1000000px` ->
+  // `1e+06px`) when normalizing the `flex` shorthand, so parse the numeric
+  // value out instead of asserting an exact fallback string.
+  const match = /^0 0 clamp\(40px, 30%, ([\d.e+]+)px\)$/.exec(panelA.style.flex);
+  expect(match, `unexpected flex-basis shape: ${panelA.style.flex}`).to.not.equal(null);
+  expect(Number(match![1])).to.equal(1_000_000);
+});
+
+it('stops a drag at a px-derived min bound instead of the plain percent min', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  // min=10 (default) would allow panel[0] down to 10%; the constraint's
+  // 60px is 30% of a 200px container, well above that plain floor.
+  el.panelConstraints = [{ minPx: 60 }];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: -1000 }));
+  expect(el.sizes[0]).to.equal(30);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+});
+
+it('stops a drag at a px-derived max bound on the dragged panel', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  el.panelConstraints = [{ maxPx: 60 }]; // 60px of a 200px container = 30%
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 1000 }));
+  expect(el.sizes[0]).to.equal(30);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+});
+
+it('stops keyboard-driven resizing at a px-derived min bound instead of the plain percent min', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  el.panelConstraints = [{ minPx: 60 }];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+
+  for (let i = 0; i < 20; i++) {
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  }
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(30);
+});
+
+it('keeps a constrained panel pinned between its px bounds when the container is resized', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  el.panelConstraints = [{ minPx: 60 }];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+
+  mockWidth(base, 200); // 60px -> 30% floor
+  for (let i = 0; i < 20; i++) {
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  }
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(30);
+
+  // Container grows: the same fixed 60px is now a smaller share, so the
+  // percent floor drops with it — the panel stays pinned to 60px, not 30%.
+  mockWidth(base, 600); // 60px -> 10% floor
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.equal(28);
 });
 
 it('splits :hover and :focus-visible into separate divider rules with a token-driven outline', () => {

@@ -21,6 +21,42 @@ it('clamps the visual fill to [0,1] of the range and stops the arc at the sweep 
   // ratio clamps to 1, so the dash pattern must be fully revealed (offset 0) —
   // i.e. the fill arc actually stops at the sweep's end point, not just "exists".
   expect(Number(fill.getAttribute('stroke-dashoffset'))).to.equal(0);
+  // aria-valuenow must stay within [aria-valuemin, aria-valuemax] like the visual fill —
+  // an out-of-range value announced verbatim is an invalid ARIA meter state.
+  expect(el.getAttribute('aria-valuenow')).to.equal('100');
+});
+
+it('accounts for a nonzero min when computing the fill ratio', async () => {
+  const el = (await fixture(html`<lyra-gauge value="30" min="20" max="40"></lyra-gauge>`)) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
+  const arcLength = (270 / 360) * 2 * Math.PI * 40;
+
+  // ratio = (30 - 20) / (40 - 20) = 0.5
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength * 0.5, 0.001);
+
+  el.value = 15; // below min -> ratio clamps to 0, not a negative/overshot dashoffset
+  await el.updateComplete;
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength, 0.001);
+});
+
+it('guards against a degenerate min===max range instead of a NaN/Infinity dashoffset', async () => {
+  const el = (await fixture(html`<lyra-gauge value="50" min="50" max="50"></lyra-gauge>`)) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
+
+  const dashoffset = Number(fill.getAttribute('stroke-dashoffset'));
+  expect(dashoffset).to.not.be.NaN;
+  expect(Number.isFinite(dashoffset)).to.be.true;
+});
+
+it('guards against a NaN/undefined value instead of leaking "NaN" into aria-valuenow and stroke-dashoffset', async () => {
+  const el = (await fixture(html`<lyra-gauge value="30" max="100"></lyra-gauge>`)) as LyraGauge;
+  el.value = undefined as unknown as number;
+  await el.updateComplete;
+
+  expect(el.hasAttribute('aria-valuenow')).to.be.false;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
+  expect(fill.getAttribute('stroke-dashoffset')).to.not.equal('NaN');
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.not.be.NaN;
 });
 
 it('drives the radial fill via a fixed-length dasharray with dashoffset derived from ratio', async () => {
@@ -114,6 +150,18 @@ it('sets aria-valuetext from valueLabel and clears it when unset', async () => {
 
   el.valueLabel = undefined;
   await el.updateComplete;
+  expect(el.hasAttribute('aria-valuetext')).to.be.false;
+});
+
+it('falls back to the numeric value when valueLabel is cleared to an empty string', async () => {
+  const el = (await fixture(html`<lyra-gauge value="72" max="100"></lyra-gauge>`)) as LyraGauge;
+  el.valueLabel = '72°F';
+  await el.updateComplete;
+
+  el.valueLabel = '';
+  await el.updateComplete;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]')!;
+  expect(valueEl.textContent).to.equal('72');
   expect(el.hasAttribute('aria-valuetext')).to.be.false;
 });
 

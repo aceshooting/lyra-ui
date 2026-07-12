@@ -31,7 +31,16 @@ export const styles = css`
   [part='menu'] {
     /* Closed state: invisible + slightly raised. visibility (not
        display:none) so opacity/transform can actually transition; hit-testing
-       and a11y exposure stay off since this part is already position:fixed. */
+       and a11y exposure stay off since this part is already position:fixed.
+       visibility deliberately isn't in the transition list below: a
+       transitioned property's computed value only settles to its new
+       target after the UA has run an actual style-change/rendering pass,
+       which lags behind a same-tick attribute write (e.g. updated()
+       synchronously focusing the first menu item right after flipping
+       open) -- that item would still resolve as visibility: hidden (and
+       so silently fail to focus) at the moment .focus() is called. Leaving
+       visibility untransitioned makes it apply immediately, in the same
+       synchronous style pass as the open attribute write. */
     visibility: hidden;
     position: fixed;
     z-index: 900;
@@ -45,8 +54,7 @@ export const styles = css`
     transform: translateY(-4px);
     transition:
       opacity var(--lyra-transition-fast),
-      transform var(--lyra-transition-fast),
-      visibility var(--lyra-transition-fast);
+      transform var(--lyra-transition-fast);
   }
   :host([open]) [part='menu'] {
     visibility: visible;

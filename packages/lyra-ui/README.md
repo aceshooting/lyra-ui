@@ -83,7 +83,7 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Components
 
-All 35 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
+All 38 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
 Tier 3, then a map/file-input batch, then widget). Grouped by the release that introduced each.
 
 **v1 — form controls, toasts, sparkline**
@@ -91,6 +91,7 @@ Tier 3, then a map/file-input batch, then widget). Grouped by the release that i
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
 | `<lyra-combobox>` + `<lyra-option>` | `wa-combobox` | Filterable single/multi select, form-associated; async data via `source` property, virtual scrolling with `max-render` |
+| `<lyra-select>` | `wa-select` | Closed-list single-select, button trigger (not a text input, no filtering); form-associated, shares `<lyra-option>` with `lyra-combobox` |
 | `<lyra-date-picker>` | `wa-date-picker` | Inline calendar, single + range |
 | `<lyra-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
@@ -109,6 +110,7 @@ Tier 3, then a map/file-input batch, then widget). Grouped by the release that i
 | `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
 | `<lyra-split>` | — (extra) | Resizable panel layout |
 | `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
+| `<lyra-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |
 
 **Tier 2 — temporal & graph**
 
@@ -128,6 +130,7 @@ Tier 3, then a map/file-input batch, then widget). Grouped by the release that i
 | `<lyra-bar-chart>`, `<lyra-line-chart>`, `<lyra-pie-chart>`, `<lyra-doughnut-chart>`, `<lyra-scatter-chart>`, `<lyra-bubble-chart>`, `<lyra-radar-chart>`, `<lyra-polar-area-chart>` | `wa-chart` | Typed `<lyra-chart>` subclasses with `type` locked — same optional peer deps as `<lyra-chart>` |
 | `<lyra-box-plot>` | — (extra) | Box-and-whisker chart from precomputed five-number summaries — needs `chart.js`, `chartjs-plugin-zoom`, and `@sgratzl/chartjs-chart-boxplot` |
 | `<lyra-histogram>` | — (extra) | Bins raw values (`binValues()`) and renders a bar chart — same optional peer deps as `<lyra-chart>` |
+| `<lyra-lite-chart>` | — (extra) | Dependency-free bar/line chart (plain SVG/DOM) — **no optional peer deps**, for projects that forbid a charting dependency outright |
 
 **Map & file-input**
 
@@ -140,19 +143,15 @@ Tier 3, then a map/file-input batch, then widget). Grouped by the release that i
 
 A non-exhaustive list of gaps a new consumer should know about before adopting:
 
-- `required` doesn't yet enforce constraint validation on `<lyra-date-input>`/`<lyra-combobox>` —
-  neither calls `internals.setValidity()`, so `form.reportValidity()`/`checkValidity()` always
-  return `true` regardless of whether a required field is empty.
-- `<lyra-tree>` has no keyboard interaction yet — only the expand/collapse button is focusable;
-  row selection and tree navigation (arrow keys, Home/End) have no keyboard path.
-- `<lyra-file-input>`'s `accept` attribute only constrains the native file-picker dialog; it has
-  no effect on the drag-drop path, so dropped files of a type `accept` would otherwise exclude are
-  silently accepted unless you also set `allowedMimeTypes`/`forbiddenMimeTypes`.
 - `<lyra-map>`'s default `mapStyle` (used only when you don't set one) points at OpenStreetMap's
   shared demo tile server — convenient for local development, but its usage policy forbids
   bulk/production traffic and non-compliant clients are rate-limited or IP-blocked (see
   https://operations.osmfoundation.org/policies/tiles/). Always pass your own `mapStyle` in
   production (a hosted vector/raster style from a tile provider you have a plan with).
+- `<lyra-split>` has no feasibility check on `min` vs. panel count (e.g. 3 panels with `min=40` is
+  unsatisfiable) — the result is a silently frozen splitter with no warning.
+- `<lyra-file-input>` has no paste-from-clipboard support and doesn't specially detect a dragged
+  folder (surfaces as a phantom zero-byte file rather than a clear rejection).
 
 ## Development
 

@@ -503,3 +503,290 @@ it('ignores a stale source response that resolves after a newer query', async ()
   );
   expect(labels).to.deep.equal(['Fresh result']);
 });
+
+it('registers the click-outside listener and fires lyra-show/lyra-hide when `open` is set directly, bypassing show()/hide()', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+
+  setTimeout(() => {
+    el.open = true;
+  });
+  await oneEvent(el, 'lyra-show');
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  // A pointerdown anywhere outside the element must still dismiss it, even
+  // though `show()` (which normally registers the listener) was never called.
+  setTimeout(() => {
+    document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  });
+  await oneEvent(el, 'lyra-hide');
+  expect(el.open).to.be.false;
+});
+
+it('closes the listbox on a pointerdown outside the element after it was opened via focus', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.dispatchEvent(new FocusEvent('focus'));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('re-fetches with the reset query after picking a row, refreshing stale async results (multiple + source)', async () => {
+  const el = (await fixture(html`<lyra-combobox multiple></lyra-combobox>`)) as LyraCombobox;
+  const calls: string[] = [];
+  el.source = async (query: string) => {
+    calls.push(query);
+    return query === 'ban'
+      ? [{ value: 'b', label: 'Banana' }]
+      : [
+          { value: 'a', label: 'Apple' },
+          { value: 'b', label: 'Banana' },
+        ];
+  };
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  await typeQuery(el, 'ban');
+  await aTimeout(250);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(1);
+
+  const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  row.click();
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(calls).to.deep.equal(['', 'ban', '']);
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) =>
+    n.textContent?.trim(),
+  );
+  expect(labels).to.deep.equal(['Apple', 'Banana']);
+});
+
+it('re-fetches with the reset query after clear(), refreshing stale async results (source mode)', async () => {
+  const el = (await fixture(html`<lyra-combobox with-clear></lyra-combobox>`)) as LyraCombobox;
+  const calls: string[] = [];
+  el.source = async (query: string) => {
+    calls.push(query);
+    return query === 'ban'
+      ? [{ value: 'b', label: 'Banana' }]
+      : [
+          { value: 'a', label: 'Apple' },
+          { value: 'b', label: 'Banana' },
+        ];
+  };
+  el.value = 'b';
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  await typeQuery(el, 'ban');
+  await aTimeout(250);
+  await el.updateComplete;
+
+  const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement;
+  setTimeout(() => clearBtn.click());
+  await oneEvent(el, 'lyra-clear');
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(calls).to.deep.equal(['', 'ban', '']);
+});
+
+it('seeds the selection from a <lyra-option selected> appended after the initial slotchange', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+
+  const opt = document.createElement('lyra-option');
+  opt.setAttribute('value', 'd');
+  opt.textContent = 'Date';
+  opt.selected = true;
+  el.appendChild(opt);
+  // slotchange fires on its own microtask queue -- force a macrotask
+  // boundary (see the source-debounce tests above) before asserting.
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(el.value).to.equal('d');
+  expect(opt.selected).to.be.true;
+});
+
+it('does not merge two nameless multiple comboboxes under a shared "value" form key', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-combobox multiple>
+        <lyra-option value="a" selected>Apple</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox multiple>
+        <lyra-option value="b" selected>Banana</lyra-option>
+      </lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const els = Array.from(form.querySelectorAll('lyra-combobox')) as LyraCombobox[];
+  await Promise.all(els.map((e) => e.updateComplete));
+  expect(els.map((e) => e.value)).to.deep.equal([['a'], ['b']]);
+
+  expect(new FormData(form).getAll('value')).to.deep.equal([]);
+});
+
+it('clears the pending debounced source timer on disconnect so a detached element never invokes a stale fetch', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  let called = false;
+  el.source = async () => {
+    called = true;
+    return [];
+  };
+  await typeQuery(el, 'ban');
+  el.remove();
+  await aTimeout(250);
+  expect(called).to.be.false;
+});
+
+it('uses a custom filter function instead of the default label/searchText matcher when provided', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.filter = (option, query) => option.value === query;
+  el.open = true;
+  await el.updateComplete;
+
+  await typeQuery(el, 'a');
+  // The default label/searchText matcher would also match "Banana" (its
+  // label contains "a"); only the custom filter narrows this to one row.
+  const rows = el.shadowRoot!.querySelectorAll('[part="option"]');
+  expect(rows.length).to.equal(1);
+  expect(rows[0].textContent).to.contain('Apple');
+});
+
+it('renders a group-label header when option rows are grouped', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox>
+      <lyra-option value="a" group="Fruits">Apple</lyra-option>
+      <lyra-option value="b" group="Fruits">Banana</lyra-option>
+      <lyra-option value="c" group="Vegetables">Carrot</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  const groups = Array.from(el.shadowRoot!.querySelectorAll('.group-label')).map((n) => n.textContent);
+  expect(groups).to.deep.equal(['Fruits', 'Vegetables']);
+});
+
+it('caps visible tags at maxOptionsVisible and shows a "+N" overflow tag', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox multiple max-options-visible="2">
+      <lyra-option value="a">Apple</lyra-option>
+      <lyra-option value="b">Banana</lyra-option>
+      <lyra-option value="c">Cherry</lyra-option>
+      <lyra-option value="d">Date</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  el.value = ['a', 'b', 'c', 'd'];
+  await el.updateComplete;
+
+  const tags = el.shadowRoot!.querySelectorAll('[part="tag"]');
+  expect(tags.length).to.equal(3);
+  expect(tags[2].textContent?.trim()).to.equal('+2');
+});
+
+it('shows the empty-state message with a custom emptyText when no rows match', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.emptyText = 'Nothing here';
+  el.open = true;
+  await el.updateComplete;
+
+  await typeQuery(el, 'zzz');
+  const empty = el.shadowRoot!.querySelector('.empty');
+  expect(empty).to.exist;
+  expect(empty!.textContent).to.equal('Nothing here');
+});
+
+it('disables the combobox when its containing fieldset is disabled', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lyra-combobox name="fruit">
+          <lyra-option value="a">Apple</lyra-option>
+        </lyra-combobox>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  await el.updateComplete;
+  expect(el.disabled).to.be.false;
+
+  fieldset.disabled = true;
+  await el.updateComplete;
+  expect(el.disabled).to.be.true;
+});
+
+it('is accessible while showing the loading state (async source pending)', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.source = () => new Promise(() => {});
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.loading')).to.exist;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible while showing the empty state (no matching rows)', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.empty')).to.exist;
+  await expect(el).to.be.accessible();
+});
+
+it('reflects required/invalid state onto the input as aria-required/aria-invalid', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox required>
+      <lyra-option value="a">Apple</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(input.getAttribute('aria-required')).to.equal('true');
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+
+  input.dispatchEvent(new FocusEvent('focus'));
+  input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+});
+
+it('closes the listbox when the input blurs (e.g. tabbing away), not just on outside click or Escape', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.dispatchEvent(new FocusEvent('focus'));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('ignores a mousedown on the combobox container while disabled', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.disabled = true;
+  await el.updateComplete;
+
+  const container = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  container.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+});

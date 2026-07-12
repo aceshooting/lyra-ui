@@ -24,23 +24,26 @@
 The library shipped in five incremental batches; `llms-full.txt` is ordered the same way:
 
 - **v1 core** — form controls, toasts, sparkline, and flags: `lyra-combobox`/`lyra-option`,
-  `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`, `lyra-sparkline`,
-  `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
+  `lyra-select` (a closed-list, button-trigger single-select sharing `lyra-option` with
+  `lyra-combobox`), `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`,
+  `lyra-sparkline`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
 - **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
   `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`,
-  `lyra-split`.
+  `lyra-split`, `lyra-widget`, `lyra-word-cloud` (zero-dependency SVG word/tag cloud).
 - **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
-  `lyra-playback`, `lyra-heatmap` (matrix layout only), `lyra-graph` (needs the optional peer deps
-  `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
+  `lyra-playback`, `lyra-heatmap` (matrix and calendar layouts), `lyra-graph` (needs the optional peer
+  deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
 - **Chart family** — a Chart.js wrapper and its typed subclasses, plus two bespoke chart types:
   `lyra-chart` (core) and its locked-`type` subclasses (`lyra-line-chart`, `lyra-bar-chart`,
   `lyra-pie-chart`, `lyra-doughnut-chart`, `lyra-radar-chart`, `lyra-polar-area-chart`,
   `lyra-bubble-chart`, `lyra-scatter-chart`), `lyra-histogram`, `lyra-box-plot` (needs
   `@sgratzl/chartjs-chart-boxplot`) — the `lyra-chart` family needs the optional peer deps
-  `chart.js`/`chartjs-plugin-zoom`.
-- **Map & file-input** — `lyra-map` (`maplibre-gl` wrapper with legend + choropleth layer, needs
-  the optional peer `maplibre-gl`), `lyra-file-input` (drag-drop + click-to-browse dropzone,
-  emits raw `File[]`).
+  `chart.js`/`chartjs-plugin-zoom`. `lyra-lite-chart` is a separate, dependency-free bar/line chart
+  (plain SVG/DOM, no peer deps at all) for projects whose architecture forbids a charting
+  dependency outright.
+- **Map & file-input** — `lyra-map` (`maplibre-gl` wrapper with legend + choropleth layer + point
+  markers, needs the optional peer `maplibre-gl`), `lyra-file-input` (drag-drop + click-to-browse
+  dropzone, emits raw `File[]`).
 
 ## Also useful
 

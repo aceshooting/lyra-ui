@@ -5,6 +5,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { css } from 'lit';
+import { cascadeUpdateComplete } from './update-cascade.js';
 import type { TreeItem } from './tree.js';
 
 const styles = css`
@@ -48,7 +49,9 @@ const styles = css`
     cursor: pointer;
     flex: 0 0 auto;
   }
-  [part='toggle']:empty {
+  [part='toggle'][hidden] {
+    /* visibility (not display) so the placeholder keeps its layout box --
+       a leaf row still lines up with sibling rows that do have a chevron. */
     visibility: hidden;
   }
   :host([expanded]) [part='toggle'] {
@@ -82,6 +85,8 @@ const styles = css`
  * sibling).
  *
  * @customElement lyra-tree-node
+ * @event lyra-node-toggle - `detail: { id, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).
+ * @event lyra-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking its label, or Enter/Space).
  * @csspart row, toggle, label, badge
  */
 export class LyraTreeNode extends LyraElement {
@@ -128,23 +133,27 @@ export class LyraTreeNode extends LyraElement {
     this.emit('lyra-node-select', { id: this.item.id });
   }
 
-  /**
-   * Cascade `updateComplete`: a nested `<lyra-tree-node>` rendered by this
-   * one (in its own shadow root) only receives a pushed-down `activeId` (and
-   * the `tabIndex` that comes from it) once *this* node's own render has
-   * committed. Without this override, awaiting a parent's `updateComplete`
-   * doesn't guarantee an arbitrarily-nested descendant's own pending update
-   * has also settled — see the matching override on `<lyra-tree>`.
-   */
+  /** See `cascadeUpdateComplete` and the matching override on `<lyra-tree>`. */
   protected async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
-    await Promise.all(
-      [...(this.shadowRoot?.querySelectorAll('lyra-tree-node') ?? [])].map(
-        (n) => (n as LyraTreeNode).updateComplete,
-      ),
-    );
+    await cascadeUpdateComplete(this.shadowRoot?.querySelectorAll('lyra-tree-node') ?? []);
     return result;
   }
+
+  /**
+   * A `<button>` is a real focusable click target even with
+   * `tabindex="-1" aria-hidden="true"` -- only *sequential* (Tab-key)
+   * navigation honors `tabindex="-1"`, a mouse click does not. Left
+   * unguarded, clicking this toggle parks real DOM focus on this hidden,
+   * non-treeitem button instead of the host, which is both an a11y dead end
+   * and invisible to `:host(:focus-visible)`'s ring. `preventDefault()` on
+   * `mousedown` blocks that default focus move; focusing the host instead
+   * keeps focus on the actual `role="treeitem"` element the row represents.
+   */
+  private onToggleMouseDown = (e: MouseEvent): void => {
+    e.preventDefault();
+    this.focus();
+  };
 
   render(): TemplateResult {
     return html`
@@ -154,6 +163,8 @@ export class LyraTreeNode extends LyraElement {
           type="button"
           tabindex="-1"
           aria-hidden="true"
+          ?hidden=${!this.hasChildren}
+          @mousedown=${this.onToggleMouseDown}
           @click=${(e: Event) => {
             e.stopPropagation();
             this.expanded ? this.collapse() : this.expand();

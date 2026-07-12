@@ -5,8 +5,17 @@ export function parseISO(s: string): Date | null {
   if (!s) return null;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
   if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return isNaN(d.getTime()) ? null : d;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const d = new Date(year, month - 1, day);
+  if (isNaN(d.getTime())) return null;
+  // The Date constructor silently rolls invalid components over into the
+  // next month/year (e.g. month 13 or Feb 30) instead of producing an
+  // invalid date, so a calendar-invalid input must be caught by comparing
+  // the constructed date back against what was actually typed.
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  return d;
 }
 
 /** Format a Date as local `YYYY-MM-DD`. */

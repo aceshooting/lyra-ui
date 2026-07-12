@@ -12,8 +12,8 @@ export const styles = css`
     gap: var(--lyra-space-s);
   }
   [part='play-button'] {
-    inline-size: 2rem;
-    block-size: 2rem;
+    inline-size: var(--lyra-icon-button-size);
+    block-size: var(--lyra-icon-button-size);
     border-radius: 50%;
     border: 1px solid var(--lyra-color-border);
     background: var(--lyra-color-surface);
@@ -37,5 +37,13 @@ export const styles = css`
   }
   [part='slider'] {
     accent-color: var(--lyra-color-brand);
+  }
+  [part='slider']:disabled {
+    opacity: var(--lyra-opacity-disabled);
+    cursor: not-allowed;
+  }
+  [part='slider']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 `;

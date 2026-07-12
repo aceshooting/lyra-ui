@@ -32,6 +32,19 @@ it('round-trips ISO parse/format', () => {
   expect(parseISO('')).to.equal(null);
 });
 
+it('rejects calendar-invalid dates instead of letting them roll over to the next month', () => {
+  // JS Date silently normalizes Feb 30 -> Mar 2, month 13 -> next January,
+  // etc. -- parseISO must catch that instead of returning the rolled-over
+  // date, per its own doc comment ("...or null if invalid").
+  expect(parseISO('2026-02-30')).to.equal(null);
+  expect(parseISO('2026-13-01')).to.equal(null);
+  expect(parseISO('2026-04-31')).to.equal(null);
+  expect(parseISO('2026-00-10')).to.equal(null);
+  expect(parseISO('2026-01-00')).to.equal(null);
+  // A genuine leap-day is still valid.
+  expect(formatISO(parseISO('2024-02-29')!)).to.equal('2024-02-29');
+});
+
 it('compares days and adds months', () => {
   expect(isSameDay(new Date(2026, 6, 7), new Date(2026, 6, 7, 23))).to.be.true;
   expect(isSameDay(new Date(2026, 6, 7), new Date(2026, 6, 8))).to.be.false;

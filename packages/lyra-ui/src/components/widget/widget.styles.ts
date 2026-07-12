@@ -3,6 +3,10 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* Fullscreen scrim color -- component-specific so a host can retheme it
+       without a raw literal leaking into the public API (no shared
+       --wa-*-overlay token exists in the design system to resolve through). */
+    --lyra-widget-overlay-color: rgb(0 0 0 / 0.5);
   }
   [part='base'] {
     display: flex;
@@ -75,7 +79,7 @@ export const styles = css`
   [part='backdrop'] {
     position: fixed;
     inset: 0;
-    background: rgb(0 0 0 / 0.5);
+    background: var(--lyra-widget-overlay-color);
     z-index: 999;
   }
   :host([fullscreen]) [part='base'] {
@@ -87,5 +91,11 @@ export const styles = css`
   :host([fullscreen]) [part='body'] {
     overflow: auto;
     block-size: 100%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='collapse-button'],
+    [part='fullscreen-button'] {
+      transition: none !important;
+    }
   }
 `;

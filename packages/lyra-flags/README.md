@@ -19,7 +19,21 @@ You normally never call this directly; `<lyra-flag>` resolves it internally. Dir
 ```js
 import { flagUrl } from '@aceshooting/lyra-flags';
 
-flagUrl('fr'); // -> resolved URL of flags/fr.svg
+await flagUrl('fr'); // -> resolved URL of flags/fr.svg
+```
+
+`flagUrl()` is genuinely code-split per flag — each code is its own dynamically-`import()`ed
+chunk, so calling `flagUrl('fr')` only ever fetches `fr`'s asset, never the other 248. That's why
+it's `async`: this is a real, separate lazy-load per code, not a lookup into one eagerly-bundled
+map (verified with a real Vite build: referencing 2 codes shipped ~28 KB total, not all 249).
+
+For the opposite case — a consumer that genuinely wants every flag up front (e.g. a flag-picker
+listing every country) — use `flagUrls()` instead:
+
+```js
+import { flagUrls } from '@aceshooting/lyra-flags';
+
+const urls = await flagUrls(); // -> { ad: '...', ae: '...', ..., zw: '...' } — all 249 at once
 ```
 
 ## Asset provenance / license

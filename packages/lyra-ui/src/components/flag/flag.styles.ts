@@ -13,7 +13,7 @@ export const styles = css`
     block-size: 100%;
     inline-size: 100%;
     border-radius: var(--lyra-flag-radius, 2px);
-    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08) inset;
+    box-shadow: 0 0 0 1px var(--lyra-color-border) inset;
     object-fit: cover;
   }
   :host([round]) {

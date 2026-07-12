@@ -17,6 +17,7 @@ const icons = {
   playIcon,
   pauseIcon,
   calendarIcon,
+  expandIcon,
 };
 
 for (const [name, fn] of Object.entries(icons)) {
@@ -43,12 +44,4 @@ it('every icon shares the same viewBox and stroke-width for visual consistency',
   const strokeWidths = new Set(svgs.map((s) => s.getAttribute('stroke-width')));
   expect(viewBoxes.size, 'all icons should share one viewBox').to.equal(1);
   expect(strokeWidths.size, 'all icons should share one stroke-width').to.equal(1);
-});
-
-it('expandIcon renders an svg with the shared viewBox', () => {
-  const template = expandIcon();
-  const container = document.createElement('div');
-  render(template, container);
-  const svg = container.querySelector('svg')!;
-  expect(svg.getAttribute('viewBox')).to.equal('0 0 24 24');
 });

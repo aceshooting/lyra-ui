@@ -1,6 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import type { Chart, ChartConfiguration, ChartType } from 'chart.js';
+import type { ActiveDataPoint, Chart, ChartConfiguration, ChartEvent, ChartType } from 'chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadChartJs } from './chart-loader.js';
@@ -50,6 +50,28 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 // skipped unconditionally regardless of `base`'s own shape.
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Defensive JS-side fallbacks for themeColors() below, mirroring the
+// light-mode default of each `--lyra-chart-*` token's own fallback chain
+// (see chart.styles.ts) — only reached if getComputedStyle somehow can't
+// resolve the custom property at all (e.g. host detached from the document).
+const FALLBACK_GRID_COLOR = '#8a8a90';
+const FALLBACK_TICK_COLOR = '#6b7280';
+const FALLBACK_LEGEND_COLOR = '#1a1a1a';
+const FALLBACK_TOOLTIP_BG = '#fff';
+const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
+
+interface ThemeColors {
+  grid: string;
+  tick: string;
+  legend: string;
+  tooltipBg: string;
+  tooltipText: string;
+}
+
 function deepMerge<T>(base: T, override: unknown): T {
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return (override === undefined ? base : (override as T)) as T;
@@ -83,6 +105,10 @@ function deepMerge<T>(base: T, override: unknown): T {
  *
  * @customElement lyra-chart
  * @event lyra-zoom - `detail: { zoomed }`.
+ * @event lyra-point-click - Fired when a click lands on (or nearest,
+ *   intersect-only — see `handlePointClick()`) a data point/segment.
+ *   `detail: { datasetIndex: number, index: number, label: string |
+ *   undefined, value: unknown }`.
  * @csspart base, canvas, reset-zoom-button
  */
 export class LyraChart extends LyraElement {
@@ -99,6 +125,10 @@ export class LyraChart extends LyraElement {
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ attribute: 'y2-label' }) y2Label = '';
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
+  /** Sets `options.indexAxis = 'y'`, Chart.js's own mechanism for horizontal bars (also applies to line/area types). */
+  @property({ type: Boolean }) horizontal = false;
+  /** Stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only meaningful for `bar` and `line` types. */
+  @property({ type: Boolean }) stacked = false;
 
   /**
    * Raw Chart.js configuration passthrough — mirrors `wa-chart`'s `config`
@@ -123,6 +153,12 @@ export class LyraChart extends LyraElement {
   // raw passthrough) can override the generated type in `buildConfig()`. See
   // the deep-merge note on `buildConfig()` below.
   private builtType?: ChartType;
+  // `chartjs-plugin-zoom`'s own `resetZoom()` synchronously re-invokes the
+  // `onZoomComplete` callback below as part of its reset, which would emit a
+  // stale `{zoomed: true}` right before `resetZoom()` emits the real
+  // `{zoomed: false}`. Set while this component's own `resetZoom()` is
+  // driving the plugin so that re-entrant callback is ignored.
+  private suppressZoomComplete = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -175,42 +211,118 @@ export class LyraChart extends LyraElement {
   }
 
   /**
+   * Resolves the `--lyra-chart-*` theme tokens (declared in
+   * `chart.styles.ts`, each layered over an existing semantic token) via
+   * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
+   * consume CSS `var()` directly — same constraint documented on
+   * `heatmap.ts`'s `labelColor()`/`noDataFill()`/`scaleEndpoints()` — so this
+   * is called fresh from `buildConfig()` on every draw rather than cached.
+   */
+  private themeColors(): ThemeColors {
+    const cs = getComputedStyle(this);
+    return {
+      grid: cs.getPropertyValue('--lyra-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
+      tick: cs.getPropertyValue('--lyra-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
+      legend: cs.getPropertyValue('--lyra-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
+      tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
+      tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
+    };
+  }
+
+  /**
    * Builds `options.scales` for the effective chart type: no scale at all for
    * pie/doughnut (a proportional-area chart has no axis), the single radial
    * `r` scale Chart.js v4 uses for radar/polarArea, and the cartesian
-   * `x`/`y`(/`y2`) block for every other (line/bar/scatter/bubble) type.
+   * `x`/`y`(/`y2`) block for every other (line/bar/scatter/bubble) type — with
+   * `x` itself further split within that block: scatter and bubble datasets
+   * carry raw numeric `{x, y(, r)}` points (via `Series.points`) and need a
+   * linear `x` scale, while line/bar plot against `labels` and need the
+   * default categorical one. `theme` (from `themeColors()`) drives every
+   * scale's `ticks.color`/`grid.color`/axis `title.color` so grid lines and
+   * labels retheme instead of sitting at Chart.js's own hardcoded defaults.
    */
-  private buildScales(): NonNullable<ChartConfiguration['options']>['scales'] {
+  private buildScales(theme: ThemeColors): NonNullable<ChartConfiguration['options']>['scales'] {
     if (this.type === 'pie' || this.type === 'doughnut') return {};
 
     if (this.type === 'radar' || this.type === 'polarArea') {
       return {
         r: {
           beginAtZero: this.beginAtZero,
+          ticks: { color: theme.tick },
+          grid: { color: theme.grid },
+          angleLines: { color: theme.grid },
+          pointLabels: { color: theme.tick },
         },
       };
     }
 
     const hasY2 = this.datasets.some((s) => s.axis === 'y2');
+    // `stacked` only applies to bar/line-family charts sharing a categorical
+    // axis, per the design spec — scatter/bubble's linear x scale and the
+    // radial r scale above are out of scope.
+    const stacked = this.stacked && (this.type === 'bar' || this.type === 'line');
     return {
       x: {
-        type: this.type === 'scatter' ? 'linear' : 'category',
-        title: { display: !!this.xLabel, text: this.xLabel },
+        type: this.type === 'scatter' || this.type === 'bubble' ? 'linear' : 'category',
+        title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
+        ticks: { color: theme.tick },
+        grid: { color: theme.grid },
+        stacked,
       },
-      y: { beginAtZero: this.beginAtZero, title: { display: !!this.yLabel, text: this.yLabel } },
+      y: {
+        beginAtZero: this.beginAtZero,
+        title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
+        ticks: { color: theme.tick },
+        grid: { color: theme.grid },
+        stacked,
+      },
       ...(hasY2
         ? {
             y2: {
               position: 'right',
-              grid: { drawOnChartArea: false },
-              title: { display: !!this.y2Label, text: this.y2Label },
+              grid: { drawOnChartArea: false, color: theme.grid },
+              title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick },
+              ticks: { color: theme.tick },
+              stacked,
             },
           }
         : {}),
     };
   }
 
+  /**
+   * `options.onClick` handler wired in `buildConfig()`. The chart-wide
+   * `interaction` mode above (`'index'`/`'nearest'`, `intersect: false`) is
+   * tuned for hover tooltips — resolving which single point/segment was
+   * actually clicked needs its own `getElementsAtEventForMode('nearest', {
+   * intersect: true }, true)` lookup instead, so a click landing off any
+   * point/segment reports nothing (`elements` empty) rather than firing for
+   * whatever's nearest. Covers the per-bar/per-segment click ask for any
+   * chart type (bar/line/pie/doughnut/etc.), not just bars.
+   */
+  private handlePointClick(event: ChartEvent, chart: Chart): void {
+    // Chart.js's own `onClick` handler hands us its `ChartEvent` wrapper, but
+    // `getElementsAtEventForMode()`'s .d.ts (inaccurately) types its first
+    // param as a DOM `Event` — at runtime Chart.js only reads `.x`/`.y` off
+    // whatever is passed (see chart.js/src/helpers/helpers.dom.ts
+    // `getRelativePosition()`), which `ChartEvent` already has, so the cast
+    // here is a type-only correction, not a behavior change.
+    const elements = chart.getElementsAtEventForMode(
+      event as unknown as Event,
+      'nearest',
+      { intersect: true },
+      true,
+    ) as ActiveDataPoint[];
+    const hit = elements[0];
+    if (!hit) return;
+    const { datasetIndex, index } = hit;
+    const label = chart.data.labels?.[index] as string | undefined;
+    const value = chart.data.datasets[datasetIndex]?.data?.[index] ?? null;
+    this.emit('lyra-point-click', { datasetIndex, index, label, value });
+  }
+
   private buildConfig(): ChartConfiguration {
+    const theme = this.themeColors();
     const generated: ChartConfiguration = {
       type: this.type as ChartType,
       data: {
@@ -220,9 +332,25 @@ export class LyraChart extends LyraElement {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // Chart.js's own mechanism for horizontal bars (also flips line/area
+        // types onto a horizontal category axis).
+        indexAxis: this.horizontal ? 'y' : undefined,
+        // Chart.js's own default ~1000ms draw-in animation only ever fires
+        // from `new Chart()` (chart/type-change construction) — every
+        // in-place update in `draw()` already passes `'none'` to
+        // `Chart#update()`. A CSS media query can't reach that
+        // canvas-internal animation loop, so `prefersReducedMotion()` is
+        // checked here instead and fed into `options.animation`.
+        animation: prefersReducedMotion() ? false : undefined,
         interaction: { intersect: false, mode: this.type === 'scatter' ? 'nearest' : 'index' },
+        onClick: (event, _elements, chart) => this.handlePointClick(event, chart),
         plugins: {
-          legend: { display: this.legend },
+          legend: { display: this.legend, labels: { color: theme.legend } },
+          tooltip: {
+            backgroundColor: theme.tooltipBg,
+            titleColor: theme.tooltipText,
+            bodyColor: theme.tooltipText,
+          },
           zoom: this.zoom
             ? {
                 pan: { enabled: false },
@@ -232,6 +360,7 @@ export class LyraChart extends LyraElement {
                   pinch: { enabled: true },
                   mode: 'x',
                   onZoomComplete: () => {
+                    if (this.suppressZoomComplete) return;
                     this.zoomed = true;
                     this.emit('lyra-zoom', { zoomed: true });
                   },
@@ -240,7 +369,7 @@ export class LyraChart extends LyraElement {
               }
             : undefined,
         },
-        scales: this.buildScales(),
+        scales: this.buildScales(theme),
       },
     };
 
@@ -271,9 +400,27 @@ export class LyraChart extends LyraElement {
 
   /** Reset any active zoom/pan back to the original view. */
   resetZoom(): void {
-    (this.chart as unknown as { resetZoom?: () => void })?.resetZoom?.();
+    this.suppressZoomComplete = true;
+    try {
+      (this.chart as unknown as { resetZoom?: () => void })?.resetZoom?.();
+    } finally {
+      this.suppressZoomComplete = false;
+    }
     this.zoomed = false;
     this.emit('lyra-zoom', { zoomed: false });
+  }
+
+  /**
+   * Forces a redraw so `themeColors()` re-reads the `--lyra-chart-*` custom
+   * properties from the current computed style. No global theme-broadcast
+   * event exists anywhere in lyra-ui (nothing to subscribe to here) — this
+   * is the escape hatch for a consumer's own theme-toggle handler to call
+   * directly when it flips e.g. a `data-theme` attribute upstream that
+   * doesn't otherwise change any `lyra-chart` property, so Lit's reactive
+   * update loop has nothing of its own to trigger `draw()` on.
+   */
+  refreshTheme(): void {
+    this.draw();
   }
 
   render(): TemplateResult {

@@ -12,3 +12,15 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => html`<lyra-file-input multiple accept=".csv,.xlsx"></lyra-file-input>`,
 };
+
+export const CustomSlotContent: Story = {
+  render: () =>
+    html`<lyra-file-input multiple accept=".csv,.xlsx" label="Upload spreadsheets">
+      <strong>Drag spreadsheets here</strong>
+      <span>or click to browse (.csv, .xlsx)</span>
+    </lyra-file-input>`,
+};
+
+export const Disabled: Story = {
+  render: () => html`<lyra-file-input disabled accept=".csv,.xlsx"></lyra-file-input>`,
+};

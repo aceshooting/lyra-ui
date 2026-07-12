@@ -110,6 +110,16 @@ it('does not throw on dragenter when accept has an extension pattern', async () 
   expect(() => dragEnterWith(base, [makeFile('a.png', 'image/png')])).to.not.throw();
 });
 
+it('previews an extension-only accept list as "accept", not "reject", on dragenter', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input accept=".csv,.xlsx"></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+});
+
 it('matches an accept MIME wildcard on drop', async () => {
   const el = (await fixture(
     html`<lyra-file-input accept="image/*"></lyra-file-input>`,
@@ -143,6 +153,34 @@ it('does not accept drops while disabled', async () => {
   expect(fired).to.be.false;
 });
 
+it('keeps the "accept"/"reject" preview state while a drag moves across nested child elements', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input><span>drop here</span></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const child = el.querySelector('span') as HTMLElement;
+
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+
+  dragEnterWith(child, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+
+  const leaveFromChild = new DragEvent('dragleave', { bubbles: true, cancelable: true });
+  child.dispatchEvent(leaveFromChild);
+  await el.updateComplete;
+  // Still inside `base` overall (the counter only nets to 0 once every nested
+  // dragenter has a matching dragleave), so it must not reset to 'default' yet.
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+
+  const leaveFromBase = new DragEvent('dragleave', { bubbles: true, cancelable: true });
+  base.dispatchEvent(leaveFromBase);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('default');
+});
+
 it('openPicker() clicks the hidden native input', async () => {
   const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
   const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
@@ -150,6 +188,16 @@ it('openPicker() clicks the hidden native input', async () => {
   input.addEventListener('click', () => (clicked = true));
   el.openPicker();
   expect(clicked).to.be.true;
+});
+
+it('openPicker() does not fire a click on the native input while disabled', async () => {
+  const el = (await fixture(html`<lyra-file-input disabled></lyra-file-input>`)) as LyraFileInput;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  expect(input.disabled).to.be.true;
+  let clicked = false;
+  input.addEventListener('click', () => (clicked = true));
+  el.openPicker();
+  expect(clicked).to.be.false;
 });
 
 it('the dropzone base is keyboard-focusable and operable', async () => {
@@ -178,10 +226,27 @@ it('removes the dropzone base from the tab order and ignores Enter/Space while d
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
   expect(base.getAttribute('tabindex')).to.equal('-1');
+  expect(base.getAttribute('aria-disabled')).to.equal('true');
   let clicked = false;
   input.addEventListener('click', () => (clicked = true));
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   expect(clicked).to.be.false;
+});
+
+it('has no aria-disabled attribute when not disabled', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.hasAttribute('aria-disabled')).to.be.false;
+});
+
+it('keeps the accessible name sourced from `label` even when slot content overrides the visible text', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input label="Upload files"
+      ><svg aria-hidden="true"></svg
+    ></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-label')).to.equal('Upload files');
 });
 
 it('adds a :focus-visible outline to the dropzone base using the shared focus-ring tokens', () => {
@@ -197,7 +262,33 @@ it('uses the shared --lyra-opacity-disabled token instead of a literal 0.5 for t
   expect(css).to.not.include('opacity: 0.5;');
 });
 
+it('hides the status live region visually via the shared sr-only helper, not a private duplicate', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  expect(status.classList.contains('sr-only')).to.be.true;
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.not.include("[part='status']");
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
   await expect(el).to.be.accessible();
+});
+
+it('announces accept/reject drag state changes via a polite live region', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  expect(status.getAttribute('aria-live')).to.equal('polite');
+  expect(status.textContent).to.equal('');
+
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(status.textContent).to.equal('Release to add the file.');
+
+  el.allowedMimeTypes = ['application/pdf'];
+  await el.updateComplete;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(status.textContent).to.equal('This file type is not accepted.');
 });

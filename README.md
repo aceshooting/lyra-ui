@@ -28,12 +28,12 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-35 tags across five component families — see the [live docs site](https://aceshooting.github.io/lyra-ui/)
+38 tags across five component families — see the [live docs site](https://aceshooting.github.io/lyra-ui/)
 for every example, or [`packages/lyra-ui/README.md`](./packages/lyra-ui/README.md#components) for
 the full per-tag reference table.
 
-- **v1 — form controls, toasts, sparkline:** combobox, date picker/input, toast, sparkline, flag
-- **Dashboard atoms:** empty, skeleton, stat, table, gauge, export button, split, widget
+- **v1 — form controls, toasts, sparkline:** combobox, select, date picker/input, toast, sparkline, flag
+- **Dashboard atoms:** empty, skeleton, stat, table, gauge, export button, split, widget, word cloud
 - **Temporal & graph:** time range, playback, heatmap, force-directed graph, tree
 - **Charts:** line/bar/pie/doughnut/radar/polar-area/scatter/bubble chart, histogram, box plot
 - **Map & file input:** maplibre-gl map with legend/choropleth, drag-drop file dropzone

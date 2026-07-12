@@ -3,6 +3,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { GeoJSONSource, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
+import type * as MaplibreGL from 'maplibre-gl';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadMaplibre } from './map-loader.js';
@@ -14,10 +15,20 @@ export interface LegendEntry {
   label: string;
 }
 
+/**
+ * Declarative GeoJSON fill layer, colored by interpolating `field`'s value
+ * across `stops`.
+ */
 export interface ChoroplethLayer {
   sourceId: string;
   geojson: GeoJSON.FeatureCollection;
   field: string;
+  /**
+   * `[value, color]` pairs, ascending by `value`, fed to a maplibre-gl
+   * `interpolate` expression. Must contain at least one pair -- an empty
+   * array can't build a valid expression, so it's ignored (the existing fill
+   * layer, if any, is left as-is) rather than applied.
+   */
   stops: [number, string][];
 }
 
@@ -26,6 +37,12 @@ export interface MapMarker {
   lngLat: [number, number];
   color?: string;
   label?: string;
+  /**
+   * Rendered as the marker's popup content via maplibre-gl's
+   * `Popup.setHTML()` -- parsed as raw markup, inline event handlers
+   * included. Only ever pass trusted content; sanitize anything derived
+   * from user input before assigning it here.
+   */
   html?: string;
 }
 
@@ -55,17 +72,29 @@ const DEFAULT_STYLE: StyleSpecification = {
 };
 
 /**
- * Rejects a `LegendEntry.color` that could break out of the single
- * `background` declaration it's assigned to — `;`, `{`, and `}` are all a
- * value needs to terminate that declaration and start another. This matters
- * even though the swatch's color is set via Lit's `styleMap` directive (not
- * raw string interpolation): `styleMap`'s first commit for a given
- * attribute part serializes the whole `style` value as a single string
+ * Matches only actual CSS color syntax: hex (`#fff`/`#ffffff`/`#ffffffff`),
+ * bare keywords (named colors, `transparent`, `currentColor`), the standard
+ * color functions, and `var(--custom-property)` references. Anything else --
+ * notably `url(...)`, which is otherwise valid `background` syntax -- is
+ * rejected.
+ */
+const SAFE_SWATCH_COLOR =
+  /^(?:#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch)\([-+0-9.%,/\s]+\)|var\(--[\w-]+\))$/;
+
+/**
+ * Rejects a `LegendEntry.color` that isn't recognizable CSS color syntax --
+ * both to stop it breaking out of the single `background` declaration it's
+ * assigned to (e.g. `;`, `{`, `}`, which terminate/reopen a declaration) and
+ * to stop non-color values such as `url(...)` from being accepted, which
+ * `background` also parses and would fetch as soon as the swatch renders.
+ * This matters even though the swatch's color is set via Lit's `styleMap`
+ * directive (not raw string interpolation): `styleMap`'s first commit for a
+ * given attribute part serializes the whole `style` value as a single string
  * (only later updates go through the safe `CSSStyleDeclaration.setProperty()`
  * path), so an unsanitized value could still inject on that first render.
  */
 function sanitizeSwatchColor(color: string): string | undefined {
-  return /[;{}]/.test(color) ? undefined : color;
+  return SAFE_SWATCH_COLOR.test(color.trim()) ? color : undefined;
 }
 
 /**
@@ -113,7 +142,11 @@ export class LyraMap extends LyraElement {
   // possible v2 option.
   private _appliedChoroplethSourceId?: string;
   private _appliedFillLayerId?: string;
-  private _maplibreModule: any;
+  // Cached once connectedCallback's loadMaplibre().then() resolves, and always
+  // set before `_map` itself is (see that closure) -- so any code path gated
+  // on `this._map` being truthy can rely on this being set too, without
+  // re-awaiting the (already-settled) loadMaplibre() promise.
+  private _maplibreModule?: typeof MaplibreGL;
   private _markerInstances = new Map<string, import('maplibre-gl').Marker>();
   // Bumped on every connectedCallback and captured by value in its
   // loadMaplibre().then() closure below. A disconnect immediately followed
@@ -235,18 +268,33 @@ export class LyraMap extends LyraElement {
       this.removeChoropleth();
     }
 
+    const existingSource = this._map.getSource(sourceId) as GeoJSONSource | undefined;
+    if (existingSource) {
+      // Re-apply the data even if the color expression below ends up skipped:
+      // `geojson` may have changed even though `sourceId`/`stops` didn't.
+      existingSource.setData(geojson);
+    } else {
+      this._map.addSource(sourceId, { type: 'geojson', data: geojson, promoteId: 'id' });
+    }
+    this._appliedChoroplethSourceId = sourceId;
+
+    // An `interpolate` expression needs at least one [value, color] stop pair
+    // -- maplibre-gl's own expression parser requires it and otherwise fires a
+    // silently-ignored ErrorEvent instead of throwing (`addLayer`/
+    // `setPaintProperty` just no-op), so an empty `stops` would otherwise
+    // "succeed" here without ever creating/updating the fill layer, and every
+    // later update (valid `stops`, same `sourceId`) would find `existingSource`
+    // and wrongly assume `setPaintProperty` has a real layer to target. Bail
+    // before touching the layer at all and leave whatever fill layer already
+    // exists (if any) untouched until `stops` is non-empty again.
+    if (stops.length === 0) return;
+
     const colorExpr: unknown[] = ['interpolate', ['linear'], ['get', field]];
     for (const [value, color] of stops) colorExpr.push(value, color);
 
-    const existingSource = this._map.getSource(sourceId) as GeoJSONSource | undefined;
-    if (existingSource) {
-      // Re-apply both the data and the color expression: `field`/`stops` may have
-      // changed even though `sourceId` didn't (e.g. switching which metric colors
-      // the same GeoJSON), so the paint property must be refreshed too.
-      existingSource.setData(geojson);
+    if (this._map.getLayer(fillLayerId)) {
       this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
     } else {
-      this._map.addSource(sourceId, { type: 'geojson', data: geojson, promoteId: 'id' });
       this._map.addLayer({
         id: fillLayerId,
         type: 'fill',
@@ -254,7 +302,6 @@ export class LyraMap extends LyraElement {
         paint: { 'fill-color': colorExpr as never, 'fill-opacity': 0.75 },
       });
     }
-    this._appliedChoroplethSourceId = sourceId;
     this._appliedFillLayerId = fillLayerId;
   }
 
@@ -271,29 +318,45 @@ export class LyraMap extends LyraElement {
     this._appliedFillLayerId = undefined;
   }
 
-  private async applyMarkers(): Promise<void> {
-    if (!this._map) return;
-    const mod = await loadMaplibre();
-    if (!mod) return;
+  // Deliberately synchronous (no `await loadMaplibre()`): `_maplibreModule` is
+  // already cached by the time `_map` exists (both are set in the same
+  // connectedCallback closure, see above), and every caller here is
+  // fire-and-forget. Re-awaiting the loader would open a window between the
+  // `_map` check and the marker mutations below where a disconnect (which
+  // synchronously clears `_map`) could resume into a torn-down map -- staying
+  // synchronous closes that window by construction instead of re-checking
+  // after the fact.
+  private applyMarkers(): void {
+    const map = this._map;
+    const mod = this._maplibreModule;
+    if (!map || !mod) return;
     const visible = new Set<string>();
     for (const m of this.markers) {
       const key = m.id ?? `${m.lngLat[0]},${m.lngLat[1]}`;
       visible.add(key);
       const existing = this._markerInstances.get(key);
       if (!existing) {
-        const marker = new (mod as any).Marker(m.color ? { color: m.color } : undefined).setLngLat(
-          m.lngLat,
-        );
+        const marker = new mod.Marker(m.color ? { color: m.color } : undefined).setLngLat(m.lngLat);
         if (m.html || m.label) {
-          const popup = new (mod as any).Popup({ offset: 12 });
+          const popup = new mod.Popup({ offset: 12 });
           if (m.html) popup.setHTML(m.html);
           else if (m.label) popup.setText(m.label);
           marker.setPopup(popup);
         }
-        marker.addTo(this._map);
+        marker.addTo(map);
         this._markerInstances.set(key, marker);
       } else {
         existing.setLngLat(m.lngLat);
+        const popup = existing.getPopup();
+        if (m.html) {
+          if (popup) popup.setHTML(m.html);
+          else existing.setPopup(new mod.Popup({ offset: 12 }).setHTML(m.html));
+        } else if (m.label) {
+          if (popup) popup.setText(m.label);
+          else existing.setPopup(new mod.Popup({ offset: 12 }).setText(m.label));
+        } else if (popup) {
+          existing.setPopup(undefined);
+        }
       }
     }
     for (const [key, marker] of this._markerInstances) {

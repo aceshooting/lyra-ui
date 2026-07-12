@@ -1,9 +1,10 @@
 import { css } from 'lit';
+import { tag } from './prefix.js';
 
 let counter = 0;
 
 /** Monotonic unique id, scoped by a short label (e.g. `nextId('listbox')`). */
-export const nextId = (scope: string): string => `lyra-${scope}-${++counter}`;
+export const nextId = (scope: string): string => `${tag(scope)}-${++counter}`;
 
 /** Visually-hidden-but-screen-reader-available helper class. */
 export const srOnly = css`

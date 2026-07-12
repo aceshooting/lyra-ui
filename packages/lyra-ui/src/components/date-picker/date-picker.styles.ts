@@ -103,7 +103,7 @@ export const styles = css`
   }
   [part~='day']:disabled {
     color: var(--lyra-color-text-quiet);
-    opacity: 0.35;
+    opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
   [part~='day']:focus-visible {

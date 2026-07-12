@@ -1,4 +1,6 @@
 import { setCustomElementsManifest } from '@storybook/web-components';
+// Docs/story authoring only — lyra-* components' shadow DOM never sees this.
+import './tailwind.css';
 // Registers every lyra-* custom element once, for every story — no per-story imports needed.
 import '../packages/lyra-ui/src/lyra.js';
 // <lyra-map>'s optional peer `maplibre-gl` ships its own CSS as a side-effect import — same

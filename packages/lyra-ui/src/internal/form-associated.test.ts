@@ -68,3 +68,18 @@ it('restores the constructed default value on form.reset(), not blank', async ()
   form.reset();
   expect(ctl.value).to.equal('2026-07-15');
 });
+
+it('cascades disablement from an ancestor <fieldset disabled> via formDisabledCallback', async () => {
+  const form = await fixture<HTMLFormElement>(
+    html`<form><fieldset><lyra-demo-ctl name="x"></lyra-demo-ctl></fieldset></form>`,
+  );
+  const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl;
+  const fieldset = form.querySelector('fieldset')!;
+  expect(ctl.disabled).to.be.false;
+
+  fieldset.disabled = true;
+  expect(ctl.disabled).to.be.true;
+
+  fieldset.disabled = false;
+  expect(ctl.disabled).to.be.false;
+});

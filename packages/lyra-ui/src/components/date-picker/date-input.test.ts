@@ -29,6 +29,26 @@ it('reverts an unparseable typed date to the last committed display text and fla
   expect(el.internals.validity.badInput).to.be.true;
 });
 
+it('flags an ISO-shaped but calendar-invalid typed date (e.g. Feb 30) as badInput instead of silently correcting it', async () => {
+  // Regression test: parseISO used to accept "2026-02-30" via JS Date's
+  // auto-rollover (returning March 2) instead of null, and Date.parse() has
+  // the same rollover behavior for an ISO-shaped string -- so a mistyped day
+  // used to silently commit a different date with no feedback at all.
+  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const committedDisplay = input.value;
+
+  input.value = '2026-02-30';
+  input.dispatchEvent(new Event('change'));
+  await el.updateComplete;
+
+  expect(el.value).to.equal('2026-07-15'); // not silently rolled over to March 2
+  expect(input.value).to.equal(committedDisplay);
+  expect(el.checkValidity()).to.be.false;
+  expect(el.internals.validity.badInput).to.be.true;
+});
+
 it('opens the calendar and commits a picked date', async () => {
   const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
   el.show();
@@ -42,6 +62,103 @@ it('opens the calendar and commits a picked date', async () => {
   await oneEvent(el, 'change');
   expect(el.value).to.equal('2026-07-22');
   expect(el.open).to.be.false; // single mode closes on pick
+});
+
+it('fires exactly one input event per day pick, not two', async () => {
+  // Regression test: the nested <lyra-date-picker>'s own 'input' event
+  // (LyraElement.emit always dispatches bubbles:true, composed:true) had no
+  // listener wired on it in date-input's render(), so it bubbled straight
+  // through the shadow boundary and fired a second, uncounted 'input' on
+  // this host on top of onPickerChange's own explicit emit.
+  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  el.show();
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker')!;
+  await (picker as unknown as LyraDateInput).updateComplete;
+
+  let inputCount = 0;
+  el.addEventListener('input', () => inputCount++);
+
+  const day = picker.shadowRoot!.querySelector('[data-date="2026-07-22"]') as HTMLButtonElement;
+  setTimeout(() => day.click());
+  await oneEvent(el, 'change');
+  expect(inputCount).to.equal(1);
+});
+
+it('fires exactly one input event per range click, and one change once the range completes', async () => {
+  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  el.show();
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  picker.goToDate('2026-07-01');
+  await picker.updateComplete;
+
+  let inputCount = 0;
+  let changeCount = 0;
+  el.addEventListener('input', () => inputCount++);
+  el.addEventListener('change', () => changeCount++);
+
+  (picker.shadowRoot!.querySelector('[data-date="2026-07-05"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(inputCount, 'the first click of a range should fire input once').to.equal(1);
+  expect(changeCount).to.equal(0);
+
+  setTimeout(() => (picker.shadowRoot!.querySelector('[data-date="2026-07-10"]') as HTMLButtonElement).click());
+  await oneEvent(el, 'change');
+  expect(inputCount, 'the second click of a range should fire input a second time, not a third').to.equal(2);
+  expect(changeCount).to.equal(1);
+});
+
+it('auto-closes the popover once a range selection is completed, not just in single mode', async () => {
+  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  el.show();
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  picker.goToDate('2026-07-01');
+  await picker.updateComplete;
+
+  (picker.shadowRoot!.querySelector('[data-date="2026-07-05"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.open, 'should stay open after the first click of a range').to.be.true;
+
+  setTimeout(() => (picker.shadowRoot!.querySelector('[data-date="2026-07-10"]') as HTMLButtonElement).click());
+  await oneEvent(el, 'change');
+  expect(el.open, 'should close once the range selection is complete').to.be.false;
+});
+
+it('closes the popover on Escape from anywhere inside the form control', async () => {
+  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  el.show();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const formControl = el.shadowRoot!.querySelector('[part="form-control"]') as HTMLElement;
+  formControl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('propagates disable-past/disable-future/with-outside-days to the nested lyra-date-picker', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input disable-past disable-future with-outside-days></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  expect(picker.disablePast).to.be.true;
+  expect(picker.disableFuture).to.be.true;
+  expect(picker.withOutsideDays).to.be.true;
+});
+
+it('links the expand-button to the popup via aria-controls', async () => {
+  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const expandBtn = el.shadowRoot!.querySelector('[part="expand-button"]') as HTMLElement;
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(popup.id, 'expected the popup to have an id').to.not.equal('');
+  expect(expandBtn.getAttribute('aria-controls')).to.equal(popup.id);
 });
 
 it('shows a formatted display value', async () => {
@@ -270,6 +387,27 @@ it('pairs the form-control label with the date input via for/id so clicking the 
   const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   expect(label.htmlFor, 'label should have a for attribute').to.not.equal('');
   expect(label.htmlFor).to.equal(input.id);
+});
+
+it('propagates locale, first-day-of-week and weekday-format to the nested lyra-date-picker', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input locale="fr-FR" first-day-of-week="mon" weekday-format="narrow"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  expect(picker.locale).to.equal('fr-FR');
+  expect(picker.firstDayOfWeek).to.equal('mon');
+  expect(picker.weekdayFormat).to.equal('narrow');
+});
+
+it('formats the displayed value using the locale property', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input value="2026-07-15" locale="fr-FR"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString('fr-FR'));
 });
 
 it('applies the shared focus-ring tokens to the clear and expand buttons', () => {

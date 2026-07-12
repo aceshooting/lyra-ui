@@ -39,11 +39,45 @@ it('renders an action button when provided', async () => {
   expect(clicked).to.be.true;
 });
 
+it('reflects the placement property on <lyra-toast>', async () => {
+  const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
+  expect(region.getAttribute('placement')).to.equal('top-end');
+
+  region.placement = 'bottom-center';
+  await region.updateComplete;
+  expect(region.getAttribute('placement')).to.equal('bottom-center');
+});
+
+it('does not retroactively move an already-open toast when a later call uses a different placement', async () => {
+  const first = toast({ message: 'stay put', placement: 'top-start', duration: 0 });
+  await first.item;
+  const firstRegion = document.querySelector('lyra-toast[placement="top-start"]') as LyraToast | null;
+  expect(firstRegion, 'a region for top-start should have been mounted').to.exist;
+
+  toast({ message: 'elsewhere', placement: 'bottom-start', duration: 0 });
+  await waitUntil(() => document.querySelector('lyra-toast[placement="bottom-start"]'));
+
+  expect(firstRegion!.placement, 'the earlier top-start region must stay at top-start').to.equal('top-start');
+  expect(firstRegion!.isConnected).to.be.true;
+});
+
 it('create() on the region resolves to the item', async () => {
   const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
   const item = await region.create('direct', { variant: 'warning', duration: 0 });
   expect(item.variant).to.equal('warning');
   expect(item.textContent).to.contain('direct');
+});
+
+it('is accessible as a bare region with no toasts open', async () => {
+  const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
+  await expect(region).to.be.accessible();
+});
+
+it('is accessible once a toast item is showing inside it', async () => {
+  const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
+  const item = await region.create('Accessible toast', { duration: 0 });
+  await waitUntil(() => item.hasAttribute('data-visible'));
+  await expect(region).to.be.accessible();
 });
 
 it('does not contain the dead `[part="stack"]::slotted(*)` selector', () => {

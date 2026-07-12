@@ -11,8 +11,8 @@ import { styles } from './playback.styles.js';
  * play-timers in time-series dashboards.
  *
  * @customElement lyra-playback
- * @event lyra-play
- * @event lyra-pause
+ * @event lyra-play - Fired when playback starts.
+ * @event lyra-pause - Fired when playback stops (including auto-pause).
  * @event lyra-step - `detail: { index }`, fired on every tick and manual step.
  * @csspart base, play-button, slider
  */
@@ -36,6 +36,11 @@ export class LyraPlayback extends LyraElement {
 
   private timer?: number;
 
+  /** Largest index reachable at the current `length` (never negative). */
+  private get maxIndex(): number {
+    return Math.max(0, this.length - 1);
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.pause();
@@ -43,11 +48,16 @@ export class LyraPlayback extends LyraElement {
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('hidden') && this.hidden) this.pause();
-    // If length is externally reduced to <= 1 while playing, the timer would
-    // otherwise keep firing forever — and the play button (the only control
-    // that could stop it) becomes ?disabled at that point, leaving no way to
-    // stop it from the rendered UI.
-    if (changed.has('length') && this.length <= 1) this.pause();
+    if (changed.has('length')) {
+      // If length is externally reduced to <= 1 while playing, the timer
+      // would otherwise keep firing forever — and the play button (the only
+      // control that could stop it) becomes ?disabled at that point, leaving
+      // no way to stop it from the rendered UI.
+      if (this.length <= 1) this.pause();
+      // Re-clamp `index` into the new `[0, length)` range on any shrink, not
+      // just the <= 1 case above, so it never lingers out of bounds.
+      if (this.index > this.maxIndex) this.index = this.maxIndex;
+    }
   }
 
   /** Start playback; no-op if there's nothing to advance through. */
@@ -55,20 +65,33 @@ export class LyraPlayback extends LyraElement {
     if (this.playing || this.length <= 1) return;
     this.playing = true;
     this.emit('lyra-play');
-    this.timer = window.setInterval(() => this.tick(), this.intervalMs);
+    this.scheduleTick();
   }
 
   /** Stop playback. */
   pause(): void {
     if (!this.playing) return;
-    window.clearInterval(this.timer);
+    window.clearTimeout(this.timer);
     this.timer = undefined;
     this.playing = false;
     this.emit('lyra-pause');
   }
 
+  /** Toggle between playing and paused. */
   toggle(): void {
     this.playing ? this.pause() : this.play();
+  }
+
+  // A self-rescheduling `setTimeout` (rather than one long-lived
+  // `setInterval`) so `intervalMs` is re-read fresh before every tick, the
+  // same way `tick()` already re-reads `this.loop` on every fire — changing
+  // `interval-ms` live takes effect on the very next step instead of only
+  // after a pause/play cycle.
+  private scheduleTick(): void {
+    this.timer = window.setTimeout(() => {
+      this.tick();
+      if (this.playing) this.scheduleTick();
+    }, this.intervalMs);
   }
 
   private tick(): void {
@@ -102,7 +125,7 @@ export class LyraPlayback extends LyraElement {
   /** Jump to an explicit index, pausing playback. */
   goTo(index: number): void {
     this.pause();
-    this.setIndex(Math.min(this.length - 1, Math.max(0, index)));
+    this.setIndex(Math.min(this.maxIndex, Math.max(0, index)));
   }
 
   render(): TemplateResult {
@@ -121,9 +144,10 @@ export class LyraPlayback extends LyraElement {
           part="slider"
           type="range"
           min="0"
-          max=${Math.max(0, this.length - 1)}
+          max=${this.maxIndex}
           .value=${String(this.index)}
           aria-label="Playback position"
+          ?disabled=${this.length <= 1}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value))}
         />
       </div>

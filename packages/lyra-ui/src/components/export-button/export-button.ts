@@ -1,8 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
+import { nextId } from '../../internal/a11y.js';
 import { buildCsv, downloadBlob, type CsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
 
@@ -17,7 +18,9 @@ export type ExportFormat = 'csv' | 'json';
  * @event lyra-export - `detail: { format }`, cancelable — call `preventDefault()`
  *   to substitute the built-in client-side download with a server-generated one.
  * @event lyra-export-complete - Fired after a non-cancelled download completes.
- * @csspart trigger, menu, menu-item
+ * @csspart trigger - The button that triggers the export (or opens the format menu).
+ * @csspart menu - The format-choice menu, shown when more than one format is configured.
+ * @csspart menu-item - A single format option inside the menu.
  */
 export class LyraExportButton extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -30,7 +33,13 @@ export class LyraExportButton extends LyraElement {
   @property() label = 'Export';
   @property({ type: Boolean, reflect: true }) open = false;
 
+  @query('[part="trigger"]') private triggerEl?: HTMLButtonElement;
+  @query('[part="menu"]') private menuEl?: HTMLElement;
+
+  private readonly menuId = nextId('export-menu');
   private cleanup?: () => void;
+  /** Which menu item to focus the next time `open` flips true; reset after use. */
+  private pendingMenuFocusIndex = 0;
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -52,17 +61,69 @@ export class LyraExportButton extends LyraElement {
     this.open = false;
   }
 
+  private menuItemEls(): HTMLButtonElement[] {
+    return Array.from(this.renderRoot.querySelectorAll<HTMLButtonElement>('[part="menu-item"]'));
+  }
+
+  /** Focuses the menu item at `index` (clamped), if the menu is already open and rendered. */
+  private focusMenuItem(index: number): void {
+    const items = this.menuItemEls();
+    if (items.length === 0) return;
+    items[Math.max(0, Math.min(items.length - 1, index))]?.focus();
+  }
+
+  /** Opens the menu (if closed) and focuses `index`, or moves focus there directly if already open. */
+  private focusMenuItemOnOpen(index: number): void {
+    if (this.open) {
+      this.focusMenuItem(index);
+    } else {
+      this.pendingMenuFocusIndex = index;
+      this.openMenu();
+    }
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.open) {
-      e.preventDefault();
-      this.closeMenu();
-      (this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null)?.focus();
+    if (e.key === 'Escape') {
+      if (this.open) {
+        e.preventDefault();
+        this.closeMenu();
+        this.triggerEl?.focus();
+      }
+      return;
+    }
+
+    if (this.formats.length <= 1 || this.disabled) return;
+
+    const items = this.menuItemEls();
+    const currentIndex = items.indexOf(e.target as HTMLButtonElement);
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        this.focusMenuItemOnOpen(currentIndex === -1 ? 0 : currentIndex + 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        this.focusMenuItemOnOpen(currentIndex === -1 ? items.length - 1 : currentIndex - 1);
+        break;
+      case 'Home':
+        if (this.open) {
+          e.preventDefault();
+          this.focusMenuItem(0);
+        }
+        break;
+      case 'End':
+        if (this.open) {
+          e.preventDefault();
+          this.focusMenuItem(items.length - 1);
+        }
+        break;
     }
   };
 
   protected firstUpdated(): void {
-    // Single delegated listener catches Escape from the trigger button or
-    // any menu-item inside this shadow root.
+    // Single delegated listener catches Escape/Arrow/Home/End from the
+    // trigger button or any menu-item inside this shadow root.
     this.renderRoot.addEventListener('keydown', this.onKeyDown as EventListener);
   }
 
@@ -77,23 +138,37 @@ export class LyraExportButton extends LyraElement {
       // property), which bypasses openMenu() entirely.
       document.removeEventListener('pointerdown', this.onDocPointer);
       if (this.open) {
-        const anchor = this.renderRoot.querySelector('[part="trigger"]') as HTMLElement | null;
-        const menu = this.renderRoot.querySelector('[part="menu"]') as HTMLElement | null;
+        const anchor = this.triggerEl;
+        const menu = this.menuEl;
         if (anchor && menu) this.cleanup = place(anchor, menu);
         document.addEventListener('pointerdown', this.onDocPointer);
+        this.focusMenuItem(this.pendingMenuFocusIndex);
+        this.pendingMenuFocusIndex = 0;
       }
     }
   }
 
+  /** Applies the same `columns` allow-list CSV exports use, so JSON can't leak fields CSV hides. */
+  private rowsForExport(): Record<string, unknown>[] {
+    if (this.columns.length === 0) return this.rows;
+    const keys = this.columns.map((c) => c.key);
+    return this.rows.map((row) => {
+      const picked: Record<string, unknown> = {};
+      for (const key of keys) picked[key] = row[key];
+      return picked;
+    });
+  }
+
   private doExport(format: ExportFormat): void {
     this.closeMenu();
+    this.triggerEl?.focus();
     const ev = this.emit('lyra-export', { format });
     if (ev.defaultPrevented) return;
 
     if (format === 'csv') {
       downloadBlob(buildCsv(this.rows, this.columns), `${this.filename}.csv`, 'text/csv;charset=utf-8;');
     } else {
-      downloadBlob(JSON.stringify(this.rows, null, 2), `${this.filename}.json`, 'application/json');
+      downloadBlob(JSON.stringify(this.rowsForExport(), null, 2), `${this.filename}.json`, 'application/json');
     }
     this.emit('lyra-export-complete', { format });
   }
@@ -112,12 +187,13 @@ export class LyraExportButton extends LyraElement {
         ?disabled=${this.disabled}
         aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
         aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}
+        aria-controls=${this.formats.length > 1 ? this.menuId : nothing}
         @click=${() => this.onTriggerClick()}
       >
         ${this.label}
       </button>
       ${this.formats.length > 1
-        ? html`<div part="menu" role="menu">
+        ? html`<div id=${this.menuId} part="menu" role="menu">
             ${this.formats.map(
               (f) =>
                 html`<button

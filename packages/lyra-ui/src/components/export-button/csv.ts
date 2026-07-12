@@ -1,5 +1,9 @@
-const UNSAFE_LEADING = /^[=+\-@\t\r]/;
-const NEEDS_QUOTING = /[",\n]/;
+// A bare leading '-' is not itself formula syntax (only '=', and context-dependent '+'/'@',
+// reliably trigger spreadsheet formula evaluation) — guarding it forces text rendering on
+// ordinary negative numbers/currency. Per OWASP CSV-injection guidance, '-' is intentionally
+// excluded here.
+const UNSAFE_LEADING = /^[=+@\t\r]/;
+const NEEDS_QUOTING = /[",\r\n]/;
 
 /** Escapes a CSV field: quotes as needed, guards against formula injection. */
 export function escapeCsvField(value: unknown): string {

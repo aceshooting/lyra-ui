@@ -4,12 +4,54 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
-    block-size: 1.5rem;
+    /* No fixed block-size here (unlike before presets existed): [part="base"]
+       now carries its own 1.5rem below and the host's block box is just the
+       natural stack height of its children. With presets empty this still
+       computes to exactly 1.5rem (the one [part="base"] child), so the
+       brush-only case renders byte-for-byte the same as before. */
+  }
+  [part='presets'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lyra-space-xs);
+    margin-block-end: var(--lyra-space-s);
+  }
+  [part='preset-button'] {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    border: 1px solid var(--lyra-color-border);
+    border-radius: var(--lyra-radius);
+    background: var(--lyra-color-surface);
+    color: var(--lyra-color-text);
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: var(--lyra-transition-fast);
+  }
+  [part='preset-button']:hover:not(:disabled) {
+    border-color: var(--lyra-color-brand);
+  }
+  [part='preset-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='preset-button'][data-active] {
+    background: var(--lyra-color-brand);
+    border-color: var(--lyra-color-brand);
+    color: var(--lyra-color-on-brand);
+  }
+  [part='preset-button']:disabled {
+    /* Dimming already comes from :host([disabled])'s opacity below (applies
+       to the whole host, presets row included) — stacking a second opacity
+       here would compound multiplicatively and over-dim relative to the
+       handles, which only restate the cursor for the same reason. */
+    cursor: not-allowed;
   }
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: 100%;
+    block-size: 1.5rem;
     display: flex;
     align-items: center;
   }

@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './chart.js';
 import type { LyraChart } from './chart.js';
+import { styles } from './chart.styles.js';
 
 it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
@@ -157,8 +158,29 @@ it('deep-merges a nested `config.options` key without clobbering the rest of the
   const config = (el as any).buildConfig();
   expect(config.options.scales.y.min).to.equal(0);
   expect(config.options.scales.y.beginAtZero).to.equal(true);
-  expect(config.options.scales.y.title).to.deep.equal({ display: true, text: 'Revenue' });
+  expect(config.options.scales.y.title.display).to.equal(true);
+  expect(config.options.scales.y.title.text).to.equal('Revenue');
   expect(config.options.scales.x.type).to.equal('category');
+});
+
+it('gives a scatter chart a linear (not categorical) x scale', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'scatter';
+  el.datasets = [{ label: 'x', points: [{ x: 10, y: 20 }, { x: 15, y: 10 }, { x: 20, y: 30 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.type).to.equal('linear');
+});
+
+it('gives a bubble chart a linear (not categorical) x scale, matching its numeric {x,y,r} points', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bubble';
+  el.datasets = [{ label: 'x', points: [{ x: 10, y: 20 }, { x: 15, y: 10 }, { x: 20, y: 30 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.type).to.equal('linear');
 });
 
 it('omits the scales block for a pie chart (no cartesian or radial axis applies)', async () => {
@@ -222,6 +244,124 @@ it('still builds the cartesian x/y scales block for a line chart', async () => {
   expect(config.options.scales.r).to.not.exist;
 });
 
+it('adds a right-side y2 scale when a dataset uses `axis: "y2"`, labelled by `y2Label`', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.y2Label = 'Secondary';
+  el.datasets = [
+    { label: 'primary', data: [1, 2] },
+    { label: 'secondary', data: [10, 20], axis: 'y2' },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y2).to.exist;
+  expect(config.options.scales.y2.position).to.equal('right');
+  expect(config.options.scales.y2.grid.drawOnChartArea).to.equal(false);
+  expect(config.options.scales.y2.title.display).to.equal(true);
+  expect(config.options.scales.y2.title.text).to.equal('Secondary');
+  expect(config.data.datasets[1].yAxisID).to.equal('y2');
+  expect(config.data.datasets[0].yAxisID).to.equal('y');
+});
+
+it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'primary', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y2).to.not.exist;
+});
+
+it('configures the zoom plugin only when `zoom` is true', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  expect((el as any).buildConfig().options.plugins.zoom).to.equal(undefined);
+
+  el.zoom = true;
+  await el.updateComplete;
+  const config = (el as any).buildConfig();
+  expect(config.options.plugins.zoom.zoom.wheel.enabled).to.equal(true);
+  expect(config.options.plugins.zoom.zoom.drag.enabled).to.equal(true);
+});
+
+it('renders the reset-zoom-button part and emits `lyra-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
+  const el = (await fixture(html`<lyra-chart zoom></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
+
+  const onZoomComplete = (el as any).buildConfig().options.plugins.zoom.zoom.onZoomComplete;
+  let event: CustomEvent | undefined;
+  el.addEventListener('lyra-zoom', (e) => (event = e as CustomEvent), { once: true });
+  onZoomComplete();
+  await el.updateComplete;
+  expect(event!.detail).to.deep.equal({ zoomed: true });
+  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.exist;
+
+  let resetEvent: CustomEvent | undefined;
+  el.addEventListener('lyra-zoom', (e) => (resetEvent = e as CustomEvent), { once: true });
+  el.resetZoom();
+  await el.updateComplete;
+  expect(resetEvent!.detail).to.deep.equal({ zoomed: false });
+  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
+});
+
+it('disables Chart.js animation when the user prefers reduced motion', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    expect((el as any).buildConfig().options.animation).to.equal(false);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it('leaves Chart.js animation at its own default when the user has no reduced-motion preference', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    expect((el as any).buildConfig().options.animation).to.equal(undefined);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
 it('does not let a `__proto__` key in the raw `config` passthrough pollute Object.prototype', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'line';
@@ -248,4 +388,168 @@ it('applies `height` as `--lyra-chart-height` on the host, not on the shadow-tre
   await el.updateComplete;
   expect(el.style.getPropertyValue('--lyra-chart-height').trim()).to.equal('640px');
   expect(getComputedStyle(el).height).to.equal('640px');
+});
+
+it('gives [part=reset-zoom-button] a token-driven :focus-visible outline, like every other interactive control', () => {
+  const css = styles.cssText;
+  const focusVisibleBlock = /\[part=['"]?reset-zoom-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
+  expect(focusVisibleBlock, 'expected a [part="reset-zoom-button"]:focus-visible rule').to.not.equal(
+    null,
+  );
+  const focusBody = focusVisibleBlock![1];
+  expect(focusBody).to.include('var(--lyra-focus-ring-width)');
+  expect(focusBody).to.include('var(--lyra-focus-ring-color)');
+  expect(focusBody).to.include('outline-offset: var(--lyra-focus-ring-offset)');
+});
+
+it('resolves grid/tick/legend/tooltip colors from custom --lyra-chart-* values set on the host', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.legend = true;
+  el.xLabel = 'X';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  el.style.setProperty('--lyra-chart-grid-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lyra-chart-tick-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lyra-chart-legend-color', 'rgb(7, 8, 9)');
+  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(10, 11, 12)');
+  el.style.setProperty('--lyra-chart-tooltip-text', 'rgb(13, 14, 15)');
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.grid.color).to.equal('rgb(1, 2, 3)');
+  expect(config.options.scales.y.grid.color).to.equal('rgb(1, 2, 3)');
+  expect(config.options.scales.x.ticks.color).to.equal('rgb(4, 5, 6)');
+  expect(config.options.scales.y.ticks.color).to.equal('rgb(4, 5, 6)');
+  expect(config.options.scales.x.title.color).to.equal('rgb(4, 5, 6)');
+  expect(config.options.plugins.legend.labels.color).to.equal('rgb(7, 8, 9)');
+  expect(config.options.plugins.tooltip.backgroundColor).to.equal('rgb(10, 11, 12)');
+  expect(config.options.plugins.tooltip.titleColor).to.equal('rgb(13, 14, 15)');
+  expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
+});
+
+it('refreshTheme() forces a redraw that re-reads the --lyra-chart-* tokens after an out-of-band computed-style change', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  // Out-of-band: mutates the computed style directly, without touching any
+  // reactive property, so Lit's own `updated()` has nothing to redraw on —
+  // exactly the case a consumer's theme-toggle handler hits.
+  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(9, 9, 9)');
+  expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.not.equal('rgb(9, 9, 9)');
+
+  el.refreshTheme();
+  expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.equal('rgb(9, 9, 9)');
+});
+
+it('emits `lyra-point-click` with the resolved point detail when the wired onClick handler fires', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [10, 20] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const chart = (el as any).chart;
+  // Stub the mode-specific lookup `handlePointClick()` delegates to, rather
+  // than synthesizing real canvas hit-testing geometry for a click event.
+  const original = chart.getElementsAtEventForMode;
+  chart.getElementsAtEventForMode = (_e: unknown, mode: string, options: unknown, useFinalPosition: unknown) => {
+    expect(mode).to.equal('nearest');
+    expect(options).to.deep.equal({ intersect: true });
+    expect(useFinalPosition).to.equal(true);
+    return [{ datasetIndex: 0, index: 1 }];
+  };
+  try {
+    const onClick = (el as any).buildConfig().options.onClick;
+    let event: CustomEvent | undefined;
+    el.addEventListener('lyra-point-click', (e) => (event = e as CustomEvent), { once: true });
+    onClick({} as never, [], chart);
+    expect(event!.detail).to.deep.equal({ datasetIndex: 0, index: 1, label: 'B', value: 20 });
+  } finally {
+    chart.getElementsAtEventForMode = original;
+  }
+});
+
+it('does not emit `lyra-point-click` when the click misses every point/segment', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [10, 20] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const chart = (el as any).chart;
+  const original = chart.getElementsAtEventForMode;
+  chart.getElementsAtEventForMode = () => [];
+  try {
+    const onClick = (el as any).buildConfig().options.onClick;
+    let fired = false;
+    el.addEventListener('lyra-point-click', () => (fired = true), { once: true });
+    onClick({} as never, [], chart);
+    expect(fired).to.equal(false);
+  } finally {
+    chart.getElementsAtEventForMode = original;
+  }
+});
+
+it('sets `options.indexAxis` to "y" only when `horizontal` is true', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  expect((el as any).buildConfig().options.indexAxis).to.equal(undefined);
+
+  el.horizontal = true;
+  await el.updateComplete;
+  expect((el as any).buildConfig().options.indexAxis).to.equal('y');
+});
+
+it('stacks the x/y (and y2) scale entries for a bar chart when `stacked` is true, and leaves them unstacked by default', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  let config = (el as any).buildConfig();
+  expect(config.options.scales.x.stacked).to.equal(false);
+  expect(config.options.scales.y.stacked).to.equal(false);
+
+  el.stacked = true;
+  await el.updateComplete;
+  config = (el as any).buildConfig();
+  expect(config.options.scales.x.stacked).to.equal(true);
+  expect(config.options.scales.y.stacked).to.equal(true);
+});
+
+it('also stacks the y2 scale of a dual-axis line chart when `stacked` is true', async () => {
+  const el = (await fixture(html`<lyra-chart stacked></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [
+    { label: 'primary', data: [1, 2] },
+    { label: 'secondary', data: [3, 4], axis: 'y2' },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y2.stacked).to.equal(true);
+});
+
+it('does not stack a scatter chart\'s linear x scale even when `stacked` is true (bar/line types only, per spec)', async () => {
+  const el = (await fixture(html`<lyra-chart stacked></lyra-chart>`)) as LyraChart;
+  el.type = 'scatter';
+  el.datasets = [{ label: 'x', points: [{ x: 1, y: 2 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x.stacked).to.equal(false);
 });

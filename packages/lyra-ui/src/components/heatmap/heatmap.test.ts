@@ -212,6 +212,85 @@ it('calendar mode: is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('calendar mode: a single malformed date entry does not blank the whole calendar (regression)', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  el.days = [
+    { date: '2026-03', value: 5 }, // malformed: missing day
+    { date: '2026-03-05', value: 9 },
+  ];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  expect(canvas.width).to.be.greaterThan(0);
+  expect(canvas.height).to.be.greaterThan(0);
+});
+
+describe('bucket-count', () => {
+  it('defaults to 5', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    expect(el.bucketCount).to.equal(5);
+  });
+
+  it('calendar mode: a non-numeric bucket-count falls back to the default instead of leaving every cell whatever fillStyle the canvas last had', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" bucket-count="abc"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    expect(Number.isNaN(el.bucketCount)).to.equal(true);
+    el.days = [
+      { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
+      { date: '2026-03-02', value: 9 }, // Monday, week 0, weekday 1 (max value)
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // The max-value cell should land in the last of the fallback 5 buckets,
+    // i.e. exactly the ramp's hi endpoint (#0969da), not the canvas default
+    // black that an unresolved bucket count would silently leave behind.
+    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(33 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0x09);
+    expect(pixel[1]).to.equal(0x69);
+    expect(pixel[2]).to.equal(0xda);
+  });
+
+  it('calendar mode: a fractional bucket-count is floored instead of producing an out-of-range ramp index', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" bucket-count="4.5"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-02', value: 9 }, // max value
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // With bucketCount floored to 4, the max-value cell lands in the last
+    // bucket (index 3), i.e. exactly the ramp's hi endpoint.
+    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(33 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0x09);
+    expect(pixel[1]).to.equal(0x69);
+    expect(pixel[2]).to.equal(0xda);
+  });
+});
+
+it('matrix mode: scale="sqrt" buckets the low value exactly to the ramp\'s lo endpoint, unlike the linear scale', async () => {
+  const el = (await fixture(html`<lyra-heatmap scale="sqrt"></lyra-heatmap>`)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y'];
+  el.values = [[1, 100]];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const dpr = window.devicePixelRatio || 1;
+  // sqrtStep(1, 100, 7) === 0, so the first cell (value 1) should be exactly
+  // the ramp's lo endpoint (#cde2fb) — the linear scale would instead mix in
+  // 10% of the hi endpoint for this same value, since it never reaches 0.
+  const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+  expect(pixel[0]).to.equal(0xcd);
+  expect(pixel[1]).to.equal(0xe2);
+  expect(pixel[2]).to.equal(0xfb);
+});
+
 it('matrix mode (default): is unaffected by the new mode/days properties', async () => {
   const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['a'];
@@ -315,4 +394,304 @@ it('retheming with an unparsable custom property value does not throw and does n
   const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
   // Falls back to the default ramp endpoints rather than parsing to solid black.
   expect([pixel[0], pixel[1], pixel[2]]).to.not.deep.equal([0, 0, 0]);
+});
+
+it('retheming --lyra-heatmap-label-font changes the canvas font used to draw labels', async () => {
+  const el = (await fixture(html`
+    <lyra-heatmap style="--lyra-heatmap-label-font: 16px monospace;"></lyra-heatmap>
+  `)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x'];
+  el.values = [[5]];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  expect(ctx.font).to.contain('16px');
+  expect(ctx.font).to.contain('monospace');
+});
+
+describe('per-cell hover/focus/click + accessible values', () => {
+  it('makes the canvas keyboard-focusable', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.tabIndex).to.equal(0);
+  });
+
+  it('matrix mode: shows a tooltip with the row/col label and value on hover, hidden on pointerleave', async () => {
+    const el = (await fixture(html`<lyra-heatmap cell-size="22"></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['Mon', 'Tue'];
+    el.colLabels = ['0h', '1h'];
+    el.values = [
+      [3, 7],
+      [1, 2],
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // PAD_LEFT=60, PAD_TOP=20, cellSize=22 — center of row 0, col 1 ('1h').
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: rect.left + 60 + 22 + 11,
+        clientY: rect.top + 20 + 11,
+        bubbles: true,
+      }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false);
+    expect(tooltip.textContent?.trim()).to.equal('Row Mon, Col 1h: 7');
+
+    canvas.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.equal(true);
+  });
+
+  it('matrix mode: hovering outside the grid does not show a tooltip', async () => {
+    const el = (await fixture(html`<lyra-heatmap cell-size="22"></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[3]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 1, clientY: rect.top + 1, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(true);
+  });
+
+  it('calendar mode: shows a tooltip with the date and value on hover', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }]; // Sunday -> week 0, weekday 0
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // CAL_PAD_LEFT=28, CAL_LABEL_H=16, CAL_CELL=11 — center of week 0, weekday 0.
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: rect.left + 28 + 5,
+        clientY: rect.top + 16 + 5,
+        bubbles: true,
+      }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false);
+    expect(tooltip.textContent?.trim()).to.equal('Mar 1: 5');
+  });
+
+  it('matrix mode: ArrowRight moves the focused cell and announces it via the live region, starting from the first cell', async () => {
+    const el = (await fixture(html`<lyra-heatmap cell-size="22"></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['Mon', 'Tue'];
+    el.colLabels = ['0h', '1h'];
+    el.values = [
+      [3, 7],
+      [1, 2],
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    expect(live.textContent).to.equal('');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    // First arrow keypress focuses the first cell without also moving it.
+    expect(live.textContent).to.equal('Row Mon, Col 0h: 3');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Row Mon, Col 1h: 7');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Row Tue, Col 1h: 2');
+  });
+
+  it('matrix mode: arrow navigation clamps at the grid edges instead of moving out of bounds', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[9]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Row a, Col x: 9');
+  });
+
+  it('calendar mode: arrow keys move the (week, weekday) cursor and announce the date', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 5 }, // Sunday: week 0, weekday 0
+      { date: '2026-03-02', value: 9 }, // Monday: week 0, weekday 1
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const live = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Mar 1: 5');
+
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(live.textContent).to.equal('Mar 2: 9');
+  });
+
+  it('matrix mode: emits lyra-cell-click with {row, col, value} on click', async () => {
+    const el = (await fixture(html`<lyra-heatmap cell-size="22"></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['Mon', 'Tue'];
+    el.colLabels = ['0h', '1h'];
+    el.values = [
+      [3, 7],
+      [1, 2],
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let detail: { row: number; col: number; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 60 + 11, clientY: rect.top + 20 + 33, bubbles: true }),
+    );
+    expect(detail).to.deep.equal({ row: 1, col: 0, value: 1 });
+  });
+
+  it('matrix mode: emits lyra-cell-click via Enter on the focused cell', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[3, 7]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0)
+    let detail: { row: number; col: number; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(detail).to.deep.equal({ row: 0, col: 0, value: 3 });
+  });
+
+  it('matrix mode: emits lyra-cell-click via Space on the focused cell', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[3, 7]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0)
+    let detail: { row: number; col: number; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect(detail).to.deep.equal({ row: 0, col: 0, value: 3 });
+  });
+
+  it('calendar mode: emits lyra-cell-click with {date, value} on click', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let detail: { date: string; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 28 + 5, clientY: rect.top + 16 + 5, bubbles: true }),
+    );
+    expect(detail).to.deep.equal({ date: '2026-03-01', value: 5 });
+  });
+
+  it('calendar mode: emits lyra-cell-click via Enter on the focused cell', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); // focuses (week 0, weekday 0)
+    let detail: { date: string; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(detail).to.deep.equal({ date: '2026-03-01', value: 5 });
+  });
+
+  it('is accessible with a hovered tooltip and a focused cell', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 2]];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('annotation/overlay affordance', () => {
+  it('matrix mode: accepts an annotations property and redraws without throwing', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 2]];
+    el.annotations = [{ row: 0, col: 1, label: 'Peak' }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  });
+
+  it('matrix mode: renders a legend-annotation entry (ring swatch + label text) when an annotation has a label', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[1]];
+    el.annotations = [{ row: 0, col: 0, label: 'Peak' }];
+    await el.updateComplete;
+    const entry = el.shadowRoot!.querySelector('[part="legend-annotation"]');
+    expect(entry).to.exist;
+    expect(entry!.textContent).to.contain('Peak');
+  });
+
+  it('omits legend-annotation when annotations have no label', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[1]];
+    el.annotations = [{ row: 0, col: 0 }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-annotation"]')).to.not.exist;
+  });
+
+  it('omits legend-annotation when there are no annotations at all', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[1]];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-annotation"]')).to.not.exist;
+  });
+
+  it('calendar mode: accepts date-based annotations, redraws without throwing, and renders their legend label', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    el.annotations = [{ date: '2026-03-01', label: 'Launch' }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    const entry = el.shadowRoot!.querySelector('[part="legend-annotation"]');
+    expect(entry).to.exist;
+    expect(entry!.textContent).to.contain('Launch');
+  });
+
+  it('renders one legend-annotation entry per labeled annotation', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[1, 2]];
+    el.annotations = [
+      { row: 0, col: 0, label: 'Peak' },
+      { row: 0, col: 1, label: 'Dip' },
+    ];
+    await el.updateComplete;
+    const entries = el.shadowRoot!.querySelectorAll('[part="legend-annotation"]');
+    expect(entries.length).to.equal(2);
+  });
 });

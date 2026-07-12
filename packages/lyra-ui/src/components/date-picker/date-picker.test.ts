@@ -2,6 +2,7 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './date-picker.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-picker.styles.js';
+import { weekdayLabels, monthTitle } from './calendar-core.js';
 
 it('selects a day and emits change with an ISO value', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
@@ -34,6 +35,46 @@ it('selects a range across two clicks', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part~="day-range-inner"]').length).to.equal(4);
 });
 
+it('keeps viewing the month the user navigated to after completing a cross-month range pick', async () => {
+  // Regression test: willUpdate() used to unconditionally resync viewDate to
+  // selection.from's month on every `value` change, including the component's
+  // own commit() -- so completing a range in a later month than the range's
+  // start snapped the view straight back to the start month.
+  const el = (await fixture(html`<lyra-date-picker mode="range"></lyra-date-picker>`)) as LyraDatePicker;
+  el.goToDate('2026-07-01');
+  await el.updateComplete;
+
+  (el.shadowRoot!.querySelector('[data-date="2026-07-25"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+  expect(title()).to.contain('august');
+
+  setTimeout(() => (el.shadowRoot!.querySelector('[data-date="2026-08-05"]') as HTMLButtonElement).click());
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('2026-07-25/2026-08-05');
+  expect(
+    title(),
+    'the view should stay on the month the user navigated to, not snap back to the range-start month',
+  ).to.contain('august');
+  expect(
+    el.shadowRoot!.querySelector('[data-date="2026-08-05"]'),
+    'the day just picked should still be rendered',
+  ).to.exist;
+});
+
+it('still syncs the view to an externally-assigned value (not just to its own commits)', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-01-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  el.value = '2026-09-10';
+  await el.updateComplete;
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+  expect(title).to.contain('september');
+});
+
 it('honors min/max by disabling out-of-range days', async () => {
   const el = (await fixture(
     html`<lyra-date-picker value="2026-07-15" min="2026-07-10" max="2026-07-20"></lyra-date-picker>`,
@@ -43,6 +84,40 @@ it('honors min/max by disabling out-of-range days', async () => {
   const inside = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
   expect(before.disabled).to.be.true;
   expect(inside.disabled).to.be.false;
+});
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+it('disables days before today when disable-past is set', async () => {
+  const el = (await fixture(html`<lyra-date-picker disable-past></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const today = new Date();
+
+  const todayCell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
+  expect(todayCell.disabled, 'today itself should remain selectable').to.be.false;
+
+  if (today.getDate() > 1) {
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    const pastCell = el.shadowRoot!.querySelector(`[data-date="${iso(yesterday)}"]`) as HTMLButtonElement;
+    expect(pastCell.disabled, 'a day before today should be disabled').to.be.true;
+  }
+});
+
+it('disables days after today when disable-future is set', async () => {
+  const el = (await fixture(html`<lyra-date-picker disable-future></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const today = new Date();
+
+  const todayCell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
+  expect(todayCell.disabled, 'today itself should remain selectable').to.be.false;
+
+  const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  if (lastOfMonth > today.getDate()) {
+    const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const futureCell = el.shadowRoot!.querySelector(`[data-date="${iso(tomorrow)}"]`) as HTMLButtonElement;
+    expect(futureCell.disabled, 'a day after today should be disabled').to.be.true;
+  }
 });
 
 it('navigates months with the next/previous buttons', async () => {
@@ -61,6 +136,55 @@ it('renders two months when requested', async () => {
   )) as LyraDatePicker;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="month"]').length).to.equal(2);
+});
+
+it('leaves the two-month view alone when ArrowRight moves into a date already visible in the second grid', async () => {
+  // Regression test: onGridKey used to always recenter the view as if the
+  // focused cell belonged to the first (offset 0) calendar, so crossing into
+  // the already-visible second month discarded the first month from view.
+  const el = (await fixture(html`<lyra-date-picker months="2"></lyra-date-picker>`)) as LyraDatePicker;
+  el.goToDate('2026-07-31');
+  await el.updateComplete;
+
+  const grids = el.shadowRoot!.querySelectorAll('[part="grid"]');
+  grids[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+
+  const titles = Array.from(el.shadowRoot!.querySelectorAll('[part="title"]')).map((t) =>
+    t.textContent!.trim().toLowerCase(),
+  );
+  expect(titles[0], 'July should stay visible -- it was never scrolled past').to.contain('july');
+  expect(titles[1]).to.contain('august');
+
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-08-01"]') as HTMLButtonElement;
+  expect(focused, 'August 1 was already showing in the second grid').to.exist;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+});
+
+it('slides the two-month view by exactly one month once a keypress moves past the last visible month', async () => {
+  const el = (await fixture(html`<lyra-date-picker months="2"></lyra-date-picker>`)) as LyraDatePicker;
+  el.goToDate('2026-07-31');
+  await el.updateComplete;
+  const grids = () => el.shadowRoot!.querySelectorAll('[part="grid"]');
+  const titles = () =>
+    Array.from(el.shadowRoot!.querySelectorAll('[part="title"]')).map((t) => t.textContent!.trim().toLowerCase());
+
+  // PageDown from July 31 lands on Aug 31, already visible in the second grid.
+  grids()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+  await el.updateComplete;
+  expect(titles()[0]).to.contain('july');
+  expect(titles()[1]).to.contain('august');
+
+  // One more day forward crosses past the visible window (Sep 1 isn't shown yet).
+  grids()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(titles()[0], 'August should slide into the first grid, not be discarded from view').to.contain('august');
+  expect(titles()[1]).to.contain('september');
+
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-09-01"]') as HTMLButtonElement;
+  expect(focused).to.exist;
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
 });
 
 it('disables every day button and dims the host when the picker itself is disabled', async () => {
@@ -283,4 +407,95 @@ it('gives an outside-month day inside a selected range normal text contrast, not
 
   expect(overlapColor).to.equal(normalColor);
   expect(overlapColor).to.not.equal(plainOutsideColor);
+});
+
+it('clear() resets the value and emits input + change', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  setTimeout(() => el.clear());
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('');
+});
+
+it('goToToday() navigates the view to the current month and focuses today', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-01-01"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  el.goToToday();
+  await el.updateComplete;
+
+  const today = new Date();
+  const cell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
+  expect(cell, 'expected today to be rendered after goToToday()').to.exist;
+  expect(cell.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(cell);
+});
+
+it('uses the shared --lyra-opacity-disabled token instead of a literal 0.35 for the disabled day state', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const dayDisabledBlock = /\[part~=['"]?day['"]?]:disabled\s*{([^}]*)}/.exec(css);
+  expect(dayDisabledBlock, 'expected a [part~="day"]:disabled rule').to.not.equal(null);
+  expect(dayDisabledBlock![1]).to.include('opacity: var(--lyra-opacity-disabled);');
+  expect(dayDisabledBlock![1]).to.not.include('0.35');
+});
+
+it('wires locale, weekday-format and first-day-of-week through to the rendered weekday headers, month title and grid alignment', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker
+      value="2026-07-15"
+      locale="fr-FR"
+      first-day-of-week="mon"
+      weekday-format="narrow"
+    ></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="weekday"]')).map((w) => w.textContent!.trim());
+  expect(labels).to.deep.equal(weekdayLabels(1, 'narrow', 'fr-FR'));
+
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
+  expect(title).to.equal(monthTitle(2026, 6, 'fr-FR'));
+
+  // July 1 2026 is a Wednesday; with a Monday-first grid it must land in the
+  // third column (index 2), proving first-day-of-week reached monthMatrix().
+  const cells = Array.from(el.shadowRoot!.querySelectorAll('[part="grid"] [role="gridcell"]'));
+  const idx = cells.findIndex((c) => (c as HTMLElement).dataset.date === '2026-07-01');
+  expect(idx % 7).to.equal(2);
+});
+
+it('clamps goToDate() to min/max instead of navigating to an out-of-range date', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker min="2026-07-10" max="2026-07-20"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  el.goToDate('2026-08-05');
+  await el.updateComplete;
+
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+  expect(title, 'expected the view to clamp into July instead of jumping to August').to.contain('july');
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-07-20"]') as HTMLButtonElement;
+  expect(focused, 'expected the view to clamp to max').to.exist;
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+});
+
+it('hides outside-month placeholders from the accessibility tree only in rows that also have a real visible day', async () => {
+  // July 2026 (Sunday-first, the default) has a mixed leading row (June 28-30
+  // outside, July 1-4 inside) and a fully-outside trailing row (Aug 2-8) --
+  // only the former may have its placeholders aria-hidden.
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  const weeks = el.shadowRoot!.querySelectorAll('[part="week"]');
+  const firstRowPlaceholders = weeks[0].querySelectorAll('[part="day-placeholder"]');
+  const lastRowPlaceholders = weeks[weeks.length - 1].querySelectorAll('[part="day-placeholder"]');
+  expect(firstRowPlaceholders.length, 'expected a mixed leading row').to.equal(3);
+  expect(lastRowPlaceholders.length, 'expected a fully-outside trailing row').to.equal(7);
+
+  for (const cell of Array.from(firstRowPlaceholders)) {
+    expect(cell.getAttribute('aria-hidden'), 'mixed row already has a visible day cell').to.equal('true');
+  }
+  for (const cell of Array.from(lastRowPlaceholders)) {
+    expect(
+      cell.hasAttribute('aria-hidden'),
+      'row role requires at least one visible gridcell; this row has none but placeholders',
+    ).to.be.false;
+  }
 });

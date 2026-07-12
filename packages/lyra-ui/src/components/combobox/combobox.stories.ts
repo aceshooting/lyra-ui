@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { ComboboxSource, OptionFilter } from './combobox.js';
 
 const meta: Meta = {
   title: 'Combobox',
@@ -28,5 +29,84 @@ export const Multiple: Story = {
       <lyra-option value="c">Cherry</lyra-option>
       <lyra-option value="d">Date</lyra-option>
     </lyra-combobox>
+  `,
+};
+
+/**
+ * Rows come from `<lyra-option>` children plus `group` (section headers),
+ * `sub` (a secondary line), and `dot-color` (a leading status dot) — useful
+ * for richer pickers like a device or status list.
+ */
+export const RichRows: Story = {
+  render: () => html`
+    <lyra-combobox label="Inverter" placeholder="Pick one…" style="max-width: 22rem">
+      <lyra-option value="inv-1" group="Building A" sub="Running" dot-color="var(--lyra-color-success)">
+        Inverter 1
+      </lyra-option>
+      <lyra-option value="inv-2" group="Building A" sub="Idle" dot-color="var(--lyra-color-text-quiet)">
+        Inverter 2
+      </lyra-option>
+      <lyra-option value="inv-3" group="Building B" sub="Fault" dot-color="var(--lyra-color-danger)">
+        Inverter 3
+      </lyra-option>
+    </lyra-combobox>
+  `,
+};
+
+/**
+ * `source` replaces the light-DOM `<lyra-option>` list with an async
+ * `(query) => Promise<ComboboxSourceRow[]>` lookup, debounced ~200ms after
+ * each keystroke. A "Loading…" row is shown while a call is in flight.
+ */
+export const AsyncSource: Story = {
+  render: () => {
+    const all = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry', 'Fig', 'Grape'];
+    const source: ComboboxSource = async (query) => {
+      await new Promise((r) => setTimeout(r, 400));
+      return all
+        .filter((label) => label.toLowerCase().includes(query.toLowerCase()))
+        .map((label) => ({ value: label.toLowerCase(), label }));
+    };
+    return html`
+      <lyra-combobox label="Fruit (async)" placeholder="Type to search…" with-clear
+        style="max-width: 22rem" .source=${source}
+      ></lyra-combobox>
+    `;
+  },
+};
+
+/**
+ * `filter` overrides the default label/searchText matcher entirely, e.g. to
+ * match only from the start of the label instead of anywhere within it.
+ */
+export const CustomFilter: Story = {
+  render: () => {
+    const startsWith: OptionFilter = (option, query) => option.label.toLowerCase().startsWith(query.toLowerCase());
+    return html`
+      <lyra-combobox label="Fruit (starts with…)" placeholder="Try “an”…" style="max-width: 22rem"
+        .filter=${startsWith}
+      >
+        <lyra-option value="a">Apple</lyra-option>
+        <lyra-option value="b">Banana</lyra-option>
+        <lyra-option value="c">Cherry</lyra-option>
+        <lyra-option value="d">Date</lyra-option>
+      </lyra-combobox>
+    `;
+  },
+};
+
+export const States: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 22rem">
+      <lyra-combobox label="Disabled" disabled placeholder="Can't touch this">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox label="Required" required hint="Pick your favorite">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox label="Invalid" required error-text="Selection required">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+    </div>
   `,
 };

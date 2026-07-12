@@ -2,7 +2,7 @@ import { property } from 'lit/decorators.js';
 import { LyraChart, type Series } from './chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
-import { binValues } from './histogram-bin.js';
+import { binValues, type HistogramBucket } from './histogram-bin.js';
 import { styles } from './histogram.styles.js';
 
 /**
@@ -26,6 +26,27 @@ export class LyraHistogram extends LyraChart {
   @property() label = 'Frequency';
 }
 
+// Both the `labels` and `datasets` accessors below derive from the same
+// `binValues(values, bins)` pass, and `LyraChart` reads `datasets` more than
+// once per `draw()`/`render()` — memoize the last bucketing result per
+// instance (keyed by reference equality on `values`/`bins`, matching Lit's
+// own change detection for the `values` array) so an unrelated property
+// change doesn't re-run the O(n) bucketing loop from scratch on every access.
+const bucketCache = new WeakMap<
+  LyraHistogram,
+  { values: number[]; bins: number; buckets: HistogramBucket[] }
+>();
+
+export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {
+  const cached = bucketCache.get(el);
+  if (cached && cached.values === el.values && cached.bins === el.bins) {
+    return cached.buckets;
+  }
+  const buckets = binValues(el.values, el.bins);
+  bucketCache.set(el, { values: el.values, bins: el.bins, buckets });
+  return buckets;
+}
+
 // `labels`/`datasets` are computed from `values`/`bins` rather than settable
 // props. `LyraChart` declares both as plain (decorator-managed) class
 // fields, and TypeScript forbids a subclass from re-declaring a base field
@@ -37,7 +58,7 @@ Object.defineProperty(LyraHistogram.prototype, 'labels', {
   configurable: true,
   enumerable: true,
   get(this: LyraHistogram): string[] {
-    return binValues(this.values, this.bins).map((b) => b.label);
+    return binnedBuckets(this).map((b) => b.label);
   },
   set(_v: string[]) {
     /* derived from `values`/`bins`; direct writes are ignored */
@@ -48,7 +69,7 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
   configurable: true,
   enumerable: true,
   get(this: LyraHistogram): Series[] {
-    return [{ label: this.label, data: binValues(this.values, this.bins).map((b) => b.count) }];
+    return [{ label: this.label, data: binnedBuckets(this).map((b) => b.count) }];
   },
   set(_v: Series[]) {
     /* derived from `values`/`bins`; direct writes are ignored */

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { srOnly } from '../../internal/a11y.js';
 import { styles } from './file-input.styles.js';
 import { matchesAccept } from './accept.js';
 
@@ -18,12 +19,14 @@ export interface RejectedFile {
  * where files ultimately get uploaded and processed anyway.
  *
  * @customElement lyra-file-input
- * @slot - Custom drop-zone content, overrides the `label` attribute.
+ * @slot - Custom drop-zone content, overrides the `label` attribute. The
+ * accessible name always comes from `label`, so icon-only slot content
+ * remains announced correctly.
  * @event lyra-files - `detail: { files, rejected }`, fired on drop and manual selection.
- * @csspart base, input
+ * @csspart base, input, status
  */
 export class LyraFileInput extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ type: Boolean, reflect: true }) multiple = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -38,10 +41,13 @@ export class LyraFileInput extends LyraElement {
 
   private dragCounter = 0;
 
-  private isAllowed(file: File): 'ok' | 'type' | 'size' {
+  private isAllowed(file: File, isPreview = false): 'ok' | 'type' | 'size' {
     if (this.forbiddenMimeTypes.includes(file.type)) return 'type';
     if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(file.type)) return 'type';
-    if (this.accept && !matchesAccept(file, this.accept)) return 'type';
+    // During dragenter preview, `accept` extension patterns can't be evaluated (no
+    // `.name` yet) — treat them as a possible match rather than a guaranteed reject,
+    // so the preview doesn't flag a file that will in fact be accepted on drop.
+    if (this.accept && !matchesAccept(file, this.accept, isPreview)) return 'type';
     // `file.size` is `undefined` on the synthetic `DataTransferItem`-cast objects
     // used during dragenter preview (real sizes aren't available until drop),
     // so this naturally only takes effect for the real `classify()` call at drop time.
@@ -49,14 +55,17 @@ export class LyraFileInput extends LyraElement {
     return 'ok';
   }
 
-  private classify(fileList: File[]): { files: File[]; rejected: RejectedFile[] } {
+  private classify(
+    fileList: File[],
+    isPreview = false,
+  ): { files: File[]; rejected: RejectedFile[] } {
     if (!this.multiple && fileList.length > 1) {
       return { files: [], rejected: fileList.map((file) => ({ file, reason: 'count' as const })) };
     }
     const files: File[] = [];
     const rejected: RejectedFile[] = [];
     for (const f of fileList) {
-      const reason = this.isAllowed(f);
+      const reason = this.isAllowed(f, isPreview);
       if (reason === 'ok') files.push(f);
       else rejected.push({ file: f, reason });
     }
@@ -74,7 +83,7 @@ export class LyraFileInput extends LyraElement {
   }
 
   private previewState(fileList: File[]): DragState {
-    const { rejected } = this.classify(fileList);
+    const { rejected } = this.classify(fileList, true);
     return rejected.length > 0 ? 'reject' : 'accept';
   }
 
@@ -123,6 +132,12 @@ export class LyraFileInput extends LyraElement {
     }
   };
 
+  private statusText(): string {
+    if (this.dragState === 'accept') return 'Release to add the file.';
+    if (this.dragState === 'reject') return 'This file type is not accepted.';
+    return '';
+  }
+
   render(): TemplateResult {
     return html`
       <div
@@ -130,6 +145,7 @@ export class LyraFileInput extends LyraElement {
         role="button"
         tabindex=${this.disabled ? '-1' : '0'}
         aria-disabled=${this.disabled ? 'true' : nothing}
+        aria-label=${this.label}
         data-drag-state=${this.dragState}
         @dragenter=${this.onDragEnter}
         @dragover=${this.onDragOver}
@@ -140,6 +156,7 @@ export class LyraFileInput extends LyraElement {
       >
         <slot>${this.label}</slot>
       </div>
+      <div part="status" class="sr-only" role="status" aria-live="polite">${this.statusText()}</div>
       <input
         part="input"
         type="file"

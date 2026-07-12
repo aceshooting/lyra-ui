@@ -27,7 +27,7 @@ export const styles = css`
     z-index: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--lyra-space-xs);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     background: var(--lyra-color-surface);
     border: 1px solid var(--lyra-color-border);
@@ -38,7 +38,7 @@ export const styles = css`
   .legend-row {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: var(--lyra-space-xs);
   }
   [part='legend-swatch'] {
     inline-size: 0.75rem;

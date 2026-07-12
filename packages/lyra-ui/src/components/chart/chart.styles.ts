@@ -5,6 +5,18 @@ export const styles = css`
     display: block;
     position: relative;
     block-size: var(--lyra-chart-height, 280px);
+    /* Chart.js renders to canvas, not the DOM, so it can't consume CSS
+       var() directly — chart.ts's themeColors() resolves these once per
+       draw() via getComputedStyle, same pattern as heatmap.ts's scale-lo/-hi.
+       Each is its own token (rather than reusing the semantic ones directly)
+       so a host can retheme just the chart's grid/ticks/legend/tooltip
+       without affecting unrelated text/border/surface colors elsewhere in
+       the component, while still defaulting to those semantic tokens. */
+    --lyra-chart-grid-color: var(--lyra-color-border);
+    --lyra-chart-tick-color: var(--lyra-color-text-quiet);
+    --lyra-chart-legend-color: var(--lyra-color-text);
+    --lyra-chart-tooltip-bg: var(--lyra-color-surface);
+    --lyra-chart-tooltip-text: var(--lyra-color-text);
   }
   [part='base'] {
     position: relative;
@@ -30,5 +42,9 @@ export const styles = css`
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     cursor: pointer;
+  }
+  [part='reset-zoom-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 `;

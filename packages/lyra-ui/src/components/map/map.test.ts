@@ -35,6 +35,31 @@ it('constructs a maplibregl.Map and exposes it via the map getter', async () => 
   expect(el.map).to.exist;
 });
 
+it('calls setCenter/setZoom on the underlying map when center/zoom change after mount', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+
+  let centerArg: unknown;
+  let zoomArg: unknown;
+  el.map!.setCenter = ((c: unknown) => {
+    centerArg = c;
+    return el.map;
+  }) as typeof el.map.setCenter;
+  el.map!.setZoom = ((z: unknown) => {
+    zoomArg = z;
+    return el.map;
+  }) as typeof el.map.setZoom;
+
+  el.center = [3, 4];
+  el.zoom = 7;
+  await el.updateComplete;
+
+  expect(centerArg).to.deep.equal([3, 4]);
+  expect(zoomArg).to.equal(7);
+});
+
 it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async () => {
   const el = document.createElement('lyra-map') as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -91,6 +116,14 @@ it('does not let a LegendEntry.color value inject extra CSS declarations via the
   expect(swatch.style.top).to.equal('');
 });
 
+it('does not accept a non-color CSS value (e.g. url()) as a legend swatch background', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.legend = [{ color: 'url(https://attacker.example/beacon.gif)', label: 'Bad' }];
+  await el.updateComplete;
+  const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+  expect(swatch.style.background).to.equal('');
+});
+
 it('does not render the legend panel when legend is empty (the default)', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   await el.updateComplete;
@@ -114,6 +147,10 @@ it('renders the legend panel once entries are set, and removes it again once cle
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
+  el.legend = [
+    { color: '#f00', label: 'High' },
+    { color: '#0f0', label: 'Low' },
+  ];
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await expect(el).to.be.accessible();
@@ -170,6 +207,43 @@ it('adds a choropleth source + fill layer, and re-applies the color expression o
     '#111111',
     10,
     '#eeeeee',
+  ]);
+});
+
+it('does not mark an empty-stops choropleth as applied, so a later non-empty update for the same sourceId still creates the fill layer', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  el.choropleth = choropleth('empty-stops', []);
+  await el.updateComplete;
+
+  // An empty `stops` array can't build a valid `interpolate` expression, so no
+  // fill layer should be considered applied for it.
+  expect(el.map!.getLayer('empty-stops-fill')).to.not.exist;
+
+  el.choropleth = choropleth('empty-stops', [
+    [0, '#000000'],
+    [10, '#ffffff'],
+  ]);
+  await el.updateComplete;
+  await waitUntil(
+    () => el.map!.getLayer('empty-stops-fill') != null,
+    'layer never added once stops became non-empty',
+    { timeout: 2000 },
+  );
+
+  expect(el.map!.getSource('empty-stops')).to.exist;
+  expect(el.map!.getPaintProperty('empty-stops-fill', 'fill-color')).to.deep.equal([
+    'interpolate',
+    ['linear'],
+    ['get', 'value'],
+    0,
+    '#000000',
+    10,
+    '#ffffff',
   ]);
 });
 
@@ -399,6 +473,54 @@ it('removes markers no longer present and reuses markers that persist', async ()
   expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(1);
 });
 
+it('updates the reused marker popup when label changes for a persisting id', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'a', lngLat: [10, 20], label: 'Station A' }];
+  await el.updateComplete;
+
+  el.markers = [{ id: 'a', lngLat: [10, 20], label: 'Station A renamed' }];
+  await el.updateComplete;
+  // Same id must reuse the marker instance, not remove/recreate it.
+  expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(1);
+
+  const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
+    'popup never opened',
+  );
+  expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain(
+    'Station A renamed',
+  );
+});
+
+it('updates the reused marker popup when html changes for a persisting id', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'a', lngLat: [10, 20], html: '<strong>Station A</strong>' }];
+  await el.updateComplete;
+
+  el.markers = [{ id: 'a', lngLat: [10, 20], html: '<strong>Station A2</strong>' }];
+  await el.updateComplete;
+
+  const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
+    'popup never opened',
+  );
+  expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain('Station A2');
+});
+
 it('attaches an openable popup when label or html is provided', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -432,6 +554,53 @@ it('removes all marker DOM on disconnect', async () => {
   el.remove();
 
   expect(shadowRoot.querySelectorAll('.maplibregl-marker').length).to.equal(0);
+});
+
+it('renders a colored marker and an html popup', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'a', lngLat: [10, 20], color: '#ff0000', html: '<strong>Station A</strong>' }];
+  await el.updateComplete;
+
+  const markerEl = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  expect(markerEl).to.exist;
+  markerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('.maplibregl-popup-content') != null,
+    'popup never opened',
+  );
+  const popupContent = el.shadowRoot!.querySelector('.maplibregl-popup-content')!;
+  expect(popupContent.querySelector('strong')).to.exist;
+  expect(popupContent.textContent).to.contain('Station A');
+});
+
+it('does not throw or leave a dangling marker when the element disconnects while applyMarkers is running', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [{ id: 'a', lngLat: [10, 20] }];
+
+  // Invoke the internal marker-sync routine directly -- the same routine
+  // `updated()` and the map's 'load' handler call fire-and-forget -- and
+  // disconnect the element immediately after, in the same synchronous tick.
+  // Before the fix, this routine re-awaited `loadMaplibre()` internally, which
+  // always yields at least one microtask even once the module is cached;
+  // resuming from that await after a disconnect had cleared `this._map`
+  // threw (`marker.addTo(undefined)` dereferences the map), rejecting the
+  // promise this call returned. Now the routine is fully synchronous, so no
+  // such window -- or rejection -- exists; awaiting its (non-)result here
+  // must not throw.
+  const pending = (el as unknown as { applyMarkers(): Promise<void> | void }).applyMarkers();
+  el.remove();
+
+  await pending;
 });
 
 function choropleth(sourceId: string, stops: [number, string][]) {

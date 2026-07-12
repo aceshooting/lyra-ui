@@ -16,3 +16,25 @@ export const Default: Story = {
     </lyra-empty>
   `,
 };
+
+export const WithIcon: Story = {
+  render: () => html`
+    <lyra-empty heading="No results" description="Try a different search.">
+      <svg slot="" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
+        <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"></path>
+      </svg>
+      <span slot="actions"><button>Reset</button></span>
+    </lyra-empty>
+  `,
+};
+
+export const Compact: Story = {
+  render: () => html`
+    <div style="max-width: 16rem; border: 1px solid var(--lyra-color-border);">
+      <lyra-empty compact heading="No results" description="Try a different search.">
+        <span slot="actions"><button>Reset</button></span>
+      </lyra-empty>
+    </div>
+  `,
+};

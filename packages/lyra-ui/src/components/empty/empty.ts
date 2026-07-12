@@ -11,7 +11,11 @@ import { styles } from './empty.styles.js';
  * @customElement lyra-empty
  * @slot - Custom icon or illustration (defaults to none).
  * @slot actions - Buttons/links shown below the description.
- * @csspart base, icon, heading, description, actions
+ * @csspart base - The outer container.
+ * @csspart icon - The wrapper around the default-slotted icon/illustration.
+ * @csspart heading - The heading paragraph.
+ * @csspart description - The description paragraph.
+ * @csspart actions - The wrapper around the `actions`-slotted content.
  */
 export class LyraEmpty extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -21,6 +25,14 @@ export class LyraEmpty extends LyraElement {
 
   /** Supporting copy, e.g. "Try a different search." */
   @property() description = '';
+
+  /**
+   * Compact rendering for use inside a constrained space (e.g. a widget body
+   * or table cell) rather than as a full-page state: left-aligned, tighter
+   * padding, and a lighter heading weight instead of the centered/spacious
+   * default.
+   */
+  @property({ type: Boolean, reflect: true }) compact = false;
 
   // `[part='icon']:empty` never matches because the part always contains a
   // `<slot>` element (CSS `:empty` only ignores text/comment nodes). Track
@@ -34,7 +46,10 @@ export class LyraEmpty extends LyraElement {
     // `firstUpdated` (after the update completes) would schedule a second,
     // wasted update (Lit's dev-mode "change-in-update" warning).
     if (!this.hasUpdated) {
-      this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      // An explicit `slot=""` still assigns to the default slot per the HTML
+      // slot algorithm, so check the attribute's value rather than its mere
+      // presence.
+      this.hasIcon = Array.from(this.children).some((el) => !el.getAttribute('slot'));
       this.hasActions = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
     }
   }
@@ -66,7 +81,7 @@ export class LyraEmpty extends LyraElement {
 
   render(): TemplateResult {
     return html`
-      <div part="base">
+      <div part="base" role="status" aria-live="polite">
         <div part="icon" ?hidden=${!this.hasIcon}><slot @slotchange=${this.onIconSlotChange}></slot></div>
         <p part="heading">${this.heading}</p>
         <p part="description">${this.description}</p>

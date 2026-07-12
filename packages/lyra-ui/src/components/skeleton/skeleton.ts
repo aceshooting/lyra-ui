@@ -29,17 +29,15 @@ export class LyraSkeleton extends LyraElement {
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('width') || changed.has('height')) {
-      const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
-      if (!base) return;
       if (this.width) {
-        base.style.setProperty('--lyra-skeleton-w', this.width);
+        this.style.setProperty('--lyra-skeleton-w', this.width);
       } else {
-        base.style.removeProperty('--lyra-skeleton-w');
+        this.style.removeProperty('--lyra-skeleton-w');
       }
       if (this.height) {
-        base.style.setProperty('--lyra-skeleton-h', this.height);
+        this.style.setProperty('--lyra-skeleton-h', this.height);
       } else {
-        base.style.removeProperty('--lyra-skeleton-h');
+        this.style.removeProperty('--lyra-skeleton-h');
       }
     }
   }

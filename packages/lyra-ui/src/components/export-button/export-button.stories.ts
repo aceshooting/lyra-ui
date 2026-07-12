@@ -38,3 +38,9 @@ export const MultiFormatMenu: Story = {
     ></lyra-export-button>
   `,
 };
+
+export const Disabled: Story = {
+  render: () => html`
+    <lyra-export-button filename="demo" .rows=${rows} .columns=${columns} disabled></lyra-export-button>
+  `,
+};

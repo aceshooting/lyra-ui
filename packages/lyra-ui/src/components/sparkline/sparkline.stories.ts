@@ -22,3 +22,29 @@ export const Area: Story = {
 export const Bar: Story = {
   render: () => html`<lyra-sparkline type="bar" .values=${DATA}></lyra-sparkline>`,
 };
+
+export const ExplicitRange: Story = {
+  render: () => html`
+    <lyra-sparkline type="bar" .values=${[20, 40, 30]} min="0" max="100"></lyra-sparkline>
+    <lyra-sparkline type="bar" .values=${[70, 90, 80]} min="0" max="100"></lyra-sparkline>
+  `,
+};
+
+export const NoData: Story = {
+  render: () => html`<lyra-sparkline></lyra-sparkline>`,
+};
+
+export const FlatData: Story = {
+  render: () => html`
+    <lyra-sparkline type="line" .values=${[5, 5, 5, 5]}></lyra-sparkline>
+    <lyra-sparkline type="area" .values=${[5, 5, 5, 5]}></lyra-sparkline>
+    <lyra-sparkline type="bar" .values=${[5, 5, 5, 5]}></lyra-sparkline>
+  `,
+};
+
+export const SingleValue: Story = {
+  render: () => html`
+    <lyra-sparkline type="line" .values=${[5]}></lyra-sparkline>
+    <lyra-sparkline type="bar" .values=${[5]}></lyra-sparkline>
+  `,
+};

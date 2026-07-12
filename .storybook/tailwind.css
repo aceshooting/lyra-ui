@@ -1,0 +1,6 @@
+/*
+ * Utility classes for docs/story authoring only (light DOM in the preview
+ * iframe) — lyra-* components stay shadow-DOM + --lyra-* design tokens, per
+ * AGENTS.md. This is not imported by any component.
+ */
+@import 'tailwindcss';

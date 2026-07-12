@@ -44,6 +44,41 @@ describe('buildCalendarGrid', () => {
     expect(result.weekCount).to.equal(0);
     expect(result.monthLabels).to.deep.equal([]);
   });
+
+  it('drops an entry with a malformed date instead of letting it poison every other cell', () => {
+    const { cells, weekCount } = buildCalendarGrid([
+      { date: '2026-03', value: 5 }, // malformed: missing day -> parseIsoDate gives an Invalid Date
+      { date: '2026-03-05', value: 9 },
+    ]);
+    expect(cells).to.have.length(1);
+    expect(cells[0].date).to.equal('2026-03-05');
+    expect(cells[0].value).to.equal(9);
+    expect(weekCount).to.equal(1);
+    expect(Number.isNaN(weekCount)).to.equal(false);
+  });
+
+  it('returns an empty grid when every entry has a malformed date', () => {
+    const result = buildCalendarGrid([
+      { date: '', value: 1 },
+      { date: '2026/03/05', value: 2 },
+    ]);
+    expect(result.cells).to.deep.equal([]);
+    expect(result.weekCount).to.equal(0);
+    expect(result.monthLabels).to.deep.equal([]);
+  });
+
+  it('does not throw a RangeError building a very large grid (spreading into Math.min/Math.max would blow the call stack)', () => {
+    const days = Array.from({ length: 150_000 }, (_, i) => {
+      const d = new Date(Date.UTC(2000, 0, 1) + i * 86_400_000);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return { date: `${y}-${m}-${day}`, value: i };
+    });
+    const { cells, weekCount } = buildCalendarGrid(days);
+    expect(cells).to.have.length(150_000);
+    expect(weekCount).to.be.greaterThan(0);
+  });
 });
 
 describe('quartileBucket', () => {
@@ -55,5 +90,17 @@ describe('quartileBucket', () => {
 
   it('returns 0 for an empty sorted array', () => {
     expect(quartileBucket(5, [], 4)).to.equal(0);
+  });
+
+  it('counts duplicate values correctly when computing rank (binary search upper-bound)', () => {
+    const sorted = [1, 1, 1, 5, 5, 9];
+    // count(v <= 5) = 5, rank = 5/6, floor((5/6)*3) = 2.
+    expect(quartileBucket(5, sorted, 3)).to.equal(2);
+  });
+
+  it('handles a value that falls between two entries of the sorted array', () => {
+    const sorted = [1, 3, 5, 7, 9];
+    // count(v <= 4) = 2 (1 and 3), rank = 2/5, floor((2/5)*5) = 2.
+    expect(quartileBucket(4, sorted, 5)).to.equal(2);
   });
 });

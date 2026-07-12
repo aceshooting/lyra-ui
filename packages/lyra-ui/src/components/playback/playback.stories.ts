@@ -12,3 +12,12 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => html`<lyra-playback length="10" interval-ms="500" loop></lyra-playback>`,
 };
+
+export const NoLoop: Story = {
+  render: () =>
+    html`<lyra-playback length="10" interval-ms="500" .loop=${false}></lyra-playback>`,
+};
+
+export const SingleFrame: Story = {
+  render: () => html`<lyra-playback length="1"></lyra-playback>`,
+};

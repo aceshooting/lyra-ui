@@ -2,15 +2,24 @@ import { LyraToast, type ToastCreateOptions, type ToastPlacement } from './toast
 import type { LyraToastItem } from './toast-item.js';
 import './toast.js';
 
-let region: LyraToast | undefined;
+const DEFAULT_PLACEMENT: ToastPlacement = 'top-end';
 
-/** Get (or lazily mount) the singleton toast region on `document.body`. */
-function getRegion(placement?: ToastPlacement): LyraToast {
+const regions = new Map<ToastPlacement, LyraToast>();
+
+/**
+ * Get (or lazily mount) the singleton toast region for a given placement.
+ * Each placement gets its own region element so that a `toast()` call
+ * targeting one placement never relocates toasts already showing at another
+ * -- `placement` is a per-call option, not a global, retroactive one.
+ */
+function getRegion(placement: ToastPlacement = DEFAULT_PLACEMENT): LyraToast {
+  let region = regions.get(placement);
   if (!region || !region.isConnected) {
     region = document.createElement('lyra-toast') as LyraToast;
+    region.placement = placement;
     document.body.appendChild(region);
+    regions.set(placement, region);
   }
-  if (placement) region.placement = placement;
   return region;
 }
 
@@ -30,7 +39,7 @@ export interface ToastHandle {
 
 /**
  * Show a toast. Ergonomic convenience over `<lyra-toast>.create()` that mounts
- * and reuses a single page-level region — the drop-in for `react-hot-toast`.
+ * and reuses a page-level region per placement — the drop-in for `react-hot-toast`.
  *
  * @example toast('Saved');
  * @example toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: undo } });

@@ -100,6 +100,92 @@ it('closes on Escape and returns focus to the trigger', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(trigger);
 });
 
+it('closes the menu and returns focus to the trigger after picking a format', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  menuItem.click();
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(el.shadowRoot!.activeElement).to.equal(trigger);
+});
+
+it('exports JSON and applies the same columns allow-list CSV uses', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.rows = [{ id: 'a', name: 'Alpha', secret: 'shh' }];
+  el.columns = columns;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+
+  const menuItems = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  const jsonButton = menuItems.find((b) => b.textContent?.trim() === 'JSON')!;
+
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lyra-export-complete');
+  try {
+    jsonButton.click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+
+  expect(capturedBlob).to.exist;
+  const text = await capturedBlob!.text();
+  expect(JSON.parse(text)).to.deep.equal([{ id: 'a', name: 'Alpha' }]);
+});
+
+it('does not open the menu or export when disabled', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  el.formats = ['csv', 'json'];
+  el.disabled = true;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(trigger.disabled).to.be.true;
+
+  let exported = false;
+  el.addEventListener('lyra-export', () => (exported = true));
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(exported).to.be.false;
+});
+
+it('removes the document pointerdown listener on disconnect', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.remove();
+
+  // If disconnectedCallback failed to remove the document listener, this
+  // pointerdown would still reach onDocPointer and flip `open` back to false.
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  expect(el.open).to.be.true;
+});
+
 it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];
@@ -163,6 +249,81 @@ it('shows a focus ring on menu items via :focus-visible', async () => {
   const style = getComputedStyle(menuItem);
   expect(style.outlineWidth).to.equal('2px');
   expect(style.outlineOffset).to.equal('2px');
+});
+
+it('links the trigger to the menu via aria-controls/id only when a menu exists', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  expect(trigger.getAttribute('aria-controls')).to.equal(menu.id);
+  expect(menu.id).to.not.equal('');
+
+  el.formats = ['csv'];
+  await el.updateComplete;
+  const singleTrigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(singleTrigger.hasAttribute('aria-controls')).to.be.false;
+});
+
+it('opens the menu and focuses the first item on ArrowDown from the trigger', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.focus();
+
+  trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.true;
+  const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+});
+
+it('opens the menu and focuses the last item on ArrowUp from the trigger', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.focus();
+
+  trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.true;
+  const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  expect(el.shadowRoot!.activeElement).to.equal(items[items.length - 1]);
+});
+
+it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with Home/End', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+
+  const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+
+  items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+
+  items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
+
+  items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(items[items.length - 1]);
+
+  items[items.length - 1].dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(items[0]);
 });
 
 it('is accessible', async () => {

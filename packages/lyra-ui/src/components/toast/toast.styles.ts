@@ -14,7 +14,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--gap);
     inline-size: var(--width);
-    max-inline-size: calc(100vw - 2rem);
+    max-inline-size: calc(100vw - (var(--lyra-space-l) * 2));
   }
   ::slotted(*) {
     pointer-events: auto;
@@ -24,28 +24,28 @@ export const styles = css`
     flex-direction: column-reverse;
   }
   :host([placement='top-start']) {
-    inset-block-start: 1rem;
-    inset-inline-start: 1rem;
+    inset-block-start: var(--lyra-space-l);
+    inset-inline-start: var(--lyra-space-l);
   }
   :host([placement='top-end']) {
-    inset-block-start: 1rem;
-    inset-inline-end: 1rem;
+    inset-block-start: var(--lyra-space-l);
+    inset-inline-end: var(--lyra-space-l);
   }
   :host([placement='top-center']) {
-    inset-block-start: 1rem;
+    inset-block-start: var(--lyra-space-l);
     inset-inline: 0;
     margin-inline: auto;
   }
   :host([placement='bottom-start']) {
-    inset-block-end: 1rem;
-    inset-inline-start: 1rem;
+    inset-block-end: var(--lyra-space-l);
+    inset-inline-start: var(--lyra-space-l);
   }
   :host([placement='bottom-end']) {
-    inset-block-end: 1rem;
-    inset-inline-end: 1rem;
+    inset-block-end: var(--lyra-space-l);
+    inset-inline-end: var(--lyra-space-l);
   }
   :host([placement='bottom-center']) {
-    inset-block-end: 1rem;
+    inset-block-end: var(--lyra-space-l);
     inset-inline: 0;
     margin-inline: auto;
   }

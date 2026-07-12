@@ -1,4 +1,16 @@
 /**
+ * ISO 3166-1 alpha-2 shape: exactly two ASCII letters, case-insensitive.
+ * Shared by `flag.ts` (validating `country`) and `languageToCountry` below
+ * (validating a language tag's region subtag), because both values end up
+ * passed to the peer package `@aceshooting/lyra-flags`' `flagUrl()`, which
+ * naively interpolates its `code` argument into a `new URL('./flags/${code}.svg',
+ * ...)` with no validation of its own -- an unvalidated value containing `../`
+ * segments can escape the intended flags/ directory. Anything that doesn't
+ * match this shape is treated the same as an unknown/missing flag.
+ */
+export const ALPHA2_RE = /^[a-z]{2}$/i;
+
+/**
  * Default mapping from a language subtag to a representative country flag
  * (ISO 3166-1 alpha-2). Languages don't map 1:1 to countries; these are the
  * conventional choices for language pickers. Override per-app as needed.
@@ -57,6 +69,6 @@ export function languageToCountry(language: string): string | undefined {
   const parts = language.toLowerCase().split(/[-_]/);
   const base = parts[0];
   const region = parts[1];
-  if (region && region.length === 2) return region;
+  if (region && ALPHA2_RE.test(region)) return region;
   return LANGUAGE_TO_COUNTRY[base];
 }

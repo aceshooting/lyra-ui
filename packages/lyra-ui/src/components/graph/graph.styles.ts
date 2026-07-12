@@ -12,6 +12,11 @@ export const styles = css`
   [part='link'] {
     stroke: var(--lyra-color-border);
     fill: none;
+    cursor: pointer;
+  }
+  [part='link']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='node'] {
     /* --lyra-node-fill is set inline per-node (see graph.ts) from GraphNode.color;
@@ -27,7 +32,7 @@ export const styles = css`
     outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='label'] {
-    font-size: 10px;
+    font-size: 0.625rem;
     fill: var(--lyra-color-text);
     font-family: var(--lyra-font);
     pointer-events: none;

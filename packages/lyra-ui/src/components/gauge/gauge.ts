@@ -56,18 +56,28 @@ export class LyraGauge extends LyraElement {
   @property({ type: Number }) max = 100;
   @property({ reflect: true }) type: GaugeType = 'radial';
   @property() label = '';
+  /** Imperative override for the displayed/announced value text, e.g. `'72°F'` for a raw `value` of `72`.
+   * An empty string is treated the same as unset and falls back to the numeric `value`. */
   @property({ attribute: false }) valueLabel?: string;
 
   private get ratio(): number {
+    if (isNaN(this.value) || isNaN(this.min) || isNaN(this.max)) return 0;
     const span = this.max - this.min || 1;
     return Math.min(1, Math.max(0, (this.value - this.min) / span));
   }
 
   protected willUpdate(): void {
     this.setAttribute('role', 'meter');
-    this.setAttribute('aria-valuenow', String(this.value));
-    this.setAttribute('aria-valuemin', String(this.min));
-    this.setAttribute('aria-valuemax', String(this.max));
+    if (!isNaN(this.value) && !isNaN(this.min) && !isNaN(this.max)) {
+      const clamped = Math.min(this.max, Math.max(this.min, this.value));
+      this.setAttribute('aria-valuenow', String(clamped));
+    } else {
+      this.removeAttribute('aria-valuenow');
+    }
+    if (isNaN(this.min)) this.removeAttribute('aria-valuemin');
+    else this.setAttribute('aria-valuemin', String(this.min));
+    if (isNaN(this.max)) this.removeAttribute('aria-valuemax');
+    else this.setAttribute('aria-valuemax', String(this.max));
     if (this.label) this.setAttribute('aria-label', this.label);
     else this.removeAttribute('aria-label');
     if (this.valueLabel) this.setAttribute('aria-valuetext', this.valueLabel);
@@ -75,7 +85,7 @@ export class LyraGauge extends LyraElement {
   }
 
   private renderRadial(): TemplateResult {
-    const text = this.valueLabel ?? String(this.value);
+    const text = this.valueLabel || (isNaN(this.value) ? '' : String(this.value));
     // Dashoffset counts down from the full arc length (nothing revealed) to 0
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
     // path" technique, which transitions smoothly via plain CSS.
@@ -95,7 +105,7 @@ export class LyraGauge extends LyraElement {
   }
 
   private renderLinear(): TemplateResult {
-    const text = this.valueLabel ?? String(this.value);
+    const text = this.valueLabel || (isNaN(this.value) ? '' : String(this.value));
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     return html`<svg part="base" viewBox="0 0 100 20" preserveAspectRatio="none">
       <line part="track" x1="0" y1=${LINEAR_BAR_Y} x2="100" y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>

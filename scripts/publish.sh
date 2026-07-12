@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-# Interactive release script for @aceshooting/lyra-ui.
+# Interactive release script for the @aceshooting/lyra-* workspace packages.
 #
-# Steps: prompt for new version -> (optionally) upgrade all workspace deps to
-# latest -> lint -> test -> build -> manifest -> confirm -> pack -> npm
-# publish -> commit + tag -> push -> GitHub Release with artifacts.
+# Packages under packages/* are versioned and released independently, driven
+# entirely by pending changesets in .changeset/. Steps: ensure main is clean
+# and up to date (offering to commit+push pending work instead of failing)
+# -> (optionally) upgrade all workspace deps to latest -> ask which of the
+# packages with pending changesets to release this run -> consume changesets
+# for just those packages -> per-package lint/test/build/manifest -> print a
+# full review (versions, bump kind, tags, artifacts) and confirm -> pack +
+# npm publish each package -> commit -> tag each as "<name>@<version>" ->
+# push -> GitHub Release per package with its artifacts.
 #
 # Flags:
 #   --upgrade-deps   Run `pnpm -r up --latest` before the version bump (off by
@@ -14,10 +20,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PKG_DIR="$ROOT_DIR/packages/lyra-ui"
-PKG_JSON="$PKG_DIR/package.json"
-PKG_NAME="@aceshooting/lyra-ui"
-TARBALL_STEM="$(node -p "'$PKG_NAME'.replace(/^@/, '').replace('/', '-')")"
 GH_HOSTNAME="github.com"
 GH_ACCOUNT="aceshooting"
 
@@ -37,9 +39,26 @@ done
 
 cd "$ROOT_DIR"
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "Error: working tree is not clean. Commit or stash changes before publishing." >&2
-  git status --short >&2
+# ---------------------------------------------------------------------------
+# Discover publishable workspace packages (packages/*/package.json without
+# "private": true).
+# ---------------------------------------------------------------------------
+PKG_DIRS=()
+declare -A PKG_NAME
+declare -A NAME_TO_DIR
+for d in packages/*/; do
+  [[ -f "${d}package.json" ]] || continue
+  is_private="$(node -p "!!require('./${d}package.json').private")"
+  [[ "$is_private" == "true" ]] && continue
+  dir="${d%/}"
+  name="$(node -p "require('./${d}package.json').name")"
+  PKG_DIRS+=("$dir")
+  PKG_NAME["$dir"]="$name"
+  NAME_TO_DIR["$name"]="$dir"
+done
+
+if [[ "${#PKG_DIRS[@]}" -eq 0 ]]; then
+  echo "Error: no publishable packages found under packages/*." >&2
   exit 1
 fi
 
@@ -47,6 +66,26 @@ current_branch="$(git rev-parse --abbrev-ref HEAD)"
 if [[ "$current_branch" != "main" ]]; then
   echo "Error: releases must be cut from 'main' (currently on '$current_branch')." >&2
   exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# The working tree must be clean before we start bumping versions. Rather
+# than just failing, offer to commit + push whatever is pending.
+# ---------------------------------------------------------------------------
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Working tree is not clean:"
+  git status --short
+  echo
+  read -rp "Commit and push all of the above to '$current_branch' now, so the release can proceed? Type 'yes' to continue, anything else to abort: " dirty_confirm
+  if [[ "$dirty_confirm" != "yes" ]]; then
+    echo "Aborted. Commit or stash changes before publishing." >&2
+    exit 1
+  fi
+  read -rp "Commit message [chore: commit pending changes before release]: " dirty_message
+  dirty_message="${dirty_message:-chore: commit pending changes before release}"
+  git add -A
+  git commit -m "$dirty_message"
+  git push origin "$current_branch"
 fi
 
 echo "==> Checking that local main is up to date with origin/main"
@@ -74,13 +113,123 @@ if ! npm whoami >/dev/null 2>&1; then
   exit 1
 fi
 
-current_version="$(node -p "require('$PKG_JSON').version")"
-echo "Current $PKG_NAME version: $current_version"
 echo "Releasing as gh account: $(gh api user --jq .login)"
-if [[ -z "$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit)" ]]; then
+
+CHANGESET_FILES=()
+while IFS= read -r -d '' f; do
+  CHANGESET_FILES+=("$f")
+done < <(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print0)
+
+if [[ "${#CHANGESET_FILES[@]}" -eq 0 ]]; then
   echo "Error: no pending changesets found in .changeset/. Run 'pnpm changeset' first to describe this release's changes." >&2
   exit 1
 fi
+
+# ---------------------------------------------------------------------------
+# Parse each pending changeset's frontmatter to find which package(s) it
+# targets, so we can ask which of them to release this run.
+# ---------------------------------------------------------------------------
+changeset_packages() {
+  node -e '
+    const fs = require("fs");
+    const text = fs.readFileSync(process.argv[1], "utf8");
+    const m = text.match(/^---\n([\s\S]*?)\n---/);
+    if (!m) process.exit(0);
+    const pkgs = [...m[1].matchAll(/^"([^"]+)":\s*(major|minor|patch)\s*$/gm)].map((x) => x[1]);
+    console.log(pkgs.join(" "));
+  ' "$1"
+}
+
+declare -A FILE_PKGS
+CANDIDATE_NAMES=()
+for f in "${CHANGESET_FILES[@]}"; do
+  pkgs="$(changeset_packages "$f")"
+  FILE_PKGS["$f"]="$pkgs"
+  for p in $pkgs; do
+    [[ -n "${NAME_TO_DIR[$p]:-}" ]] || continue
+    if [[ ! " ${CANDIDATE_NAMES[*]:-} " == *" $p "* ]]; then
+      CANDIDATE_NAMES+=("$p")
+    fi
+  done
+done
+
+if [[ "${#CANDIDATE_NAMES[@]}" -eq 0 ]]; then
+  echo "Error: pending changesets don't target any publishable package under packages/*." >&2
+  exit 1
+fi
+
+echo
+echo "==> Packages with pending changesets:"
+for i in "${!CANDIDATE_NAMES[@]}"; do
+  echo "  $((i + 1))) ${CANDIDATE_NAMES[$i]}"
+done
+read -rp "Which package(s) do you want to release now? (comma-separated numbers, or 'all') [all]: " selection
+selection="${selection:-all}"
+
+SELECTED_NAMES=()
+if [[ "$selection" == "all" ]]; then
+  SELECTED_NAMES=("${CANDIDATE_NAMES[@]}")
+else
+  IFS=',' read -ra picks <<< "$selection"
+  for pick in "${picks[@]}"; do
+    pick="$(echo "$pick" | tr -d '[:space:]')"
+    if ! [[ "$pick" =~ ^[0-9]+$ ]] || (( pick < 1 || pick > ${#CANDIDATE_NAMES[@]} )); then
+      echo "Error: '$pick' is not a valid choice (1-${#CANDIDATE_NAMES[@]})." >&2
+      exit 1
+    fi
+    SELECTED_NAMES+=("${CANDIDATE_NAMES[$((pick - 1))]}")
+  done
+fi
+
+# A changeset can't be split package-by-package: if a selected package shares
+# a changeset with a package that wasn't picked, that package is pulled in
+# too — surface this clearly instead of silently expanding the release.
+EFFECTIVE_NAMES=("${SELECTED_NAMES[@]}")
+for f in "${CHANGESET_FILES[@]}"; do
+  pkgs="${FILE_PKGS[$f]}"
+  overlaps=0
+  for p in $pkgs; do
+    [[ " ${SELECTED_NAMES[*]:-} " == *" $p "* ]] && overlaps=1
+  done
+  if [[ "$overlaps" -eq 1 ]]; then
+    for p in $pkgs; do
+      [[ -n "${NAME_TO_DIR[$p]:-}" ]] || continue
+      if [[ ! " ${EFFECTIVE_NAMES[*]:-} " == *" $p "* ]]; then
+        echo "Note: '$f' also targets '$p', which wasn't selected — including it too (changesets can't be split)." >&2
+        EFFECTIVE_NAMES+=("$p")
+      fi
+    done
+  fi
+done
+
+DEFER_DIR=""
+restore_deferred_changesets() {
+  if [[ -n "$DEFER_DIR" && -d "$DEFER_DIR" ]]; then
+    shopt -s nullglob
+    for f in "$DEFER_DIR"/*.md; do
+      mv "$f" .changeset/
+    done
+    shopt -u nullglob
+    rmdir "$DEFER_DIR" 2>/dev/null || true
+    DEFER_DIR=""
+  fi
+}
+trap restore_deferred_changesets EXIT
+
+DEFER_DIR="$(mktemp -d)"
+for f in "${CHANGESET_FILES[@]}"; do
+  pkgs="${FILE_PKGS[$f]}"
+  keep=0
+  for p in $pkgs; do
+    [[ " ${EFFECTIVE_NAMES[*]:-} " == *" $p "* ]] && keep=1
+  done
+  [[ "$keep" -eq 0 ]] && mv "$f" "$DEFER_DIR/"
+done
+
+declare -A OLD_VERSION
+for dir in "${PKG_DIRS[@]}"; do
+  OLD_VERSION["$dir"]="$(node -p "require('./$dir/package.json').version")"
+done
 
 if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
   echo
@@ -89,7 +238,7 @@ if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
 
   echo
   echo "==> Dependency upgrade diff"
-  git --no-pager diff -- pnpm-lock.yaml "$ROOT_DIR"/packages/*/package.json
+  git --no-pager diff -- pnpm-lock.yaml packages/*/package.json
   echo
   read -rp "Type 'yes' to continue the release with the dependency upgrade shown above: " upgrade_confirm
   if [[ "$upgrade_confirm" != "yes" ]]; then
@@ -105,119 +254,214 @@ echo
 echo "==> Consuming changesets: bumping version(s) and generating CHANGELOG.md"
 pnpm changeset version
 
-new_version="$(node -p "require('$PKG_JSON').version")"
-if [[ "$new_version" == "$current_version" ]]; then
-  echo "Error: 'pnpm changeset version' did not change $PKG_NAME's version — check .changeset/ for a changeset targeting this package." >&2
+restore_deferred_changesets
+
+RELEASE_DIRS=()
+for name in "${EFFECTIVE_NAMES[@]}"; do
+  dir="${NAME_TO_DIR[$name]}"
+  new_version="$(node -p "require('./$dir/package.json').version")"
+  if [[ "$new_version" != "${OLD_VERSION[$dir]}" ]]; then
+    RELEASE_DIRS+=("$dir")
+  fi
+done
+
+if [[ "${#RELEASE_DIRS[@]}" -eq 0 ]]; then
+  echo "Error: 'pnpm changeset version' did not change any selected package's version." >&2
   exit 1
 fi
 
-if git rev-parse "$new_version" >/dev/null 2>&1; then
-  echo "Error: git tag '$new_version' already exists." >&2
-  exit 1
-fi
+declare -A NEW_VERSION TAG TARBALL_STEM TARBALL_PATH
+for dir in "${RELEASE_DIRS[@]}"; do
+  NEW_VERSION["$dir"]="$(node -p "require('./$dir/package.json').version")"
+  TAG["$dir"]="$(basename "$dir")@${NEW_VERSION[$dir]}"
+  if git rev-parse "${TAG[$dir]}" >/dev/null 2>&1; then
+    echo "Error: git tag '${TAG[$dir]}' already exists." >&2
+    exit 1
+  fi
+  TARBALL_STEM["$dir"]="$(node -p "'${PKG_NAME[$dir]}'.replace(/^@/, '').replace('/', '-')")"
+done
 
 echo
 echo "==> Installing to refresh lockfile"
 pnpm install
 
-echo
-echo "==> Lint"
-pnpm --filter "$PKG_NAME" run lint
+for dir in "${RELEASE_DIRS[@]}"; do
+  name="${PKG_NAME[$dir]}"
+  echo
+  echo "==> [$name] Lint"
+  pnpm --filter "$name" --if-present run lint
+  echo
+  echo "==> [$name] Test"
+  pnpm --filter "$name" --if-present run test
+  echo
+  echo "==> [$name] Build"
+  pnpm --filter "$name" --if-present run build
+  echo
+  echo "==> [$name] Generate manifest"
+  pnpm --filter "$name" --if-present run manifest
+done
+
+# ---------------------------------------------------------------------------
+# Full review before doing anything irreversible.
+# ---------------------------------------------------------------------------
+bump_kind() {
+  local old="$1" new="$2"
+  IFS='.' read -r o_major o_minor o_patch <<< "$old"
+  IFS='.' read -r n_major n_minor n_patch <<< "$new"
+  if [[ "$n_major" != "$o_major" ]]; then echo major
+  elif [[ "$n_minor" != "$o_minor" ]]; then echo minor
+  else echo patch
+  fi
+}
+next_version() {
+  local ver="$1" level="$2"
+  IFS='.' read -r major minor patch <<< "$ver"
+  case "$level" in
+    major) echo "$((major + 1)).0.0" ;;
+    minor) echo "$major.$((minor + 1)).0" ;;
+    patch) echo "$major.$minor.$((patch + 1))" ;;
+  esac
+}
 
 echo
-echo "==> Test"
-pnpm --filter "$PKG_NAME" run test
-
+echo "==> Review — verify everything below before executing"
+for dir in "${RELEASE_DIRS[@]}"; do
+  old="${OLD_VERSION[$dir]}"
+  new="${NEW_VERSION[$dir]}"
+  kind="$(bump_kind "$old" "$new")"
+  echo
+  echo "Package:     ${PKG_NAME[$dir]}"
+  echo "Version:     $old -> $new   (${kind} bump, per pending changeset)"
+  echo "  if patch:  $(next_version "$old" patch)"
+  echo "  if minor:  $(next_version "$old" minor)"
+  echo "  if major:  $(next_version "$old" major)"
+  echo "Git tag:     ${TAG[$dir]}"
+  echo "npm publish: ${PKG_NAME[$dir]}@${new} (--access public)"
+done
 echo
-echo "==> Build"
-pnpm --filter "$PKG_NAME" run build
-
+git --no-pager diff --stat -- pnpm-lock.yaml packages/*/package.json || true
 echo
-echo "==> Generate custom-elements manifest"
-pnpm --filter "$PKG_NAME" run manifest
-
-echo
-echo "==> Ready to release"
-echo "Package:  $PKG_NAME"
-echo "Version:  $current_version -> $new_version"
-git --no-pager diff --stat -- pnpm-lock.yaml "$PKG_DIR/package.json" "$ROOT_DIR"/packages/*/package.json || true
-echo
-read -rp "Type 'yes' to publish $PKG_NAME@$new_version to npm, tag $new_version, and create a GitHub Release with artifacts: " confirm
+read -rp "Type 'yes' to publish the package(s) above to npm, tag each, and create GitHub Releases: " confirm
 
 if [[ "$confirm" != "yes" ]]; then
-  echo "Aborted. No changes were published (local files were still modified by the upgrade/version bump)."
+  echo "Aborted. No changes were published (local files were still modified by the version bump)."
   exit 1
 fi
 
-echo
-echo "==> Packing tarball"
-rm -f "$PKG_DIR/$TARBALL_STEM"-*.tgz
-(cd "$PKG_DIR" && pnpm pack)
-tarball_path="$PKG_DIR/$TARBALL_STEM-$new_version.tgz"
-if [[ ! -f "$tarball_path" ]]; then
-  echo "Error: expected tarball not found at $tarball_path" >&2
-  exit 1
-fi
-
-echo
-echo "==> Publishing $tarball_path to npm"
-npm publish "$tarball_path" --access public
-
-# From here on, $PKG_NAME@$new_version is already live on npm and CANNOT be
-# unpublished after ~72h (and unpublishing is discouraged even within that
-# window). If anything below fails, don't retry this script from the top —
-# it would try to `npm publish` an already-published version and fail. Print
-# clear manual-recovery instructions instead of leaving a bare stack trace.
+# ---------------------------------------------------------------------------
+# From here on, each `npm publish` is live and CANNOT be unpublished after
+# ~72h (and unpublishing is discouraged even within that window). If
+# anything below fails, don't retry this script from the top.
+# ---------------------------------------------------------------------------
+PUBLISHED_DIRS=()
 publish_recovery_trap() {
   local exit_code=$?
   echo >&2
-  echo "==> FAILED after npm publish succeeded." >&2
-  echo "    $PKG_NAME@$new_version is already published on npm — do not re-run this script." >&2
-  echo "    Remaining manual steps to finish the release:" >&2
-  if ! git rev-parse "$new_version" >/dev/null 2>&1; then
-    echo "      1. Commit the version bump: git add pnpm-lock.yaml '$PKG_DIR/package.json' '$ROOT_DIR'/packages/*/package.json '$ROOT_DIR'/packages/*/CHANGELOG.md '$PKG_DIR/custom-elements.json' '$ROOT_DIR/.changeset' && git commit -m 'chore(release): $PKG_NAME@$new_version'" >&2
-    echo "      2. Tag it: git tag -a '$new_version' -m 'Release $new_version'" >&2
+  echo "==> FAILED during release." >&2
+  if [[ "${#PUBLISHED_DIRS[@]}" -eq 0 ]]; then
+    echo "    Nothing was published to npm yet — fix the issue and re-run this script." >&2
   else
-    echo "      1. (done) git tag '$new_version' already exists locally." >&2
+    echo "    Already published to npm (do NOT re-run this script for these):" >&2
+    for dir in "${PUBLISHED_DIRS[@]}"; do
+      echo "      - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}" >&2
+    done
+    echo "    Remaining manual steps:" >&2
+    echo "      - git add pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md packages/*/custom-elements.json .changeset" >&2
+    echo "      - git commit -m 'chore(release): ...'" >&2
+    for dir in "${PUBLISHED_DIRS[@]}"; do
+      git rev-parse "${TAG[$dir]}" >/dev/null 2>&1 || echo "      - git tag -a '${TAG[$dir]}' -m 'Release ${TAG[$dir]}'" >&2
+    done
+    echo "      - git push origin HEAD $(for dir in "${PUBLISHED_DIRS[@]}"; do printf "'%s' " "${TAG[$dir]}"; done)" >&2
+    for dir in "${PUBLISHED_DIRS[@]}"; do
+      echo "      - gh release create '${TAG[$dir]}' '${TARBALL_PATH[$dir]:-<tarball>}' '$dir/CHANGELOG.md' --title '${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}' --generate-notes" >&2
+    done
   fi
-  echo "      3. Push: git push origin HEAD '$new_version'" >&2
-  echo "      4. Create the GitHub Release: gh release create '$new_version' '$tarball_path' '$PKG_DIR/custom-elements.json' '$PKG_DIR/llms.txt' '$PKG_DIR/llms-full.txt' --title '$PKG_NAME@$new_version' --generate-notes" >&2
   exit "$exit_code"
 }
 trap publish_recovery_trap ERR
 
+for dir in "${RELEASE_DIRS[@]}"; do
+  name="${PKG_NAME[$dir]}"
+  new_version="${NEW_VERSION[$dir]}"
+  stem="${TARBALL_STEM[$dir]}"
+
+  echo
+  echo "==> [$name] Packing tarball"
+  rm -f "$dir/$stem"-*.tgz
+  (cd "$dir" && pnpm pack)
+  tarball_path="$dir/$stem-$new_version.tgz"
+  if [[ ! -f "$tarball_path" ]]; then
+    # Use `false` rather than `exit 1`: an explicit `exit` does NOT run the
+    # ERR trap in bash, which would silently skip the "already published to
+    # npm, don't re-run this script" recovery message once a prior package
+    # in this loop has already been published.
+    echo "Error: expected tarball not found at $tarball_path" >&2
+    false
+  fi
+  TARBALL_PATH["$dir"]="$tarball_path"
+
+  echo
+  echo "==> [$name] Publishing $tarball_path to npm"
+  npm publish "$tarball_path" --access public
+  PUBLISHED_DIRS+=("$dir")
+done
+
 echo
 echo "==> Committing version bump"
-git add pnpm-lock.yaml "$PKG_DIR/package.json" "$ROOT_DIR"/packages/*/package.json \
-  "$ROOT_DIR"/packages/*/CHANGELOG.md "$PKG_DIR/custom-elements.json" "$ROOT_DIR/.changeset"
+git add pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md .changeset
+for dir in "${PKG_DIRS[@]}"; do
+  [[ -f "$dir/custom-elements.json" ]] && git add "$dir/custom-elements.json"
+done
+subject_parts=()
+for dir in "${RELEASE_DIRS[@]}"; do
+  subject_parts+=("${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}")
+done
+joined_subjects="$(printf '%s, ' "${subject_parts[@]}")"
+commit_subject="chore(release): ${joined_subjects%, }"
 if git diff --cached --quiet; then
   echo "No local changes to commit (version/lockfile already up to date on this branch)."
 else
-  git commit -m "chore(release): $PKG_NAME@$new_version"
+  git commit -m "$commit_subject"
 fi
 
 echo
-echo "==> Tagging $new_version"
-git tag -a "$new_version" -m "Release $new_version"
-
-echo
-echo "==> Pushing commit and tag"
-git push origin HEAD "$new_version"
-
-echo
-echo "==> Creating GitHub Release"
-release_files=("$tarball_path" "$PKG_DIR/custom-elements.json" "$PKG_DIR/llms.txt" "$PKG_DIR/llms-full.txt" "$PKG_DIR/CHANGELOG.md")
-for f in "${release_files[@]}"; do
-  if [[ ! -f "$f" ]]; then
-    echo "Error: release artifact missing: $f" >&2
-    exit 1
-  fi
+echo "==> Tagging"
+tag_args=()
+for dir in "${RELEASE_DIRS[@]}"; do
+  git tag -a "${TAG[$dir]}" -m "Release ${TAG[$dir]}"
+  tag_args+=("${TAG[$dir]}")
 done
-gh release create "$new_version" "${release_files[@]}" \
-  --title "$PKG_NAME@$new_version" \
-  --generate-notes
+
+echo
+echo "==> Pushing commit and tags"
+git push origin HEAD "${tag_args[@]}"
+
+for dir in "${RELEASE_DIRS[@]}"; do
+  name="${PKG_NAME[$dir]}"
+  has_manifest_script="$(node -p "!!(require('./$dir/package.json').scripts || {}).manifest")"
+  release_files=("${TARBALL_PATH[$dir]}" "$dir/CHANGELOG.md")
+  if [[ "$has_manifest_script" == "true" ]]; then
+    release_files+=("$dir/custom-elements.json" "$dir/llms.txt" "$dir/llms-full.txt")
+  fi
+  for f in "${release_files[@]}"; do
+    if [[ ! -f "$f" ]]; then
+      # See the `false` note above: explicit `exit` would skip the ERR trap,
+      # and every package here has already been published to npm by now.
+      echo "Error: release artifact missing: $f" >&2
+      false
+    fi
+  done
+  echo
+  echo "==> [$name] Creating GitHub Release ${TAG[$dir]}"
+  gh release create "${TAG[$dir]}" "${release_files[@]}" \
+    --title "${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}" \
+    --generate-notes
+done
 
 trap - ERR
 
 echo
-echo "Published, tagged, and released $PKG_NAME@$new_version."
+echo "Published, tagged, and released:"
+for dir in "${RELEASE_DIRS[@]}"; do
+  echo "  - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]} (tag ${TAG[$dir]})"
+done

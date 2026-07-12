@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -12,6 +12,7 @@ import {
   parseISO,
   isSameDay,
   addMonths,
+  clampDate,
   resolveFirstDayOfWeek,
   type WeekdayFormat,
 } from './calendar-core.js';
@@ -30,8 +31,8 @@ export interface DateRange {
  * @customElement lyra-date-picker
  * @event change - The user committed a value.
  * @event input - The value changed during interaction (range: after the first click).
- * @csspart base, month, header, title, previous, next, weekdays, weekday, grid
- * @csspart day, day-today, day-outside, day-selected, day-range-start, day-range-end, day-range-inner
+ * @csspart base, month, header, title, previous, next, weekdays, weekday, grid, week
+ * @csspart day, day-today, day-outside, day-selected, day-range-start, day-range-end, day-range-inner, day-placeholder
  */
 export class LyraDatePicker extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -54,6 +55,12 @@ export class LyraDatePicker extends LyraElement {
   @state() private viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   @state() private focusedDate: Date | null = null;
   private focusPending = false;
+  // Set right before `commit()` assigns `value`, so `willUpdate` can tell its
+  // own write apart from an external assignment. Internal commits already
+  // know the right date is on-screen (it's the cell the user just clicked, or
+  // the view the user navigated to), so they must not force the view back to
+  // `selection.from`'s month -- only an externally-set `value` should do that.
+  private suppressViewSync = false;
 
   get selection(): DateRange {
     const parts = this.value.split('/');
@@ -66,9 +73,13 @@ export class LyraDatePicker extends LyraElement {
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    if (changed.has('value') && this.value) {
-      const from = this.selection.from;
-      if (from) this.viewDate = new Date(from.getFullYear(), from.getMonth(), 1);
+    if (changed.has('value')) {
+      const external = !this.suppressViewSync;
+      this.suppressViewSync = false;
+      if (external && this.value) {
+        const from = this.selection.from;
+        if (from) this.viewDate = new Date(from.getFullYear(), from.getMonth(), 1);
+      }
     }
   }
 
@@ -76,21 +87,17 @@ export class LyraDatePicker extends LyraElement {
     return resolveFirstDayOfWeek(this.firstDayOfWeek, this.locale);
   }
 
-  private isDisabled(d: Date): boolean {
+  private isDisabled(d: Date, min: Date | null, max: Date | null, today: Date): boolean {
     if (this.disabled || this.readonly) return true;
-    const min = parseISO(this.min);
-    const max = parseISO(this.max);
     if (min && d < min) return true;
     if (max && d > max) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     if (this.disablePast && d < today) return true;
     if (this.disableFuture && d > today) return true;
     return false;
   }
 
   private commit(from: Date | null, to: Date | null, fire: boolean): void {
-    this.value =
+    const next =
       this.mode === 'range'
         ? from && to
           ? `${formatISO(from)}/${formatISO(to)}`
@@ -100,12 +107,21 @@ export class LyraDatePicker extends LyraElement {
         : from
           ? formatISO(from)
           : '';
+    // Only arm the suppression when `value` is actually about to change --
+    // that's the only case `willUpdate` will see `changed.has('value')` and
+    // get a chance to consume (and clear) the flag.
+    if (next !== this.value) this.suppressViewSync = true;
+    this.value = next;
     this.emit('input');
     if (fire) this.emit('change');
   }
 
   private selectDate(date: Date): void {
-    if (this.isDisabled(date)) return;
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (this.isDisabled(date, min, max, today)) return;
     this.focusedDate = date;
     if (this.mode === 'range') {
       const { from, to } = this.selection;
@@ -132,12 +148,13 @@ export class LyraDatePicker extends LyraElement {
     this.goToDate(new Date());
   }
 
-  /** Navigate the view to a date and focus it. */
+  /** Navigate the view to a date and focus it, clamped to `min`/`max`. */
   goToDate(date: string | Date): void {
     const d = typeof date === 'string' ? parseISO(date) : date;
     if (!d) return;
-    this.viewDate = new Date(d.getFullYear(), d.getMonth(), 1);
-    this.focusedDate = d;
+    const clamped = clampDate(d, parseISO(this.min), parseISO(this.max));
+    this.viewDate = new Date(clamped.getFullYear(), clamped.getMonth(), 1);
+    this.focusedDate = clamped;
     this.focusPending = true;
   }
 
@@ -183,9 +200,24 @@ export class LyraDatePicker extends LyraElement {
     }
     e.preventDefault();
     this.focusedDate = next;
-    this.viewDate = new Date(next.getFullYear(), next.getMonth(), 1);
+    this.viewDate = this.viewDateForFocus(next);
     this.focusPending = true;
   };
+
+  /**
+   * The anchor month for a newly-focused date, sliding the view by the
+   * minimum amount needed to bring it into view. With `months` > 1, a date
+   * that's already visible in a later grid must not discard an earlier grid
+   * that's already on-screen.
+   */
+  private viewDateForFocus(next: Date): Date {
+    const firstMonth = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
+    const nextMonth = new Date(next.getFullYear(), next.getMonth(), 1);
+    const lastMonth = addMonths(firstMonth, this.months - 1);
+    if (nextMonth < firstMonth) return nextMonth;
+    if (nextMonth > lastMonth) return addMonths(nextMonth, -(this.months - 1));
+    return firstMonth;
+  }
 
   protected updated(): void {
     if (this.focusPending && this.focusedDate) {
@@ -196,16 +228,32 @@ export class LyraDatePicker extends LyraElement {
     }
   }
 
-  private renderDay(date: Date, shownMonth: number): TemplateResult {
+  private renderDay(
+    date: Date,
+    shownMonth: number,
+    selection: DateRange,
+    min: Date | null,
+    max: Date | null,
+    today: Date,
+    rowHasVisibleDay: boolean,
+  ): TemplateResult {
     const outside = date.getMonth() !== shownMonth;
     // Outside-month days are empty placeholders by default (matches WA), keeping the
     // 6-row grid aligned without low-contrast faded numbers.
     if (outside && !this.withOutsideDays) {
-      return html`<span part="day-placeholder" role="gridcell"></span>`;
+      // role="gridcell" stays either way. A trailing week can land entirely
+      // outside the shown month (monthMatrix always emits 6 rows of 7), and
+      // ARIA's row role requires at least one visible gridcell descendant --
+      // so only rows that already have a real, visible day cell may hide
+      // their placeholders from the accessibility tree.
+      return html`<span
+        part="day-placeholder"
+        role="gridcell"
+        aria-hidden=${rowHasVisibleDay ? 'true' : nothing}
+      ></span>`;
     }
-    const { from, to } = this.selection;
-    const disabled = this.isDisabled(date);
-    const today = new Date();
+    const { from, to } = selection;
+    const disabled = this.isDisabled(date, min, max, today);
     const isToday = isSameDay(date, today);
     const isStart = from && isSameDay(date, from);
     const isEnd = to && isSameDay(date, to);
@@ -241,12 +289,19 @@ export class LyraDatePicker extends LyraElement {
     </button>`;
   }
 
-  private renderMonth(offset: number): TemplateResult {
+  private renderMonth(
+    offset: number,
+    selection: DateRange,
+    min: Date | null,
+    max: Date | null,
+    today: Date,
+    fdow: number,
+    labels: string[],
+  ): TemplateResult {
     const base = addMonths(this.viewDate, offset);
     const year = base.getFullYear();
     const month = base.getMonth();
-    const matrix = monthMatrix(year, month, this.fdow);
-    const labels = weekdayLabels(this.fdow, this.weekdayFormat, this.locale);
+    const matrix = monthMatrix(year, month, fdow);
     const isFirst = offset === 0;
     const isLast = offset === this.months - 1;
 
@@ -266,16 +321,28 @@ export class LyraDatePicker extends LyraElement {
       </div>
       <div part="weekdays">${labels.map((l) => html`<span part="weekday">${l}</span>`)}</div>
       <div part="grid" role="grid" @keydown=${this.onGridKey}>
-        ${matrix.map(
-          (week) => html`<div part="week" role="row">${week.map((d) => this.renderDay(d, month))}</div>`,
-        )}
+        ${matrix.map((week) => {
+          const rowHasVisibleDay = week.some((d) => d.getMonth() === month);
+          return html`<div part="week" role="row">${week.map((d) =>
+            this.renderDay(d, month, selection, min, max, today, rowHasVisibleDay),
+          )}</div>`;
+        })}
       </div>
     </div>`;
   }
 
   render(): TemplateResult {
+    const selection = this.selection;
+    const min = parseISO(this.min);
+    const max = parseISO(this.max);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const fdow = this.fdow;
+    const labels = weekdayLabels(fdow, this.weekdayFormat, this.locale);
     const monthEls: TemplateResult[] = [];
-    for (let i = 0; i < this.months; i++) monthEls.push(this.renderMonth(i));
+    for (let i = 0; i < this.months; i++) {
+      monthEls.push(this.renderMonth(i, selection, min, max, today, fdow, labels));
+    }
     return html`<div part="base">${monthEls}</div>`;
   }
 }

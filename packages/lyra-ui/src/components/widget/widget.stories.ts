@@ -34,3 +34,14 @@ export const CollapsedInitially: Story = {
     </lyra-widget>
   `,
 };
+
+export const FullscreenInitially: Story = {
+  render: () => html`
+    <lyra-widget label="Load profile" sublabel="Last 7 days" expandable fullscreen style="max-width: 28rem;">
+      <span slot="actions"><button>Refresh</button></span>
+      <div style="padding: 1rem;">
+        <p style="margin: 0;">Rendered already fullscreen — backdrop, fixed panel, and dialog semantics.</p>
+      </div>
+    </lyra-widget>
+  `,
+};

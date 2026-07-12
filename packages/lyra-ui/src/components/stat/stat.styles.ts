@@ -77,11 +77,55 @@ export const styles = css`
   :host([variant='danger']) [part='value'] {
     color: var(--lyra-color-danger);
   }
+  [part='spark'] {
+    /* Consumers compose their own <lyra-sparkline slot="spark">; this part
+       only needs to reserve width for it. */
+    display: block;
+  }
+  [part='spark'][hidden] {
+    display: none;
+  }
   [part='caption'] {
     font-size: 0.8125rem;
     color: var(--lyra-color-text-quiet);
   }
   [part='caption'][hidden] {
     display: none;
+  }
+  [part='rows'] {
+    display: flex;
+    flex-direction: column;
+    /* Slightly tighter than the card's own --lyra-space-xs gap so the
+       breakdown list reads as one nested group rather than siblings of
+       equal weight with label/value/caption. */
+    gap: 0.125rem;
+  }
+  [part='rows'][hidden] {
+    display: none;
+  }
+  [part='row'] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--lyra-space-xs);
+    font-size: 0.8125rem;
+  }
+  [part='row-label'] {
+    color: var(--lyra-color-text-quiet);
+  }
+  [part='row-value'] {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-weight: 600;
+  }
+  /* Orthogonal to the status variant: an accent edge that marks a stat as
+     visually emphasized (e.g. the "headline" stat in a group) regardless of
+     status color. */
+  :host([emphasis]) [part='base'] {
+    border-inline-start: 3px solid var(--lyra-color-brand);
+  }
+  /* Status semantics win over visual emphasis: only tint the value with the
+     brand color when there's no status variant already claiming it. */
+  :host([emphasis][variant='neutral']) [part='value'] {
+    color: var(--lyra-color-brand);
   }
 `;

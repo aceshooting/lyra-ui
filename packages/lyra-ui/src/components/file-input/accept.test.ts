@@ -30,3 +30,10 @@ it('does not throw and does not match an extension pattern when name is unavaila
   expect(matchesAccept(nameless, '.csv,.xlsx')).to.be.false;
   expect(matchesAccept(nameless, 'text/csv')).to.be.true;
 });
+
+it('treats an unresolved extension pattern as a match when assumeExtensionMatch is true', () => {
+  const nameless = { type: 'text/csv' } as File;
+  expect(matchesAccept(nameless, '.csv,.xlsx', true)).to.be.true;
+  // A pattern that isn't extension-based is unaffected by the flag.
+  expect(matchesAccept(nameless, 'image/*', true)).to.be.false;
+});

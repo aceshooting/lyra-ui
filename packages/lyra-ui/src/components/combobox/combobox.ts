@@ -39,15 +39,23 @@ export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
  * @event lyra-show - The listbox opened.
  * @event lyra-hide - The listbox closed.
  * @event lyra-clear - The value was cleared.
+ * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
+ * @csspart form-control-label - The `<label>` element.
  * @csspart combobox - The input container (positioning anchor).
  * @csspart combobox-input - The text input.
  * @csspart listbox - The options popover.
  * @csspart option - An option row.
+ * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
+ * @csspart option-label - An option row's label/sub wrapper.
+ * @csspart option-sub - An option row's secondary line (when `sub` is set).
+ * @csspart option-overflow - The "+N more" indicator shown when rows are capped by `maxRender`.
  * @csspart tags - The multi-select tag container.
  * @csspart tag - An individual selected tag.
+ * @csspart tag__remove-button - A tag's remove button.
  * @csspart clear-button - The clear button.
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - The error message.
+ * @csspart hint - The hint message.
  */
 export class LyraCombobox extends LyraElement {
   static formAssociated = true;
@@ -104,6 +112,7 @@ export class LyraCombobox extends LyraElement {
   private listId = nextId('combobox-list');
   private inputId = nextId('combobox-input');
   private cleanup?: () => void;
+  private _isFirstUpdate = true;
   private _selected: string[] = [];
   // What `form.reset()` restores to. Captured exactly once, from whatever
   // `<lyra-option selected>` markup was present the first time slotted
@@ -127,6 +136,11 @@ export class LyraCombobox extends LyraElement {
   }
 
   protected willUpdate(): void {
+    // `hasUpdated` flips to `true` before `updated()` even sees its first
+    // call, so it can't distinguish "just mounted" from "just changed" there
+    // -- capture that distinction here, while it's still reliable, for
+    // `updated()`'s `open`-handling below to consult.
+    this._isFirstUpdate = !this.hasUpdated;
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -157,9 +171,18 @@ export class LyraCombobox extends LyraElement {
 
   private syncFormValue(): void {
     if (this.multiple) {
+      // A FormData form value submits under the keys baked into the FormData
+      // itself, bypassing the element's own `name` the way a plain string
+      // value would use it -- so an unnamed multi-select must contribute
+      // nothing (matching a nameless native `<select multiple>`) rather than
+      // inventing a shared key that would merge with any other unnamed
+      // combobox in the same form.
+      if (!this.name) {
+        this.internals.setFormValue(null);
+        return;
+      }
       const fd = new FormData();
-      const key = this.name || 'value';
-      for (const v of this._selected) fd.append(key, v);
+      for (const v of this._selected) fd.append(this.name, v);
       this.internals.setFormValue(fd);
     } else {
       this.internals.setFormValue(this._selected[0] ?? '');
@@ -183,11 +206,13 @@ export class LyraCombobox extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
+    clearTimeout(this.sourceTimer);
     document.removeEventListener('pointerdown', this.onDocPointer);
   }
 
   private collectOptions = (e: Event): void => {
     const slot = e.target as HTMLSlotElement;
+    const previous = new Set(this.options);
     this.options = slot
       .assignedElements({ flatten: true })
       .filter((el): el is LyraOption => el instanceof LyraOption);
@@ -204,6 +229,19 @@ export class LyraCombobox extends LyraElement {
       this._defaultSelected = [...declared];
       if (declared.length) {
         this.value = this.multiple ? declared : declared[0];
+        return; // `value=`'s setter already called reflectSelected()
+      }
+    } else {
+      // Options slotted in after the first pass (e.g. a lazily-populated
+      // list appended post-connect) still declare selection the same way a
+      // native `<select><option selected>` would -- seed newly-arrived ones
+      // into the live selection instead of letting reflectSelected() below
+      // strip their `selected` attribute back off.
+      const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected).map((o) => o.value);
+      if (newlySelected.length) {
+        this.value = this.multiple
+          ? [...new Set([...this._selected, ...newlySelected])]
+          : newlySelected[newlySelected.length - 1];
         return; // `value=`'s setter already called reflectSelected()
       }
     }
@@ -266,15 +304,11 @@ export class LyraCombobox extends LyraElement {
   private show(): void {
     if (this.open || this.disabled) return;
     this.open = true;
-    this.emit('lyra-show');
-    document.addEventListener('pointerdown', this.onDocPointer);
   }
   private hide(): void {
     if (!this.open) return;
     this.open = false;
     this.activeIndex = -1;
-    this.emit('lyra-hide');
-    document.removeEventListener('pointerdown', this.onDocPointer);
   }
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) this.hide();
@@ -284,15 +318,24 @@ export class LyraCombobox extends LyraElement {
     if (changed.has('open')) {
       this.cleanup?.();
       this.cleanup = undefined;
+      // All `open`-driven side effects (positioning, the click-outside
+      // listener, and the lyra-show/lyra-hide events) live here rather than
+      // in show()/hide() so they fire however `open` became true -- via
+      // show()/hide()'s own user-interaction paths, or a consumer/test
+      // setting `el.open` directly, which bypasses both entirely.
       if (this.open) {
+        document.addEventListener('pointerdown', this.onDocPointer);
+        // Don't announce a "show" transition for markup that's simply
+        // rendering open for the first time (e.g. `<lyra-combobox open>`) --
+        // only for an actual closed-to-open transition.
+        if (!this._isFirstUpdate) this.emit('lyra-show');
         const anchor = this.renderRoot.querySelector('[part="combobox"]') as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
-        // Reacting to the `open` property itself (not just inside show())
-        // means this fires however `open` became true — via show()'s own
-        // user-interaction paths, or a consumer/test setting `el.open = true`
-        // directly, which bypasses show() entirely.
         if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
+      } else {
+        document.removeEventListener('pointerdown', this.onDocPointer);
+        if (!this._isFirstUpdate) this.emit('lyra-hide');
       }
     }
     if (changed.has('required')) this.updateValidity();
@@ -314,6 +357,11 @@ export class LyraCombobox extends LyraElement {
       this.query = '';
       this.hide();
     }
+    // The query resets to '' above but `asyncRows` doesn't refresh on its
+    // own -- re-run `source` so the listbox (still open in multiple mode,
+    // and whatever `asyncRows` holds for the next time it reopens in single
+    // mode) matches the now-empty input instead of the stale prior query.
+    if (this.source) this.runSource(this.query);
     this.emit('input');
     this.emit('change');
   }
@@ -326,6 +374,7 @@ export class LyraCombobox extends LyraElement {
   private clear(): void {
     this.value = [];
     this.query = '';
+    if (this.source) this.runSource(this.query);
     this.emit('lyra-clear');
     this.emit('change');
   }
@@ -357,6 +406,12 @@ export class LyraCombobox extends LyraElement {
 
   private onInputBlur = (): void => {
     this.touched = true;
+    // A mouse click outside the element is already handled by
+    // onDocPointer/hide(), but that leaves keyboard users with no way to
+    // dismiss the listbox short of Escape -- tabbing focus away from the
+    // input should close it too, the same as it would for a native
+    // `<select>`'s popup.
+    this.hide();
   };
 
   private onHintSlotChange = (e: Event): void => {
@@ -518,6 +573,8 @@ export class LyraCombobox extends LyraElement {
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}
             aria-autocomplete="list"
+            aria-required=${this.required ? 'true' : 'false'}
+            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             autocomplete="off"
             .value=${this.displayValue}
             placeholder=${hasValue && !this.multiple ? '' : this.placeholder}
@@ -551,9 +608,9 @@ export class LyraCombobox extends LyraElement {
           @click=${this.onListboxClick}
         >
           ${this.loading
-            ? html`<div class="loading">Loading…</div>`
+            ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">Loading…</div>`
             : rows.length === 0
-              ? html`<div class="empty">${this.emptyText}</div>`
+              ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.emptyText}</div>`
               : html`${this.renderRows(rows, activeId)}
                   ${overflow > 0
                     ? html`<div part="option-overflow">+${overflow} more — refine your search</div>`

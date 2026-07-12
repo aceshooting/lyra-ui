@@ -23,6 +23,12 @@
   "engines": {
     "node": ">=20"
   },
+  "sideEffects": false,
+  "scripts": {
+    "generate": "node scripts/generate-index.mjs",
+    "test": "node scripts/test.mjs",
+    "prepack": "pnpm run generate"
+  },
   "files": [
     "flags",
     "index.js",
