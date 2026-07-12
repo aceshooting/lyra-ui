@@ -83,14 +83,14 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Components
 
-All 34 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
-Tier 3, then a map/file-input batch). Grouped by the release that introduced each.
+All 35 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
+Tier 3, then a map/file-input batch, then widget). Grouped by the release that introduced each.
 
 **v1 — form controls, toasts, sparkline**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lyra-combobox>` + `<lyra-option>` | `wa-combobox` | Filterable single/multi select, form-associated |
+| `<lyra-combobox>` + `<lyra-option>` | `wa-combobox` | Filterable single/multi select, form-associated; async data via `source` property, virtual scrolling with `max-render` |
 | `<lyra-date-picker>` | `wa-date-picker` | Inline calendar, single + range |
 | `<lyra-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
@@ -108,6 +108,7 @@ Tier 3, then a map/file-input batch). Grouped by the release that introduced eac
 | `<lyra-gauge>` | — (extra) | Radial or linear meter |
 | `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
 | `<lyra-split>` | — (extra) | Resizable panel layout |
+| `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 
 **Tier 2 — temporal & graph**
 
@@ -115,7 +116,7 @@ Tier 3, then a map/file-input batch). Grouped by the release that introduced eac
 |-----------|---------|-------|
 | `<lyra-time-range>` | — (extra) | Two-handle brush/scrubber over a numeric domain |
 | `<lyra-playback>` | — (extra) | Play/pause index stepper on a fixed interval |
-| `<lyra-heatmap>` | — (extra) | DPR-aware Canvas matrix heatmap (matrix layout only today — see Known limitations) |
+| `<lyra-heatmap>` | — (extra) | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling |
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy for graph/document navigation |
 
@@ -132,7 +133,7 @@ Tier 3, then a map/file-input batch). Grouped by the release that introduced eac
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend, choropleth GeoJSON layer, and point markers, plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above). Defaults to OpenStreetMap's demo tiles when `mapStyle` is unset — **production apps must supply their own `mapStyle`** (see Install above / Known limitations) |
+| `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend, choropleth GeoJSON layer, and point markers (via `markers` property), plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above). Defaults to OpenStreetMap's demo tiles when `mapStyle` is unset — **production apps must supply their own `mapStyle`** (see Install above / Known limitations) |
 | `<lyra-file-input>` | — (extra) | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
 
 ## Known limitations
@@ -144,8 +145,6 @@ A non-exhaustive list of gaps a new consumer should know about before adopting:
   return `true` regardless of whether a required field is empty.
 - `<lyra-tree>` has no keyboard interaction yet — only the expand/collapse button is focusable;
   row selection and tree navigation (arrow keys, Home/End) have no keyboard path.
-- `<lyra-heatmap>` is matrix-only today, despite its description mentioning calendar layouts — a
-  calendar-heatmap rendering mode isn't implemented yet.
 - `<lyra-file-input>`'s `accept` attribute only constrains the native file-picker dialog; it has
   no effect on the drag-drop path, so dropped files of a type `accept` would otherwise exclude are
   silently accepted unless you also set `allowedMimeTypes`/`forbiddenMimeTypes`.

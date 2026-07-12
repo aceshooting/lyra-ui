@@ -33,6 +33,7 @@ import './components/chart/box-plot.js';
 import './components/chart/histogram.js';
 import './components/map/map.js';
 import './components/file-input/file-input.js';
+import './components/widget/widget.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -91,6 +92,10 @@ export type { HistogramBucket } from './components/chart/histogram-bin.js';
 export { LyraMap } from './components/map/map.js';
 export type { LegendEntry, ChoroplethLayer } from './components/map/map.js';
 export { LyraFileInput } from './components/file-input/file-input.js';
+export { LyraWidget } from './components/widget/widget.js';
+export type { MapMarker } from './components/map/map.js';
+export type { ComboboxSource, ComboboxSourceRow } from './components/combobox/combobox.js';
+export type { CalendarDay } from './components/heatmap/calendar-grid.js';
 
 export { LyraElement } from './internal/lyra-element.js';
 export { FormAssociated } from './internal/form-associated.js';
