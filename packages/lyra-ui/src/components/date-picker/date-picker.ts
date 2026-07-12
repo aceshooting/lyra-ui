@@ -77,6 +77,7 @@ export class LyraDatePicker extends LyraElement {
   }
 
   private isDisabled(d: Date): boolean {
+    if (this.disabled || this.readonly) return true;
     const min = parseISO(this.min);
     const max = parseISO(this.max);
     if (min && d < min) return true;

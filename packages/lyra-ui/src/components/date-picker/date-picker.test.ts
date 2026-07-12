@@ -62,6 +62,30 @@ it('renders two months when requested', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="month"]').length).to.equal(2);
 });
 
+it('disables every day button and dims the host when the picker itself is disabled', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker value="2026-07-15" disabled></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  const days = el.shadowRoot!.querySelectorAll('[part~="day"]') as NodeListOf<HTMLButtonElement>;
+  expect(days.length).to.be.greaterThan(0);
+  for (const day of days) expect(day.disabled).to.be.true;
+
+  expect(getComputedStyle(el).pointerEvents).to.equal('none');
+});
+
+it('disables every day button when the picker is readonly', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker value="2026-07-15" readonly></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  const days = el.shadowRoot!.querySelectorAll('[part~="day"]') as NodeListOf<HTMLButtonElement>;
+  expect(days.length).to.be.greaterThan(0);
+  for (const day of days) expect(day.disabled).to.be.true;
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;

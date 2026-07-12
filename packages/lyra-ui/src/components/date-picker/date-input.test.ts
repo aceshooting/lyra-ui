@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './date-input.js';
 import type { LyraDateInput } from './date-input.js';
+import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-input.styles.js';
 
 it('parses typed input into an ISO value and emits change', async () => {
@@ -235,6 +236,22 @@ it('does not render an orphaned asterisk when required but no label is provided'
 
 it('clamps the popup to the viewport width like the combobox listbox', () => {
   expect(styles.cssText).to.include('max-inline-size: min(92vw, 28rem)');
+});
+
+it('propagates disabled/readonly to the nested lyra-date-picker so its days actually stop being interactive', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input value="2026-07-15" disabled></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  expect(picker.disabled).to.be.true;
+
+  el.disabled = false;
+  el.readonly = true;
+  await el.updateComplete;
+  await picker.updateComplete;
+  expect(picker.readonly).to.be.true;
 });
 
 it('shows a not-allowed cursor on the disabled input wrapper', async () => {

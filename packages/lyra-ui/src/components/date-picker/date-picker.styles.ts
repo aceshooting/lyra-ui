@@ -5,6 +5,10 @@ export const styles = css`
     display: inline-block;
     --lyra-cell-size: 2.25rem;
   }
+  :host([disabled]) {
+    opacity: var(--lyra-opacity-disabled);
+    pointer-events: none;
+  }
   [part='base'] {
     display: flex;
     gap: var(--lyra-space-l);

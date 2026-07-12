@@ -237,6 +237,8 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             .max=${this.max}
             .months=${this.months}
             .locale=${this.locale}
+            .disabled=${this.disabled}
+            .readonly=${this.readonly}
             first-day-of-week=${this.firstDayOfWeek}
             weekday-format=${this.weekdayFormat}
             @change=${this.onPickerChange}
