@@ -325,6 +325,24 @@ it('allows a required model-select to submit once a value is set', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
+  const form = (await fixture(html`
+    <form><lyra-model-select name="model" .catalog=${CATALOG}></lyra-model-select></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-model-select') as LyraModelSelect;
+  expect(el.checkValidity()).to.be.true;
+
+  el.required = true;
+  expect(el.hasAttribute('required')).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+  expect(form.checkValidity()).to.be.false;
+
+  el.required = false;
+  expect(el.hasAttribute('required')).to.be.false;
+  expect(el.checkValidity()).to.be.true;
+  expect(form.checkValidity()).to.be.true;
+});
+
 it('restores the declared default value (initial value attribute) on form.reset()', async () => {
   const form = (await fixture(html`
     <form>
