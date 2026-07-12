@@ -44,6 +44,18 @@ function loadFlagUrlResolver(): Promise<FlagUrlResolver | null> {
 }
 
 /**
+ * @internal Test-only seam: overrides (or, with `undefined`, clears) the module-level cache that
+ * `willUpdate()` reads through `loadFlagUrlResolver()`. The real `@aceshooting/lyra-flags` peer's
+ * `flagUrl(code)` never actually rejects (unknown codes just resolve `undefined`), so this is the
+ * only way to exercise a resolver-function rejection — e.g. a network failure fetching a flag
+ * asset — without uninstalling the real package. Not part of the public API; not re-exported from
+ * the root barrel.
+ */
+export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | null> | undefined): void {
+  flagUrlResolver = value;
+}
+
+/**
  * `<lyra-flag>` — a country/language flag.
  *
  * Flag images are shipped by the optional peer package `@aceshooting/lyra-flags`,
@@ -145,6 +157,12 @@ export class LyraFlag extends LyraElement {
       .then((url) => {
         if (token !== this.resolveToken) return; // superseded by a later country/language/src change
         this.resolvedSrc = url;
+        this.loading = false;
+      })
+      .catch((err) => {
+        if (token !== this.resolveToken) return; // superseded by a later country/language/src change
+        console.warn(`<lyra-flag> failed to resolve a flag URL for "${code}":`, err);
+        this.resolvedSrc = undefined;
         this.loading = false;
       });
   }

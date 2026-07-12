@@ -1,6 +1,6 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './flag.js';
-import { loadFlagUrl } from './flag.js';
+import { loadFlagUrl, __setFlagUrlResolverForTesting } from './flag.js';
 import type { LyraFlag } from './flag.js';
 
 async function img(el: LyraFlag): Promise<HTMLImageElement> {
@@ -176,5 +176,78 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
     }
     expect(calls.length).to.equal(1);
     expect(calls[0][0]).to.contain('@aceshooting/lyra-flags');
+  });
+});
+
+describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
+  // The real `@aceshooting/lyra-flags` peer's `flagUrl(code)` never actually rejects (an unknown
+  // code just resolves `undefined`), so `loadFlagUrl()`'s own try/catch -- which only guards the
+  // *import* step -- can't be exercised into the "resolver *function* itself rejects" gap this
+  // task fixes. `__setFlagUrlResolverForTesting` swaps in a rejecting resolver at the exact seam
+  // `willUpdate()` reads through (`loadFlagUrlResolver()`'s cache) so that gap is directly
+  // testable without uninstalling the real peer package.
+  afterEach(() => {
+    // Restore the real cached resolver for every later test in this file/suite.
+    __setFlagUrlResolverForTesting(undefined);
+  });
+
+  it('does not leave an unhandled promise rejection when the resolver function itself rejects, matching the baseline (peer-missing) behavior of resolving to loading=false', async () => {
+    __setFlagUrlResolverForTesting(
+      Promise.resolve(async () => {
+        throw new Error('network failure');
+      }),
+    );
+    let caught: unknown;
+    const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
+    window.addEventListener('unhandledrejection', onUnhandled);
+    const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
+    // Give the rejection every chance to surface as an unhandled rejection before asserting.
+    await aTimeout(50);
+    window.removeEventListener('unhandledrejection', onUnhandled);
+    expect(caught, 'no unhandledrejection event should have fired').to.be.undefined;
+    expect(el.loading).to.be.false;
+    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  });
+
+  it('ignores a rejection superseded by a newer country/language/src change (the same resolveToken guard the .then() branch uses), while the still-current call still recovers from its own rejection', async () => {
+    const rejecters: Array<(err: unknown) => void> = [];
+    __setFlagUrlResolverForTesting(
+      Promise.resolve(
+        () =>
+          new Promise<string | undefined>((_resolve, reject) => {
+            rejecters.push(reject);
+          }),
+      ),
+    );
+    let caught: unknown;
+    const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
+    window.addEventListener('unhandledrejection', onUnhandled);
+
+    const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
+    await el.updateComplete;
+    expect(el.loading, 'still awaiting the fr resolution').to.be.true;
+
+    // Supersede the in-flight 'fr' resolution before it ever settles -- bumps resolveToken.
+    el.country = 'de';
+    await el.updateComplete;
+    expect(el.loading, 'now awaiting the de resolution').to.be.true;
+    expect(rejecters.length).to.equal(2);
+
+    // Reject the stale 'fr' call first: the guard must recognize it as superseded and no-op,
+    // leaving the still-in-flight 'de' call's loading state untouched.
+    rejecters[0](new Error('stale fr failure'));
+    await aTimeout(20);
+    expect(el.loading, 'the stale rejection must not touch loading').to.be.true;
+
+    // Now reject the current 'de' call: its own .catch() branch (token === resolveToken) must
+    // still fire and recover to loading=false.
+    rejecters[1](new Error('de failure'));
+    await aTimeout(20);
+    window.removeEventListener('unhandledrejection', onUnhandled);
+
+    expect(caught, 'no unhandledrejection event should have fired').to.be.undefined;
+    expect(el.loading).to.be.false;
+    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
   });
 });
