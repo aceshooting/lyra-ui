@@ -553,3 +553,57 @@ it('does not stack a scatter chart\'s linear x scale even when `stacked` is true
   const config = (el as any).buildConfig();
   expect(config.options.scales.x.stacked).to.equal(false);
 });
+
+it('skips redrawing when scrolled off-screen', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  (el as any).visible = false;
+  el.labels = ['A', 'B', 'C'];
+  await el.updateComplete;
+  expect((el as any).chart.data.labels).to.deep.equal(['A', 'B']);
+});
+
+it('redraws once when it becomes visible again after being off-screen', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  (el as any).visible = false;
+  el.labels = ['A', 'B', 'C'];
+  await el.updateComplete;
+  (el as any).visible = true;
+  (el as any).draw();
+  await el.updateComplete;
+  expect((el as any).chart.data.labels).to.deep.equal(['A', 'B', 'C']);
+});
+
+it('skips redrawing when the content signature is unchanged', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const dataRef = (el as any).chart.data;
+  el.requestUpdate();
+  await el.updateComplete;
+  expect((el as any).chart.data).to.equal(dataRef);
+});
+
+it('refreshTheme() always redraws regardless of the signature gate', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const dataRef = (el as any).chart.data;
+  el.refreshTheme();
+  expect((el as any).chart.data).to.not.equal(dataRef);
+});

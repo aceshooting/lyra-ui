@@ -145,6 +145,10 @@ export class LyraChart extends LyraElement {
 
   @state() private zoomed = false;
 
+  @state() private visible = true;
+  private intersectionObserver?: IntersectionObserver;
+  private lastSignature = '';
+
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: Chart;
   private chartJsModule?: typeof import('chart.js');
@@ -168,12 +172,21 @@ export class LyraChart extends LyraElement {
       this.chartJsModule = mod;
       this.draw();
     });
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        const wasVisible = this.visible;
+        this.visible = entries[0]?.isIntersecting ?? true;
+        if (this.visible && !wasVisible) this.draw();
+      });
+      this.intersectionObserver.observe(this);
+    }
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.chart?.destroy();
     this.chart = undefined;
+    this.intersectionObserver?.disconnect();
   }
 
   protected updated(changed: PropertyValues): void {
@@ -188,8 +201,19 @@ export class LyraChart extends LyraElement {
     if (changed.has('height')) {
       this.style.setProperty('--lyra-chart-height', this.height);
     }
+    // While `chart.js` is still loading, `draw()` would no-op anyway (no
+    // `chartJsModule`/`canvasEl` yet) — bail before touching `lastSignature`
+    // so that phantom "no-op" update doesn't get cached as the baseline and
+    // silently swallow the real first draw once loading finishes with no
+    // other property having changed in the meantime.
+    if (this.loading) return;
     const onlyZoomChanged = changed.size === 1 && changed.has('zoomed');
-    if (!onlyZoomChanged) this.draw();
+    if (onlyZoomChanged) return;
+    if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
+    const signature = this.computeSignature();
+    if (signature === this.lastSignature) return;
+    this.lastSignature = signature;
+    this.draw();
   }
 
   private seriesToDataset(s: Series) {
@@ -227,6 +251,30 @@ export class LyraChart extends LyraElement {
       tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
       tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
+  }
+
+  /**
+   * A content-affecting-properties fingerprint used by `updated()` to skip a
+   * redundant `draw()` when neither visibility nor any of these properties
+   * actually changed since the last draw (e.g. an unrelated property/state
+   * update, or `requestUpdate()` with nothing changed). Mirrors
+   * `lite-chart.ts`'s `computeSignature()`.
+   */
+  private computeSignature(): string {
+    return JSON.stringify([
+      this.type,
+      this.labels,
+      this.datasets,
+      this.legend,
+      this.area,
+      this.xLabel,
+      this.yLabel,
+      this.y2Label,
+      this.beginAtZero,
+      this.horizontal,
+      this.stacked,
+      this.config,
+    ]);
   }
 
   /**
