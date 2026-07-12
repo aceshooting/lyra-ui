@@ -40,7 +40,9 @@ it('renders an img for a country code', async () => {
   const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
   const el2 = await img(el);
   expect(el2.getAttribute('src')).to.contain('fr.svg');
-  expect(el2.getAttribute('alt')).to.equal('FR');
+  expect(el2.getAttribute('alt')).to.equal(
+    new Intl.DisplayNames([navigator.language], { type: 'region' }).of('FR'),
+  );
   expect(el.hasAttribute('aria-busy')).to.be.false;
 });
 
@@ -52,14 +54,18 @@ it('re-resolves the flag when country changes on an already-mounted element', as
     () => el.shadowRoot!.querySelector('img')?.getAttribute('src')?.includes('de.svg'),
     'flag image should update to the new country',
   );
-  expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('DE');
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal(
+    new Intl.DisplayNames([navigator.language], { type: 'region' }).of('DE'),
+  );
 });
 
 it('country takes precedence over language when both are set', async () => {
   const el = (await fixture(html`<lyra-flag country="fr" language="en"></lyra-flag>`)) as LyraFlag;
   const el2 = await img(el);
   expect(el2.getAttribute('src')).to.contain('fr.svg');
-  expect(el2.getAttribute('alt')).to.equal('FR');
+  expect(el2.getAttribute('alt')).to.equal(
+    new Intl.DisplayNames([navigator.language], { type: 'region' }).of('FR'),
+  );
 });
 
 it('reflects the round attribute', async () => {
@@ -146,6 +152,28 @@ it('rejects a path-traversal-shaped language region subtag instead of passing it
   await aTimeout(50);
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
   expect(el.hasAttribute('aria-busy')).to.be.false;
+});
+
+it('uses a human-readable region name as the default alt text', async () => {
+  const el = (await fixture(html`<lyra-flag country="fr"></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('alt')).to.equal(
+    new Intl.DisplayNames([navigator.language], { type: 'region' }).of('FR'),
+  );
+});
+
+it('still prefers an explicit label over the derived display name', async () => {
+  const el = (await fixture(html`<lyra-flag country="fr" label="French flag"></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('alt')).to.equal('French flag');
+});
+
+it('maps a language-only tag through to its country display name', async () => {
+  const el = (await fixture(html`<lyra-flag language="en"></lyra-flag>`)) as LyraFlag;
+  const image = await img(el);
+  expect(image.getAttribute('alt')).to.equal(
+    new Intl.DisplayNames([navigator.language], { type: 'region' }).of('GB'),
+  );
 });
 
 it('is accessible', async () => {

@@ -29,6 +29,22 @@ export async function loadFlagUrl(
   }
 }
 
+/**
+ * Resolves an ISO 3166-1 alpha-2 region code to a human-readable, localized
+ * display name (e.g. `'FR'` -> `'France'`) via `Intl.DisplayNames`, for use as
+ * the default accessible name (`alt`) instead of a bare code read
+ * letter-by-letter by most screen readers. Falls back to the uppercase code
+ * itself if `Intl.DisplayNames` throws (unrecognized region) or isn't
+ * available in the current runtime.
+ */
+function displayNameFor(code: string): string {
+  try {
+    return new Intl.DisplayNames([navigator.language], { type: 'region' }).of(code.toUpperCase()) ?? code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
 let flagUrlResolver: Promise<FlagUrlResolver | null> | undefined;
 
 /**
@@ -88,10 +104,13 @@ export class LyraFlag extends LyraElement {
   @property() src?: string;
 
   /**
-   * Accessible label / `alt` text. Defaults to the uppercase *resolved country
-   * code* — for a `language`-only element (e.g. `language="en"`) that's the
-   * mapped country (`"GB"`), not the language tag itself (`"EN"`). Has no
-   * default when only `src` is given (no country/language to derive one from).
+   * Accessible label / `alt` text. Defaults to a localized, human-readable
+   * region name derived from the *resolved country code* via
+   * `Intl.DisplayNames` (e.g. `"United Kingdom"`) — for a `language`-only
+   * element (e.g. `language="en"`) that's the mapped country's display name,
+   * not the language tag itself. Falls back to the bare uppercase code if
+   * `Intl.DisplayNames` can't resolve it. Has no default when only `src` is
+   * given (no country/language to derive one from).
    */
   @property() label?: string;
 
@@ -158,7 +177,8 @@ export class LyraFlag extends LyraElement {
     if (this.loading) return html`<lyra-skeleton variant="rect"></lyra-skeleton>`;
     const url = this.src ?? this.resolvedSrc;
     if (!url) return html``;
-    const alt = this.label ?? (this.code ?? '').toUpperCase();
+    const code = this.code;
+    const alt = this.label ?? (code ? displayNameFor(code) : '');
     return html`<img part="image" src=${url} alt=${alt} loading="lazy" decoding="async" />`;
   }
 }
