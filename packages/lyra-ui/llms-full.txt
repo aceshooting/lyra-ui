@@ -794,9 +794,12 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `goodDirection: 'up'|'down' = 'up'` (attribute `good-direction`) — which trend direction counts
   as "good"; inverts arrow/color polarity for cost/latency/error-rate-style metrics where a
   *decrease* is the win.
-- `rows: StatRow[] = []` (attribute: false) — `StatRow { label: string; value: string }`; rendered as
-  a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/`[part="row-label"]`/
-  `[part="row-value"]`) beneath the caption, hidden entirely when empty
+- `rows: StatRow[] = []` (attribute: false) — `StatRow { label: string; value: string; exactValue?:
+  string }`; rendered as a simple label/value breakdown list (`[part="rows"]`/`[part="row"]`/
+  `[part="row-label"]`/`[part="row-value"]`) beneath the caption, hidden entirely when empty. A row's
+  optional `exactValue` mirrors the headline `exactValue`/`exact-value` pattern: rendered as a `title`
+  tooltip on that row's `[part="row-value"]` and gives it `tabindex="0"`, independently per row —
+  unset rows are unaffected.
 - `emphasis: boolean = false` (reflected) — visual emphasis (e.g. for a "headline" stat in a group):
   a brand-colored accent edge, orthogonal to the status `variant`; status semantics still win over
   it — `emphasis` only additionally tints `[part="value"]` brand-colored when `variant` is still
@@ -856,9 +859,17 @@ of `rows` — this component only renders and emits intents.
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
-  `[part='reveal-columns-button']` (rendered whenever any column sets a `priority`); `sticky` pins
-  that column's header cell/cells to the inline-start edge (`position: sticky`) while the table
-  scrolls horizontally
+  `[part='reveal-columns-button']`; `sticky` pins that column's header cell/cells to the inline-start
+  edge (`position: sticky`) while the table scrolls horizontally
+- `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
+  when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
+  `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
+  `[part='base']` plus a post-render DOM check, so it settles one render cycle after a `columns`/
+  `rows`/width change lands — poll for the settled value (e.g. `await el.updateComplete;` twice, or
+  `waitUntil()`) rather than assuming a single `updateComplete` covers it. Setting it directly has no
+  lasting effect; it's recomputed on the next render or resize. `[part='reveal-columns-button']` now
+  renders exactly when `columnsHidden` is true — no longer whenever any column merely *declares* a
+  `priority` regardless of whether anything is actually hidden
 - `rows: T[] = []` (attribute: false)
 - `sortKey: string = ''` (attribute `sort-key`)
 - `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
@@ -876,13 +887,14 @@ of `rows` — this component only renders and emits intents.
   button's label once they've been revealed)
 
 **Events:** `lyra-sort` (`detail: { key }`, fired on sortable-header activation), `lyra-row-click`
-(`detail: { row }`), `lyra-load-more` (fired on the "load more" button)
+(`detail: { row }`), `lyra-load-more` (fired on the "load more" button), `lyra-columns-hidden-change`
+(`detail: { hidden: boolean }`, fired only on a real `columnsHidden` transition)
 
 **Slots:** none — content comes entirely from `columns`/`rows`.
 
 **CSS parts:** `base`, `table`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
-(shown only when at least one column sets `priority`)
+(shown only when `columnsHidden` is true)
 
 **Themeable custom properties:** `--lyra-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`).
@@ -1057,13 +1069,35 @@ auto-inserted between each adjacent pair.
   regardless — only the effective drag/keyboard clamp bounds (and the rendered `flex-basis`, via a
   native CSS `clamp()` so a constrained panel stays pinned between its px bounds across container
   resizes with no extra `ResizeObserver`) change for a constrained panel.
+- `collapse: 'start'|'end'|'none' = 'none'` (reflected) — opt-in responsive collapse for one panel:
+  `'start'`/`'end'` is a *logical* position (RTL-aware, matching CSS logical properties — the panel at
+  the document's visual leading/trailing edge, not a raw array index). `lyra-split` only owns the
+  width-collapse mechanics/state signaling below; it renders no icon-only UI itself — the collapsing
+  panel's own slotted content is expected to adapt itself (e.g. via its own `@container` query reading
+  the panel's clamped width or `data-collapse-state`, see below).
+- `railWidth: string = '3.5rem'` (attribute `rail-width`) — the fixed CSS length the collapsing panel
+  clamps to in `'rail'` state.
+- `railBreakpoint: number = 640` (attribute `rail-breakpoint`, px) — below this container width (a
+  `ResizeObserver` on `[part='base']`, active only while `collapse !== 'none'`), the collapsing panel
+  switches from its normal drag-resizable percent width to the fixed `railWidth`.
+- `floatBreakpoint: number = 400` (attribute `float-breakpoint`, px) — below this narrower container
+  width, the collapsing panel instead becomes an absolutely-positioned overlay ("floating card") on
+  top of the other pane(s), removed from the normal flex flow; the sibling(s) take the full width.
+
+`collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
+— are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
+itself (absent for `'wide'`/`collapse="none"`); and the `lyra-split-collapse-change` event below. The
+divider adjacent to the collapsed panel is drag/keyboard-disabled (`aria-disabled="true"`) while
+collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-collapse-feature behavior.
 
 **Events:** `lyra-resize` (`detail: { sizes }`, fired on every drag step/release **and** every
-keyboard step)
+keyboard step), `lyra-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
+on a real `collapse`-state transition, never on every resize/render)
 
 **Slots:** default (each direct child element is one panel).
 
-**CSS parts:** `base`, `divider`
+**CSS parts:** `base` (`position: relative`, so the `'floating'` state can anchor to it), `divider`
+(carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed)
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1400,6 +1434,12 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
   Unset (the default) falls back to the built-in English "Row X, Col Y: value" / "Mon DD: value"
   template — additive, not breaking.
+- `columnX?: (index: number) => number` (attribute: false, calendar mode only) — overrides the
+  internal week-column x-coordinate formula (`CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP)`) used
+  consistently across drawing, hit-testing, the focus ring, and month-label positioning, so a
+  consumer can pixel-align this calendar's week columns with a sibling `<lyra-lite-chart>`'s bars
+  (see that component's own `barX`) by supplying the same coordinate function to both. Unset (the
+  default) is the original formula, unchanged.
 
 **Events:** `lyra-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode)
@@ -1472,7 +1512,10 @@ color) and `--lyra-space-xs`.
   longer leak a `MediaQueryList` listener per crossing — both previously-known issues are fixed.
 - calendar mode's date labels (used by the default `cellText` template and the tooltip/live-region
   text) now format via the runtime locale (`toLocaleString(undefined, ...)`) instead of a hardcoded
-  `'en'` — fixed.
+  `'en'` — fixed. The canvas-drawn axis chrome is now locale-aware too: month labels use
+  `toLocaleString(undefined, ...)` (previously hardcoded `'en'`) and weekday labels are derived via
+  `Intl.DateTimeFormat(undefined, { weekday: 'short' })` (previously a literal English `['', 'Mon',
+  '', 'Wed', '', 'Fri', '']` array) — same sparse every-other-day spacing, just locale-correct text.
 
 ---
 
@@ -1783,6 +1826,23 @@ passthrough). Not a subclass of `LyraChart`.
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
   Falls back to the built-in "nice numbers" formatter when unset.
+- `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
+  whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
+  content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
+  `[part='base']` becomes horizontally `overflow-x: auto` so the user scrolls to see every bar at a
+  legible fixed width instead of them compressing as category count grows. Bar type only.
+- `barWidth: number = 32` (attribute `bar-width`, px) — each bar's fixed width in `layout="scroll"`
+  mode; ignored in the default `'fit'` mode.
+- `maxLabels?: number` (attribute `max-labels`, type Number) — decimates which category axis labels
+  actually render *text* when `labels.length > maxLabels` (bars themselves are never decimated, only
+  their axis `<text>` labels): always shows the first and last label, and roughly evenly distributes
+  the rest between them. Works in either `layout` mode. Unset (the default) renders every label,
+  unchanged.
+- `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
+  per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
+  consumer can pixel-align this chart's bars with a sibling `<lyra-heatmap>` calendar's week columns
+  (see that component's own `columnX`) by supplying the same coordinate function to both. Unset (the
+  default) is the original formula, unchanged.
 
 **Events:** `lyra-point-click` — fired when a bar/point is activated (click, or Enter/Space while
 focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
@@ -1791,10 +1851,11 @@ focused). `detail: { datasetIndex: number, index: number, label: string | undefi
 **Performance:** rendering is `IntersectionObserver`-gated and content-signature-memoized — `render()`
 skips recomputing the grid/marks (and reuses the previous `TemplateResult`) while the host is scrolled
 off-screen, or when none of the content-affecting properties (`type`, `labels`, `datasets`, `legend`,
-`xLabel`, `yLabel`, `beginAtZero`, `stacked`, or the measured plot size) have changed since the last
-render. A `tickFormat` identity change alone (with everything else unchanged) does not force a redraw —
-in practice `tickFormat` is stable across a component's lifetime, and any data change that would make a
-different `tickFormat` output visible already changes `datasets`/`labels` too.
+`xLabel`, `yLabel`, `beginAtZero`, `stacked`, `layout`, `barWidth`, `maxLabels`, or the measured plot
+size) have changed since the last render. A `tickFormat`/`barX` identity change alone (with everything
+else unchanged) does not force a redraw — in practice both are stable across a component's lifetime,
+and any data change that would make a different output visible already changes `datasets`/`labels`
+too.
 
 **Slots:** none.
 
