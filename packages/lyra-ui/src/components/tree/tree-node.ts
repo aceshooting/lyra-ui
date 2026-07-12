@@ -86,7 +86,7 @@ const styles = css`
  *
  * @customElement lyra-tree-node
  * @event lyra-node-toggle - `detail: { id, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).
- * @event lyra-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking its label, or Enter/Space).
+ * @event lyra-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).
  * @csspart row, toggle, label, badge
  */
 export class LyraTreeNode extends LyraElement {
@@ -128,9 +128,19 @@ export class LyraTreeNode extends LyraElement {
     this.emit('lyra-node-toggle', { id: this.item.id, expanded: false });
   }
 
-  /** Fire this item's primary "select" action (Enter/Space, or clicking the label). */
+  /**
+   * Fire this item's primary "select" action (Enter/Space, or clicking
+   * anywhere in the row). Emits *before* calling `.focus()`: `<lyra-tree>`'s
+   * `onNodeActivate` listener for `lyra-node-select` runs synchronously
+   * (native `dispatchEvent` is sync) and updates `activeId`, which pushes
+   * `tabIndex = 0` down onto this node via its own render -- calling
+   * `.focus()` after that emit, rather than before, means real DOM focus
+   * lands correctly the very first time a previously-inactive node is
+   * clicked, not one render late.
+   */
   select(): void {
     this.emit('lyra-node-select', { id: this.item.id });
+    this.focus();
   }
 
   /** See `cascadeUpdateComplete` and the matching override on `<lyra-tree>`. */
@@ -157,7 +167,7 @@ export class LyraTreeNode extends LyraElement {
 
   render(): TemplateResult {
     return html`
-      <div part="row" style=${`--lyra-tree-depth:${this.depth}`}>
+      <div part="row" style=${`--lyra-tree-depth:${this.depth}`} @click=${() => this.select()}>
         <button
           part="toggle"
           type="button"
@@ -172,7 +182,7 @@ export class LyraTreeNode extends LyraElement {
         >
           ${this.hasChildren ? chevronIcon() : nothing}
         </button>
-        <span part="label" @click=${() => this.select()}>${this.item.label}</span>
+        <span part="label">${this.item.label}</span>
         ${this.item.badge != null ? html`<span part="badge">${this.item.badge}</span>` : nothing}
       </div>
       ${this.expanded && this.hasChildren
