@@ -75,11 +75,50 @@ it('cascades disablement from an ancestor <fieldset disabled> via formDisabledCa
   );
   const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl;
   const fieldset = form.querySelector('fieldset')!;
-  expect(ctl.disabled).to.be.false;
+  expect(ctl.effectiveDisabled).to.be.false;
 
   fieldset.disabled = true;
-  expect(ctl.disabled).to.be.true;
+  expect(ctl.effectiveDisabled).to.be.true;
 
   fieldset.disabled = false;
-  expect(ctl.disabled).to.be.false;
+  expect(ctl.effectiveDisabled).to.be.false;
+});
+
+it('reflects a property-assigned `name` to the content attribute so form submission can key on it', async () => {
+  const ctl = (await fixture(html`<lyra-demo-ctl></lyra-demo-ctl>`)) as unknown as Ctl;
+  ctl.name = 'quantity';
+  expect((ctl as unknown as HTMLElement).getAttribute('name')).to.equal('quantity');
+});
+
+it('submits an empty string, not a missing field, before `value` is ever assigned', async () => {
+  const form = document.createElement('form');
+  const ctl = document.createElement(tag('demo-ctl')) as unknown as Ctl;
+  form.appendChild(ctl as unknown as Node);
+  ctl.name = 'quantity';
+  document.body.appendChild(form);
+  const data = new FormData(form);
+  expect(data.has('quantity')).to.be.true;
+  expect(data.get('quantity')).to.equal('');
+  form.remove();
+});
+
+it('updates constraint validity synchronously when `required` is assigned, with no await', () => {
+  const ctl = document.createElement(tag('demo-ctl')) as unknown as Ctl;
+  document.body.appendChild(ctl as unknown as Node);
+  ctl.required = true;
+  expect(ctl.checkValidity()).to.be.false;
+  ctl.required = false;
+  expect(ctl.checkValidity()).to.be.true;
+  (ctl as unknown as HTMLElement).remove();
+});
+
+it('restores its own explicit `disabled` after an ancestor fieldset re-enables, instead of forcing it false', async () => {
+  const ctl = (await fixture(html`<lyra-demo-ctl disabled></lyra-demo-ctl>`)) as unknown as Ctl;
+  const withFormDisabledCallback = ctl as unknown as { formDisabledCallback(d: boolean): void };
+  expect(ctl.disabled).to.be.true;
+  withFormDisabledCallback.formDisabledCallback(true);
+  expect(ctl.effectiveDisabled).to.be.true;
+  withFormDisabledCallback.formDisabledCallback(false);
+  expect(ctl.effectiveDisabled).to.be.true; // own explicit disabled still applies
+  expect(ctl.disabled).to.be.true; // never force-cleared by the fieldset
 });

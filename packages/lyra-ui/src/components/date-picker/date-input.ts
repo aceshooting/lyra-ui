@@ -86,7 +86,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
 
   /** Open the calendar popover. */
   show(): void {
-    if (this.open || this.disabled || this.readonly) return;
+    if (this.open || this.effectiveDisabled || this.readonly) return;
     this.open = true;
     this.emit('lyra-show');
     document.addEventListener('pointerdown', this.onDocPointer);
@@ -240,7 +240,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             aria-label=${this.label || this.placeholder || 'Date'}
             .value=${this.displayText}
             placeholder=${this.placeholder}
-            ?disabled=${this.disabled}
+            ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
             @change=${this.onInputChange}
             @keydown=${this.onInputKey}
@@ -263,7 +263,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             aria-haspopup="dialog"
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.popupId}
-            ?disabled=${this.disabled || this.readonly}
+            ?disabled=${this.effectiveDisabled || this.readonly}
             @click=${() => (this.open ? this.hide() : this.show())}
           >
             <span part="expand-icon" aria-hidden="true">${calendarIcon()}</span>
@@ -278,7 +278,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             .max=${this.max}
             .months=${this.months}
             .locale=${this.locale}
-            .disabled=${this.disabled}
+            .disabled=${this.effectiveDisabled}
             .readonly=${this.readonly}
             .disablePast=${this.disablePast}
             .disableFuture=${this.disableFuture}
