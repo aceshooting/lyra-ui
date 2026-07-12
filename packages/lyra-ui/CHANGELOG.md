@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- 99fb0e0: Added several new components
+
+### Patch Changes
+
+- Updated dependencies [99fb0e0]
+  - @aceshooting/lyra-flags@1.0.0
+
 All notable changes to `@aceshooting/lyra-ui` are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

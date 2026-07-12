@@ -175,7 +175,7 @@ publish_recovery_trap() {
   echo "    $PKG_NAME@$new_version is already published on npm — do not re-run this script." >&2
   echo "    Remaining manual steps to finish the release:" >&2
   if ! git rev-parse "$new_version" >/dev/null 2>&1; then
-    echo "      1. Commit the version bump: git add pnpm-lock.yaml '$PKG_DIR/package.json' '$ROOT_DIR'/packages/*/package.json && git commit -m 'chore(release): $PKG_NAME@$new_version'" >&2
+    echo "      1. Commit the version bump: git add pnpm-lock.yaml '$PKG_DIR/package.json' '$ROOT_DIR'/packages/*/package.json '$ROOT_DIR'/packages/*/CHANGELOG.md '$PKG_DIR/custom-elements.json' && git commit -m 'chore(release): $PKG_NAME@$new_version'" >&2
     echo "      2. Tag it: git tag -a '$new_version' -m 'Release $new_version'" >&2
   else
     echo "      1. (done) git tag '$new_version' already exists locally." >&2
@@ -188,7 +188,8 @@ trap publish_recovery_trap ERR
 
 echo
 echo "==> Committing version bump"
-git add pnpm-lock.yaml "$PKG_DIR/package.json" "$ROOT_DIR"/packages/*/package.json
+git add pnpm-lock.yaml "$PKG_DIR/package.json" "$ROOT_DIR"/packages/*/package.json \
+  "$ROOT_DIR"/packages/*/CHANGELOG.md "$PKG_DIR/custom-elements.json"
 if git diff --cached --quiet; then
   echo "No local changes to commit (version/lockfile already up to date on this branch)."
 else
