@@ -9,6 +9,9 @@
 
 ## Docs
 
+- [Live docs site](https://aceshooting.github.io/lyra-ui/): Storybook site with a live, interactive
+  example and copy-pasteable source for every component — useful for a human reviewing this
+  library, less relevant for a coding assistant already reading this file.
 - [llms-full.txt](./llms-full.txt): Complete component-by-component API reference (properties,
   events, slots, CSS parts, themeable custom properties, optional peer deps, usage snippets, and
   known gotchas) for every tag in the library — the primary resource for a coding assistant
