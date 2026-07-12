@@ -568,7 +568,7 @@ export class LyraCombobox extends LyraElement {
             id=${this.inputId}
             part="combobox-input"
             role="combobox"
-            aria-label=${this.label || this.placeholder || 'Combobox'}
+            aria-label=${this.getAttribute('aria-label') || this.label || this.placeholder || 'Combobox'}
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}

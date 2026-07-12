@@ -790,3 +790,17 @@ it('ignores a mousedown on the combobox container while disabled', async () => {
 
   expect(el.open).to.be.false;
 });
+
+it('prefers a host-level aria-label over label/placeholder for the input', async () => {
+  const el = (await fixture(
+    html`<lyra-combobox aria-label="Filter items" placeholder="Search…"></lyra-combobox>`,
+  )) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLElement;
+  expect(input.getAttribute('aria-label')).to.equal('Filter items');
+});
+
+it('falls back to placeholder when no host aria-label or label is set', async () => {
+  const el = (await fixture(html`<lyra-combobox placeholder="Search…"></lyra-combobox>`)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLElement;
+  expect(input.getAttribute('aria-label')).to.equal('Search…');
+});
