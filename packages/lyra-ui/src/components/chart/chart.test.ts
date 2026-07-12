@@ -583,3 +583,30 @@ it('does not construct a Chart.js instance if disconnected before the lazy chart
   await aTimeout(100);
   expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
 });
+
+it('does not leak a Chart instance bound to a detached canvas when zoom turns on and the element disconnects before loadChartJsWithZoom() resolves', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const instanceBeforeZoom = (el as any).chart;
+
+  // Turn zoom on and disconnect in the same synchronous tick — before the
+  // dynamic import inside loadChartJsWithZoom() (real, un-mocked) can
+  // possibly resolve — matching the `connectedCallback()` disconnect-guard
+  // test above.
+  el.zoom = true;
+  el.remove();
+  await aTimeout(200);
+
+  // The chart that existed before disconnect must have been torn down by
+  // disconnectedCallback() and never replaced by a new instance bound to the
+  // now-detached canvas. `instanceBeforeZoom.canvas` itself is nulled out by
+  // Chart.js's own `destroy()` (see chart.js's `Chart#destroy()`), so check
+  // `config` (untouched by `destroy()`) instead, just to confirm this really
+  // was a real, built Chart instance and not e.g. `undefined` all along.
+  expect((el as any).chart).to.be.undefined;
+  expect(instanceBeforeZoom.config.type).to.equal('line');
+});

@@ -2,7 +2,7 @@ import type * as ChartJsModule from 'chart.js';
 import type ZoomPlugin from 'chartjs-plugin-zoom';
 
 let chartJs: Promise<typeof ChartJsModule | null> | undefined;
-let zoomRegistered = false;
+let zoomLoad: Promise<typeof ChartJsModule | null> | undefined;
 let registered = false;
 
 /**
@@ -99,14 +99,36 @@ export function loadChartJs(): Promise<typeof ChartJsModule | null> {
  * a hard dependency on `hammerjs`. Registers the plugin at most once across
  * the page. Call this instead of `loadChartJs()` from any chart that has
  * `zoom` set (at connect time, or later once `zoom` turns on).
+ *
+ * The whole operation (chart.js core + the zoom plugin import + its
+ * registration) is memoized behind a single `zoomLoad` promise, assigned
+ * synchronously before any `await` — mirroring `loadChartJs()`'s own
+ * `chartJs` memoization above. A plain boolean "already registered" guard
+ * checked before an `await` and only set after would leave a check-then-act
+ * race across that `await` boundary: two callers racing to turn `zoom` on
+ * close together (e.g. two `<lyra-chart zoom>` elements connecting around
+ * the same time) could both pass the check before either sets the flag,
+ * each independently re-importing the plugin and calling
+ * `mod.Chart.register()`. A single promise assigned up front closes that
+ * window — the second caller synchronously observes `zoomLoad` already set
+ * and awaits the same in-flight load instead of starting its own.
+ *
+ * `importZoom` defaults to the real dynamic import; it's a parameter purely
+ * so tests can instrument/count the underlying import without needing to
+ * actually uninstall the package.
  */
-export async function loadChartJsWithZoom(): Promise<typeof ChartJsModule | null> {
-  const mod = await loadChartJs();
-  if (!mod || zoomRegistered) return mod;
-  const result = await loadChartAndZoom(() => Promise.resolve(mod), undefined, true);
-  if (result?.zoomPlugin) {
-    mod.Chart.register(result.zoomPlugin);
-    zoomRegistered = true;
+export function loadChartJsWithZoom(
+  importZoom: () => Promise<{ default: typeof ZoomPlugin }> = () => import('chartjs-plugin-zoom'),
+): Promise<typeof ChartJsModule | null> {
+  if (!zoomLoad) {
+    zoomLoad = loadChartJs().then(async (mod) => {
+      if (!mod) return null;
+      const result = await loadChartAndZoom(() => Promise.resolve(mod), importZoom, true);
+      if (result?.zoomPlugin) {
+        mod.Chart.register(result.zoomPlugin);
+      }
+      return mod;
+    });
   }
-  return mod;
+  return zoomLoad;
 }

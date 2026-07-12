@@ -178,6 +178,19 @@ export class LyraChart extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
+    // Disconnected between the property change that scheduled this update
+    // and Lit's (microtask-deferred) processing of it — e.g. a property
+    // changes and the element is removed in the same synchronous tick, so
+    // `disconnectedCallback()` (which already destroyed `this.chart`) runs
+    // *before* this method does. Nothing below should run in that case:
+    // this method's own unconditional `draw()` call further down would
+    // otherwise construct a brand-new `Chart` bound to the now-detached
+    // canvas — `draw()`'s own guard (`!chartJsModule || !canvasEl`) doesn't
+    // catch this, since both persist on a disconnected-but-intact element.
+    // If the component is reconnected later, `connectedCallback()` re-kicks
+    // its own load/draw sequence, so nothing is lost by bailing out here.
+    if (!this.isConnected) return;
+
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
@@ -192,8 +205,18 @@ export class LyraChart extends LyraElement {
     // `zoom` can also turn on after connect (it was false at
     // `connectedCallback()` time, so only the core `loadChartJs()` load was
     // kicked off) — load the zoom plugin on demand now and redraw once it's
-    // registered.
-    if (changed.has('zoom') && this.zoom) void loadChartJsWithZoom().then(() => this.draw());
+    // registered. Mirrors the same `isConnected` guard `connectedCallback()`
+    // uses: this method already bailed out above if *already* disconnected,
+    // but the element can *also* disconnect during the gap while this
+    // dynamic import is in flight — without this guard, `draw()` would
+    // construct a new, leaked `Chart` bound to the now-detached canvas once
+    // the import resolves.
+    if (changed.has('zoom') && this.zoom) {
+      void loadChartJsWithZoom().then(() => {
+        if (!this.isConnected) return;
+        this.draw();
+      });
+    }
     const onlyZoomChanged = changed.size === 1 && changed.has('zoomed');
     if (!onlyZoomChanged) this.draw();
   }
