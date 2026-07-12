@@ -11,8 +11,11 @@ export const tokens = css`
     --lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da);
     --lyra-color-brand-quiet: var(--wa-color-brand-fill-quiet, #ddf4ff);
     --lyra-color-success: var(--wa-color-success-fill-loud, #1a7f37);
+    --lyra-color-success-quiet: var(--wa-color-success-fill-quiet, #dafbe1);
     --lyra-color-warning: var(--wa-color-warning-fill-loud, #9a6700);
+    --lyra-color-warning-quiet: var(--wa-color-warning-fill-quiet, #fff8c5);
     --lyra-color-danger: var(--wa-color-danger-fill-loud, #cf222e);
+    --lyra-color-danger-quiet: var(--wa-color-danger-fill-quiet, #ffebe9);
     /* Text/icon color for content painted on top of a solid brand-fill
        background (selected calendar days, filled badges, etc.) -- almost
        always white on both the light and dark brand fills above, so it's
@@ -66,8 +69,11 @@ export const tokens = css`
       --lyra-color-brand: var(--wa-color-brand-fill-loud, #4d9fef);
       --lyra-color-brand-quiet: var(--wa-color-brand-fill-quiet, #163650);
       --lyra-color-success: var(--wa-color-success-fill-loud, #3fb950);
+      --lyra-color-success-quiet: var(--wa-color-success-fill-quiet, #1b4721);
       --lyra-color-warning: var(--wa-color-warning-fill-loud, #d29922);
+      --lyra-color-warning-quiet: var(--wa-color-warning-fill-quiet, #3b2900);
       --lyra-color-danger: var(--wa-color-danger-fill-loud, #f85149);
+      --lyra-color-danger-quiet: var(--wa-color-danger-fill-quiet, #4c1210);
     }
   }
   :host([hidden]) {
