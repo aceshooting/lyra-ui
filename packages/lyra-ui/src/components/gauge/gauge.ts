@@ -61,23 +61,26 @@ export class LyraGauge extends LyraElement {
   @property({ attribute: false }) valueLabel?: string;
 
   private get ratio(): number {
-    if (isNaN(this.value) || isNaN(this.min) || isNaN(this.max)) return 0;
-    const span = this.max - this.min || 1;
-    return Math.min(1, Math.max(0, (this.value - this.min) / span));
+    if (!Number.isFinite(this.value) || !Number.isFinite(this.min) || !Number.isFinite(this.max)) return 0;
+    const lo = Math.min(this.min, this.max);
+    const hi = Math.max(this.min, this.max);
+    const span = hi - lo || 1;
+    return Math.min(1, Math.max(0, (this.value - lo) / span));
   }
 
   protected willUpdate(): void {
     this.setAttribute('role', 'meter');
-    if (!isNaN(this.value) && !isNaN(this.min) && !isNaN(this.max)) {
+    const finiteTrio = Number.isFinite(this.value) && Number.isFinite(this.min) && Number.isFinite(this.max);
+    if (finiteTrio) {
       const clamped = Math.min(this.max, Math.max(this.min, this.value));
       this.setAttribute('aria-valuenow', String(clamped));
     } else {
       this.removeAttribute('aria-valuenow');
     }
-    if (isNaN(this.min)) this.removeAttribute('aria-valuemin');
-    else this.setAttribute('aria-valuemin', String(this.min));
-    if (isNaN(this.max)) this.removeAttribute('aria-valuemax');
-    else this.setAttribute('aria-valuemax', String(this.max));
+    if (Number.isFinite(this.min)) this.setAttribute('aria-valuemin', String(this.min));
+    else this.removeAttribute('aria-valuemin');
+    if (Number.isFinite(this.max)) this.setAttribute('aria-valuemax', String(this.max));
+    else this.removeAttribute('aria-valuemax');
     if (this.label) this.setAttribute('aria-label', this.label);
     else this.removeAttribute('aria-label');
     if (this.valueLabel) this.setAttribute('aria-valuetext', this.valueLabel);

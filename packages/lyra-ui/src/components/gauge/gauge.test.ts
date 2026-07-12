@@ -59,6 +59,24 @@ it('guards against a NaN/undefined value instead of leaking "NaN" into aria-valu
   expect(Number(fill.getAttribute('stroke-dashoffset'))).to.not.be.NaN;
 });
 
+it('renders a finite dashoffset instead of NaN when max is Infinity', async () => {
+  const el = (await fixture(html`<lyra-gauge value="5" max="Infinity"></lyra-gauge>`)) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]')!;
+  expect(fill.getAttribute('stroke-dashoffset')).to.not.include('NaN');
+});
+
+it('does not emit an Infinity aria-valuemax', async () => {
+  const el = (await fixture(html`<lyra-gauge value="5" max="Infinity"></lyra-gauge>`)) as LyraGauge;
+  expect(el.getAttribute('aria-valuemax')).to.not.equal('Infinity');
+});
+
+it('treats a reversed min > max as an empty/zero ratio instead of a negative one', async () => {
+  const el = (await fixture(html`<lyra-gauge value="5" min="100" max="0"></lyra-gauge>`)) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]')!;
+  const dashoffset = Number(fill.getAttribute('stroke-dashoffset'));
+  expect(dashoffset).to.be.at.least(0);
+});
+
 it('drives the radial fill via a fixed-length dasharray with dashoffset derived from ratio', async () => {
   const el = (await fixture(
     html`<lyra-gauge value="0" min="0" max="100"></lyra-gauge>`,
