@@ -67,6 +67,54 @@ it('resyncs the running auto-dismiss timer when `duration` changes after creatio
   expect(el.isConnected).to.be.false;
 });
 
+it('hides immediately when called before the show animation frame has run', async () => {
+  const el = document.createElement('lyra-toast-item') as LyraToastItem;
+  el.textContent = 'msg';
+  let sawShow = false;
+  el.addEventListener('lyra-show', () => (sawShow = true));
+  document.body.appendChild(el);
+  const hidden = el.hide(); // runs before firstUpdated()'s rAF has had a chance to fire
+  await hidden;
+  expect(el.isConnected).to.be.false;
+  // The pending rAF must not resurrect the show sequence on top of an
+  // already-hiding item -- without the `if (this.hiding) return;` guard, the
+  // rAF still fires (it isn't cancelled until disconnectedCallback, which
+  // only runs once hide() reaches this.remove()) and re-sets data-visible /
+  // emits lyra-show underneath the in-flight hide().
+  expect(sawShow, 'lyra-show should not fire once hide() ran before the first frame').to.be.false;
+  expect(el.hasAttribute('data-visible'), 'data-visible should not be resurrected by a stale rAF callback').to
+    .be.false;
+});
+
+it('hides promptly when duration is shortened below the already-elapsed time', async () => {
+  const el = (await fixture(html`<lyra-toast-item duration="5000">msg</lyra-toast-item>`)) as LyraToastItem;
+  await aTimeout(50);
+  el.duration = 10;
+  // resumeTimer() must call hide() synchronously once it sees the shortened
+  // duration is already behind elapsedMs -- but hide() still runs the full
+  // ANIM_MS hide animation before this.remove() actually disconnects it, so
+  // the wait budget needs to clear that delay too, not just the (already
+  // negative) timer remainder.
+  await oneEvent(el, 'lyra-after-hide');
+  expect(el.isConnected).to.be.false;
+});
+
+it('restarts the timer when duration changes from disabled (0) back to a positive value', async () => {
+  const el = (await fixture(html`<lyra-toast-item duration="0">msg</lyra-toast-item>`)) as LyraToastItem;
+  await aTimeout(20);
+  expect(el.isConnected).to.be.true;
+  el.duration = 15;
+  await oneEvent(el, 'lyra-after-hide');
+  expect(el.isConnected).to.be.false;
+});
+
+it('resolves hide() even if the element disconnects mid-hide-animation', async () => {
+  const el = (await fixture(html`<lyra-toast-item>msg</lyra-toast-item>`)) as LyraToastItem;
+  const hidden = el.hide();
+  el.remove();
+  await hidden; // must not hang forever
+});
+
 it('applies distinct visual sizing per the `size` property', async () => {
   const xs = (await fixture(
     html`<lyra-toast-item size="xs" duration="0">a</lyra-toast-item>`,
