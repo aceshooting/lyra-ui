@@ -203,6 +203,12 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`.
  *
+ * `columnX` (calendar mode only) overrides the x-origin computed for each
+ * week column — drawing, hit-testing, the focus ring, and month-label
+ * positioning all consult it consistently, so a consumer can pixel-align a
+ * calendar's week columns with a sibling chart's coordinate system. Unset
+ * (the default) keeps the original evenly-spaced formula.
+ *
  * @customElement lyra-heatmap
  * @event lyra-cell-click - Fired on click, or Enter/Space on the
  * focused/hovered cell. `detail: { row, col, value }` in matrix mode,
@@ -238,6 +244,19 @@ export class LyraHeatmap extends LyraElement {
    *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its value. Falls back to
    *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
   @property({ attribute: false }) cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string;
+  /**
+   * Calendar mode only: overrides the x-origin (canvas-local CSS px) of week
+   * column `index` (0-based, same indexing as `CalendarCellPos.week`).
+   * Consulted consistently by every calendar-mode geometry call site —
+   * drawing, hit-testing, the keyboard focus ring, and month-label
+   * positioning — via the private `columnXFor()` helper, so painted
+   * geometry and pointer hit-testing never disagree. Lets a consumer
+   * pixel-align a calendar's week columns with a sibling chart's bars by
+   * supplying that chart the same coordinate function. Unset (the default)
+   * keeps today's evenly-spaced `CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP)`
+   * formula unchanged. Ignored in matrix mode.
+   */
+  @property({ attribute: false }) columnX?: (index: number) => number;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
@@ -399,10 +418,67 @@ export class LyraHeatmap extends LyraElement {
     else this.drawMatrix();
   }
 
+  /**
+   * Calendar-mode week-column x-origin (canvas-local CSS px) — `columnX(week)`
+   * when set, otherwise the original evenly-spaced formula. Shared by every
+   * calendar-mode drawing and hit-testing call site (`drawCalendar()`,
+   * `hitTestCalendar()`/`weekAtX()`, `cellRect()`) so painted geometry and
+   * interactive hit-testing never disagree — mirrors the existing
+   * `matrixCellSize()` invariant for matrix mode's
+   * `drawMatrix()`/`hitTestMatrix()`/`cellRect()`.
+   */
+  private columnXFor(week: number): number {
+    return this.columnX ? this.columnX(week) : CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP);
+  }
+
+  /**
+   * Inverse of `columnXFor()`: resolves an x position (canvas-local CSS px)
+   * to the week column it falls in, or `null` if it's outside every column
+   * (`weekCount` is 0, or `x` doesn't land inside `[0, weekCount)`'s span).
+   * The default spacing has a closed-form inverse (division); an arbitrary
+   * `columnX` override doesn't, so that case instead scans each column's
+   * `[columnXFor(week), columnXFor(week + 1))` span — algebraically the same
+   * span the default formula's division derives — so hit-testing always
+   * agrees with wherever `columnXFor()` actually painted that column.
+   */
+  private weekAtX(x: number, weekCount: number): number | null {
+    if (!this.columnX) {
+      const week = Math.floor((x - CAL_PAD_LEFT) / (CAL_CELL + CAL_GAP));
+      return week >= 0 && week < weekCount ? week : null;
+    }
+    for (let week = 0; week < weekCount; week++) {
+      const start = this.columnXFor(week);
+      const end = week + 1 < weekCount ? this.columnXFor(week + 1) : start + (CAL_CELL + CAL_GAP);
+      if (x >= start && x < end) return week;
+    }
+    return null;
+  }
+
+  /**
+   * Locale-derived weekday-axis labels for the Sunday..Saturday rows drawn
+   * down the left of the calendar grid. Only indices 1 (Mon), 3 (Wed), and 5
+   * (Fri) are filled in — matching today's sparse every-other-day label
+   * density — the rest stay blank. `firstWeekStart` is always a UTC Sunday
+   * by construction (see `buildCalendarGrid()`), so weekday index 0..6 is a
+   * fixed Sun..Sat positional mapping; only the label *text* for indices
+   * 1/3/5 is derived here, via `Intl.DateTimeFormat` on a real UTC date that
+   * actually falls on that weekday, so it follows the runtime locale instead
+   * of a hardcoded English array (see `calendarCellText()`'s tooltip text
+   * for the same pattern).
+   */
+  private weekdayLabels(firstWeekStart: Date): string[] {
+    const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
+    const labels = ['', '', '', '', '', '', ''];
+    for (const weekday of [1, 3, 5]) {
+      labels[weekday] = formatter.format(new Date(firstWeekStart.getTime() + weekday * MS_PER_DAY));
+    }
+    return labels;
+  }
+
   private drawCalendar(): void {
     if (!this.canvas) return;
-    const { cells, weekCount, monthLabels } = buildCalendarGrid(this.days);
-    const w = CAL_PAD_LEFT + Math.max(1, weekCount) * (CAL_CELL + CAL_GAP);
+    const { cells, weekCount, firstWeekStart, monthLabels } = buildCalendarGrid(this.days);
+    const w = this.columnXFor(Math.max(1, weekCount));
     const h = CAL_LABEL_H + 7 * (CAL_CELL + CAL_GAP);
     const dpr = window.devicePixelRatio || 1;
     this.canvas.width = w * dpr;
@@ -427,7 +503,7 @@ export class LyraHeatmap extends LyraElement {
     const noDataFill = this.noDataFill();
 
     for (const cell of cells) {
-      const x = CAL_PAD_LEFT + cell.week * (CAL_CELL + CAL_GAP);
+      const x = this.columnXFor(cell.week);
       const y = CAL_LABEL_H + cell.weekday * (CAL_CELL + CAL_GAP);
       ctx.fillStyle =
         cell.value < 0 || !Number.isFinite(cell.value)
@@ -446,7 +522,7 @@ export class LyraHeatmap extends LyraElement {
         if (ann.date == null) continue;
         const match = cells.find((c) => c.date === ann.date);
         if (!match) continue;
-        const x = CAL_PAD_LEFT + match.week * (CAL_CELL + CAL_GAP);
+        const x = this.columnXFor(match.week);
         const y = CAL_LABEL_H + match.weekday * (CAL_CELL + CAL_GAP);
         ctx.strokeRect(x + 0.5, y + 0.5, CAL_CELL - 1, CAL_CELL - 1);
       }
@@ -459,7 +535,7 @@ export class LyraHeatmap extends LyraElement {
       if (week < weekCount && weekday < 7) {
         ctx.lineWidth = RING_LINE_WIDTH;
         ctx.strokeStyle = this.focusRingColor();
-        const x = CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP);
+        const x = this.columnXFor(week);
         const y = CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP);
         ctx.strokeRect(x + 0.5, y + 0.5, CAL_CELL - 1, CAL_CELL - 1);
       }
@@ -468,9 +544,9 @@ export class LyraHeatmap extends LyraElement {
     ctx.fillStyle = this.labelColor();
     ctx.font = this.labelFont();
     for (const m of monthLabels) {
-      ctx.fillText(m.label, CAL_PAD_LEFT + m.week * (CAL_CELL + CAL_GAP), CAL_LABEL_H - 4);
+      ctx.fillText(m.label, this.columnXFor(m.week), CAL_LABEL_H - 4);
     }
-    const WEEKDAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+    const WEEKDAY_LABELS = this.weekdayLabels(firstWeekStart);
     WEEKDAY_LABELS.forEach((label, weekday) => {
       if (label) ctx.fillText(label, 2, CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP) + CAL_CELL - 1);
     });
@@ -610,9 +686,9 @@ export class LyraHeatmap extends LyraElement {
   private hitTestCalendar(x: number, y: number): CalendarCellPos | null {
     const { weekCount } = buildCalendarGrid(this.days);
     if (weekCount === 0) return null;
-    const week = Math.floor((x - CAL_PAD_LEFT) / (CAL_CELL + CAL_GAP));
+    const week = this.weekAtX(x, weekCount);
     const weekday = Math.floor((y - CAL_LABEL_H) / (CAL_CELL + CAL_GAP));
-    if (week < 0 || week >= weekCount || weekday < 0 || weekday > 6) return null;
+    if (week === null || weekday < 0 || weekday > 6) return null;
     return { week, weekday };
   }
 
@@ -640,7 +716,7 @@ export class LyraHeatmap extends LyraElement {
   private cellRect(pos: CellPos): { x: number; y: number; w: number; h: number } {
     if ('week' in pos) {
       return {
-        x: CAL_PAD_LEFT + pos.week * (CAL_CELL + CAL_GAP),
+        x: this.columnXFor(pos.week),
         y: CAL_LABEL_H + pos.weekday * (CAL_CELL + CAL_GAP),
         w: CAL_CELL,
         h: CAL_CELL,

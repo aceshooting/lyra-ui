@@ -167,6 +167,34 @@ export const CustomCellText: Story = {
   `,
 };
 
+/**
+ * `columnX` overrides where each week column is painted (and hit-tested) in
+ * calendar mode — here spaced wider than the default formula, to show how a
+ * consumer could pass the same coordinate function to a sibling chart for
+ * pixel-perfect column alignment.
+ */
+export const CalendarColumnAlignment: Story = {
+  render: () => {
+    const days: CalendarDay[] = [];
+    const start = Date.UTC(2026, 0, 4); // a Sunday
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      const value = Math.round(Math.abs(Math.sin(i / 5)) * 10);
+      days.push({ date, value });
+    }
+    const columnX = (week: number) => 32 + week * 20;
+    return html`
+      <lyra-heatmap
+        mode="calendar"
+        value-label="commits"
+        bucket-count="5"
+        .days=${days}
+        .columnX=${columnX}
+      ></lyra-heatmap>
+    `;
+  },
+};
+
 /** `annotations` in calendar mode match by ISO `date` instead of `row`/`col`. */
 export const CalendarAnnotations: Story = {
   render: () => {

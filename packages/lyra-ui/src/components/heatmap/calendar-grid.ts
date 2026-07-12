@@ -87,7 +87,7 @@ export function buildCalendarGrid(days: CalendarDay[]): {
     seenMonths.add(key);
     monthLabels.push({
       week: cell.week,
-      label: cellDate.toLocaleString('en', { month: 'short', timeZone: 'UTC' }),
+      label: cellDate.toLocaleString(undefined, { month: 'short', timeZone: 'UTC' }),
     });
   }
 

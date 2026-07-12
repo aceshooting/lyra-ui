@@ -775,4 +775,82 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
     });
     expect(live!.textContent).to.equal(`${expected}: 3`);
   });
+
+  it('derives weekday-axis labels from the runtime locale via Intl, not a hardcoded English array', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    await el.updateComplete;
+    const msPerDay = 86_400_000;
+    // Any UTC Sunday works as the anchor — 2026-01-18 is one.
+    const firstWeekStart = new Date(Date.UTC(2026, 0, 18));
+    const labels = (el as unknown as { weekdayLabels: (d: Date) => string[] }).weekdayLabels(firstWeekStart);
+    const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
+    expect(labels).to.have.length(7);
+    // Only indices 1 (Mon), 3 (Wed), 5 (Fri) are filled — same sparse density as before.
+    expect(labels[0]).to.equal('');
+    expect(labels[1]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 1 * msPerDay)));
+    expect(labels[2]).to.equal('');
+    expect(labels[3]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 3 * msPerDay)));
+    expect(labels[4]).to.equal('');
+    expect(labels[5]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 5 * msPerDay)));
+    expect(labels[6]).to.equal('');
+  });
+});
+
+describe('columnX override (calendar mode)', () => {
+  it('unset: canvas width and cell geometry follow the original evenly-spaced formula (regression)', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // CAL_PAD_LEFT(28) + max(1, weekCount=1) * (CAL_CELL(11) + CAL_GAP(2)) = 28 + 13 = 41.
+    expect(parseInt(canvas.style.width, 10)).to.equal(41);
+  });
+
+  it('drawn cell fill and pointer hit-testing both follow a custom columnX function, staying consistent with each other', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
+      { date: '2026-03-08', value: 9 }, // Sunday, week 1, weekday 0 (max value)
+    ];
+    el.columnX = (week: number) => 100 + week * 50;
+    await el.updateComplete;
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // week 1's cell x-origin is columnX(1) = 150, y-origin CAL_LABEL_H(16).
+    const pixel = ctx.getImageData(Math.round(154 * dpr), Math.round(20 * dpr), 1, 1).data;
+    // Max value of the two -> exactly the ramp's hi endpoint (#0969da).
+    expect(pixel[0]).to.equal(0x09);
+    expect(pixel[1]).to.equal(0x69);
+    expect(pixel[2]).to.equal(0xda);
+
+    const rect = canvas.getBoundingClientRect();
+    let detail: { date: string; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 154, clientY: rect.top + 20, bubbles: true }),
+    );
+    expect(detail).to.deep.equal({ date: '2026-03-08', value: 9 });
+  });
+
+  it('a click at the default-formula position misses once columnX moves that column elsewhere', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-08', value: 9 },
+    ];
+    el.columnX = (week: number) => 100 + week * 50;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let detail: unknown;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    // Week 1's *default*-formula position (CAL_PAD_LEFT + 1*(CAL_CELL+CAL_GAP) = 41) is below
+    // columnX(0) = 100, so it no longer lands on any column at all.
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 41, clientY: rect.top + 20, bubbles: true }),
+    );
+    expect(detail).to.be.undefined;
+  });
 });
