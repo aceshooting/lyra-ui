@@ -458,10 +458,19 @@ it('shows a loading row while an in-flight source call is pending', async () => 
 
   expect(el.shadowRoot!.querySelector('.loading')).to.exist;
 
+  // Resolving the source promise only fires the `.then()` -> set asyncRows -> `.finally()` ->
+  // set loading=false chain on later microtask ticks (`.finally()` is itself a `.then()` under
+  // the hood), so a single already-scheduled `updateComplete` await can resolve before that
+  // chain -- and the render it triggers -- has actually run. `aTimeout(0)` forces a macrotask
+  // boundary that lets all of those microtasks (and the resulting Lit update) drain first.
   resolve([{ value: 'x', label: 'Found' }]);
+  await aTimeout(0);
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('.loading')).to.not.exist;
+  // Boolean-cast rather than `.to.not.exist` on the live element: if this ever regresses, chai/
+  // loupe formatting a failing HTMLElement can stall long enough to blow through the test
+  // runner's timeout, hiding the real assertion failure behind a misleading "did not finish" hang.
+  expect(!!el.shadowRoot!.querySelector('.loading')).to.equal(false);
 });
 
 it('ignores a stale source response that resolves after a newer query', async () => {
@@ -477,10 +486,20 @@ it('ignores a stale source response that resolves after a newer query', async ()
 
   expect(resolvers).to.have.length(2);
   resolvers[0]([{ value: 'stale', label: 'Stale result' }]);
+  await aTimeout(0);
   await el.updateComplete;
   resolvers[1]([{ value: 'fresh', label: 'Fresh result' }]);
+  // See the comment in the "shows a loading row" test above: resolving triggers a `.then()` ->
+  // set asyncRows -> render chain that needs a macrotask boundary to fully settle before a
+  // subsequent `updateComplete` reliably reflects it.
+  await aTimeout(0);
   await el.updateComplete;
 
-  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) => n.textContent);
+  // `.trim()`: `[part="option-label"]`'s textContent includes the template's own whitespace
+  // (it wraps the label in a nested `<span>` alongside a conditional `sub` span), so comparing
+  // the raw textContent against a bare label string was never actually going to match.
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="option-label"]')).map((n) =>
+    n.textContent?.trim(),
+  );
   expect(labels).to.deep.equal(['Fresh result']);
 });
