@@ -125,8 +125,11 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   }
 
   private onInputChange = (e: Event): void => {
-    const raw = (e.target as HTMLInputElement).value.trim();
+    const target = e.target as HTMLInputElement;
+    const raw = target.value.trim();
     if (!raw) {
+      // The mixin's value setter recomputes validity (updateValidity()),
+      // which clears any stale badInput state along the way.
       this.value = '';
       this.emit('input');
       this.emit('change');
@@ -137,6 +140,14 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
       this.value = formatISO(parsed);
       this.emit('input');
       this.emit('change');
+    } else {
+      // Unparseable text: don't silently keep the committed value while the
+      // field still shows garbage -- revert the displayed text back to the
+      // last valid commit and flag the constraint-validation state (mirrors
+      // how `required` is already wired via internals.setValidity(), see
+      // form-associated.ts).
+      target.value = this.displayText;
+      this.internals.setValidity({ badInput: true }, 'Enter a valid date');
     }
   };
 

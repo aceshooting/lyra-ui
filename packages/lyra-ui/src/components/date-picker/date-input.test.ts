@@ -12,6 +12,22 @@ it('parses typed input into an ISO value and emits change', async () => {
   expect(el.value).to.equal('2026-07-15');
 });
 
+it('reverts an unparseable typed date to the last committed display text and flags badInput', async () => {
+  const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const committedDisplay = input.value;
+
+  input.value = 'not a date';
+  input.dispatchEvent(new Event('change'));
+  await el.updateComplete;
+
+  expect(el.value).to.equal('2026-07-15'); // committed value untouched
+  expect(input.value).to.equal(committedDisplay); // reverted, not left showing garbage
+  expect(el.checkValidity()).to.be.false;
+  expect(el.internals.validity.badInput).to.be.true;
+});
+
 it('opens the calendar and commits a picked date', async () => {
   const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
   el.show();
