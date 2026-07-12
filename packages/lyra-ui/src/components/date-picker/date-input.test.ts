@@ -530,3 +530,27 @@ it('wires aria-describedby to the visible hint/error text', async () => {
   expect(describedBy).to.include('date-input-hint');
   expect(describedBy).to.include('date-input-error');
 });
+
+it("parses an ambiguous dd/mm/yyyy-style date according to the locale, not Date.parse()'s bias", async () => {
+  const el = (await fixture(html`<lyra-date-input locale="en-GB"></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '15/07/2026'; // en-GB: 15 July 2026 -- Date.parse() would read this as invalid or mm/dd (month 15 -> invalid, or misparsed)
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-07-15');
+});
+
+it('parses an ambiguous mm/dd/yyyy-style date according to an en-US locale', async () => {
+  const el = (await fixture(html`<lyra-date-input locale="en-US"></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '07/15/2026'; // en-US: July 15, 2026
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-07-15');
+});
+
+it('normalizes a typed reversed range into from-before-to order', async () => {
+  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = '2026-05-15/2026-05-01';
+  input.dispatchEvent(new Event('change'));
+  expect(el.value).to.equal('2026-05-01/2026-05-15');
+});

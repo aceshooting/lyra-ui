@@ -11,6 +11,29 @@ import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.js';
 import './date-picker.js';
 
+/** Determines the locale's day/month/year field order from a real formatted
+ *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
+ *  distinguishable), instead of relying on Date.parse()'s implementation-defined
+ *  (commonly mm/dd/yyyy-biased) heuristics for an ambiguous separated date. */
+function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
+  try {
+    const parts = new Intl.DateTimeFormat(locale || undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date(2026, 0, 2));
+    const order = parts
+      .filter(
+        (p): p is Intl.DateTimeFormatPart & { type: 'day' | 'month' | 'year' } =>
+          p.type === 'day' || p.type === 'month' || p.type === 'year',
+      )
+      .map((p) => p.type);
+    return order.length === 3 ? order : ['month', 'day', 'year'];
+  } catch {
+    return ['month', 'day', 'year']; // Date.parse()'s own bias, as a last-resort fallback
+  }
+}
+
 /**
  * `<lyra-date-input>` — a date field with an attached calendar popover.
  * Mirrors the core `<wa-date-input>` API under `lyra-`. Value is ISO 8601
@@ -167,10 +190,34 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   };
 
   /** Parses one date, ISO-first (so a calendar-invalid ISO string like
-   *  "2026-02-30" is rejected rather than silently rolled over by Date.parse). */
+   *  "2026-02-30" is rejected rather than silently rolled over by Date.parse()).
+   *  A 3-part, ambiguous slash/dot/dash-separated date (e.g. "15/07/2026") is
+   *  parsed according to the locale's own day/month/year order (via a real
+   *  Intl.DateTimeFormat sample, see localeDateOrder()) rather than
+   *  Date.parse()'s implementation-defined heuristics -- this is what prevents
+   *  e.g. an en-GB "15/07/2026" from being silently misread as some other day.
+   *  Anything else (e.g. "July 15, 2026") still falls through to Date.parse(). */
   private parseOneDate(raw: string): Date | null {
     const looksLikeISO = /^\d{4}-\d{2}-\d{2}$/.test(raw);
-    return looksLikeISO ? parseISO(raw) : isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw));
+    if (looksLikeISO) return parseISO(raw);
+
+    const ambiguous = /^(\d{1,4})[/.-](\d{1,4})[/.-](\d{1,4})$/.exec(raw);
+    if (ambiguous) {
+      const order = localeDateOrder(this.locale);
+      const values = [Number(ambiguous[1]), Number(ambiguous[2]), Number(ambiguous[3])];
+      const fields: Partial<Record<'day' | 'month' | 'year', number>> = {};
+      order.forEach((type, i) => {
+        fields[type] = values[i];
+      });
+      if (fields.day != null && fields.month != null && fields.year != null) {
+        const year = fields.year < 100 ? 2000 + fields.year : fields.year;
+        return parseISO(
+          `${String(year).padStart(4, '0')}-${String(fields.month).padStart(2, '0')}-${String(fields.day).padStart(2, '0')}`,
+        );
+      }
+    }
+
+    return isNaN(Date.parse(raw)) ? null : new Date(Date.parse(raw));
   }
 
   private parseSingleText(raw: string): string | null {
@@ -180,18 +227,25 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
 
   /** Only round-trips the exact `displayText` shape this component itself
    *  renders (`"<locale from> – <locale to>"`) — a raw ISO range typed
-   *  directly (`"2026-05-01/2026-05-15"`) is also accepted as a convenience. */
+   *  directly (`"2026-05-01/2026-05-15"`) is also accepted as a convenience.
+   *  A reversed typed range (`to` before `from`) is normalized into
+   *  from-before-to order, matching what the date-picker's own UI-driven
+   *  `commit()` already does for a UI-picked range. */
   private parseRangeText(raw: string): string | null {
     if (/^\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}$/.test(raw)) {
       const [a, b] = raw.split('/');
-      return parseISO(a) && parseISO(b) ? raw : null;
+      const from = parseISO(a);
+      const to = parseISO(b);
+      if (!from || !to) return null;
+      return from <= to ? raw : `${b}/${a}`;
     }
     const separator = ' – '; // matches displayText's ` – ` join exactly
     const idx = raw.indexOf(separator);
     if (idx === -1) return null;
     const from = this.parseOneDate(raw.slice(0, idx).trim());
     const to = this.parseOneDate(raw.slice(idx + separator.length).trim());
-    return from && to ? `${formatISO(from)}/${formatISO(to)}` : null;
+    if (!from || !to) return null;
+    return from <= to ? `${formatISO(from)}/${formatISO(to)}` : `${formatISO(to)}/${formatISO(from)}`;
   }
 
   private isWithinBounds(isoValue: string): boolean {
