@@ -259,6 +259,34 @@ it('participates in a form: value reflects in FormData on submit', async () => {
   expect(new FormData(form).get('model')).to.equal('mistral');
 });
 
+it('submits under a programmatically assigned name in the same tick', async () => {
+  const form = (await fixture(html`
+    <form><lyra-model-select value="mistral" .catalog=${CATALOG}></lyra-model-select></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-model-select') as LyraModelSelect;
+
+  el.name = 'first';
+  expect(el.getAttribute('name')).to.equal('first');
+  expect(new FormData(form).get('first')).to.equal('mistral');
+
+  el.name = 'second';
+  const renamed = new FormData(form);
+  expect(renamed.has('first')).to.be.false;
+  expect(renamed.get('second')).to.equal('mistral');
+
+  el.name = '';
+  expect(el.hasAttribute('name')).to.be.false;
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('second')).to.be.false;
+
+  el.setAttribute('name', 'from-attribute');
+  expect(el.name).to.equal('from-attribute');
+  expect(new FormData(form).get('from-attribute')).to.equal('mistral');
+  el.removeAttribute('name');
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('from-attribute')).to.be.false;
+});
+
 it('blocks a required, empty model-select from submitting the form', async () => {
   const form = (await fixture(html`
     <form>

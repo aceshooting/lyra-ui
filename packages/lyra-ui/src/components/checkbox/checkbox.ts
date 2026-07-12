@@ -76,6 +76,10 @@ export class LyraCheckbox extends LyraElement {
   static styles = [LyraElement.styles, styles];
   static formAssociated = true;
 
+  static properties = {
+    name: { reflect: true, noAccessor: true },
+  };
+
   @property({ type: Boolean, reflect: true }) checked = false;
   // Visual-only mixed state, matching native `<input type="checkbox">`
   // semantics: it does not affect `checked`'s own value, and a user
@@ -84,7 +88,6 @@ export class LyraCheckbox extends LyraElement {
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) required = false;
-  @property() name = '';
   @property() value = 'on';
 
   // Tracks whether the default slot carries any real (non-whitespace)
@@ -109,10 +112,26 @@ export class LyraCheckbox extends LyraElement {
   private _defaultChecked = false;
   private _defaultCaptured = false;
   private _fieldsetDisabled = false;
+  private _name = '';
 
   /** Whether the control is disabled explicitly or by an ancestor fieldset. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled;
+  }
+
+  /** The form submission key, reflected synchronously for native form APIs. */
+  get name(): string {
+    return this._name;
+  }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) {
+      this.setAttribute('name', this._name);
+    } else {
+      this.removeAttribute('name');
+    }
+    this.requestUpdate('name', old);
   }
 
   constructor() {

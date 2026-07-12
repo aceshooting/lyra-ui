@@ -180,6 +180,34 @@ it('participates in a form: submits value under name only when checked', async (
   expect(new FormData(form).get('notify')).to.equal(null);
 });
 
+it('submits under a programmatically assigned name in the same tick', async () => {
+  const form = (await fixture(html`
+    <form><lyra-checkbox value="yes" checked>Notify me</lyra-checkbox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
+
+  el.name = 'first';
+  expect(el.getAttribute('name')).to.equal('first');
+  expect(new FormData(form).get('first')).to.equal('yes');
+
+  el.name = 'second';
+  const renamed = new FormData(form);
+  expect(renamed.has('first')).to.be.false;
+  expect(renamed.get('second')).to.equal('yes');
+
+  el.name = '';
+  expect(el.hasAttribute('name')).to.be.false;
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('second')).to.be.false;
+
+  el.setAttribute('name', 'from-attribute');
+  expect(el.name).to.equal('from-attribute');
+  expect(new FormData(form).get('from-attribute')).to.equal('yes');
+  el.removeAttribute('name');
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('from-attribute')).to.be.false;
+});
+
 it('uses "on" as the default form value', async () => {
   const form = (await fixture(html`
     <form><lyra-checkbox name="notify" checked>Notify me</lyra-checkbox></form>

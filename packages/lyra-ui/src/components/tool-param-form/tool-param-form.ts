@@ -119,11 +119,13 @@ export class LyraToolParamForm extends LyraElement {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];
 
+  static properties = {
+    name: { reflect: true, noAccessor: true },
+  };
+
   @property({ attribute: false }) schema: ToolParamFormSchema = EMPTY_SCHEMA;
   @property({ attribute: false }) value: Record<string, unknown> = {};
 
-  /** Submission key for the optional native `<form>` participation — see the class doc. */
-  @property() name = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   // The true (touched-independent) per-field error set, recomputed in
@@ -141,6 +143,7 @@ export class LyraToolParamForm extends LyraElement {
   private internals: ElementInternals;
   private baseId = nextId('tool-param-form');
   private _fieldsetDisabled = false;
+  private _name = '';
   // Guards lyra-validity-change so it only fires on an actual change, not on
   // every render — `undefined` guarantees the first computed state always
   // "changes" from it, so mounting with an unmet required field still
@@ -180,6 +183,21 @@ export class LyraToolParamForm extends LyraElement {
       }
     }
     return out;
+  }
+
+  /** Submission key for the optional native `<form>` participation, reflected synchronously. */
+  get name(): string {
+    return this._name;
+  }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) {
+      this.setAttribute('name', this._name);
+    } else {
+      this.removeAttribute('name');
+    }
+    this.requestUpdate('name', old);
   }
 
   /** Whether the form is disabled explicitly or by an ancestor fieldset. */

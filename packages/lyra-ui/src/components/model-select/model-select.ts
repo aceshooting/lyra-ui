@@ -60,6 +60,7 @@ export class LyraModelSelect extends LyraElement {
 
   static properties = {
     value: { noAccessor: true },
+    name: { reflect: true, noAccessor: true },
   };
 
   /** Informational only — e.g. `'ollama'`. Rendered as a small leading badge for display grouping. */
@@ -69,7 +70,6 @@ export class LyraModelSelect extends LyraElement {
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
   @property() placeholder = '';
-  @property() name = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) required = false;
   @property({ type: Boolean, reflect: true }) open = false;
@@ -89,6 +89,7 @@ export class LyraModelSelect extends LyraElement {
   private cleanup?: () => void;
   private _value = '';
   private _fieldsetDisabled = false;
+  private _name = '';
   // What `form.reset()` restores to — captured from the `value` *content
   // attribute* only, mirroring native `<input>`/`FormAssociated`'s
   // `_defaultValue` (see internal/form-associated.ts). There's no child
@@ -127,6 +128,21 @@ export class LyraModelSelect extends LyraElement {
     this.internals.setFormValue(this._value);
     this.updateValidity();
     this.requestUpdate('value', old);
+  }
+
+  /** The form submission key, reflected synchronously for native form APIs. */
+  get name(): string {
+    return this._name;
+  }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) {
+      this.setAttribute('name', this._name);
+    } else {
+      this.removeAttribute('name');
+    }
+    this.requestUpdate('name', old);
   }
 
   /** Whether the control is disabled explicitly or by an ancestor fieldset. */

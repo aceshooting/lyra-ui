@@ -205,6 +205,51 @@ it('participates in a form: submits the resolved value as JSON under name', asyn
   expect(JSON.parse(raw)).to.deep.equal({ city: 'Paris', units: 'celsius', days: 3 });
 });
 
+it('submits under a programmatically assigned name in the same tick', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-tool-param-form
+        .schema=${basicSchema}
+        .value=${{ city: 'Paris' }}
+      ></lyra-tool-param-form>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+
+  el.name = 'first';
+  expect(el.getAttribute('name')).to.equal('first');
+  expect(JSON.parse(new FormData(form).get('first') as string)).to.deep.equal({
+    city: 'Paris',
+    units: 'celsius',
+    days: 3,
+  });
+
+  el.name = 'second';
+  const renamed = new FormData(form);
+  expect(renamed.has('first')).to.be.false;
+  expect(JSON.parse(renamed.get('second') as string)).to.deep.equal({
+    city: 'Paris',
+    units: 'celsius',
+    days: 3,
+  });
+
+  el.name = '';
+  expect(el.hasAttribute('name')).to.be.false;
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('second')).to.be.false;
+
+  el.setAttribute('name', 'from-attribute');
+  expect(el.name).to.equal('from-attribute');
+  expect(JSON.parse(new FormData(form).get('from-attribute') as string)).to.deep.equal({
+    city: 'Paris',
+    units: 'celsius',
+    days: 3,
+  });
+  el.removeAttribute('name');
+  expect(el.name).to.equal('');
+  expect(new FormData(form).has('from-attribute')).to.be.false;
+});
+
 it('blocks form submission while a required field is empty', async () => {
   const form = (await fixture(html`
     <form><lyra-tool-param-form name="args" .schema=${basicSchema}></lyra-tool-param-form></form>
