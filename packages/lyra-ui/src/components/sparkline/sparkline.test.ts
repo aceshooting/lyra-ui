@@ -1,4 +1,4 @@
-import { fixture, expect } from '@open-wc/testing';
+import { fixture, expect, html } from '@open-wc/testing';
 import './sparkline.js';
 import type { LyraSparkline } from './sparkline.js';
 
@@ -114,4 +114,53 @@ it('is accessible', async () => {
   el.values = [3, 1, 4, 1, 5];
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('caps the number of points built for a line chart with a huge values array', async () => {
+  const values = Array.from({ length: 5000 }, (_, i) => i);
+  const el = (await fixture(html`<lyra-sparkline type="line" .values=${values}></lyra-sparkline>`)) as LyraSparkline;
+  const path = el.shadowRoot!.querySelector('[part="line"]')!;
+  const commandCount = (path.getAttribute('d')!.match(/[ML]/g) ?? []).length;
+  expect(commandCount).to.be.at.most(500);
+});
+
+it('always includes the final sample when decimating', async () => {
+  const values = Array.from({ length: 777 }, (_, i) => i);
+  const el = (await fixture(html`<lyra-sparkline type="bar" .values=${values}></lyra-sparkline>`)) as LyraSparkline;
+  const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  const lastBar = bars[bars.length - 1] as SVGRectElement;
+  // The last drawn bar's x should correspond to the series' actual final
+  // value (776), not an earlier one truncated by imprecise step sampling.
+  // Bar width is now dynamic (narrows as point count grows), so undo the
+  // actual rendered half-width rather than assuming the old fixed value.
+  const barWidth = Number(lastBar.getAttribute('width'));
+  const x = Number(lastBar.getAttribute('x')) + barWidth / 2;
+  expect(x).to.be.closeTo(100, 1); // VIEW = 100, last point sits at the right edge
+});
+
+it('narrows bar width as bar count grows so bars do not overlap', async () => {
+  const few = (await fixture(html`<lyra-sparkline type="bar" .values=${[1, 2, 3]}></lyra-sparkline>`)) as LyraSparkline;
+  const many = (await fixture(
+    html`<lyra-sparkline type="bar" .values=${Array.from({ length: 60 }, (_, i) => i)}></lyra-sparkline>`,
+  )) as LyraSparkline;
+  const fewWidth = Number(few.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('width'));
+  const manyWidth = Number(many.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('width'));
+  expect(manyWidth).to.be.lessThan(fewWidth);
+});
+
+it('scales against the full pre-decimation value range, not just whatever the sampled subset kept', async () => {
+  // 600 values, all 0 except a single huge spike at index 3 -- with a
+  // ~1.2 step size (600 values decimated to 500), index 3 is one of the
+  // indices decimation actually drops (round(3*1.2)=4, so index 3 never
+  // survives into the sampled set). If auto min/max were scanned AFTER
+  // decimating, the spike would vanish entirely and every rendered point
+  // would sit at the flat mid-line (span=0 fallback); scanning the full
+  // raw array first still finds it, correctly pulling every surviving
+  // (all-zero) point down toward the bottom of the plot instead.
+  const values = Array.from({ length: 600 }, () => 0);
+  values[3] = 1000;
+  const el = (await fixture(html`<lyra-sparkline type="bar" .values=${values}></lyra-sparkline>`)) as LyraSparkline;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const y = Number(bar.getAttribute('y'));
+  expect(y).to.be.closeTo(100, 1); // VIEW = 100; a 0 value against a real [0, 1000] range sits at the bottom
 });

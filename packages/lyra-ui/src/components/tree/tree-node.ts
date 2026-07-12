@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { defineElement } from '../../internal/prefix.js';
+import { defineElement, tag } from '../../internal/prefix.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { css } from 'lit';
 import { cascadeUpdateComplete } from './update-cascade.js';
@@ -146,7 +146,9 @@ export class LyraTreeNode extends LyraElement {
   /** See `cascadeUpdateComplete` and the matching override on `<lyra-tree>`. */
   protected async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
-    await cascadeUpdateComplete(this.shadowRoot?.querySelectorAll('lyra-tree-node') ?? []);
+    await cascadeUpdateComplete(
+      [...(this.shadowRoot?.querySelectorAll(tag('tree-node')) ?? [])] as LyraTreeNode[],
+    );
     return result;
   }
 
