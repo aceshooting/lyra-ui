@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './date-picker.js';
 import type { LyraDatePicker } from './date-picker.js';
+import { styles } from './date-picker.styles.js';
 
 it('selects a day and emits change with an ISO value', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
@@ -84,6 +85,17 @@ it('disables every day button when the picker is readonly', async () => {
   const days = el.shadowRoot!.querySelectorAll('[part~="day"]') as NodeListOf<HTMLButtonElement>;
   expect(days.length).to.be.greaterThan(0);
   for (const day of days) expect(day.disabled).to.be.true;
+});
+
+it('uses the shared --lyra-color-on-brand token instead of a raw #fff for selected/range day text', () => {
+  const css = styles.cssText;
+  const selectedBlock =
+    /\[part~=['"]?day-selected['"]?],\s*\[part~=['"]?day-range-start['"]?],\s*\[part~=['"]?day-range-end['"]?]\s*{([^}]*)}/.exec(
+      css,
+    );
+  expect(selectedBlock, 'expected a shared day-selected/day-range-start/day-range-end rule').to.not.equal(null);
+  expect(selectedBlock![1]).to.include('var(--lyra-color-on-brand');
+  expect(selectedBlock![1]).to.not.match(/color:\s*#fff/);
 });
 
 it('is accessible', async () => {

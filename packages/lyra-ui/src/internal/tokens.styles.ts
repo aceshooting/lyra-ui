@@ -13,6 +13,11 @@ export const tokens = css`
     --lyra-color-success: var(--wa-color-success-fill-loud, #1a7f37);
     --lyra-color-warning: var(--wa-color-warning-fill-loud, #9a6700);
     --lyra-color-danger: var(--wa-color-danger-fill-loud, #cf222e);
+    /* Text/icon color for content painted on top of a solid brand-fill
+       background (selected calendar days, filled badges, etc.) -- almost
+       always white on both the light and dark brand fills above, so it's
+       not itself light/dark-mode-swapped like the other tokens here. */
+    --lyra-color-on-brand: var(--wa-color-on-brand, #fff);
     --lyra-space-xs: var(--wa-space-xs, 0.25rem);
     --lyra-space-s: var(--wa-space-s, 0.5rem);
     --lyra-space-m: var(--wa-space-m, 0.75rem);

@@ -99,7 +99,7 @@ export const styles = css`
   [part~='day-range-start'],
   [part~='day-range-end'] {
     background: var(--lyra-color-brand);
-    color: #fff;
+    color: var(--lyra-color-on-brand);
   }
   [part~='day']:disabled {
     color: var(--lyra-color-text-quiet);
