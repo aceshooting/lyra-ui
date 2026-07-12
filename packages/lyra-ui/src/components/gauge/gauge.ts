@@ -70,6 +70,8 @@ export class LyraGauge extends LyraElement {
     this.setAttribute('aria-valuemax', String(this.max));
     if (this.label) this.setAttribute('aria-label', this.label);
     else this.removeAttribute('aria-label');
+    if (this.valueLabel) this.setAttribute('aria-valuetext', this.valueLabel);
+    else this.removeAttribute('aria-valuetext');
   }
 
   private renderRadial(): TemplateResult {
@@ -87,8 +89,8 @@ export class LyraGauge extends LyraElement {
         stroke-dasharray=${RADIAL_ARC_LENGTH}
         stroke-dashoffset=${dashoffset}
       ></path>
-      <text part="value" x="50" y="52">${text}</text>
-      ${this.label ? svg`<text part="label" x="50" y="68">${this.label}</text>` : ''}
+      <text part="value" x="50" y="52" aria-hidden="true">${text}</text>
+      ${this.label ? svg`<text part="label" x="50" y="68" aria-hidden="true">${this.label}</text>` : ''}
     </svg>`;
   }
 
@@ -107,8 +109,8 @@ export class LyraGauge extends LyraElement {
         stroke-dasharray=${LINEAR_LENGTH}
         stroke-dashoffset=${dashoffset}
       ></line>
-      ${this.label ? svg`<text part="label" x="0" y=${LINEAR_TEXT_Y}>${this.label}</text>` : ''}
-      <text part="value" x="100" y=${LINEAR_TEXT_Y}>${text}</text>
+      ${this.label ? svg`<text part="label" x="0" y=${LINEAR_TEXT_Y} aria-hidden="true">${this.label}</text>` : ''}
+      <text part="value" x="100" y=${LINEAR_TEXT_Y} aria-hidden="true">${text}</text>
     </svg>`;
   }
 

@@ -104,6 +104,37 @@ it('exposes a base part on the render root for both radial and linear', async ()
   expect(linear.shadowRoot!.querySelector('[part="base"]')).to.exist;
 });
 
+it('sets aria-valuetext from valueLabel and clears it when unset', async () => {
+  const el = (await fixture(html`<lyra-gauge value="72" max="100"></lyra-gauge>`)) as LyraGauge;
+  expect(el.hasAttribute('aria-valuetext')).to.be.false;
+
+  el.valueLabel = '72°F';
+  await el.updateComplete;
+  expect(el.getAttribute('aria-valuetext')).to.equal('72°F');
+
+  el.valueLabel = undefined;
+  await el.updateComplete;
+  expect(el.hasAttribute('aria-valuetext')).to.be.false;
+});
+
+it('hides the SVG value/label text from the accessibility tree in both radial and linear modes', async () => {
+  const radial = (await fixture(
+    html`<lyra-gauge value="30" max="100" label="CPU"></lyra-gauge>`,
+  )) as LyraGauge;
+  const radialValue = radial.shadowRoot!.querySelector('[part="value"]')!;
+  const radialLabel = radial.shadowRoot!.querySelector('[part="label"]')!;
+  expect(radialValue.getAttribute('aria-hidden')).to.equal('true');
+  expect(radialLabel.getAttribute('aria-hidden')).to.equal('true');
+
+  const linear = (await fixture(
+    html`<lyra-gauge type="linear" value="30" max="100" label="CPU"></lyra-gauge>`,
+  )) as LyraGauge;
+  const linearValue = linear.shadowRoot!.querySelector('[part="value"]')!;
+  const linearLabel = linear.shadowRoot!.querySelector('[part="label"]')!;
+  expect(linearValue.getAttribute('aria-hidden')).to.equal('true');
+  expect(linearLabel.getAttribute('aria-hidden')).to.equal('true');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lyra-gauge value="30" max="100" label="CPU"></lyra-gauge>`,
