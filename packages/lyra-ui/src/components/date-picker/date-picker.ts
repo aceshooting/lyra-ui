@@ -105,7 +105,7 @@ export class LyraDatePicker extends LyraElement {
   }
 
   private selectDate(date: Date): void {
-    if (this.disabled || this.readonly || this.isDisabled(date)) return;
+    if (this.isDisabled(date)) return;
     this.focusedDate = date;
     if (this.mode === 'range') {
       const { from, to } = this.selection;
