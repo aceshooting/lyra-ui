@@ -2,8 +2,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import type { GeoJSONSource, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
-import type * as MaplibreGL from 'maplibre-gl';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadMaplibre } from './map-loader.js';
@@ -58,7 +56,7 @@ export interface MapMarker {
  * their own `mapStyle` (a hosted vector/raster style from a tile provider
  * you have a plan with, or your own tile server).
  */
-const DEFAULT_STYLE: StyleSpecification = {
+const DEFAULT_STYLE: import('maplibre-gl').StyleSpecification = {
   version: 8,
   sources: {
     'lyra-osm': {
@@ -117,7 +115,7 @@ export class LyraMap extends LyraElement {
 
   @property({ type: Array }) center: [number, number] = [0, 0];
   @property({ type: Number }) zoom = 2;
-  @property({ attribute: false }) mapStyle: StyleSpecification | string = DEFAULT_STYLE;
+  @property({ attribute: false }) mapStyle: import('maplibre-gl').StyleSpecification | string = DEFAULT_STYLE;
   @property({ attribute: false }) legend: LegendEntry[] = [];
   @property({ attribute: false }) choropleth?: ChoroplethLayer;
   @property({ attribute: false }) markers: MapMarker[] = [];
@@ -126,7 +124,7 @@ export class LyraMap extends LyraElement {
   @state() private loading = true;
 
   @query('[part="container"]') private containerEl?: HTMLElement;
-  private _map?: MaplibreMap;
+  private _map?: import('maplibre-gl').Map;
   // Tracks whether the style has fired its initial 'load' (i.e. addSource/
   // addLayer/setPaintProperty are now safe to call), rather than re-querying
   // `this._map.isStyleLoaded()`: that also reflects in-flight *tile* loading
@@ -146,7 +144,7 @@ export class LyraMap extends LyraElement {
   // set before `_map` itself is (see that closure) -- so any code path gated
   // on `this._map` being truthy can rely on this being set too, without
   // re-awaiting the (already-settled) loadMaplibre() promise.
-  private _maplibreModule?: typeof MaplibreGL;
+  private _maplibreModule?: typeof import('maplibre-gl');
   private _markerInstances = new Map<string, import('maplibre-gl').Marker>();
   // Bumped on every connectedCallback and captured by value in its
   // loadMaplibre().then() closure below. A disconnect immediately followed
@@ -161,7 +159,7 @@ export class LyraMap extends LyraElement {
   private _connectGeneration = 0;
 
   /** The raw `maplibregl.Map` instance — escape hatch for anything this wrapper doesn't expose. */
-  get map(): MaplibreMap | undefined {
+  get map(): import('maplibre-gl').Map | undefined {
     return this._map;
   }
 
@@ -268,7 +266,7 @@ export class LyraMap extends LyraElement {
       this.removeChoropleth();
     }
 
-    const existingSource = this._map.getSource(sourceId) as GeoJSONSource | undefined;
+    const existingSource = this._map.getSource(sourceId) as import('maplibre-gl').GeoJSONSource | undefined;
     if (existingSource) {
       // Re-apply the data even if the color expression below ends up skipped:
       // `geojson` may have changed even though `sourceId`/`stops` didn't.

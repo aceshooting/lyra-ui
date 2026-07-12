@@ -1,6 +1,5 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import type { Chart, ChartConfiguration } from 'chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadChartJs } from './chart-loader.js';
@@ -72,7 +71,7 @@ export class LyraBoxPlot extends LyraElement {
   @state() private loading = true;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
-  private chart?: Chart;
+  private chart?: import('chart.js').Chart;
   private chartJsModule?: typeof import('chart.js');
 
   connectedCallback(): void {
@@ -117,7 +116,7 @@ export class LyraBoxPlot extends LyraElement {
     this.draw();
   }
 
-  private buildConfig(): ChartConfiguration {
+  private buildConfig(): import('chart.js').ChartConfiguration {
     return {
       // boxplot isn't in chart.js's static ChartType union — same cast the seed uses.
       type: 'boxplot' as never,

@@ -1,6 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import type { ActiveDataPoint, Chart, ChartConfiguration, ChartEvent, ChartType } from 'chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { loadChartJs } from './chart-loader.js';
@@ -138,7 +137,7 @@ export class LyraChart extends LyraElement {
    * without discarding sibling keys the generated config set), for consumers
    * who need full Chart.js control beyond the simplified `Series` shape.
    */
-  @property({ attribute: false }) config?: Partial<ChartConfiguration>;
+  @property({ attribute: false }) config?: Partial<import('chart.js').ChartConfiguration>;
 
   /** True until the lazy-loaded `chart.js` peer dependency has settled (success or failure). */
   @state() private loading = true;
@@ -146,13 +145,13 @@ export class LyraChart extends LyraElement {
   @state() private zoomed = false;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
-  private chart?: Chart;
+  private chart?: import('chart.js').Chart;
   private chartJsModule?: typeof import('chart.js');
   // Tracks the *effective* Chart.js type actually passed to `new Chart()` —
   // i.e. `config.type` post-merge, not `this.type` — since `config.type` (the
   // raw passthrough) can override the generated type in `buildConfig()`. See
   // the deep-merge note on `buildConfig()` below.
-  private builtType?: ChartType;
+  private builtType?: import('chart.js').ChartType;
   // `chartjs-plugin-zoom`'s own `resetZoom()` synchronously re-invokes the
   // `onZoomComplete` callback below as part of its reset, which would emit a
   // stale `{zoomed: true}` right before `resetZoom()` emits the real
@@ -241,7 +240,7 @@ export class LyraChart extends LyraElement {
    * scale's `ticks.color`/`grid.color`/axis `title.color` so grid lines and
    * labels retheme instead of sitting at Chart.js's own hardcoded defaults.
    */
-  private buildScales(theme: ThemeColors): NonNullable<ChartConfiguration['options']>['scales'] {
+  private buildScales(theme: ThemeColors): NonNullable<import('chart.js').ChartConfiguration['options']>['scales'] {
     if (this.type === 'pie' || this.type === 'doughnut') return {};
 
     if (this.type === 'radar' || this.type === 'polarArea') {
@@ -300,7 +299,7 @@ export class LyraChart extends LyraElement {
    * whatever's nearest. Covers the per-bar/per-segment click ask for any
    * chart type (bar/line/pie/doughnut/etc.), not just bars.
    */
-  private handlePointClick(event: ChartEvent, chart: Chart): void {
+  private handlePointClick(event: import('chart.js').ChartEvent, chart: import('chart.js').Chart): void {
     // Chart.js's own `onClick` handler hands us its `ChartEvent` wrapper, but
     // `getElementsAtEventForMode()`'s .d.ts (inaccurately) types its first
     // param as a DOM `Event` — at runtime Chart.js only reads `.x`/`.y` off
@@ -312,7 +311,7 @@ export class LyraChart extends LyraElement {
       'nearest',
       { intersect: true },
       true,
-    ) as ActiveDataPoint[];
+    ) as import('chart.js').ActiveDataPoint[];
     const hit = elements[0];
     if (!hit) return;
     const { datasetIndex, index } = hit;
@@ -321,10 +320,10 @@ export class LyraChart extends LyraElement {
     this.emit('lyra-point-click', { datasetIndex, index, label, value });
   }
 
-  private buildConfig(): ChartConfiguration {
+  private buildConfig(): import('chart.js').ChartConfiguration {
     const theme = this.themeColors();
-    const generated: ChartConfiguration = {
-      type: this.type as ChartType,
+    const generated: import('chart.js').ChartConfiguration = {
+      type: this.type as import('chart.js').ChartType,
       data: {
         labels: this.labels,
         datasets: this.datasets.map((s) => this.seriesToDataset(s)) as never,
