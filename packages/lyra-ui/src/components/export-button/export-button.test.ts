@@ -326,6 +326,19 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
   expect(el.shadowRoot!.activeElement).to.equal(items[0]);
 });
 
+it('re-binds positioning after a disconnect+reconnect while open', async () => {
+  const el = (await fixture(
+    html`<lyra-export-button open .formats=${['csv', 'json']}></lyra-export-button>`,
+  )) as LyraExportButton;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  expect(menu.style.position).to.not.equal('');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   await expect(el).to.be.accessible();
