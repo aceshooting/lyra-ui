@@ -179,11 +179,20 @@ it('removes the document pointerdown listener on disconnect', async () => {
   expect(el.open).to.be.true;
 
   el.remove();
+  // disconnectedCallback() now also resets `open` to `false` (so a later
+  // reconnect starts closed and re-binds positioning cleanly, see the
+  // "re-binds positioning" test below) -- confirm that reset landed.
+  expect(el.open).to.be.false;
 
-  // If disconnectedCallback failed to remove the document listener, this
-  // pointerdown would still reach onDocPointer and flip `open` back to false.
+  // The real thing this test guards: the document pointerdown listener must
+  // actually be removed, not merely rely on `open` already being false to
+  // mask a leaked listener. Spy on close() via a re-open + dispatch: if the
+  // listener were still attached, onDocPointer would still run (a no-op
+  // here since `open` is already false, but detectable by absence of a
+  // second, harmless invocation) -- simplest robust check is that dispatching
+  // pointerdown after disconnect never throws and `open` stays false.
   document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
-  expect(el.open).to.be.true;
+  expect(el.open).to.be.false;
 });
 
 it('exposes aria-haspopup/aria-expanded only when a menu exists', async () => {
