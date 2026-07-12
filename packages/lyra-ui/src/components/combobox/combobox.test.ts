@@ -139,6 +139,56 @@ it('blocks a required, empty combobox from submitting the form', async () => {
   expect(form.reportValidity()).to.be.false;
 });
 
+it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+
+  el.required = true;
+  expect(el.hasAttribute('required')).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+
+  el.required = false;
+  expect(el.hasAttribute('required')).to.be.false;
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('updates disabled form participation synchronously without awaiting a Lit update', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-combobox name="fruit">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+  el.value = 'a';
+  expect(new FormData(form).get('fruit')).to.equal('a');
+
+  el.disabled = true;
+  expect(el.hasAttribute('disabled')).to.be.true;
+  expect(new FormData(form).has('fruit')).to.be.false;
+
+  el.disabled = false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(new FormData(form).get('fruit')).to.equal('a');
+});
+
+it('switches the submitted single/multiple representation synchronously', async () => {
+  const form = (await fixture(html`
+    <form><lyra-combobox name="tags"></lyra-combobox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-combobox') as LyraCombobox;
+  el.value = ['a', 'b'];
+  expect(new FormData(form).getAll('tags')).to.deep.equal(['a']);
+
+  el.multiple = true;
+  expect(el.hasAttribute('multiple')).to.be.true;
+  expect(new FormData(form).getAll('tags')).to.deep.equal(['a', 'b']);
+
+  el.multiple = false;
+  expect(el.hasAttribute('multiple')).to.be.false;
+  expect(new FormData(form).getAll('tags')).to.deep.equal(['a']);
+});
+
 it('seeds the initial selection from a declaratively-selected <lyra-option>', async () => {
   const el = (await fixture(html`
     <lyra-combobox>

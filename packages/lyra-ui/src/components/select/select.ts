@@ -68,13 +68,13 @@ export class LyraSelect extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   static properties = {
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
     name: { reflect: true, noAccessor: true },
   };
 
   @property() placeholder = '';
-  @property({ type: Boolean, reflect: true }) disabled = false;
-  @property({ type: Boolean, reflect: true }) required = false;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -106,6 +106,8 @@ export class LyraSelect extends LyraElement {
   private cleanup?: () => void;
   private _isFirstUpdate = true;
   private _selected = '';
+  private _disabled = false;
+  private _required = false;
   // What `form.reset()` restores to. Captured exactly once, from whatever
   // `<lyra-option selected>` markup was present the first time slotted
   // options are collected (mirrors native `<select><option selected>`) --
@@ -167,6 +169,28 @@ export class LyraSelect extends LyraElement {
     this.requestUpdate('name', old);
   }
 
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    if (this._disabled) this.hide();
+    this.requestUpdate('disabled', old);
+  }
+
+  get required(): boolean {
+    return this._required;
+  }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.updateValidity();
+    this.requestUpdate('required', old);
+  }
+
   /** The selected value: a single string (empty when nothing is selected). */
   get value(): string {
     return this._selected;
@@ -210,6 +234,7 @@ export class LyraSelect extends LyraElement {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    if (disabled) this.hide();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -335,14 +360,13 @@ export class LyraSelect extends LyraElement {
         if (!this._isFirstUpdate) this.emit('lyra-hide');
       }
     }
-    if (changed.has('required')) this.updateValidity();
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
   }
 
   private selectOption(option: LyraOption): void {
-    if (option.disabled) return;
+    if (this.effectiveDisabled || option.disabled) return;
     this.value = option.value;
     this.hide();
     this.emit('input');

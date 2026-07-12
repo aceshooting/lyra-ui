@@ -259,6 +259,23 @@ it('participates in a form: value reflects in FormData on submit', async () => {
   expect(new FormData(form).get('model')).to.equal('mistral');
 });
 
+it('updates disabled form participation synchronously without awaiting a Lit update', async () => {
+  const form = (await fixture(html`
+    <form><lyra-model-select name="model" .catalog=${CATALOG}></lyra-model-select></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-model-select') as LyraModelSelect;
+  el.value = 'mistral';
+  expect(new FormData(form).get('model')).to.equal('mistral');
+
+  el.disabled = true;
+  expect(el.hasAttribute('disabled')).to.be.true;
+  expect(new FormData(form).has('model')).to.be.false;
+
+  el.disabled = false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(new FormData(form).get('model')).to.equal('mistral');
+});
+
 it('submits under a programmatically assigned name in the same tick', async () => {
   const form = (await fixture(html`
     <form><lyra-model-select value="mistral" .catalog=${CATALOG}></lyra-model-select></form>

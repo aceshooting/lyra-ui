@@ -13,6 +13,7 @@ export interface FormAssociatedInterface {
   setFormValue(next: string): void;
   checkValidity(): boolean;
   reportValidity(): boolean;
+  formResetCallback(): void;
 }
 
 /**
@@ -35,15 +36,14 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     static properties = {
       name: { reflect: true, noAccessor: true },
       value: { noAccessor: true },
-      disabled: { type: Boolean, reflect: true },
+      disabled: { type: Boolean, reflect: true, noAccessor: true },
       required: { type: Boolean, reflect: true, noAccessor: true },
     };
 
     internals: ElementInternals;
 
-    disabled = false;
-
     private _fieldsetDisabled = false;
+    private _disabled = false;
 
     // Hand-written accessor (mirrors `value`/`required` below): native form
     // submission for a form-associated custom element keys its `FormData`
@@ -101,6 +101,19 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this.internals.setFormValue(this._value);
       this.updateValidity();
       this.requestUpdate('value', old);
+    }
+
+    get disabled(): boolean {
+      return this._disabled;
+    }
+
+    set disabled(next: boolean) {
+      const old = this._disabled;
+      this._disabled = Boolean(next);
+      // FACE omission and barred validation are driven by the live host
+      // attribute, so reflection must happen before same-tick form APIs run.
+      this.toggleAttribute('disabled', this._disabled);
+      this.requestUpdate('disabled', old);
     }
 
     get required(): boolean {

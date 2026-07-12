@@ -121,6 +121,11 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     this.value = String(this.clampValue(next));
   }
 
+  formResetCallback(): void {
+    super.formResetCallback();
+    this.value = String(this.valueAsNumber);
+  }
+
   /** If `value` is still unset, seed it with the sanitized default — the
    *  midpoint of `[min, max]`, snapped to `step` — so `value`/`valueAsNumber`
    *  and rendering never have to treat "" as a real, distinct state. */
@@ -279,16 +284,8 @@ export class LyraSlider extends FormAssociated(LyraElement) {
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    // `formResetCallback` (inherited from `FormAssociated`, restoring
-    // `value` to whatever default the mixin captured — "" when no `value`
-    // attribute was ever declared) isn't part of the mixin's exported
-    // `FormAssociatedInterface` type, so it can't be overridden here with a
-    // `super` call the way `connectedCallback`/`disconnectedCallback` above
-    // are. Catching the resulting empty `value` here instead, in the same
-    // pre-render pass that already re-clamps a changed min/max/step below,
-    // covers `form.reset()` the same way `connectedCallback` covers first
-    // mount — and doing it in `willUpdate` (not `updated`) folds the fix-up
-    // into this same update cycle instead of scheduling a second one.
+    // Keep direct empty-string assignments from becoming a persistent
+    // slider state. form.reset() is handled synchronously above.
     if (changed.has('value') && this.value === '') {
       this.ensureValue();
       return;

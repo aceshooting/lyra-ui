@@ -213,6 +213,43 @@ it('allows a required select to submit once a value is selected', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('updates dynamic required validity synchronously without awaiting a Lit update', async () => {
+  const el = (await fixture(html`
+    <lyra-select>
+      <lyra-option value="a">Apple</lyra-option>
+    </lyra-select>
+  `)) as LyraSelect;
+
+  el.required = true;
+  expect(el.hasAttribute('required')).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+
+  el.required = false;
+  expect(el.hasAttribute('required')).to.be.false;
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('updates disabled form participation synchronously without awaiting a Lit update', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-select name="fruit">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-select>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-select') as LyraSelect;
+  el.value = 'a';
+  expect(new FormData(form).get('fruit')).to.equal('a');
+
+  el.disabled = true;
+  expect(el.hasAttribute('disabled')).to.be.true;
+  expect(new FormData(form).has('fruit')).to.be.false;
+
+  el.disabled = false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(new FormData(form).get('fruit')).to.equal('a');
+});
+
 it('seeds the initial selection from a declaratively-selected <lyra-option>', async () => {
   const el = (await fixture(html`
     <lyra-select>

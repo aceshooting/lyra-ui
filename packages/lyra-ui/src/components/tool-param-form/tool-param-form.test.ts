@@ -205,6 +205,51 @@ it('participates in a form: submits the resolved value as JSON under name', asyn
   expect(JSON.parse(raw)).to.deep.equal({ city: 'Paris', units: 'celsius', days: 3 });
 });
 
+it('synchronizes schema, value, FormData, and validity before the next render', async () => {
+  const form = (await fixture(html`
+    <form><lyra-tool-param-form name="args"></lyra-tool-param-form></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+
+  el.schema = basicSchema;
+  expect(el.errors).to.have.property('city');
+  expect(el.checkValidity()).to.be.false;
+  expect(el.reportValidity()).to.be.false;
+  expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({
+    units: 'celsius',
+    days: 3,
+  });
+
+  el.value = { city: 'Paris' };
+  expect(el.errors).to.deep.equal({});
+  expect(el.checkValidity()).to.be.true;
+  expect(form.checkValidity()).to.be.true;
+  expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({
+    city: 'Paris',
+    units: 'celsius',
+    days: 3,
+  });
+});
+
+it('applies programmatic disabled state to native form APIs in the same tick', async () => {
+  const form = (await fixture(html`
+    <form><lyra-tool-param-form name="args" .schema=${basicSchema}></lyra-tool-param-form></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+  expect(form.checkValidity()).to.be.false;
+  expect(new FormData(form).has('args')).to.be.true;
+
+  el.disabled = true;
+  expect(el.hasAttribute('disabled')).to.be.true;
+  expect(new FormData(form).has('args')).to.be.false;
+  expect(form.checkValidity()).to.be.true;
+
+  el.disabled = false;
+  expect(el.hasAttribute('disabled')).to.be.false;
+  expect(new FormData(form).has('args')).to.be.true;
+  expect(form.checkValidity()).to.be.false;
+});
+
 it('submits under a programmatically assigned name in the same tick', async () => {
   const form = (await fixture(html`
     <form>
@@ -270,8 +315,12 @@ it('formResetCallback clears value back to {} on form.reset()', async () => {
   await el.updateComplete;
 
   form.reset();
-  await el.updateComplete;
   expect(el.value).to.deep.equal({});
+  expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({
+    units: 'celsius',
+    days: 3,
+  });
+  expect(form.checkValidity()).to.be.false;
 });
 
 it('temporarily disables every field through a fieldset without overwriting author state', async () => {

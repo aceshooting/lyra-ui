@@ -62,14 +62,14 @@ export class LyraCombobox extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   static properties = {
+    multiple: { type: Boolean, reflect: true, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
     name: { reflect: true, noAccessor: true },
   };
 
-  @property({ type: Boolean, reflect: true }) multiple = false;
   @property() placeholder = '';
-  @property({ type: Boolean, reflect: true }) disabled = false;
-  @property({ type: Boolean, reflect: true }) required = false;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -119,6 +119,9 @@ export class LyraCombobox extends LyraElement {
   private cleanup?: () => void;
   private _isFirstUpdate = true;
   private _selected: string[] = [];
+  private _multiple = false;
+  private _disabled = false;
+  private _required = false;
   // What `form.reset()` restores to. Captured exactly once, from whatever
   // `<lyra-option selected>` markup was present the first time slotted
   // options are collected (mirrors native `<select><option selected>`) —
@@ -175,6 +178,39 @@ export class LyraCombobox extends LyraElement {
       this.removeAttribute('name');
     }
     this.requestUpdate('name', old);
+  }
+
+  get multiple(): boolean {
+    return this._multiple;
+  }
+  set multiple(next: boolean) {
+    const old = this._multiple;
+    this._multiple = Boolean(next);
+    this.toggleAttribute('multiple', this._multiple);
+    this.syncFormValue();
+    this.requestUpdate('multiple', old);
+  }
+
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    if (this._disabled) this.hide();
+    this.requestUpdate('disabled', old);
+  }
+
+  get required(): boolean {
+    return this._required;
+  }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.updateValidity();
+    this.requestUpdate('required', old);
   }
 
   /** The selected value(s): a string in single mode, a string[] in `multiple` mode. */
@@ -237,6 +273,7 @@ export class LyraCombobox extends LyraElement {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    if (disabled) this.hide();
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -397,15 +434,14 @@ export class LyraCombobox extends LyraElement {
         if (!this._isFirstUpdate) this.emit('lyra-hide');
       }
     }
-    if (changed.has('required')) this.updateValidity();
-    if (changed.has('name') || changed.has('multiple')) this.syncFormValue();
+    if (changed.has('name')) this.syncFormValue();
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
   }
 
   private pickRow(row: ComboboxSourceRow): void {
-    if (row.disabled) return;
+    if (this.effectiveDisabled || row.disabled) return;
     this._selectedLabelCache.set(row.value, row.label);
     if (this.multiple) {
       const set = new Set(this._selected);

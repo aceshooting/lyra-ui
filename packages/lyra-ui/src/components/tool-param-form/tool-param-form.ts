@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { nextId } from '../../internal/a11y.js';
@@ -121,18 +121,16 @@ export class LyraToolParamForm extends LyraElement {
 
   static properties = {
     name: { reflect: true, noAccessor: true },
+    schema: { attribute: false, noAccessor: true },
+    value: { attribute: false, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
-  @property({ attribute: false }) schema: ToolParamFormSchema = EMPTY_SCHEMA;
-  @property({ attribute: false }) value: Record<string, unknown> = {};
-
-  @property({ type: Boolean, reflect: true }) disabled = false;
-
-  // The true (touched-independent) per-field error set, recomputed in
-  // willUpdate() so it's available to the very same render() pass rather
-  // than lagging a frame behind in updated(). Exposed publicly (read-only)
-  // via the `errors` getter below, under a leading underscore here so the
-  // getter itself can be named plain `errors` without a collision.
+  // The true (touched-independent) per-field error set, recomputed by the
+  // synchronous schema/value accessors so native validity APIs and the next
+  // render observe the same state. Exposed publicly (read-only) via the
+  // `errors` getter below, under a leading underscore so the getter itself
+  // can be named plain `errors` without a collision.
   @state() private _errors: Record<string, string> = {};
   // Which fields have been visited (focusout'd) at least once — gates only
   // the *visual* error/aria-invalid presentation, matching every other
@@ -144,6 +142,9 @@ export class LyraToolParamForm extends LyraElement {
   private baseId = nextId('tool-param-form');
   private _fieldsetDisabled = false;
   private _name = '';
+  private _schema: ToolParamFormSchema = EMPTY_SCHEMA;
+  private _value: Record<string, unknown> = {};
+  private _disabled = false;
   // Guards lyra-validity-change so it only fires on an actual change, not on
   // every render — `undefined` guarantees the first computed state always
   // "changes" from it, so mounting with an unmet required field still
@@ -153,6 +154,7 @@ export class LyraToolParamForm extends LyraElement {
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.syncInternals();
   }
 
   connectedCallback(): void {
@@ -185,6 +187,26 @@ export class LyraToolParamForm extends LyraElement {
     return out;
   }
 
+  get schema(): ToolParamFormSchema {
+    return this._schema;
+  }
+  set schema(next: ToolParamFormSchema) {
+    const old = this._schema;
+    this._schema = next ?? EMPTY_SCHEMA;
+    this.syncFormState();
+    this.requestUpdate('schema', old);
+  }
+
+  get value(): Record<string, unknown> {
+    return this._value;
+  }
+  set value(next: Record<string, unknown>) {
+    const old = this._value;
+    this._value = next ?? {};
+    this.syncFormState();
+    this.requestUpdate('value', old);
+  }
+
   /** Submission key for the optional native `<form>` participation, reflected synchronously. */
   get name(): string {
     return this._name;
@@ -198,6 +220,16 @@ export class LyraToolParamForm extends LyraElement {
       this.removeAttribute('name');
     }
     this.requestUpdate('name', old);
+  }
+
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this.requestUpdate('disabled', old);
   }
 
   /** Whether the form is disabled explicitly or by an ancestor fieldset. */
@@ -259,12 +291,6 @@ export class LyraToolParamForm extends LyraElement {
     this.requestUpdate();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
-    if (changed.has('value') || changed.has('schema') || !this.hasUpdated) {
-      this._errors = this.computeErrors();
-    }
-  }
-
   /** Pushes `effectiveValue`/`errors` into `ElementInternals` — see the class doc's form-participation note. */
   private syncInternals(): void {
     this.internals.setFormValue(JSON.stringify(this.effectiveValue));
@@ -276,9 +302,13 @@ export class LyraToolParamForm extends LyraElement {
     }
   }
 
+  private syncFormState(): void {
+    this._errors = this.computeErrors();
+    this.syncInternals();
+  }
+
   protected updated(changed: PropertyValues): void {
     if (changed.has('value') || changed.has('schema')) {
-      this.syncInternals();
       const valid = Object.keys(this._errors).length === 0;
       const key = JSON.stringify({ valid, errors: this._errors });
       if (key !== this.lastValidityKey) {
@@ -289,6 +319,7 @@ export class LyraToolParamForm extends LyraElement {
   }
 
   private setFieldValue(key: string, val: unknown): void {
+    if (this.effectiveDisabled) return;
     this.value = { ...this.value, [key]: val };
     this.emit('lyra-input', { value: this.effectiveValue });
   }

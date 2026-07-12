@@ -1,4 +1,4 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -77,18 +77,18 @@ export class LyraCheckbox extends LyraElement {
   static formAssociated = true;
 
   static properties = {
+    checked: { type: Boolean, reflect: true, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
+    value: { noAccessor: true },
   };
 
-  @property({ type: Boolean, reflect: true }) checked = false;
   // Visual-only mixed state, matching native `<input type="checkbox">`
   // semantics: it does not affect `checked`'s own value, and a user
   // interaction (click/keyboard) clears it back to `false`, exactly like the
   // native control does.
   @property({ type: Boolean, reflect: true }) indeterminate = false;
-  @property({ type: Boolean, reflect: true }) disabled = false;
-  @property({ type: Boolean, reflect: true }) required = false;
-  @property() value = 'on';
 
   // Tracks whether the default slot carries any real (non-whitespace)
   // content, so the label wrapper — and the gap next to the box — can
@@ -113,10 +113,34 @@ export class LyraCheckbox extends LyraElement {
   private _defaultCaptured = false;
   private _fieldsetDisabled = false;
   private _name = '';
+  private _checked = false;
+  private _disabled = false;
+  private _required = false;
+  private _value = 'on';
 
   /** Whether the control is disabled explicitly or by an ancestor fieldset. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled;
+  }
+
+  get checked(): boolean {
+    return this._checked;
+  }
+  set checked(next: boolean) {
+    const old = this._checked;
+    this._checked = Boolean(next);
+    this.syncFormState();
+    this.requestUpdate('checked', old);
+  }
+
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this.requestUpdate('disabled', old);
   }
 
   /** The form submission key, reflected synchronously for native form APIs. */
@@ -134,9 +158,31 @@ export class LyraCheckbox extends LyraElement {
     this.requestUpdate('name', old);
   }
 
+  get required(): boolean {
+    return this._required;
+  }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.updateValidity();
+    this.requestUpdate('required', old);
+  }
+
+  get value(): string {
+    return this._value;
+  }
+  set value(next: string) {
+    const old = this._value;
+    this._value = next ?? 'on';
+    this.syncFormState();
+    this.requestUpdate('value', old);
+  }
+
   constructor() {
     super();
     this.internals = this.attachInternals();
+    this.syncFormState();
   }
 
   connectedCallback(): void {
@@ -166,16 +212,12 @@ export class LyraCheckbox extends LyraElement {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
-    if (changed.has('checked') || changed.has('value')) {
-      // A native checkbox submits its `value` content attribute (default
-      // "on") only while checked, and contributes nothing at all — not even
-      // an empty string — while unchecked.
-      this.internals.setFormValue(this.checked ? this.value : null);
-    }
-    if (changed.has('checked') || changed.has('required')) {
-      this.updateValidity();
-    }
+  private syncFormState(): void {
+    // A native checkbox submits its `value` content attribute (default
+    // "on") only while checked, and contributes nothing at all — not even
+    // an empty string — while unchecked.
+    this.internals.setFormValue(this.checked ? this.value : null);
+    this.updateValidity();
   }
 
   formResetCallback(): void {

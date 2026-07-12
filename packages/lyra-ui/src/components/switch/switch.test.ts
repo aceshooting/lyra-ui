@@ -135,6 +135,45 @@ it('participates in a form: submits value under name only when checked', async (
   expect(new FormData(form).get('notify')).to.equal(null);
 });
 
+it('updates form value and validity synchronously when checked changes', async () => {
+  const form = (await fixture(html`
+    <form><lyra-switch name="notify" value="yes" required>Notify me</lyra-switch></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-switch') as LyraSwitch;
+
+  expect(el.checkValidity()).to.be.false;
+
+  el.checked = true;
+  expect(new FormData(form).get('notify')).to.equal('yes');
+  expect(el.checkValidity()).to.be.true;
+
+  el.checked = false;
+  expect(new FormData(form).get('notify')).to.equal(null);
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('updates the submitted value synchronously when value changes', async () => {
+  const form = (await fixture(html`
+    <form><lyra-switch name="notify" value="yes" checked>Notify me</lyra-switch></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-switch') as LyraSwitch;
+
+  el.value = 'updated';
+  expect(new FormData(form).get('notify')).to.equal('updated');
+});
+
+it('updates validity synchronously when required changes', async () => {
+  const el = (await fixture(html`
+    <lyra-switch name="terms">Agree</lyra-switch>
+  `)) as LyraSwitch;
+
+  expect(el.checkValidity()).to.be.true;
+  el.required = true;
+  expect(el.checkValidity()).to.be.false;
+  el.required = false;
+  expect(el.checkValidity()).to.be.true;
+});
+
 it('submits under a programmatically assigned name in the same tick', async () => {
   const form = (await fixture(html`
     <form><lyra-switch value="yes" checked>Notify me</lyra-switch></form>
@@ -182,9 +221,37 @@ it('blocks a required, unchecked switch from submitting the form', async () => {
   expect(form.reportValidity()).to.be.true;
 });
 
+it('applies and removes explicit disabled form state synchronously', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-switch id="submitted" name="notify" value="yes" checked>Notify me</lyra-switch>
+      <lyra-switch id="invalid" name="terms" required>Agree</lyra-switch>
+    </form>
+  `)) as HTMLFormElement;
+  const submitted = form.querySelector('#submitted') as LyraSwitch;
+  const invalid = form.querySelector('#invalid') as LyraSwitch;
+
+  expect(new FormData(form).get('notify')).to.equal('yes');
+  expect(invalid.checkValidity()).to.be.false;
+
+  submitted.disabled = true;
+  invalid.disabled = true;
+  expect(submitted.hasAttribute('disabled')).to.be.true;
+  expect(invalid.hasAttribute('disabled')).to.be.true;
+  expect(new FormData(form).has('notify')).to.be.false;
+  expect(invalid.checkValidity()).to.be.true;
+
+  submitted.disabled = false;
+  invalid.disabled = false;
+  expect(submitted.hasAttribute('disabled')).to.be.false;
+  expect(invalid.hasAttribute('disabled')).to.be.false;
+  expect(new FormData(form).get('notify')).to.equal('yes');
+  expect(invalid.checkValidity()).to.be.false;
+});
+
 it('restores the declared default checked state on form.reset()', async () => {
   const form = (await fixture(html`
-    <form><lyra-switch name="notify" checked>Notify me</lyra-switch></form>
+    <form><lyra-switch name="notify" value="yes" checked required>Notify me</lyra-switch></form>
   `)) as HTMLFormElement;
   const el = form.querySelector('lyra-switch') as LyraSwitch;
   expect(el.checked).to.be.true;
@@ -192,10 +259,13 @@ it('restores the declared default checked state on form.reset()', async () => {
   el.checked = false;
   await el.updateComplete;
   expect(el.checked).to.be.false;
+  expect(new FormData(form).get('notify')).to.equal(null);
+  expect(el.checkValidity()).to.be.false;
 
   form.reset();
-  await el.updateComplete;
   expect(el.checked, 'reset must restore the declared default, not blank/false').to.be.true;
+  expect(new FormData(form).get('notify')).to.equal('yes');
+  expect(el.checkValidity()).to.be.true;
 });
 
 it('resets to unchecked via form.reset() when no default was declared', async () => {
@@ -205,10 +275,11 @@ it('resets to unchecked via form.reset() when no default was declared', async ()
   const el = form.querySelector('lyra-switch') as LyraSwitch;
   el.checked = true;
   await el.updateComplete;
+  expect(new FormData(form).get('notify')).to.equal('on');
 
   form.reset();
-  await el.updateComplete;
   expect(el.checked).to.be.false;
+  expect(new FormData(form).get('notify')).to.equal(null);
 });
 
 it('temporarily disables through a fieldset without overwriting the author disabled state', async () => {

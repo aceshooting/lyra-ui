@@ -112,6 +112,26 @@ it('updates constraint validity synchronously when `required` is assigned, with 
   (ctl as unknown as HTMLElement).remove();
 });
 
+it('applies `disabled` synchronously to its attribute, FormData entry, and barred validity state', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lyra-demo-ctl name="quantity" required></lyra-demo-ctl></form>
+  `);
+  const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl;
+  const host = ctl as unknown as HTMLElement;
+  expect(ctl.checkValidity()).to.be.false;
+  expect(new FormData(form).has('quantity')).to.be.true;
+
+  ctl.disabled = true;
+  expect(host.hasAttribute('disabled')).to.be.true;
+  expect(new FormData(form).has('quantity')).to.be.false;
+  expect(ctl.checkValidity()).to.be.true;
+
+  ctl.disabled = false;
+  expect(host.hasAttribute('disabled')).to.be.false;
+  expect(new FormData(form).get('quantity')).to.equal('');
+  expect(ctl.checkValidity()).to.be.false;
+});
+
 it('restores its own explicit `disabled` after an ancestor fieldset re-enables, instead of forcing it false', async () => {
   const ctl = (await fixture(html`<lyra-demo-ctl disabled></lyra-demo-ctl>`)) as unknown as Ctl;
   const withFormDisabledCallback = ctl as unknown as { formDisabledCallback(d: boolean): void };

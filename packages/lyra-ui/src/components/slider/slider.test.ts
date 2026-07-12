@@ -345,6 +345,35 @@ it('re-defaults to the domain midpoint on form.reset() when no default was decla
   expect(el.valueAsNumber).to.equal(50);
 });
 
+it('restores and submits the implicit midpoint synchronously during form.reset()', async () => {
+  const form = (await fixture(html`
+    <form><lyra-slider name="temperature" min="0" max="100"></lyra-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-slider') as LyraSlider;
+  el.valueAsNumber = 90;
+  expect(new FormData(form).get('temperature')).to.equal('90');
+
+  form.reset();
+  expect(el.value).to.equal('50');
+  expect(el.valueAsNumber).to.equal(50);
+  expect(new FormData(form).get('temperature')).to.equal('50');
+});
+
+it('sanitizes and submits a declared default synchronously during form.reset()', async () => {
+  const form = (await fixture(html`
+    <form><lyra-slider name="temperature" min="0" max="100" step="10" value="83"></lyra-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-slider') as LyraSlider;
+  expect(el.valueAsNumber).to.equal(80);
+  el.valueAsNumber = 20;
+  expect(new FormData(form).get('temperature')).to.equal('20');
+
+  form.reset();
+  expect(el.value).to.equal('80');
+  expect(el.valueAsNumber).to.equal(80);
+  expect(new FormData(form).get('temperature')).to.equal('80');
+});
+
 it('formDisabledCallback disables the control via a fieldset', async () => {
   const form = (await fixture(html`
     <form>
