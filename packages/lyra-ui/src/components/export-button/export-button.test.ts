@@ -178,20 +178,29 @@ it('removes the document pointerdown listener on disconnect', async () => {
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  el.remove();
-  // disconnectedCallback() now also resets `open` to `false` (so a later
-  // reconnect starts closed and re-binds positioning cleanly, see the
-  // "re-binds positioning" test below) -- confirm that reset landed.
-  expect(el.open).to.be.false;
+  // Spy on document.removeEventListener directly -- checking `el.open` alone
+  // is no longer a valid proxy for "was the listener removed" now that
+  // disconnectedCallback() also resets `open` to `false` itself (that reset
+  // would make closeMenu()'s own `if (!this.open) return;` guard mask a
+  // leaked listener, since `open` is already false before any dispatch).
+  const originalRemove = document.removeEventListener.bind(document);
+  let removedPointerdown = false;
+  document.removeEventListener = ((
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions,
+  ) => {
+    if (type === 'pointerdown') removedPointerdown = true;
+    return originalRemove(type, listener, options);
+  }) as typeof document.removeEventListener;
 
-  // The real thing this test guards: the document pointerdown listener must
-  // actually be removed, not merely rely on `open` already being false to
-  // mask a leaked listener. Spy on close() via a re-open + dispatch: if the
-  // listener were still attached, onDocPointer would still run (a no-op
-  // here since `open` is already false, but detectable by absence of a
-  // second, harmless invocation) -- simplest robust check is that dispatching
-  // pointerdown after disconnect never throws and `open` stays false.
-  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  try {
+    el.remove();
+  } finally {
+    document.removeEventListener = originalRemove;
+  }
+
+  expect(removedPointerdown).to.be.true;
   expect(el.open).to.be.false;
 });
 
@@ -335,7 +344,7 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
   expect(el.shadowRoot!.activeElement).to.equal(items[0]);
 });
 
-it('re-binds positioning after a disconnect+reconnect while open', async () => {
+it('resets to closed on disconnect and re-binds the outside-click listener when reopened after reconnect', async () => {
   const el = (await fixture(
     html`<lyra-export-button open .formats=${['csv', 'json']}></lyra-export-button>`,
   )) as LyraExportButton;
@@ -344,8 +353,20 @@ it('re-binds positioning after a disconnect+reconnect while open', async () => {
   el.remove();
   parent.appendChild(el);
   await el.updateComplete;
-  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
-  expect(menu.style.position).to.not.equal('');
+  // The real, discriminating check: a leftover inline `position` style is set
+  // once on first open and never cleared either way, so it can't tell a fixed
+  // reconnect apart from the pre-fix bug (which left `open` stuck `true`
+  // across the whole cycle). `open` itself is what the fix actually resets.
+  expect(el.open).to.be.false;
+
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  // Confirms the outside-click listener was genuinely re-armed by this fresh
+  // open, not left stale/leaked from before the reconnect.
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  expect(el.open).to.be.false;
 });
 
 it('is accessible', async () => {
