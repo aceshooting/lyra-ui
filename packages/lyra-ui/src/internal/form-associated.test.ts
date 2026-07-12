@@ -142,3 +142,45 @@ it('restores its own explicit `disabled` after an ancestor fieldset re-enables, 
   expect(ctl.effectiveDisabled).to.be.true; // own explicit disabled still applies
   expect(ctl.disabled).to.be.true; // never force-cleared by the fieldset
 });
+
+it('exposes native-like form ownership, label, and constraint-validation state', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form id="owner">
+      <label id="caption" for="control">Quantity</label>
+      <lyra-demo-ctl id="control" name="quantity" required></lyra-demo-ctl>
+    </form>
+  `);
+  const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl & {
+    form: HTMLFormElement | null;
+    labels: NodeList;
+    validity: ValidityState;
+    validationMessage: string;
+    willValidate: boolean;
+  };
+
+  expect(ctl.form?.id).to.equal('owner');
+  expect(ctl.labels.length).to.equal(1);
+  expect((ctl.labels.item(0) as HTMLElement | null)?.id).to.equal('caption');
+  expect(ctl.validity.valueMissing).to.be.true;
+  expect(ctl.validationMessage).to.equal('Please fill out this field.');
+  expect(ctl.willValidate).to.be.true;
+
+  ctl.disabled = true;
+  expect(ctl.willValidate).to.be.false;
+});
+
+it('restores a string state synchronously without emitting a user event', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lyra-demo-ctl name="quantity" value="initial"></lyra-demo-ctl></form>
+  `);
+  const ctl = form.querySelector('lyra-demo-ctl') as unknown as Ctl & {
+    formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+  };
+
+  ctl.value = 'changed';
+  ctl.formStateRestoreCallback('restored', 'restore');
+
+  expect(ctl.value).to.equal('restored');
+  expect(new FormData(form).get('quantity')).to.equal('restored');
+  expect(ctl.checkValidity()).to.be.true;
+});

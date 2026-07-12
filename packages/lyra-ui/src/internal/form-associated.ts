@@ -15,10 +15,16 @@ export interface FormAssociatedInterface {
   disabled: boolean;
   required: boolean;
   readonly effectiveDisabled: boolean;
+  readonly form: HTMLFormElement | null;
+  readonly labels: NodeList;
+  readonly validity: ValidityState;
+  readonly validationMessage: string;
+  readonly willValidate: boolean;
   setFormValue(next: string): void;
   checkValidity(): boolean;
   reportValidity(): boolean;
   formResetCallback(): void;
+  formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
   /** @internal */
   [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message?: string): void;
 }
@@ -87,6 +93,26 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // without this, a control whose `value` is never touched is entirely
       // absent from FormData instead of present as "".
       this.internals.setFormValue('');
+    }
+
+    get form(): HTMLFormElement | null {
+      return this.internals.form;
+    }
+
+    get labels(): NodeList {
+      return this.internals.labels;
+    }
+
+    get validity(): ValidityState {
+      return this.internals.validity;
+    }
+
+    get validationMessage(): string {
+      return this.internals.validationMessage;
+    }
+
+    get willValidate(): boolean {
+      return this.internals.willValidate;
     }
 
     /** @internal */
@@ -200,6 +226,13 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // Restore the constructed default value (native `defaultValue`
       // semantics) — previously this unconditionally blanked the field.
       this.value = this._defaultValue;
+    }
+
+    formStateRestoreCallback(
+      state: string | File | FormData | null,
+      _mode?: 'restore' | 'autocomplete',
+    ): void {
+      this.value = typeof state === 'string' ? state : '';
     }
 
     /**

@@ -53,7 +53,8 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   properties `name: string`, `value: string` (hand-written accessor via Lit's `noAccessor` so
   `internals.setFormValue()` fires synchronously on assignment, not on the async update cycle),
   `disabled: boolean` (reflected), `required: boolean` (reflected). Provides
-  `checkValidity()`/`reportValidity()` (delegate to `internals`), `formDisabledCallback(disabled)`,
+  `checkValidity()`/`reportValidity()` (delegate to `internals`), readonly `form`, `labels`,
+  `validity`, `validationMessage`, and `willValidate` getters, `formDisabledCallback(disabled)`,
   and a real `updateValidity()` that calls `internals.setValidity({ valueMissing: true }, ...)`
   whenever `required` is set and `value === ''` (re-run on every `value`/`required` change and once
   from `connectedCallback()`) — so `checkValidity()`/`reportValidity()`/`:invalid`/`:user-invalid`
@@ -61,11 +62,14 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   restores the value captured from the element's original `value` *content attribute* (native
   `defaultValue` semantics), not a hardcoded blank — only a later `setAttribute('value', ...)` or
   declarative markup updates that captured default; assigning the `.value` IDL property never does.
-  Only `lyra-date-input` uses this mixin; `lyra-combobox` and `lyra-select` each hand-roll an
+  `formStateRestoreCallback()` restores string state synchronously without emitting a user event.
+  `lyra-date-input`, `lyra-chat-composer`, and `lyra-slider` use this mixin; controls with non-string
+  values and controls whose defaults come from child markup hand-roll an
   equivalent independently instead (same `setValidity`/default-capture behavior — `lyra-combobox`
   needs its own copy because its value can be an array in `multiple` mode, `lyra-select` because its
   default is captured from a declared-`selected` `<lyra-option>` rather than a `value` content
   attribute — see each component's own gotchas for where its copy diverges from the mixin).
+  Every form-associated control exposes the same five readonly native-like getters.
 - **`positioner.ts` → `place(anchor, popup, opts?): () => void`** — thin wrapper over
   `@floating-ui/dom`'s `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (to match the
   popup's own `position:fixed` CSS — otherwise it lands offset by the page scroll position),

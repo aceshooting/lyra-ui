@@ -139,6 +139,22 @@ export class LyraSwitch extends LyraElement {
     this.syncFormState();
   }
 
+  get form(): HTMLFormElement | null {
+    return this.internals.form;
+  }
+  get labels(): NodeList {
+    return this.internals.labels;
+  }
+  get validity(): ValidityState {
+    return this.internals.validity;
+  }
+  get validationMessage(): string {
+    return this.internals.validationMessage;
+  }
+  get willValidate(): boolean {
+    return this.internals.willValidate;
+  }
+
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return this.renderRoot?.querySelector('[part="base"]') ?? null;
