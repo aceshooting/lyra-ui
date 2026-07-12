@@ -3,6 +3,10 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { expandIcon } from '../../internal/icons.js';
+import {
+  safeLinkHref as validateLinkHref,
+  safeMediaSrc as validateMediaSrc,
+} from '../../internal/safe-url.js';
 import { styles } from './media-card.styles.js';
 
 export type MediaCardKind = 'image' | 'video' | 'file';
@@ -12,60 +16,16 @@ export interface MediaCardOpenDetail {
   filename: string;
 }
 
-// -- safe-URL checking -------------------------------------------------
-//
-// `new URL()` is used (rather than a hand-rolled "does this look like a
-// scheme" regex) specifically because the platform's own URL parser already
-// implements the WHATWG URL Standard's input normalization -- stripping
-// ASCII tab/newline and leading/trailing C0-control-or-space from the input
-// before it ever looks for a scheme. A naive regex checked against the raw
-// string is exactly what a crafted value like `"java\tscript:alert(1)"` is
-// designed to defeat: the tab breaks a `/^[a-z]+:/`-style match (so the
-// string would wrongly fall through to the "no scheme, must be relative"
-// branch) while a browser attribute sink still normalizes it down to a
-// working `javascript:` URL. Delegating to `URL` means this check can never
-// drift out of sync with what the browser itself will actually do with the
-// string. `new URL(url)` throws when `url` has no scheme and no base to
-// resolve against, which is exactly the "relative or scheme-relative" case
-// this component allows unconditionally -- see `schemeOf()` below.
-const SAFE_MEDIA_SRC_SCHEMES = new Set(['http:', 'https:', 'blob:', 'data:']);
-// Deliberately narrower than the media-src allowlist: `data:` is excluded.
-// A `data:` URI is inert as an `<img>`/`<video>` *source* (a browser never
-// executes script from a media element's `src`), but a `data:text/html;...`
-// URI navigated to directly via a clicked `<a href>` runs as a full document
-// and can execute script -- so the same scheme gets a different verdict
-// depending on which DOM sink it's headed for.
-const SAFE_LINK_HREF_SCHEMES = new Set(['http:', 'https:', 'blob:']);
-
-function schemeOf(url: string): string | null {
-  try {
-    return new URL(url).protocol;
-  } catch {
-    return null;
-  }
-}
-
-function safeUrlOrNull(url: string, allowedSchemes: ReadonlySet<string>): string | null {
-  const trimmed = url.trim();
-  if (trimmed === '') return null;
-  const scheme = schemeOf(trimmed);
-  if (scheme === null) return trimmed; // no scheme -- relative or scheme-relative, always allowed
-  return allowedSchemes.has(scheme) ? trimmed : null;
-}
-
-/** Validates `url` is safe to assign as an `<img>`/`<video>` `src`. Returns
- *  the trimmed url when safe, `null` otherwise -- see the "safe-URL
- *  checking" comment above for the `data:` judgement call and why `URL` is
- *  used instead of a regex. */
+/** Validates `url` for an `<img>`/`<video>` source. Kept as a public wrapper
+ * so existing imports and generated API metadata remain stable. */
 export function safeMediaSrc(url: string): string | null {
-  return safeUrlOrNull(url, SAFE_MEDIA_SRC_SCHEMES);
+  return validateMediaSrc(url);
 }
 
-/** Validates `url` is safe to assign as an `<a href>` -- stricter than
- *  `safeMediaSrc()`, see the "safe-URL checking" comment above. Returns the
- *  trimmed url when safe, `null` otherwise. */
+/** Validates `url` for the library's download/open link sinks. Kept as a
+ * public wrapper so existing imports and generated API metadata remain stable. */
 export function safeLinkHref(url: string): string | null {
-  return safeUrlOrNull(url, SAFE_LINK_HREF_SCHEMES);
+  return validateLinkHref(url);
 }
 
 function detectKind(mimeType: string): MediaCardKind {
@@ -123,11 +83,10 @@ function fileGlyph(): SVGTemplateResult {
  * `<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:`
  * (plus `data:` for a *media* `src` only) or a scheme-relative/relative URL
  * with no scheme at all pass; anything else (`javascript:`, `vbscript:`,
- * and similarly suspicious schemes) is rejected. See `safeMediaSrc()` /
- * `safeLinkHref()` and their shared "safe-URL checking" comment for exactly
- * why `data:` gets two different answers depending on which DOM sink it's
- * headed for, and why the check is built on `new URL()` rather than a
- * hand-rolled scheme regex. An `image`/`video` `kind` whose `src` fails the
+ * and similarly suspicious schemes) is rejected. `safeMediaSrc()` and
+ * `safeLinkHref()` share a platform-URL-based validator; their sink-specific
+ * allowlists explain why `data:` gets two different answers depending on
+ * where it is used. An `image`/`video` `kind` whose `src` fails the
  * media-src check falls back to the generic file-chip rendering (which then
  * separately re-validates `src` against the stricter href allowlist for its
  * own download affordance) — this is the "plain preview unavailable state"

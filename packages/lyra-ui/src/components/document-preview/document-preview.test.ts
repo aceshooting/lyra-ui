@@ -2,6 +2,9 @@ import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './document-preview.js';
 import type { LyraDocumentPreview } from './document-preview.js';
 
+const IMAGE_DATA_URI =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
 /** Stubs `window.fetch` for the duration of one test, restoring the original
  *  afterward. `@sinonjs/fake-timers` is unavailable in this test environment
  *  (see `<lyra-stream-status>`'s test file), but this needs no timers at
@@ -180,6 +183,51 @@ describe('text/* and application/json dispatch', () => {
     }
   });
 
+  it('never fetches a URL whose normalized scheme is unsafe', async () => {
+    let called = false;
+    const unstub = stubFetch(() => {
+      called = true;
+      return Promise.resolve(textResponse('should not load'));
+    });
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview
+          .src=${'java\tscript:alert(1)'}
+          mime-type="text/plain"
+          filename="payload.txt"
+        ></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      await aTimeout(20);
+      await el.updateComplete;
+      expect(called).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.be.true;
+    } finally {
+      unstub();
+    }
+  });
+
+  it('keeps data:text URLs available for safe inline text previews', async () => {
+    const urls: string[] = [];
+    const unstub = stubFetch((url) => {
+      urls.push(url);
+      return Promise.resolve(textResponse('inline data'));
+    });
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview
+          src="data:text/plain,inline%20data"
+          mime-type="text/plain"
+        ></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      await aTimeout(20);
+      await el.updateComplete;
+      expect(urls).to.deep.equal(['data:text/plain,inline%20data']);
+      expect(el.shadowRoot!.querySelector('pre')?.textContent).to.equal('inline data');
+    } finally {
+      unstub();
+    }
+  });
+
   it('does not fetch while status="converting", even with a text src already set', async () => {
     let called = false;
     const unstub = stubFetch(() => {
@@ -233,6 +281,30 @@ describe('image/* dispatch', () => {
       unstub();
     }
   });
+
+  it('never assigns an unsafe normalized URL to an image src', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        .src=${'java\tscript:alert(1)'}
+        mime-type="image/png"
+        filename="payload.png"
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    expect(el.shadowRoot!.querySelector('[part="body"] img') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="download-link"]') === null).to.be.true;
+    expect(el.shadowRoot!.querySelector('.fallback-text')?.textContent).to.contain('payload.png');
+  });
+
+  it('keeps data:image URLs available for inline image previews', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        .src=${IMAGE_DATA_URI}
+        mime-type="image/png"
+        filename="pixel.png"
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    expect(el.shadowRoot!.querySelector('img')?.getAttribute('src')).to.equal(IMAGE_DATA_URI);
+  });
 });
 
 describe('generic-download fallback', () => {
@@ -263,6 +335,40 @@ describe('generic-download fallback', () => {
       html`<lyra-document-preview mime-type="application/pdf" filename="report.pdf"></lyra-document-preview>`,
     )) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
+  });
+
+  it('fails closed when the src attribute is removed at runtime', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        src="https://example.test/report.pdf"
+        mime-type="application/pdf"
+        filename="report.pdf"
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    el.removeAttribute('src');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="download-link"]') === null).to.be.true;
+  });
+
+  it('omits the download link for unsafe or active-document URL schemes', async () => {
+    for (const src of [
+      'javascript:alert(1)',
+      'java\tscript:alert(1)',
+      ' \rJaVa\nScRiPt:alert(1)',
+      'data:text/html,<script>alert(1)</script>',
+      'data:image/svg+xml,<svg onload=alert(1)></svg>',
+      'vbscript:msgbox(1)',
+    ]) {
+      const el = (await fixture(html`
+        <lyra-document-preview
+          .src=${src}
+          mime-type="application/pdf"
+          filename="payload.pdf"
+        ></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      expect(el.shadowRoot!.querySelector('[part="download-link"]') === null, src).to.be.true;
+      expect(el.shadowRoot!.querySelector('.fallback-text')?.textContent, src).to.contain('payload.pdf');
+    }
   });
 
   it('fires lyra-download with { src, filename } when the link is activated', async () => {

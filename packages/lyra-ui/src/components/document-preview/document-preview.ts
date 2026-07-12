@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { srOnly } from '../../internal/a11y.js';
+import { safeFetchUrl, safeLinkHref, safeMediaSrc } from '../../internal/safe-url.js';
 import { styles } from './document-preview.styles.js';
 
 export type DocumentPreviewStatus = 'idle' | 'converting' | 'ready' | 'error';
@@ -128,6 +129,13 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
  * that a *rendering* failure and a host's own state machine are different
  * concerns.
  *
+ * Every `src` is validated for the DOM/API sink that consumes it. Text
+ * fetches and image sources allow relative URLs plus `http:`, `https:`,
+ * `blob:`, and `data:`. Download links deliberately exclude `data:` because
+ * following a `data:text/html` URL can create an active document. Unsafe or
+ * malformed URLs never reach `fetch()`, an image `src`, or an anchor `href`;
+ * they render a non-interactive fallback/error instead.
+ *
  * Accessibility: the `"converting"` state (no numeric `progress`) is a
  * `role="status"` region wrapping a visually-hidden "Converting document…"
  * string. This is a *plain* static region, not routed through
@@ -149,10 +157,10 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
  *   component doesn't natively support (i.e. whenever format dispatch would
  *   otherwise fall through to "generic"). Ignored while `mime-type` resolves
  *   to `text`/`image` dispatch, or while `status` is `"converting"`/`"error"`.
- * @event lyra-download - `detail: { src, filename }` — fired when the
- *   generic-download fallback's link is activated. The browser download
- *   itself needs no JS (a plain `<a download>` handles it); this is purely
- *   for a host that wants to observe/log the download.
+ * @event lyra-download - `detail: { src, filename }` — fired when the safe
+ *   generic-download fallback link is activated. The browser download itself
+ *   needs no JS (a plain `<a download>` handles it); this is purely for a host
+ *   that wants to observe/log the download.
  * @event lyra-render-error - `detail: { error }` — fired when this
  *   component's own `text/*`/`application/json` `fetch(src)` fails. Distinct
  *   from `status="error"`, which is entirely host-driven (see the class
@@ -163,14 +171,15 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
  * @csspart body - The wrapper around whichever content is currently showing (text/image preview, the generic fallback, the spinner, or the error message).
  * @csspart spinner - The converting/loading indicator — indeterminate (`role="status"`) or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
  * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
- * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set.
+ * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
  */
 export class LyraDocumentPreview extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch (for `text`/`application/json`) or display (`image`, or as
-   *  the generic fallback's download `href`). Optional — gracefully absent
-   *  while, e.g., a conversion is still in progress. */
+   *  the generic fallback's download `href`). The value is validated against
+   *  a sink-specific scheme allowlist before use. Optional — gracefully
+   *  absent while, e.g., a conversion is still in progress. */
   @property() src = '';
 
   /** Drives format dispatch — see the class doc. */
@@ -212,9 +221,10 @@ export class LyraDocumentPreview extends LyraElement {
       this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
     }
 
+    const safeTextSrc = safeFetchUrl(this.src);
     const shouldFetchText =
       classifyFormat(this.mimeType) === 'text' &&
-      this.src !== '' &&
+      safeTextSrc !== null &&
       this.status !== 'converting' &&
       this.status !== 'error';
 
@@ -228,7 +238,7 @@ export class LyraDocumentPreview extends LyraElement {
         changed.has('mimeType') ||
         (changed.has('status') && this.textFetch.kind === 'idle')
       ) {
-        void this.fetchText(this.src);
+        void this.fetchText(safeTextSrc);
       }
     } else if (this.textFetch.kind !== 'idle') {
       // No longer applicable (format changed away from text, src cleared,
@@ -303,6 +313,7 @@ export class LyraDocumentPreview extends LyraElement {
 
   private renderTextPreview(): TemplateResult {
     if (this.src === '') return html`<pre class="text"></pre>`;
+    if (safeFetchUrl(this.src) === null) return this.renderError('Document URL is not allowed.');
     switch (this.textFetch.kind) {
       case 'loaded':
         return html`<pre class="text">${this.textFetch.text}</pre>`;
@@ -317,20 +328,23 @@ export class LyraDocumentPreview extends LyraElement {
 
   private renderImagePreview(): TemplateResult {
     if (this.src === '') return html`<p class="empty-note">No image to display.</p>`;
-    return html`<img src=${this.src} alt=${this.filename || 'Document preview'} />`;
+    const src = safeMediaSrc(this.src);
+    if (src === null) return this.renderDownloadFallback();
+    return html`<img src=${src} alt=${this.filename || 'Document preview'} />`;
   }
 
   private renderDownloadFallback(): TemplateResult {
     const label = this.filename || 'this file';
+    const href = safeLinkHref(this.src);
     return html`
       <div class="fallback">
         <span class="fallback-icon" aria-hidden="true">${fileGlyph()}</span>
         <p class="fallback-text">Preview not available for ${label}.</p>
-        ${this.src !== ''
+        ${href !== null
           ? html`
               <a
                 part="download-link"
-                href=${this.src}
+                href=${href}
                 download=${this.filename || ''}
                 @click=${this.onDownloadClick}
               >

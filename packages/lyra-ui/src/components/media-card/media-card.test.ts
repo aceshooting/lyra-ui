@@ -76,6 +76,19 @@ describe('defaults', () => {
     expect(base.tagName).to.equal('SPAN');
     expect(el.shadowRoot!.querySelector('[part="filename"]')!.textContent).to.equal('Untitled file');
   });
+
+  it('fails closed when the src attribute is removed at runtime', async () => {
+    const el = (await fixture(html`
+      <lyra-media-card
+        src="https://example.test/report.pdf"
+        kind="file"
+        filename="report.pdf"
+      ></lyra-media-card>
+    `)) as LyraMediaCard;
+    el.removeAttribute('src');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')?.tagName).to.equal('SPAN');
+  });
 });
 
 describe('kind resolution', () => {
