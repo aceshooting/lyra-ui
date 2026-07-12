@@ -1,6 +1,7 @@
 /// <reference types="geojson" />
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import type { GeoJSONSource, Map as MaplibreMap, StyleSpecification } from 'maplibre-gl';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -52,6 +53,20 @@ const DEFAULT_STYLE: StyleSpecification = {
   },
   layers: [{ id: 'lyra-osm', type: 'raster', source: 'lyra-osm' }],
 };
+
+/**
+ * Rejects a `LegendEntry.color` that could break out of the single
+ * `background` declaration it's assigned to — `;`, `{`, and `}` are all a
+ * value needs to terminate that declaration and start another. This matters
+ * even though the swatch's color is set via Lit's `styleMap` directive (not
+ * raw string interpolation): `styleMap`'s first commit for a given
+ * attribute part serializes the whole `style` value as a single string
+ * (only later updates go through the safe `CSSStyleDeclaration.setProperty()`
+ * path), so an unsanitized value could still inject on that first render.
+ */
+function sanitizeSwatchColor(color: string): string | undefined {
+  return /[;{}]/.test(color) ? undefined : color;
+}
 
 /**
  * `<lyra-map>` — a maplibre-gl wrapper with a declarative legend and
@@ -302,12 +317,13 @@ export class LyraMap extends LyraElement {
           : html`<div part="container"></div>`}
         ${this.legend.length
           ? html`<div part="legend">
-              ${this.legend.map(
-                (entry) => html`<div class="legend-row">
-                  <span part="legend-swatch" style=${`background:${entry.color}`}></span>
+              ${this.legend.map((entry) => {
+                const bg = sanitizeSwatchColor(entry.color);
+                return html`<div class="legend-row">
+                  <span part="legend-swatch" style=${styleMap(bg ? { background: bg } : {})}></span>
                   <span>${entry.label}</span>
-                </div>`,
-              )}
+                </div>`;
+              })}
             </div>`
           : nothing}
       </div>

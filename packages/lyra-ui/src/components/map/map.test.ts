@@ -79,6 +79,18 @@ it('renders a legend swatch per entry', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(2);
 });
 
+it('does not let a LegendEntry.color value inject extra CSS declarations via the swatch style attribute', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.legend = [{ color: 'red; position: fixed; top: 0px', label: 'Bad' }];
+  await el.updateComplete;
+  const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+  // Read the parsed inline style declaration directly — this is what actually
+  // detects a second CSS declaration having been injected into the style
+  // attribute via string concatenation.
+  expect(swatch.style.position).to.equal('');
+  expect(swatch.style.top).to.equal('');
+});
+
 it('does not render the legend panel when legend is empty (the default)', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   await el.updateComplete;
