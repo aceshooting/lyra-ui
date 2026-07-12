@@ -1,0 +1,50 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Introduction" />
+
+# Lyra UI
+
+Free, clean-room [Lit](https://lit.dev) web components — a companion to
+[Web Awesome](https://webawesome.com) that provides open-source equivalents of several
+Web Awesome **Pro** components, plus a few extras. Token-compatible with Web Awesome, so
+components look native inside a WA app, and are fully usable standalone.
+
+> **Independent project.** Not affiliated with or endorsed by Web Awesome. Component APIs
+> intentionally mirror Web Awesome's public API (attributes, slots, events, CSS parts) so
+> migration is a prefix rename — but every implementation here is original (clean-room).
+
+## Install
+
+```bash
+npm install @aceshooting/lyra-ui
+```
+
+## Usage
+
+```js
+import '@aceshooting/lyra-ui/components/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/combobox/option.js';
+```
+
+```html
+<lyra-combobox label="Fruit" with-clear>
+  <lyra-option value="a">Apple</lyra-option>
+  <lyra-option value="b">Banana</lyra-option>
+</lyra-combobox>
+```
+
+## Links
+
+- [GitHub](https://github.com/aceshooting/lyra-ui)
+- [npm](https://www.npmjs.com/package/@aceshooting/lyra-ui)
+- [llms.txt](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms.txt) — API
+  reference index for coding assistants integrating this library.
+
+## Theming
+
+Components read Web Awesome's `--wa-*` design tokens (with `--lyra-*` fallbacks). Inside a
+Web Awesome app they inherit your theme automatically; standalone, they use sensible defaults.
+See the [package README](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui#theming)
+for the full token list.
+
+Browse the sidebar for a live example and API reference of every component.
