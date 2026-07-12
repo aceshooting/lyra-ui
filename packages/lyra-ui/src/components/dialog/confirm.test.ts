@@ -96,16 +96,22 @@ it('fills the confirm button with --lyra-color-brand by default, --lyra-color-da
   const neutral = confirm({ title: 'Proceed?' });
   const neutralDialog = getMountedDialog();
   const neutralConfirm = footerButtons(neutralDialog)[1];
-  expect(neutralConfirm.style.background).to.include('--lyra-color-brand');
+  const neutralBackground = neutralConfirm.style.background;
+  const neutralColor = neutralConfirm.style.color;
   footerButtons(neutralDialog)[0].click();
   await neutral;
+  expect(neutralBackground).to.include('--lyra-color-brand');
+  expect(neutralColor).to.include('--lyra-color-on-brand');
 
   const danger = confirm({ title: 'Delete?', tone: 'danger' });
   const dangerDialog = getMountedDialog();
   const dangerConfirm = footerButtons(dangerDialog)[1];
-  expect(dangerConfirm.style.background).to.include('--lyra-color-danger');
+  const dangerBackground = dangerConfirm.style.background;
+  const dangerColor = dangerConfirm.style.color;
   footerButtons(dangerDialog)[0].click();
   await danger;
+  expect(dangerBackground).to.include('--lyra-color-danger');
+  expect(dangerColor).to.include('--lyra-color-on-danger');
 });
 
 it('uses the title as the dialog heading, which drives aria-label', async () => {

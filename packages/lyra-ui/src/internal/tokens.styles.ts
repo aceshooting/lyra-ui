@@ -7,7 +7,7 @@ export const tokens = css`
     --lyra-color-surface: var(--wa-color-surface-default, #fff);
     --lyra-color-text: var(--wa-color-text-normal, #1a1a1a);
     --lyra-color-text-quiet: var(--wa-color-text-quiet, #6b7280);
-    --lyra-color-border: var(--wa-color-neutral-fill-normal, #8a8a90);
+    --lyra-color-border: var(--wa-color-surface-border, #8a8a90);
     --lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da);
     --lyra-color-brand-quiet: var(--wa-color-brand-fill-quiet, #ddf4ff);
     --lyra-color-success: var(--wa-color-success-fill-loud, #1a7f37);
@@ -16,11 +16,13 @@ export const tokens = css`
     --lyra-color-warning-quiet: var(--wa-color-warning-fill-quiet, #fff8c5);
     --lyra-color-danger: var(--wa-color-danger-fill-loud, #cf222e);
     --lyra-color-danger-quiet: var(--wa-color-danger-fill-quiet, #ffebe9);
-    /* Text/icon color for content painted on top of a solid brand-fill
-       background (selected calendar days, filled badges, etc.) -- almost
-       always white on both the light and dark brand fills above, so it's
-       not itself light/dark-mode-swapped like the other tokens here. */
-    --lyra-color-on-brand: var(--wa-color-on-brand, #fff);
+    /* Text/icon colors paired with each solid semantic fill. These are
+       separate tokens because a theme can choose different foregrounds per
+       tone, and the bright standalone dark fills require dark content. */
+    --lyra-color-on-brand: var(--wa-color-brand-on-loud, #fff);
+    --lyra-color-on-success: var(--wa-color-success-on-loud, #fff);
+    --lyra-color-on-warning: var(--wa-color-warning-on-loud, #fff);
+    --lyra-color-on-danger: var(--wa-color-danger-on-loud, #fff);
     --lyra-space-xs: var(--wa-space-xs, 0.25rem);
     --lyra-space-s: var(--wa-space-s, 0.5rem);
     --lyra-space-m: var(--wa-space-m, 0.75rem);
@@ -42,7 +44,7 @@ export const tokens = css`
     /* Focus ring — every :focus-visible rule in the library should reference
        these three instead of hardcoding its own width/color/offset. */
     --lyra-focus-ring-width: 2px;
-    --lyra-focus-ring-color: var(--lyra-color-brand);
+    --lyra-focus-ring-color: var(--wa-color-focus, var(--lyra-color-brand));
     --lyra-focus-ring-offset: 2px;
 
     /* Minimum tappable box for an icon-only button (close/dismiss/nav
@@ -65,15 +67,19 @@ export const tokens = css`
       --lyra-color-surface: var(--wa-color-surface-default, #1a1a1a);
       --lyra-color-text: var(--wa-color-text-normal, #f2f2f2);
       --lyra-color-text-quiet: var(--wa-color-text-quiet, #9aa1ac);
-      --lyra-color-border: var(--wa-color-neutral-fill-normal, #4a4a52);
-      --lyra-color-brand: var(--wa-color-brand-fill-loud, #4d9fef);
+      --lyra-color-border: var(--wa-color-surface-border, #6b6b74);
+      --lyra-color-brand: var(--wa-color-brand-fill-loud, #4ea0f0);
       --lyra-color-brand-quiet: var(--wa-color-brand-fill-quiet, #163650);
       --lyra-color-success: var(--wa-color-success-fill-loud, #3fb950);
-      --lyra-color-success-quiet: var(--wa-color-success-fill-quiet, #1b4721);
+      --lyra-color-success-quiet: var(--wa-color-success-fill-quiet, #17411e);
       --lyra-color-warning: var(--wa-color-warning-fill-loud, #d29922);
       --lyra-color-warning-quiet: var(--wa-color-warning-fill-quiet, #3b2900);
-      --lyra-color-danger: var(--wa-color-danger-fill-loud, #f85149);
+      --lyra-color-danger: var(--wa-color-danger-fill-loud, #fa524a);
       --lyra-color-danger-quiet: var(--wa-color-danger-fill-quiet, #4c1210);
+      --lyra-color-on-brand: var(--wa-color-brand-on-loud, #111827);
+      --lyra-color-on-success: var(--wa-color-success-on-loud, #111827);
+      --lyra-color-on-warning: var(--wa-color-warning-on-loud, #111827);
+      --lyra-color-on-danger: var(--wa-color-danger-on-loud, #111827);
     }
   }
   :host([hidden]) {

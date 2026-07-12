@@ -17,11 +17,8 @@ export interface ConfirmOptions {
 // Plain inline-styled <button>s, not a shared lyra-button component -- none
 // exists in this library yet. Every value below is still a --lyra-* token
 // reference, never a raw literal, same requirement as a component's own
-// styles.ts. --lyra-color-on-brand is documented (tokens.styles.ts) as the
-// text color for *brand*-fill content specifically, but it's white in both
-// light and dark themes and reads fine over the danger fill too, so the
-// confirm button reuses it rather than introducing a redundant --lyra-color-
-// on-danger token for one call site.
+// styles.ts. Each filled tone uses its matching on-color token so standalone
+// light/dark fallbacks and a consumer's Web Awesome theme stay paired.
 const BUTTON_BASE_STYLE =
   'font: inherit; font-size: 0.875rem; padding: var(--lyra-space-xs) var(--lyra-space-m); ' +
   'border-radius: var(--lyra-radius); cursor: pointer; border: 1px solid var(--lyra-color-border);';
@@ -30,7 +27,7 @@ const CONFIRM_TONE_STYLE: Record<'neutral' | 'danger', string> = {
   neutral:
     'background: var(--lyra-color-brand); color: var(--lyra-color-on-brand); border-color: var(--lyra-color-brand);',
   danger:
-    'background: var(--lyra-color-danger); color: var(--lyra-color-on-brand); border-color: var(--lyra-color-danger);',
+    'background: var(--lyra-color-danger); color: var(--lyra-color-on-danger); border-color: var(--lyra-color-danger);',
 };
 
 function createButton(label: string, style: string, onClick: () => void): HTMLButtonElement {

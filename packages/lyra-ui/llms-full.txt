@@ -77,9 +77,10 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   the whole design-token layer. Every value chains through a `--wa-*` Web Awesome token first, with
   a hard-coded fallback, e.g. `--lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da)`. Full
   set: `--lyra-color-surface / -text / -text-quiet / -border / -brand / -brand-quiet / -success /
-  -warning / -danger`, `--lyra-color-on-brand` (text/icon color for content painted on a solid
-  brand-fill background, e.g. selected calendar days — not itself light/dark-swapped, since it's
-  white on both fills), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
+  -warning / -danger`, `--lyra-color-on-brand / -on-success / -on-warning / -on-danger` (paired
+  text/icon colors for content painted on the corresponding solid semantic fill; the standalone
+  fallbacks switch from light content in light mode to dark content on the brighter dark-mode
+  fills), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
   `--lyra-font`, `--lyra-transition-fast` / `-base` (motion timing every animating component should
   share), `--lyra-opacity-disabled` (one shared disabled-state opacity), `--lyra-focus-ring-width` /
   `-color` / `-offset` (every `:focus-visible` rule should reference these), `--lyra-icon-button-size`
@@ -2278,9 +2279,10 @@ used is still a `--lyra-*` token reference, never a raw literal.
   `<lyra-dialog>`'s own `close()`/`lyra-dialog-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
   `.remove()` itself.
-- Both buttons reuse `--lyra-color-on-brand` for their text color, even in the `danger` tone — there
-  is no separate `--lyra-color-on-danger` token, and `--lyra-color-on-brand` happens to be white in
-  both light and dark themes so it reads fine over the danger fill too.
+- The neutral confirm button pairs `--lyra-color-on-brand` with `--lyra-color-brand`; the danger
+  tone pairs `--lyra-color-on-danger` with `--lyra-color-danger`. Each token chains through Web
+  Awesome's matching `*-on-loud` semantic role and has contrast-tested standalone light/dark
+  fallbacks.
 - Importing `confirm` alone is enough to register `<lyra-dialog>` — `confirm.ts` imports
   `./dialog.js` for its side effect, so a consumer doesn't need a separate import for the dialog
   element.
