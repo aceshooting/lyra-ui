@@ -233,6 +233,7 @@ export type { ToolApprovalDialogCloseReason } from './components/tool-approval-d
 export { LyraToolParamForm } from './components/tool-param-form/tool-param-form.js';
 export type {
   ToolParamFormPropertyType,
+  ToolParamFormPrimitive,
   ToolParamFormProperty,
   ToolParamFormSchema,
 } from './components/tool-param-form/tool-param-form.js';

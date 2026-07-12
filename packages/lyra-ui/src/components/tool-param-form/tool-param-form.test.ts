@@ -51,12 +51,13 @@ it('renders schema.description as helper text under the field', async () => {
   expect(field(el, 'units').querySelector('[part="description"]')).to.be.null;
 });
 
-it('marks a required field with data-required and aria-required/required on its control', async () => {
+it('marks a required field without applying HTML nonempty semantics to the inner control', async () => {
   const el = (await fixture(html`<lyra-tool-param-form .schema=${basicSchema}></lyra-tool-param-form>`)) as LyraToolParamForm;
   expect(field(el, 'city').hasAttribute('data-required')).to.be.true;
   expect(field(el, 'units').hasAttribute('data-required')).to.be.false;
   const input = field(el, 'city').querySelector('input') as HTMLInputElement;
-  expect(input.required).to.be.true;
+  expect(input.required).to.be.false;
+  expect(input.getAttribute('aria-required')).to.equal('true');
 });
 
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {
@@ -233,7 +234,7 @@ it('focuses the first invalid nested or native field during direct and form vali
   expect(nestedCheckbox.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
 
-it('renders a boolean value=true field as satisfying required (checked counts as filled)', async () => {
+it('treats a required boolean as property presence, so false and true are both valid values', async () => {
   const requiredBoolSchema: ToolParamFormSchema = {
     type: 'object',
     properties: { confirm: { type: 'boolean' } },
@@ -244,9 +245,209 @@ it('renders a boolean value=true field as satisfying required (checked counts as
   )) as LyraToolParamForm;
   expect(el.checkValidity()).to.be.false;
 
-  el.value = { confirm: true };
-  await el.updateComplete;
+  el.value = { confirm: false };
   expect(el.checkValidity()).to.be.true;
+
+  el.value = { confirm: true };
+  expect(el.checkValidity()).to.be.true;
+
+  el.schema = {
+    ...requiredBoolSchema,
+    properties: { confirm: { type: 'boolean', default: false } },
+  };
+  el.value = {};
+  expect(el.effectiveValue.confirm).to.be.false;
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('accepts empty strings, zero, and false when their required properties are present', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      text: { type: 'string' },
+      count: { type: 'number' },
+      enabled: { type: 'boolean' },
+    },
+    required: ['text', 'count', 'enabled'],
+  };
+  const el = (await fixture(
+    html`<lyra-tool-param-form
+      .schema=${schema}
+      .value=${{ text: '', count: 0, enabled: false }}
+    ></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  expect(el.errors).to.deep.equal({});
+  expect(el.checkValidity()).to.be.true;
+
+  el.value = { text: undefined, count: 0, enabled: false };
+  expect(el.errors.text).to.equal('This field is required.');
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('validates every supported property type and string enum even when fields are optional', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      text: { type: 'string' },
+      amount: { type: 'number' },
+      count: { type: 'integer' },
+      enabled: { type: 'boolean' },
+      mode: { type: 'string', enum: ['fast', 'safe'] },
+    },
+  };
+  const el = (await fixture(
+    html`<lyra-tool-param-form
+      .schema=${schema}
+      .value=${{ text: 1, amount: '2', count: 2.5, enabled: 'false', mode: 'unknown' }}
+    ></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  expect(el.errors).to.have.keys(['text', 'amount', 'count', 'enabled', 'mode']);
+  expect(el.errors.text).to.equal('Must be a string.');
+  expect(el.errors.amount).to.equal('Must be a finite number.');
+  expect(el.errors.count).to.equal('Must be a whole number.');
+  expect(el.errors.enabled).to.equal('Must be a boolean.');
+  expect(el.errors.mode).to.equal('Must be one of: fast, safe.');
+  expect(el.internals.validity.typeMismatch).to.be.true;
+  expect(el.internals.validity.stepMismatch).to.be.true;
+  expect(el.internals.validity.customError).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+
+  el.value = { text: '', amount: 0, count: 2, enabled: false, mode: 'fast' };
+  expect(el.errors).to.deep.equal({});
+  expect(el.checkValidity()).to.be.true;
+
+  el.value.enabled = 'no';
+  expect(el.checkValidity()).to.be.false;
+  expect(el.errors.enabled).to.equal('Must be a boolean.');
+});
+
+it('rejects non-finite numbers and schema defaults that do not match their declared type', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      amount: { type: 'number' },
+      count: { type: 'integer', default: 1.5 },
+    },
+  };
+  const el = (await fixture(
+    html`<lyra-tool-param-form .schema=${schema} .value=${{ amount: Infinity }}></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  expect(el.errors.amount).to.equal('Must be a finite number.');
+  expect(el.errors.count).to.equal('Must be a whole number.');
+
+  el.value = { amount: Number.NaN, count: 2 };
+  expect(el.errors.amount).to.equal('Must be a finite number.');
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('supports primitive const so a must-confirm boolean is distinct from required presence', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { confirm: { type: 'boolean', const: true, title: 'Confirm' } },
+    required: ['confirm'],
+  };
+  const el = (await fixture(
+    html`<lyra-tool-param-form .schema=${schema} .value=${{ confirm: false }}></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  expect(el.errors.confirm).to.equal('Must equal true.');
+  expect(el.internals.validity.customError).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+  await el.updateComplete;
+  expect((field(el, 'confirm').querySelector('lyra-checkbox') as HTMLElement & { required: boolean }).required).to.be.false;
+
+  el.value = { confirm: true };
+  expect(el.errors).to.deep.equal({});
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('handles circular and BigInt values without throwing, omits unsafe FormData, and recovers', async () => {
+  const form = (await fixture(html`
+    <form><lyra-tool-param-form name="args"></lyra-tool-param-form></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+
+  expect(() => {
+    el.value = circular;
+  }).not.to.throw();
+  expect(el.formError).to.equal('Value must be JSON-serializable.');
+  expect(el.internals.validity.customError).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+  expect(new FormData(form).has('args')).to.be.false;
+
+  expect(() => {
+    el.value = { amount: 1n };
+  }).not.to.throw();
+  expect(el.checkValidity()).to.be.false;
+  expect(new FormData(form).has('args')).to.be.false;
+
+  expect(el.reportValidity()).to.be.false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('.form-error')?.textContent).to.equal('Value must be JSON-serializable.');
+
+  el.value = { amount: 1 };
+  expect(el.formError).to.equal('');
+  expect(el.checkValidity()).to.be.true;
+  expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({ amount: 1 });
+});
+
+it('emits serialization-only validity transitions without fabricating a field error', async () => {
+  const el = (await fixture(html`<lyra-tool-param-form></lyra-tool-param-form>`)) as LyraToolParamForm;
+  await el.updateComplete;
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+
+  let changed = oneEvent(el, 'lyra-validity-change');
+  el.value = circular;
+  let event = await changed;
+  expect(event.detail.valid).to.be.false;
+  expect(event.detail.errors).to.deep.equal({});
+  expect(el.formError).to.equal('Value must be JSON-serializable.');
+
+  changed = oneEvent(el, 'lyra-validity-change');
+  el.value = {};
+  event = await changed;
+  expect(event.detail.valid).to.be.true;
+  expect(event.detail.errors).to.deep.equal({});
+});
+
+it('fails closed for malformed root schemas without retaining form data', async () => {
+  const form = (await fixture(html`
+    <form><lyra-tool-param-form name="args"></lyra-tool-param-form></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-tool-param-form') as LyraToolParamForm;
+
+  el.schema = { type: 'array', properties: {} } as unknown as ToolParamFormSchema;
+  expect(el.formError).to.equal('Schema must describe an object.');
+  expect(el.internals.validity.customError).to.be.true;
+  expect(new FormData(form).has('args')).to.be.false;
+
+  el.schema = { type: 'object', properties: null } as unknown as ToolParamFormSchema;
+  expect(el.formError).to.equal('Schema properties must be a flat object.');
+  expect(new FormData(form).has('args')).to.be.false;
+});
+
+it('contains enumerable getter failures without throwing from value assignment or rendering', async () => {
+  const el = (await fixture(html`<lyra-tool-param-form></lyra-tool-param-form>`)) as LyraToolParamForm;
+  const hostile = Object.defineProperty({}, 'boom', {
+    enumerable: true,
+    get(): never {
+      throw new Error('boom');
+    },
+  });
+
+  expect(() => {
+    el.value = hostile;
+  }).not.to.throw();
+  expect(el.formError).to.equal('Value must be JSON-serializable.');
+  expect(el.checkValidity()).to.be.false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
 });
 
 it('renders a visible fallback note for a property type outside this phase\'s scope, instead of dropping it', async () => {
@@ -256,6 +457,9 @@ it('renders a visible fallback note for a property type outside this phase\'s sc
   } as unknown as ToolParamFormSchema;
   const el = (await fixture(html`<lyra-tool-param-form .schema=${weirdSchema}></lyra-tool-param-form>`)) as LyraToolParamForm;
   expect(field(el, 'nested').querySelector('.unsupported')).to.exist;
+  expect(el.errors.nested).to.equal('Unsupported field type "object".');
+  expect(el.internals.validity.customError).to.be.true;
+  expect(el.checkValidity()).to.be.false;
 });
 
 it('participates in a form: submits the resolved value as JSON under name', async () => {

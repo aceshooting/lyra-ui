@@ -16,6 +16,7 @@ import '../checkbox/checkbox.js';
 
 /** The four leaf property types this phase's flat-schema renderer understands. */
 export type ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean';
+export type ToolParamFormPrimitive = string | number | boolean;
 
 /**
  * One `schema.properties` entry. Deliberately shallow — see the class doc for
@@ -31,6 +32,8 @@ export interface ToolParamFormProperty {
   title?: string;
   /** Pre-filled value used whenever `value` doesn't already have this key. */
   default?: unknown;
+  /** Exact primitive value required when the property is present. */
+  const?: ToolParamFormPrimitive;
 }
 
 /**
@@ -46,24 +49,6 @@ export interface ToolParamFormSchema {
 
 const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
 
-/** `true` when `v` counts as "empty" for `prop`'s type, for the one validation rule this phase implements. */
-function isFieldEmpty(prop: ToolParamFormProperty, v: unknown): boolean {
-  if (prop.type === 'boolean') {
-    // A checkbox always holds a concrete true/false once rendered — there's
-    // no third "unset" visual state to represent JSON Schema's "key absent"
-    // meaning. Reusing <lyra-checkbox>'s own required semantics (must be
-    // checked) gives `required` on a boolean field an actually useful
-    // meaning here — e.g. a `confirmDestroy: boolean, required` param — and
-    // matches the control it's composed from instead of inventing a second,
-    // inconsistent definition of "required checkbox".
-    return v !== true;
-  }
-  if (v === undefined || v === null) return true;
-  if (prop.type === 'string') return typeof v !== 'string' || v.trim() === '';
-  // number / integer
-  return typeof v !== 'number' || Number.isNaN(v);
-}
-
 /**
  * `<lyra-tool-param-form>` — renders one form control per top-level property
  * of a JSON Schema object, for ad hoc tool invocation or approval-editing UIs
@@ -72,18 +57,21 @@ function isFieldEmpty(prop: ToolParamFormProperty, v: unknown): boolean {
  *
  * **Scope limitation (intentional, not accidental):** this phase only
  * understands a *flat* object schema — every `properties` entry must be
- * `'string'`, `'number'`, `'integer'`, `'boolean'`, or a string `enum`.
- * Nested objects, arrays, `oneOf`/`anyOf`/`allOf`, `$ref`, and any other
- * JSON Schema keyword are not read. A full JSON-Schema-to-form renderer is
+ * `'string'`, `'number'`, `'integer'`, `'boolean'`, or a string `enum`;
+ * primitive `const` is also enforced. Nested objects, arrays,
+ * `oneOf`/`anyOf`/`allOf`, `$ref`, constraints such as `minLength`/`minimum`,
+ * and schema-valued `additionalProperties` are not read. A full
+ * JSON-Schema-to-form renderer is
  * out of scope for this component; a property whose `type` isn't one of the
- * four above renders a visible "Unsupported field type" note instead of
- * silently dropping it or throwing.
+ * four above renders a visible "Unsupported field type" note and marks the
+ * form invalid instead of silently dropping it or throwing.
  *
  * Fields render in `Object.keys(schema.properties)` order (insertion order,
  * which is reliable for a plain object's string keys). A field's label is
  * `title ?? ` the property key; `description` renders as helper text below
- * the control; a key listed in `required` gets a visible `*` and the
- * underlying control's own `required` wiring.
+ * the control; a key listed in `required` gets a visible `*`. The outer
+ * component owns validation because JSON Schema `required` means property
+ * presence, unlike HTML controls' nonempty/must-check semantics.
  *
  * This component owns no Submit/Cancel/Approve chrome — a consumer composes
  * it inside their own dialog (e.g. a tool-approval dialog) and reads
@@ -98,7 +86,9 @@ function isFieldEmpty(prop: ToolParamFormProperty, v: unknown): boolean {
  * uncontrolled `<input placeholder>` not writing to `.value`, and means the
  * very first `lyra-input` a consumer receives already carries every default
  * resolved, so round-tripping `e.detail.value` back into `.value` converges
- * after one edit.
+ * after one edit. JSON Schema defines `default` as an annotation; this form
+ * renderer deliberately materializes it before validation and submission,
+ * so a valid default can satisfy `required` here.
  *
  * Optional native `<form>` participation is implemented via `ElementInternals`
  * attached directly (this component's value is a whole object, not a plain
@@ -112,13 +102,13 @@ function isFieldEmpty(prop: ToolParamFormProperty, v: unknown): boolean {
  * @event lyra-input - A field's value changed. `detail: { value }` — the
  * full current value object (every property, defaults resolved), not just
  * the field that changed.
- * @event lyra-validity-change - Overall validity changed (a required field
- * became empty/non-empty). `detail: { valid: boolean; errors: Record<string, string> }`.
+ * @event lyra-validity-change - Overall validity or field errors changed.
+ * `detail: { valid: boolean; errors: Record<string, string> }`.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
  * @csspart description - A field's helper text, from `schema.description`.
- * @csspart error - A field's inline validation message (only rendered once the field has been visited).
+ * @csspart error - A field-level or form-level validation message.
  */
 export class LyraToolParamForm extends LyraElement {
   static formAssociated = true;
@@ -137,6 +127,8 @@ export class LyraToolParamForm extends LyraElement {
   // `errors` getter below, under a leading underscore so the getter itself
   // can be named plain `errors` without a collision.
   @state() private _errors: Record<string, string> = {};
+  @state() private _formError = '';
+  @state() private showFormError = false;
   // Which fields have been visited (focusout'd) at least once — gates only
   // the *visual* error/aria-invalid presentation, matching every other
   // form control in this library (lyra-select/lyra-combobox/lyra-model-select
@@ -150,6 +142,8 @@ export class LyraToolParamForm extends LyraElement {
   private _name = '';
   private _schema: ToolParamFormSchema = EMPTY_SCHEMA;
   private _value: Record<string, unknown> = {};
+  private _effectiveValue: Record<string, unknown> = {};
+  private _validityFlags: ValidityStateFlags = {};
   private _disabled = false;
   // Guards lyra-validity-change so it only fires on an actual change, not on
   // every render — `undefined` guarantees the first computed state always
@@ -161,7 +155,7 @@ export class LyraToolParamForm extends LyraElement {
     super();
     this.internals = this.attachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    this.syncInternals();
+    this.syncFormState();
   }
 
   /** @internal */
@@ -192,13 +186,28 @@ export class LyraToolParamForm extends LyraElement {
     // see the correct answer even if called before Lit's first (async)
     // update has run, mirroring lyra-select's/lyra-checkbox's identical
     // connectedCallback -> updateValidity() call.
-    this._errors = this.computeErrors();
-    this.syncInternals();
+    this.syncFormState();
   }
 
   /** `value`, with any property missing from it filled in from `schema`'s own `default` — see the class doc. */
   get effectiveValue(): Record<string, unknown> {
-    const props = this.schema?.properties ?? {};
+    return { ...this._effectiveValue };
+  }
+
+  private get schemaProperties(): Record<string, ToolParamFormProperty> {
+    const properties = (this.schema as unknown as { properties?: unknown })?.properties;
+    return properties !== null && typeof properties === 'object' && !Array.isArray(properties)
+      ? (properties as Record<string, ToolParamFormProperty>)
+      : {};
+  }
+
+  private get requiredKeys(): string[] {
+    const required = (this.schema as unknown as { required?: unknown })?.required;
+    return Array.isArray(required) ? required.filter((key): key is string => typeof key === 'string') : [];
+  }
+
+  private resolveEffectiveValue(): Record<string, unknown> {
+    const props = this.schemaProperties;
     const out: Record<string, unknown> = { ...this.value };
     for (const key of Object.keys(props)) {
       // `hasOwnProperty`, not `out[key] === undefined` — a number field the
@@ -209,7 +218,12 @@ export class LyraToolParamForm extends LyraElement {
       // happens to be `undefined`. Only a key genuinely absent from `value`
       // (never touched, or reset back to `{}`) falls back to the default.
       if (!Object.prototype.hasOwnProperty.call(this.value, key) && props[key].default !== undefined) {
-        out[key] = props[key].default;
+        Object.defineProperty(out, key, {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value: props[key].default,
+        });
       }
     }
     return out;
@@ -266,79 +280,209 @@ export class LyraToolParamForm extends LyraElement {
   }
 
   /**
-   * The current per-field validation errors (`{ [propertyKey]: message }`),
-   * required-and-empty only — mirrors the last `lyra-validity-change`
-   * event's `errors`. Independent of which fields have been visited; a
-   * consumer wanting the visited-only, screen-reader-announced subset
-   * should read the rendered `[part="error"]` elements instead.
+   * The current per-field validation errors (`{ [propertyKey]: message }`) —
+   * required presence, primitive type, integer, enum, const, or unsupported
+   * type — mirrors the last `lyra-validity-change` event's `errors`.
+   * Independent of which fields have been visited; a consumer wanting the
+   * visited-only, screen-reader-announced subset should read the rendered
+   * `[part="error"]` elements instead.
    */
   get errors(): Record<string, string> {
     return { ...this._errors };
   }
 
-  /** The current per-field validation errors (required-and-empty only), independent of `touchedFields`. */
-  private computeErrors(): Record<string, string> {
-    const props = this.schema?.properties ?? {};
-    const required = new Set(this.schema?.required ?? []);
-    const effective = this.effectiveValue;
-    const out: Record<string, string> = {};
-    for (const key of Object.keys(props)) {
-      if (!required.has(key)) continue;
-      if (isFieldEmpty(props[key], effective[key])) {
-        out[key] = 'This field is required.';
-      }
-    }
-    return out;
+  /** A schema-wide or JSON-serialization error that cannot be assigned to one field. */
+  get formError(): string {
+    return this._formError;
   }
 
-  /** Non-mutating validity check — unlike `reportValidity()`, never reveals inline errors. */
+  /**
+   * Computes the supported flat JSON Schema subset against the exact value
+   * that will be submitted. Defaults are already materialized in `effective`.
+   */
+  private computeValidation(effective: Record<string, unknown>): {
+    errors: Record<string, string>;
+    flags: ValidityStateFlags;
+  } {
+    const props = this.schemaProperties;
+    const required = new Set(this.requiredKeys);
+    const out: Record<string, string> = {};
+    const flags: ValidityStateFlags = {};
+    const addError = (key: string, message: string): void => {
+      Object.defineProperty(out, key, {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: message,
+      });
+    };
+
+    for (const key of Object.keys(props)) {
+      const prop = props[key];
+      const type = (prop as unknown as { type?: unknown })?.type;
+      if (type !== 'string' && type !== 'number' && type !== 'integer' && type !== 'boolean') {
+        addError(key, `Unsupported field type "${String(type)}".`);
+        flags.customError = true;
+        continue;
+      }
+
+      const present = Object.prototype.hasOwnProperty.call(effective, key) && effective[key] !== undefined;
+      if (!present) {
+        if (required.has(key)) {
+          addError(key, 'This field is required.');
+          flags.valueMissing = true;
+        }
+        continue;
+      }
+
+      const v = effective[key];
+      if (type === 'string' && typeof v !== 'string') {
+        addError(key, 'Must be a string.');
+        flags.typeMismatch = true;
+        continue;
+      }
+      if (type === 'number' && (typeof v !== 'number' || !Number.isFinite(v))) {
+        addError(key, 'Must be a finite number.');
+        flags.typeMismatch = true;
+        continue;
+      }
+      if (type === 'integer' && (typeof v !== 'number' || !Number.isFinite(v))) {
+        addError(key, 'Must be a whole number.');
+        flags.typeMismatch = true;
+        continue;
+      }
+      if (type === 'integer' && !Number.isInteger(v)) {
+        addError(key, 'Must be a whole number.');
+        flags.stepMismatch = true;
+        continue;
+      }
+      if (type === 'boolean' && typeof v !== 'boolean') {
+        addError(key, 'Must be a boolean.');
+        flags.typeMismatch = true;
+        continue;
+      }
+
+      if (type === 'string' && Array.isArray(prop.enum) && !prop.enum.includes(v as string)) {
+        addError(key, `Must be one of: ${prop.enum.join(', ')}.`);
+        flags.customError = true;
+        continue;
+      }
+      if (prop.const !== undefined && v !== prop.const) {
+        addError(key, `Must equal ${JSON.stringify(prop.const)}.`);
+        flags.customError = true;
+      }
+    }
+
+    for (const key of required) {
+      if (Object.prototype.hasOwnProperty.call(props, key)) continue;
+      if (!Object.prototype.hasOwnProperty.call(effective, key) || effective[key] === undefined) {
+        addError(key, 'This field is required.');
+        flags.valueMissing = true;
+      }
+    }
+
+    return { errors: out, flags };
+  }
+
+  /** Resynchronizes validity without revealing inline errors. */
   checkValidity(): boolean {
+    this.syncFormState();
     return this.internals.checkValidity();
   }
 
   /**
-   * Reveals inline errors for every currently-invalid required field (as if
-   * each had been visited) and returns overall validity — the hook a
+   * Reveals every current field/root error (as if each field had been
+   * visited) and returns overall validity — the hook a
    * consumer's own Submit/Approve button should call right before acting,
    * mirroring a native `<form>`'s `reportValidity()`.
    */
   reportValidity(): boolean {
-    const errors = this.computeErrors();
-    if (Object.keys(errors).length > 0) {
-      this.touchedFields = new Set([...this.touchedFields, ...Object.keys(errors)]);
+    this.syncFormState();
+    if (Object.keys(this._errors).length > 0) {
+      this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
     }
+    if (this._formError) this.showFormError = true;
     return this.internals.reportValidity();
   }
 
   formResetCallback(): void {
     this.value = {};
     this.touchedFields = new Set();
+    this.showFormError = false;
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     this.requestUpdate();
   }
 
-  /** Pushes `effectiveValue`/`errors` into `ElementInternals` — see the class doc's form-participation note. */
-  private syncInternals(): void {
-    this.internals.setFormValue(JSON.stringify(this.effectiveValue));
-    if (Object.keys(this._errors).length === 0) {
+  private schemaShapeError(): string {
+    const schema = this.schema as unknown;
+    if (schema === null || typeof schema !== 'object' || (schema as { type?: unknown }).type !== 'object') {
+      return 'Schema must describe an object.';
+    }
+    const properties = (schema as { properties?: unknown }).properties;
+    if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) {
+      return 'Schema properties must be a flat object.';
+    }
+    return '';
+  }
+
+  private serializeEffectiveValue(effective: Record<string, unknown>): string {
+    const serialized = JSON.stringify(effective, (_key, value: unknown) => {
+      if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new TypeError('Non-finite numbers are not JSON values.');
+      }
+      return value;
+    });
+    if (typeof serialized !== 'string') throw new TypeError('Value did not serialize to JSON.');
+    return serialized;
+  }
+
+  /** Pushes the already-computed snapshot into `ElementInternals`. */
+  private syncInternals(formValue: string | null): void {
+    this.internals.setFormValue(formValue);
+    if (Object.keys(this._validityFlags).length === 0) {
       this.validityController.setValidity({});
     } else {
-      const firstMessage = Object.values(this._errors)[0] ?? 'Some required fields are empty.';
-      this.validityController.setValidity({ valueMissing: true }, firstMessage);
+      const firstMessage = Object.values(this._errors)[0] ?? this._formError ?? 'The value is invalid.';
+      this.validityController.setValidity(this._validityFlags, firstMessage);
     }
   }
 
   private syncFormState(): void {
-    this._errors = this.computeErrors();
-    this.syncInternals();
+    let effective: Record<string, unknown> = {};
+    let errors: Record<string, string> = {};
+    let flags: ValidityStateFlags = {};
+    let formError = '';
+    let formValue: string | null = null;
+
+    try {
+      formError = this.schemaShapeError();
+      effective = this.resolveEffectiveValue();
+      const validation = this.computeValidation(effective);
+      errors = validation.errors;
+      flags = validation.flags;
+      formValue = this.serializeEffectiveValue(effective);
+    } catch {
+      formError = 'Value must be JSON-serializable.';
+      formValue = null;
+    }
+
+    if (formError) {
+      flags.customError = true;
+      formValue = null;
+    }
+    this._effectiveValue = effective;
+    if (JSON.stringify(this._errors) !== JSON.stringify(errors)) this._errors = errors;
+    this._formError = formError;
+    this._validityFlags = flags;
+    this.syncInternals(formValue);
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('value') || changed.has('schema')) {
-      const valid = Object.keys(this._errors).length === 0;
-      const key = JSON.stringify({ valid, errors: this._errors });
+    if (changed.has('value') || changed.has('schema') || changed.has('_errors') || changed.has('_formError')) {
+      const valid = Object.keys(this._errors).length === 0 && this._formError === '';
+      const key = JSON.stringify({ valid, errors: this._errors, formError: this._formError });
       if (key !== this.lastValidityKey) {
         this.lastValidityKey = key;
         this.emit('lyra-validity-change', { valid, errors: { ...this._errors } });
@@ -405,8 +549,8 @@ export class LyraToolParamForm extends LyraElement {
       return html`<lyra-select
         id=${fieldId}
         aria-label=${errorMessage ? `${label}. ${errorMessage}` : label}
+        aria-required=${required ? 'true' : nothing}
         .value=${typeof effective === 'string' ? effective : ''}
-        ?required=${required}
         ?disabled=${this.effectiveDisabled}
         @change=${(e: Event) => this.onSelectChange(key, e)}
       >
@@ -419,9 +563,9 @@ export class LyraToolParamForm extends LyraElement {
         type="text"
         id=${fieldId}
         aria-describedby=${describedBy || nothing}
+        aria-required=${required ? 'true' : nothing}
         aria-invalid=${errorMessage ? 'true' : nothing}
         .value=${typeof effective === 'string' ? effective : ''}
-        ?required=${required}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onTextInput(key, e)}
       />`;
@@ -434,9 +578,9 @@ export class LyraToolParamForm extends LyraElement {
         id=${fieldId}
         step=${prop.type === 'integer' ? '1' : 'any'}
         aria-describedby=${describedBy || nothing}
+        aria-required=${required ? 'true' : nothing}
         aria-invalid=${errorMessage ? 'true' : nothing}
         .value=${numValue}
-        ?required=${required}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onNumberInput(key, e)}
       />`;
@@ -450,7 +594,6 @@ export class LyraToolParamForm extends LyraElement {
       return html`<lyra-checkbox
         id=${fieldId}
         ?checked=${effective === true}
-        ?required=${required}
         ?disabled=${this.effectiveDisabled}
         @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
       >
@@ -464,7 +607,7 @@ export class LyraToolParamForm extends LyraElement {
   }
 
   private renderField(key: string, prop: ToolParamFormProperty, index: number): TemplateResult {
-    const required = (this.schema.required ?? []).includes(key);
+    const required = this.requiredKeys.includes(key);
     const label = prop.title ?? key;
     const fieldId = `${this.baseId}-f${index}`;
     const descId = prop.description ? `${fieldId}-desc` : '';
@@ -472,7 +615,7 @@ export class LyraToolParamForm extends LyraElement {
     const describedBy = [descId, this.touchedFields.has(key) ? errId : ''].filter(Boolean).join(' ');
     const hasError = this.touchedFields.has(key) && Boolean(this._errors[key]);
     const errorMessage = hasError ? this._errors[key] : '';
-    const effective = this.effectiveValue[key];
+    const effective = this._effectiveValue[key];
     const isBoolean = prop.type === 'boolean';
 
     return html`
@@ -492,10 +635,13 @@ export class LyraToolParamForm extends LyraElement {
   }
 
   render(): TemplateResult {
-    const props = this.schema?.properties ?? {};
+    const props = this.schemaProperties;
     const keys = Object.keys(props);
     return html`<div part="base">
       ${keys.map((key, i) => this.renderField(key, props[key], i))}
+      ${this.showFormError && this._formError
+        ? html`<p part="error" class="form-error" role="alert">${this._formError}</p>`
+        : nothing}
     </div>`;
   }
 }

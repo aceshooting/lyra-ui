@@ -4929,20 +4929,22 @@ Renders one form control per top-level property of a JSON Schema object, for ad 
 approval-editing UIs (e.g. "the agent wants to call `create_event(title, attendees, allDay)` — let the
 user tweak the arguments before running it"). First-party invention (no Web Awesome equivalent).
 
-**Scope limitation (intentional, not accidental):** this component only understands a *flat* object
-schema — every `properties` entry must be `'string'`, `'number'`, `'integer'`, `'boolean'`, or a string
-`enum`. Nested objects, arrays, `oneOf`/`anyOf`/`allOf`, `$ref`, and any other JSON Schema keyword are
-not read. A property whose `type` isn't one of the four above renders a visible "Unsupported field
-type" note instead of silently dropping it or throwing.
+**Supported schema subset:** a *flat* object whose properties use one primitive `type`
+(`'string'`, `'number'`, `'integer'`, or `'boolean'`), `required` property presence, string `enum`,
+primitive `const`, and the `title`/`description`/`default` annotations. Nested objects, arrays, type
+unions, `oneOf`/`anyOf`/`allOf`, `$ref`, string/numeric constraints, and schema-valued
+`additionalProperties` are not interpreted. An unsupported property type renders a visible fallback
+and makes the form invalid instead of being silently accepted.
 
 **Exported types:**
 - `ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean'` — the four leaf property
   types this renderer understands
+- `ToolParamFormPrimitive = string | number | boolean` — values accepted by the supported `const`
 - `ToolParamFormProperty { type: ToolParamFormPropertyType; enum?: string[]; description?: string;
-  title?: string; default?: unknown }` — one `schema.properties` entry. `enum` is only meaningful when
-  `type` is `'string'` (rendered as a `<lyra-select>`); `title` is the display label, falling back to
-  the property key itself; `description` renders as helper text under the control; `default` pre-fills
-  a field whenever `value` doesn't already have that key.
+  title?: string; default?: unknown; const?: ToolParamFormPrimitive }` — one `schema.properties`
+  entry. `enum` is only meaningful when `type` is `'string'` (rendered as a `<lyra-select>`); `const`
+  enforces one exact primitive value; `title` is the display label; `description` is helper text;
+  `default` pre-fills a field whenever `value` doesn't already have that key.
 - `ToolParamFormSchema { type: 'object'; properties: Record<string, ToolParamFormProperty>; required?:
   string[] }` — the (intentionally flat) schema shape this component can render.
 
@@ -4951,7 +4953,9 @@ type" note instead of silently dropping it or throwing.
 - `value: Record<string, unknown> = {}` (attribute: false) — exactly what the consumer last set it to.
   A field with no entry in `value` but a schema `default` *displays* (and is *emitted*, via
   `lyra-input`) as that default, but the `value` property itself is left alone until the user actually
-  edits that field — mirrors an uncontrolled `<input placeholder>` not writing to `.value`.
+  edits that field. JSON Schema ordinarily treats `default` as an annotation; this renderer
+  deliberately materializes it before validation/submission, so a valid default can satisfy
+  `required`.
 - `name: string = ''` — submission key for optional native `<form>` participation
 - `disabled: boolean = false` (reflected)
 
@@ -4961,21 +4965,23 @@ type" note instead of silently dropping it or throwing.
   A key the user has explicitly cleared (a real own property set to `undefined`) stays cleared rather
   than snapping back to its default — only a key genuinely absent from `value` falls back.
 - `errors: Record<string, string>` — the current per-field validation errors (`{ [propertyKey]:
-  message }`), required-and-empty only; independent of which fields have been visited, so it doesn't
-  need a prior `reportValidity()` call to be accurate.
+  message }`) for required presence, primitive type, finite number/integer, enum, const, and
+  unsupported type; independent of which fields have been visited.
+- `formError: string` — a schema-wide/JSON-serialization error that has no honest field key; empty
+  when the current effective value is safe to submit.
 
 **Methods:**
-- `checkValidity(): boolean` — non-mutating; delegates to the underlying `ElementInternals`, never
-  reveals inline errors.
-- `reportValidity(): boolean` — reveals inline errors for every currently-invalid required field (as
-  if each had been visited) and returns overall validity; the hook a consumer's own Submit/Approve
-  button should call right before acting, mirroring a native `<form>`'s `reportValidity()`.
+- `checkValidity(): boolean` — synchronously re-snapshots even an in-place-mutated value/schema,
+  updates `ElementInternals`, and returns validity without revealing inline errors.
+- `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
+  errors, focuses the first invalid generated field when one exists, and delegates to native
+  `ElementInternals.reportValidity()`.
 
 **Events:** `lyra-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lyra-validity-change`
-(`detail: { valid: boolean; errors: Record<string, string> }` — fired whenever overall validity
-changes, including once up front at connect time, so a consumer sees `valid: false` immediately if a
-required field starts out empty without waiting for user interaction)
+(`detail: { valid: boolean; errors: Record<string, string> }` — fired whenever overall validity or
+the field-error set changes, including once up front at connect time; serialization-only failures
+set `valid: false` while `formError`, rather than a fabricated field key, carries the root message)
 
 **Slots:** none.
 
@@ -5016,29 +5022,37 @@ This component owns no Submit/Cancel/Approve chrome — a consumer composes it i
 that's `<lyra-checkbox>`'s documented way to give itself an accessible name, unlike `aria-describedby`
 (neither `<lyra-select>` nor `<lyra-checkbox>` forward a host-level `aria-describedby` to their
 internal focusable element, so for the enum-select case the error message is folded into `aria-label`
-instead, alongside the always-visible adjacent `[part="description"]` text). A `required` boolean
-field means "must be checked" — there is no third "unset" visual state a rendered checkbox can
-represent, so `isFieldEmpty()` treats anything other than `true` as empty for that field's type.
+instead, alongside the always-visible adjacent `[part="description"]` text). The outer component owns
+schema validity rather than forwarding HTML `required` constraints: JSON Schema `required` means an
+own property is present, so `''`, `0`, and `false` are valid present values. Use
+`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
 value is a whole object: `formResetCallback()` clears `value`/touched state back to `{}`, and
-`formDisabledCallback(disabled)` mirrors the wrapping form's disabled state onto the `disabled`
-property. This is a nice-to-have layered on top of the primary `value` + `lyra-input`/
-`lyra-validity-change` contract, not a requirement — a consumer that never puts this inside a `<form>`
-loses nothing.
+`formDisabledCallback(disabled)` tracks inherited fieldset state separately from the author-owned
+`disabled` property. JSON serialization is guarded: circular values, `BigInt`, throwing getters/`toJSON`, and
+non-finite numbers cannot escape from an assignment or leave stale form data; the form entry is
+temporarily removed and `formError`/custom validity are set until a serializable value replaces it.
+This is layered on top of the primary `value` + `lyra-input`/`lyra-validity-change` contract.
 
 **Known gotchas:**
 - a schema property whose `type` isn't `'string'`/`'number'`/`'integer'`/`'boolean'` renders an inline
   "Unsupported field type" message (a plain `.unsupported`-classed element, not one of the documented
-  CSS parts) instead of throwing or being silently dropped.
+  CSS parts) and fails closed with custom validity instead of throwing or being silently dropped.
 - inline per-field errors only render once a field has been visited (`focusout`) at least once, or
   after an explicit `reportValidity()` call — `checkValidity()` alone never reveals them, matching
   every other form control in this library (`<lyra-select>`/`<lyra-combobox>`/`<lyra-model-select>`
   all avoid flashing red before the user has touched anything).
 - `effectiveValue` distinguishes "key absent from `value`" (falls back to `default`) from "key present
-  but `undefined`" (stays cleared) via `hasOwnProperty`, not an `=== undefined` check — relevant if you
-  ever construct `value` objects by hand rather than round-tripping `lyra-input`'s detail.
+  but `undefined`" (stays cleared and counts as absent for `required`) via `hasOwnProperty`, not an
+  `=== undefined` fallback check.
+- additional value keys are retained and submitted (matching JSON Schema's default open-object
+  behavior), but schema-valued/false `additionalProperties` is outside this renderer's subset.
+- reassign `value`/`schema` after changing them. Direct in-place mutation is resnapshotted by the
+  component's own `checkValidity()`/`reportValidity()`, but native `form.checkValidity()` and
+  submission use the last synchronized snapshot because the browser cannot observe arbitrary object
+  mutation.
 - `lyra-validity-change` fires once immediately at connect time even before any user interaction, so a
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 
