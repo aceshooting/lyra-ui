@@ -241,3 +241,196 @@ it('is accessible', async () => {
   ></lyra-lite-chart>`);
   await expect(el).to.be.accessible();
 });
+
+it('draws a bar from the axis lo, not the domain zero, when beginAtZero is false', async () => {
+  const el = (await fixture(
+    // NOTE: intentionally NOT `begin-at-zero="false"` as an HTML attribute --
+    // Lit's Boolean attribute converter treats *any* attribute presence
+    // (including the literal string "false") as `true`; only *omitting* the
+    // attribute or setting the JS property directly yields `false`. Using
+    // `.beginAtZero=${false}` below is what actually disables begin-at-zero.
+    html`<lyra-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [95] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  el.style.setProperty('--lyra-chart-height', '200px');
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 400;
+  (el as unknown as { plotHeight: number }).plotHeight = 200;
+  await el.updateComplete;
+  const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const y = Number(rect.getAttribute('y'));
+  const height = Number(rect.getAttribute('height'));
+  // The bar's bottom edge (y + height) must sit at the plot's own bottom
+  // edge (the axis lo), not overshoot past it.
+  const plotBottom = 8 + (200 - 8 - 20); // PAD_TOP + plotH, mirrors render()'s own math
+  expect(y + height).to.be.at.most(plotBottom + 0.5);
+});
+
+it('draws a bar from the axis hi, not the domain zero, when beginAtZero is false and every value is negative', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [-95] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 400;
+  (el as unknown as { plotHeight: number }).plotHeight = 200;
+  await el.updateComplete;
+  const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const y = Number(rect.getAttribute('y'));
+  // The bar's top edge (y) must sit at the plot's own top edge (the axis
+  // hi, which is negative and close to -95 here), not overshoot above it
+  // into negative/off-plot territory the way clamping to a literal 0
+  // baseline would (0 is way above this all-negative domain's hi).
+  const plotTop = 8; // PAD_TOP, mirrors render()'s own math
+  expect(y).to.be.at.least(plotTop - 0.5);
+});
+
+it('centers each category label on its own bar group instead of a line-endpoint position', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="bar" .labels=${['x', 'y', 'z']} .datasets=${[{ label: 's', data: [1, 2, 3] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const bars = Array.from(el.shadowRoot!.querySelectorAll('[part="bar"]')) as SVGRectElement[];
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).filter(
+    (n) => !n.hasAttribute('y1'), // exclude gridline text reuse if any
+  ) as SVGTextElement[];
+  const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
+  const firstLabelX = Number(labels.find((l) => l.textContent === 'x')!.getAttribute('x'));
+  expect(Math.abs(firstBarCenter - firstLabelX)).to.be.lessThan(1);
+});
+
+it('breaks the line at a null value instead of bridging across it', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="line" .labels=${['a', 'b', 'c']} .datasets=${[{ label: 's', data: [1, null, 3] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
+  // Two "M" (moveto) commands means two disjoint segments -- a single M
+  // followed by only L commands would mean the null was bridged.
+  expect((path.getAttribute('d')!.match(/M/g) ?? []).length).to.equal(2);
+});
+
+it('breaks the line at multiple disjoint null gaps, producing one M per segment', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart
+      type="line"
+      .labels=${['a', 'b', 'c', 'd', 'e']}
+      .datasets=${[{ label: 's', data: [1, null, 3, null, 5] }]}
+    ></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
+  // Three disjoint single-point segments -> three M commands, zero L commands
+  // (a lone point can't have a line drawn to/from it).
+  const d = path.getAttribute('d')!;
+  expect((d.match(/M/g) ?? []).length).to.equal(3);
+  expect((d.match(/L/g) ?? []).length).to.equal(0);
+});
+
+it('renders no invalid/NaN geometry when every value is non-finite', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart type="line" .labels=${['a']} .datasets=${[{ label: 's', data: [NaN] }]}></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
+  expect(path.getAttribute('d') ?? '').to.not.include('NaN');
+});
+
+it('excludes a non-finite (Infinity/NaN) value from the line path and its points, same as null', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart
+      type="line"
+      .labels=${['a', 'b', 'c']}
+      .datasets=${[{ label: 's', data: [1, Infinity, 3] }]}
+    ></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
+  const d = path.getAttribute('d')!;
+  expect(d).to.not.include('Infinity');
+  expect((d.match(/M/g) ?? []).length).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(2);
+});
+
+it('excludes a non-finite (NaN) bar value, same as null, without throwing', async () => {
+  const el = (await fixture(
+    html`<lyra-lite-chart
+      type="bar"
+      .labels=${['a', 'b']}
+      .datasets=${[{ label: 's', data: [NaN, 4] }]}
+    ></lyra-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const rects = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  expect(rects.length).to.equal(1);
+});
+
+it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize still triggers a re-render', async () => {
+  // A real browser's ResizeObserver notification timing across a
+  // synchronous disconnect+reconnect is inherently racy in headless test
+  // runs (the entry delivery is scheduled by the UA, not deterministic
+  // microtask ordering), so this spies on the real ResizeObserver
+  // constructor/observe instead of waiting on real layout timing -- it
+  // still exercises the real class (via `extends`), just records calls.
+  const observeCalls: Element[] = [];
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class SpyResizeObserver extends OriginalRO {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      callbacks.push(callback);
+    }
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      observeCalls.push(target);
+      super.observe(target, options);
+    }
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = SpyResizeObserver;
+
+  try {
+    const el = (await fixture(
+      html`<lyra-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lyra-lite-chart>`,
+    )) as LyraLiteChart;
+    const svgEl = el.shadowRoot!.querySelector('svg')!;
+
+    // First mount: connectedCallback() creates the observer, but svgEl isn't
+    // rendered yet at that synchronous point, so firstUpdated() is what
+    // actually arms it -- exactly one observe() call, on the real <svg>.
+    expect(observeCalls.length).to.equal(1);
+    expect(observeCalls[0]).to.equal(svgEl);
+
+    const parent = el.parentNode!;
+    parent.removeChild(el); // disconnectedCallback() disconnects the old observer
+    parent.appendChild(el); // connectedCallback() re-creates + re-observes
+
+    // Re-arming on reconnect: a *second* observe() call, still targeting the
+    // same underlying <svg> (Lit's shadow root/DOM survives a disconnect, so
+    // svgEl is already populated by the time connectedCallback() runs here --
+    // unlike on first mount).
+    expect(observeCalls.length).to.equal(2);
+    expect(observeCalls[1]).to.equal(svgEl);
+
+    // Prove it's not just "observe() was called" theater: feed the *new*
+    // (post-reconnect) observer's callback a synthetic resize entry, the way
+    // the browser would after a real layout change, and confirm it actually
+    // re-renders (plotWidth/plotHeight update, moving the viewBox).
+    const viewBoxBefore = svgEl.getAttribute('viewBox');
+    const latestCallback = callbacks[callbacks.length - 1];
+    latestCallback(
+      [{ contentBoxSize: [{ inlineSize: 321, blockSize: 123 }] } as unknown as ResizeObserverEntry],
+      new OriginalRO(() => {}),
+    );
+    await el.updateComplete;
+    const viewBoxAfter = el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox');
+    expect(viewBoxAfter).to.equal('0 0 321 123');
+    expect(viewBoxAfter).to.not.equal(viewBoxBefore);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
+});

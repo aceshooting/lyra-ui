@@ -139,6 +139,11 @@ export class LyraLiteChart extends LyraElement {
         }
       }
     });
+    // A reconnect re-creates the observer above but the `<svg>` render root
+    // content survives across disconnect/reconnect (Lit doesn't tear down the
+    // shadow root) — re-observe it here (firstUpdated() only ever runs once,
+    // on the very first render, so it can't be relied on for a reconnect).
+    if (this.svgEl) this.resizeObserver.observe(this.svgEl);
   }
 
   disconnectedCallback(): void {
@@ -146,6 +151,18 @@ export class LyraLiteChart extends LyraElement {
     this.resizeObserver?.disconnect();
   }
 
+  // Kept (not deleted, despite the "delete it" alternative the fix brief
+  // offered): connectedCallback() fires *before* Lit's first render, so on
+  // the very first mount `this.svgEl` (a `@query('svg')`) is still
+  // undefined there and its guarded `observe()` call is a no-op — verified
+  // empirically: deleting firstUpdated() here hung every existing test that
+  // waits for the ResizeObserver's initial measurement. firstUpdated() runs
+  // once, after that first render, and is what actually arms the observer
+  // for the initial mount; connectedCallback()'s own observe() call (added
+  // above) only ever succeeds on a *reconnect*, when the shadow DOM (and
+  // svgEl) already exists from before the disconnect. Together the two
+  // cover first-mount and reconnect without ever double-observing the same
+  // element from the same callback path.
   protected firstUpdated(): void {
     if (this.svgEl) this.resizeObserver?.observe(this.svgEl);
   }
@@ -232,7 +249,7 @@ export class LyraLiteChart extends LyraElement {
       let stackNeg = 0; // running negative-side offset
       this.datasets.forEach((s, di) => {
         const v = s.data[i];
-        if (v == null) return;
+        if (v == null || !Number.isFinite(v)) return;
         const color = this.colorFor(di, s);
         let barX: number;
         let barValLo: number;
@@ -250,8 +267,9 @@ export class LyraLiteChart extends LyraElement {
           }
         } else {
           barX = slotStart + di * (barW + BAR_GAP * slot);
-          barValLo = Math.min(0, v);
-          barValHi = Math.max(0, v);
+          const zeroClamped = Math.min(hi, Math.max(lo, 0));
+          barValLo = Math.min(zeroClamped, v);
+          barValHi = Math.max(zeroClamped, v);
         }
         const y1 = plotY + plotH - ((barValHi - lo) / span) * plotH;
         const y2 = plotY + plotH - ((barValLo - lo) / span) * plotH;
@@ -284,12 +302,19 @@ export class LyraLiteChart extends LyraElement {
 
     return this.datasets.map((s, di) => {
       const color = this.colorFor(di, s);
-      const pts = s.data
-        .map((v, i) => (v == null ? null : ([xFor(i), yFor(v)] as const)))
-        .filter((p): p is readonly [number, number] => p !== null);
-      const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ');
+      let d = '';
+      let penDown = false;
+      s.data.forEach((v, i) => {
+        if (v == null || !Number.isFinite(v)) {
+          penDown = false;
+          return;
+        }
+        const cmd = penDown ? 'L' : 'M';
+        d += `${cmd}${xFor(i)},${yFor(v)} `;
+        penDown = true;
+      });
       const dots = s.data.map((v, i) => {
-        if (v == null) return nothing;
+        if (v == null || !Number.isFinite(v)) return nothing;
         const label = this.labels[i];
         return svg`
           <circle
@@ -306,7 +331,7 @@ export class LyraLiteChart extends LyraElement {
           ><title>${s.label} — ${label}: ${v}</title></circle>
         `;
       });
-      return svg`<path part="line" d=${d} stroke=${color}></path>${dots}`;
+      return svg`<path part="line" d=${d.trim()} stroke=${color}></path>${dots}`;
     });
   }
 
@@ -329,7 +354,10 @@ export class LyraLiteChart extends LyraElement {
 
     const categoryLabels = this.labels.map((label, i) => {
       const n = this.labels.length;
-      const x = plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
+      const x =
+        this.type === 'bar' && n > 0
+          ? plotX + (i + 0.5) * (plotW / n) // matches renderBars()'s own per-category slot center
+          : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
       return svg`<text part="axis-label" x=${x} y=${plotY + plotH + 14} text-anchor="middle">${label}</text>`;
     });
 
