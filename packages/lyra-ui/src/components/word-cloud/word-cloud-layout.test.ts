@@ -165,3 +165,28 @@ it('retains the original array index on each placed word, independent of weight-
   expect(result.placed.find((w) => w.text === 'lightest')!.originalIndex).to.equal(0);
   expect(result.placed.find((w) => w.text === 'heaviest')!.originalIndex).to.equal(1);
 });
+
+it('clamps non-finite/negative minFontSize/maxFontSize to a sane positive default', () => {
+  const { placed } = layoutWordCloud([{ text: 'a', weight: 1 }], {
+    minFontSize: NaN,
+    maxFontSize: -5,
+    scale: 'linear',
+    orientations: 'horizontal',
+    measureText: stubMeasure,
+  });
+  expect(placed[0]!.fontSize).to.be.greaterThan(0);
+  expect(Number.isFinite(placed[0]!.fontSize)).to.be.true;
+});
+
+it('swaps a reversed minFontSize/maxFontSize instead of inverting the weight-to-size mapping', () => {
+  const { placed } = layoutWordCloud(
+    [
+      { text: 'small', weight: 1 },
+      { text: 'big', weight: 10 },
+    ],
+    { minFontSize: 40, maxFontSize: 10, scale: 'linear', orientations: 'horizontal', measureText: stubMeasure },
+  );
+  const big = placed.find((p) => p.text === 'big')!;
+  const small = placed.find((p) => p.text === 'small')!;
+  expect(big.fontSize).to.be.greaterThan(small.fontSize);
+});

@@ -128,21 +128,37 @@ export class LyraWordCloud extends LyraElement {
       changed.has('scale') ||
       changed.has('orientations')
     ) {
-      this.cachedLayout = layoutWordCloud(this.words, {
-        minFontSize: this.minFontSize,
-        maxFontSize: this.maxFontSize,
-        scale: this.scale,
-        orientations: this.orientations,
-        measureText: this.measureText,
-      });
-      if (this.cachedLayout.skipped.length > 0) warnSkippedWords(this.cachedLayout.skipped.length);
-      // The previous focus cursor may no longer address a real word once the
-      // data changes out from under it.
-      this.focusedIndex = null;
-      this.liveText = '';
+      this.relayout();
     }
     this.setAttribute('role', 'group');
-    this.setAttribute('aria-label', `Word cloud of ${this.words.length} word${this.words.length === 1 ? '' : 's'}`);
+    this.setAttribute(
+      'aria-label',
+      `Word cloud of ${this.cachedLayout.placed.length} word${this.cachedLayout.placed.length === 1 ? '' : 's'}`,
+    );
+  }
+
+  private relayout(): void {
+    this.cachedLayout = layoutWordCloud(this.words, {
+      minFontSize: this.minFontSize,
+      maxFontSize: this.maxFontSize,
+      scale: this.scale,
+      orientations: this.orientations,
+      measureText: this.measureText,
+    });
+    if (this.cachedLayout.skipped.length > 0) warnSkippedWords(this.cachedLayout.skipped.length);
+    // The previous focus cursor may no longer address a real word once the
+    // data changes out from under it.
+    this.focusedIndex = null;
+    this.liveText = '';
+  }
+
+  /** Forces a relayout so the font-family theme token (`--lyra-font`) is
+   *  re-read from computed style — mirrors `lyra-chart`'s `refreshTheme()`.
+   *  No global theme-broadcast event exists in lyra-ui to subscribe to
+   *  automatically; call this from a consumer's own theme-toggle handler. */
+  refreshTheme(): void {
+    this.relayout();
+    this.requestUpdate();
   }
 
   private activate(word: PlacedWord): void {
