@@ -613,3 +613,21 @@ describe('external removal while open', () => {
     otherContainer.remove();
   });
 });
+
+it('lets a consumer set an assertive width via --lyra-dialog-width, not just a cap', async () => {
+  const el = (await fixture(html`<lyra-dialog open>short</lyra-dialog>`)) as LyraDialog;
+  // 600px: comfortably under the test runner's fixed 800px-wide iframe (minus the
+  // host's own inline padding) so this exercises the assertive-width path itself,
+  // not the separate 100%-viewport safety clamp asserted by the test below.
+  el.style.setProperty('--lyra-dialog-width', '600px');
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(getComputedStyle(panel).inlineSize).to.equal('600px');
+});
+
+it("leaves today's shrink-to-fit-content behavior unchanged when --lyra-dialog-width is unset", async () => {
+  const el = (await fixture(html`<lyra-dialog open>short</lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(getComputedStyle(panel).inlineSize).to.not.equal('600px');
+});

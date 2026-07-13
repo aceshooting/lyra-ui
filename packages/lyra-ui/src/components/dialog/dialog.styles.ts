@@ -30,10 +30,17 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
+    /* --lyra-dialog-width is an assertive width (unset/auto by default -- the panel shrink-wraps to
+       content, unchanged) capped by the same max-inline-size below and by the viewport. */
+    inline-size: var(--lyra-dialog-width, auto);
     /* --lyra-dialog-max-width lets a consumer widen/narrow the panel per
        instance (e.g. inline on the host) without overriding the whole rule --
-       same convention as lyra-media-card's --lyra-media-card-max-height. */
-    max-inline-size: min(var(--lyra-dialog-max-width, var(--lyra-size-32rem)), 100%);
+       same convention as lyra-media-card's --lyra-media-card-max-height. When
+       --lyra-dialog-width is set but --lyra-dialog-max-width is left at its
+       default, the cap falls back to the requested width itself (not the
+       32rem default) so an assertive width isn't silently clipped by the
+       old shrink-to-fit cap -- the viewport (100%) is still a hard limit. */
+    max-inline-size: min(var(--lyra-dialog-max-width, var(--lyra-dialog-width, var(--lyra-size-32rem))), 100%);
     max-block-size: 100%;
     background: var(--lyra-color-surface);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
