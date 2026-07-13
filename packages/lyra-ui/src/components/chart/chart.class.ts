@@ -560,9 +560,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const config = this.buildConfig();
     const effectiveType = config.type;
     if (this.chart && this.builtType === effectiveType) {
+      // Chart.js tracks per-dataset legend-toggled visibility by dataset INDEX against its own
+      // internal metadata, separate from `chart.data.datasets` itself -- a full reassignment of
+      // `chart.data` on every reactive update (as every live-polling consumer's parent naturally
+      // produces) would otherwise silently reset every hidden series back to visible.
+      const priorVisibility = this.datasets.map((_, i) => this.chart!.isDatasetVisible(i));
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');
+      priorVisibility.forEach((visible, i) => {
+        if (!visible) this.chart!.setDatasetVisibility(i, false);
+      });
       return;
     }
     this.chart?.destroy();

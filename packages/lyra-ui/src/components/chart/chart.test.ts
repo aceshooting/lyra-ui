@@ -55,6 +55,29 @@ it('updates in place (same Chart instance) when only data changes', async () => 
   expect((el as any).chart).to.equal(instance);
 });
 
+it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [
+    { label: 'x', data: [1, 2] },
+    { label: 'y', data: [3, 4] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.setDatasetVisibility(1, false); // simulate a user clicking the legend to hide dataset 1
+
+  el.datasets = [
+    { label: 'x', data: [5, 6] },
+    { label: 'y', data: [7, 8] },
+  ];
+  await el.updateComplete;
+
+  expect(chart.isDatasetVisible(0)).to.be.true;
+  expect(chart.isDatasetVisible(1)).to.be.false;
+});
+
 it('rebuilds (new Chart instance) when type changes', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'line';
