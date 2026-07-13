@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { nextId } from '../../internal/a11y.js';
@@ -18,53 +19,16 @@ import '../json-viewer/json-viewer.js';
  */
 export type ToolApprovalDialogCloseReason = 'escape' | 'backdrop' | 'approve' | 'deny' | 'api' | string;
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Shadow-piercing so a slotted custom element's real focusable target, and
-// this component's own directly-rendered <lyra-json-viewer>'s internal
-// toggle/copy buttons, are found even though neither the slotted host tag
-// nor <lyra-json-viewer> itself matches FOCUSABLE_SELECTOR. Deliberately
-// duplicated from lyra-dialog's/lyra-tool-select-dialog's identical helper
-// rather than imported/shared -- this component is its own standalone
-// overlay and must not depend on either (see this file's class doc).
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/** Whether `el` is actually laid out/paintable -- `checkVisibility()` (falling
- *  back to `getClientRects().length` where unsupported) correctly follows
- *  flattened-tree/slot assignment, unlike `offsetParent`. Mirrors
- *  lyra-dialog's/lyra-tool-select-dialog's identical helper. */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
-}
-
 /**
  * `<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one
  * proposed tool/function call (`toolName` + `args`) and blocks an agent from
  * executing it until a person explicitly approves or denies it, with an
  * optional inline "edit the arguments before approving" step.
  *
- * This is its own standalone overlay implementation (`role="dialog"`,
- * focus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than
- * nesting a `<lyra-dialog>` in its shadow template — see `<lyra-dialog>`'s
- * own header comment for why a new overlay component in this library
- * duplicates that pattern locally instead of composing the previous one.
+ * This renders its own dialog panel rather than nesting a `<lyra-dialog>` in
+ * its shadow template. Shared overlay infrastructure coordinates stacking,
+ * focus trapping, Escape/backdrop dismissal, and focus return with every
+ * other overlay in the same document.
  *
  * Approve/Deny/Edit are built-in chrome (not a `footer` slot a consumer must
  * assemble) — this component's interaction shape is fixed enough (there is
@@ -86,8 +50,12 @@ function isRendered(el: HTMLElement): boolean {
  * Both `editing` and any in-progress draft reset back to the read-only view
  * every time the dialog transitions from closed to open, so a reused
  * instance never leaks one proposal's half-finished edit into the next.
+ * `editable` flipping to `false` mid-edit does the same (see `willUpdate()`)
+ * and, if the textarea it unmounts still held focus, `updated()` refocuses
+ * Deny so the focus trap keeps engaging instead of silently letting focus
+ * fall through to the document.
  *
- * Initial focus deliberately does *not* land on Approve (see `updated()`):
+ * Initial focus deliberately does *not* land on Approve:
  * approving a tool call is a consequential, potentially irreversible action,
  * so a user who opens this dialog and reflexively presses Enter/Space before
  * reading anything should deny, not approve. Deny gets the initial focus
@@ -144,22 +112,15 @@ export class LyraToolApprovalDialog extends LyraElement {
   @state() private draftError = '';
 
   private releaseScrollLock?: () => void;
-  private lastTrigger?: HTMLElement;
+  private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-approval-dialog-title');
   private readonly errorId = nextId('tool-approval-dialog-error');
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('open')) {
       if (this.open) {
-        // Captured here (before render) rather than from a click event on
-        // some specific internal control -- like lyra-dialog, a trigger
-        // typically lives *outside* this component entirely, so "whatever
-        // had focus right before open" is the only generally correct
-        // definition of "the trigger".
-        const active = this.getActiveElement();
-        this.lastTrigger = active instanceof HTMLElement ? active : undefined;
-        this.releaseScrollLock = lockScroll();
-        document.addEventListener('keydown', this.onDocKeyDown);
+        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+        this.activateOverlay();
         // Every open starts fresh in the read-only view -- a reused instance
         // must never carry a half-finished edit (or its error state) over
         // from whatever the previous proposal was.
@@ -169,7 +130,8 @@ export class LyraToolApprovalDialog extends LyraElement {
       } else {
         this.releaseScrollLock?.();
         this.releaseScrollLock = undefined;
-        document.removeEventListener('keydown', this.onDocKeyDown);
+        this.overlay?.deactivate();
+        this.overlay = undefined;
       }
     }
     // A consumer flipping editable off mid-edit (e.g. a policy change
@@ -188,33 +150,32 @@ export class LyraToolApprovalDialog extends LyraElement {
   // them -- mirrors lyra-dialog's identical ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
-      // Deliberately the Deny button, not "the first focusable element" --
-      // see the class doc's focus-management paragraph.
-      const deny = this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]');
-      if (deny) {
-        deny.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]')?.focus();
-      }
+      this.overlay?.focusInitial();
       return;
     }
-    if (changed.has('editing') && this.editing) {
-      // Entering edit mode is a deliberate request to start typing --
-      // steering focus into the textarea beats leaving it on the Edit
-      // button the click already left it on.
-      this.shadowRoot?.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.focus();
+    if (changed.has('editing')) {
+      if (this.editing) {
+        // Entering edit mode is a deliberate request to start typing --
+        // steering focus into the textarea beats leaving it on the Edit
+        // button the click already left it on.
+        this.shadowRoot?.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.focus();
+      } else if (this.open && !this.shadowRoot?.activeElement) {
+        // Reached when editing was turned off some way other than clicking
+        // Cancel (e.g. `editable` flipping to false while the textarea held
+        // focus, in willUpdate above) -- the textarea that held focus was
+        // just unmounted without anything else claiming it, which would
+        // otherwise drop focus to <body> and silently stop the Tab trap
+        // from engaging. Refocus a stable target inside the panel instead.
+        this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]')?.focus();
+      }
     }
   }
 
   connectedCallback(): void {
     super.connectedCallback();
-    // A reconnect (e.g. a drag-and-drop reparent keeping this same element
-    // instance) fires disconnectedCallback then connectedCallback
-    // synchronously with no update in between, so willUpdate never reruns to
-    // notice `open` is still true -- restore the scroll lock/trap it dropped.
-    if (this.hasUpdated && this.open && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    if (this.hasUpdated && this.open) {
+      this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+      this.activateOverlay();
     }
   }
 
@@ -222,7 +183,22 @@ export class LyraToolApprovalDialog extends LyraElement {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlay?.suspend();
+  }
+
+  private activateOverlay(): void {
+    if (this.overlay?.isActive()) {
+      this.overlay.resume();
+      return;
+    }
+    this.overlay = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.close('escape'),
+      onBackdrop: () => this.close('backdrop'),
+      preferredInitialFocus: () =>
+        this.shadowRoot?.querySelector<HTMLElement>('[part="deny-button"]') ?? null,
+    });
   }
 
   /**
@@ -238,64 +214,11 @@ export class LyraToolApprovalDialog extends LyraElement {
     if (!this.open) return;
     this.open = false;
     this.emit<ToolApprovalDialogCloseReason>('lyra-close', reason);
-    this.lastTrigger?.focus();
   }
 
   private onBackdropClick = (): void => {
-    this.close('backdrop');
+    this.overlay?.dismissBackdrop();
   };
-
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.open) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.close('escape');
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while open. Order follows the body
-  // (the json-viewer's own toggle/copy buttons, or the textarea, depending
-  // on `editing`), then the footer row (the footer slot, then Deny/Edit/
-  // Approve) -- the same order the flattened tree already tabs through.
-  // collectFocusable()'s own FOCUSABLE_SELECTOR check excludes the Approve
-  // button for free while it's `disabled`, so an invalid in-progress edit
-  // can't be Tab-trapped into.
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const body = root.querySelector<HTMLElement>('[part="body"]');
-    const footer = root.querySelector<HTMLElement>('[part="footer"]');
-    return [...(body ? collectFocusable(body) : []), ...(footer ? collectFocusable(footer) : [])].filter(
-      isRendered,
-    );
-  }
-
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
-  }
 
   private stringifyArgs(): string {
     try {

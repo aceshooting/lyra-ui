@@ -299,6 +299,33 @@ describe('focus management', () => {
     expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
   });
 
+  it('refocuses the Deny button (keeping the trap engaged) when editable is turned off while the textarea has focus', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
+
+    el.editable = false;
+    await el.updateComplete;
+
+    // Focus lands back on Deny instead of falling through to <body> -- see
+    // updated()'s editing-turned-off branch.
+    expect(el.shadowRoot!.activeElement).to.equal(denyButton(el));
+
+    // And the trap as a whole is still fully engaged afterwards: Tab from
+    // the last focusable element still wraps back to the first. That would
+    // not hold if focus had silently fallen through to <body> instead --
+    // <body> matches neither the trap's first nor last element, so the
+    // keydown handler would never call preventDefault at all and a real Tab
+    // press would escape the panel entirely.
+    approveButton(el).focus();
+    const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(tabForward);
+    expect(tabForward.defaultPrevented).to.be.true;
+  });
+
   it('returns focus to the element that was focused before the dialog opened', async () => {
     const trigger = document.createElement('button');
     trigger.textContent = 'open';
@@ -414,6 +441,28 @@ describe('scroll lock', () => {
     el.remove();
 
     expect(document.documentElement.style.overflow).to.equal('');
+  });
+
+  it('restores the scroll lock and keydown trap when reparented while still open', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog open></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    await el.updateComplete;
+    expect(document.documentElement.style.overflow).to.equal('hidden');
+
+    const otherContainer = document.createElement('div');
+    document.body.appendChild(otherContainer);
+    otherContainer.appendChild(el); // reparenting an already-connected node fires disconnectedCallback then connectedCallback synchronously
+    expect(el.open).to.be.true;
+    expect(document.documentElement.style.overflow).to.equal('hidden');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(document.documentElement.style.overflow).to.equal('');
+
+    otherContainer.remove();
   });
 });
 

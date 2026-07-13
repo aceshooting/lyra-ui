@@ -53,7 +53,7 @@ export const NotEditable: Story = {
       open
       tool-name="delete_file"
       .args=${{ path: '/workspace/report-draft.md' }}
-      ?editable=${false}
+      .editable=${false}
     ></lyra-tool-approval-dialog>
   `,
 };
