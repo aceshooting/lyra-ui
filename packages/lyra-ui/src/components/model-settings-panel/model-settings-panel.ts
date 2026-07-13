@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -25,6 +25,16 @@ const DEFAULT_TEMPERATURE_STEP = 0.1;
 // default differs (OpenAI and Anthropic both default to 1, which this matches).
 const DEFAULT_TEMPERATURE = 1;
 
+/** Number of decimal digits in `n`'s shortest string representation, e.g.
+ *  `0.1` -> 1, `5` -> 0. Mirrors lyra-slider's identical helper so the
+ *  panel's own re-clamping of `temperature` lands on the exact same
+ *  step-grid values the nested slider itself would compute. */
+function decimalPlaces(n: number): number {
+  const str = n.toString();
+  const dot = str.indexOf('.');
+  return dot === -1 ? 0 : str.length - dot - 1;
+}
+
 /**
  * `<lyra-model-settings-panel>` — a fixed composition of `<lyra-model-select>`
  * and `<lyra-slider>` into one agent-configuration card: pick a provider's
@@ -37,6 +47,12 @@ const DEFAULT_TEMPERATURE = 1;
  * child control's own prop of the same/similar name; see the child
  * components themselves for the exact semantics of `catalog`/`allowCustom`
  * and `temperatureMin`/`temperatureMax`/`temperatureStep`.
+ *
+ * The panel's own `temperature` readout mirrors the slider's *live* value —
+ * updated on every `lyra-input` (drag/key-repeat), not just the committed
+ * `lyra-change` — and is re-clamped into `[temperatureMin, temperatureMax]`
+ * (snapped to `temperatureStep`) whenever those three properties change, so
+ * it can never drift from what the nested `lyra-slider` itself shows.
  *
  * @customElement lyra-model-settings-panel
  * @event lyra-change - Either child control changed. `detail: { modelValue: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
@@ -66,6 +82,11 @@ export class LyraModelSettingsPanel extends LyraElement {
    *  the same two rows side by side with a smaller temperature caption, for
    *  toolbars/sidebars where the vertical layout's height doesn't fit. */
   @property({ reflect: true }) layout: ModelSettingsPanelLayout = 'vertical';
+  /** Disables the panel as a unit by forwarding to both the internal
+   *  `lyra-model-select` and `lyra-slider` — a wrapping `<fieldset disabled>`
+   *  alone would not reach either, since a form-associated control's own
+   *  `disabled` IDL property/attribute is never mutated by fieldset cascading. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Whether `modelValue` is present in `catalog` — recomputed fresh from
    *  scratch (like `lyra-model-select`'s own `effectiveEntries`) rather than
@@ -76,6 +97,29 @@ export class LyraModelSettingsPanel extends LyraElement {
     const catalog = this.catalog;
     if (!catalog || catalog.length === 0) return false;
     return catalog.some((entry) => (typeof entry === 'string' ? entry === this.modelValue : entry.id === this.modelValue));
+  }
+
+  /** Clamps `raw` into `[temperatureMin, temperatureMax]`, snapped to
+   *  `temperatureStep`'s grid anchored at the low end -- exactly mirroring
+   *  `lyra-slider`'s own private `clampValue`/`domain` math -- so the
+   *  mirrored `temperature` readout can never disagree with what the nested
+   *  slider itself would clamp the same raw number to. */
+  private clampTemperature(raw: number): number {
+    const rawMin = this.temperatureMin;
+    const rawMax = this.temperatureMax;
+    const min = isNaN(rawMin) ? DEFAULT_TEMPERATURE_MIN : rawMin;
+    const max = isNaN(rawMax) ? DEFAULT_TEMPERATURE_MAX : rawMax;
+    const lo = Math.min(min, max);
+    const hi = Math.max(min, max);
+    const step = this.temperatureStep;
+    const hasStep = Number.isFinite(step) && step > 0;
+    let stepped = raw;
+    if (hasStep) {
+      const stepsFromLo = Math.round((raw - lo) / step);
+      const factor = 10 ** decimalPlaces(step);
+      stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
+    }
+    return Math.min(hi, Math.max(lo, stepped));
   }
 
   private emitChange(): void {
@@ -96,6 +140,22 @@ export class LyraModelSettingsPanel extends LyraElement {
     this.emitChange();
   };
 
+  /** Mirrors the slider's *live* (uncommitted) value into the panel's own
+   *  `temperature` readout -- display only, no `emitChange()` -- mirroring
+   *  native `input` (continuous) vs. `change` (committed) semantics so the
+   *  readout tracks an in-progress drag/key-repeat instead of only updating
+   *  once the interaction commits. */
+  private onTemperatureInput = (e: CustomEvent<{ value: number }>): void => {
+    this.temperature = e.detail.value;
+  };
+
+  protected willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('temperatureMin') || changed.has('temperatureMax') || changed.has('temperatureStep')) {
+      const clamped = this.clampTemperature(this.temperature);
+      if (clamped !== this.temperature) this.temperature = clamped;
+    }
+  }
+
   render(): TemplateResult {
     return html`
       <div part="base">
@@ -105,6 +165,7 @@ export class LyraModelSettingsPanel extends LyraElement {
             .catalog=${this.catalog}
             .value=${this.modelValue}
             .allowCustom=${this.allowCustom}
+            .disabled=${this.disabled}
             placeholder="Select a model…"
             @lyra-change=${this.onModelChange}
           ></lyra-model-select>
@@ -118,9 +179,11 @@ export class LyraModelSettingsPanel extends LyraElement {
             .step=${this.temperatureStep}
             .valueAsNumber=${this.temperature}
             .showValue=${false}
+            .disabled=${this.disabled}
+            @lyra-input=${this.onTemperatureInput}
             @lyra-change=${this.onTemperatureChange}
           ></lyra-slider>
-          <span part="temperature-value">${this.temperature}</span>
+          <span part="temperature-value" aria-hidden="true">${this.temperature}</span>
         </div>
       </div>
     `;

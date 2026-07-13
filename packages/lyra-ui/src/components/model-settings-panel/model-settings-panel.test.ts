@@ -64,6 +64,30 @@ it('suppresses the internal slider’s own value readout in favor of the panel�
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('1');
 });
 
+it('hides the panel’s own temperature-value readout from the accessibility tree, mirroring the slider’s suppressed value span', async () => {
+  const el = (await fixture(html`<lyra-model-settings-panel></lyra-model-settings-panel>`)) as LyraModelSettingsPanel;
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.getAttribute('aria-hidden')).to.equal('true');
+});
+
+it('forwards disabled to both the internal lyra-model-select and lyra-slider', async () => {
+  const el = (await fixture(
+    html`<lyra-model-settings-panel disabled .catalog=${CATALOG}></lyra-model-settings-panel>`,
+  )) as LyraModelSettingsPanel;
+
+  expect(el.disabled).to.be.true;
+  expect(el.hasAttribute('disabled')).to.be.true;
+  expect(modelSelect(el).disabled).to.be.true;
+  expect(slider(el).disabled).to.be.true;
+});
+
+it('defaults disabled to false on the panel and both internal controls', async () => {
+  const el = (await fixture(html`<lyra-model-settings-panel></lyra-model-settings-panel>`)) as LyraModelSettingsPanel;
+
+  expect(el.disabled).to.be.false;
+  expect(modelSelect(el).disabled).to.be.false;
+  expect(slider(el).disabled).to.be.false;
+});
+
 // -- Layout -------------------------------------------------------------
 
 it('defaults to and reflects the vertical layout', async () => {
@@ -78,6 +102,51 @@ it('reflects an explicit compact layout', async () => {
   )) as LyraModelSettingsPanel;
   expect(el.layout).to.equal('compact');
   expect(el.getAttribute('layout')).to.equal('compact');
+});
+
+// -- Live temperature mirroring ------------------------------------------
+
+it('mirrors a live lyra-input from the slider into temperature and the rendered readout, without emitting lyra-change', async () => {
+  const el = (await fixture(
+    html`<lyra-model-settings-panel temperature="0.5"></lyra-model-settings-panel>`,
+  )) as LyraModelSettingsPanel;
+
+  let changeFired = false;
+  el.addEventListener('lyra-change', () => {
+    changeFired = true;
+  });
+
+  slider(el).dispatchEvent(new CustomEvent('lyra-input', { detail: { value: 0.8 }, bubbles: true }));
+  await el.updateComplete;
+
+  expect(el.temperature).to.equal(0.8);
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('0.8');
+  expect(changeFired).to.be.false;
+});
+
+it('re-clamps temperature (matching the slider’s own clamp math) when temperatureMax drops below the current temperature', async () => {
+  const el = (await fixture(
+    html`<lyra-model-settings-panel temperature="1.5"></lyra-model-settings-panel>`,
+  )) as LyraModelSettingsPanel;
+
+  el.temperatureMax = 1;
+  await el.updateComplete;
+
+  expect(el.temperature).to.equal(1);
+  expect(el.temperature).to.equal(slider(el).valueAsNumber);
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('1');
+});
+
+it('re-clamps temperature to a narrowed step grid when temperatureStep changes', async () => {
+  const el = (await fixture(
+    html`<lyra-model-settings-panel temperature="0.35" temperature-step="0.1"></lyra-model-settings-panel>`,
+  )) as LyraModelSettingsPanel;
+
+  el.temperatureStep = 0.25;
+  await el.updateComplete;
+
+  expect(el.temperature).to.equal(slider(el).valueAsNumber);
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal(String(el.temperature));
 });
 
 // -- Consolidated lyra-change -------------------------------------------
