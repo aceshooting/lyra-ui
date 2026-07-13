@@ -154,7 +154,11 @@ export type LyraMessageKey =
   | 'kbdShiftWord'
   | 'selectValueMissing'
   | 'select'
-  | 'sourceListDefaultLabel';
+  | 'sourceListDefaultLabel'
+  | 'streamStalled'
+  | 'streamStallAnnounce'
+  | 'streamRecoverAnnounce'
+  | 'streamStallClearedAnnounce';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -310,6 +314,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   selectValueMissing: 'Please select an option.',
   select: 'Select',
   sourceListDefaultLabel: 'Sources',
+  streamStalled: 'Taking longer than usual…',
+  streamStallAnnounce: 'Connection stalled.',
+  streamRecoverAnnounce: 'Connection restored.',
+  streamStallClearedAnnounce: 'No longer stalled.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

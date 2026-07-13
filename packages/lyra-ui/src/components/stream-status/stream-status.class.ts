@@ -7,15 +7,6 @@ import { styles } from './stream-status.styles.js';
 
 export type StreamStatusPhase = 'idle' | 'connecting' | 'streaming' | 'stalled';
 
-const DEFAULT_STALL_MESSAGE = 'Taking longer than usual…';
-const STALL_ANNOUNCEMENT = 'Connection stalled.';
-const RECOVER_ANNOUNCEMENT = 'Connection restored.';
-// Used instead of RECOVER_ANNOUNCEMENT when a stall is left behind by moving
-// to 'idle'/'connecting' rather than back to 'streaming' -- see
-// announceTransition()'s caller in onPhaseChanged() for why "restored" would
-// be actively misleading in that case.
-const STALL_CLEARED_ANNOUNCEMENT = 'No longer stalled.';
-
 // The default slot's stalled-message content is often plain text with no
 // wrapping element at all (see the CustomStalledMessage story), so an
 // Element-only check never counts it, and ordinary indented-markup
@@ -221,7 +212,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
     if (this.phase === 'stalled' && previous !== 'stalled') {
       this.emit('lyra-stall');
-      this.announceTransition('assertive', STALL_ANNOUNCEMENT);
+      this.announceTransition('assertive', this.localize('streamStallAnnounce'));
     } else if (previous === 'stalled' && this.phase !== 'stalled') {
       // `lyra-recover` fires unconditionally -- a host may still want the
       // event for any exit from 'stalled' -- but the *announced text* must
@@ -230,7 +221,10 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
       // recovering, and telling a screen-reader user otherwise would be the
       // opposite of what a sighted user sees on screen.
       this.emit('lyra-recover');
-      const text = this.phase === 'streaming' ? RECOVER_ANNOUNCEMENT : STALL_CLEARED_ANNOUNCEMENT;
+      const text =
+        this.phase === 'streaming'
+          ? this.localize('streamRecoverAnnounce')
+          : this.localize('streamStallClearedAnnounce');
       this.announceTransition('polite', text);
     }
   }
@@ -279,7 +273,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
           ? html`<div part="message">
               <slot @slotchange=${this.onMessageSlotChange}></slot>${this.hasMessageContent
                 ? nothing
-                : DEFAULT_STALL_MESSAGE}
+                : this.localize('streamStalled')}
             </div>`
           : nothing}
         <div part="actions" ?hidden=${!this.hasActionsSlot}>

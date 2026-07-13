@@ -209,6 +209,50 @@ it('never announces from recordActivity() itself while streaming -- only an actu
   expect(liveRegionText(el), 'no phase transition occurred, so nothing should have been announced').to.equal('');
 });
 
+describe('announcement/message localization', () => {
+  it('localizes the stall/recover live-region announcements via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-stream-status
+        phase="streaming"
+        stall-threshold-ms="40"
+        .strings=${{ streamStallAnnounce: 'Connexion interrompue.', streamRecoverAnnounce: 'Connexion rétablie.' }}
+      ></lyra-stream-status>`,
+    )) as LyraStreamStatus;
+
+    await oneEvent(el, 'lyra-stall');
+    expect(liveRegionText(el)).to.equal('Connexion interrompue.');
+
+    const recovered = oneEvent(el, 'lyra-recover');
+    el.recordActivity();
+    await recovered;
+    expect(liveRegionText(el)).to.equal('Connexion rétablie.');
+  });
+
+  it('localizes the neutral "no longer stalled" announcement via this.localize() when a stall is abandoned to idle', async () => {
+    const el = (await fixture(
+      html`<lyra-stream-status
+        phase="stalled"
+        .strings=${{ streamStallClearedAnnounce: 'Plus interrompu.' }}
+      ></lyra-stream-status>`,
+    )) as LyraStreamStatus;
+    const ev = oneEvent(el, 'lyra-recover');
+    el.phase = 'idle';
+    await ev;
+    expect(liveRegionText(el)).to.equal('Plus interrompu.');
+  });
+
+  it('localizes the default stalled message via this.localize() when .strings overrides streamStalled', async () => {
+    const el = (await fixture(
+      html`<lyra-stream-status
+        phase="stalled"
+        .strings=${{ streamStalled: 'Cela prend plus de temps que d’habitude…' }}
+      ></lyra-stream-status>`,
+    )) as LyraStreamStatus;
+    const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
+    expect(message.textContent!.trim()).to.equal('Cela prend plus de temps que d’habitude…');
+  });
+});
+
 it('renders the message part (default slot) only while phase="stalled", with a built-in default when nothing is slotted', async () => {
   const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
   expect(el.shadowRoot!.querySelector('[part="message"]')).to.not.exist;
