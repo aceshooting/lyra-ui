@@ -271,6 +271,47 @@ it('shows attachments once slotted', async () => {
   expect((el.shadowRoot!.querySelector('[part="attachments"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
 });
 
+it('localizes the visible status text via this.localize(), not a hardcoded English map', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message
+      .strings=${{ chatSending: 'Envoi…', chatResponding: 'Réponse…', chatFailedToSend: "Échec de l'envoi" }}
+      >hi</lyra-chat-message
+    >`,
+  )) as LyraChatMessage;
+  el.status = 'sending';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Envoi…');
+  el.status = 'streaming';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Réponse…');
+  el.status = 'failed';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal("Échec de l'envoi");
+});
+
+it('defaults to English status text when no strings override is set', async () => {
+  const el = (await fixture(html`<lyra-chat-message>hi</lyra-chat-message>`)) as LyraChatMessage;
+  el.status = 'sending';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Sending…');
+});
+
+it('localizes the live-region status-change announcements via this.localize()', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message .strings=${{ chatFailedAnnounce: 'Échec.', chatCompleteAnnounce: 'Terminé.' }}
+      >hi</lyra-chat-message
+    >`,
+  )) as LyraChatMessage;
+  el.status = 'streaming';
+  await el.updateComplete;
+  el.status = 'sent';
+  await el.updateComplete;
+  expect(liveRegionText(el)).to.equal('Terminé.');
+  el.status = 'failed';
+  await el.updateComplete;
+  expect(liveRegionText(el)).to.equal('Échec.');
+});
+
 it('is accessible in the default, empty state', async () => {
   const el = (await fixture(html`<lyra-chat-message>A plain message.</lyra-chat-message>`)) as LyraChatMessage;
   await expect(el).to.be.accessible();

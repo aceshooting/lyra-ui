@@ -55,7 +55,12 @@ export type LyraMessageKey =
   | 'fileSizeUnitTb'
   | 'chartCategory'
   | 'chartPointLabel'
-  | 'resetZoom';
+  | 'resetZoom'
+  | 'chatSending'
+  | 'chatResponding'
+  | 'chatFailedToSend'
+  | 'chatFailedAnnounce'
+  | 'chatCompleteAnnounce';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -112,6 +117,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   chartCategory: 'Category',
   chartPointLabel: 'Point {n}',
   resetZoom: 'Reset zoom',
+  chatSending: 'Sending…',
+  chatResponding: 'Responding…',
+  chatFailedToSend: 'Failed to send',
+  chatFailedAnnounce: 'Message failed to send.',
+  chatCompleteAnnounce: 'Message complete.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

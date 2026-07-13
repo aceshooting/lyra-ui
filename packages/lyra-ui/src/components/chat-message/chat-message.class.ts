@@ -44,11 +44,14 @@ function defaultFormatTimestamp(date: Date): string {
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
- *  `'sent'` renders nothing here, it's the resting state. */
-const STATUS_TEXT: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
-  sending: 'Sending…',
-  streaming: 'Responding…',
-  failed: 'Failed to send',
+ *  `'sent'` renders nothing here, it's the resting state. Localized via
+ *  this.localize() in the statusText getter below -- these are the
+ *  LyraMessageKey names, not the displayed strings themselves (those live
+ *  in localization.ts's DEFAULT_STRINGS). */
+const STATUS_TEXT_KEY: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
+  sending: 'chatSending',
+  streaming: 'chatResponding',
+  failed: 'chatFailedToSend',
 };
 
 export interface LyraChatMessageEventMap {
@@ -223,7 +226,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   }
 
   private get statusText(): string | undefined {
-    return this.status === 'sent' ? undefined : STATUS_TEXT[this.status];
+    return this.status === 'sent' ? undefined : this.localize(STATUS_TEXT_KEY[this.status]);
   }
 
   private announceStatusChange(previous: ChatMessageStatus): void {
@@ -232,10 +235,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     if (!region) return;
     if (this.status === 'failed') {
       region.mode = 'assertive';
-      region.announce('Message failed to send.', { force: true });
+      region.announce(this.localize('chatFailedAnnounce'), { force: true });
     } else if (previous === 'streaming' && this.status === 'sent') {
       region.mode = 'polite';
-      region.announce('Message complete.', { force: true });
+      region.announce(this.localize('chatCompleteAnnounce'), { force: true });
     }
   }
 
