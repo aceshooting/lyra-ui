@@ -54,15 +54,24 @@ jobs:
         browser: [firefox, webkit]
         node-version: [20, 22]
     runs-on: ubuntu-latest
+    env:
+      # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
+      # (imports node:sqlite) under Node 20. The Node 20 leg below installs a
+      # compatible pnpm 10 instead, but pnpm has its own Corepack-like
+      # "manage package manager versions" self-enforcement: any pnpm binary
+      # run from this repo root notices the packageManager mismatch and
+      # silently re-execs itself as 11.10.0, reintroducing the crash. Disable
+      # that self-management for this job (harmless on the Node 22 leg, where
+      # the installed version already matches packageManager).
+      npm_config_manage_package_manager_versions: 'false'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
-          # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
-          # (imports node:sqlite) under Node 20. pnpm/action-setup hard-errors if
-          # `version` is given and differs from packageManager, so point it at an
-          # alternate file with a Node-20-compatible pnpm version for that leg
-          # instead of overriding `version` directly.
+          # pnpm/action-setup hard-errors if `version` is given and differs
+          # from packageManager, so point it at an alternate file with a
+          # Node-20-compatible pnpm version for that leg instead of
+          # overriding `version` directly.
           package_json_file: ${{ matrix.node-version == 20 && '.github/ci-pnpm10.json' || 'package.json' }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
