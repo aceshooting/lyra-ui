@@ -314,6 +314,112 @@ it('resolves an explicit left/right placement through rtlAwarePlacement, mirrori
   expect(rtlPopup.style.top).to.equal(ltrPopup.style.top);
 });
 
+it('resets `open` to false on disconnect, so a reconnect (drag-drop reparent) starts closed rather than stuck open', async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  // `disconnectedCallback()` resets `open` to `false` -- asserting that
+  // directly is what actually distinguishes the fix from the pre-fix bug,
+  // where `open` stayed `true` across the reconnect and a subsequent
+  // document pointerdown no longer closed the (visually stuck-open) menu.
+  expect(el.open).to.be.false;
+
+  document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('resyncs the roving activeIndex when focus lands on an item outside setActiveItem (e.g. a disabled item via mousedown)', async () => {
+  const el = (await fixture(html`
+    <lyra-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="a">A</lyra-menu-item>
+      <lyra-menu-item value="b" disabled>B</lyra-menu-item>
+      <lyra-menu-item value="c">C</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a, b] = items(el);
+  expect(document.activeElement).to.equal(a);
+
+  // A real mousedown-driven focus lands directly on the disabled item --
+  // tabIndex="-1" remains mouse-focusable per spec -- bypassing setActiveItem().
+  b.focus();
+  expect(document.activeElement).to.equal(b);
+  await el.updateComplete;
+
+  // Without the focusin resync, activeIndex would still be stuck on `a`'s
+  // stale position, so ArrowDown here would jump to `c` instead of wrapping
+  // back around to `a` (the only navigable item after the unresolvable `b`).
+  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(a);
+});
+
+it('closes on Tab without preventing the default focus-advance behavior', async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const ev = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  list(el).dispatchEvent(ev);
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  // Unlike Escape, Tab must NOT call e.preventDefault() -- the browser's own
+  // native focus advance still has to run.
+  expect(ev.defaultPrevented).to.be.false;
+});
+
+it('jumps the roving focus with type-ahead to the next non-disabled item whose text starts with the typed letter', async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [, duplicate] = items(el); // Rename, Duplicate, Delete
+
+  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(duplicate);
+});
+
+it('accumulates the type-ahead buffer across quick keystrokes to narrow the match', async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [, , destroy] = items(el); // Rename, Duplicate, Delete
+
+  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(destroy);
+});
+
+it('skips a disabled item during type-ahead even when its text would otherwise match', async () => {
+  const el = (await fixture(html`
+    <lyra-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="a">Apple</lyra-menu-item>
+      <lyra-menu-item value="b" disabled>Banana</lyra-menu-item>
+      <lyra-menu-item value="c">Blueberry</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [, , blueberry] = items(el);
+
+  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(blueberry);
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await expect(el).to.be.accessible();

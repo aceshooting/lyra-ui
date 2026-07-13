@@ -51,7 +51,10 @@ export interface MenuSelectDetail {
  *   Home/End jump to the first/last non-disabled item. Enter/Space activate
  *   the focused item. Escape closes and returns focus to the trigger. Tab
  *   closes the menu without trapping focus (the browser's own default Tab
- *   behavior proceeds untouched).
+ *   behavior proceeds untouched). A printable keypress runs type-ahead:
+ *   roving focus jumps to the next non-disabled item whose text starts with
+ *   the accumulated buffer, cycling from just after the active item (mirrors
+ *   `<lyra-select>`'s identical listbox type-ahead).
  * - A click outside both the trigger and the open popup closes it (mirrors
  *   `<lyra-select>`'s `onDocPointer` exactly) — this does *not* refocus the
  *   trigger, since the outside click itself already moved focus somewhere
@@ -125,6 +128,12 @@ export class LyraMenu extends LyraElement {
   private _isFirstUpdate = true;
   private pendingFocus: 'first' | 'last' = 'first';
   private readonly listId = nextId('menu-list');
+  // Standard menu type-ahead, mirroring lyra-select's identical listbox
+  // trio: printable keystrokes accumulate into this buffer and reset ~500ms
+  // after the last one, so "d" then "e" narrows to "de" instead of
+  // restarting the search on every keystroke.
+  private typeAheadBuffer = '';
+  private typeAheadTimer?: ReturnType<typeof setTimeout>;
 
   protected willUpdate(): void {
     this._isFirstUpdate = !this.hasUpdated;
@@ -174,7 +183,14 @@ export class LyraMenu extends LyraElement {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
+    clearTimeout(this.typeAheadTimer);
     document.removeEventListener('pointerdown', this.onDocPointer);
+    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
+    // `updated()`'s `open`-driven branch -- without this, `open` stays
+    // `true` across the disconnect/reconnect and `changed.has('open')` never
+    // fires again, leaving the menu rendered open with no positioning and
+    // no outside-click listener.
+    this.open = false;
   }
 
   private show(focus: 'first' | 'last' = 'first'): void {
@@ -298,6 +314,24 @@ export class LyraMenu extends LyraElement {
     item.focus();
   }
 
+  /** Resyncs `activeIndex` (and the roving `tabindex`) to wherever real DOM
+   *  focus actually lands, for any path that doesn't go through
+   *  `setActiveItem()` -- e.g. a real mousedown on an item, which focuses it
+   *  even while `disabled` (`tabIndex="-1"` remains mouse-focusable per
+   *  spec). Without this, `activeIndex` goes stale the moment focus moves any
+   *  other way, and subsequent Arrow-key navigation computes its next item
+   *  from that stale position instead of from where focus actually is. A
+   *  no-op for `setActiveItem()`'s own `.focus()` call, since `activeIndex`
+   *  there is already set to match before focus moves. */
+  private onListFocusIn = (e: FocusEvent): void => {
+    const target = e.target;
+    if (!(target instanceof LyraMenuItem)) return;
+    const index = this.items.indexOf(target);
+    if (index === -1 || index === this.activeIndex) return;
+    this.activeIndex = index;
+    this.applyRovingTabIndex();
+  };
+
   private onListKeyDown = (e: KeyboardEvent): void => {
     const navigable = this.items.filter((i) => !i.disabled);
     const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
@@ -342,9 +376,37 @@ export class LyraMenu extends LyraElement {
         this.hide();
         break;
       default:
+        if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
+          this.typeAhead(e.key);
+        }
         return;
     }
   };
+
+  /** Standard WAI-ARIA APG menu-button type-ahead: moves the roving focus to
+   *  the next non-disabled item whose text content starts with the
+   *  accumulated buffer, cycling from just after the currently active item
+   *  -- mirrors `<lyra-select>`'s identical listbox type-ahead. */
+  private typeAhead(char: string): void {
+    clearTimeout(this.typeAheadTimer);
+    this.typeAheadBuffer += char.toLowerCase();
+    this.typeAheadTimer = setTimeout(() => {
+      this.typeAheadBuffer = '';
+    }, 500);
+
+    const navigable = this.items.filter((i) => !i.disabled);
+    if (!navigable.length) return;
+    const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+    const currentIndex = current ? navigable.indexOf(current) : -1;
+    const n = navigable.length;
+    for (let step = 1; step <= n; step++) {
+      const candidate = navigable[(currentIndex + step + n) % n];
+      if ((candidate.textContent ?? '').trim().toLowerCase().startsWith(this.typeAheadBuffer)) {
+        this.setActiveItem(candidate);
+        return;
+      }
+    }
+  }
 
   render(): TemplateResult {
     return html`
@@ -358,6 +420,7 @@ export class LyraMenu extends LyraElement {
           role="menu"
           aria-label=${this.label}
           @keydown=${this.onListKeyDown}
+          @focusin=${this.onListFocusIn}
           @lyra-menu-item-select=${this.onItemSelect}
         >
           <slot @slotchange=${this.onItemsSlotChange}></slot>

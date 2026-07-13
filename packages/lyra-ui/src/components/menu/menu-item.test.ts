@@ -68,6 +68,17 @@ it('starts with tabIndex -1 before any parent menu manages roving focus', async 
   expect(el.tabIndex).to.equal(-1);
 });
 
+it('forces tabIndex to -1 and blurs itself the moment disabled flips true while it holds real focus', async () => {
+  const el = await fixtureInMenu(html`<lyra-menu-item tabindex="0">Rename</lyra-menu-item>`);
+  el.focus();
+  expect(document.activeElement).to.equal(el);
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.tabIndex).to.equal(-1);
+  expect(document.activeElement).to.not.equal(el);
+});
+
 it('hides the icon part when the icon slot is empty, shows it once populated', async () => {
   const el = (await fixture(html`<lyra-menu-item>Rename</lyra-menu-item>`)) as LyraMenuItem;
   const iconPart = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;

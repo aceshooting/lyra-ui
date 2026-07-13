@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -68,13 +68,25 @@ export class LyraMenuItem extends LyraElement {
     if (this.tabIndex !== 0) this.tabIndex = -1;
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
     // role/aria-disabled live on the host (see the class doc), so they're
     // plain imperative attribute writes here rather than part of render()'s
     // shadow-DOM template -- mirrors lyra-tree-node's identical willUpdate.
     this.setAttribute('role', 'menuitem');
     if (this.disabled) {
       this.setAttribute('aria-disabled', 'true');
+      // Defense-in-depth mirroring connectedCallback's baseline above:
+      // <lyra-menu>'s roving-tabindex bookkeeping (activeIndex) only gets a
+      // chance to resync once real focus actually moves (via its own
+      // focusin listener), so a `disabled` flip must proactively strip this
+      // item out of the roving target and drop any focus it's currently
+      // holding right here -- regardless of what the parent's activeIndex
+      // still thinks -- so a disabled item can never remain the roving
+      // target or retain focus.
+      if (changed.has('disabled')) {
+        this.tabIndex = -1;
+        if (document.activeElement === this) this.blur();
+      }
     } else {
       this.removeAttribute('aria-disabled');
     }
