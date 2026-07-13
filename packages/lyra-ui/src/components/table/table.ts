@@ -75,6 +75,9 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
  * Enter/Space still only sort/activate (see `activateColumn()` /
  * `activateRow()`).
  *
+ * Set `aria-label` on the host to give the `role="grid"` element an
+ * accessible name; it's forwarded into the shadow DOM's `<table>`.
+ *
  * `columns[].priority` ('medium' | 'low') hides that column under
  * `[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`
  * forces them all back into view. Rather than a *static* check of whether any
@@ -94,7 +97,15 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
  *   (a `priority` column just became hidden/un-hidden by the `@container`
  *   rules, or `showAllColumns` force-visible mode was toggled while a
  *   `priority` column was hidden). `detail: { hidden: boolean }`.
- * @csspart base, table, head, header-cell, row, cell, more-button, sort-icon, reveal-columns-button
+ * @csspart base - The root wrapper around the `<table>` and its footer controls.
+ * @csspart table - The `<table role="grid">` element.
+ * @csspart head - The `<thead>` element.
+ * @csspart header-cell - Each `<th>` header cell.
+ * @csspart row - Each body `<tr>`.
+ * @csspart cell - Each body `<td>`.
+ * @csspart more-button - The "load more" control, shown when `hasMore` is true.
+ * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
+ * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
  */
 export class LyraTable<T = unknown> extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -291,7 +302,15 @@ export class LyraTable<T = unknown> extends LyraElement {
     // already observed.
     const base = this.renderRoot.querySelector('[part="base"]');
     if (base) this.observeBase(base);
-    this.recomputeColumnsHidden();
+    // Deferred to a microtask rather than called synchronously here: a real
+    // priority-hidden transition mutates the reactive `columnsHidden`
+    // property, and doing that from inside this same updated() call stack
+    // schedules a second update from within the first update's own lifecycle
+    // callback -- Lit's dev-mode "scheduled an update ... after an update
+    // completed" warning. Pushing the write out to a microtask lets this
+    // update finish first, so the follow-up update is a normal externally
+    // triggered one instead.
+    queueMicrotask(() => this.recomputeColumnsHidden());
   }
 
   private activateColumn(key: string): void {
@@ -460,7 +479,13 @@ export class LyraTable<T = unknown> extends LyraElement {
 
     return html`
       <div part="base" ?data-force-visible=${this.showAllColumns}>
-        <table part="table" role="grid" @click=${this.onTableClick} @keydown=${this.onTableKeyDown}>
+        <table
+          part="table"
+          role="grid"
+          aria-label=${this.getAttribute('aria-label') || nothing}
+          @click=${this.onTableClick}
+          @keydown=${this.onTableKeyDown}
+        >
           <thead part="head">
             <tr role="row">
               ${this.columns.map((col) => {
@@ -512,7 +537,7 @@ export class LyraTable<T = unknown> extends LyraElement {
                         data-priority=${col.priority ?? nothing}
                         ?data-sticky=${col.sticky}
                       >
-                        ${col.cell(row) as unknown as string}
+                        ${col.cell(row)}
                       </td>`,
                   )}
                 </tr>`;

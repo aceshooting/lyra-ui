@@ -724,6 +724,62 @@ it('keeps a numeric-key row and a string-key row distinct instead of colliding',
   expect(keys.size).to.equal(2);
 });
 
+it('forwards a host aria-label into the shadow-DOM grid element', async () => {
+  const el = (await fixture(
+    html`<lyra-table aria-label="Scores"></lyra-table>`,
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+  expect(grid.getAttribute('aria-label')).to.equal('Scores');
+});
+
+it('omits aria-label on the shadow-DOM grid element when the host has none', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+  expect(grid.hasAttribute('aria-label')).to.be.false;
+});
+
+it('does not trigger a Lit "scheduled an update after an update completed" dev warning when a priority column transitions to actually-hidden', async () => {
+  // Reset Lit's own dedupe set first so this doesn't silently pass just
+  // because an earlier test in this file (or another file in the same
+  // browser session) already tripped -- and thus suppressed -- the exact
+  // same warning string. Same guard chip-group.test.ts's/toast-item.test.ts's
+  // equivalent tests use.
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  if (globalWarnings) {
+    [...globalWarnings]
+      .filter((w) => w.includes('scheduled an update'))
+      .forEach((w) => globalWarnings.delete(w));
+  }
+
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(
+      html`<lyra-table style="display: block; width: 300px;"></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = priorityColumns;
+    el.rows = rows;
+    await el.updateComplete;
+    // recomputeColumnsHidden() runs a frame after the initial paint (see the
+    // sibling columnsHidden tests above) -- wait for the settled state so the
+    // synchronous-mutation-inside-updated() warning (if any) has had a chance
+    // to fire before asserting on it.
+    await waitUntil(() => el.columnsHidden === true);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  const messages = calls.flat().map(String);
+  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.false;
+});
+
 it('does not trigger row activation or preventDefault when Enter is pressed on a focused button inside a cell()', async () => {
   const actionColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },
