@@ -312,3 +312,43 @@ it('is accessible while collapsed', async () => {
   await elementUpdated(el);
   await expect(el).to.be.accessible();
 });
+
+describe('aria-label localization', () => {
+  it('defaults to the built-in English aria-labels for handle and collapse-toggle', async () => {
+    const el = await dockedFixture('collapsible');
+    await elementUpdated(el);
+    const handle = el.shadowRoot!.querySelector('[part="handle"]')!;
+    const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]')!;
+    expect(handle.getAttribute('aria-label')).to.equal('Resize panel');
+    expect(toggle.getAttribute('aria-label')).to.equal('Collapse panel');
+
+    el.collapsed = true;
+    await elementUpdated(el);
+    expect(toggle.getAttribute('aria-label')).to.equal('Expand panel');
+  });
+
+  it('honors a strings override for dockPanelResize/dockPanelCollapse/dockPanelExpand', async () => {
+    const wrapper = (await fixture(
+      html`<div style="position: relative; height: 20rem; display: flex;">
+        <lyra-dock-panel
+          collapsible
+          .strings=${{
+            dockPanelResize: 'Redimensionner le panneau',
+            dockPanelCollapse: 'Réduire le panneau',
+            dockPanelExpand: 'Agrandir le panneau',
+          }}
+        ></lyra-dock-panel>
+      </div>`,
+    )) as HTMLDivElement;
+    const el = wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+    await elementUpdated(el);
+    const handle = el.shadowRoot!.querySelector('[part="handle"]')!;
+    const toggle = el.shadowRoot!.querySelector('[part="collapse-toggle"]')!;
+    expect(handle.getAttribute('aria-label')).to.equal('Redimensionner le panneau');
+    expect(toggle.getAttribute('aria-label')).to.equal('Réduire le panneau');
+
+    el.collapsed = true;
+    await elementUpdated(el);
+    expect(toggle.getAttribute('aria-label')).to.equal('Agrandir le panneau');
+  });
+});

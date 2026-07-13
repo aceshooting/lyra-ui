@@ -107,7 +107,10 @@ export type LyraMessageKey =
   | 'citationUnverified'
   | 'contextMeterUsed'
   | 'contextMeterUsedOfTotal'
-  | 'untitledConversation';
+  | 'untitledConversation'
+  | 'dockPanelCollapse'
+  | 'dockPanelExpand'
+  | 'dockPanelResize';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -216,6 +219,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   contextMeterUsed: '{used} used',
   contextMeterUsedOfTotal: '{used} of {total} used',
   untitledConversation: 'Untitled conversation',
+  dockPanelCollapse: 'Collapse panel',
+  dockPanelExpand: 'Expand panel',
+  dockPanelResize: 'Resize panel',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

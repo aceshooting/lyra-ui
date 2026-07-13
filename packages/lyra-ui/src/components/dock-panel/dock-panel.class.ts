@@ -326,7 +326,7 @@ export class LyraDockPanel extends LyraElement {
     return html`<div
       part="handle"
       role="separator"
-      aria-label="Resize panel"
+      aria-label=${this.localize('dockPanelResize')}
       aria-orientation=${this.axis === 'inline' ? 'vertical' : 'horizontal'}
       aria-valuenow=${Math.round(this.currentSizePx())}
       aria-valuemin=${Math.round(minPx)}
@@ -344,7 +344,7 @@ export class LyraDockPanel extends LyraElement {
       type="button"
       aria-expanded=${this.collapsed ? 'false' : 'true'}
       aria-controls=${this.contentId}
-      aria-label=${this.collapsed ? 'Expand panel' : 'Collapse panel'}
+      aria-label=${this.collapsed ? this.localize('dockPanelExpand') : this.localize('dockPanelCollapse')}
       @click=${this.toggleCollapsed}
     >
       <span style=${`display:inline-flex;transform:rotate(${this.toggleChevronDeg}deg)`}
