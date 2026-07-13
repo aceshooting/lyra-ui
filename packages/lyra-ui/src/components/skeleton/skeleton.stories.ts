@@ -18,3 +18,8 @@ export const Gallery: Story = {
     </div>
   `,
 };
+
+export const CustomLabel: Story = {
+  render: () =>
+    html`<lyra-skeleton label="Loading chart" width="10rem" height="1rem"></lyra-skeleton>`,
+};

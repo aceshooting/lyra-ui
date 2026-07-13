@@ -11,14 +11,12 @@ export const styles = css`
     block-size: 100%;
     background: var(--lyra-color-border);
   }
-  :host([variant='text']) [part='base'] {
+  :host([variant='text']) [part='base'],
+  :host([variant='rect']) [part='base'] {
     border-radius: var(--lyra-radius);
   }
   :host([variant='circle']) [part='base'] {
     border-radius: 50%;
-  }
-  :host([variant='rect']) [part='base'] {
-    border-radius: var(--lyra-radius);
   }
   :host([effect='pulse']) [part='base'] {
     animation: lyra-skeleton-pulse 1.5s ease-in-out infinite;
@@ -53,6 +51,9 @@ export const styles = css`
   @media (prefers-reduced-motion: reduce) {
     [part='base'] {
       animation: none !important;
+    }
+    :host([effect='sheen']) [part='base'] {
+      background-image: none;
     }
   }
 `;

@@ -23,6 +23,10 @@ export class LyraSkeleton extends LyraElement {
   @property() width?: string;
   @property() height?: string;
 
+  /** Accessible name announced via `role="status"`. Override with a
+   *  description of what is actually loading (e.g. "Loading chart"). */
+  @property() label = 'Loading…';
+
   protected willUpdate(): void {
     this.setAttribute('role', 'status');
   }
@@ -43,7 +47,7 @@ export class LyraSkeleton extends LyraElement {
   }
 
   render(): TemplateResult {
-    return html`<span part="base"><span class="sr-only">Loading…</span></span>`;
+    return html`<span part="base"><span class="sr-only">${this.label}</span></span>`;
   }
 }
 

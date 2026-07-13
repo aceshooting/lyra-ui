@@ -78,8 +78,19 @@ it('gives pulse and sheen distinct keyframe animations, disabled under reduced m
   expect(css).to.include('background-image: linear-gradient(');
   expect(css).to.include('animation: lyra-skeleton-sheen 1.5s ease-in-out infinite;');
   expect(css).to.include(
-    "@media (prefers-reduced-motion: reduce) { [part='base'] { animation: none !important; } }",
+    "@media (prefers-reduced-motion: reduce) { [part='base'] { animation: none !important; } " +
+      ":host([effect='sheen']) [part='base'] { background-image: none; } }",
   );
+});
+
+it('defaults the accessible name to "Loading…" and reflects a custom label', async () => {
+  const defaulted = (await fixture(html`<lyra-skeleton></lyra-skeleton>`)) as LyraSkeleton;
+  expect(defaulted.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading…');
+
+  const labeled = (await fixture(
+    html`<lyra-skeleton label="Loading chart"></lyra-skeleton>`,
+  )) as LyraSkeleton;
+  expect(labeled.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading chart');
 });
 
 it('is accessible', async () => {
