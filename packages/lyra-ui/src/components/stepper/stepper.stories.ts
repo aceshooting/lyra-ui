@@ -18,6 +18,22 @@ const errorSteps: StepItem[] = [
   { id: 'payment', label: 'Payment', state: 'disabled' },
 ];
 
+const lockedStepsWithTitle: StepItem[] = [
+  { id: 'account', label: 'Account', state: 'current' },
+  {
+    id: 'profile',
+    label: 'Profile',
+    state: 'disabled',
+    title: 'Complete Account first',
+  },
+  {
+    id: 'plan',
+    label: 'Plan',
+    state: 'disabled',
+    title: 'Complete Account first',
+  },
+];
+
 const meta: Meta = {
   title: 'Stepper',
   component: 'lyra-stepper',
@@ -44,6 +60,18 @@ export const Vertical: Story = {
 
 export const WithError: Story = {
   render: () => html`<lyra-stepper .steps=${errorSteps}></lyra-stepper>`,
+};
+
+export const LockedStepWithTitle: Story = {
+  render: () => html`<lyra-stepper .steps=${lockedStepsWithTitle}></lyra-stepper>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A locked step can set `title` to explain why it\'s disabled -- hover a disabled step to see the native browser tooltip.',
+      },
+    },
+  },
 };
 
 export const StepSelectEvent: Story = {

@@ -33,6 +33,30 @@ describe('lyra-stepper', () => {
     expect(el.steps[1]!.state).to.equal('current'); // unchanged -- this component never self-mutates
   });
 
+  it('renders a title attribute on a step that provides one', async () => {
+    const el = (await fixture(
+      html`<lyra-stepper
+        .steps=${[
+          { id: 'basics', label: 'Basics', state: 'completed' as const },
+          {
+            id: 'inputs',
+            label: 'Inputs',
+            state: 'disabled' as const,
+            title: 'Complete Basics first',
+          },
+        ]}
+      ></lyra-stepper>`,
+    )) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons[1]!.getAttribute('title')).to.equal('Complete Basics first');
+  });
+
+  it('renders no title attribute for a step that omits one', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons[0]!.hasAttribute('title')).to.be.false;
+  });
+
   it('does not fire lyra-step-select for a disabled step', async () => {
     const el = (await fixture(html`<lyra-stepper .steps=${[...steps().slice(0, 2), { id: 'review', label: 'Review', state: 'disabled' as const }]}></lyra-stepper>`)) as LyraStepper;
     const buttons = stepButtons(el);

@@ -11,6 +11,9 @@ export interface StepItem {
   id: string;
   label: string;
   state: StepState;
+  /** Optional native `title` tooltip for this step's button -- e.g. explaining why a
+   *  `disabled` step is locked. Omit for no `title` attribute at all (not an empty string). */
+  title?: string;
 }
 
 export interface LyraStepperEventMap {
@@ -59,7 +62,9 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Ordered step data. Never mutated by this component -- see the class doc's controlled-
-   *  component contract. Empty (the default) renders nothing. */
+   *  component contract. Empty (the default) renders nothing. Each step's optional `title`
+   *  renders as a native `title` tooltip on that step's button -- e.g. to explain why a
+   *  `disabled` step is locked. */
   @property({ attribute: false }) steps: StepItem[] = [];
 
   /** `'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);
@@ -132,6 +137,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
             aria-current=${step.state === 'current' ? 'step' : nothing}
             aria-disabled=${step.state === 'disabled' ? 'true' : 'false'}
             tabindex=${step.state === 'current' ? '0' : '-1'}
+            title=${step.title ?? nothing}
             @click=${() => this.selectStep(step, index)}
           >
             ${step.state === 'completed'

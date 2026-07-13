@@ -2337,7 +2337,7 @@
               "type": {
                 "text": "string | undefined"
               },
-              "description": "Overrides the single-capability trigger button's `aria-label`, which\notherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.\n`'Attach files'`). Set this to localize the accessible name; leave it\nunset to keep the built-in English default. Only affects the\nsingle-capability button ([part='trigger']) — the multi-capability\nmenu's own trigger keeps its fixed `'Add attachment'` label regardless.",
+              "description": "Overrides the single-capability trigger button's `aria-label`, which\notherwise comes from `this.localize()` (e.g. `'Attach files'`, localizable\nvia `.strings`/`registerLyraLocale()`). Set this for a one-off override;\nleave it unset to keep the localized default. Only affects the\nsingle-capability button ([part='trigger']) — the multi-capability\nmenu's own trigger keeps its own `'Add attachment'` label regardless.",
               "attribute": "trigger-label"
             },
             {
@@ -2621,7 +2621,7 @@
               "type": {
                 "text": "string | undefined"
               },
-              "description": "Overrides the single-capability trigger button's `aria-label`, which\notherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.\n`'Attach files'`). Set this to localize the accessible name; leave it\nunset to keep the built-in English default. Only affects the\nsingle-capability button ([part='trigger']) — the multi-capability\nmenu's own trigger keeps its fixed `'Add attachment'` label regardless.",
+              "description": "Overrides the single-capability trigger button's `aria-label`, which\notherwise comes from `this.localize()` (e.g. `'Attach files'`, localizable\nvia `.strings`/`registerLyraLocale()`). Set this for a one-off override;\nleave it unset to keep the localized default. Only affects the\nsingle-capability button ([part='trigger']) — the multi-capability\nmenu's own trigger keeps its own `'Add attachment'` label regardless.",
               "fieldName": "triggerLabel"
             },
             {
@@ -29464,6 +29464,16 @@
             },
             {
               "kind": "field",
+              "name": "effectiveLabel",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "description": "Resolves `label`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `label` itself to be set.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "effectiveLocale",
               "type": {
                 "text": "string"
@@ -29500,7 +29510,7 @@
                 "text": "string"
               },
               "default": "'Export'",
-              "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.",
+              "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
               "attribute": "label"
             },
             {
@@ -29897,7 +29907,7 @@
                 "text": "string"
               },
               "default": "'Export'",
-              "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.",
+              "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
               "fieldName": "label"
             },
             {
@@ -34638,7 +34648,7 @@
                   }
                 }
               ],
-              "description": "Locale-derived weekday-axis labels for the 7 rows drawn down the left of\nthe calendar grid. Only indices 1, 3, and 5 (relative to `firstWeekStart`)\nare filled in — matching today's sparse every-other-day label density —\nthe rest stay blank. `firstWeekStart` is always the UTC\n`firstDayOfWeek`-weekday by construction (see `buildCalendarGrid()`), so\nweekday index 0..6 is a fixed positional mapping relative to it (with the\ndefault `firstDayOfWeek` of 0, that's the original Sun..Sat mapping,\nunchanged); only the label *text* for indices 1/3/5 is derived here, via\n`Intl.DateTimeFormat` on a real UTC date that actually falls on that\nweekday, so it follows the runtime locale instead of a hardcoded English\narray (see `calendarCellText()`'s tooltip text for the same pattern)."
+              "description": "Locale-derived weekday-axis labels for the 7 rows drawn down the left of\nthe calendar grid. The labeled weekdays are always Monday, Wednesday, and\nFriday — matching today's sparse every-other-day label density — the\nrest stay blank. Which *row* each one lands on depends on\n`firstDayOfWeek`, since `buildCalendarGrid()` anchors `firstWeekStart`\n(and therefore row 0) at that weekday. For each target weekday (using\nthe standard JS convention, Sunday=0..Saturday=6, so Monday=1,\nWednesday=3, Friday=5), the row is `(weekday - firstDayOfWeek + 7) % 7`;\nwith the default `firstDayOfWeek` of 0 this reduces to rows 1/3/5,\nunchanged. The label *text* for each computed row is derived via\n`Intl.DateTimeFormat` on a real UTC date that actually falls on that row,\nso it follows the runtime locale instead of a hardcoded English array\n(see `calendarCellText()`'s tooltip text for the same pattern)."
             }
           ],
           "events": [
@@ -41901,7 +41911,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-poll-status>` — a \"next scheduled refresh\" countdown with a built-in pause control: a\nticking `M:SS` display counting down to the next scheduled action, a \"Refreshing…\" state at\nzero, and a pause/resume toggle. First-party invention (no Web Awesome equivalent); the\nclosest existing component, `lyra-stream-status`, is scoped to transport/connection-health\nphases, a different concern from a scheduled-interval countdown -- this mirrors its internal\n`<lyra-live-region>` composition for accessible phase-transition announcements.",
+          "description": "`<lyra-poll-status>` — a \"next scheduled refresh\" countdown with a built-in pause control: a\nticking `M:SS` display counting down to the next scheduled action, a \"Refreshing…\" state at\nzero, a \"Paused\" state while `paused` (instead of freezing on a stale value), and a\npause/resume toggle. First-party invention (no Web Awesome equivalent); the\nclosest existing component, `lyra-stream-status`, is scoped to transport/connection-health\nphases, a different concern from a scheduled-interval countdown -- this mirrors its internal\n`<lyra-live-region>` composition for accessible phase-transition announcements.",
           "name": "LyraPollStatus",
           "cssParts": [
             {
@@ -41909,7 +41919,7 @@
               "name": "base"
             },
             {
-              "description": "The `M:SS` (or \"Refreshing…\") text.",
+              "description": "The `M:SS` text (or \"Refreshing…\" once due, or \"Paused\" while `paused`).",
               "name": "countdown"
             },
             {
@@ -43772,6 +43782,16 @@
             },
             {
               "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name for the radiogroup, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the `role=\"radiogroup\"` element. A plain `aria-label`\nattribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-slider>`.",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -44011,6 +44031,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name for the radiogroup, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the `role=\"radiogroup\"` element. A plain `aria-label`\nattribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-slider>`.",
+              "fieldName": "label"
+            },
             {
               "name": "locale",
               "type": {
@@ -49104,7 +49133,7 @@
                 "text": "StepItem[]"
               },
               "default": "[]",
-              "description": "Ordered step data. Never mutated by this component -- see the class doc's controlled-\ncomponent contract. Empty (the default) renders nothing."
+              "description": "Ordered step data. Never mutated by this component -- see the class doc's controlled-\ncomponent contract. Empty (the default) renders nothing. Each step's optional `title`\nrenders as a native `title` tooltip on that step's button -- e.g. to explain why a\n`disabled` step is locked."
             },
             {
               "kind": "field",
@@ -60607,6 +60636,14 @@
               "name": "actions"
             },
             {
+              "description": "Overrides the built-in chevron glyph inside the collapse/expand toggle button entirely, via the platform's own slot-fallback-content mechanism (same convention as `<lyra-tool-call-chip>`'s `icon` slot): whatever is assigned wins, otherwise the default chevron renders. Only meaningful while `collapsible`.",
+              "name": "collapse-icon"
+            },
+            {
+              "description": "Overrides the built-in expand/close glyph inside the fullscreen toggle button entirely, using the same mechanism -- the override replaces *both* the \"expand\" and \"exit fullscreen\" default icons, so a consumer supplying one is responsible for its own expand/exit distinction (e.g. by reading the `fullscreen` attribute). Only meaningful while `expandable`.",
+              "name": "fullscreen-icon"
+            },
+            {
               "description": "Optional leading icon in the title row.",
               "name": "icon"
             },
@@ -60894,7 +60931,7 @@
                 "text": "WidgetView[]"
               },
               "default": "[]",
-              "description": "Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card\nchrome. Each entry gets a header toggle button and a `<slot name=\"view-${id}\">`. Empty (the\ndefault) renders today's single unnamed default slot as the sole view, unchanged."
+              "description": "Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card\nchrome. Each entry gets a header toggle button and a `<slot name=\"view-${id}\">`. Empty (the\ndefault) renders today's single unnamed default slot as the sole view, unchanged. An entry's\n`label` is optional -- see `WidgetView`'s own doc for the icon-only (`ariaLabel`) case."
             },
             {
               "kind": "method",
