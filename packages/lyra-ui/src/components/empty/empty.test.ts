@@ -37,8 +37,8 @@ it('renders heading, description, and slotted content', async () => {
       <span slot="actions"><button>Reset</button></span>
     </lyra-empty>`,
   )) as LyraEmpty;
-  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('No results');
-  expect(el.shadowRoot!.querySelector('[part="description"]')!.textContent).to.equal(
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent!.trim()).to.equal('No results');
+  expect(el.shadowRoot!.querySelector('[part="description"]')!.textContent!.trim()).to.equal(
     'Try a different search.',
   );
   const actionsSlot = el.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement;
@@ -98,16 +98,16 @@ it('does not collapse the actions wrapper when actions content is slotted', asyn
 
 it('collapses the heading when it is omitted, matching the description collapse behavior', async () => {
   const el = (await fixture(
-    html`<lyra-empty description="Try a different search."></lyra-empty>`,
+    html`<lyra-empty description="only"></lyra-empty>`,
   )) as LyraEmpty;
   const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
-  expect(getComputedStyle(heading).display).to.equal('none');
+  expect(heading.hasAttribute('hidden')).to.be.true;
 });
 
 it('collapses the description when it is omitted', async () => {
-  const el = (await fixture(html`<lyra-empty heading="Nothing here"></lyra-empty>`)) as LyraEmpty;
+  const el = (await fixture(html`<lyra-empty heading="only"></lyra-empty>`)) as LyraEmpty;
   const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
-  expect(getComputedStyle(description).display).to.equal('none');
+  expect(description.hasAttribute('hidden')).to.be.true;
 });
 
 it('does not collapse the icon wrapper when icon content carries an explicit empty slot="" attribute', async () => {
@@ -240,6 +240,26 @@ it('keeps the default (non-compact) base/heading styling unchanged', async () =>
   expect(baseStyle.alignItems).to.equal('center');
   expect(baseStyle.textAlign).to.equal('center');
   expect(headingStyle.fontWeight).to.equal('600');
+});
+
+it('lets the heading slot override the heading attribute instead of concatenating both', async () => {
+  const el = (await fixture(
+    html`<lyra-empty heading="attr"><span slot="heading">rich <code>[[x]]</code></span></lyra-empty>`,
+  )) as LyraEmpty;
+  const slot = el.shadowRoot!.querySelector('slot[name="heading"]') as HTMLSlotElement;
+  const assigned = slot.assignedElements({ flatten: true });
+  expect(assigned.length).to.equal(1);
+  expect(assigned[0].textContent).to.equal('rich [[x]]');
+});
+
+it('lets the description slot override the description attribute instead of concatenating both', async () => {
+  const el = (await fixture(
+    html`<lyra-empty description="attr"><span slot="description">rich</span></lyra-empty>`,
+  )) as LyraEmpty;
+  const slot = el.shadowRoot!.querySelector('slot[name="description"]') as HTMLSlotElement;
+  const assigned = slot.assignedElements({ flatten: true });
+  expect(assigned.length).to.equal(1);
+  expect(assigned[0].textContent).to.equal('rich');
 });
 
 it('applies compact styling to [part="base"] and [part="heading"] when compact', async () => {

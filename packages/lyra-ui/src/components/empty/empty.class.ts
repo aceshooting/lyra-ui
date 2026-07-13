@@ -9,6 +9,8 @@ import { styles } from './empty.styles.js';
  *
  * @customElement lyra-empty
  * @slot - Custom icon or illustration (defaults to none).
+ * @slot heading - Rich heading content (overrides the `heading` attribute).
+ * @slot description - Rich description content (overrides the `description` attribute).
  * @slot actions - Buttons/links shown below the description.
  * @csspart base - The outer container.
  * @csspart icon - The wrapper around the default-slotted icon/illustration.
@@ -38,6 +40,8 @@ export class LyraEmpty extends LyraElement {
   // real slot assignment in JS instead and key the CSS off these instead.
   @state() private hasIcon = false;
   @state() private hasActions = false;
+  @state() private hasHeadingSlot = false;
+  @state() private hasDescriptionSlot = false;
 
   protected willUpdate(): void {
     // Set from light-DOM children before the first render so the initial
@@ -50,6 +54,10 @@ export class LyraEmpty extends LyraElement {
       // presence.
       this.hasIcon = Array.from(this.children).some((el) => !el.getAttribute('slot'));
       this.hasActions = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      this.hasHeadingSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'heading');
+      this.hasDescriptionSlot = Array.from(this.children).some(
+        (el) => el.getAttribute('slot') === 'description',
+      );
     }
   }
 
@@ -89,12 +97,28 @@ export class LyraEmpty extends LyraElement {
     this.hasActions = slot.assignedElements({ flatten: true }).length > 0;
   };
 
+  private onHeadingSlotChange = (e: Event): void => {
+    const slot = e.target as HTMLSlotElement;
+    this.hasHeadingSlot = slot.assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onDescriptionSlotChange = (e: Event): void => {
+    const slot = e.target as HTMLSlotElement;
+    this.hasDescriptionSlot = slot.assignedElements({ flatten: true }).length > 0;
+  };
+
   render(): TemplateResult {
+    const hasHeading = this.hasHeadingSlot || this.heading.length > 0;
+    const hasDescription = this.hasDescriptionSlot || this.description.length > 0;
     return html`
       <div part="base" role="status" aria-live="polite">
         <div part="icon" ?hidden=${!this.hasIcon}><slot @slotchange=${this.onIconSlotChange}></slot></div>
-        <p part="heading">${this.heading}</p>
-        <p part="description">${this.description}</p>
+        <p part="heading" ?hidden=${!hasHeading}>
+          <slot name="heading" @slotchange=${this.onHeadingSlotChange}>${this.heading}</slot>
+        </p>
+        <p part="description" ?hidden=${!hasDescription}>
+          <slot name="description" @slotchange=${this.onDescriptionSlotChange}>${this.description}</slot>
+        </p>
         <div part="actions" ?hidden=${!this.hasActions}>
           <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
         </div>
