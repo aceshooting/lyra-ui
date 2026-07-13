@@ -25,6 +25,13 @@ describe('formatFileSize', () => {
     expect(formatFileSize(NaN)).to.equal('');
     expect(formatFileSize(Infinity)).to.equal('');
   });
+
+  describe('formatFileSize unit-label resolver', () => {
+    it('accepts an optional unit-label resolver, defaulting to the plain English abbreviation', () => {
+      expect(formatFileSize(2415919)).to.equal('2.3 MB');
+      expect(formatFileSize(2415919, (unit) => `[${unit}]`)).to.equal('2.3 [MB]');
+    });
+  });
 });
 
 it('defaults to status="pending", removable=true, and empty independent props', async () => {
@@ -527,6 +534,27 @@ describe('thumbnailOnly', () => {
     expect(el.thumbnailOnly).to.be.false;
     const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
     expect(getComputedStyle(meta).display).to.not.equal('none');
+  });
+});
+
+describe('file-size unit localization', () => {
+  it('localizes file-size units via this.localize(), not hardcoded English abbreviations', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip
+        .file=${makeFile('report.pdf', 'application/pdf', 2415919)}
+        .strings=${{ fileSizeUnitMb: 'Mo' }}
+      ></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const size = el.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
+    expect(size.textContent).to.equal('2.3 Mo');
+  });
+
+  it('defaults to English unit abbreviations when no strings override is set', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip .file=${makeFile('report.pdf', 'application/pdf', 2415919)}></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const size = el.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
+    expect(size.textContent).to.equal('2.3 MB');
   });
 });
 

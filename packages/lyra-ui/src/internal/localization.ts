@@ -47,7 +47,12 @@ export type LyraMessageKey =
   | 'sendMessage'
   | 'stopGenerating'
   | 'dropzoneReleaseToAdd'
-  | 'dropzoneRejectedType';
+  | 'dropzoneRejectedType'
+  | 'fileSizeUnitB'
+  | 'fileSizeUnitKb'
+  | 'fileSizeUnitMb'
+  | 'fileSizeUnitGb'
+  | 'fileSizeUnitTb';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -96,6 +101,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   stopGenerating: 'Stop generating',
   dropzoneReleaseToAdd: 'Release to add the file.',
   dropzoneRejectedType: 'This file type is not accepted.',
+  fileSizeUnitB: 'B',
+  fileSizeUnitKb: 'KB',
+  fileSizeUnitMb: 'MB',
+  fileSizeUnitGb: 'GB',
+  fileSizeUnitTb: 'TB',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

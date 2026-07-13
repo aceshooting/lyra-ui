@@ -62,22 +62,38 @@ function retryIcon(): SVGTemplateResult {
 
 const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
 
+/** Maps each BYTE_UNITS abbreviation to its LyraMessageKey, for callers that
+ *  want a localized unit label (see formatFileSize's unitLabel parameter). */
+export const FILE_SIZE_UNIT_KEYS: Record<(typeof BYTE_UNITS)[number], string> = {
+  B: 'fileSizeUnitB',
+  KB: 'fileSizeUnitKb',
+  MB: 'fileSizeUnitMb',
+  GB: 'fileSizeUnitGb',
+  TB: 'fileSizeUnitTb',
+};
+
 /**
  * `512` -> `"512 B"`; `2415919` -> `"2.3 MB"`. Whole bytes never get a
  * decimal (there's no meaningful fraction of a byte); every unit past that
  * gets exactly one decimal place. Returns `""` for a negative/non-finite
  * input so a missing/unknown size renders nothing instead of `"NaN B"`.
+ * `unitLabel` resolves each abbreviation to its displayed label -- defaults
+ * to the identity function (today's plain English abbreviations), so every
+ * existing single-argument call site/test is unaffected.
  */
-export function formatFileSize(bytes: number): string {
+export function formatFileSize(
+  bytes: number,
+  unitLabel: (unit: (typeof BYTE_UNITS)[number]) => string = (unit) => unit,
+): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '';
-  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024) return `${Math.round(bytes)} ${unitLabel('B')}`;
   let value = bytes;
   let unitIndex = 0;
   while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
     value /= 1024;
     unitIndex++;
   }
-  return `${value.toFixed(1)} ${BYTE_UNITS[unitIndex]}`;
+  return `${value.toFixed(1)} ${unitLabel(BYTE_UNITS[unitIndex])}`;
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
@@ -333,7 +349,10 @@ export class LyraAttachmentChip extends LyraElement {
     // A `0`-byte size reads the same as "unknown" here (there's no prop to
     // distinguish a genuinely empty file from a size that was simply never
     // supplied) -- hide the part entirely rather than show a literal "0 B".
-    const sizeText = this.effectiveSize > 0 ? formatFileSize(this.effectiveSize) : '';
+    const sizeText =
+      this.effectiveSize > 0
+        ? formatFileSize(this.effectiveSize, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit], unit))
+        : '';
     const text = statusText(
       this.status,
       this.progress,

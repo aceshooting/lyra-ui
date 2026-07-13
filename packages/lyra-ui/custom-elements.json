@@ -2080,12 +2080,36 @@
               "type": {
                 "text": "number"
               }
+            },
+            {
+              "name": "unitLabel",
+              "default": "(unit) => unit",
+              "type": {
+                "text": "(unit: (typeof BYTE_UNITS)[number]) => string"
+              }
             }
           ],
-          "description": "`512` -> `\"512 B\"`; `2415919` -> `\"2.3 MB\"`. Whole bytes never get a\ndecimal (there's no meaningful fraction of a byte); every unit past that\ngets exactly one decimal place. Returns `\"\"` for a negative/non-finite\ninput so a missing/unknown size renders nothing instead of `\"NaN B\"`."
+          "description": "`512` -> `\"512 B\"`; `2415919` -> `\"2.3 MB\"`. Whole bytes never get a\ndecimal (there's no meaningful fraction of a byte); every unit past that\ngets exactly one decimal place. Returns `\"\"` for a negative/non-finite\ninput so a missing/unknown size renders nothing instead of `\"NaN B\"`.\n`unitLabel` resolves each abbreviation to its displayed label -- defaults\nto the identity function (today's plain English abbreviations), so every\nexisting single-argument call site/test is unaffected."
+        },
+        {
+          "kind": "variable",
+          "name": "FILE_SIZE_UNIT_KEYS",
+          "type": {
+            "text": "Record<(typeof BYTE_UNITS)[number], string>"
+          },
+          "default": "{ B: 'fileSizeUnitB', KB: 'fileSizeUnitKb', MB: 'fileSizeUnitMb', GB: 'fileSizeUnitGb', TB: 'fileSizeUnitTb', }",
+          "description": "Maps each BYTE_UNITS abbreviation to its LyraMessageKey, for callers that\nwant a localized unit label (see formatFileSize's unitLabel parameter)."
         }
       ],
       "exports": [
+        {
+          "kind": "js",
+          "name": "FILE_SIZE_UNIT_KEYS",
+          "declaration": {
+            "name": "FILE_SIZE_UNIT_KEYS",
+            "module": "src/components/attachment-chip/attachment-chip.class.ts"
+          }
+        },
         {
           "kind": "js",
           "name": "LyraAttachmentChip",
