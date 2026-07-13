@@ -180,6 +180,12 @@ const preview = {
   decorators: [withLyraTheme],
   parameters: {
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/i } },
+    // @storybook/addon-a11y's afterEach hook otherwise auto-runs axe-core on
+    // every story render, racing with scripts/check-storybook.mjs's own
+    // manual axe.run() calls on the same document ("Axe is already running").
+    // check-storybook.mjs is this project's actual a11y gate, so disable the
+    // addon's automatic pass instead of running two axe scans concurrently.
+    a11y: { test: 'off' },
   },
 };
 
