@@ -610,8 +610,8 @@ it('renders a clamp()-based flex-basis for a panel with panelConstraints, leavin
   el.panelConstraints = [{ minPx: 40, maxPx: 200 }, null];
   await elementUpdated(el);
   const [panelA, panelB] = [...el.children] as HTMLElement[];
-  expect(panelA.style.flex).to.equal('0 0 clamp(40px, 30%, 200px)');
-  expect(panelB.style.flex).to.equal('0 0 70%');
+  expect(panelA.style.flex).to.equal('0 1 clamp(40px, 30%, 200px)');
+  expect(panelB.style.flex).to.equal('0 1 70%');
 });
 
 it('falls back to sentinel px bounds when a constraint only specifies one side', async () => {
@@ -625,7 +625,7 @@ it('falls back to sentinel px bounds when a constraint only specifies one side',
   // The browser may re-serialize a large px literal (e.g. `1000000px` ->
   // `1e+06px`) when normalizing the `flex` shorthand, so parse the numeric
   // value out instead of asserting an exact fallback string.
-  const match = /^0 0 clamp\(40px, 30%, ([\d.e+]+)px\)$/.exec(panelA.style.flex);
+  const match = /^0 1 clamp\(40px, 30%, ([\d.e+]+)px\)$/.exec(panelA.style.flex);
   expect(match, `unexpected flex-basis shape: ${panelA.style.flex}`).to.not.equal(null);
   expect(Number(match![1])).to.equal(1_000_000);
 });
@@ -709,6 +709,26 @@ it('keeps a constrained panel pinned between its px bounds when the container is
   divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
   await elementUpdated(el);
   expect(el.sizes[0]).to.equal(28);
+});
+
+it('does not overflow its container by the dividers\' own width in the default (uncollapsed) state', async () => {
+  const el = (await fixture(html`
+    <lyra-split>
+      <div>A</div>
+      <div>B</div>
+      <div>C</div>
+    </lyra-split>
+  `)) as LyraSplit;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 900);
+  await elementUpdated(el);
+  const panels = [...el.children] as HTMLElement[];
+  // flex-shrink (the second flex shorthand token) must be nonzero so the panels can absorb
+  // the two dividers' combined width instead of the row overflowing by that fixed amount.
+  for (const panel of panels) {
+    const shrink = panel.style.flex.trim().split(/\s+/)[1];
+    expect(shrink).to.not.equal('0');
+  }
 });
 
 it('splits :hover and :focus-visible into separate divider rules with a token-driven outline', () => {
