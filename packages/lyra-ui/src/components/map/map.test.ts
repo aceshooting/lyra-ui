@@ -35,6 +35,65 @@ it('constructs a maplibregl.Map and exposes it via the map getter', async () => 
   expect(el.map).to.exist;
 });
 
+it('does not construct the underlying maplibregl.Map (and its WebGL context) until the element is observed intersecting the viewport', async () => {
+  // A real IntersectionObserver already reports this test's fixture-mounted
+  // element as intersecting almost immediately (it's actually on-screen in
+  // the headless test page), which would make this scenario impossible to
+  // reproduce deterministically. Swap in a fully fake observer instead --
+  // one that never delivers a real notification on its own -- so this test
+  // controls exactly when (and whether) intersection is reported, the same
+  // spy-the-observer-constructor technique lite-chart.test.ts uses for
+  // ResizeObserver, but stubbed rather than extending the real class since
+  // the real class's own genuine observation is exactly what must be ruled
+  // out here.
+  const observedTargets: Element[] = [];
+  const callbacks: IntersectionObserverCallback[] = [];
+  const OriginalIO = window.IntersectionObserver;
+  class FakeIntersectionObserver {
+    constructor(callback: IntersectionObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(target: Element): void {
+      observedTargets.push(target);
+    }
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+
+  try {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    await el.updateComplete;
+    expect(observedTargets).to.include(el);
+
+    // maplibre-gl itself loads regardless of visibility -- only the actual
+    // `new Map()` construction is gated on it -- so the container renders
+    // (loading flips false) even though no intersection has been reported.
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="container"]') != null,
+      'container never rendered',
+      { timeout: 2000 },
+    );
+    // Let the microtask queue drain so connectedCallback()'s own internal
+    // `await this.updateComplete` (which runs tryConstructMap() right after)
+    // has had its chance to run and bail on `!this.visible`.
+    await el.updateComplete;
+    expect(el.map).to.be.undefined;
+
+    // Now simulate the element scrolling into view.
+    callbacks[0]([{ isIntersecting: true } as unknown as IntersectionObserverEntry], new OriginalIO(() => {}));
+    await waitUntil(() => el.map != null, 'map never constructed after becoming visible', { timeout: 2000 });
+    expect(el.map).to.exist;
+  } finally {
+    (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = OriginalIO;
+  }
+});
+
 it('calls setCenter/setZoom on the underlying map when center/zoom change after mount', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -247,6 +306,32 @@ it('does not mark an empty-stops choropleth as applied, so a later non-empty upd
   ]);
 });
 
+it('adds the choropleth GeoJSON source without promoteId, so a top-level Feature.id is preserved instead of requiring a duplicate properties.id', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  let addSourceOptions: unknown;
+  const originalAddSource = el.map!.addSource.bind(el.map);
+  el.map!.addSource = ((id: string, options: unknown) => {
+    addSourceOptions = options;
+    return originalAddSource(id, options as never);
+  }) as typeof el.map.addSource;
+
+  el.choropleth = choropleth('promote-id-check', [
+    [0, '#000000'],
+    [10, '#ffffff'],
+  ]);
+  await el.updateComplete;
+  await waitUntil(() => el.map!.getSource('promote-id-check') != null, 'source never added', {
+    timeout: 2000,
+  });
+
+  expect(addSourceOptions).to.not.have.property('promoteId');
+});
+
 it('fires lyra-map-click with the lngLat and no feature when there is no choropleth', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -400,6 +485,68 @@ it('calls setStyle when mapStyle changes after the map has mounted', async () =>
   await el.updateComplete;
 
   expect(calledWith).to.equal(NEXT_STYLE);
+});
+
+it('accepts the string style-URL form of mapStyle and passes it through to setStyle, not just the StyleSpecification object form', async () => {
+  const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+
+  let calledWith: unknown;
+  el.map!.setStyle = ((style: unknown) => {
+    calledWith = style;
+    return el.map;
+  }) as typeof el.map.setStyle;
+
+  el.mapStyle = 'https://example.test/lyra-map-style.json';
+  await el.updateComplete;
+
+  expect(calledWith).to.equal('https://example.test/lyra-map-style.json');
+});
+
+it('constructs the underlying maplibregl.Map with a string style-URL mapStyle set from initial mount, and maplibre-gl actually requests and loads it as a style', async () => {
+  // Fully stubbed (never touches the real network, so this doesn't depend on
+  // outbound network access being available in CI) -- proves the string
+  // flowed all the way into maplibre-gl's own style-loading request and
+  // successfully loaded, not merely that `new Map({ style })` accepted a
+  // string without throwing synchronously.
+  const requestedUrls: string[] = [];
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.includes('lyra-map-style.json')) {
+      requestedUrls.push(url);
+      return Promise.resolve(
+        new Response(JSON.stringify(RASTER_STYLE), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }
+    return originalFetch(input, init);
+  }) as typeof window.fetch;
+
+  const el = document.createElement('lyra-map') as LyraMap;
+  el.mapStyle = 'https://example.test/lyra-map-style.json';
+  document.body.appendChild(el);
+  try {
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    await waitUntil(
+      () => requestedUrls.length > 0,
+      'the string mapStyle was never requested as a style',
+      { timeout: 2000 },
+    );
+    await waitUntil(
+      () => el.map!.isStyleLoaded(),
+      'the style loaded from the string mapStyle never finished loading',
+      { timeout: 2000 },
+    );
+  } finally {
+    el.remove();
+    window.fetch = originalFetch;
+  }
 });
 
 it('re-applies the choropleth once the new style finishes loading after a mapStyle change', async () => {

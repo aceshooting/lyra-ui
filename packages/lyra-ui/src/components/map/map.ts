@@ -102,6 +102,15 @@ function sanitizeSwatchColor(color: string): string | undefined {
  * choropleth GeoJSON layer, plus a raw `map` escape hatch. Requires the
  * optional peer dep `maplibre-gl` (consumers also import its CSS once).
  *
+ * The underlying `maplibregl.Map` — and the WebGL context it opens — isn't
+ * constructed until this element is first visible in the viewport (tracked
+ * via `IntersectionObserver`), even once the `maplibre-gl` peer dependency
+ * has finished loading. Browsers hard-cap concurrent WebGL contexts per
+ * page, so a grid/dashboard of many `<lyra-map>` instances only constructs
+ * the ones actually on-screen instead of racing to exhaust that budget the
+ * instant each one mounts. `map` stays `undefined` (and `lyra-map-load`
+ * doesn't fire) until construction actually happens.
+ *
  * @customElement lyra-map
  * @event lyra-map-load - Fired once the underlying maplibregl.Map loads.
  * @event lyra-map-click - `detail: { lngLat, feature? }`.
@@ -124,6 +133,16 @@ export class LyraMap extends LyraElement {
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
   @state() private loading = true;
+
+  // Gates the actual `new mod.Map(...)` construction (see `tryConstructMap()`)
+  // -- starts `false` so a `<lyra-map>` mounted off-screen doesn't open a
+  // WebGL context before it's ever seen, and only flips `true` once the
+  // IntersectionObserver below reports this element actually intersecting
+  // the viewport. Defaults `true` outright when `IntersectionObserver` isn't
+  // available at all (fail open, matching `lyra-chart`'s own fallback)
+  // rather than gating construction on an observer that will never fire.
+  @state() private visible = typeof IntersectionObserver === 'undefined';
+  private intersectionObserver?: IntersectionObserver;
 
   @query('[part="container"]') private containerEl?: HTMLElement;
   private _map?: import('maplibre-gl').Map;
@@ -176,6 +195,16 @@ export class LyraMap extends LyraElement {
   connectedCallback(): void {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
+    // A reconnect always tears the map down in disconnectedCallback() below,
+    // so it needs its own fresh visibility read rather than trusting
+    // whatever `visible` was left at from before the previous disconnect.
+    this.visible = typeof IntersectionObserver === 'undefined';
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting) this.visible = true;
+      });
+      this.intersectionObserver.observe(this);
+    }
     void loadMaplibre().then(async (mod) => {
       // A newer connectedCallback (disconnect + reconnect) already
       // superseded this attempt while loadMaplibre()'s cached promise was
@@ -196,29 +225,7 @@ export class LyraMap extends LyraElement {
       // already ran) — or superseded by yet another disconnect+reconnect
       // cycle that happened during the `await` above.
       if (generation !== this._connectGeneration || !this.containerEl || !this.isConnected) return;
-      this._map = new mod.Map({
-        container: this.containerEl,
-        style: this.mapStyle,
-        center: this.center,
-        zoom: this.zoom,
-      });
-      this._map.on('load', () => {
-        this._styleLoaded = true;
-        this.applyChoropleth();
-        this.applyMarkers();
-        this.emit('lyra-map-load');
-      });
-      this._map.on('click', (e) => {
-        const fillLayerId = this._appliedFillLayerId;
-        const features =
-          fillLayerId && this._map!.getLayer(fillLayerId)
-            ? this._map!.queryRenderedFeatures(e.point, { layers: [fillLayerId] })
-            : [];
-        this.emit('lyra-map-click', {
-          lngLat: [e.lngLat.lng, e.lngLat.lat],
-          feature: features[0],
-        });
-      });
+      this.tryConstructMap();
     });
   }
 
@@ -229,14 +236,58 @@ export class LyraMap extends LyraElement {
     this._styleLoaded = false;
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
+    this.intersectionObserver?.disconnect();
+    this.intersectionObserver = undefined;
     for (const marker of this._markerInstances.values()) marker.remove();
     this._markerInstances.clear();
     this._markerColors.clear();
   }
 
+  /**
+   * Constructs the underlying `maplibregl.Map` — called once both the
+   * lazy-loaded `maplibre-gl` module has resolved and this element has been
+   * observed intersecting the viewport, whichever settles last. Idempotent
+   * (a no-op once `_map` already exists), so it's safe to call from both the
+   * `connectedCallback()` load path and the visibility path in `updated()`
+   * below without risking a double construction.
+   */
+  private tryConstructMap(): void {
+    if (this._map || !this._maplibreModule || !this.containerEl || !this.visible || !this.isConnected) return;
+    const mod = this._maplibreModule;
+    this._map = new mod.Map({
+      container: this.containerEl,
+      style: this.mapStyle,
+      center: this.center,
+      zoom: this.zoom,
+    });
+    this._map.on('load', () => {
+      this._styleLoaded = true;
+      this.applyChoropleth();
+      this.applyMarkers();
+      this.emit('lyra-map-load');
+    });
+    this._map.on('click', (e) => {
+      const fillLayerId = this._appliedFillLayerId;
+      const features =
+        fillLayerId && this._map!.getLayer(fillLayerId)
+          ? this._map!.queryRenderedFeatures(e.point, { layers: [fillLayerId] })
+          : [];
+      this.emit('lyra-map-click', {
+        lngLat: [e.lngLat.lng, e.lngLat.lat],
+        feature: features[0],
+      });
+    });
+  }
+
   protected updated(changed: PropertyValues): void {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
+
+    // Became visible after the maplibre-gl module had already loaded (the
+    // reverse order — module loads first, visibility follows — is the
+    // common case and is instead handled at the end of the
+    // `loadMaplibre().then()` chain in connectedCallback() above).
+    if (changed.has('visible') && this.visible) this.tryConstructMap();
 
     if (changed.has('mapStyle') && this._map) {
       // A style change wipes every layer/source maplibre-gl knows about, so
@@ -283,7 +334,16 @@ export class LyraMap extends LyraElement {
       // `geojson` may have changed even though `sourceId`/`stops` didn't.
       existingSource.setData(geojson);
     } else {
-      this._map.addSource(sourceId, { type: 'geojson', data: geojson, promoteId: 'id' });
+      // No `promoteId` -- maplibre-gl falls back to its own default id
+      // resolution (the standard top-level GeoJSON `Feature.id`, when
+      // present). A hardcoded `promoteId: 'id'` here would instead require
+      // every feature to *also* duplicate its id inside `properties.id`,
+      // silently discarding the real top-level `id` otherwise and breaking
+      // `feature.id` on `lyra-map-click` for the common case. Nothing in this
+      // component actually needs feature-state promotion today; if that's
+      // added later it should be driven by an explicit, documented
+      // `ChoroplethLayer` option (e.g. `idField`), not a silent default.
+      this._map.addSource(sourceId, { type: 'geojson', data: geojson });
     }
     this._appliedChoroplethSourceId = sourceId;
 
