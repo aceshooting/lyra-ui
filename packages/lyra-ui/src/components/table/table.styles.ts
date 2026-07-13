@@ -126,6 +126,20 @@ export const styles = css`
     background: var(--lyra-color-surface);
     box-shadow: var(--lyra-size-1px) 0 0 0 var(--lyra-color-border);
   }
+  [part='foot'] {
+    position: sticky;
+    inset-block-end: 0;
+    background: var(--lyra-color-surface);
+  }
+  [part='footer-cell'] {
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    font-weight: var(--lyra-font-weight-semibold);
+    text-align: start;
+  }
+  [part='footer-cell'][data-align='end'] {
+    text-align: end;
+  }
   [part='more-button'],
   [part='reveal-columns-button'] {
     display: block;

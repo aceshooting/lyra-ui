@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../internal/icons.js';
@@ -20,6 +21,14 @@ export interface TableColumn<T> {
    *  `position: sticky` so it stays visible while the table scrolls
    *  horizontally. */
   sticky?: boolean;
+  /** Renders a sticky-bottom footer cell for this column, computed from every currently-rendered
+   *  row (post-sort, pre-pagination) -- e.g. a column total. Omit for a column with no footer
+   *  value; a `<tfoot>` renders at all only when at least one column defines this. */
+  footer?(rows: T[]): unknown;
+  /** Applied directly to the generated `<td>` via `styleMap` -- e.g. a computed heat-tint
+   *  background that a `cell()`-returned inner element can't paint into the cell's own padding.
+   *  Omit for no per-cell style override (the default; unchanged output). */
+  cellStyle?(row: T): Record<string, string> | undefined;
   cell: (row: T) => unknown;
 }
 
@@ -112,6 +121,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart header-cell - Each `<th>` header cell.
  * @csspart row - Each body `<tr>`.
  * @csspart cell - Each body `<td>`.
+ * @csspart foot - The `<tfoot>`, only rendered when at least one column defines `footer`.
+ * @csspart footer-row - The single footer row.
+ * @csspart footer-cell - A single footer cell.
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
@@ -592,6 +604,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                         data-align=${col.align ?? 'start'}
                         data-priority=${col.priority ?? nothing}
                         ?data-sticky=${col.sticky}
+                        style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
                       >
                         ${col.cell(row)}
                       </td>`,
@@ -600,6 +613,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               },
             )}
           </tbody>
+          ${this.columns.some((c) => c.footer)
+            ? html`<tfoot part="foot">
+                <tr part="footer-row">
+                  ${this.columns.map(
+                    (col) => html`<td
+                      part="footer-cell"
+                      data-col-key=${col.key}
+                      data-align=${col.align ?? 'start'}
+                    >${col.footer?.(this.rows) ?? ''}</td>`,
+                  )}
+                </tr>
+              </tfoot>`
+            : nothing}
         </table>
         ${this.columnsHidden
           ? html`<button
