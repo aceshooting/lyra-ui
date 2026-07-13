@@ -79,6 +79,27 @@ it('emits input alongside change on selection, matching a native <select>', asyn
   expect(inputFired).to.be.true;
 });
 
+it('does not refire change/input when reopening and re-clicking the already-selected row', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  el.value = 'b';
+  await el.updateComplete;
+
+  el.open = true;
+  await el.updateComplete;
+
+  let changeFired = false;
+  let inputFired = false;
+  el.addEventListener('change', () => (changeFired = true));
+  el.addEventListener('input', () => (inputFired = true));
+  rows(el)[1].click();
+  await el.updateComplete;
+
+  expect(el.value).to.equal('b');
+  expect(el.open).to.be.false;
+  expect(changeFired).to.be.false;
+  expect(inputFired).to.be.false;
+});
+
 it('navigates with ArrowDown and selects the active option with Enter', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
@@ -650,6 +671,23 @@ describe('single-option auto-commit', () => {
     await oneEvent(el, 'change');
     expect(el.value).to.equal('a');
     expect(el.open).to.be.false;
+  });
+
+  it('does not refire change/input on a second click once the sole option is already selected', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    setTimeout(() => trigger(el).click());
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('a');
+
+    let changeFired = false;
+    let inputFired = false;
+    el.addEventListener('change', () => (changeFired = true));
+    el.addEventListener('input', () => (inputFired = true));
+    trigger(el).click();
+    await el.updateComplete;
+    expect(el.value).to.equal('a');
+    expect(changeFired).to.be.false;
+    expect(inputFired).to.be.false;
   });
 
   it('still opens normally (three-row combobox chrome, no auto-commit) once a second option is enabled', async () => {

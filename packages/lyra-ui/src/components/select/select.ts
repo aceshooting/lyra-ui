@@ -403,10 +403,19 @@ export class LyraSelect extends LyraElement {
 
   private selectOption(option: LyraOption): void {
     if (this.effectiveDisabled || option.disabled) return;
+    // Reopening the listbox (or, on a single-option select, simply
+    // reactivating the trigger) and landing back on the already-selected
+    // row is not a selection change -- `change`/`input` are documented as
+    // firing when "the selection changed", so only emit them when the
+    // value actually moves, matching a native <select> (which never fires
+    // `change` for re-picking the currently-selected <option>).
+    const changed = option.value !== this._selected;
     this.value = option.value;
     this.hide();
-    this.emit('input');
-    this.emit('change');
+    if (changed) {
+      this.emit('input');
+      this.emit('change');
+    }
   }
 
   private onTriggerClick = (): void => {
