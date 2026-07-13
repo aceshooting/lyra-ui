@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
 import { styles } from './lite-chart.styles.js';
@@ -912,4 +912,129 @@ it('renders gridlines and y-axis tick labels by default (hideAxis unset, regress
   ></lyra-lite-chart>`);
   expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.be.greaterThan(0);
   expect(el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="end"]').length).to.be.greaterThan(0);
+});
+
+// --- minBarHeight -----------------------------------------------------------------
+
+describe('minBarHeight', () => {
+  it('floors a tiny nonzero stacked segment to at least minBarHeight px', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        stacked
+        min-bar-height="4"
+        .labels=${['a']}
+        .datasets=${[
+          { label: 'big', data: [1000] },
+          { label: 'tiny', data: [1] },
+        ]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+    expect(bars).to.have.length(2);
+    const tinyHeight = Number(bars[1]!.getAttribute('height'));
+    expect(tinyHeight).to.be.at.least(4);
+  });
+
+  it('leaves bar height untouched when minBarHeight is unset', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        stacked
+        .labels=${['a']}
+        .datasets=${[
+          { label: 'big', data: [1000] },
+          { label: 'tiny', data: [1] },
+        ]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+    const tinyHeight = Number(bars[1]!.getAttribute('height'));
+    expect(tinyHeight).to.be.lessThan(4);
+  });
+});
+
+// --- scale="sqrt" stacked proportionality -----------------------------------------
+
+describe('scale="sqrt" stacked proportionality', () => {
+  it('sqrt-compresses the bar total, then splits it linearly by each segment share of that bar', async () => {
+    // Reproduces the filed bug's exact repro: three categories, one stacked bar, values
+    // 10/10/80 (domain max 100) -- segment heights must come out to 10%/10%/80% of the
+    // sqrt-compressed bar height, not 31.6%/13.1%/55.3% (today's buggy per-segment-position sqrt).
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        stacked
+        scale="sqrt"
+        begin-at-zero
+        .labels=${['only']}
+        .datasets=${[
+          { label: 'A', data: [10] },
+          { label: 'B', data: [10] },
+          { label: 'C', data: [80] },
+        ]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+    expect(bars).to.have.length(3);
+    const heights = Array.from(bars).map((b) => Number(b.getAttribute('height')));
+    const total = heights.reduce((a, b) => a + b, 0);
+    const shares = heights.map((h) => h / total);
+    expect(shares[0]).to.be.closeTo(0.1, 0.01);
+    expect(shares[1]).to.be.closeTo(0.1, 0.01);
+    expect(shares[2]).to.be.closeTo(0.8, 0.01);
+  });
+
+  it('non-stacked scale="sqrt" is unaffected (already proportional, single segment per bar)', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        scale="sqrt"
+        begin-at-zero
+        .labels=${['a', 'b']}
+        .datasets=${[{ label: 'A', data: [10, 90] }]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+    const h0 = Number(bars[0]!.getAttribute('height'));
+    const h1 = Number(bars[1]!.getAttribute('height'));
+    // sqrt(10/90) ≈ 0.333 of h1's height -- same formula as before this task.
+    expect(h0 / h1).to.be.closeTo(Math.sqrt(10 / 90), 0.02);
+  });
+});
+
+// --- chartLabel --------------------------------------------------------------------
+
+describe('chartLabel', () => {
+  it('overrides the auto-derived <svg> aria-label when set', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        chart-label="Custom chart description"
+        .labels=${['a']}
+        .datasets=${[{ label: 'A', data: [1] }]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Custom chart description');
+  });
+
+  it('falls back to the auto-derived label (joined dataset labels, or "Chart") when unset', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart .labels=${['a']} .datasets=${[{ label: 'A', data: [1] }]}></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('A');
+  });
 });

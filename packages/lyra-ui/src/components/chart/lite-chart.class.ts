@@ -220,6 +220,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
    *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
   @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;
+  /** A pixel floor for a bar/stacked-segment's rendered height, for a nonzero value that would
+   *  otherwise round to sub-pixel and become visually indistinguishable from absent (while still
+   *  being focusable/tab-stoppable/announced) — a real accessibility/visibility gap for
+   *  heterogeneous-magnitude stacked data. `type="bar"` only; a value of exactly `0` is unaffected
+   *  (that's `skipZero`'s job, not this one's). Unset (the default) reproduces today's
+   *  `Math.max(0, y2 - y1)` exactly, with no floor. */
+  @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
+  /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
+   *  'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)
+   *  keeps today's auto-derived (English-fallback) label exactly. */
+  @property({ attribute: 'chart-label' }) chartLabel?: string;
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
@@ -359,13 +370,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   /**
    * A value-to-y-pixel mapping for a bar's top/bottom edge. `'linear'` (the
-   * default) is the standard `niceDomain`-fraction formula, unchanged from
-   * before `scale` existed. `'sqrt'` instead compresses via
-   * `Math.sqrt(value / domainMax)` (mirroring `lyra-heatmap`'s matrix-mode
-   * `sqrt` branch), clamping `value` to `[0, hi]` first since a negative
-   * input has no real square root — bar charts using `scale="sqrt"` are
-   * expected to carry non-negative data, same assumption as the heatmap
-   * precedent this mirrors.
+   * default) is the standard `niceDomain`-fraction formula. `'sqrt'`
+   * compresses via `Math.sqrt(value / domainMax)`, clamping `value` to
+   * `[0, hi]` first since a negative input has no real square root.
+   *
+   * NOT used for the `stacked && scale === 'sqrt'` case — that combination's
+   * proportionality (compress the bar's *total* height once, then split it
+   * linearly by each segment's share) is computed directly in `renderBars()`,
+   * since a per-segment call here (compressing each segment's absolute
+   * cumulative stack position independently) is exactly the non-proportional
+   * bug this method's stacked callers used to have.
    */
   private barValueToY(value: number, plotY: number, plotH: number, lo: number, hi: number): number {
     if (this.scale === 'sqrt') {
@@ -477,6 +491,29 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const barW = (groupW - BAR_GAP * slot * (groupCount - 1)) / groupCount;
     const markIndexes = this.markIndexMap();
     const activeMarkIndex = this.normalizedMarkIndex();
+    // Only meaningful for stacked + scale="sqrt": each category's *positive*
+    // and *negative* stack totals, sqrt-compressed once per category (not
+    // per segment) -- see barValueToY()'s doc for why this has to be a
+    // per-category pre-pass rather than a per-segment computation.
+    const stackedSqrt = this.stacked && this.scale === 'sqrt';
+    const domainMax = hi > 0 ? hi : 1;
+    const posTotals: number[] = [];
+    const negTotals: number[] = [];
+    if (stackedSqrt) {
+      for (let i = 0; i < n; i++) {
+        let pos = 0;
+        let neg = 0;
+        for (const s of this.datasets) {
+          const v = s.data[i];
+          if (v == null || !Number.isFinite(v)) continue;
+          if (this.skipZero && v === 0) continue;
+          if (v >= 0) pos += v;
+          else neg += v;
+        }
+        posTotals.push(pos);
+        negTotals.push(neg);
+      }
+    }
 
     const bars: TemplateResult[] = [];
     for (let i = 0; i < n; i++) {
@@ -488,16 +525,45 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const slotStart = origin + (slot - groupW) / 2;
       let stackPos = 0; // running positive-side offset (in value units) for stacked bars
       let stackNeg = 0; // running negative-side offset
+      // sqrt-compressed pixel height of this category's positive/negative
+      // stack total, computed once per category (not per segment) -- see
+      // barValueToY()'s doc comment for why this differs from the old,
+      // buggy per-segment-cumulative-position sqrt.
+      const posCompressedH = stackedSqrt ? Math.sqrt(Math.min(domainMax, posTotals[i]!) / domainMax) * plotH : 0;
+      const negCompressedH = stackedSqrt ? Math.sqrt(Math.min(domainMax, -negTotals[i]!) / domainMax) * plotH : 0;
       this.datasets.forEach((s, di) => {
         const v = s.data[i];
         if (v == null || !Number.isFinite(v)) return;
         if (this.skipZero && v === 0) return;
         const color = this.colorFor(di, s);
         let rectX: number;
-        let barValLo: number;
-        let barValHi: number;
-        if (this.stacked) {
+        let y1: number;
+        let y2: number;
+        if (this.stacked && stackedSqrt) {
           rectX = slotStart;
+          if (v >= 0) {
+            // Split the category's already-compressed total height linearly
+            // by this segment's share of the category's own positive total
+            // -- proportional by construction, unlike compressing each
+            // segment's absolute cumulative position independently.
+            const total = posTotals[i]!;
+            const shareLo = total > 0 ? stackPos / total : 0;
+            const shareHi = total > 0 ? (stackPos + v) / total : 0;
+            y1 = plotY + plotH - shareHi * posCompressedH;
+            y2 = plotY + plotH - shareLo * posCompressedH;
+            stackPos += v;
+          } else {
+            const total = -negTotals[i]!;
+            const shareLo = total > 0 ? -stackNeg / total : 0;
+            const shareHi = total > 0 ? (-stackNeg - v) / total : 0;
+            y1 = plotY + plotH + shareLo * negCompressedH;
+            y2 = plotY + plotH + shareHi * negCompressedH;
+            stackNeg += v;
+          }
+        } else if (this.stacked) {
+          rectX = slotStart;
+          let barValLo: number;
+          let barValHi: number;
           if (v >= 0) {
             barValLo = stackPos;
             barValHi = stackPos + v;
@@ -507,20 +573,33 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             barValHi = stackNeg;
             stackNeg += v;
           }
+          y1 = this.barValueToY(barValHi, plotY, plotH, lo, hi);
+          y2 = this.barValueToY(barValLo, plotY, plotH, lo, hi);
         } else {
           rectX = slotStart + di * (barW + BAR_GAP * slot);
           const zeroClamped = Math.min(hi, Math.max(lo, 0));
-          barValLo = Math.min(zeroClamped, v);
-          barValHi = Math.max(zeroClamped, v);
+          const barValLo = Math.min(zeroClamped, v);
+          const barValHi = Math.max(zeroClamped, v);
+          y1 = this.barValueToY(barValHi, plotY, plotH, lo, hi);
+          y2 = this.barValueToY(barValLo, plotY, plotH, lo, hi);
         }
-        const y1 = this.barValueToY(barValHi, plotY, plotH, lo, hi);
-        const y2 = this.barValueToY(barValLo, plotY, plotH, lo, hi);
         const label = this.labels[i];
         const custom = this.resolvePointText(label, v, di);
         const ariaLabel = custom ?? `${s.label}, ${label}: ${v}`;
         const titleText = custom ?? `${s.label} — ${label}: ${v}`;
         const w = Math.max(0, barW);
-        const h = Math.max(0, y2 - y1);
+        let h = Math.max(0, y2 - y1);
+        // A nonzero value's segment can round to sub-pixel and become
+        // visually/indistinguishable from absent -- minBarHeight floors it,
+        // pulling y1 upward by the same amount so the segment still
+        // terminates at its correct baseline (a floored segment "pushes" any
+        // segments stacked after it, the same tradeoff a hand-rolled
+        // Math.max(2, scaleToLength(...)) floor accepts).
+        if (this.minBarHeight != null && v !== 0 && h < this.minBarHeight) {
+          const extra = this.minBarHeight - h;
+          y1 -= extra;
+          h = this.minBarHeight;
+        }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         bars.push(
           this.roundedBars
@@ -676,7 +755,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       return svg`<text part="axis-label" x=${x} y=${plotY + plotH + 14} text-anchor="middle">${label}</text>`;
     });
 
-    const chartLabel = this.datasets.map((d) => d.label).join(', ') || 'Chart';
+    const chartLabel = this.chartLabel ?? (this.datasets.map((d) => d.label).join(', ') || 'Chart');
     const marksForA11y = this.interactiveMarks();
     const activeMark = this.normalizedMarkIndex(marksForA11y);
 
