@@ -18,9 +18,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
       - run: pnpm lint
+      # Build before test: src/package-entrypoints.test.ts dynamically imports
+      # the package's published entry points (./dist/lyra.js etc., per
+      # package.json's "exports"), which only exist after a build.
+      - run: pnpm build
       - run: pnpm test
       - run: pnpm --filter @aceshooting/lyra-ui test:coverage
-      - run: pnpm build
       - run: pnpm manifest
       - run: pnpm manifest:check
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
