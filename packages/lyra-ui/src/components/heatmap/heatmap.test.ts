@@ -232,6 +232,22 @@ it('calendar mode: a single malformed date entry does not blank the whole calend
   expect(canvas.height).to.be.greaterThan(0);
 });
 
+it('calendar mode: a day missing from `days` entirely (a gap) is painted with the no-data fill, not left transparent', async () => {
+  const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+  el.days = [
+    { date: '2026-03-01', value: 5 }, // Sunday, week 0, weekday 0
+    { date: '2026-03-08', value: 9 }, // Sunday, week 1, weekday 0 — leaves week 0's weekdays 1-6 as gaps
+  ];
+  await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const dpr = window.devicePixelRatio || 1;
+  // week 0, weekday 1 (Monday, 2026-03-02) has no entry in `days` at all —
+  // it must still get the no-data fill (non-zero alpha), not stay transparent.
+  const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(32 * dpr), 1, 1).data;
+  expect(pixel[3]).to.be.greaterThan(0);
+});
+
 describe('bucket-count', () => {
   it('defaults to 5', async () => {
     const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
@@ -307,6 +323,94 @@ it('matrix mode (default): is unaffected by the new mode/days properties', async
   await el.updateComplete;
   expect(el.mode).to.equal('matrix');
   expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
+});
+
+describe('per-update-cycle caching (perf)', () => {
+  it('does not recompute the value range on a hover-only update that never touches values/days/mode', async () => {
+    const el = (await fixture(html`<lyra-heatmap cell-size="22"></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+
+    let calls = 0;
+    const instrumented = el as unknown as { computeValueRange: () => [number, number] | null };
+    const original = instrumented.computeValueRange.bind(el);
+    instrumented.computeValueRange = () => {
+      calls++;
+      return original();
+    };
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // PAD_LEFT=60, PAD_TOP=20, cellSize=22 — lands inside cell (0, 0).
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 65, clientY: rect.top + 25, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false); // sanity: the hover actually landed on the cell and updated state
+
+    expect(calls).to.equal(0);
+  });
+
+  it('does recompute the value range once values actually change', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x'];
+    el.values = [[5]];
+    await el.updateComplete;
+
+    let calls = 0;
+    const instrumented = el as unknown as { computeValueRange: () => [number, number] | null };
+    const original = instrumented.computeValueRange.bind(el);
+    instrumented.computeValueRange = () => {
+      calls++;
+      return original();
+    };
+
+    el.values = [[9]];
+    await el.updateComplete;
+    expect(calls).to.equal(1);
+  });
+
+  it('caches the calendar grid layout and does not rebuild it on a hover-only update', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const cached = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
+    expect(cached).to.exist;
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // CAL_PAD_LEFT=28, CAL_LABEL_H=16, CAL_CELL=11 — lands inside week 0, weekday 0
+    // (the single day in `days`), so this genuinely triggers a hoverCell update.
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 32, clientY: rect.top + 20, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false); // sanity: the hover actually landed on the cell and updated state
+
+    const after = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
+    // Same reference: a hover-only update (days unchanged) must not rebuild it.
+    expect(after).to.equal(cached);
+  });
+
+  it('rebuilds the cached calendar grid once `days` actually changes', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const before = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
+
+    el.days = [
+      { date: '2026-03-01', value: 5 },
+      { date: '2026-03-08', value: 9 },
+    ];
+    await el.updateComplete;
+    const after = (el as unknown as { cachedCalendarGrid: unknown }).cachedCalendarGrid;
+    expect(after).to.not.equal(before);
+  });
 });
 
 describe('hexToRgb', () => {

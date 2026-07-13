@@ -1,4 +1,4 @@
-/** Maps `value` in `[lo, hi]` to a 0.1–1.0 alpha, matching the cd-heatmap ramp. */
+/** Maps `value` in `[lo, hi]` to a 0.1-1.0 alpha so the lowest real value still reads as faintly present rather than invisible. */
 export function linearAlpha(value: number, lo: number, hi: number): number {
   const span = hi - lo || 1;
   const t = (value - lo) / span;
@@ -34,9 +34,14 @@ export function minMax(values: number[]): [number, number] | null {
  * (`drawMatrix()`) before `sqrtStep` is ever invoked, so a real `count === 0`
  * (e.g. "zero events that day") reaches this function and must bucket to the
  * lowest ramp step like any other legitimate value, not render as no-data.
+ * Likewise, `max <= 0` means every real value in the dataset is zero (a
+ * legitimate "zero events everywhere" dataset, not an absence of data) — the
+ * whole range collapses to a single point, so `count` (itself necessarily 0)
+ * buckets to the lowest step rather than being misread as no-data.
  */
 export function sqrtStep(count: number, max: number, steps: number): number {
-  if (count < 0 || max <= 0) return -1;
+  if (count < 0) return -1;
+  if (max <= 0) return 0;
   const ratio = Math.sqrt(count) / Math.sqrt(max);
   return Math.min(steps - 1, Math.floor(ratio * steps));
 }

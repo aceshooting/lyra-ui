@@ -11,13 +11,16 @@ it('linearAlpha handles a zero-span range without dividing by zero', () => {
   expect(linearAlpha(5, 5, 5)).to.equal(0.1);
 });
 
-it('sqrtStep returns -1 for a negative count (no-data sentinel) or a degenerate max', () => {
+it('sqrtStep returns -1 only for a negative count (the no-data sentinel)', () => {
   expect(sqrtStep(-1, 10, 7)).to.equal(-1);
-  expect(sqrtStep(5, 0, 7)).to.equal(-1);
 });
 
 it('buckets a real zero-value count into the lowest ramp step, not "no data"', () => {
   expect(sqrtStep(0, 100, 7)).to.equal(0);
+});
+
+it('buckets an entirely-zero dataset (max <= 0) to the lowest ramp step instead of no-data', () => {
+  expect(sqrtStep(0, 0, 7)).to.equal(0);
 });
 
 it('still returns -1 for a negative count', () => {

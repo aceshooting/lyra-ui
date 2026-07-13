@@ -6,7 +6,7 @@ import { defineElement } from '../../internal/prefix.js';
 import { srOnly } from '../../internal/a11y.js';
 import { linearAlpha, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
-import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarDay } from './calendar-grid.js';
+import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
 
 const PAD_LEFT = 60;
 const PAD_TOP = 20;
@@ -183,7 +183,8 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * - `"calendar"`: a GitHub-style Sunday-Saturday x week grid built from
  *   `days`, colored by `quartileBucket()` into `bucketCount` buckets. As in
  *   matrix mode, a cell whose `value` is negative or non-finite is treated
- *   as "no data" rather than being bucketed.
+ *   as "no data" rather than being bucketed — as is a grid position with no
+ *   matching entry in `days` at all (a gap in a sparse calendar).
  *
  * The sequential color ramp's endpoints are read from the
  * `--lyra-heatmap-scale-lo`/`-hi` custom properties (declared in
@@ -263,6 +264,16 @@ export class LyraHeatmap extends LyraElement {
   private dprQuery?: MediaQueryList;
   /** The current value range, refreshed once per update cycle by `willUpdate()`. See `computeValueRange()`. */
   private cachedValueRange: [number, number] | null = null;
+  /**
+   * The calendar-mode grid layout, refreshed by `willUpdate()` only when
+   * `days` actually changes (see `computeValueRange()`'s twin comment above)
+   * — `buildCalendarGrid()` parses every date, filters invalid ones, and does
+   * a full `.slice().sort()` for month labels, so recomputing it from
+   * `drawCalendar()`, `hitTestCalendar()`, `calendarCellAt()`, and
+   * `onCalendarKeyDown()` independently would redo that work 2-4x for a
+   * single hover/click/keydown.
+   */
+  private cachedCalendarGrid = buildCalendarGrid(this.days);
 
   /** The cell currently under the pointer (`null` when not hovering one) — drives `[part="tooltip"]`. */
   @state() private hoverCell: CellPos | null = null;
@@ -326,11 +337,23 @@ export class LyraHeatmap extends LyraElement {
       this.hoverCell = null;
       this.liveText = '';
     }
+    // Calendar-mode grid layout depends only on `days` (not `mode`) — rebuilt
+    // here, once per cycle, instead of independently by every call site (see
+    // `cachedCalendarGrid`'s doc comment).
+    if (changed.has('days') || !this.hasUpdated) {
+      this.cachedCalendarGrid = buildCalendarGrid(this.days);
+    }
     if (!this.hasUpdated) {
       this.authorSuppliedRole = this.hasAttribute('role');
       this.authorSuppliedAriaLabel = this.hasAttribute('aria-label');
     }
-    this.cachedValueRange = this.computeValueRange();
+    // A hover/keyboard-focus @state() change (hoverCell/focusedCell/liveText)
+    // triggers this same willUpdate() but never touches values/days/mode, so
+    // gating the O(rows*cols) rescan the same way the focus/hover reset above
+    // is gated avoids redoing it on every pointer move.
+    if (changed.has('values') || changed.has('days') || changed.has('mode') || !this.hasUpdated) {
+      this.cachedValueRange = this.computeValueRange();
+    }
     const bounds = this.cachedValueRange;
     const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
     // Only default role/aria-label when the author hasn't already supplied
@@ -477,7 +500,7 @@ export class LyraHeatmap extends LyraElement {
 
   private drawCalendar(): void {
     if (!this.canvas) return;
-    const { cells, weekCount, firstWeekStart, monthLabels } = buildCalendarGrid(this.days);
+    const { cells, weekCount, firstWeekStart, monthLabels } = this.cachedCalendarGrid;
     const w = this.columnXFor(Math.max(1, weekCount));
     const h = CAL_LABEL_H + 7 * (CAL_CELL + CAL_GAP);
     const dpr = window.devicePixelRatio || 1;
@@ -502,14 +525,24 @@ export class LyraHeatmap extends LyraElement {
     const ramp = Array.from({ length: buckets }, (_, i) => mixRgb(loRgb, hiRgb, i / (buckets - 1)));
     const noDataFill = this.noDataFill();
 
-    for (const cell of cells) {
-      const x = this.columnXFor(cell.week);
-      const y = CAL_LABEL_H + cell.weekday * (CAL_CELL + CAL_GAP);
-      ctx.fillStyle =
-        cell.value < 0 || !Number.isFinite(cell.value)
-          ? noDataFill
-          : ramp[quartileBucket(cell.value, sortedValues, buckets)]!;
-      ctx.fillRect(x, y, CAL_CELL, CAL_CELL);
+    // Indexed once per draw so every (week, weekday) grid position can be
+    // painted below, not just positions with a matching entry in `cells` — a
+    // day missing from `days` entirely (a gap in a sparse calendar) still
+    // gets a real grid cell (see `calendarCellAt()`'s doc comment for the
+    // same `-1` no-data sentinel used here) instead of being left
+    // transparent.
+    const cellsByPos = new Map<string, CalendarCell>();
+    for (const cell of cells) cellsByPos.set(`${cell.week}:${cell.weekday}`, cell);
+
+    for (let week = 0; week < weekCount; week++) {
+      for (let weekday = 0; weekday < 7; weekday++) {
+        const value = cellsByPos.get(`${week}:${weekday}`)?.value ?? -1;
+        const x = this.columnXFor(week);
+        const y = CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP);
+        ctx.fillStyle =
+          value < 0 || !Number.isFinite(value) ? noDataFill : ramp[quartileBucket(value, sortedValues, buckets)]!;
+        ctx.fillRect(x, y, CAL_CELL, CAL_CELL);
+      }
     }
 
     // Annotation ring overlay, stroked after the fill pass so it reads
@@ -684,7 +717,7 @@ export class LyraHeatmap extends LyraElement {
   }
 
   private hitTestCalendar(x: number, y: number): CalendarCellPos | null {
-    const { weekCount } = buildCalendarGrid(this.days);
+    const { weekCount } = this.cachedCalendarGrid;
     if (weekCount === 0) return null;
     const week = this.weekAtX(x, weekCount);
     const weekday = Math.floor((y - CAL_LABEL_H) / (CAL_CELL + CAL_GAP));
@@ -701,7 +734,7 @@ export class LyraHeatmap extends LyraElement {
    * sentinel uses in matrix mode), instead of being unresolvable.
    */
   private calendarCellAt(pos: CalendarCellPos): { date: string; value: number } {
-    const { cells, firstWeekStart } = buildCalendarGrid(this.days);
+    const { cells, firstWeekStart } = this.cachedCalendarGrid;
     const match = cells.find((c) => c.week === pos.week && c.weekday === pos.weekday);
     if (match) return { date: match.date, value: match.value };
     const date = new Date(firstWeekStart.getTime() + (pos.week * 7 + pos.weekday) * MS_PER_DAY);
@@ -857,7 +890,7 @@ export class LyraHeatmap extends LyraElement {
   }
 
   private onCalendarKeyDown(e: KeyboardEvent): void {
-    const { weekCount } = buildCalendarGrid(this.days);
+    const { weekCount } = this.cachedCalendarGrid;
     if (weekCount === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
