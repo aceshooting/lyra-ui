@@ -2,14 +2,23 @@
 
 [![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
 
-Free, clean-room [Lit](https://lit.dev) web components — a companion to
-[Web Awesome](https://webawesome.com) that provides open-source equivalents of several
-Web Awesome **Pro** components, plus a few extras. Token-compatible with Web Awesome, so
-the components look native inside a WA app, and fully usable standalone.
+**Web Awesome, plus.** Free, clean-room [Lit](https://lit.dev) web components — a companion to
+[Web Awesome](https://webawesome.com) that provides open-source, 1:1-mirrored equivalents of
+several Web Awesome **Pro** components (form controls, date pickers, toasts, charts, …), *plus*
+dozens of original components Web Awesome has no equivalent for at all — dashboard atoms, a chart
+family, temporal/graph/map visualizations, and (newest) a full **Conversation & Agent UI** family
+for building chat/agent products: message bubbles, streaming text, tool-call chips and approval
+dialogs, citations, model/settings pickers, and more. Token-compatible with Web Awesome, so the
+mirrored components look native inside a WA app, and everything is fully usable standalone.
 
-> **Independent project.** Not affiliated with or endorsed by Web Awesome. Component APIs
-> intentionally mirror Web Awesome's public API (attributes, slots, events, CSS parts) so
-> migration is a prefix rename — but every implementation here is original (clean-room).
+> **Independent project.** Not affiliated with or endorsed by Web Awesome, and no `wa-` prefix or
+> Web Awesome trademark/branding is used here. For components that *do* have a Web Awesome
+> counterpart, the public API (attributes, slots, events, CSS parts) intentionally mirrors Web
+> Awesome's own 1:1 under the `lyra-` prefix, so migrating that piece of a WA Pro app is a
+> mechanical rename — but every implementation in this package is original (clean-room; no Web
+> Awesome Pro source was ever available to or copied by this project). Most of the library, and
+> all of the Conversation & Agent UI family, has no Web Awesome counterpart to mirror in the first
+> place — see the "Mirrors" column in the tables below.
 
 ## Install
 
@@ -80,12 +89,23 @@ toast({ message: 'Saved', variant: 'success' });
 
 ## Migrating from Web Awesome Pro
 
-Everything a consumer touches is mirrored 1:1 — only the prefix differs:
+For every component that *does* have a Web Awesome counterpart — marked `wa-*` in the "Mirrors"
+column of the tables below — the public surface (attributes, slots, events, CSS parts, custom
+properties) is mirrored 1:1 under the `lyra-` prefix, so migrating that piece of a Web Awesome
+Pro app is a mechanical rename, nothing more:
 
 ```
 <wa-combobox value="x" multiple with-clear>  →  <lyra-combobox value="x" multiple with-clear>
 <wa-date-input value="2026-07-15">           →  <lyra-date-input value="2026-07-15">
 ```
+
+Everything else in the tables below — marked `— (extra)` — has no Web Awesome equivalent to
+migrate *from* in the first place, so there's nothing to rename: install the package and import
+what you need (see Usage above). That's most of this library, including every dashboard atom
+(stat cards, gauges, empty/skeleton states), the whole chart family, the temporal/graph/tree
+components, `<lyra-map>`, and the entire **Conversation & Agent UI** family (chat messages,
+streaming text, tool-call chips/dialogs, citations, model/settings pickers, and more) — Web
+Awesome has no chat/agent UI component family at all.
 
 ## Theming
 
@@ -94,8 +114,9 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Components
 
-All 38 tags below have shipped across five incremental releases (v1, then Tier 1, Tier 2,
-Tier 3, then a map/file-input batch, then widget). Grouped by the release that introduced each.
+All 83 tags below have shipped across six incremental releases (v1, then Tier 1, Tier 2, Tier 3,
+a map/file-input batch, then the Conversation & Agent UI family). Grouped by the release that
+introduced each.
 
 **v1 — form controls, toasts, sparkline**
 
@@ -115,11 +136,11 @@ Tier 3, then a map/file-input batch, then widget). Grouped by the release that i
 |-----------|---------|-------|
 | `<lyra-empty>` | — (extra) | Generic empty/no-data state |
 | `<lyra-skeleton>` | — (extra) | Loading placeholder (pulse/sheen) |
-| `<lyra-stat>` | — (extra) | KPI/stat card with trend pill |
-| `<lyra-table>` | — (extra) | Presentational, sort/select-aware data table |
+| `<lyra-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
+| `<lyra-table>` | — (extra) | Presentational, sort/select-aware data table; a column's responsive `priority` (`medium`/`low`) hides it first as the container narrows, with a reveal-columns button to force hidden columns back |
 | `<lyra-gauge>` | — (extra) | Radial or linear meter |
 | `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
-| `<lyra-split>` | — (extra) | Resizable panel layout |
+| `<lyra-split>` | — (extra) | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
 | `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 | `<lyra-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |
 
@@ -149,6 +170,57 @@ Tier 3, then a map/file-input batch, then widget). Grouped by the release that i
 |-----------|---------|-------|
 | `<lyra-map>` | — (extra) | maplibre-gl wrapper with declarative legend, choropleth GeoJSON layer, and point markers (via `markers` property), plus a raw `map` escape hatch — needs the optional peer `maplibre-gl` (see Install above). Defaults to OpenStreetMap's demo tiles when `mapStyle` is unset — **production apps must supply their own `mapStyle`** (see Install above / Known limitations) |
 | `<lyra-file-input>` | — (extra) | Drag-drop + click-to-browse file dropzone, emits raw `File[]` (no CSV/XLSX parsing — that's host-specific) |
+
+**Conversation & Agent UI — chat/agent product building blocks**
+
+Web Awesome has no chat/agent UI component family at all, so every component in this table is
+original to lyra-ui (`— (extra)`) — there's nothing to migrate from. See
+[`llms-full.txt`](./llms-full.txt) for the full API (properties, events, parts, tokens) behind
+each one-liner below.
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lyra-chat-message>` | — (extra) | Role-based (`user`/`assistant`/`system`) message bubble shell; avatar/badges header, status-aware footer (built-in retry on `status="failed"`), attachments strip — renders no message content itself, just the chrome around a slotted body |
+| `<lyra-typing-indicator>` | — (extra) | Purely presentational "assistant is responding" cue; `dots`/`pulse`/`cursor` variants |
+| `<lyra-streaming-text>` | — (extra) | Token-coalescing incremental text renderer for streamed output; auto-detects Markdown (or force via `markdown`), optional blinking cursor |
+| `<lyra-thinking-panel>` | — (extra) | Collapsible panel for an agent's intermediate reasoning transcript; `live` mode auto-scrolls (stick-to-bottom) while streaming, `post-hoc` doesn't |
+| `<lyra-generation-status>` | — (extra) | Ticking elapsed-time / token-count / throughput readout for an in-progress response, plus a built-in Stop button |
+| `<lyra-stream-status>` | — (extra) | Compact transport-health indicator (`idle`/`connecting`/`streaming`/`stalled`) with heartbeat-aware stall detection via `recordActivity()` |
+| `<lyra-markdown>` | — (extra) | Sanitized Markdown → HTML (GFM tables, fenced code, links); lazy-loads the optional peers `marked` + `dompurify` |
+| `<lyra-code-block>` | — (extra) | Fenced code display with a copy button; lazy-loads the optional peer `shiki` for syntax highlighting, degrades to plain `<pre><code>` without it |
+| `<lyra-live-region>` | — (extra) | Throttled/coalesced ARIA live-region announcer for streaming UIs, built on the reusable internal `Announcer` engine |
+| `<lyra-chat-composer>` | — (extra) | Auto-resizing message `<textarea>` + built-in send/stop button; form-associated, Enter-to-send with Shift+Enter/IME handling |
+| `<lyra-attachment-chip>` | — (extra) | Pre-send or sent file chip with thumbnail/size/upload-progress/retry; derives metadata from a real `File` or from persisted server metadata |
+| `<lyra-attachment-trigger>` | — (extra) | Attach-file affordance for a composer's leading slot; a single icon button, or a `<lyra-menu>` when more than one capability (`files`/`image`/`camera`) is configured |
+| `<lyra-mention-popover>` | — (extra) | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself |
+| `<lyra-tool-call-chip>` | — (extra) | Compact inline pill for one tool/function call mid-conversation; status-aware glyph/color, optional hover/focus detail tooltip |
+| `<lyra-tool-result-view>` + `registerToolRenderer()` | — (extra) | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lyra-json-viewer>` |
+| `<lyra-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lyra-tabs>` of Input/Preview/JSON/Raw) |
+| `<lyra-tool-approval-dialog>` | — (extra) | Human-in-the-loop approve/deny gate for one proposed tool call, with an optional inline JSON argument editor before approving |
+| `<lyra-tool-param-form>` | — (extra) | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing |
+| `<lyra-tool-select-dialog>` | — (extra) | Category-grouped, filterable, searchable dialog for picking which agent tools are enabled in a conversation |
+| `<lyra-json-viewer>` | — (extra) | Collapsible, copyable tree view for an arbitrary JSON value; path-keyed expand state survives a streamed in-place `data` patch |
+| `<lyra-citation-badge>` | — (extra) | Inline `[n]` citation marker with a hover/focus preview popover and confidence/verification-status coloring |
+| `<lyra-source-list>` + `<lyra-source-card>` | — (extra) | Collapsible "Sources" panel for one chat message, grouping per-source cards with an excerpt + "Show more" full-text toggle |
+| `<lyra-conversation-item>` | — (extra) | Selectable chat-history row with inline rename; usable standalone or as `<lyra-virtual-list>`'s `renderItem()` payload |
+| `<lyra-virtual-list>` | — (extra) | Generic windowed/virtualized list host — renders only the viewport's rows as real DOM, for a multi-thousand-row history sidebar |
+| `<lyra-app-rail>` | — (extra) | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints |
+| `<lyra-responsive-panel>` | — (extra) | The same slotted content docked inline in normal layout flow (desktop) or as a fullscreen/bottom-sheet overlay (mobile) |
+| `<lyra-dock-panel>` | — (extra) | Single panel docked to one edge of its container, drag/keyboard-resizable and collapsible — the single-edge counterpart to `<lyra-split>`'s multi-sibling-panel case |
+| `<lyra-model-select>` | — (extra) | Provider/model picker: closed dropdown over a fixed `catalog`, or a filterable free-text combobox when there isn't one (or `allow-custom` is set) |
+| `<lyra-model-settings-panel>` | — (extra) | Fixed `<lyra-model-select>` + `<lyra-slider>` composition for picking a model and tuning its sampling temperature in one `lyra-change` |
+| `<lyra-slider>` | — (extra) | Numeric range control (e.g. an LLM "temperature" setting), form-associated, mirrors native `<input type="range">` semantics |
+| `<lyra-context-meter>` | — (extra) | Segmented bar/ring occupancy meter for a token budget or context window, split across labeled categories |
+| `<lyra-dialog>` + `confirm()` | — (extra) | General-purpose modal/overlay (focus-trapped, Escape/backdrop-dismissible, scroll-locking, dialog stacking); `confirm()` is a promise-based `window.confirm()` replacement built on it |
+| `<lyra-tabs>` | — (extra) | Tab strip over direct light-DOM panels; WAI-ARIA APG automatic-activation keyboard pattern |
+| `<lyra-checkbox>` | — (extra) | Boolean form control, `role="checkbox"` with a visual/`indeterminate` mixed state |
+| `<lyra-switch>` | — (extra) | Boolean toggle-switch form control, `role="switch"` on/off semantics |
+| `<lyra-menu>` + `<lyra-menu-item>` | — (extra) | Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox) |
+| `<lyra-chip>` + `<lyra-chip-group>` | — (extra) | Content-agnostic label pill (tag/filter/scope indicator) and a flex-wrap group with a "+N" overflow indicator |
+| `<lyra-kbd>` | — (extra) | Keyboard-shortcut chip; renders platform-appropriate glyphs (⌘ vs. Ctrl) from a single `"mod+k"`-style `keys` string |
+| `<lyra-result-card>` + `<lyra-result-field>` | — (extra) | Small bordered card + label/value row shell, for giving custom `lyra-tool-result-view` renderers a consistent look with no bespoke box |
+| `<lyra-document-preview>` | — (extra) | Format-dispatching document/attachment viewer (`text/*`/JSON inline, `image/*` inline, else a download fallback) plus a host-driven async-conversion status shell |
+| `<lyra-media-card>` | — (extra) | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message |
 
 ## Known limitations
 
