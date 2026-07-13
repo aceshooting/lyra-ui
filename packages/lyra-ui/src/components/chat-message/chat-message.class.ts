@@ -56,6 +56,7 @@ const STATUS_TEXT_KEY: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
 
 export interface LyraChatMessageEventMap {
   'lyra-retry': CustomEvent<undefined>;
+  'lyra-collapse-toggle': CustomEvent<boolean>;
 }
 /**
  * `<lyra-chat-message>` — a role-based message bubble *shell* for a chat/
