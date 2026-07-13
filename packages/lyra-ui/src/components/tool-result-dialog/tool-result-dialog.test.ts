@@ -449,3 +449,35 @@ it('is accessible while open with body and footer content', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('localizes the tool-name fallback, status label, and maximize/restore button via this.localize()', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog
+      status="running"
+      .strings=${{
+        toolCall: "Appel d'outil",
+        statusRunning: 'En cours',
+        maximize: 'Agrandir',
+        restore: 'Restaurer',
+      }}
+    ></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal("Appel d'outil");
+  expect(el.shadowRoot!.querySelector('[part="status"] span')!.textContent).to.equal('En cours');
+  const maximizeButton = el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLButtonElement;
+  expect(maximizeButton.getAttribute('aria-label')).to.equal('Agrandir');
+  maximizeButton.click();
+  await el.updateComplete;
+  expect(maximizeButton.getAttribute('aria-label')).to.equal('Restaurer');
+});
+
+it('defaults to English "Tool call"/"Running"/"Maximize" when no strings override is set', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog status="running"></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('Tool call');
+  expect(el.shadowRoot!.querySelector('[part="status"] span')!.textContent).to.equal('Running');
+  expect((el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+    'Maximize',
+  );
+});

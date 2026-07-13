@@ -112,13 +112,26 @@ const STATUS_ICON: Record<ToolResultStatus, () => SVGTemplateResult> = {
   denied: deniedIcon,
 };
 
-/** Visible (not just color-coded) text for every status. */
+/** Visible (not just color-coded) text for every status -- English fallback
+ *  values only; STATUS_LABEL_KEY below supplies the localize() key for each,
+ *  and STATUS_VALUES (right below) still derives its allowed-value set from
+ *  this object's keys, unaffected by localization. */
 const STATUS_LABEL: Record<ToolResultStatus, string> = {
   pending: 'Pending',
   running: 'Running',
   success: 'Success',
   error: 'Error',
   denied: 'Denied',
+};
+
+/** localize() key for each status's visible label -- see STATUS_LABEL for
+ *  the English fallback text. */
+const STATUS_LABEL_KEY: Record<ToolResultStatus, string> = {
+  pending: 'statusPending',
+  running: 'statusRunning',
+  success: 'statusSuccess',
+  error: 'statusError',
+  denied: 'statusDenied',
 };
 
 const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
@@ -353,10 +366,10 @@ export class LyraToolResultDialog extends LyraElement {
       >
         <div part="header">
           <div part="title">
-            <span part="tool-name" id=${this.titleId}>${this.toolName || 'Tool call'}</span>
+            <span part="tool-name" id=${this.titleId}>${this.toolName || this.localize('toolCall')}</span>
             <span part="status"
               >${(STATUS_ICON[this.status] ?? STATUS_ICON.pending)()}<span
-                >${STATUS_LABEL[this.status] ?? STATUS_LABEL.pending}</span
+                >${this.localize(STATUS_LABEL_KEY[this.status] ?? STATUS_LABEL_KEY.pending)}</span
               ></span
             >
             ${hasDuration ? html`<span part="duration">${formatDuration(this.durationMs!)}</span>` : nothing}
@@ -366,7 +379,7 @@ export class LyraToolResultDialog extends LyraElement {
               part="maximize-button"
               type="button"
               aria-pressed=${this.maximized ? 'true' : 'false'}
-              aria-label=${this.maximized ? 'Restore' : 'Maximize'}
+              aria-label=${this.maximized ? this.localize('restore') : this.localize('maximize')}
               @click=${this.toggleMaximized}
             >
               ${this.maximized ? shrinkIcon() : expandIcon()}

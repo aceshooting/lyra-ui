@@ -73,7 +73,15 @@ export type LyraMessageKey =
   | 'jsonObject'
   | 'jsonValue'
   | 'untitledSource'
-  | 'sourcePageSuffix';
+  | 'sourcePageSuffix'
+  | 'toolCall'
+  | 'statusPending'
+  | 'statusRunning'
+  | 'statusSuccess'
+  | 'statusError'
+  | 'statusDenied'
+  | 'maximize'
+  | 'restore';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -148,6 +156,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   jsonValue: 'value',
   untitledSource: 'Untitled source',
   sourcePageSuffix: '{base} — p. {page}',
+  toolCall: 'Tool call',
+  statusPending: 'Pending',
+  statusRunning: 'Running',
+  statusSuccess: 'Success',
+  statusError: 'Error',
+  statusDenied: 'Denied',
+  maximize: 'Maximize',
+  restore: 'Restore',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
