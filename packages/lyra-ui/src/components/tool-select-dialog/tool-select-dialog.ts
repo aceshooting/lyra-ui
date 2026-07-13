@@ -1,9 +1,10 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
-import { nextId } from '../../internal/a11y.js';
+import { nextId, srOnly } from '../../internal/a11y.js';
 import { styles } from './tool-select-dialog.styles.js';
 import '../checkbox/checkbox.js';
 import '../switch/switch.js';
@@ -46,43 +47,6 @@ export type ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | string
 
 const OTHER_CATEGORY = 'Other';
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Shadow-piercing so both a slotted custom element's real focusable target
-// (footer content) and a directly-rendered one (the search input, the
-// use-defaults <lyra-switch>, each row's <lyra-checkbox> -- all live in this
-// component's own shadow tree, not projected via <slot>) are found even
-// though the tag itself doesn't match FOCUSABLE_SELECTOR. Deliberately
-// duplicated from lyra-dialog's/lyra-tool-result-dialog's identical helper
-// rather than imported/shared -- this component is its own standalone
-// overlay and must not depend on either (see this file's class doc).
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/** Whether `el` is actually laid out/paintable -- `checkVisibility()` (falling
- *  back to `getClientRects().length` where unsupported) correctly follows
- *  flattened-tree/slot assignment, unlike `offsetParent`. Mirrors
- *  lyra-dialog's/lyra-tool-result-dialog's identical helper. */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
-}
-
 /** Default `filter`: case-insensitive substring match against the tool's name and description. */
 function defaultFilter(tool: ToolSelectDialogTool, query: string): boolean {
   return tool.name.toLowerCase().includes(query) || (tool.description ?? '').toLowerCase().includes(query);
@@ -98,11 +62,10 @@ interface ToolGroup {
  * tool-enablement dialog for picking which agent tools are available in a
  * conversation.
  *
- * This is its own standalone overlay implementation (`role="dialog"`,
- * focus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than
- * nesting a `<lyra-dialog>` in its shadow template — see `<lyra-dialog>`'s
- * own header comment for why a new overlay component in this library
- * duplicates that pattern locally instead of composing the previous one.
+ * This renders its own dialog panel rather than nesting a `<lyra-dialog>` in
+ * its shadow template. Shared overlay infrastructure coordinates stacking,
+ * focus trapping, Escape/backdrop dismissal, and focus return with every
+ * other overlay in the same document.
  *
  * `useDefaults` is a single top-level switch: while `true`, every per-tool
  * checkbox below renders disabled (still reflecting whatever `selected`
@@ -140,18 +103,21 @@ interface ToolGroup {
  * @csspart empty - The "no tools" / "no matches" message.
  * @csspart category - A single category's wrapper (`role="group"`).
  * @csspart category-heading - A category's heading.
- * @csspart category-count - The visible tool count next to a category heading.
+ * @csspart category-count - The terse, `aria-hidden` tool count next to a category heading
+ * (the heading's accessible name gets the full sentence from an sr-only sibling instead).
  * @csspart category-list - The `<ul>` of tool rows within a category.
  * @csspart tool-row - A single tool's `<li>` row.
  * @csspart tool-checkbox - A row's `<lyra-checkbox>`.
  * @csspart tool-name - A row's name text (plus its `icon`, if set).
  * @csspart tool-icon - A row's leading icon glyph, when `icon` is set.
  * @csspart tool-description - A row's optional description text.
- * @csspart tool-disabled-reason - A disabled row's `disabledReason` text.
+ * @csspart tool-disabled-reason - A disabled row's `disabledReason` text, slotted inside
+ * `tool-checkbox` (alongside `tool-name`/`tool-description`) so it contributes to the
+ * checkbox's accessible name/description instead of going unannounced.
  * @csspart footer - The wrapper around the `footer` slot.
  */
 export class LyraToolSelectDialog extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -177,7 +143,7 @@ export class LyraToolSelectDialog extends LyraElement {
   @state() private hasFooterSlot = false;
 
   private releaseScrollLock?: () => void;
-  private lastTrigger?: HTMLElement;
+  private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-select-dialog-title');
   // Stable per-category heading ids, keyed by category name -- generated
   // once (not regenerated every render/keystroke) so a category's
@@ -190,19 +156,17 @@ export class LyraToolSelectDialog extends LyraElement {
     }
     if (changed.has('open')) {
       if (this.open) {
-        // Captured here (before render) rather than from a click event on
-        // some specific internal control -- like lyra-dialog, a trigger
-        // typically lives *outside* this component entirely, so "whatever
-        // had focus right before open" is the only generally correct
-        // definition of "the trigger".
-        const active = this.getActiveElement();
-        this.lastTrigger = active instanceof HTMLElement ? active : undefined;
-        this.releaseScrollLock = lockScroll();
-        document.addEventListener('keydown', this.onDocKeyDown);
+        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+        this.activateOverlay();
       } else {
         this.releaseScrollLock?.();
         this.releaseScrollLock = undefined;
-        document.removeEventListener('keydown', this.onDocKeyDown);
+        this.overlay?.deactivate();
+        this.overlay = undefined;
+        // Otherwise a long-lived instance reopens still showing whatever
+        // search filter/collapsed-category state the previous session left
+        // behind, rather than the fresh, unfiltered list a reopen implies.
+        this.query = '';
       }
     }
   }
@@ -213,24 +177,15 @@ export class LyraToolSelectDialog extends LyraElement {
   // ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
-      const first = this.getFocusableElements()[0];
-      if (first) {
-        first.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]')?.focus();
-      }
+      this.overlay?.focusInitial();
     }
   }
 
   connectedCallback(): void {
     super.connectedCallback();
-    // A reconnect (e.g. a drag-and-drop reparent keeping this same element
-    // instance) fires disconnectedCallback then connectedCallback
-    // synchronously with no update in between, so willUpdate never reruns to
-    // notice `open` is still true -- restore the scroll lock/trap it dropped.
-    if (this.hasUpdated && this.open && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    if (this.hasUpdated && this.open) {
+      this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+      this.activateOverlay();
     }
   }
 
@@ -238,7 +193,20 @@ export class LyraToolSelectDialog extends LyraElement {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlay?.suspend();
+  }
+
+  private activateOverlay(): void {
+    if (this.overlay?.isActive()) {
+      this.overlay.resume();
+      return;
+    }
+    this.overlay = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.close('escape'),
+      onBackdrop: () => this.close('backdrop'),
+    });
   }
 
   private onFooterSlotChange = (e: Event): void => {
@@ -257,70 +225,11 @@ export class LyraToolSelectDialog extends LyraElement {
     if (!this.open) return;
     this.open = false;
     this.emit<ToolSelectDialogCloseReason>('lyra-close', reason);
-    this.lastTrigger?.focus();
   }
 
   private onBackdropClick = (): void => {
-    this.close('backdrop');
+    this.overlay?.dismissBackdrop();
   };
-
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.open) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.close('escape');
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while open. Order follows the search
-  // input, then the use-defaults switch, then each visible tool row's
-  // checkbox, then the footer slot -- the same order the flattened tree
-  // already tabs through (mirrors lyra-tool-result-dialog's identical
-  // header-buttons-then-body-then-footer ordering rationale).
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const searchInput = root.querySelector<HTMLElement>('[part="search-input"]');
-    const defaultsToggle = root.querySelector<HTMLElement>('[part="defaults-toggle"]');
-    const checkboxes = Array.from(root.querySelectorAll<HTMLElement>('[part="tool-checkbox"]'));
-    const fromSlot = (selector: string): HTMLElement[] => {
-      const slot = root.querySelector<HTMLSlotElement>(selector);
-      return slot ? slot.assignedElements({ flatten: true }).flatMap(collectFocusable) : [];
-    };
-    return [
-      ...(searchInput ? collectFocusable(searchInput) : []),
-      ...(defaultsToggle ? collectFocusable(defaultsToggle) : []),
-      ...checkboxes.flatMap(collectFocusable),
-      ...fromSlot('slot[name="footer"]'),
-    ].filter(isRendered);
-  }
-
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
-  }
 
   private emitChange(): void {
     this.emit<ToolSelectionChangeDetail>('lyra-change', {
@@ -395,10 +304,10 @@ export class LyraToolSelectDialog extends LyraElement {
             ${tool.icon ? html`<span part="tool-icon" aria-hidden="true">${tool.icon}</span>` : nothing}${tool.name}
           </span>
           ${tool.description ? html`<span part="tool-description">${tool.description}</span>` : nothing}
+          ${tool.disabled && tool.disabledReason
+            ? html`<span part="tool-disabled-reason">${tool.disabledReason}</span>`
+            : nothing}
         </lyra-checkbox>
-        ${tool.disabled && tool.disabledReason
-          ? html`<p part="tool-disabled-reason">${tool.disabledReason}</p>`
-          : nothing}
       </li>
     `;
   }
@@ -408,7 +317,8 @@ export class LyraToolSelectDialog extends LyraElement {
     return html`
       <div part="category" role="group" aria-labelledby=${headingId}>
         <h3 part="category-heading" id=${headingId}>
-          ${group.category}<span part="category-count">${group.tools.length}</span>
+          ${group.category}<span part="category-count" aria-hidden="true">${group.tools.length}</span
+          ><span class="sr-only">${group.tools.length} tool${group.tools.length === 1 ? '' : 's'}</span>
         </h3>
         <ul part="category-list">
           ${group.tools.map((tool) => this.renderTool(tool))}

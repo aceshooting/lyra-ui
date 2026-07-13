@@ -11,7 +11,7 @@ export const styles = css`
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--lyra-overlay-stack-index, 1000);
     align-items: center;
     justify-content: center;
     padding: var(--lyra-space-l);
@@ -80,7 +80,13 @@ export const styles = css`
   }
   [part='defaults-hint'] {
     margin: 0;
-    padding-inline-start: calc(var(--lyra-icon-button-size) * 0.7);
+    /* Lines the hint up under the switch's label text, not its track --
+       lyra-switch's own [part="base"] uses a fixed 2.25rem track
+       inline-size plus a --lyra-space-s gap before its label (both defined
+       in switch.styles.ts, not exposed as tokens), so this indent is
+       coupled to that fixed geometry rather than derived from an unrelated
+       component's token. */
+    padding-inline-start: calc(2.25rem + var(--lyra-space-s));
     font-size: 0.75rem;
     color: var(--lyra-color-text-quiet);
   }
@@ -163,8 +169,11 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
   }
   [part='tool-disabled-reason'] {
-    margin: 0;
-    padding-inline-start: calc(var(--lyra-icon-button-size) * 0.7);
+    /* Slotted into lyra-checkbox's default slot alongside tool-name/
+       tool-description (see tool-select-dialog.ts's renderTool()), so it
+       inherits its indent for free from ::part(label)'s column layout
+       above instead of needing its own guessed padding. */
+    display: block;
     font-size: 0.75rem;
     color: var(--lyra-color-warning);
   }

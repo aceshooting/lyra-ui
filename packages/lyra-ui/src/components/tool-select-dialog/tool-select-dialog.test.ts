@@ -41,6 +41,15 @@ function clickCheckbox(checkbox: LyraCheckbox): void {
   (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
 }
 
+// The heading's textContent also carries the aria-hidden visual count and
+// the sr-only full-sentence announcement (see "category-count" tests below)
+// -- strip both so category-grouping tests only compare the category name.
+function categoryHeadingName(heading: Element): string {
+  const clone = heading.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('[part="category-count"], .sr-only').forEach((n) => n.remove());
+  return clone.textContent!.trim();
+}
+
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
   const el = (await fixture(html`<lyra-tool-select-dialog></lyra-tool-select-dialog>`)) as LyraToolSelectDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -81,9 +90,7 @@ it('groups tools by category in first-seen order, with an uncategorized "Other" 
   const el = (await fixture(
     html`<lyra-tool-select-dialog .tools=${TOOLS}></lyra-tool-select-dialog>`,
   )) as LyraToolSelectDialog;
-  const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map(
-    (h) => h.textContent!.trim().replace(/\d+$/, '').trim(),
-  );
+  const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map(categoryHeadingName);
   expect(headings).to.deep.equal(['Research', 'Code execution', 'Other']);
 });
 
@@ -93,6 +100,28 @@ it('shows the tool count next to each category heading', async () => {
   )) as LyraToolSelectDialog;
   const count = el.shadowRoot!.querySelector('[part="category-heading"] [part="category-count"]');
   expect(count!.textContent).to.equal('2');
+});
+
+it('hides the visual category count from assistive tech and pairs it with a full-sentence sr-only announcement', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-select-dialog .tools=${TOOLS}></lyra-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const heading = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].find((h) =>
+    categoryHeadingName(h) === 'Research',
+  )!;
+  const count = heading.querySelector('[part="category-count"]')!;
+  expect(count.getAttribute('aria-hidden')).to.equal('true');
+  expect(heading.querySelector('.sr-only')!.textContent).to.equal('2 tools');
+});
+
+it('uses the singular "tool" in the sr-only announcement for a single-tool category', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-select-dialog
+      .tools=${[{ id: 'solo', name: 'Solo tool', category: 'Solo' }]}
+    ></lyra-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const heading = el.shadowRoot!.querySelector('[part="category-heading"]')!;
+  expect(heading.querySelector('.sr-only')!.textContent).to.equal('1 tool');
 });
 
 it('shows a disabled row with its disabledReason as supporting text, and a disabled checkbox', async () => {
@@ -112,6 +141,15 @@ it('does not render a disabled-reason paragraph for an enabled row', async () =>
   )) as LyraToolSelectDialog;
   const row = checkboxFor(el, 'web_search').closest('[part="tool-row"]') as HTMLElement;
   expect(row.querySelector('[part="tool-disabled-reason"]')).to.not.exist;
+});
+
+it('folds the disabled reason into the checkbox itself, so it contributes to its accessible name/content instead of going unannounced', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-select-dialog .tools=${TOOLS}></lyra-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const checkbox = checkboxFor(el, 'run_shell');
+  expect(checkbox.querySelector('[part="tool-disabled-reason"]')).to.exist;
+  expect(checkbox.textContent).to.include('Requires admin approval.');
 });
 
 describe('search filtering', () => {
@@ -144,9 +182,7 @@ describe('search filtering', () => {
     input.dispatchEvent(new Event('input'));
     await el.updateComplete;
 
-    const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map((h) =>
-      h.textContent!.trim().replace(/\d+$/, '').trim(),
-    );
+    const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map(categoryHeadingName);
     expect(headings).to.deep.equal(['Code execution']);
   });
 
@@ -183,6 +219,31 @@ describe('search filtering', () => {
 
     expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(1);
     expect(checkboxFor(el, 'send_email')).to.exist;
+  });
+
+  it('resets the search query (and the resulting grouping/empty-state) once the dialog closes, so reopening the same instance starts unfiltered', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-select-dialog open .tools=${TOOLS}></lyra-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+
+    input.value = 'nonexistent-tool';
+    input.dispatchEvent(new Event('input'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(0);
+
+    el.close('api');
+    await el.updateComplete;
+    expect((el as unknown as { query: string }).query).to.equal('');
+
+    el.open = true;
+    await el.updateComplete;
+
+    const reopenedInput = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+    expect(reopenedInput.value).to.equal('');
+    expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(TOOLS.length);
+    const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map(categoryHeadingName);
+    expect(headings).to.deep.equal(['Research', 'Code execution', 'Other']);
   });
 });
 
