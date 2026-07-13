@@ -67,3 +67,36 @@ describe('active', () => {
     expect(base.getAttribute('aria-current')).to.equal('page');
   });
 });
+
+describe('tooltip', () => {
+  it('shows a flyout with the label text on hover/focus when tooltip is set and icon-only is active', async () => {
+    const el = (await fixture(html`<lyra-app-rail-item tooltip icon-only>Dashboard</lyra-app-rail-item>`)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    let flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
+    expect(flyout).to.not.exist;
+    base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await el.updateComplete;
+    flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
+    expect(flyout).to.exist;
+    expect(flyout!.textContent!.trim()).to.equal('Dashboard');
+    base.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+  });
+
+  it('does not show a flyout when tooltip is unset (the default)', async () => {
+    const el = (await fixture(html`<lyra-app-rail-item icon-only>Dashboard</lyra-app-rail-item>`)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+  });
+
+  it('does not show a flyout when tooltip is set but icon-only is not active (label is already visible)', async () => {
+    const el = (await fixture(html`<lyra-app-rail-item tooltip>Dashboard</lyra-app-rail-item>`)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+  });
+});
