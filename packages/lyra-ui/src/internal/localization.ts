@@ -182,7 +182,19 @@ export type LyraMessageKey =
   | 'deny'
   | 'edit'
   | 'approve'
-  | 'invalidJson';
+  | 'invalidJson'
+  | 'fieldRequired'
+  | 'fieldMustBeString'
+  | 'fieldMustBeNumber'
+  | 'fieldMustBeInteger'
+  | 'fieldMustBeBoolean'
+  | 'unsupportedFieldType'
+  | 'fieldMustBeOneOf'
+  | 'fieldMustEqual'
+  | 'schemaMustBeObject'
+  | 'schemaPropertiesMustBeFlat'
+  | 'valueMustBeSerializable'
+  | 'valueInvalid';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -366,6 +378,18 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   edit: 'Edit',
   approve: 'Approve',
   invalidJson: 'Invalid JSON.',
+  fieldRequired: 'This field is required.',
+  fieldMustBeString: 'Must be a string.',
+  fieldMustBeNumber: 'Must be a finite number.',
+  fieldMustBeInteger: 'Must be a whole number.',
+  fieldMustBeBoolean: 'Must be a boolean.',
+  unsupportedFieldType: 'Unsupported field type "{type}".',
+  fieldMustBeOneOf: 'Must be one of: {values}.',
+  fieldMustEqual: 'Must equal {value}.',
+  schemaMustBeObject: 'Schema must describe an object.',
+  schemaPropertiesMustBeFlat: 'Schema properties must be a flat object.',
+  valueMustBeSerializable: 'Value must be JSON-serializable.',
+  valueInvalid: 'The value is invalid.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
