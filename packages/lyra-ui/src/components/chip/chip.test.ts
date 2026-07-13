@@ -93,6 +93,18 @@ describe('remove affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Remove');
   });
 
+  it('excludes lit-html marker comments from the label when the label is an interpolated expression, not a static string', async () => {
+    // A static string child (as every other case in this file uses) never
+    // needs a lit-html child-part marker at all, so it can't exercise this --
+    // only a real `${expr}` binding (the ordinary way a consumer would
+    // interpolate a data-driven label) makes lit-html insert a marker Comment
+    // node alongside the Text node in the light DOM.
+    const label = 'research';
+    const el = (await fixture(html`<lyra-chip removable>${label}</lyra-chip>`)) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove research');
+  });
+
   it('emits lyra-remove with { value: undefined } when value was never set', async () => {
     const el = (await fixture(html`<lyra-chip removable>Tag</lyra-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;

@@ -69,10 +69,16 @@ export class LyraChipGroup extends LyraElement {
   firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time — same idiom as
-    // `<lyra-source-list>`'s identical `firstUpdated`.
+    // `<lyra-source-list>`'s identical `firstUpdated`. This can't move to
+    // `willUpdate` (the `<slot>` doesn't exist in the shadow DOM until after
+    // the first render), so when it actually corrects `childCount` (the
+    // slot-forwarding case, where `this.children.length` under-counts) it
+    // unavoidably schedules a second update pass — `updated()` (below) always
+    // runs right after this and already recomputes visibility from this same
+    // corrected count, so there's nothing left for an explicit call here to
+    // do.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
     this.childCount = slot.assignedElements({ flatten: true }).length;
-    this.syncChildVisibility();
   }
 
   protected updated(): void {

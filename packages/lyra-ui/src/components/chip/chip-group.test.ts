@@ -1,7 +1,24 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { LitElement, html as litHtml } from 'lit';
 import './chip-group.js';
 import './chip.js';
 import type { LyraChipGroup } from './chip-group.js';
+
+// A minimal host that re-projects its own light-DOM children into a
+// `<lyra-chip-group>` living in its shadow DOM via a forwarding `<slot>` --
+// this is the "slot forwarding" scenario `firstUpdated()`'s fallback
+// reconciliation exists for: `this.children` (the forwarding `<slot>` itself,
+// one element) under-counts what the group's own default slot actually
+// flattens to (the real projected `<lyra-chip>`s).
+class ChipGroupForwarder extends LitElement {
+  protected createRenderRoot() {
+    return this.attachShadow({ mode: 'open' });
+  }
+  protected render() {
+    return litHtml`<lyra-chip-group max-visible="2"><slot></slot></lyra-chip-group>`;
+  }
+}
+customElements.define('chip-group-forwarder-test', ChipGroupForwarder);
 
 function fiveChips() {
   return html`
@@ -153,6 +170,57 @@ describe('dynamic children', () => {
     expect(indicator.textContent!.trim()).to.equal('+1');
     expect((extra as HTMLElement).hidden).to.be.true;
   });
+});
+
+it('reconciles childCount correctly through a forwarding <slot> (children.length under-counts), without a redundant explicit resync alongside it', async () => {
+  // Reset Lit's own dedupe set first so this doesn't silently pass just
+  // because an earlier test already tripped (and thus suppressed) the exact
+  // same warning string -- same guard `<lyra-toast-item>`'s equivalent test
+  // uses.
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  if (globalWarnings) {
+    [...globalWarnings].filter((w) => w.includes('scheduled an update')).forEach((w) => globalWarnings.delete(w));
+  }
+
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  let host: ChipGroupForwarder;
+  try {
+    host = (await fixture(html`
+      <chip-group-forwarder-test>
+        <lyra-chip>one</lyra-chip>
+        <lyra-chip>two</lyra-chip>
+        <lyra-chip>three</lyra-chip>
+      </chip-group-forwarder-test>
+    `)) as ChipGroupForwarder;
+    await host.updateComplete;
+    const group = host.shadowRoot!.querySelector('lyra-chip-group') as LyraChipGroup;
+    // The childCount correction inside firstUpdated() schedules a second,
+    // separate update cycle (that's the whole warning this test is about) --
+    // a single `await updateComplete` only guarantees the *current* cycle
+    // finished, per Lit's own documented `while (!(await el.updateComplete))`
+    // idiom, so loop until nothing more is pending.
+    while (!(await group.updateComplete)) {
+      /* keep draining until settled */
+    }
+
+    // The corrected count (3, not the under-counted 1 `this.children.length`
+    // sees through the forwarding `<slot>`) must actually reach rendered
+    // output -- confirming `updated()`'s own resync (which runs regardless)
+    // is the only thing doing that work now that the redundant explicit
+    // `syncChildVisibility()` call is gone from `firstUpdated()`. The
+    // childCount reassignment causing exactly one extra render pass here is
+    // the accepted structural trade-off noted in `firstUpdated()`'s comment.
+    const indicator = group.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
+    expect(indicator).to.exist;
+    expect(indicator.textContent!.trim()).to.equal('+1');
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  const messages = calls.flat().map(String);
+  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.true;
 });
 
 it('is accessible with no overflow', async () => {

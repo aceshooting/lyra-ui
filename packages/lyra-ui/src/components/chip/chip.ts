@@ -78,10 +78,20 @@ export class LyraChip extends LyraElement {
 
   // Only the default slot's own content counts toward the remove button's
   // accessible name — text incidentally living inside the (decorative)
-  // `icon` slot shouldn't leak into "Remove {text}".
+  // `icon` slot shouldn't leak into "Remove {text}". Restricting to Text and
+  // Element nodes also excludes Comment nodes: when a consumer interpolates
+  // the label via a lit-html expression (`html\`<lyra-chip>${label}</lyra-chip>\``,
+  // the ordinary way a data-driven label gets bound) rather than a static
+  // string, lit-html inserts a marker Comment node alongside the Text node in
+  // the light DOM. That comment's own (non-empty) data is internal
+  // bookkeeping, not label content, so it must never reach `textContent`.
   private get labelText(): string {
     return Array.from(this.childNodes)
-      .filter((n) => !(n instanceof Element && n.getAttribute('slot') === 'icon'))
+      .filter(
+        (n): n is Text | Element =>
+          (n.nodeType === Node.TEXT_NODE || n instanceof Element) &&
+          !(n instanceof Element && n.getAttribute('slot') === 'icon'),
+      )
       .map((n) => n.textContent ?? '')
       .join('')
       .trim();
