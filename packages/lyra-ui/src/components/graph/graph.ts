@@ -10,6 +10,7 @@ import '../skeleton/skeleton.js';
 export interface GraphNode {
   id: string;
   label?: string;
+  /** Clamped to [6, 24] (a non-finite/missing value uses the midpoint, 15) — never rendered smaller/larger. */
   radius?: number;
   color?: string;
 }
@@ -93,7 +94,13 @@ function sanitizeNodeColor(color: string | undefined): string | undefined {
  *
  * Set `seed` for a deterministic layout: node initial positions become
  * reproducible (keyed by node id) and the settle happens synchronously
- * instead of animating, like `prefers-reduced-motion`.
+ * instead of animating, like `prefers-reduced-motion`. `seed` only takes
+ * effect on the update that first populates `nodes`/`links` (or a later
+ * update that adds genuinely new node ids) — willUpdate() only reads it from
+ * inside rebuildSimulation(), which itself only ever assigns x/y to nodes
+ * that don't already have a settled position, so changing `seed` on an
+ * already-rendered graph is a no-op; nothing re-derives already-positioned
+ * nodes' x/y from the new value.
  *
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
@@ -113,7 +120,12 @@ export class LyraGraph extends LyraElement {
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 8;
   /** When set, seeds each node's initial x/y deterministically (keyed by
    *  node id, not array index) instead of forceSimulation()'s own random
-   *  start, and settles the simulation synchronously — see rebuildSimulation(). */
+   *  start, and settles the simulation synchronously — see rebuildSimulation().
+   *  Only takes effect on the update that first assigns a given node id an
+   *  x/y (i.e. supplied at/before `nodes`/`links` first populate, or when a
+   *  later update introduces new node ids) — changing `seed` afterwards does
+   *  not retroactively reposition already-settled nodes; there is currently
+   *  no way to make an already-rendered graph reproducible after the fact. */
   @property({ type: Number }) seed?: number;
 
   /** True until the lazy-loaded d3 peer dependencies have settled (success or failure). */
@@ -152,6 +164,19 @@ export class LyraGraph extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // A reconnect (e.g. a drag-and-drop reparent that keeps this same
+    // element instance) fires disconnectedCallback then connectedCallback
+    // synchronously with no update in between — this.d3 is already set from
+    // the initial mount, and the live simulation/DOM are still intact
+    // (disconnectedCallback only stops the simulation's timer, it doesn't
+    // tear anything down). Redoing the lazy-load + rebuildSimulation() here
+    // would discard every already-settled node's position and restart the
+    // whole ~300-tick alpha=1 settle animation for no reason — just resume
+    // the existing simulation in place instead.
+    if (this.d3) {
+      this.simulation?.restart();
+      return;
+    }
     void loadD3().then((mods) => {
       this.loading = false;
       // The element may have been removed from the DOM while the dynamic
@@ -168,8 +193,16 @@ export class LyraGraph extends LyraElement {
     this.simulation?.stop();
   }
 
+  /**
+   * A caller-supplied `radius` is clamped to [MIN_RADIUS, MAX_RADIUS] (and a
+   * non-finite/NaN value falls back to the same default average as an unset
+   * one) — an unclamped 0/negative radius would render an invisibly small
+   * `<circle>` that's still `role="button" tabindex="0"`, an invisible,
+   * focusable/clickable control with no visible focus indicator.
+   */
   private nodeRadius(n: GraphNode): number {
-    return n.radius ?? (MIN_RADIUS + MAX_RADIUS) / 2;
+    const r = n.radius ?? (MIN_RADIUS + MAX_RADIUS) / 2;
+    return Number.isFinite(r) ? Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, r)) : (MIN_RADIUS + MAX_RADIUS) / 2;
   }
 
   protected willUpdate(changed: PropertyValues): void {

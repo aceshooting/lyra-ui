@@ -536,6 +536,61 @@ it('user-initiated drag still works normally after a seeded synchronous settle',
   expect(select(nodeEl).on('mousedown.drag')).to.be.a('function');
 });
 
+it('changing seed after nodes/links already have positions is a documented no-op (does not retroactively reposition)', async () => {
+  const seededNodes = [
+    { id: 'a', label: 'A' },
+    { id: 'b', label: 'B' },
+  ];
+  const seededLinks = [{ source: 'a', target: 'b' }];
+
+  const el = (await fixture(html`<lyra-graph seed="1"></lyra-graph>`)) as LyraGraph;
+  el.nodes = seededNodes;
+  el.links = seededLinks;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const before = Array.from(el.shadowRoot!.querySelectorAll('[part="node"]')).map((n) => [
+    n.getAttribute('cx'),
+    n.getAttribute('cy'),
+  ]);
+
+  // A different seed, supplied after nodes/links already assigned every
+  // node a settled position, must not reshuffle the existing layout.
+  el.seed = 999;
+  await el.updateComplete;
+
+  const after = Array.from(el.shadowRoot!.querySelectorAll('[part="node"]')).map((n) => [
+    n.getAttribute('cx'),
+    n.getAttribute('cy'),
+  ]);
+  expect(after).to.deep.equal(before);
+});
+
+it('clamps an out-of-range GraphNode.radius so the node still renders visibly-sized and focusable', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = [
+    { id: 'a', label: 'A', radius: 0 },
+    { id: 'b', label: 'B', radius: -50 },
+    { id: 'c', label: 'C', radius: 1000 },
+  ];
+  el.links = [];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const circles = Array.from(el.shadowRoot!.querySelectorAll('[part="node"]')) as SVGCircleElement[];
+  for (const circle of circles) {
+    const r = Number(circle.getAttribute('r'));
+    expect(r).to.be.at.least(6);
+    expect(r).to.be.at.most(24);
+    expect(circle.getAttribute('tabindex')).to.equal('0');
+    expect(circle.getAttribute('role')).to.equal('button');
+  }
+});
+
 it('stops the force simulation on disconnect so a detached instance stops ticking', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;
@@ -563,6 +618,73 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
   const alphaAfterDisconnect = simulation.alpha();
   await aTimeout(200);
   expect(simulation.alpha()).to.equal(alphaAfterDisconnect);
+});
+
+it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and-drop reparent)', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const simulation = (el as any).simulation as { alpha: () => number; alphaMin: () => number };
+  await waitUntil(() => simulation.alpha() <= simulation.alphaMin(), undefined, {
+    timeout: ALPHA_SETTLE_TIMEOUT,
+  });
+
+  const otherContainer = document.createElement('div');
+  document.body.appendChild(otherContainer);
+  otherContainer.appendChild(el); // reparenting an already-connected node fires disconnectedCallback then connectedCallback synchronously
+
+  // A buggy connectedCallback kicks off its rebuild from an already-resolved
+  // `loadD3()` promise's `.then()` — that callback lands on a later
+  // microtask/task, not synchronously within this reparent — so give it a
+  // moment to run before asserting nothing changed.
+  await aTimeout(50);
+
+  // A from-scratch rebuild would swap in a brand-new forceSimulation()
+  // instance (starting at alpha=1, restarting the ~300-tick settle
+  // animation) — the same, already-settled instance must be reused instead.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).simulation).to.equal(simulation);
+  expect(simulation.alpha()).to.be.at.most(simulation.alphaMin());
+
+  otherContainer.remove();
+});
+
+it('silently drops a link whose target id has no matching node, without throwing, and still renders the valid links', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes; // ids: a, b
+  el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  // Give the simulation a moment to tick — a dangling link that slipped
+  // through would hand d3-force an undefined node and throw from onTick().
+  await aTimeout(200);
+
+  const linkEls = el.shadowRoot!.querySelectorAll('[part="link"]');
+  expect(linkEls.length).to.equal(1);
+  expect((linkEls[0] as SVGLineElement).getAttribute('aria-label')).to.equal('Link from A to B');
+});
+
+it('silently drops a link whose source id has no matching node, without throwing, and still renders the valid links', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes; // ids: a, b
+  el.links = [...links, { source: 'does-not-exist', target: 'b' }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  await aTimeout(200);
+
+  const linkEls = el.shadowRoot!.querySelectorAll('[part="link"]');
+  expect(linkEls.length).to.equal(1);
+  expect((linkEls[0] as SVGLineElement).getAttribute('aria-label')).to.equal('Link from A to B');
 });
 
 it('is accessible', async () => {
