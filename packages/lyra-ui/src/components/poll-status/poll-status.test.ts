@@ -102,4 +102,22 @@ describe('lyra-poll-status', () => {
     await el.updateComplete;
     expect(liveRegionText(el)).to.equal('Actualisation en cours.');
   });
+
+  it('shows a distinct "Paused" countdown text instead of a frozen value while paused', async () => {
+    const el = (await fixture(html`<lyra-poll-status next-in-ms="10000"></lyra-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    el.paused = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('Paused');
+  });
+
+  it('localizes the paused countdown text via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-poll-status next-in-ms="10000" .strings=${{ pollPaused: 'En pause' }}></lyra-poll-status>`,
+    )) as LyraPollStatus;
+    await el.updateComplete;
+    el.paused = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('En pause');
+  });
 });

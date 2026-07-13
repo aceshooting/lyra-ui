@@ -16,7 +16,8 @@ const TICK_MS = 1000;
 /**
  * `<lyra-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a
  * ticking `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at
- * zero, and a pause/resume toggle. First-party invention (no Web Awesome equivalent); the
+ * zero, a "Paused" state while `paused` (instead of freezing on a stale value), and a
+ * pause/resume toggle. First-party invention (no Web Awesome equivalent); the
  * closest existing component, `lyra-stream-status`, is scoped to transport/connection-health
  * phases, a different concern from a scheduled-interval countdown -- this mirrors its internal
  * `<lyra-live-region>` composition for accessible phase-transition announcements.
@@ -26,7 +27,7 @@ const TICK_MS = 1000;
  * @event lyra-pause-change - Fired when `paused` changes via the built-in button. `detail: boolean`.
  * @csspart base - The root wrapper.
  * @csspart indicator - The pulsing status dot.
- * @csspart countdown - The `M:SS` (or "Refreshing…") text.
+ * @csspart countdown - The `M:SS` text (or "Refreshing…" once due, or "Paused" while `paused`).
  * @csspart pause-button - The built-in pause/resume toggle.
  */
 export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
@@ -115,6 +116,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   };
 
   private formatCountdown(): string {
+    if (this.paused) return this.localize('pollPaused');
     if (this.due) return this.localize('pollRefreshing');
     const totalSeconds = Math.ceil(this.remainingMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);

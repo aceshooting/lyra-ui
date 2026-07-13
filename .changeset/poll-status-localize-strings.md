@@ -1,8 +1,9 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 `lyra-poll-status`'s pause/resume button aria-label, due-state countdown text ("Refreshing…"), and its
 three live-region announcements ("Paused."/"Resumed."/"Refreshing now.") now route through
-`this.localize()`, overridable via `.strings`/`registerLyraLocale()` — the one component the 2.3.0/2.4.0
-localization pass missed. Default English output is unchanged.
+`this.localize()`, overridable via `.strings`/`registerLyraLocale()`. It also now shows a distinct
+"Paused" countdown state while `paused`, instead of freezing on whatever value it last displayed.
+Default English output is unchanged when no override is set.

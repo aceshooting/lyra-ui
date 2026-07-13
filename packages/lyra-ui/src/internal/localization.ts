@@ -87,6 +87,7 @@ export type LyraMessageKey =
   | 'pollPause'
   | 'pollResume'
   | 'pollRefreshing'
+  | 'pollPaused'
   | 'pollPausedAnnounce'
   | 'pollResumedAnnounce'
   | 'pollRefreshingAnnounce';
@@ -177,6 +178,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pollPause: 'Pause',
   pollResume: 'Resume',
   pollRefreshing: 'Refreshing…',
+  pollPaused: 'Paused',
   pollPausedAnnounce: 'Paused.',
   pollResumedAnnounce: 'Resumed.',
   pollRefreshingAnnounce: 'Refreshing now.',
