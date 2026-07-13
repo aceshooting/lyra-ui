@@ -53,6 +53,11 @@ pnpm storybook:check-theme
 pnpm check:packed-consumer
 ```
 
+Note that `pnpm readme:check` **passing here proves nothing about the release commit**: it compares
+the README's "## Status" version against `packages/lyra-ui/package.json` *before* `pnpm changeset
+version` bumps it, so it necessarily passes pre-bump and then goes stale the moment the version
+lands. Step 5 is what actually keeps it honest — don't treat this green check as covering it.
+
 These are the exact steps `.github/workflows/ci.yml`'s `build-test` job runs. If you want extra
 confidence, also run the `platform-contracts` job's suite locally: `pnpm --filter @aceshooting/lyra-ui test:platform` (needs Firefox/WebKit via Playwright).
 
@@ -110,6 +115,25 @@ need to match what you actually intend to do.
 
 ## 5. Post-release
 
+- **Sync the root README's "## Status" version — do this first, every release, without checking
+  whether it "looks" stale.** It always is: `scripts/publish.sh` bumps `package.json` but its
+  release commit only stages `pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md
+  .changeset` (+ `custom-elements.json`) — the root `README.md` is **not** in that list, and step
+  2's `readme:check` ran before the bump. So every release commit lands with a README that still
+  advertises the *previous* version, and `build-test` goes red on `pnpm readme:check` (this is what
+  happened to 2.4.0, and to 2.3.0 before it — see `b4862ec`). Edit the line to the versions just
+  published, verify, and push a follow-up commit:
+
+  ```bash
+  # README.md, "## Status": `@aceshooting/lyra-ui` is published at `<new>`; `@aceshooting/lyra-flags` at `<new>`
+  pnpm readme:check   # must print "README freshness check passed (<N> tags, v<new>)"
+  git commit -am "docs: sync README \"Status\" version with lyra-ui <new>" && git push origin main
+  ```
+
+  Only the package(s) actually released change — leave the other's version alone. Note this still
+  leaves the tagged release commit itself red in CI; the durable fix is to teach `scripts/publish.sh`
+  to rewrite that line right after `pnpm changeset version` and stage `README.md` into the release
+  commit. Until that exists, this step is the guard.
 - `npm view @aceshooting/lyra-ui version` (and `@aceshooting/lyra-flags` if it was released too) —
   confirm it matches what was just published.
 - `gh repo view aceshooting/lyra-ui --json description` — the GitHub repo's "About" description is
