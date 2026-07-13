@@ -222,6 +222,24 @@ it('recognizes an object-shaped catalog entry (id/label) for inCatalog', async (
   expect(detail.inCatalog).to.be.true;
 });
 
+// -- String localization ---------------------------------------------------
+
+it('defaults the temperature caption/slider label and model-select placeholder to English', async () => {
+  const el = (await fixture(html`<lyra-model-settings-panel></lyra-model-settings-panel>`)) as LyraModelSettingsPanel;
+  expect(el.shadowRoot!.querySelector('[part="temperature-label"]')!.textContent).to.equal('Temperature');
+  expect(slider(el).label).to.equal('Temperature');
+  expect(modelSelect(el).placeholder).to.equal('Select a model…');
+});
+
+it('honors a strings override for temperature/selectModel', async () => {
+  const el = (await fixture(html`
+    <lyra-model-settings-panel .strings=${{ temperature: 'Température', selectModel: 'Choisir un modèle…' }}></lyra-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  expect(el.shadowRoot!.querySelector('[part="temperature-label"]')!.textContent).to.equal('Température');
+  expect(slider(el).label).to.equal('Température');
+  expect(modelSelect(el).placeholder).to.equal('Choisir un modèle…');
+});
+
 // -- Accessibility -------------------------------------------------------
 
 it('is accessible with default/empty settings', async () => {

@@ -120,6 +120,8 @@ export type LyraMessageKey =
   | 'generationStatusTokens'
   | 'graphDataList'
   | 'mentionSuggestions'
+  | 'temperature'
+  | 'selectModel'
   | 'kbdEscapeVisual'
   | 'kbdEscapeWord'
   | 'kbdTabWord'
@@ -266,6 +268,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   generationStatusTokens: 'tokens',
   graphDataList: 'Graph data',
   mentionSuggestions: 'Suggestions',
+  temperature: 'Temperature',
+  selectModel: 'Select a model…',
   kbdEscapeVisual: 'Esc',
   kbdEscapeWord: 'Escape',
   kbdTabWord: 'Tab',
