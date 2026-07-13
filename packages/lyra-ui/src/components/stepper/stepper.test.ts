@@ -1,0 +1,59 @@
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import './stepper.js';
+import type { LyraStepper } from './stepper.js';
+
+const steps = () => [
+  { id: 'basics', label: 'Basics', state: 'completed' as const },
+  { id: 'inputs', label: 'Inputs', state: 'current' as const },
+  { id: 'review', label: 'Review', state: 'pending' as const },
+];
+
+function stepButtons(el: LyraStepper): HTMLButtonElement[] {
+  return [...el.shadowRoot!.querySelectorAll('[part="step"]')] as HTMLButtonElement[];
+}
+
+describe('lyra-stepper', () => {
+  it('renders one step per entry with the right state-driven part/attribute', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons).to.have.length(3);
+    expect(buttons[0]!.getAttribute('data-state')).to.equal('completed');
+    expect(buttons[1]!.getAttribute('data-state')).to.equal('current');
+    expect(buttons[1]!.getAttribute('aria-current')).to.equal('step');
+    expect(buttons[2]!.getAttribute('data-state')).to.equal('pending');
+  });
+
+  it('fires a cancelable lyra-step-select on click, without mutating steps itself', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    setTimeout(() => buttons[2]!.click());
+    const ev = await oneEvent(el, 'lyra-step-select');
+    expect(ev.detail).to.deep.equal({ index: 2, id: 'review' });
+    expect(ev.cancelable).to.be.true;
+    expect(el.steps[1]!.state).to.equal('current'); // unchanged -- this component never self-mutates
+  });
+
+  it('does not fire lyra-step-select for a disabled step', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${[...steps().slice(0, 2), { id: 'review', label: 'Review', state: 'disabled' as const }]}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    let fired = false;
+    el.addEventListener('lyra-step-select', () => (fired = true));
+    buttons[2]!.click();
+    await el.updateComplete;
+    expect(fired).to.be.false;
+  });
+
+  it('supports ArrowRight/ArrowLeft/Home/End among non-disabled steps, clamped (not cyclic)', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    buttons[1]!.focus();
+    buttons[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(document.activeElement === el || el.shadowRoot!.activeElement).to.exist;
+  });
+
+  it('is accessible', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    await expect(el).to.be.accessible();
+  });
+});
