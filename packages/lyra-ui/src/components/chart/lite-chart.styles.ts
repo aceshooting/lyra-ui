@@ -66,6 +66,10 @@ export const styles = css`
   [part='bar'] {
     cursor: pointer;
   }
+  [part='bar'][data-selected] {
+    stroke: var(--lyra-lite-chart-selected-outline-color, var(--lyra-color-brand));
+    stroke-width: var(--lyra-size-2px);
+  }
   [part='bar']:focus-visible,
   [part='point']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
