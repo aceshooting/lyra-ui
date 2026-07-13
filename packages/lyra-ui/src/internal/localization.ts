@@ -110,7 +110,11 @@ export type LyraMessageKey =
   | 'untitledConversation'
   | 'dockPanelCollapse'
   | 'dockPanelExpand'
-  | 'dockPanelResize';
+  | 'dockPanelResize'
+  | 'documentPreviewAlt'
+  | 'documentPreviewUrlNotAllowed'
+  | 'documentPreviewFailedToLoad'
+  | 'documentPreviewGenericError';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -222,6 +226,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   dockPanelCollapse: 'Collapse panel',
   dockPanelExpand: 'Expand panel',
   dockPanelResize: 'Resize panel',
+  documentPreviewAlt: 'Document preview',
+  documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
+  documentPreviewFailedToLoad: 'Failed to load document.',
+  documentPreviewGenericError: 'Something went wrong.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

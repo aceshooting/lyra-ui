@@ -569,3 +569,138 @@ describe('accessibility', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('localization', () => {
+  it('defaults the image alt to "Document preview" when filename is unset', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview src="https://example.test/photo.png" mime-type="image/png"></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const img = el.shadowRoot!.querySelector('[part="body"] img') as HTMLImageElement;
+    expect(img.getAttribute('alt')).to.equal('Document preview');
+  });
+
+  it('localizes the image alt fallback via .strings', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        src="https://example.test/photo.png"
+        mime-type="image/png"
+        .strings=${{ documentPreviewAlt: 'Aperçu du document' }}
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const img = el.shadowRoot!.querySelector('[part="body"] img') as HTMLImageElement;
+    expect(img.getAttribute('alt')).to.equal('Aperçu du document');
+  });
+
+  it('defaults the loading spinner label to "Loading document…"', async () => {
+    const unstub = stubFetch(
+      () =>
+        new Promise(() => {
+          /* never resolves -- keep the spinner up for the assertion */
+        }),
+    );
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+      expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Loading document…');
+    } finally {
+      unstub();
+    }
+  });
+
+  it('localizes the loading spinner label via .strings (loadingDocument)', async () => {
+    const unstub = stubFetch(
+      () =>
+        new Promise(() => {
+          /* never resolves */
+        }),
+    );
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview
+          src="https://example.test/a.txt"
+          mime-type="text/plain"
+          .strings=${{ loadingDocument: 'Chargement du document…' }}
+        ></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+      expect(spinner.querySelector('.sr-only')!.textContent).to.equal('Chargement du document…');
+    } finally {
+      unstub();
+    }
+  });
+
+  it('defaults to "Document URL is not allowed." for an unsafe text src', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview .src=${'java\tscript:alert(1)'} mime-type="text/plain"></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal('Document URL is not allowed.');
+  });
+
+  it('localizes the unsafe-URL error via .strings (documentPreviewUrlNotAllowed)', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        .src=${'java\tscript:alert(1)'}
+        mime-type="text/plain"
+        .strings=${{ documentPreviewUrlNotAllowed: "L'URL du document n'est pas autorisée." }}
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal("L'URL du document n'est pas autorisée.");
+  });
+
+  it('defaults to "Failed to load document." when the fetch rejects with a non-Error value', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview mime-type="text/plain"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    const unstub = stubFetch(() => Promise.reject('boom'));
+    try {
+      const eventPromise = oneEvent(el, 'lyra-render-error');
+      el.src = 'https://example.test/a.txt';
+      await eventPromise;
+      await el.updateComplete;
+      const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+      expect(error.textContent).to.equal('Failed to load document.');
+    } finally {
+      unstub();
+    }
+  });
+
+  it('localizes the non-Error fetch-failure message via .strings (documentPreviewFailedToLoad)', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        mime-type="text/plain"
+        .strings=${{ documentPreviewFailedToLoad: 'Échec du chargement du document.' }}
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const unstub = stubFetch(() => Promise.reject('boom'));
+    try {
+      const eventPromise = oneEvent(el, 'lyra-render-error');
+      el.src = 'https://example.test/a.txt';
+      await eventPromise;
+      await el.updateComplete;
+      const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+      expect(error.textContent).to.equal('Échec du chargement du document.');
+    } finally {
+      unstub();
+    }
+  });
+
+  it('defaults status="error" with no error-message to "Something went wrong."', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview status="error"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal('Something went wrong.');
+  });
+
+  it('localizes the generic error fallback via .strings (documentPreviewGenericError)', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview status="error" .strings=${{ documentPreviewGenericError: "Une erreur s'est produite." }}></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal("Une erreur s'est produite.");
+  });
+});

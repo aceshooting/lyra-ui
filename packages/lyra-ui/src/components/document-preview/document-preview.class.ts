@@ -263,7 +263,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       this.textFetch = { kind: 'loaded', text };
     } catch (error) {
       if (generation !== this.fetchGeneration) return;
-      const message = error instanceof Error ? error.message : 'Failed to load document.';
+      const message = error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad');
       this.textFetch = { kind: 'error', message };
       this.emit('lyra-render-error', { error });
     }
@@ -311,12 +311,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderError(message: string): TemplateResult {
-    return html`<div part="error" role="alert">${message || 'Something went wrong.'}</div>`;
+    return html`<div part="error" role="alert">${message || this.localize('documentPreviewGenericError')}</div>`;
   }
 
   private renderTextPreview(): TemplateResult {
     if (this.src === '') return html`<p class="empty-note">No document to display.</p>`;
-    if (safeFetchUrl(this.src) === null) return this.renderError('Document URL is not allowed.');
+    if (safeFetchUrl(this.src) === null) return this.renderError(this.localize('documentPreviewUrlNotAllowed'));
     switch (this.textFetch.kind) {
       case 'loaded':
         return html`<pre class="text">${this.textFetch.text}</pre>`;
@@ -325,7 +325,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       case 'loading':
       case 'idle':
       default:
-        return this.renderSpinner('Loading document…');
+        return this.renderSpinner(this.localize('loadingDocument'));
     }
   }
 
@@ -333,7 +333,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     if (this.src === '') return html`<p class="empty-note">No image to display.</p>`;
     const src = safeMediaSrc(this.src);
     if (src === null) return this.renderDownloadFallback();
-    return html`<img src=${src} alt=${this.filename || 'Document preview'} />`;
+    return html`<img src=${src} alt=${this.filename || this.localize('documentPreviewAlt')} />`;
   }
 
   private renderDownloadFallback(): TemplateResult {
