@@ -57,20 +57,54 @@ export interface TimeRangePreset {
  * shortcut that sets both handles at once, the continuous brush underneath
  * is unaffected and both interaction modes coexist.
  *
+ * Form-associated (via a directly-attached `ElementInternals`, mirroring
+ * `<lyra-combobox>`'s minimal pattern rather than the single-string-value
+ * `FormAssociated` mixin, which doesn't fit a two-handle range): an ancestor
+ * `<fieldset disabled>` disables both handles and every preset button
+ * through `effectiveDisabled`, the same way it would a native `<input>`,
+ * without touching the consumer-facing `disabled` property/attribute itself.
+ *
  * @customElement lyra-time-range
  * @event lyra-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
  * @event lyra-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
  * @csspart base, track, range, handle-start, handle-end, presets, preset-button
  */
 export class LyraTimeRange extends LyraElement {
+  static formAssociated = true;
   static styles = [LyraElement.styles, styles];
+
+  static properties = {
+    // Hand-written accessor (see the `get`/`set disabled` pair below)
+    // instead of a plain `@property({ reflect: true })`: this element is
+    // form-associated, and the browser invokes `formDisabledCallback`
+    // synchronously for *this element's own* `disabled` attribute changes
+    // too, not only for an ancestor `<fieldset disabled>` toggling. A plain
+    // reflecting property defers its attribute write into the async Lit
+    // update cycle, so that browser callback would otherwise fire nested
+    // *inside* this same element's own in-progress update -- the
+    // `requestUpdate()` it triggers (to pick up `_fieldsetDisabled`) then
+    // races Lit's own scheduling and can resolve `updateComplete` before the
+    // corrected value actually renders. Reflecting the attribute
+    // synchronously, right in the setter (mirrors `<lyra-combobox>`'s and
+    // `FormAssociated`'s identical `disabled` accessor), makes the browser
+    // invoke that callback *before* any Lit update even starts, so it never
+    // interleaves with one.
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+  };
 
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Number }) start = 0;
   @property({ type: Number }) end = 100;
   @property({ type: Number }) step = 1;
-  @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Accessible name for the start handle, used as its `aria-label`.
+   *  Overridable for i18n/custom copy; defaults to the same literal text
+   *  this component always rendered before the property existed. */
+  @property({ attribute: 'start-label' }) startLabel = 'Range start';
+  /** Accessible name for the end handle, used as its `aria-label`.
+   *  Overridable for i18n/custom copy; defaults to the same literal text
+   *  this component always rendered before the property existed. */
+  @property({ attribute: 'end-label' }) endLabel = 'Range end';
   /**
    * Optional discrete presets rendered as a `[part="presets"]` button row
    * above the track. Purely additive: leaving this empty (the default)
@@ -78,11 +112,53 @@ export class LyraTimeRange extends LyraElement {
    */
   @property({ attribute: false }) presets: TimeRangePreset[] = [];
 
+  private internals: ElementInternals;
+  private _disabled = false;
+  // Tracked separately from the consumer's own `disabled` -- a fieldset
+  // cascade must never mutate that IDL property/attribute itself (mirrors
+  // combobox.ts's/slider.ts's identical `_fieldsetDisabled`/
+  // `effectiveDisabled` pattern), only the combined getter below.
+  private _fieldsetDisabled = false;
+
   // Keyed by pointerId rather than a single scalar so two concurrent drags
   // (e.g. a two-finger touch, one per handle) each keep tracking their own
   // handle instead of the second pointerdown hijacking which handle the
   // first pointer's subsequent moves apply to.
   private drags = new Map<number, DragState>();
+
+  constructor() {
+    super();
+    this.internals = this.attachInternals();
+  }
+
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this.requestUpdate('disabled', old);
+  }
+
+  /** Effective disabled state: this element's own `disabled` OR an ancestor
+   *  `<fieldset disabled>`'s inherited state -- mirrors native `<input>`,
+   *  whose own `disabled` IDL property/attribute is never mutated by a
+   *  fieldset. */
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled;
+  }
+
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>` toggles.
+   * Tracked separately from the consumer's own `disabled` (see
+   * `effectiveDisabled`) so a consumer's explicit `disabled` survives the
+   * fieldset re-enabling instead of being permanently overwritten.
+   */
+  formDisabledCallback(disabled: boolean): void {
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
+  }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -178,30 +254,36 @@ export class LyraTimeRange extends LyraElement {
   /**
    * Apply a discrete preset: sets both handles and emits the same
    * lyra-input/lyra-change pair a committed drag or keyboard step would.
+   *
+   * Deliberately bypasses `setValue()`/`clamp()` — a preset is an explicit
+   * discrete jump to the caller's own exact numbers, not a stepped nudge, so
+   * routing it through `clamp()`'s step-grid rounding would silently round
+   * a preset's values away from what the caller specified (and desync the
+   * active-button match in render(), which compares against these exact
+   * numbers). Only the domain bounds and the start<=end invariant apply
+   * here, not `step`. Both handles are also assigned before either event
+   * fires — routing them through two sequential `setValue()` calls instead
+   * would emit an extra lyra-input whose detail still held the stale
+   * pre-preset value for whichever handle hadn't been assigned yet.
    */
   private applyPreset(preset: TimeRangePreset): void {
-    if (this.disabled) return;
-    // clamp('start', v) pins to <= this.end and clamp('end', v) pins to >=
-    // this.start, cross-referencing the *other* handle's current value. If
-    // the preset shifts the whole range past the old end (or before the old
-    // start), applying setValue() in either order straight away would let
-    // that cross-reference clip the first handle against the stale sibling
-    // before the second call updates it. Widen the working range first —
-    // never narrows anything, just guarantees both setValue() calls below
-    // land on the preset's exact values regardless of direction.
-    this.start = Math.min(this.start, preset.start);
-    this.end = Math.max(this.end, preset.end);
-    this.setValue('start', preset.start, false);
-    this.setValue('end', preset.end, true);
+    if (this.effectiveDisabled) return;
+    const { lo, hi } = this.domain();
+    const start = Math.min(Math.max(lo, preset.start), hi);
+    const end = Math.min(Math.max(lo, preset.end), hi);
+    this.start = Math.min(start, end);
+    this.end = Math.max(start, end);
+    this.emit('lyra-input', { start: this.start, end: this.end });
+    this.emit('lyra-change', { start: this.start, end: this.end });
   }
 
   private onKeyDown = (handle: Handle, e: KeyboardEvent): void => {
     // A handle that already has focus when the component becomes disabled
     // must not still respond to arrow keys (new pointerdowns are already
-    // blocked by the `if (this.disabled) return;` guard in onPointerDown,
-    // and disabled handles carry `tabindex="-1"`, but a pre-existing focus
-    // can bypass both of those).
-    if (this.disabled) return;
+    // blocked by the `if (this.effectiveDisabled) return;` guard in
+    // onPointerDown, and disabled handles carry `tabindex="-1"`, but a
+    // pre-existing focus can bypass both of those).
+    if (this.effectiveDisabled) return;
     const current = handle === 'start' ? this.start : this.end;
     // Mirror the same left/right swap as onPointerMove: under RTL, physical
     // ArrowRight moves toward inset-inline-start, i.e. a lower value.
@@ -233,12 +315,12 @@ export class LyraTimeRange extends LyraElement {
     // Only commit on release of the keys that onKeyDown acts on — releasing
     // an unrelated key (Tab, Shift, ...) while a handle happens to be
     // focused must not emit a spurious lyra-change.
-    if (this.disabled || !isSliderKey(e.key)) return;
+    if (this.effectiveDisabled || !isSliderKey(e.key)) return;
     this.emit('lyra-change', { start: this.start, end: this.end });
   };
 
   private onPointerDown = (handle: Handle, e: PointerEvent): void => {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
     this.drags.set(e.pointerId, { handle, base });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -257,15 +339,15 @@ export class LyraTimeRange extends LyraElement {
   private onPointerMove = (e: PointerEvent): void => {
     const drag = this.drags.get(e.pointerId);
     if (drag === undefined) return;
-    if (this.disabled) {
+    if (this.effectiveDisabled) {
       // These are window-level listeners driven by setPointerCapture, so
       // they keep firing for this pointerId regardless of any CSS on the
       // host (this was already true even back when the host used
       // `pointer-events: none`, since that never governed an
       // already-captured window listener) — a drag already in progress
       // would otherwise keep mutating start/end (and emitting lyra-input)
-      // after `disabled` flips true mid-drag. Abort the drag instead of
-      // continuing to process it.
+      // after `disabled` (or an ancestor fieldset) flips true mid-drag.
+      // Abort the drag instead of continuing to process it.
       this.endDrag(e.pointerId, false);
       return;
     }
@@ -343,7 +425,7 @@ export class LyraTimeRange extends LyraElement {
               return html`<button
                 part="preset-button"
                 type="button"
-                ?disabled=${this.disabled}
+                ?disabled=${this.effectiveDisabled}
                 aria-pressed=${active ? 'true' : 'false'}
                 ?data-active=${active}
                 @click=${() => this.applyPreset(preset)}
@@ -362,9 +444,9 @@ export class LyraTimeRange extends LyraElement {
         <div
           part="handle-start"
           role="slider"
-          tabindex=${this.disabled ? '-1' : '0'}
-          aria-label="Range start"
-          aria-disabled=${this.disabled ? 'true' : nothing}
+          tabindex=${this.effectiveDisabled ? '-1' : '0'}
+          aria-label=${this.startLabel}
+          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
           aria-valuenow=${isNaN(this.start) ? nothing : this.start}
@@ -376,9 +458,9 @@ export class LyraTimeRange extends LyraElement {
         <div
           part="handle-end"
           role="slider"
-          tabindex=${this.disabled ? '-1' : '0'}
-          aria-label="Range end"
-          aria-disabled=${this.disabled ? 'true' : nothing}
+          tabindex=${this.effectiveDisabled ? '-1' : '0'}
+          aria-label=${this.endLabel}
+          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}
           aria-valuenow=${isNaN(this.end) ? nothing : this.end}

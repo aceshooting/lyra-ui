@@ -540,6 +540,46 @@ it('does not render invalid CSS or an aria-valuenow="NaN" when start fails Numbe
   expect(startHandle.hasAttribute('aria-valuenow')).to.be.false;
 });
 
+it('defaults each handle\'s aria-label and lets startLabel/endLabel override them', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  // Unset, these match the literal text this component always rendered
+  // before startLabel/endLabel existed -- non-breaking default.
+  expect(startHandle.getAttribute('aria-label')).to.equal('Range start');
+  expect(endHandle.getAttribute('aria-label')).to.equal('Range end');
+
+  el.startLabel = 'From';
+  el.endLabel = 'To';
+  await el.updateComplete;
+  // Before the fix, both aria-labels were hardcoded literals with no
+  // property to override them, so this assignment would have had no effect
+  // on what's actually rendered.
+  expect(startHandle.getAttribute('aria-label')).to.equal('From');
+  expect(endHandle.getAttribute('aria-label')).to.equal('To');
+});
+
+it('reflects startLabel/endLabel from their start-label/end-label content attributes', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      start-label="From"
+      end-label="To"
+    ></lyra-time-range>`,
+  )) as LyraTimeRange;
+  expect(el.startLabel).to.equal('From');
+  expect(el.endLabel).to.equal('To');
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  expect(startHandle.getAttribute('aria-label')).to.equal('From');
+  expect(endHandle.getAttribute('aria-label')).to.equal('To');
+});
+
 it('marks handles aria-disabled when disabled, for screen readers browsing by virtual cursor', async () => {
   const el = (await fixture(
     html`<lyra-time-range min="0" max="100" start="20" end="80" disabled></lyra-time-range>`,
@@ -597,6 +637,62 @@ it('toggles tabindex between "0" and "-1" as disabled changes, removing disabled
   await el.updateComplete;
   expect(startHandle.getAttribute('tabindex')).to.equal('0');
   expect(endHandle.getAttribute('tabindex')).to.equal('0');
+});
+
+it('is disabled by an ancestor <fieldset disabled> without mutating the disabled property, and re-enables when the fieldset does', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lyra-time-range min="0" max="100" start="20" end="80" step="5"></lyra-time-range>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-time-range') as LyraTimeRange;
+  await el.updateComplete;
+
+  // `el.disabled` (the consumer-facing IDL property/attribute) is never
+  // mutated by fieldset cascading -- only the combined `effectiveDisabled`
+  // reflects it (mirrors lyra-combobox's/lyra-slider's identical
+  // `_fieldsetDisabled`/`effectiveDisabled` pattern).
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(el.disabled).to.be.false;
+
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  expect(startHandle.getAttribute('tabindex')).to.equal('-1');
+  expect(startHandle.getAttribute('aria-disabled')).to.equal('true');
+
+  // Before the fix, lyra-time-range never became form-associated at all, so
+  // an ancestor fieldset had no effect: the handle would stay focusable and
+  // arrow keys would still move it.
+  startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(el.start).to.equal(20);
+
+  const fieldset = form.querySelector('fieldset')!;
+  fieldset.disabled = false;
+  await el.updateComplete;
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.false;
+  expect(startHandle.getAttribute('tabindex')).to.equal('0');
+  startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(el.start).to.equal(25);
+});
+
+it('disables preset buttons via an ancestor <fieldset disabled> too', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-time-range') as LyraTimeRange;
+  el.presets = PRESETS;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+  expect(button.disabled).to.be.true;
+  button.click();
+  await el.updateComplete;
+  expect(el.start).to.equal(20);
+  expect(el.end).to.equal(80);
 });
 
 it('renders a stable 0%/100% pair instead of dividing by zero when min === max', async () => {
@@ -772,6 +868,48 @@ it('handles a preset that shifts the whole range past the previous end (clamp() 
   await el.updateComplete;
   expect(el.start).to.equal(60);
   expect(el.end).to.equal(90);
+});
+
+it('emits exactly one lyra-input event from a preset click, already holding the final values', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Far future', start: 60, end: 90 }];
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+
+  const inputDetails: Array<{ start: number; end: number }> = [];
+  el.addEventListener('lyra-input', (e) => inputDetails.push((e as CustomEvent).detail));
+  button.click();
+
+  // Before the fix, applyPreset() routed both handles through setValue()
+  // sequentially, so this fired twice: once with the *stale* pre-preset end
+  // (80) while start had already moved but end hadn't yet, and only the
+  // second carried the true final values -- a caller reacting to the first
+  // lyra-input would have observed an inconsistent, never-actually-rendered
+  // intermediate state.
+  expect(inputDetails.length).to.equal(1);
+  expect(inputDetails[0]).to.deep.equal({ start: 60, end: 90 });
+});
+
+it('lands exactly on preset values that are not aligned to a coarse step, and still shows data-active', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="100" start="20" end="80" step="10"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Odd preset', start: 3, end: 47 }];
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+  button.click();
+  await el.updateComplete;
+
+  // Before the fix, routing preset.start/preset.end through setValue()'s
+  // clamp() snapped them to the nearest multiple of `step` from `min` (0 and
+  // 50), silently overriding the caller's exact preset numbers and leaving
+  // the button's aria-pressed/data-active match permanently false.
+  expect(el.start).to.equal(3);
+  expect(el.end).to.equal(47);
+  expect(button.getAttribute('aria-pressed')).to.equal('true');
+  expect(button.hasAttribute('data-active')).to.be.true;
 });
 
 it('still supports brush dragging via handle-start/handle-end while presets is set (both interaction modes coexist)', async () => {
