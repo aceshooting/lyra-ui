@@ -1,0 +1,30 @@
+import { expect } from '@open-wc/testing';
+import {
+  installHappyDomFormAssociatedShims,
+  installStubInternalsForTest,
+} from './happy-dom-shims.js';
+
+describe('installHappyDomFormAssociatedShims', () => {
+  it('is a no-op in a real browser (attachInternals already exists natively)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    installHappyDomFormAssociatedShims();
+    expect(HTMLElement.prototype.attachInternals).to.equal(original);
+  });
+
+  it('installs a stub whose setFormValue accepts every call shape used across the library without throwing', () => {
+    // Force-install the stub even though attachInternals exists natively here, purely to verify
+    // the stub object's own shape in isolation (the real guard is exercised by the test above).
+    const div = document.createElement('div');
+    const stub = installStubInternalsForTest(div);
+    expect(() => stub.setFormValue('')).to.not.throw();
+    expect(() => stub.setFormValue(null, 'unchecked')).to.not.throw();
+    expect(() => stub.setFormValue(new FormData(), '[]')).to.not.throw();
+    expect(stub.validity.valid).to.be.true;
+    expect(() => stub.checkValidity()).to.not.throw();
+    expect(() => stub.reportValidity()).to.not.throw();
+    expect(stub.form).to.be.null;
+    expect(stub.labels.length).to.equal(0);
+    expect(stub.validationMessage).to.equal('');
+    expect(stub.willValidate).to.be.true;
+  });
+});
