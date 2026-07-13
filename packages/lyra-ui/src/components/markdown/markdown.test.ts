@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, oneEvent, aTimeout } from '@open-wc/testing';
 import './markdown.js';
 import type { LyraMarkdown } from './markdown.js';
 
@@ -156,6 +156,58 @@ it('does not intercept any link when internal-link-prefix is unset', async () =>
   withNavigationBlocked(() => a.click());
   await el.updateComplete;
   expect(fired).to.be.false;
+});
+
+it('percent-encodes a link href that needs it, matching marked\'s own default renderer', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '[t](café.md)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+  expect(el.shadowRoot!.querySelector('a')!.getAttribute('href')).to.equal('caf%C3%A9.md');
+});
+
+it('does not double-encode a link href that is already percent-encoded', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '[t](a%20b.md)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+  expect(el.shadowRoot!.querySelector('a')!.getAttribute('href')).to.equal('a%20b.md');
+});
+
+it('drops the anchor and renders only the link text when the href is malformed (lone surrogate)', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '[a](\uD800)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim().length > 0);
+  expect(el.shadowRoot!.querySelector('a')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('a');
+});
+
+it('adds scope="col" to every rendered table header cell', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.content = richSample;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+  const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
+  expect(ths.length).to.be.greaterThan(0);
+  ths.forEach((th) => expect(th.getAttribute('scope')).to.equal('col'));
+});
+
+it('does not set deps or render when the element disconnects before loadMarkdownDeps() resolves', async () => {
+  const el = document.createElement('lyra-markdown') as LyraMarkdown;
+  el.content = '# hi';
+  document.body.appendChild(el);
+  // Disconnect in the same synchronous tick as connect, before the
+  // (module-cached) loadMarkdownDeps() promise's .then() callback -- always
+  // deferred to a microtask, even when the promise is already resolved from
+  // an earlier test -- has a chance to run.
+  el.remove();
+  await aTimeout(50);
+
+  type Internals = { deps?: unknown; renderedHtml: string | null };
+  const internals = el as unknown as Internals;
+  expect(internals.deps, 'deps must not be set on a disconnected instance').to.equal(undefined);
+  expect(internals.renderedHtml).to.equal(null);
 });
 
 it('reflects the streaming property as a boolean attribute with no rendering effect', async () => {

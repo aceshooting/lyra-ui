@@ -20,21 +20,21 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Mirrors marked's own default `link()` renderer's defensive href guard: a
- * malformed percent-escape or lone UTF-16 surrogate in the raw href throws
- * inside `encodeURI`, and marked's default renderer responds by dropping the
- * anchor (rendering the link text alone) rather than emitting a broken
- * `href`. `encodeURI`'s *return value* is discarded on purpose, not applied —
- * calling it a second time on an already-percent-encoded URL (the common
- * case for a real markdown link) would double-encode every existing `%XX`
- * escape.
+ * Mirrors marked's own default `link()` renderer's `cleanUrl()`: a malformed
+ * percent-escape or lone UTF-16 surrogate in the raw href throws inside
+ * `encodeURI`, and marked's default renderer responds by dropping the anchor
+ * (rendering the link text alone) rather than emitting a broken `href` —
+ * returning `null` here lets the caller do the same. The
+ * `.replace(/%25/g, '%')` compensates for `encodeURI` re-escaping the `%` of
+ * an href that was already percent-encoded (the common case for a real
+ * markdown link) — without it, every existing `%XX` escape would become
+ * `%25XX`, double-encoding it.
  */
-function isValidHref(href: string): boolean {
+function cleanHref(href: string): string | null {
   try {
-    encodeURI(href);
-    return true;
+    return encodeURI(href).replace(/%25/g, '%');
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -119,6 +119,15 @@ export class LyraMarkdown extends LyraElement {
   connectedCallback(): void {
     super.connectedCallback();
     void loadMarkdownDeps().then((resolved) => {
+      // The (module-cached, page-lifetime) loadMarkdownDeps() promise can
+      // resolve after this instance was removed from the DOM -- e.g. an
+      // <lyra-markdown> inside a conditionally-rendered chat message or a
+      // virtualized list. Without this guard, a detached instance would
+      // still have its `deps` set and renderMarkdown() called, mutating the
+      // @state() renderedHtml property and scheduling a Lit update no one
+      // will ever see. Mirrors chart.ts's own connectedCallback() guard for
+      // the identical race.
+      if (!this.isConnected) return;
       this.deps = resolved;
       this.renderMarkdown();
     });
@@ -221,8 +230,17 @@ export class LyraMarkdown extends LyraElement {
           return `<blockquote part="blockquote">\n${this.parser.parse(token.tokens)}</blockquote>\n`;
         },
         table(token) {
+          // Built directly here (rather than delegating to the inherited
+          // tablecell()) so a scope="col" can be added -- marked's own
+          // default tablecell() never emits it, and without it a screen
+          // reader can't reliably associate a data cell with its column
+          // header beyond the simplest table.
           let headerRow = '';
-          for (const cell of token.header) headerRow += this.tablecell(cell);
+          for (const cell of token.header) {
+            const text = this.parser.parseInline(cell.tokens);
+            const alignAttr = cell.align ? ` align="${cell.align}"` : '';
+            headerRow += `<th scope="col"${alignAttr}>${text}</th>`;
+          }
           let bodyRows = '';
           for (const row of token.rows) {
             let rowHtml = '';
@@ -235,10 +253,11 @@ export class LyraMarkdown extends LyraElement {
         },
         link(token) {
           const text = this.parser.parseInline(token.tokens);
-          if (!isValidHref(token.href)) return text;
+          const href = cleanHref(token.href);
+          if (href === null) return text;
           const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
           return (
-            `<a part="link" href="${escapeHtml(token.href)}"${titleAttr} ` +
+            `<a part="link" href="${escapeHtml(href)}"${titleAttr} ` +
             `target="${escapeHtml(linkTarget)}" rel="noopener noreferrer">${text}</a>`
           );
         },

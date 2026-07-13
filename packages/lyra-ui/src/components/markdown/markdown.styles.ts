@@ -38,7 +38,7 @@ export const styles = css`
     font-family: var(--lyra-markdown-font-mono);
     font-size: 0.875em;
     background: var(--lyra-color-brand-quiet);
-    border-radius: 0.1875rem;
+    border-radius: calc(var(--lyra-radius) * 0.5);
     padding: 0.125rem 0.3125rem;
   }
   [part='code-block'] {
