@@ -97,8 +97,10 @@ export class LyraContextMeter extends LyraElement {
     const totalValue = Math.max(0, finiteNumber(this.total, 0));
     const usedForSummary = totalValue > 0 ? Math.min(this.usedTotal, totalValue) : this.usedTotal;
     const used = formatCount(usedForSummary);
-    const total = totalValue > 0 ? formatCount(totalValue) : null;
-    const phrase = total ? `${used} of ${total} used` : `${used} used`;
+    const phrase =
+      totalValue > 0
+        ? this.localize('contextMeterUsedOfTotal', undefined, { used, total: formatCount(totalValue) })
+        : this.localize('contextMeterUsed', undefined, { used });
     return this.label ? `${this.label} — ${phrase}` : phrase;
   }
 

@@ -121,6 +121,27 @@ it('falls back to a used-only summary when total is 0 or unset', async () => {
   expect(el.getAttribute('aria-label')).to.equal('5 used');
 });
 
+describe('summary localization', () => {
+  it('localizes the "used of total" summary via this.localize() when .strings overrides contextMeterUsedOfTotal', async () => {
+    const el = (await fixture(html`
+      <lyra-context-meter total="10000" .strings=${{ contextMeterUsedOfTotal: '{used} sur {total} utilisés' }}
+      ></lyra-context-meter>
+    `)) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('8,000 sur 10,000 utilisés');
+  });
+
+  it('localizes the used-only summary via this.localize() when .strings overrides contextMeterUsed', async () => {
+    const el = (await fixture(html`
+      <lyra-context-meter .strings=${{ contextMeterUsed: '{used} utilisés' }}></lyra-context-meter>
+    `)) as LyraContextMeter;
+    el.segments = [{ label: 'a', value: 5 }];
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('5 utilisés');
+  });
+});
+
 it('renders the label part visibly, hidden from the accessibility tree since the host aria-label already carries it', async () => {
   const el = (await fixture(
     html`<lyra-context-meter total="100" label="Token budget"></lyra-context-meter>`,

@@ -104,7 +104,9 @@ export type LyraMessageKey =
   | 'citationMediumConfidence'
   | 'citationLowConfidence'
   | 'citationVerified'
-  | 'citationUnverified';
+  | 'citationUnverified'
+  | 'contextMeterUsed'
+  | 'contextMeterUsedOfTotal';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -210,6 +212,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   citationLowConfidence: 'Low confidence',
   citationVerified: 'Verified',
   citationUnverified: 'Unverified',
+  contextMeterUsed: '{used} used',
+  contextMeterUsedOfTotal: '{used} of {total} used',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
