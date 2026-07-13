@@ -12,6 +12,8 @@ export const styles = css`
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
+    block-size: 100%;
+    box-sizing: border-box;
   }
   [part='icon'] {
     color: var(--lyra-color-text-quiet);
