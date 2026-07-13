@@ -223,6 +223,34 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
   expect(messages.some((m) => m.includes('scheduled an update'))).to.be.true;
 });
 
+it('localizes the overflow-toggle aria-label and collapsed text via this.localize(), not hardcoded English', async () => {
+  const el = (await fixture(html`
+    <lyra-chip-group max-visible="1" .strings=${{ showMoreCount: '{count} de plus', showLess: 'Voir moins' }}>
+      <lyra-chip>A</lyra-chip>
+      <lyra-chip>B</lyra-chip>
+      <lyra-chip>C</lyra-chip>
+    </lyra-chip-group>
+  `)) as LyraChipGroup;
+  const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(toggle.getAttribute('aria-label')).to.equal('2 de plus');
+  toggle.click();
+  await el.updateComplete;
+  expect(toggle.getAttribute('aria-label')).to.equal('Voir moins');
+  expect(toggle.textContent!.trim()).to.equal('Voir moins');
+});
+
+it('defaults to English "Show N more"/"Show less" when no strings override is set', async () => {
+  const el = (await fixture(html`
+    <lyra-chip-group max-visible="1">
+      <lyra-chip>A</lyra-chip>
+      <lyra-chip>B</lyra-chip>
+      <lyra-chip>C</lyra-chip>
+    </lyra-chip-group>
+  `)) as LyraChipGroup;
+  const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(toggle.getAttribute('aria-label')).to.equal('Show 2 more');
+});
+
 it('is accessible with no overflow', async () => {
   const el = (await fixture(html`
     <lyra-chip-group>

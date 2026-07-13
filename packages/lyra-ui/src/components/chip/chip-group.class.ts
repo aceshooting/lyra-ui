@@ -118,10 +118,10 @@ export class LyraChipGroup extends LyraElement {
               part="overflow-indicator"
               type="button"
               aria-expanded=${this.expanded ? 'true' : 'false'}
-              aria-label=${this.expanded ? 'Show less' : `Show ${hiddenCount} more`}
+              aria-label=${this.expanded ? this.localize('showLess') : this.localize('showMoreCount', undefined, { count: hiddenCount })}
               @click=${this.onToggleOverflow}
             >
-              ${this.expanded ? 'Show less' : `+${hiddenCount}`}
+              ${this.expanded ? this.localize('showLess') : `+${hiddenCount}`}
             </button>`
           : nothing}
       </div>
