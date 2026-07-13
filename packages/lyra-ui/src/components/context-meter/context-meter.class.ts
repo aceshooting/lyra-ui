@@ -90,12 +90,20 @@ export class LyraContextMeter extends LyraElement {
     return out;
   }
 
+  /** `usedTotal` and `total`, both clamped the same way ratios() clamps the
+   *  visual fill -- a segments array that sums past total must not report an
+   *  impossible "160 of 100 used"/aria-valuenow > aria-valuemax while the
+   *  bar/ring visibly caps at 100%. Shared by `summary` and `willUpdate`'s
+   *  aria-value* trio so the announced text and the queryable numeric value
+   *  can never diverge. */
+  private get clampedUsedTotal(): { used: number; total: number } {
+    const total = Math.max(0, finiteNumber(this.total, 0));
+    const used = total > 0 ? Math.min(this.usedTotal, total) : this.usedTotal;
+    return { used, total };
+  }
+
   private get summary(): string {
-    // Clamp the announced figure the same way ratios() clamps the visual fill --
-    // a segments array that sums past total must not report an impossible
-    // "160 of 100 used" to assistive tech while the bar/ring visibly caps at 100%.
-    const totalValue = Math.max(0, finiteNumber(this.total, 0));
-    const usedForSummary = totalValue > 0 ? Math.min(this.usedTotal, totalValue) : this.usedTotal;
+    const { used: usedForSummary, total: totalValue } = this.clampedUsedTotal;
     const used = formatCount(usedForSummary);
     const phrase =
       totalValue > 0
@@ -105,12 +113,20 @@ export class LyraContextMeter extends LyraElement {
   }
 
   protected willUpdate(): void {
-    // role="img" + aria-label (rather than exposing the SVG/bar internals to
-    // the accessibility tree) mirrors lyra-gauge's "meter" role convention:
-    // one computed string carries the whole occupancy summary, so a screen
-    // reader gets meaningful text instead of silence or a bare "graphic".
-    this.setAttribute('role', 'img');
+    // role="meter" + a real aria-valuenow/aria-valuemin/aria-valuemax trio
+    // (rather than exposing the SVG/bar internals to the accessibility
+    // tree) genuinely mirrors lyra-gauge's "meter" role convention: the
+    // occupancy is exposed as a queryable numeric value, not just baked
+    // into a single static string. aria-label still carries the full
+    // human-readable summary (used/total, optionally prefixed by `label`)
+    // as the accessible name, same as before.
+    this.setAttribute('role', 'meter');
     this.setAttribute('aria-label', this.summary);
+    const { used, total } = this.clampedUsedTotal;
+    this.setAttribute('aria-valuenow', String(used));
+    this.setAttribute('aria-valuemin', '0');
+    if (total > 0) this.setAttribute('aria-valuemax', String(total));
+    else this.removeAttribute('aria-valuemax');
   }
 
   private renderBar(): TemplateResult {

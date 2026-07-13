@@ -100,8 +100,11 @@ it('computes a "used of total" aria-label summary from the segment sum, ignoring
   el.segments = SEGMENTS;
   await el.updateComplete;
 
-  expect(el.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('role')).to.equal('meter');
   expect(el.getAttribute('aria-label')).to.equal('8,000 of 10,000 used');
+  expect(el.getAttribute('aria-valuenow')).to.equal('8000');
+  expect(el.getAttribute('aria-valuemin')).to.equal('0');
+  expect(el.getAttribute('aria-valuemax')).to.equal('10000');
 });
 
 it('prefixes the aria-label summary with the label when provided', async () => {
