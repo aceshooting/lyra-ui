@@ -121,7 +121,9 @@ export class LyraChipGroup extends LyraElement {
               aria-label=${this.expanded ? this.localize('showLess') : this.localize('showMoreCount', undefined, { count: hiddenCount })}
               @click=${this.onToggleOverflow}
             >
-              ${this.expanded ? this.localize('showLess') : `+${hiddenCount}`}
+              ${this.expanded
+                ? this.localize('showLess')
+                : this.localize('showMoreCollapsed', undefined, { count: hiddenCount })}
             </button>`
           : nothing}
       </div>

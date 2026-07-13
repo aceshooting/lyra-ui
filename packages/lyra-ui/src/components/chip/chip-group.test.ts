@@ -239,6 +239,30 @@ it('localizes the overflow-toggle aria-label and collapsed text via this.localiz
   expect(toggle.textContent!.trim()).to.equal('Voir moins');
 });
 
+it('localizes the collapsed overflow-indicator visible text via this.localize(), not a hardcoded "+N"', async () => {
+  const el = (await fixture(html`
+    <lyra-chip-group max-visible="1" .strings=${{ showMoreCollapsed: '{count} de plus' }}>
+      <lyra-chip>A</lyra-chip>
+      <lyra-chip>B</lyra-chip>
+      <lyra-chip>C</lyra-chip>
+    </lyra-chip-group>
+  `)) as LyraChipGroup;
+  const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(toggle.textContent!.trim()).to.equal('2 de plus');
+});
+
+it('defaults to a plain "+N" when no strings override is set', async () => {
+  const el = (await fixture(html`
+    <lyra-chip-group max-visible="1">
+      <lyra-chip>A</lyra-chip>
+      <lyra-chip>B</lyra-chip>
+      <lyra-chip>C</lyra-chip>
+    </lyra-chip-group>
+  `)) as LyraChipGroup;
+  const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  expect(toggle.textContent!.trim()).to.equal('+2');
+});
+
 it('defaults to English "Show N more"/"Show less" when no strings override is set', async () => {
   const el = (await fixture(html`
     <lyra-chip-group max-visible="1">
