@@ -67,6 +67,22 @@ describe('accessible name', () => {
     }
   });
 
+  it('localizes each status word via this.localize() when .strings overrides the citation* keys', async () => {
+    const el = (await fixture(html`
+      <lyra-citation-badge
+        index="1"
+        status="verified"
+        .strings=${{ citationVerified: 'Vérifié', citationUnverified: 'Non vérifié' }}
+      ></lyra-citation-badge>
+    `)) as LyraCitationBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Citation 1, Vérifié');
+
+    el.status = 'unverified';
+    await el.updateComplete;
+    expect(base.getAttribute('aria-label')).to.equal('Citation 1, Non vérifié');
+  });
+
   it('lets the label prop fully override the computed accessible name', async () => {
     const el = (await fixture(
       html`<lyra-citation-badge index="3" status="verified" label="Source: report.pdf, page 4"></lyra-citation-badge>`,

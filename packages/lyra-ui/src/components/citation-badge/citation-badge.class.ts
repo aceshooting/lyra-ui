@@ -18,16 +18,17 @@ export interface CitationOpenDetail {
   href?: string;
 }
 
-/** Visible (not just color-coded) status word, folded into the computed
- *  accessible name — `''` for `default` omits the status clause entirely
- *  rather than announcing a meaningless "Citation 3, Default". */
-const STATUS_LABEL: Record<CitationBadgeStatus, string> = {
-  default: '',
-  high: 'High confidence',
-  medium: 'Medium confidence',
-  low: 'Low confidence',
-  verified: 'Verified',
-  unverified: 'Unverified',
+/** Localization key for the visible (not just color-coded) status word,
+ *  folded into the computed accessible name — `null` for `default` omits the
+ *  status clause entirely rather than announcing a meaningless
+ *  "Citation 3, Default". */
+const STATUS_MESSAGE_KEY: Record<CitationBadgeStatus, string | null> = {
+  default: null,
+  high: 'citationHighConfidence',
+  medium: 'citationMediumConfidence',
+  low: 'citationLowConfidence',
+  verified: 'citationVerified',
+  unverified: 'citationUnverified',
 };
 
 // A short grace period before the popover actually hides on pointer-leave/
@@ -169,7 +170,8 @@ export class LyraCitationBadge extends LyraElement {
 
   private get accessibleLabel(): string {
     if (this.label) return this.label;
-    const statusText = STATUS_LABEL[this.status];
+    const key = STATUS_MESSAGE_KEY[this.status];
+    const statusText = key ? this.localize(key) : '';
     return statusText ? `Citation ${this.index}, ${statusText}` : `Citation ${this.index}`;
   }
 

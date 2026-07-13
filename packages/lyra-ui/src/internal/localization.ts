@@ -99,7 +99,12 @@ export type LyraMessageKey =
   | 'attachmentMenuImage'
   | 'attachmentMenuCamera'
   | 'checkboxRequired'
-  | 'switchRequired';
+  | 'switchRequired'
+  | 'citationHighConfidence'
+  | 'citationMediumConfidence'
+  | 'citationLowConfidence'
+  | 'citationVerified'
+  | 'citationUnverified';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -200,6 +205,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   attachmentMenuCamera: 'Take a photo',
   checkboxRequired: 'Please check this box if you want to continue.',
   switchRequired: 'Please turn this on.',
+  citationHighConfidence: 'High confidence',
+  citationMediumConfidence: 'Medium confidence',
+  citationLowConfidence: 'Low confidence',
+  citationVerified: 'Verified',
+  citationUnverified: 'Unverified',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
