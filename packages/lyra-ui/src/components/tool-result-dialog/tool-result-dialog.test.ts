@@ -72,6 +72,23 @@ it('shows a visible status label for every status value, not just a color', asyn
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Denied');
 });
 
+it('falls back to a pending badge instead of throwing for an out-of-union status attribute', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="run_python" status="bogus"></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  expect(el.status).to.equal('pending');
+  expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Pending');
+});
+
+it('falls back to a pending badge instead of throwing when status is assigned an out-of-union value directly', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  el.status = 'bogus' as LyraToolResultDialog['status'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Pending');
+});
+
 it('omits the duration part entirely when duration-ms is unset', async () => {
   const el = (await fixture(
     html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
@@ -223,6 +240,26 @@ it('returns focus to the element that was focused before the dialog opened', asy
   trigger.remove();
 });
 
+it('restores focus to the trigger when open is set to false directly, not just via close()', async () => {
+  const trigger = document.createElement('button');
+  trigger.textContent = 'open';
+  document.body.appendChild(trigger);
+  trigger.focus();
+
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="maximize-button"]'));
+
+  el.open = false;
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(trigger);
+
+  trigger.remove();
+});
+
 it('locks document scroll while open and releases it on close', async () => {
   const el = (await fixture(
     html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
@@ -246,6 +283,51 @@ it('releases the scroll lock on disconnect while open', async () => {
   el.remove();
 
   expect(document.documentElement.style.overflow).to.equal('');
+});
+
+it('restores the scroll lock and keydown trap when reparented while still open', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  await el.updateComplete;
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+
+  const otherContainer = document.createElement('div');
+  document.body.appendChild(otherContainer);
+  otherContainer.appendChild(el); // reparenting an already-connected node fires disconnectedCallback then connectedCallback synchronously
+  expect(el.open).to.be.true;
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(document.documentElement.style.overflow).to.equal('');
+
+  otherContainer.remove();
+});
+
+it('closes only the topmost dialog on Escape when two instances are open at once', async () => {
+  const back = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="first" open></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  await back.updateComplete;
+
+  const front = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="second" open></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  await front.updateComplete;
+
+  const listener = oneEvent(front, 'lyra-dialog-close');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  const { detail } = await listener;
+
+  expect(detail).to.equal('escape');
+  expect(front.open).to.be.false;
+  expect(back.open, 'the dialog beneath the topmost must stay open').to.be.true;
+
+  back.close('api');
+  await back.updateComplete;
 });
 
 it('traps Tab focus inside the panel, wrapping last->first and first->last', async () => {

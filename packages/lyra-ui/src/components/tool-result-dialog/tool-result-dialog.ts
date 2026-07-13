@@ -1,8 +1,17 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  svg,
+  nothing,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
+import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../internal/icons.js';
 import { styles } from './tool-result-dialog.styles.js';
@@ -18,42 +27,12 @@ export type ToolResultStatus = 'pending' | 'running' | 'success' | 'error' | 'de
  * other string is whatever a caller passes to `close()` directly (e.g. a
  * consumer's own footer action).
  */
-export type ToolResultDialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | string;
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Shadow-piercing so a slotted custom element's real focusable target (e.g.
-// an <input> inside its own shadow root) is found even though the host tag
-// itself doesn't match FOCUSABLE_SELECTOR. Deliberately duplicated from
-// lyra-dialog's identical helper rather than imported/shared -- this
-// component is its own standalone overlay with its own header chrome and
-// must not depend on lyra-dialog (see this file's authoring notes).
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/** Whether `el` is actually laid out/paintable -- `checkVisibility()` (falling
- *  back to `getClientRects().length` where unsupported) correctly follows
- *  flattened-tree/slot assignment, unlike `offsetParent`. Mirrors
- *  lyra-dialog's/lyra-widget's identical helper. */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
-}
+export type ToolResultDialogCloseReason =
+  | 'escape'
+  | 'backdrop'
+  | 'close-button'
+  | 'api'
+  | (string & Record<never, never>);
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
@@ -143,6 +122,26 @@ const STATUS_LABEL: Record<ToolResultStatus, string> = {
   denied: 'Denied',
 };
 
+const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
+
+/**
+ * Normalizes `status` at the attribute boundary -- an out-of-union value
+ * (markup a caller doesn't fully control, or a raw string from an untyped
+ * consumer) falls back to `'pending'` here rather than reaching
+ * STATUS_ICON/STATUS_LABEL as a bad lookup key and crashing `render()`. This
+ * only covers attribute parsing; a `.status = ...` assignment made directly
+ * as a property bypasses converters entirely, which is why `render()` below
+ * also falls back at the STATUS_ICON/STATUS_LABEL lookup itself.
+ */
+const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
+  fromAttribute(value): ToolResultStatus {
+    return value !== null && STATUS_VALUES.has(value) ? (value as ToolResultStatus) : 'pending';
+  },
+  toAttribute(value): string {
+    return value;
+  },
+};
+
 /** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Sub-second
  *  durations are the common case for a single tool call, so they get the
  *  more precise unit; once a call runs a full second or longer, trimming to
@@ -180,6 +179,10 @@ function formatDuration(ms: number): string {
  * return to, so no separate scroll-lock/focus-trap bookkeeping is needed for
  * the transition itself.
  *
+ * Stacking: opening more than one of these dialogs at once is supported --
+ * Escape and the Tab focus trap only ever act on the topmost open instance,
+ * so instances beneath it stay open and untouched until the one on top closes.
+ *
  * @customElement lyra-tool-result-dialog
  * @slot body - The dialog's main content — typically a `<lyra-tabs>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
@@ -205,14 +208,25 @@ function formatDuration(ms: number): string {
 export class LyraToolResultDialog extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
-  /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
+  /**
+   * Whether the dialog is open. Set this (or call `close()`) — there is no
+   * separate `show()`/`hide()` pair. Both paths restore focus to the trigger
+   * element identically; only `close()` additionally fires
+   * `lyra-dialog-close`, since a direct assignment carries no reason string
+   * to attach to that event.
+   */
   @property({ type: Boolean, reflect: true }) open = false;
 
   /** The tool's name, rendered prominently in the header. */
   @property({ attribute: 'tool-name' }) toolName = '';
 
-  /** The tool call's current lifecycle state — drives the header's status badge. */
-  @property({ reflect: true }) status: ToolResultStatus = 'pending';
+  /**
+   * The tool call's current lifecycle state — drives the header's status
+   * badge. An out-of-union value (e.g. a stray `status` attribute, or a
+   * direct property assignment from an untyped caller) is treated as
+   * `'pending'` rather than crashing render.
+   */
+  @property({ reflect: true, converter: statusConverter }) status: ToolResultStatus = 'pending';
 
   /** How long the call took, in milliseconds. Omitted from the header entirely when unset. */
   @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
@@ -223,7 +237,7 @@ export class LyraToolResultDialog extends LyraElement {
   @state() private hasFooterSlot = false;
 
   private releaseScrollLock?: () => void;
-  private lastTrigger?: HTMLElement;
+  private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-result-dialog-title');
 
   protected willUpdate(changed: PropertyValues): void {
@@ -232,34 +246,18 @@ export class LyraToolResultDialog extends LyraElement {
     }
     if (changed.has('open')) {
       if (this.open) {
-        // Captured here (before render) rather than from a click event on
-        // some specific internal control -- like lyra-dialog, a trigger
-        // typically lives *outside* this component entirely, so "whatever
-        // had focus right before open" is the only generally correct
-        // definition of "the trigger".
-        const active = this.getActiveElement();
-        this.lastTrigger = active instanceof HTMLElement ? active : undefined;
-        this.releaseScrollLock = lockScroll();
-        document.addEventListener('keydown', this.onDocKeyDown);
+        this.activateOverlay();
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
-        document.removeEventListener('keydown', this.onDocKeyDown);
+        this.deactivateOverlay();
       }
     }
   }
 
-  // Runs after render (not willUpdate) so [part="panel"] has already landed
-  // in the DOM before the fallback .focus() call below can rely on it --
-  // mirrors lyra-dialog's identical ordering rationale.
+  // Runs after render so the manager can resolve the panel and its composed
+  // focus targets, including controls projected through either slot.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
-      const first = this.getFocusableElements()[0];
-      if (first) {
-        first.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]')?.focus();
-      }
+      this.overlay?.focusInitial();
     }
   }
 
@@ -269,9 +267,13 @@ export class LyraToolResultDialog extends LyraElement {
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
     // notice `open` is still true -- restore the scroll lock/trap it dropped.
-    if (this.hasUpdated && this.open && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    if (this.hasUpdated && this.open) {
+      if (this.overlay?.isActive()) {
+        this.overlay.resume();
+        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+      } else {
+        this.activateOverlay();
+      }
     }
   }
 
@@ -279,7 +281,7 @@ export class LyraToolResultDialog extends LyraElement {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlay?.suspend();
   }
 
   private onFooterSlotChange = (e: Event): void => {
@@ -294,16 +296,21 @@ export class LyraToolResultDialog extends LyraElement {
    * call this directly with its own reason string, so every dismissal path
    * funnels through the same event instead of the consumer having to also
    * toggle `open` itself.
+   *
+   * Focus restoration follows the `open` lifecycle, so a direct `.open =
+   * false` assignment restores focus identically to calling `close()` -- the
+   * one thing a direct assignment still can't do is fire
+   * `lyra-dialog-close`, since there's no reason string to attach without
+   * going through this method.
    */
   close(reason: ToolResultDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
     this.emit<ToolResultDialogCloseReason>('lyra-dialog-close', reason);
-    this.lastTrigger?.focus();
   }
 
   private onBackdropClick = (): void => {
-    this.close('backdrop');
+    this.overlay?.dismissBackdrop();
   };
 
   private onCloseButtonClick = (): void => {
@@ -315,59 +322,22 @@ export class LyraToolResultDialog extends LyraElement {
     this.emit<boolean>('lyra-maximize-change', this.maximized);
   };
 
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.open) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.close('escape');
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while open. Order follows the header's
-  // own maximize/close buttons, then the body slot, then the footer slot --
-  // the same order the flattened tree already tabs through (mirrors
-  // lyra-widget's identical actions-before-body ordering for its fullscreen
-  // mode).
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const fromSlot = (selector: string): HTMLElement[] => {
-      const slot = root.querySelector<HTMLSlotElement>(selector);
-      return slot ? slot.assignedElements({ flatten: true }).flatMap(collectFocusable) : [];
-    };
-    const headerButtons = Array.from(
-      root.querySelectorAll<HTMLElement>('[part="maximize-button"], [part="close-button"]'),
-    );
-    return [...headerButtons, ...fromSlot('slot[name="body"]'), ...fromSlot('slot[name="footer"]')].filter(
-      isRendered,
-    );
+  private activateOverlay(): void {
+    if (this.overlay?.isActive()) return;
+    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+    this.overlay = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.close('escape'),
+      onBackdrop: () => this.close('backdrop'),
+    });
   }
 
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
+  private deactivateOverlay(): void {
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlay?.deactivate();
+    this.overlay = undefined;
   }
 
   render(): TemplateResult {
@@ -384,7 +354,11 @@ export class LyraToolResultDialog extends LyraElement {
         <div part="header">
           <div part="title">
             <span part="tool-name" id=${this.titleId}>${this.toolName || 'Tool call'}</span>
-            <span part="status">${STATUS_ICON[this.status]()}<span>${STATUS_LABEL[this.status]}</span></span>
+            <span part="status"
+              >${(STATUS_ICON[this.status] ?? STATUS_ICON.pending)()}<span
+                >${STATUS_LABEL[this.status] ?? STATUS_LABEL.pending}</span
+              ></span
+            >
             ${hasDuration ? html`<span part="duration">${formatDuration(this.durationMs!)}</span>` : nothing}
           </div>
           <div part="header-actions">
