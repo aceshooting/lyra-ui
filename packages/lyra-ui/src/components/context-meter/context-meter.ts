@@ -22,8 +22,11 @@ interface RatioSegment {
   ratio: number;
 }
 
-// Ring geometry, matching lyra-gauge's radial numbers so the two "circular
-// meter" components in the library share one visual scale.
+// Ring geometry: RADIUS/CENTER match lyra-gauge's radial numbers, so both
+// components' rings sit on the same circle within their viewBox. STROKE is
+// intentionally heavier than the gauge's (12 vs. 10) -- tightly-packed
+// multi-tone arcs need more width to stay visually distinct than a gauge's
+// single fill arc, so it isn't shared.
 const RADIUS = 40;
 const CENTER = 50;
 const STROKE = 12;
@@ -88,7 +91,11 @@ export class LyraContextMeter extends LyraElement {
   }
 
   private get summary(): string {
-    const used = formatCount(this.usedTotal);
+    // Clamp the announced figure the same way ratios() clamps the visual fill --
+    // a segments array that sums past total must not report an impossible
+    // "160 of 100 used" to assistive tech while the bar/ring visibly caps at 100%.
+    const usedForSummary = this.total > 0 ? Math.min(this.usedTotal, this.total) : this.usedTotal;
+    const used = formatCount(usedForSummary);
     const total = Number.isFinite(this.total) && this.total > 0 ? formatCount(this.total) : null;
     const phrase = total ? `${used} of ${total} used` : `${used} used`;
     return this.label ? `${this.label} — ${phrase}` : phrase;

@@ -68,9 +68,6 @@ export const styles = css`
   [part='segment'][data-tone='danger'] {
     background: var(--lyra-color-danger);
   }
-  [part='segment'][data-tone='neutral'] {
-    background: var(--lyra-color-border);
-  }
 
   /* --- ring variant -------------------------------------------------- */
   :host([variant='ring']) svg[part='base'] {
@@ -102,9 +99,6 @@ export const styles = css`
   }
   :host([variant='ring']) [part='segment'][data-tone='danger'] {
     stroke: var(--lyra-color-danger);
-  }
-  :host([variant='ring']) [part='segment'][data-tone='neutral'] {
-    stroke: var(--lyra-color-border);
   }
   :host([variant='ring']) [part='label'] {
     text-anchor: middle;

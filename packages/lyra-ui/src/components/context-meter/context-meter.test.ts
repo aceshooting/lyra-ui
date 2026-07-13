@@ -67,6 +67,19 @@ it('clamps a segments array that sums to more than total instead of overflowing 
   expect(parseFloat((segments[1] as HTMLElement).style.flexBasis)).to.be.closeTo(20, 0.01);
 });
 
+it('clamps the aria-label summary to total, not the raw segment sum, when segments overflow past capacity', async () => {
+  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  el.segments = [
+    { label: 'a', value: 80 },
+    { label: 'b', value: 80 },
+  ];
+  await el.updateComplete;
+
+  // Raw sum is 160, but the accessible summary must report the same clamped
+  // 100 the visual fill is capped to, not an impossible "160 of 100 used".
+  expect(el.getAttribute('aria-label')).to.equal('100 of 100 used');
+});
+
 it('treats a negative or NaN segment value as 0 instead of producing a negative width', async () => {
   const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
   el.segments = [
