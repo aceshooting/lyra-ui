@@ -172,6 +172,19 @@ describe('views', () => {
     expect(toggle.getAttribute('aria-label')).to.equal('Chart view');
   });
 
+  it('is accessible with an icon-only view toggle (ariaLabel supplies the accessible name)', async () => {
+    const chartIcon = html`<svg class="chart-icon"></svg>`;
+    const el = (await fixture(html`
+      <lyra-widget
+        label="Usage"
+        .views=${[{ id: 'chart', icon: chartIcon, ariaLabel: 'Chart view' }]}
+      >
+        <div slot="view-chart">chart content</div>
+      </lyra-widget>
+    `)) as LyraWidget;
+    await expect(el).to.be.accessible();
+  });
+
   it('falls back to the view id as a last-resort accessible name when both label and ariaLabel are omitted', async () => {
     const el = (await fixture(html`
       <lyra-widget label="Usage" .views=${[{ id: 'chart' }]}>
