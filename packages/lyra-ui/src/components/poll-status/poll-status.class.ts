@@ -70,10 +70,10 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     if (changed.has('paused')) {
       if (this.paused) {
         this.disarmTicker();
-        this.announce('Paused.');
+        this.announce(this.localize('pollPausedAnnounce'));
       } else {
         if (this.active) this.armTicker();
-        this.announce('Resumed.');
+        this.announce(this.localize('pollResumedAnnounce'));
       }
     }
     if (changed.has('active')) {
@@ -90,7 +90,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.due = true;
         this.disarmTicker();
         this.emit('lyra-poll-due');
-        this.announce('Refreshing now.');
+        this.announce(this.localize('pollRefreshingAnnounce'));
       }
     }, TICK_MS);
   }
@@ -115,7 +115,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   };
 
   private formatCountdown(): string {
-    if (this.due) return 'Refreshing…';
+    if (this.due) return this.localize('pollRefreshing');
     const totalSeconds = Math.ceil(this.remainingMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -131,7 +131,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
           part="pause-button"
           type="button"
           aria-pressed=${this.paused ? 'true' : 'false'}
-          aria-label=${this.paused ? 'Resume' : 'Pause'}
+          aria-label=${this.localize(this.paused ? 'pollResume' : 'pollPause')}
           @click=${this.togglePause}
         >${this.paused ? playIcon() : pauseIcon()}</button>
         <lyra-live-region></lyra-live-region>

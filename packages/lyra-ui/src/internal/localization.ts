@@ -83,7 +83,13 @@ export type LyraMessageKey =
   | 'maximize'
   | 'restore'
   | 'wordCloudWord'
-  | 'wordCloudWords';
+  | 'wordCloudWords'
+  | 'pollPause'
+  | 'pollResume'
+  | 'pollRefreshing'
+  | 'pollPausedAnnounce'
+  | 'pollResumedAnnounce'
+  | 'pollRefreshingAnnounce';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -168,6 +174,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   restore: 'Restore',
   wordCloudWord: 'word',
   wordCloudWords: 'words',
+  pollPause: 'Pause',
+  pollResume: 'Resume',
+  pollRefreshing: 'Refreshing…',
+  pollPausedAnnounce: 'Paused.',
+  pollResumedAnnounce: 'Resumed.',
+  pollRefreshingAnnounce: 'Refreshing now.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

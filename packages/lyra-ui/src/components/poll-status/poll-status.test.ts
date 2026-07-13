@@ -40,4 +40,66 @@ describe('lyra-poll-status', () => {
     const el = (await fixture(html`<lyra-poll-status next-in-ms="10000"></lyra-poll-status>`)) as LyraPollStatus;
     await expect(el).to.be.accessible();
   });
+
+  it('defaults to English "Pause"/"Resume" aria-labels when no strings override is set', async () => {
+    const el = (await fixture(html`<lyra-poll-status next-in-ms="10000"></lyra-poll-status>`)) as LyraPollStatus;
+    await el.updateComplete;
+    const pauseButton = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+    expect(pauseButton.getAttribute('aria-label')).to.equal('Pause');
+    el.paused = true;
+    await el.updateComplete;
+    expect(pauseButton.getAttribute('aria-label')).to.equal('Resume');
+  });
+
+  it('localizes the pause-button aria-label via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-poll-status
+        next-in-ms="10000"
+        .strings=${{ pollPause: 'Interrompre', pollResume: 'Reprendre' }}
+      ></lyra-poll-status>`,
+    )) as LyraPollStatus;
+    await el.updateComplete;
+    const pauseButton = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+    expect(pauseButton.getAttribute('aria-label')).to.equal('Interrompre');
+    el.paused = true;
+    await el.updateComplete;
+    expect(pauseButton.getAttribute('aria-label')).to.equal('Reprendre');
+  });
+
+  it('localizes the due-state countdown text via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-poll-status next-in-ms="40" .strings=${{ pollRefreshing: 'Actualisation…' }}></lyra-poll-status>`,
+    )) as LyraPollStatus;
+    await oneEvent(el, 'lyra-poll-due');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('Actualisation…');
+  });
+
+  it('localizes the pause/resume live-region announcements via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-poll-status
+        next-in-ms="10000"
+        .strings=${{ pollPausedAnnounce: 'Interrompu.', pollResumedAnnounce: 'Repris.' }}
+      ></lyra-poll-status>`,
+    )) as LyraPollStatus;
+    await el.updateComplete;
+    el.paused = true;
+    await el.updateComplete;
+    expect(liveRegionText(el)).to.equal('Interrompu.');
+    el.paused = false;
+    await el.updateComplete;
+    expect(liveRegionText(el)).to.equal('Repris.');
+  });
+
+  it('localizes the due live-region announcement via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-poll-status
+        next-in-ms="40"
+        .strings=${{ pollRefreshingAnnounce: 'Actualisation en cours.' }}
+      ></lyra-poll-status>`,
+    )) as LyraPollStatus;
+    await oneEvent(el, 'lyra-poll-due');
+    await el.updateComplete;
+    expect(liveRegionText(el)).to.equal('Actualisation en cours.');
+  });
 });
