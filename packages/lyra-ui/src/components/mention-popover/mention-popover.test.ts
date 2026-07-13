@@ -111,12 +111,50 @@ it('moves the active row with ArrowDown/ArrowUp, clamped at the ends', async () 
   expect(el.activeDescendantId).to.equal(el.listboxId + '-opt-0');
 });
 
+it('scrolls the active row into view as ArrowDown moves it past the popup\'s visible, height-capped area', async () => {
+  const manyItems: MentionItem[] = Array.from({ length: 20 }, (_, i) => ({ id: `item-${i}`, label: `Item ${i}` }));
+  const el = await openWithItems(manyItems);
+  const box = listbox(el);
+
+  // The popup is height-capped (max-block-size: 16rem) and scrollable -- 20
+  // rows overflow it, so arrowing this far down would otherwise leave the
+  // active row scrolled out of view.
+  for (let i = 0; i < 15; i++) {
+    el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+    await el.updateComplete;
+  }
+
+  const activeRow = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+  expect(activeRow).to.exist;
+  const rowRect = activeRow.getBoundingClientRect();
+  const boxRect = box.getBoundingClientRect();
+  expect(rowRect.top >= boxRect.top - 1, 'active row top must be within the scrolled listbox viewport').to.be.true;
+  expect(rowRect.bottom <= boxRect.bottom + 1, 'active row bottom must be within the scrolled listbox viewport').to.be
+    .true;
+});
+
 it('ArrowDown/ArrowUp preventDefault and report the key as consumed', async () => {
   const el = await openWithItems();
   const evt = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
   const consumed = el.handleKeyDown(evt);
   expect(consumed).to.be.true;
   expect(evt.defaultPrevented).to.be.true;
+});
+
+it('leaves ArrowDown/ArrowUp unconsumed when there is nothing to navigate (no matches)', async () => {
+  const el = await openWithItems();
+  el.query = 'zzz-no-match';
+  await el.updateComplete;
+  expect(el.filteredItems.length).to.equal(0);
+
+  const downEvt = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+  expect(el.handleKeyDown(downEvt), 'ArrowDown must fall through, e.g. so the host textarea still moves its caret')
+    .to.be.false;
+  expect(downEvt.defaultPrevented).to.be.false;
+
+  const upEvt = new KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+  expect(el.handleKeyDown(upEvt)).to.be.false;
+  expect(upEvt.defaultPrevented).to.be.false;
 });
 
 it('commits the active item on Enter: fires lyra-mention-select, closes, and does not fire lyra-mention-close', async () => {

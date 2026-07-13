@@ -317,6 +317,16 @@ export class LyraMentionPopover extends LyraElement {
     } else if (this.open && (changed.has('anchor') || changed.has('query'))) {
       this.reposition();
     }
+    // Keyed separately from the open/anchor/query branch above: a plain
+    // ArrowDown/ArrowUp only ever changes activeIndex (see handleKeyDown), so
+    // this must fire on its own rather than piggyback on a reposition. The
+    // popup's own [part='listbox'] is height-capped and scrollable (see
+    // mention-popover.styles.ts) -- without this, arrowing past its visible
+    // rows would silently move the highlight off-screen. `block: 'nearest'`
+    // makes this a no-op whenever the active row is already fully visible.
+    if (changed.has('activeIndex')) {
+      this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   disconnectedCallback(): void {
@@ -357,19 +367,27 @@ export class LyraMentionPopover extends LyraElement {
    * The host's own text-control keydown handler calls this while the
    * popover is open. Returns `true` when the key was intercepted
    * (`preventDefault()` already called) and the host should not also act on
-   * it; `false` when the host's normal handling should proceed untouched.
+   * it; `false` when the host's normal handling should proceed untouched --
+   * including ArrowDown/ArrowUp/Enter/Tab when there are zero filtered rows
+   * to act on, so e.g. the host's own textarea still moves its caret a line
+   * normally rather than having the keystroke silently eaten.
    */
   handleKeyDown(e: KeyboardEvent): boolean {
     if (!this.open) return false;
     const rows = this.filteredItems;
     switch (e.key) {
       case 'ArrowDown':
+        // Nothing to navigate -- let the key fall through to the host's own
+        // control (e.g. move the caret to the next line), matching Enter/Tab's
+        // identical "no active row" fallthrough right below.
+        if (!rows.length) return false;
         e.preventDefault();
-        if (rows.length) this.activeIndex = Math.min(rows.length - 1, this.clampedIndex(rows) + 1);
+        this.activeIndex = Math.min(rows.length - 1, this.clampedIndex(rows) + 1);
         return true;
       case 'ArrowUp':
+        if (!rows.length) return false;
         e.preventDefault();
-        if (rows.length) this.activeIndex = Math.max(0, this.clampedIndex(rows) - 1);
+        this.activeIndex = Math.max(0, this.clampedIndex(rows) - 1);
         return true;
       case 'Enter':
       case 'Tab': {
