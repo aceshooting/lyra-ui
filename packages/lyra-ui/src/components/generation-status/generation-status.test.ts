@@ -54,6 +54,14 @@ it('defaults to inactive with no optional segments, and a stop button with a cle
   expect(stopButton.getAttribute('aria-label')).to.equal('Stop generating');
 });
 
+it('localizes the stop button aria-label via .strings (stopGenerating)', async () => {
+  const el = (await fixture(html`
+    <lyra-generation-status .strings=${{ stopGenerating: 'Arrêter' }}></lyra-generation-status>
+  `)) as LyraGenerationStatus;
+  const stopButton = el.shadowRoot!.querySelector('[part="stop-button"]') as HTMLButtonElement;
+  expect(stopButton.getAttribute('aria-label')).to.equal('Arrêter');
+});
+
 it('active reflects to an attribute', async () => {
   const el = (await fixture(html`<lyra-generation-status></lyra-generation-status>`)) as LyraGenerationStatus;
   el.active = true;
@@ -224,6 +232,20 @@ it('renders the tokens segment once token-count is set, using singular/plural wo
   el.tokenCount = 1;
   await el.updateComplete;
   expect(tokensText(el)).to.equal('1 token');
+});
+
+it('localizes the tokens segment singular/plural noun via .strings', async () => {
+  const el = (await fixture(html`
+    <lyra-generation-status
+      token-count="340"
+      .strings=${{ generationStatusToken: 'jeton', generationStatusTokens: 'jetons' }}
+    ></lyra-generation-status>
+  `)) as LyraGenerationStatus;
+  expect(tokensText(el)).to.equal('340 jetons');
+
+  el.tokenCount = 1;
+  await el.updateComplete;
+  expect(tokensText(el)).to.equal('1 jeton');
 });
 
 it('uses a host-supplied tokens-per-second as-is, even while inactive with zero elapsed time', async () => {

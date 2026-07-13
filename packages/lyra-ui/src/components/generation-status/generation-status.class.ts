@@ -53,16 +53,13 @@ function formatElapsed(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-/** `340` -> `"340 tokens"`; `1` -> `"1 token"`. Same plain singular/plural
- *  ternary `<lyra-json-viewer>`'s array/object summary already uses -- this
- *  library has no general i18n/pluralization system (see
- *  `<lyra-source-list>`'s class doc for that stance), but a two-way English
- *  ternary for one fixed noun is a different, much smaller thing than a
- *  general pluralization engine, and reads better than an unconditional
- *  "1 tokens". */
-function formatTokenCount(count: number): string {
+/** `340` -> `"340 tokens"`; `1` -> `"1 token"`. `noun` is the already-localized
+ *  singular/plural word (see the call site's `this.localize()` resolution) --
+ *  same plain singular/plural shape `<lyra-json-viewer>`'s array/object
+ *  summary and `<lyra-word-cloud>`'s accessible summary already use. */
+function formatTokenCount(count: number, noun: string): string {
   const rounded = Math.max(0, Math.round(count));
-  return `${rounded} ${rounded === 1 ? 'token' : 'tokens'}`;
+  return `${rounded} ${noun}`;
 }
 
 /** `27.4` -> `"27 tok/s"`; `3.2` -> `"3.2 tok/s"`. Same shape as this file's
@@ -332,11 +329,23 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
     return html`
       <div part="base">
         <span part="elapsed">${formatElapsed(this.elapsedMs)}</span>
-        ${hasTokens ? html`<span part="tokens">${formatTokenCount(this.tokenCount!)}</span>` : nothing}
+        ${hasTokens
+          ? html`<span part="tokens"
+              >${formatTokenCount(
+                this.tokenCount!,
+                this.localize(this.tokenCount === 1 ? 'generationStatusToken' : 'generationStatusTokens'),
+              )}</span
+            >`
+          : nothing}
         ${hasThroughput ? html`<span part="throughput">${formatThroughput(throughput!)}</span>` : nothing}
         ${this.showStop
           ? html`
-              <button part="stop-button" type="button" aria-label="Stop generating" @click=${this.onStopClick}>
+              <button
+                part="stop-button"
+                type="button"
+                aria-label=${this.localize('stopGenerating')}
+                @click=${this.onStopClick}
+              >
                 ${stopIcon()}
               </button>
             `
