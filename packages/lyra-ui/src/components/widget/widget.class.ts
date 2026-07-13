@@ -14,8 +14,16 @@ import { styles } from './widget.styles.js';
 
 export interface WidgetView {
   id: string;
-  label: string;
+  /** Visible label text. Optional so a toggle can be icon-only (`icon` set, `label` omitted) --
+   *  set `ariaLabel` too in that case so the button keeps a real accessible name; see `ariaLabel`'s
+   *  own doc for what happens if both are left unset. */
+  label?: string;
   icon?: TemplateResult;
+  /** Accessible name for the toggle button, used only when `label` is omitted -- ignored otherwise,
+   *  since the visible label text already supplies the accessible name. If both `label` and
+   *  `ariaLabel` are omitted, the button falls back to its own `id` as a last-resort accessible name:
+   *  not silently unlabeled, but not a good name either, so set one of the two for any icon-only view. */
+  ariaLabel?: string;
 }
 
 export interface LyraWidgetEventMap {
@@ -35,6 +43,15 @@ export interface LyraWidgetEventMap {
  * @slot label - Rich label content (overrides the `label` attribute).
  * @slot sublabel - Rich sublabel content (overrides the `sublabel` attribute).
  * @slot actions - Header action controls, rendered before the collapse/expand buttons.
+ * @slot collapse-icon - Overrides the built-in chevron glyph inside the collapse/expand toggle
+ *   button entirely, via the platform's own slot-fallback-content mechanism (same convention as
+ *   `<lyra-tool-call-chip>`'s `icon` slot): whatever is assigned wins, otherwise the default chevron
+ *   renders. Only meaningful while `collapsible`.
+ * @slot fullscreen-icon - Overrides the built-in expand/close glyph inside the fullscreen toggle
+ *   button entirely, using the same mechanism -- the override replaces *both* the "expand" and
+ *   "exit fullscreen" default icons, so a consumer supplying one is responsible for its own
+ *   expand/exit distinction (e.g. by reading the `fullscreen` attribute). Only meaningful while
+ *   `expandable`.
  * @event lyra-collapse-change - `detail: boolean` (the new `collapsed` state).
  * @event lyra-fullscreen-change - `detail: boolean` (the new `fullscreen` state).
  * @event lyra-view-change - Fired when the active view changes via a header toggle click.
@@ -75,7 +92,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card
    *  chrome. Each entry gets a header toggle button and a `<slot name="view-${id}">`. Empty (the
-   *  default) renders today's single unnamed default slot as the sole view, unchanged. */
+   *  default) renders today's single unnamed default slot as the sole view, unchanged. An entry's
+   *  `label` is optional -- see `WidgetView`'s own doc for the icon-only (`ariaLabel`) case. */
   @property({ attribute: false }) views: WidgetView[] = [];
 
   /** The currently active view's `id` -- defaults to the first entry of `views` (or `''` when
@@ -263,14 +281,20 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
           </div>
           ${this.views.length > 0
             ? html`<div part="view-toggles" role="group" aria-label="Panel view">
-                ${this.views.map(
-                  (v) => html`<button
+                ${this.views.map((v) => {
+                  // `label` supplies the accessible name via its own visible text, same as
+                  // before -- aria-label is only ever added for an icon-only toggle (`label`
+                  // omitted), where `ariaLabel` is the intended name and `id` is the last-resort
+                  // fallback if even that's missing (see WidgetView's doc).
+                  const hasLabel = !!v.label;
+                  return html`<button
                     part="view-toggle"
                     type="button"
                     aria-pressed=${v.id === this.activeView ? 'true' : 'false'}
+                    aria-label=${hasLabel ? nothing : v.ariaLabel || v.id}
                     @click=${() => this.setActiveView(v.id)}
-                  >${v.icon ?? nothing}${v.label}</button>`,
-                )}
+                  >${v.icon ?? nothing}${v.label ?? nothing}</button>`;
+                })}
               </div>`
             : nothing}
           ${this.collapsible
@@ -283,7 +307,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 style="transform:rotate(${this.collapsed ? '0deg' : '90deg'})"
                 @click=${this.toggleCollapsed}
               >
-                ${chevronIcon()}
+                <slot name="collapse-icon">${chevronIcon()}</slot>
               </button>`
             : nothing}
           ${this.expandable
@@ -294,7 +318,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 aria-label=${this.fullscreen ? 'Exit fullscreen' : 'Expand to fullscreen'}
                 @click=${this.toggleFullscreen}
               >
-                ${this.fullscreen ? closeIcon() : expandIcon()}
+                <slot name="fullscreen-icon">${this.fullscreen ? closeIcon() : expandIcon()}</slot>
               </button>`
             : nothing}
         </div>

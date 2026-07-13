@@ -35,6 +35,61 @@ describe('icon slot', () => {
   });
 });
 
+describe('collapse-icon slot override', () => {
+  it('renders the default chevron icon when nothing is slotted (unchanged)', async () => {
+    const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+    const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+    const slot = btn.querySelector('slot[name="collapse-icon"]') as HTMLSlotElement;
+    expect(slot.assignedElements().length).to.equal(0);
+    expect(slot.querySelector('svg')).to.exist;
+  });
+
+  it('renders a custom icon slotted into collapse-icon instead of the default chevron', async () => {
+    const el = (await fixture(html`
+      <lyra-widget label="x" collapsible>
+        <svg slot="collapse-icon" class="my-collapse-icon"></svg>
+        content
+      </lyra-widget>
+    `)) as LyraWidget;
+    const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+    const slot = btn.querySelector('slot[name="collapse-icon"]') as HTMLSlotElement;
+    const assigned = slot.assignedElements({ flatten: true });
+    expect(assigned.length).to.equal(1);
+    expect((assigned[0] as HTMLElement).classList.contains('my-collapse-icon')).to.be.true;
+  });
+});
+
+describe('fullscreen-icon slot override', () => {
+  it('renders the default expand/close icon when nothing is slotted (unchanged)', async () => {
+    const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
+    const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
+    const slot = btn.querySelector('slot[name="fullscreen-icon"]') as HTMLSlotElement;
+    expect(slot.assignedElements().length).to.equal(0);
+    expect(slot.querySelector('svg')).to.exist;
+  });
+
+  it('renders a custom icon slotted into fullscreen-icon instead of the default expand/close glyph', async () => {
+    const el = (await fixture(html`
+      <lyra-widget label="x" expandable>
+        <svg slot="fullscreen-icon" class="my-fullscreen-icon"></svg>
+        content
+      </lyra-widget>
+    `)) as LyraWidget;
+    const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
+    const slot = btn.querySelector('slot[name="fullscreen-icon"]') as HTMLSlotElement;
+    const assigned = slot.assignedElements({ flatten: true });
+    expect(assigned.length).to.equal(1);
+    expect((assigned[0] as HTMLElement).classList.contains('my-fullscreen-icon')).to.be.true;
+
+    btn.click();
+    await el.updateComplete;
+    // Still overridden after the fullscreen state flips (which changes which
+    // default icon *would* have rendered between expand/close).
+    const slotAfter = btn.querySelector('slot[name="fullscreen-icon"]') as HTMLSlotElement;
+    expect(slotAfter.assignedElements({ flatten: true }).length).to.equal(1);
+  });
+});
+
 describe('rich label/sublabel', () => {
   it('lets the label slot override the label attribute instead of concatenating both', async () => {
     const el = (await fixture(
@@ -88,6 +143,43 @@ describe('views', () => {
     const ev = await oneEvent(el, 'lyra-view-change');
     expect(ev.detail).to.equal('table');
     expect(el.activeView).to.equal('table');
+  });
+
+  it('keeps rendering a label-only view toggle with no aria-label (unchanged today)', async () => {
+    const el = (await fixture(html`
+      <lyra-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }]}>
+        <div slot="view-chart">chart content</div>
+      </lyra-widget>
+    `)) as LyraWidget;
+    const toggle = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement;
+    expect(toggle.textContent?.trim()).to.equal('Chart');
+    expect(toggle.hasAttribute('aria-label')).to.be.false;
+  });
+
+  it('renders an icon-only view toggle (no label) using ariaLabel as its accessible name', async () => {
+    const chartIcon = html`<svg class="chart-icon"></svg>`;
+    const el = (await fixture(html`
+      <lyra-widget
+        label="Usage"
+        .views=${[{ id: 'chart', icon: chartIcon, ariaLabel: 'Chart view' }]}
+      >
+        <div slot="view-chart">chart content</div>
+      </lyra-widget>
+    `)) as LyraWidget;
+    const toggle = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement;
+    expect(toggle.textContent?.trim()).to.equal('');
+    expect(toggle.querySelector('svg.chart-icon')).to.exist;
+    expect(toggle.getAttribute('aria-label')).to.equal('Chart view');
+  });
+
+  it('falls back to the view id as a last-resort accessible name when both label and ariaLabel are omitted', async () => {
+    const el = (await fixture(html`
+      <lyra-widget label="Usage" .views=${[{ id: 'chart' }]}>
+        <div slot="view-chart">chart content</div>
+      </lyra-widget>
+    `)) as LyraWidget;
+    const toggle = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).to.equal('chart');
   });
 });
 

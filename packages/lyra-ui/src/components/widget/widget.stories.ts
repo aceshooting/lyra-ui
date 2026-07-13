@@ -80,3 +80,36 @@ export const Compact: Story = {
     </lyra-widget>
   `,
 };
+
+const barChartIcon = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="18" y1="20" x2="18" y2="14"></line></svg>`;
+const tableIcon = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line><line x1="9" y1="4" x2="9" y2="20"></line></svg>`;
+
+export const IconOnlyViewToggles: Story = {
+  render: () => html`
+    <lyra-widget
+      label="Usage"
+      sublabel="Last 7 days"
+      .views=${[
+        { id: 'chart', icon: barChartIcon, ariaLabel: 'Chart view' },
+        { id: 'table', icon: tableIcon, ariaLabel: 'Table view' },
+      ]}
+      style="max-width: 28rem;"
+    >
+      <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
+      <div slot="view-table" style="padding: 1rem;">Table view body.</div>
+    </lyra-widget>
+  `,
+};
+
+export const CustomCollapseAndFullscreenIcons: Story = {
+  render: () => html`
+    <lyra-widget label="Load profile" sublabel="Last 7 days" collapsible expandable style="max-width: 28rem;">
+      <span slot="collapse-icon">▾</span>
+      <span slot="fullscreen-icon">⤢</span>
+      <div style="padding: 1rem;">
+        The <code>collapse-icon</code> and <code>fullscreen-icon</code> slots override the built-in
+        chevron/expand glyphs entirely -- omit either to keep the library default.
+      </div>
+    </lyra-widget>
+  `,
+};
