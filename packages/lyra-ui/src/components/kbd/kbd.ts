@@ -115,6 +115,19 @@ function detectIsMac(): boolean {
 // instance or every re-render.
 const IS_MAC = detectIsMac();
 
+// The one "is there real content" predicate shared by both the initial
+// synchronous seed (willUpdate, reading light-DOM childNodes) and the
+// runtime slotchange handler (reading assignedNodes) — using two different
+// predicates for the same question let them disagree: a text-only check
+// would seed correctly for whitespace-only text but (wrongly) treat a
+// content-less icon element as empty, and a node-count-only check would
+// treat *any* assigned node — including a whitespace-only text node — as
+// real content. Counting every element node as real content (regardless of
+// its own text) while requiring non-whitespace text from text nodes gets
+// both cases right in one place.
+const hasRealContent = (nodes: Iterable<Node>): boolean =>
+  Array.from(nodes).some((n) => n.nodeType === Node.ELEMENT_NODE || (n.textContent ?? '').trim().length > 0);
+
 /**
  * `<lyra-kbd>` — a small chip representing a keyboard shortcut, rendering
  * the platform-appropriate glyph for cross-platform modifier keys (⌘ on
@@ -169,12 +182,12 @@ export class LyraKbd extends LyraElement {
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
-      this.hasCustomContent = Array.from(this.childNodes).some((n) => (n.textContent ?? '').trim().length > 0);
+      this.hasCustomContent = hasRealContent(this.childNodes);
     }
   }
 
   private onSlotChange = (e: Event): void => {
-    this.hasCustomContent = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).length > 0;
+    this.hasCustomContent = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
   };
 
   render(): TemplateResult {
@@ -193,16 +206,22 @@ export class LyraKbd extends LyraElement {
     // lyra-context-meter's/lyra-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so
     // exposing them as separate accessible-tree text would read worse than
-    // the single spelled-out aria-label below. An empty `keys` renders
-    // nothing visible, so it's marked aria-hidden instead of exposed as a
-    // nameless image.
+    // the single spelled-out aria-label below. An empty `keys` (and no
+    // explicit override) renders nothing visible, so it's marked
+    // aria-hidden instead of exposed as a nameless image.
+    //
+    // role/aria-hidden are both derived from this same `ariaLabel` value
+    // (rather than each independently re-deriving "is there a label" from
+    // tokens.length/explicitLabel) so role="img" can never be absent while
+    // aria-label is present — that combination is an aria-prohibited-attr
+    // violation (a nameless-but-labeled, role-less element).
     const ariaLabel = explicitLabel || tokens.map((t) => t.word).join('+');
 
     return html`
       <span
         part="base"
-        role=${tokens.length > 0 ? 'img' : nothing}
-        aria-hidden=${tokens.length === 0 && !explicitLabel ? 'true' : nothing}
+        role=${ariaLabel ? 'img' : nothing}
+        aria-hidden=${ariaLabel ? nothing : 'true'}
         aria-label=${ariaLabel || nothing}
       >
         ${tokens.map(

@@ -118,6 +118,19 @@ describe('<lyra-kbd> rendering', () => {
     expect(base.getAttribute('aria-label')).to.equal('Open palette');
   });
 
+  it('sets role="img" alongside an explicit aria-label even with empty keys and no slot content', async () => {
+    // role and aria-hidden must both be derived from the same computed
+    // ariaLabel value as aria-label itself -- an explicit label asserted on
+    // a role-less element (role gated only on tokens.length) is an
+    // aria-prohibited-attr violation.
+    const el = (await fixture(html`<lyra-kbd aria-label="Something"></lyra-kbd>`)) as LyraKbd;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('Something');
+    expect(base.hasAttribute('aria-hidden')).to.be.false;
+    await expect(el).to.be.accessible();
+  });
+
   it('reacts to the keys property changing after first render', async () => {
     const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
     el.keys = 'esc';
@@ -164,6 +177,43 @@ describe('default slot override', () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(0);
+  });
+
+  it('does not permanently blank the chip for whitespace-only slotted text', async () => {
+    // Whitespace-only text is not "real content": the keys-driven UI must
+    // stay put both immediately (willUpdate's synchronous seed) and after
+    // the initial <slot>'s slotchange fires (onSlotChange) -- before the
+    // shared hasRealContent predicate, onSlotChange's own check counted any
+    // assigned node, including a whitespace-only text node, as content and
+    // permanently blanked the chip once that slotchange fired.
+    const el = (await fixture(html`<lyra-kbd keys="mod+k">   </lyra-kbd>`)) as LyraKbd;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(2);
+  });
+
+  it('never flashes the keys-driven UI for icon-only slotted content', async () => {
+    // An icon element carries no text of its own, so a purely text-based
+    // "is there content" check would (wrongly) seed hasCustomContent false
+    // on the very first render, flashing the keys-driven UI for a frame
+    // before onSlotChange self-corrects. Inspecting the DOM after a couple
+    // of microtask ticks -- deliberately before awaiting updateComplete --
+    // catches that flash if it exists: with the shared hasRealContent
+    // predicate, the element-node case is already handled on the very first
+    // (synchronous) render, so [part="key"] must stay empty throughout.
+    const el = document.createElement('lyra-kbd') as LyraKbd;
+    el.setAttribute('keys', 'mod+k');
+    el.appendChild(document.createElement('span'));
+    document.body.appendChild(el);
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(el.shadowRoot?.querySelectorAll('[part="key"]').length ?? 0).to.equal(0);
+
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(0);
+
+    document.body.removeChild(el);
   });
 });
 
