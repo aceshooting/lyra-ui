@@ -38271,6 +38271,26 @@
             },
             {
               "kind": "field",
+              "name": "effectiveEmptyText",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "description": "Resolves `emptyText`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `emptyText` itself to be set.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLabel",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "description": "Resolves `label`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `label` itself to be set.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "effectiveLocale",
               "type": {
                 "text": "string"
@@ -39310,6 +39330,16 @@
             },
             {
               "kind": "field",
+              "name": "effectiveLabel",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "description": "Resolves `label`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `label` itself to be set.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "effectiveLocale",
               "type": {
                 "text": "string"
@@ -39346,7 +39376,7 @@
                 "text": "string"
               },
               "default": "'Menu'",
-              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.",
+              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.\nLocalized (`menuLabel`) when left at its default.",
               "attribute": "label"
             },
             {
@@ -39812,7 +39842,7 @@
                 "text": "string"
               },
               "default": "'Menu'",
-              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.",
+              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.\nLocalized (`menuLabel`) when left at its default.",
               "fieldName": "label"
             },
             {
@@ -41503,6 +41533,7 @@
                 "text": "number"
               },
               "default": "0",
+              "description": "The current step, in `[0, length)`.",
               "attribute": "index"
             },
             {
@@ -41512,6 +41543,7 @@
                 "text": "number"
               },
               "default": "900",
+              "description": "Delay between ticks, in milliseconds, while playing. Clamped to\n`[MIN_INTERVAL_MS, MAX_TIMEOUT_MS]` — see `scheduleTick()`.",
               "attribute": "interval-ms"
             },
             {
@@ -41521,6 +41553,7 @@
                 "text": "number"
               },
               "default": "0",
+              "description": "Total number of steps to play through; the index range is `[0, length)`.",
               "attribute": "length"
             },
             {
@@ -41880,6 +41913,7 @@
                 "text": "number"
               },
               "default": "0",
+              "description": "The current step, in `[0, length)`.",
               "fieldName": "index"
             },
             {
@@ -41888,6 +41922,7 @@
                 "text": "number"
               },
               "default": "900",
+              "description": "Delay between ticks, in milliseconds, while playing. Clamped to\n`[MIN_INTERVAL_MS, MAX_TIMEOUT_MS]` — see `scheduleTick()`.",
               "fieldName": "intervalMs"
             },
             {
@@ -41896,6 +41931,7 @@
                 "text": "number"
               },
               "default": "0",
+              "description": "Total number of steps to play through; the index range is `[0, length)`.",
               "fieldName": "length"
             },
             {
@@ -44195,6 +44231,10 @@
               "name": "form-control-label"
             },
             {
+              "description": "An option group's heading row (shown when any option declares a `group`).",
+              "name": "group-label"
+            },
+            {
               "description": "The hint message.",
               "name": "hint"
             },
@@ -45052,7 +45092,7 @@
           ],
           "events": [
             {
-              "description": "The selection changed.",
+              "description": "The selection changed. Deliberately unprefixed, mirroring native `<select>`'s own event name -- contrast `<lyra-slider>`, which uses `lyra-input`/`lyra-change` for its analogous value-change pair. Which form controls mirror native unprefixed DOM event names (this one, matching `<select>`) versus which use the `lyra-` prefix (`<lyra-slider>`, matching `<input type=\"range\">` via a custom name) is a deliberate per-control choice, not an incidental divergence.",
               "name": "change"
             },
             {
@@ -46731,7 +46771,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-source-list>` — a collapsible \"Sources\" panel for one chat message,\ngrouping a set of `<lyra-source-card>` children (its default-slot light-DOM\nchildren, plain composition — no `.items` array prop, the same shape\n`<lyra-split>`'s panels take) behind a single clickable header.\n\nThis library has no built-in i18n/pluralization (see `<lyra-empty>`'s plain\n`description` prop for the same stance), so the header text is entirely\nconsumer-supplied: `label-plural` (e.g. `\"3 sources\"`) wins when set,\nfalling back to `label`, falling back to the literal word `\"Sources\"` — see\neach property's own doc. `sourceCount` (a read-only, live-updated count of\nthe currently-slotted children) is exposed for a consumer who wants to\nbuild that string reactively instead of hand-counting DOM children.\n\nThe card list is removed from the accessibility tree (not just visually\nhidden) while collapsed, via the native `hidden` attribute on\n`[part=\"list\"]` — a screen reader user tabbing past the header never lands\non off-screen source cards they can't currently see.",
+          "description": "`<lyra-source-list>` — a collapsible \"Sources\" panel for one chat message,\ngrouping a set of `<lyra-source-card>` children (its default-slot light-DOM\nchildren, plain composition — no `.items` array prop, the same shape\n`<lyra-split>`'s panels take) behind a single clickable header.\n\nThis library has no built-in pluralization (see `<lyra-empty>`'s plain\n`description` prop for a similar stance), so anything beyond the final\nfallback is entirely consumer-supplied: `label-plural` (e.g. `\"3 sources\"`)\nwins when set, falling back to `label`, falling back to a localized\n`\"Sources\"` (via `this.localize()`) — see each property's own doc.\n`sourceCount` (a read-only, live-updated count of the currently-slotted\nchildren) is exposed for a consumer who wants to build that string\nreactively instead of hand-counting DOM children.\n\nThe card list is removed from the accessibility tree (not just visually\nhidden) while collapsed, via the native `hidden` attribute on\n`[part=\"list\"]` — a screen reader user tabbing past the header never lands\non off-screen source cards they can't currently see.",
           "name": "LyraSourceList",
           "cssParts": [
             {
@@ -52609,7 +52649,7 @@
                 "text": "string"
               },
               "default": "'Thinking'",
-              "description": "Header text.",
+              "description": "Header text. Localized (`thinkingPanelLabel`) when left at its default\n`'Thinking'`; any other value is shown as-is.",
               "attribute": "label"
             },
             {
@@ -52878,7 +52918,7 @@
                 "text": "string"
               },
               "default": "'Thinking'",
-              "description": "Header text.",
+              "description": "Header text. Localized (`thinkingPanelLabel`) when left at its default\n`'Thinking'`; any other value is shown as-is.",
               "fieldName": "label"
             },
             {
