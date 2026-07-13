@@ -9,26 +9,28 @@ A pnpm workspace hosting `lyra-ui` and its optional companion packages.
 **[Browse the live docs site →](https://aceshooting.github.io/lyra-ui/)** — every component with
 a live example, source code, and API reference.
 
-**Lyra UI is a free, open-source, clean-room extension of [Web Awesome](https://webawesome.com)** —
-an independent companion project, not an official Web Awesome product, fork, or rebrand, and not
-affiliated with, endorsed by, or partnered with Web Awesome in any way. No Web Awesome Pro source
-code was ever available to, or used by, the maintainers; every component here was implemented from
-scratch, referencing only Web Awesome's public docs for the surface to mirror. For the components
-Web Awesome sells only in its **Pro** tier — the v1 form controls (combobox, select, date
-picker/input, toast, sparkline) and the core charting family (line/bar/pie/doughnut/radar/
-polar-area/scatter/bubble chart) — lyra-ui ships a 1:1 API-mirrored, token-compatible free
-alternative: identical attributes, slots, events, parts, and `--wa-*` design tokens, published
-under a `lyra-` prefix instead of `wa-`.
-Migrating a component is a mechanical `wa-` → `lyra-` rename, not a rewrite.
+**Lyra UI isn't just another component library.** It's a free, open-source, clean-room extension of
+[Web Awesome](https://webawesome.com) — an independent companion project, not an official Web
+Awesome product, fork, or rebrand, and not affiliated with, endorsed by, or partnered with Web
+Awesome in any way. No Web Awesome Pro source code was ever available to, or used by, the
+maintainers; every component here was implemented from scratch, referencing only Web Awesome's
+public docs for the surface to mirror. For the components Web Awesome sells only in its **Pro**
+tier — the v1 form controls (combobox, select, date picker/input, toast, sparkline) and the core
+charting family (line/bar/pie/doughnut/radar/polar-area/scatter/bubble chart) — lyra-ui gives you
+free, open-source components wherever Web Awesome Pro normally charges, matching its attributes,
+slots, events, parts, and `--wa-*` design tokens exactly (under a `lyra-` prefix instead of `wa-`).
 
-That mirrored tier is 17 of lyra-ui's 83 tags. The other 66 have no Web Awesome equivalent at
-all — Web Awesome doesn't sell them in any tier: dashboard atoms (stat tiles, tables, gauges,
-empty/skeleton states, split panes, widgets), temporal & graph widgets (time range, playback
-scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't offer (histogram,
-box plot, and a dependency-free `lyra-lite-chart`), MapLibre GL maps with choropleth layers, a
-drag-drop file dropzone, and — the largest single family by far — a 45-component conversation/agent
-UI kit (chat composer, tool-call/result/approval dialogs, streaming text, citations, model
-selection, and more) for building LLM chat and agent interfaces from scratch.
+That free-Pro-equivalent tier is 17 of lyra-ui's 83 tags. The other 66 have no Web Awesome
+equivalent at all, free or paid — Web Awesome doesn't sell them in any tier: dashboard atoms (stat
+tiles, tables, gauges, empty/skeleton states, split panes, widgets), temporal & graph widgets (time
+range, playback scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't
+offer (histogram, box plot, and a dependency-free `lyra-lite-chart`), MapLibre GL maps with
+choropleth layers, a drag-drop file dropzone, and — the largest single family by far — a
+45-component conversation/agent UI kit (chat composer, tool-call/result/approval dialogs, streaming
+text, citations, model selection, and more) for building LLM chat and agent interfaces from
+scratch. As far as we've been able to tell, no established project combines those three things —
+Web Awesome-compatible foundations, dashboard/visualization components, and agent-chat UI — in one
+open, framework-agnostic web-component library.
 
 | Package | Description |
 |---|---|

@@ -13,12 +13,13 @@ mirrored components look native inside a WA app, and everything is fully usable 
 
 > **Independent project.** Not affiliated with or endorsed by Web Awesome, and no `wa-` prefix or
 > Web Awesome trademark/branding is used here. For components that *do* have a Web Awesome
-> counterpart, the public API (attributes, slots, events, CSS parts) intentionally mirrors Web
-> Awesome's own 1:1 under the `lyra-` prefix, so migrating that piece of a WA Pro app is a
-> mechanical rename — but every implementation in this package is original (clean-room; no Web
-> Awesome Pro source was ever available to or copied by this project). Most of the library, and
-> all of the Conversation & Agent UI family, has no Web Awesome counterpart to mirror in the first
-> place — see the "Mirrors" column in the tables below.
+> counterpart, this package gives you a free, open-source component wherever Web Awesome Pro
+> normally charges — the public API (attributes, slots, events, CSS parts) mirrors Web Awesome's
+> own 1:1 under the `lyra-` prefix, so adopting it alongside (or in place of) that piece of a WA
+> Pro app is a drop-in swap, not a rewrite — but every implementation in this package is original
+> (clean-room; no Web Awesome Pro source was ever available to or copied by this project). Most of
+> the library, and all of the Conversation & Agent UI family, has no Web Awesome counterpart to
+> mirror in the first place — see the "Mirrors" column in the tables below.
 
 ## Install
 
