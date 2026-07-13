@@ -201,6 +201,13 @@ export class LyraAttachmentChip extends LyraElement {
    *  properties individually. `false` (the default) is visually identical to today. */
   @property({ type: Boolean, reflect: true }) compact = false;
 
+  /** When both this and `compact` are set, hides `[part=meta]` (the filename/size text) entirely
+   *  for an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a
+   *  thumbnail-only density purely through props, with no consumer-side CSS. Has no effect for a
+   *  non-image chip (there is no thumbnail to fall back to showing on its own) or when `compact` is
+   *  unset. `false` (the default) reproduces today's exact output. */
+  @property({ type: Boolean, reflect: true, attribute: 'thumbnail-only' }) thumbnailOnly = false;
+
   /** Verb used in the remove button's `aria-label`, interpolated as
    *  `` `${removeLabel} ${displayName}` `` -- override for i18n/locale.
    *  Defaults to `'Remove'`, reproducing today's exact `"Remove ${displayName}"`
