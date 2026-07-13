@@ -54,7 +54,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     return html`
       <div part="base">
         ${this.copyable
-          ? html`<button part="copy-button" type="button" aria-label=${`${this.localize('copy')} diff`} @click=${this.onCopyClick}>
+          ? html`<button part="copy-button" type="button" aria-label=${this.localize('copyDiff')} @click=${this.onCopyClick}>
               ${this.localize('copy')}
             </button>`
           : nothing}

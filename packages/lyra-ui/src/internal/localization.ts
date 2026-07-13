@@ -67,7 +67,8 @@ export type LyraMessageKey =
   | 'copyCode'
   | 'copiedToClipboard'
   | 'codeRegion'
-  | 'codeRegionWithLanguage';
+  | 'codeRegionWithLanguage'
+  | 'copyDiff';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -136,6 +137,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   copiedToClipboard: 'Copied! to clipboard',
   codeRegion: 'Code',
   codeRegionWithLanguage: '{language} code',
+  copyDiff: 'Copy diff',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

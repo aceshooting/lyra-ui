@@ -23,4 +23,20 @@ describe('lyra-diff-view', () => {
     const el = (await fixture(html`<lyra-diff-view .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`)) as LyraDiffView;
     await expect(el).to.be.accessible();
   });
+
+  it('localizes the copy-button aria-label via this.localize(), not a hardcoded "diff" suffix', async () => {
+    const el = (await fixture(
+      html`<lyra-diff-view copyable .oldText=${'a'} .newText=${'b'} .strings=${{ copyDiff: 'Copier la diff' }}></lyra-diff-view>`,
+    )) as LyraDiffView;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Copier la diff');
+  });
+
+  it('defaults to English "Copy diff" when no strings override is set', async () => {
+    const el = (await fixture(
+      html`<lyra-diff-view copyable .oldText=${'a'} .newText=${'b'}></lyra-diff-view>`,
+    )) as LyraDiffView;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Copy diff');
+  });
 });
