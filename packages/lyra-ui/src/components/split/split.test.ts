@@ -606,6 +606,59 @@ it('renders a clamp()-based flex-basis for a panel with panelConstraints, leavin
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
   )) as LyraSplit;
+  // Pinned so this test's own 30% share (of a 500px container) stays inside
+  // the constraint's [40px, 200px] bounds -- i.e. this panel is not actually
+  // clamped this render, so there's nothing for panel B to absorb, and its
+  // flex-basis stays bare-percent. Without pinning this, the container falls
+  // back to the test runner's real (browser-default, environment-dependent)
+  // width, which happens to be wide enough to clamp panel A and would then
+  // legitimately trigger redistribution -- see the two tests below, which
+  // cover the clamped and containerSize<=0 cases explicitly.
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 500);
+  el.sizes = [30, 70];
+  el.panelConstraints = [{ minPx: 40, maxPx: 200 }, null];
+  await elementUpdated(el);
+  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  expect(panelA.style.flex).to.equal('0 1 clamp(40px, 30%, 200px)');
+  expect(panelB.style.flex).to.equal('0 1 70%');
+});
+
+it('redistributes an unconstrained sibling into space freed by a maxPx-clamped panel', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 1920);
+  el.sizes = [50, 50];
+  el.panelConstraints = [{ minPx: 150, maxPx: 440 }, null];
+  await elementUpdated(el);
+  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  expect(panelA.style.flex).to.equal('0 1 clamp(150px, 50%, 440px)');
+  // Panel A's 50% share clamps down to (440/1920)*100%; panel B (no
+  // constraint) absorbs exactly the freed difference. The browser
+  // re-serializes the long repeating-decimal percent (same normalization the
+  // sentinel-px test below already works around), so parse the numeric value
+  // out and compare with a tolerance instead of asserting an exact string.
+  const clampedPercent = (440 / 1920) * 100;
+  const freedPercent = 50 - clampedPercent;
+  const match = /^0 1 ([\d.]+)%$/.exec(panelB.style.flex);
+  expect(match, `unexpected flex-basis shape: ${panelB.style.flex}`).to.not.equal(null);
+  expect(Number(match![1])).to.be.closeTo(50 + freedPercent, 1e-3);
+});
+
+it('does not redistribute when the container is too narrow to measure (containerSize <= 0)', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  // Explicitly pinned to 0 -- an un-mocked fixture in this real-browser test
+  // runner still reports a genuine nonzero layout width (the test page's
+  // default viewport), which is itself a real, measured containerSize and so
+  // would legitimately clamp+redistribute here (30% of it exceeds this
+  // constraint's 200px maxPx). This test's actual subject is the
+  // containerSize<=0 short-circuit, which requires mocking it directly.
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 0);
   el.sizes = [30, 70];
   el.panelConstraints = [{ minPx: 40, maxPx: 200 }, null];
   await elementUpdated(el);

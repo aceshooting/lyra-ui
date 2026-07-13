@@ -795,6 +795,41 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // its normal `'wide'` state, so every panel below falls straight through
     // to the exact pre-existing (non-collapse) styling in either case.
     const collapsingIndex = this.collapseActive ? this.collapsingIndex : -1;
+    // Percent-space bounds are already known before layout: resolveConstraintBounds()
+    // above converted each panel's minPx/maxPx into a percent range using this same
+    // containerSize. Clamp each panel's raw sizes[i] against its own bounds to find how
+    // much of its basis a constrained panel's CSS clamp() will take away this render,
+    // then hand that freed percentage to sibling panels with no active pixel constraint
+    // of their own, proportional to their own sizes share -- mirrors the collapsed
+    // branch's `flex: ${percent} 1 0%` grow-by-own-share pattern a few lines below.
+    // Skipped while a panel is collapsing (that branch redistributes its own freed
+    // space differently), and only handles a panel clamped *down* below its raw share --
+    // a panel clamped *up* (raw share under its own minPx) is left as today, since
+    // handling that symmetrically would mean *shrinking* other panels below their own
+    // bounds, a different, unfiled problem.
+    const redistributedShare = new Array<number>(panels.length).fill(0);
+    if (collapsingIndex === -1) {
+      let freedPercent = 0;
+      const growableIndexes: number[] = [];
+      let growableTotal = 0;
+      for (let i = 0; i < panels.length; i++) {
+        const percent = this.sizes[i] ?? 0;
+        const constraint = constraintResolution.usePanelConstraints ? this.panelConstraints[i] : undefined;
+        if (constraint && (constraint.minPx != null || constraint.maxPx != null)) {
+          const bounds = constraintResolution.bounds[i];
+          const clamped = bounds ? Math.min(Math.max(percent, bounds.min), bounds.max) : percent;
+          if (clamped < percent) freedPercent += percent - clamped;
+        } else {
+          growableIndexes.push(i);
+          growableTotal += percent;
+        }
+      }
+      if (freedPercent > 0 && growableTotal > 0) {
+        for (const i of growableIndexes) {
+          redistributedShare[i] = freedPercent * ((this.sizes[i] ?? 0) / growableTotal);
+        }
+      }
+    }
     panels.forEach((panel, i) => {
       const percent = this.sizes[i] ?? 0;
       const constraint = constraintResolution.usePanelConstraints ? this.panelConstraints[i] : undefined;
@@ -849,10 +884,16 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         // dividers' own combined width instead of the row's total content width
         // overflowing the container by (panelCount - 1) * dividerWidth, which
         // flex-shrink: 0 previously could not.
+        //
+        // An unconstrained panel's basis also folds in any space freed by a
+        // clamped sibling this render (see redistributedShare above); a
+        // constrained panel's own clamp() is untouched by that, since it's
+        // never itself a redistribution target.
+        const adjustedPercent = percent + (redistributedShare[i] ?? 0);
         panel.style.flex =
           constraint && (constraint.minPx != null || constraint.maxPx != null)
             ? `0 1 clamp(${constraint.minPx ?? NO_MIN_PX}px, ${percent}%, ${constraint.maxPx ?? NO_MAX_PX}px)`
-            : `0 1 ${percent}%`;
+            : `0 1 ${adjustedPercent}%`;
       }
       panel.style.order = String(i * 2);
 
