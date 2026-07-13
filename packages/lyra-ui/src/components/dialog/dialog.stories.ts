@@ -80,6 +80,31 @@ export const LabelPropNoHeading: Story = {
   `,
 };
 
+export const NestedDialogs: Story = {
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Open settings</button>
+      <lyra-dialog>
+        <h2 style="margin: 0 0 0.5rem;">Settings</h2>
+        <p style="margin: 0;">
+          Escape and Tab only ever act on the topmost open dialog -- confirming discard below
+          leaves this settings dialog untouched underneath it until the confirm is answered.
+        </p>
+        <div slot="footer">
+          <button
+            @click=${async (e: Event) => {
+              const ok = await confirm({ title: 'Discard unsaved changes?', tone: 'danger' });
+              if (ok) ((e.target as HTMLElement).closest('lyra-dialog') as LyraDialog).close('discard');
+            }}
+          >
+            Close without saving
+          </button>
+        </div>
+      </lyra-dialog>
+    </div>
+  `,
+};
+
 export const ConfirmHelper: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem;">

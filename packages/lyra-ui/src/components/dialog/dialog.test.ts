@@ -358,3 +358,103 @@ it('is accessible while open with a slotted heading', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+describe('stacked dialogs', () => {
+  it('closes only the topmost dialog on Escape, leaving dialogs beneath it open', async () => {
+    const bottom = (await fixture(html`<lyra-dialog label="Bottom" open>bottom body</lyra-dialog>`)) as LyraDialog;
+    const top = (await fixture(html`<lyra-dialog label="Top" open>top body</lyra-dialog>`)) as LyraDialog;
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await bottom.updateComplete;
+    await top.updateComplete;
+
+    expect(top.open, 'the topmost dialog should close').to.be.false;
+    expect(bottom.open, 'the dialog beneath it should remain open').to.be.true;
+
+    bottom.close('api');
+    await bottom.updateComplete;
+  });
+
+  it('closes the new topmost dialog on a second Escape once the original topmost is gone', async () => {
+    const bottom = (await fixture(html`<lyra-dialog label="Bottom" open>bottom body</lyra-dialog>`)) as LyraDialog;
+    const top = (await fixture(html`<lyra-dialog label="Top" open>top body</lyra-dialog>`)) as LyraDialog;
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await bottom.updateComplete;
+    await top.updateComplete;
+    expect(top.open).to.be.false;
+    expect(bottom.open).to.be.true;
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await bottom.updateComplete;
+    expect(bottom.open, 'now-topmost dialog should close on the next Escape').to.be.false;
+  });
+
+  it('does not swallow Tab for the topmost dialog when a dialog beneath it has no focusable content', async () => {
+    const bottom = (await fixture(html`<lyra-dialog label="Bottom" open><p>no controls</p></lyra-dialog>`)) as LyraDialog;
+    const top = (await fixture(
+      html`<lyra-dialog label="Top" open
+        ><button>first</button><button>middle</button><button>last</button></lyra-dialog
+      >`,
+    )) as LyraDialog;
+    await top.updateComplete;
+
+    // Focus a middle button -- neither wrap branch in top's own handler
+    // should fire, so the only way defaultPrevented ends up true is if the
+    // non-topmost (bottom) dialog's zero-focusable early-return wrongly swallows it.
+    const middle = top.querySelectorAll('button')[1];
+    middle.focus();
+
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(tab);
+
+    expect(tab.defaultPrevented, 'a non-topmost dialog with no focusable content must not swallow Tab').to.be.false;
+
+    top.close('api');
+    bottom.close('api');
+    await top.updateComplete;
+    await bottom.updateComplete;
+  });
+});
+
+describe('external removal while open', () => {
+  it('emits lyra-dialog-close with reason "unmount" when removed from the DOM without calling close()', async () => {
+    const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+    let detail: unknown;
+    let count = 0;
+    el.addEventListener('lyra-dialog-close', (e) => {
+      count++;
+      detail = (e as CustomEvent).detail;
+    });
+
+    el.remove();
+    // The emit is deferred a microtask so a synchronous reparent (disconnect
+    // immediately followed by reconnect) isn't mistaken for a real removal.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(count).to.equal(1);
+    expect(detail).to.equal('unmount');
+    expect(el.open).to.be.false;
+  });
+
+  it('does not emit lyra-dialog-close on a synchronous reparent while still open', async () => {
+    const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
+    let count = 0;
+    el.addEventListener('lyra-dialog-close', () => count++);
+
+    const otherContainer = document.createElement('div');
+    document.body.appendChild(otherContainer);
+    otherContainer.appendChild(el); // disconnect + reconnect synchronously, same instance
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(count, 'a reparent must not be mistaken for a real removal').to.equal(0);
+    expect(el.open).to.be.true;
+
+    el.close('api');
+    await el.updateComplete;
+    otherContainer.remove();
+  });
+});

@@ -154,6 +154,16 @@ it('does not resolve a second time when both buttons are somehow activated', asy
   expect(await promise).to.be.true;
 });
 
+it('resolves false instead of hanging when the dialog is removed from the DOM by something other than a button', async () => {
+  const promise = confirm({ title: 'Proceed?' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+
+  dialog.remove();
+
+  expect(await promise).to.be.false;
+});
+
 it('is accessible while open', async () => {
   const promise = confirm({ title: 'Delete conversation?', description: 'This cannot be undone.' });
   const dialog = getMountedDialog();

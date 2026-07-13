@@ -3,54 +3,22 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
+import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
 import { styles } from './dialog.styles.js';
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
-
-// Shadow-piercing so a slotted custom element's real focusable target (e.g.
-// an <input> inside its own shadow root) is found even though the host tag
-// itself doesn't match FOCUSABLE_SELECTOR. Deliberately duplicated from
-// lyra-widget's identical helper rather than imported/shared -- widget's
-// fullscreen mode is a separate feature and this component must not depend
-// on it (see the module doc in dialog.ts's authoring notes).
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/** Whether `el` is actually laid out/paintable -- `checkVisibility()` (falling
- *  back to `getClientRects().length` where unsupported) correctly follows
- *  flattened-tree/slot assignment, unlike `offsetParent`. Mirrors
- *  lyra-widget's identical helper. */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
-}
 
 /**
  * Reason a dialog was dismissed, forwarded as the `lyra-dialog-close` event
  * detail. `'escape'` and `'backdrop'` are emitted by the dialog's own built-in
- * dismiss triggers; any other string is whatever a caller passes to
- * `close()` (e.g. a consumer's own footer close button, or confirm.ts's
- * `'confirm'`/`'cancel'`).
+ * dismiss triggers; `'unmount'` is emitted when the dialog is removed from
+ * the DOM while still open by something other than its own `close()` (e.g. a
+ * consumer's own cleanup code, or a parent re-render that drops it); any
+ * other string is whatever a caller passes to `close()` (e.g. a consumer's
+ * own footer close button, or confirm.ts's `'confirm'`/`'cancel'`).
  */
-export type DialogCloseReason = 'escape' | 'backdrop' | 'api' | string;
+export type DialogCloseReason = 'escape' | 'backdrop' | 'api' | 'unmount' | string;
 
 /**
  * `<lyra-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
@@ -77,11 +45,18 @@ export type DialogCloseReason = 'escape' | 'backdrop' | 'api' | string;
  * `label`-prop case above, where the sr-only element is rendered inside the
  * same shadow root it labels, so `aria-labelledby` there is safe.
  *
+ * Stacking: opening one `<lyra-dialog>` while another is already open (e.g. a
+ * `confirm()` launched from within an already-open dialog) is supported --
+ * Escape and the Tab focus trap only ever act on the topmost open dialog, so
+ * dialogs beneath it stay open and untouched until the one on top closes.
+ *
  * @customElement lyra-dialog
  * @slot - The dialog body.
  * @slot footer - Action buttons, rendered in a bottom row.
  * @event lyra-dialog-close - `detail: DialogCloseReason`. Fired whenever the
- *   dialog is dismissed via Escape, a backdrop click, or a `close()` call.
+ *   dialog is dismissed via Escape, a backdrop click, a `close()` call, or
+ *   (with reason `'unmount'`) removal from the DOM by anything else while
+ *   still open.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
  * @csspart label - The invisible `label`-text element used for
@@ -102,7 +77,7 @@ export class LyraDialog extends LyraElement {
   @state() private headingText?: string;
 
   private releaseScrollLock?: () => void;
-  private lastTrigger?: HTMLElement;
+  private overlay?: OverlayHandle;
   private readonly srLabelId = nextId('dialog-label');
 
   protected willUpdate(changed: PropertyValues): void {
@@ -112,34 +87,18 @@ export class LyraDialog extends LyraElement {
     }
     if (changed.has('open')) {
       if (this.open) {
-        // Captured here (before render) rather than from a click event on
-        // some specific internal control -- unlike lyra-widget's fullscreen
-        // toggle, a dialog's trigger typically lives *outside* the
-        // component entirely, so "whatever had focus right before open"
-        // is the only generally correct definition of "the trigger".
-        const active = this.getActiveElement();
-        this.lastTrigger = active instanceof HTMLElement ? active : undefined;
-        this.releaseScrollLock = lockScroll();
-        document.addEventListener('keydown', this.onDocKeyDown);
+        this.activateOverlay();
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
-        document.removeEventListener('keydown', this.onDocKeyDown);
+        this.deactivateOverlay();
       }
     }
   }
 
-  // Runs after render (not willUpdate) so [part="panel"] has already landed
-  // in the DOM before the fallback .focus() call below can rely on it --
-  // mirrors lyra-widget's identical ordering rationale for its fullscreen mode.
+  // Runs after render so the manager can resolve the panel and its composed
+  // focus targets, including controls projected through either slot.
   protected updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
-      const first = this.getFocusableElements()[0];
-      if (first) {
-        first.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]')?.focus();
-      }
+      this.overlay?.focusInitial();
     }
   }
 
@@ -149,9 +108,13 @@ export class LyraDialog extends LyraElement {
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
     // notice `open` is still true -- restore the scroll lock/trap it dropped.
-    if (this.hasUpdated && this.open && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    if (this.hasUpdated && this.open) {
+      if (this.overlay?.isActive()) {
+        this.overlay.resume();
+        this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+      } else {
+        this.activateOverlay();
+      }
     }
   }
 
@@ -159,7 +122,25 @@ export class LyraDialog extends LyraElement {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlay?.suspend();
+    if (this.open) {
+      // A reparent (drag-and-drop moving this same element instance to a new
+      // parent) fires disconnectedCallback immediately followed by a
+      // synchronous connectedCallback, with no turn of the event loop in
+      // between -- deferring this check a microtask lets that case
+      // short-circuit here once isConnected is true again, so only a genuine
+      // removal (the element still disconnected once microtasks flush) ever
+      // reaches the assignment below. Without this, removing an open dialog
+      // any way other than its own close() (a consumer's own DOM cleanup, a
+      // parent re-render that drops it, etc.) never fires
+      // `lyra-dialog-close`, so e.g. confirm()'s returned promise hangs forever.
+      queueMicrotask(() => {
+        if (!this.isConnected && this.open) {
+          this.open = false;
+          this.emit<DialogCloseReason>('lyra-dialog-close', 'unmount');
+        }
+      });
+    }
   }
 
   private onDefaultSlotChange = (): void => {
@@ -197,59 +178,28 @@ export class LyraDialog extends LyraElement {
     if (!this.open) return;
     this.open = false;
     this.emit<DialogCloseReason>('lyra-dialog-close', reason);
-    this.lastTrigger?.focus();
   }
 
   private onBackdropClick = (): void => {
-    this.close('backdrop');
+    this.overlay?.dismissBackdrop();
   };
 
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.open) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.close('escape');
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while open. Order follows the default
-  // (body) slot, then the footer slot -- the same order the flattened tree
-  // already tabs through.
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const fromSlot = (selector: string): HTMLElement[] => {
-      const slot = root.querySelector<HTMLSlotElement>(selector);
-      return slot ? slot.assignedElements({ flatten: true }).flatMap(collectFocusable) : [];
-    };
-    return [...fromSlot('slot:not([name])'), ...fromSlot('slot[name="footer"]')].filter(isRendered);
+  private activateOverlay(): void {
+    if (this.overlay?.isActive()) return;
+    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+    this.overlay = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.close('escape'),
+      onBackdrop: () => this.close('backdrop'),
+    });
   }
 
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
+  private deactivateOverlay(): void {
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlay?.deactivate();
+    this.overlay = undefined;
   }
 
   render(): TemplateResult {
