@@ -549,6 +549,29 @@ it('still gives Arrow/Home/End/Enter/Space full default behavior from slotted no
   expect(el.open).to.be.true;
 });
 
+it('defaults the list accessible name to "Menu", overridable via label', async () => {
+  const withoutLabel = (await fixture(html`
+    <lyra-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  expect(list(withoutLabel).getAttribute('aria-label')).to.equal('Menu');
+
+  const el = (await fixture(basic())) as LyraMenu;
+  expect(list(el).getAttribute('aria-label')).to.equal('Row actions');
+});
+
+it('honors a strings override for menuLabel while label is left at its default', async () => {
+  const el = (await fixture(html`
+    <lyra-menu .strings=${{ menuLabel: 'Menú' }}>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  expect(list(el).getAttribute('aria-label')).to.equal('Menú');
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await expect(el).to.be.accessible();

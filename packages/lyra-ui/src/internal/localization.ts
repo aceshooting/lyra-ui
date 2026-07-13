@@ -122,6 +122,7 @@ export type LyraMessageKey =
   | 'mentionSuggestions'
   | 'temperature'
   | 'selectModel'
+  | 'menuLabel'
   | 'kbdEscapeVisual'
   | 'kbdEscapeWord'
   | 'kbdTabWord'
@@ -270,6 +271,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   mentionSuggestions: 'Suggestions',
   temperature: 'Temperature',
   selectModel: 'Select a model…',
+  menuLabel: 'Menu',
   kbdEscapeVisual: 'Esc',
   kbdEscapeWord: 'Escape',
   kbdTabWord: 'Tab',
