@@ -312,7 +312,7 @@ export class LyraDocumentPreview extends LyraElement {
   }
 
   private renderTextPreview(): TemplateResult {
-    if (this.src === '') return html`<pre class="text"></pre>`;
+    if (this.src === '') return html`<p class="empty-note">No document to display.</p>`;
     if (safeFetchUrl(this.src) === null) return this.renderError('Document URL is not allowed.');
     switch (this.textFetch.kind) {
       case 'loaded':

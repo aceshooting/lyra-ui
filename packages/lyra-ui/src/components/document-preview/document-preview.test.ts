@@ -169,7 +169,7 @@ describe('text/* and application/json dispatch', () => {
     }
   });
 
-  it('skips the fetch and renders gracefully when src is absent', async () => {
+  it('skips the fetch and renders an empty-state message when src is absent', async () => {
     const unstub = stubFetch(() => Promise.reject(new Error('should not be called')));
     try {
       const el = (await fixture(
@@ -177,7 +177,41 @@ describe('text/* and application/json dispatch', () => {
       )) as LyraDocumentPreview;
       await aTimeout(10);
       expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('[part="body"] pre')).to.exist;
+      expect(el.shadowRoot!.querySelector('[part="body"] pre')).to.not.exist;
+      const emptyNote = el.shadowRoot!.querySelector('[part="body"] .empty-note');
+      expect(emptyNote).to.exist;
+      expect(emptyNote!.textContent).to.equal('No document to display.');
+    } finally {
+      unstub();
+    }
+  });
+
+  it('refetches once status leaves converting/error and a text src was already set but never fetched', async () => {
+    let callCount = 0;
+    const urls: string[] = [];
+    const unstub = stubFetch((url) => {
+      callCount++;
+      urls.push(url);
+      return Promise.resolve(textResponse('recovered content'));
+    });
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview
+          src="https://example.test/a.txt"
+          mime-type="text/plain"
+          status="converting"
+        ></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      await aTimeout(20);
+      expect(callCount).to.equal(0);
+
+      el.status = 'ready';
+      await aTimeout(20);
+      await el.updateComplete;
+
+      expect(callCount).to.equal(1);
+      expect(urls).to.deep.equal(['https://example.test/a.txt']);
+      expect(el.shadowRoot!.querySelector('[part="body"] pre')!.textContent).to.equal('recovered content');
     } finally {
       unstub();
     }
