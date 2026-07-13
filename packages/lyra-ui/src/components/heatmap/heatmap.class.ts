@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
-import { linearAlpha, minMax, sqrtStep } from './heatmap-scale.js';
+import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
 
@@ -332,6 +332,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its value. Falls back to
    *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
   @property({ attribute: false }) cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string;
+  /** Opts individual cells out of the interaction model — receives the cell position and its
+   *  value, return `false` to make that cell present-but-non-interactive (no hover tooltip,
+   *  click, or keyboard roving-focus stop), without losing the layout/color-ramp machinery. Lets
+   *  a consumer omit a future/out-of-range date from interaction, or mark a zero-value cell as
+   *  non-interactive, without ~300+ meaningless keyboard tab stops on a dense grid. Unset (the
+   *  default) keeps every cell interactive, unchanged from before this property existed. */
+  @property({ attribute: false }) cellInteractive?: (pos: MatrixCellPos | CalendarCellPos, value: number) => boolean;
+  /** A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly
+   *  interpolating between the two `--lyra-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
+   *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
+   *  `mode`s and both `scale` values, discretizing whichever scale would otherwise interpolate
+   *  continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer than 2
+   *  entries) keeps today's 2-endpoint interpolation exactly. */
+  @property({ attribute: false }) colorSteps?: string[];
   /**
    * Calendar mode only: overrides the x-origin (canvas-local CSS px) of week
    * column `index` (0-based, same indexing as `CalendarCellPos.week`).
@@ -488,7 +502,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       changed.has('rowLabels') ||
       changed.has('colLabels') ||
       changed.has('days') ||
-      changed.has('firstDayOfWeek')
+      changed.has('firstDayOfWeek') ||
+      changed.has('cellInteractive')
     ) {
       // The previous focus/hover cursor may no longer address a real cell
       // once the grid's shape (or mode) changes out from under it —
@@ -519,6 +534,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!this.hasUpdated) {
       this.authorSuppliedRole = this.hasAttribute('role');
       this.authorSuppliedAriaLabel = this.hasAttribute('aria-label');
+    }
+    if (changed.has('colorSteps') || !this.hasUpdated) {
+      if (this.colorSteps && this.colorSteps.length >= 2) {
+        this.style.setProperty('--lyra-heatmap-color-steps-gradient', `linear-gradient(to right, ${this.colorSteps.join(', ')})`);
+      } else {
+        this.style.removeProperty('--lyra-heatmap-color-steps-gradient');
+      }
     }
     // A hover/keyboard-focus @state() change (hoverCell/focusedCell/liveText)
     // triggers this same willUpdate() but never touches values/days/mode, so
@@ -586,6 +608,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'rowY',
         'firstDayOfWeek',
         'focusedCell',
+        'colorSteps',
       ].some((name) => changed.has(name))
     ) {
       this.draw();
@@ -652,6 +675,19 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     loRgb: [number, number, number];
     hiRgb: [number, number, number];
   } {
+    const steps = this.colorSteps;
+    if (steps && steps.length >= 2) {
+      const key = `steps ${steps.join(' ')}`;
+      if (this.cachedRamp?.key === key) return this.cachedRamp;
+      const colors = steps.map((c) => {
+        const [r, g, b] = resolveRgb(c, FALLBACK_SCALE_LO);
+        return `rgb(${r}, ${g}, ${b})`;
+      });
+      const loRgb = resolveRgb(steps[0]!, FALLBACK_SCALE_LO);
+      const hiRgb = resolveRgb(steps[steps.length - 1]!, FALLBACK_SCALE_HI);
+      this.cachedRamp = { key, colors, loRgb, hiRgb };
+      return this.cachedRamp;
+    }
     const [scaleLo, scaleHi] = this.scaleEndpoints();
     const normalizedBucketCount = normalizeBucketCount(bucketCount);
     const key = `${scaleLo}\u0000${scaleHi}\u0000${normalizedBucketCount}`;
@@ -811,6 +847,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // `hi` bound, reusing the already-cached value range instead of
     // rescanning `sortedValues` for its max.
     const bounds = this.cachedValueRange;
+    const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
 
     // Indexed once per draw so every (week, weekday) grid position can be
@@ -827,8 +864,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         if (value < 0 || !Number.isFinite(value)) {
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
-          const step = sqrtStep(value, hi, buckets);
+          const step = sqrtStep(value, hi, ramp.length);
           ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
+        } else if (this.colorSteps && this.colorSteps.length >= 2) {
+          const step = linearBucket(value, lo, hi, ramp.length);
+          ctx.fillStyle = ramp[step]!;
         } else {
           ctx.fillStyle = ramp[quartileBucket(value, this.cachedCalendarSortedValues, buckets)]!;
         }
@@ -929,8 +969,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           // left in `ctx.fillStyle` (canvas ignores unparsable assignments).
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
-          const step = sqrtStep(v, hi, RAMP_STEPS);
+          // ramp.length (not the RAMP_STEPS constant) so a colorSteps-driven ramp's
+          // actual length governs bucketing -- equal to RAMP_STEPS when colorSteps is unset.
+          const step = sqrtStep(v, hi, ramp.length);
           ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
+        } else if (this.colorSteps && this.colorSteps.length >= 2) {
+          const step = linearBucket(v, lo, hi, ramp.length);
+          ctx.fillStyle = ramp[step]!;
         } else {
           // linearAlpha() returns a 0.1-1.0 ramp position; reused here as a
           // mix ratio between the two ramp-endpoint colors (rather than as a
@@ -1003,7 +1048,73 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const col = Math.floor((x - PAD_LEFT) / cellSize);
     const row = Math.floor((y - PAD_TOP) / cellSize);
     if (row < 0 || row >= rows || col < 0 || col >= cols) return null;
-    return { row, col };
+    const pos = { row, col };
+    return this.isCellInteractive(pos) ? pos : null;
+  }
+
+  /** The first interactive matrix cell in row-major order, or `null` if every cell is excluded —
+   *  used by `onMatrixKeyDown()`'s first-arrow-press case. */
+  private firstInteractiveMatrixCell(rows: number, cols: number): MatrixCellPos | null {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (this.isCellInteractive({ row: r, col: c })) return { row: r, col: c };
+      }
+    }
+    return null;
+  }
+
+  /** Steps from `(row, col)` by `(dRow, dCol)` repeatedly, skipping non-interactive cells, until
+   *  an interactive cell is found or the grid edge is reached (in which case the original
+   *  position is returned unchanged, matching today's clamp-at-edge behavior). Bounded: each
+   *  iteration strictly approaches the edge, so this always terminates. */
+  private nextInteractiveMatrixCell(
+    row: number,
+    col: number,
+    dRow: number,
+    dCol: number,
+    rows: number,
+    cols: number,
+  ): MatrixCellPos {
+    let r = row;
+    let c = col;
+    for (;;) {
+      const nr = Math.min(rows - 1, Math.max(0, r + dRow));
+      const nc = Math.min(cols - 1, Math.max(0, c + dCol));
+      if (nr === r && nc === c) return { row, col };
+      r = nr;
+      c = nc;
+      if (this.isCellInteractive({ row: r, col: c })) return { row: r, col: c };
+    }
+  }
+
+  /** Calendar-mode analogue of `firstInteractiveMatrixCell()`. */
+  private firstInteractiveCalendarCell(weekCount: number): CalendarCellPos | null {
+    for (let week = 0; week < weekCount; week++) {
+      for (let weekday = 0; weekday < 7; weekday++) {
+        if (this.isCellInteractive({ week, weekday })) return { week, weekday };
+      }
+    }
+    return null;
+  }
+
+  /** Calendar-mode analogue of `nextInteractiveMatrixCell()`. */
+  private nextInteractiveCalendarCell(
+    week: number,
+    weekday: number,
+    dWeek: number,
+    dWeekday: number,
+    weekCount: number,
+  ): CalendarCellPos {
+    let w = week;
+    let d = weekday;
+    for (;;) {
+      const nw = Math.min(weekCount - 1, Math.max(0, w + dWeek));
+      const nd = Math.min(6, Math.max(0, d + dWeekday));
+      if (nw === w && nd === d) return { week, weekday };
+      w = nw;
+      d = nd;
+      if (this.isCellInteractive({ week: w, weekday: d })) return { week: w, weekday: d };
+    }
   }
 
   private hitTestCalendar(x: number, y: number): CalendarCellPos | null {
@@ -1012,7 +1123,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const week = this.weekAtX(x, weekCount);
     const weekday = this.weekdayAtY(y);
     if (week === null || weekday === null) return null;
-    return { week, weekday };
+    const pos = { week, weekday };
+    return this.isCellInteractive(pos) ? pos : null;
   }
 
   /**
@@ -1085,6 +1197,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   /** Dispatches to the host-provided `cellText` formatter when set, otherwise the built-in template. */
   private resolveCellText(pos: CellPos): string {
     return this.cellText ? this.cellText(pos, this.valueAt(pos)) : this.defaultCellText(pos);
+  }
+
+  /** Dispatches to the host-provided `cellInteractive` predicate when set, otherwise `true`
+   *  (every cell interactive, today's unchanged default). */
+  private isCellInteractive(pos: CellPos): boolean {
+    return this.cellInteractive?.(pos, this.valueAt(pos)) ?? true;
   }
 
   /** Refreshes the visually-hidden live-region text for a newly-focused cell. */
@@ -1160,22 +1278,21 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     if (!ARROW_KEYS.has(e.key)) return;
     e.preventDefault();
-    // The first arrow keypress just moves focus onto the grid (at the
-    // top-left cell) rather than also applying that keypress's delta —
-    // otherwise ArrowRight from "unfocused" would land on column 1,
-    // silently skipping column 0.
     if (!this.focusedCell || !('row' in this.focusedCell)) {
-      const next: MatrixCellPos = { row: 0, col: 0 };
+      const next = this.firstInteractiveMatrixCell(rows, cols);
+      if (!next) return;
       this.focusedCell = next;
       this.announce(next);
       return;
     }
     const { row, col } = this.focusedCell;
-    let next: MatrixCellPos = { row, col };
-    if (e.key === 'ArrowUp') next = { row: Math.max(0, row - 1), col };
-    else if (e.key === 'ArrowDown') next = { row: Math.min(rows - 1, row + 1), col };
-    else if (e.key === 'ArrowLeft') next = { row, col: Math.max(0, col - 1) };
-    else if (e.key === 'ArrowRight') next = { row, col: Math.min(cols - 1, col + 1) };
+    let dRow = 0;
+    let dCol = 0;
+    if (e.key === 'ArrowUp') dRow = -1;
+    else if (e.key === 'ArrowDown') dRow = 1;
+    else if (e.key === 'ArrowLeft') dCol = -1;
+    else if (e.key === 'ArrowRight') dCol = 1;
+    const next = this.nextInteractiveMatrixCell(row, col, dRow, dCol, rows, cols);
     this.focusedCell = next;
     this.announce(next);
   }
@@ -1191,17 +1308,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!ARROW_KEYS.has(e.key)) return;
     e.preventDefault();
     if (!this.focusedCell || !('week' in this.focusedCell)) {
-      const next: CalendarCellPos = { week: 0, weekday: 0 };
+      const next = this.firstInteractiveCalendarCell(weekCount);
+      if (!next) return;
       this.focusedCell = next;
       this.announce(next);
       return;
     }
     const { week, weekday } = this.focusedCell;
-    let next: CalendarCellPos = { week, weekday };
-    if (e.key === 'ArrowUp') next = { week, weekday: Math.max(0, weekday - 1) };
-    else if (e.key === 'ArrowDown') next = { week, weekday: Math.min(6, weekday + 1) };
-    else if (e.key === 'ArrowLeft') next = { week: Math.max(0, week - 1), weekday };
-    else if (e.key === 'ArrowRight') next = { week: Math.min(weekCount - 1, week + 1), weekday };
+    let dWeek = 0;
+    let dWeekday = 0;
+    if (e.key === 'ArrowUp') dWeekday = -1;
+    else if (e.key === 'ArrowDown') dWeekday = 1;
+    else if (e.key === 'ArrowLeft') dWeek = -1;
+    else if (e.key === 'ArrowRight') dWeek = 1;
+    const next = this.nextInteractiveCalendarCell(week, weekday, dWeek, dWeekday, weekCount);
     this.focusedCell = next;
     this.announce(next);
   }

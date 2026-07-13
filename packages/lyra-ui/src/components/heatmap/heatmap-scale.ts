@@ -45,3 +45,16 @@ export function sqrtStep(count: number, max: number, steps: number): number {
   const ratio = Math.sqrt(count) / Math.sqrt(max);
   return Math.min(steps - 1, Math.floor(ratio * steps));
 }
+
+/**
+ * Linear (non-quantile) bucket index in `[0, steps-1]` for `value` in `[lo, hi]` — mirrors
+ * `linearAlpha()`'s own min-max normalization (matrix mode's default continuous color mapping),
+ * discretized into `steps` buckets instead of a continuous alpha. Used when a discrete
+ * `colorSteps` ramp replaces the default continuous 2-endpoint interpolation for the `'linear'`
+ * scale case (the `'sqrt'` scale already has its own discrete `sqrtStep()`).
+ */
+export function linearBucket(value: number, lo: number, hi: number, steps: number): number {
+  const span = hi - lo || 1;
+  const t = Math.min(1, Math.max(0, (value - lo) / span));
+  return Math.min(steps - 1, Math.floor(t * steps));
+}

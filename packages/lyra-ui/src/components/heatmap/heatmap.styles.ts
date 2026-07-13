@@ -82,10 +82,9 @@ export const styles = css`
     inline-size: var(--lyra-size-6rem);
     block-size: var(--lyra-size-0-5rem);
     border-radius: var(--lyra-size-2px);
-    background: linear-gradient(
-      to right,
-      var(--lyra-heatmap-scale-lo),
-      var(--lyra-heatmap-scale-hi)
+    background: var(
+      --lyra-heatmap-color-steps-gradient,
+      linear-gradient(to right, var(--lyra-heatmap-scale-lo), var(--lyra-heatmap-scale-hi))
     );
   }
   [part='legend-annotation'] {

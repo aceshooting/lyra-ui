@@ -1081,6 +1081,25 @@ describe('first-day-of-week (calendar mode)', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
   });
+
+  it('weekday-axis labels stay correct at the actually-anchored positions for a non-Sunday firstDayOfWeek', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" first-day-of-week="1"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    await el.updateComplete;
+    // 2026-01-19 is a Monday -- with firstDayOfWeek=1, buildCalendarGrid() anchors
+    // firstWeekStart at that exact Monday (daysBackToAnchor is 0 for a Monday date).
+    const firstWeekStart = new Date(Date.UTC(2026, 0, 19));
+    const labels = (el as unknown as { weekdayLabels: (d: Date) => string[] }).weekdayLabels(firstWeekStart);
+    const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
+    const msPerDay = 86_400_000;
+    // Row 1 in a Monday-first grid is Tuesday, row 3 is Thursday, row 5 is Saturday --
+    // NOT the Sunday-first Mon/Wed/Fri the pre-fix bug would have hardcoded.
+    expect(labels[1]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 1 * msPerDay)));
+    expect(labels[1]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 20)))); // Tuesday
+    expect(labels[3]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 22)))); // Thursday
+    expect(labels[5]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 24)))); // Saturday
+  });
 });
 
 describe('rowY override (calendar mode)', () => {
@@ -1188,6 +1207,108 @@ describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only pr
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     // 28 + 1*(20+2) = 50, independent of host width.
     expect(parseInt(canvas.style.width, 10)).to.equal(50);
+  });
+});
+
+describe('cellInteractive predicate', () => {
+  it('matrix mode: a cell for which cellInteractive returns false is skipped by hit-testing and roving focus', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['r0', 'r1']}
+        .colLabels=${['c0', 'c1']}
+        .values=${[
+          [1, 2],
+          [3, 4],
+        ]}
+        .cellInteractive=${(pos: { row?: number; col?: number }) => !(pos.row === 0 && pos.col === 1)}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let clicked: unknown;
+    el.addEventListener('lyra-cell-click', (e) => (clicked = (e as CustomEvent).detail));
+    // (row 0, col 1) is excluded -- a click there must not fire lyra-cell-click.
+    const cellSize = 22; // DEFAULT_MATRIX_CELL_SIZE
+    const padLeft = 60; // PAD_LEFT
+    const padTop = 20; // PAD_TOP
+    canvas.dispatchEvent(
+      new MouseEvent('click', {
+        clientX: rect.left + padLeft + cellSize * 1.5,
+        clientY: rect.top + padTop + cellSize * 0.5,
+        bubbles: true,
+      }),
+    );
+    expect(clicked).to.be.undefined;
+
+    // Roving focus (first ArrowRight from unfocused) must land on (0,0) then skip (0,1) when
+    // stepping right again, landing on (1,0)... actually stepping right from (0,0) with only 2
+    // columns and (0,1) excluded should skip straight to staying at (0,0)'s row boundary -- assert
+    // via the live region text instead of internal cursor state.
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    let live = el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
+    expect(live).to.contain('r0');
+    expect(live).to.contain('c0');
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    live = el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
+    // (0,1) is excluded -- ArrowRight from (0,0) must NOT land there.
+    expect(live).to.not.contain('Row r0, Col c1');
+  });
+
+  it('unset: every cell stays interactive (regression)', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap .rowLabels=${['r0']} .colLabels=${['c0', 'c1']} .values=${[[1, 2]]}></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let clicked: unknown;
+    el.addEventListener('lyra-cell-click', (e) => (clicked = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 60 + 11, clientY: rect.top + 20 + 11, bubbles: true }),
+    );
+    expect(clicked).to.deep.equal({ row: 0, col: 0, value: 1 });
+  });
+});
+
+describe('colorSteps', () => {
+  it('matrix mode, scale="linear": colors cells from the discrete colorSteps array, not the 2-endpoint ramp', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['r0']}
+        .colLabels=${['c0', 'c1', 'c2', 'c3']}
+        .values=${[[0, 33, 66, 100]]}
+        .colorSteps=${['#000000', '#3f3f3f', '#7f7f7f', '#ffffff']}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const cellSize = 22;
+    const padLeft = 60;
+    const padTop = 20;
+    // Cell 0 (value 0, lowest) -> exactly colorSteps[0] (#000000).
+    const p0 = ctx.getImageData(Math.round((padLeft + cellSize * 0.5) * dpr), Math.round((padTop + cellSize * 0.5) * dpr), 1, 1).data;
+    expect([p0[0], p0[1], p0[2]]).to.deep.equal([0, 0, 0]);
+    // Cell 3 (value 100, highest) -> exactly colorSteps[3] (#ffffff).
+    const p3 = ctx.getImageData(
+      Math.round((padLeft + cellSize * 3.5) * dpr),
+      Math.round((padTop + cellSize * 0.5) * dpr),
+      1,
+      1,
+    ).data;
+    expect([p3[0], p3[1], p3[2]]).to.deep.equal([255, 255, 255]);
+  });
+
+  it('unset: the 2-endpoint linear interpolation is unchanged (regression)', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap .rowLabels=${['r0']} .colLabels=${['c0']} .values=${[[5]]}></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.colorSteps).to.be.undefined;
   });
 });
 
