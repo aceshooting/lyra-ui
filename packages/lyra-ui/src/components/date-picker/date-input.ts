@@ -1,4 +1,10 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  type ComplexAttributeConverter,
+  type TemplateResult,
+  type PropertyValues,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
@@ -8,7 +14,14 @@ import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon, calendarIcon } from '../../internal/icons.js';
 import { composedContains, deepActiveElement } from '../../internal/overlay-manager.js';
-import { parseISO, formatISO, type WeekdayFormat } from './calendar-core.js';
+import {
+  dateTimeFormat,
+  parseISO,
+  formatISO,
+  normalizeCalendarMonths,
+  normalizeWeekdayFormat,
+  type WeekdayFormat,
+} from './calendar-core.js';
 import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.js';
 import './date-picker.js';
@@ -35,6 +48,16 @@ function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
     return ['month', 'day', 'year']; // Date.parse()'s own bias, as a last-resort fallback
   }
 }
+
+const monthsConverter: ComplexAttributeConverter<1 | 2> = {
+  fromAttribute: normalizeCalendarMonths,
+  toAttribute: normalizeCalendarMonths,
+};
+
+const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
+  fromAttribute: normalizeWeekdayFormat,
+  toAttribute: normalizeWeekdayFormat,
+};
 
 /**
  * `<lyra-date-input>` — a date field with an attached calendar popover.
@@ -74,9 +97,9 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property() placeholder = '';
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
   @property() locale = '';
-  @property({ type: Number }) months: 1 | 2 = 1;
+  @property({ converter: monthsConverter }) months: 1 | 2 = 1;
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
-  @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
+  @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';
   @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
   /** Accessible label for the clear button. Override for a non-English `locale`. */
   @property({ attribute: 'clear-label' }) clearLabel = 'Clear';
@@ -277,7 +300,8 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     const from = parseISO(parts[0] ?? '');
     const to = parseISO(parts[1] ?? '');
     if (!from) return '';
-    const fmt = (d: Date) => d.toLocaleDateString(this.locale || undefined);
+    const formatter = dateTimeFormat(this.locale, {});
+    const fmt = (d: Date) => formatter.format(d);
     return this.mode === 'range' && to ? `${fmt(from)} – ${fmt(to)}` : fmt(from);
   }
 
@@ -606,7 +630,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             .mode=${this.mode}
             .min=${this.min}
             .max=${this.max}
-            .months=${this.months}
+            .months=${normalizeCalendarMonths(this.months)}
             .locale=${this.locale}
             .disabled=${this.effectiveDisabled}
             .readonly=${this.readonly}
@@ -614,7 +638,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             .disableFuture=${this.disableFuture}
             .withOutsideDays=${this.withOutsideDays}
             first-day-of-week=${this.firstDayOfWeek}
-            weekday-format=${this.weekdayFormat}
+            .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
             @input=${this.onPickerInput}
             @change=${this.onPickerChange}
           ></lyra-date-picker>

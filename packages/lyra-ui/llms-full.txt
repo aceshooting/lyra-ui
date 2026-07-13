@@ -403,15 +403,17 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 
 **Properties:**
 - `value: string = ''`
-- `mode: 'single'|'range' = 'single'`
+- `mode: 'single'|'range' = 'single'` — unknown runtime values fall back to `single`
 - `min: string = ''`
 - `max: string = ''`
 - `disabled: boolean = false` (reflected)
 - `readonly: boolean = false` (reflected)
-- `months: 1|2 = 1`
-- `locale: string = ''`
+- `months: 1|2 = 1` — finite runtime values are truncated and clamped to `1..2`; non-finite
+  values fall back to `1`
+- `locale: string = ''` — malformed locale tags fall back to the platform locale
 - `firstDayOfWeek: string = 'auto'` (attribute `first-day-of-week` — see gotchas)
-- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`)
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`; unknown runtime
+  values fall back to `short`)
 - `disablePast: boolean = false` (attribute `disable-past`)
 - `disableFuture: boolean = false` (attribute `disable-future`)
 - `withOutsideDays: boolean = false` (attribute `with-outside-days`)
@@ -423,8 +425,8 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 **Getters:** `selection: { from: Date|null; to: Date|null }`, `valueAsDate: Date | null` (single
 mode only)
 
-**Methods:** `clear()`, `goToToday()`, `goToDate(date: string | Date)` (clamped to `min`/`max` before
-navigating/focusing)
+**Methods:** `clear()`, `goToToday()`, `goToDate(date: string | Date)` (valid dates are clamped to
+`min`/`max` before navigating/focusing; invalid `Date` objects and strings are ignored)
 
 **Events:** `input` (during interaction — for range mode, fires after the first click of a pair),
 `change` (committed value)
@@ -456,10 +458,11 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `label: string = ''`
 - `hint: string = ''`
 - `placeholder: string = ''`
-- `locale: string = ''`
-- `months: 1|2 = 1`
+- `locale: string = ''` — malformed locale tags fall back to the platform locale
+- `months: 1|2 = 1` — finite runtime values are truncated and clamped to `1..2`; non-finite
+  values fall back to `1`
 - `firstDayOfWeek: string = 'auto'`
-- `weekdayFormat: 'narrow'|'short'|'long' = 'short'`
+- `weekdayFormat: 'narrow'|'short'|'long' = 'short'` — unknown runtime values fall back to `short`
 - `disablePast: boolean = false` (attribute `disable-past`)
 - `disableFuture: boolean = false` (attribute `disable-future`)
 - `withOutsideDays: boolean = false` (attribute `with-outside-days`)
@@ -501,7 +504,9 @@ from the package root**, but worth knowing when reasoning about behavior): `pars
 the target month's last day instead of overflowing into the month after — e.g. Jan 31 + 1 month
 lands on Feb 28/29, not Mar 3; backs `lyra-date-picker`'s PageUp/PageDown), `clampDate`,
 `monthMatrix(year, month, firstDayOfWeek)`, `weekdayLabels(firstDayOfWeek, format, locale)`,
-`monthTitle(year, month, locale)`, `resolveFirstDayOfWeek(value, locale?)`.
+`monthTitle(year, month, locale)`, `resolveFirstDayOfWeek(value, locale?)`,
+`normalizeCalendarMode(value)`, `normalizeCalendarMonths(value)`, `normalizeWeekdayFormat(value)`,
+and `dateTimeFormat(locale, options)`.
 
 **Known gotchas:**
 - `first-day-of-week="auto"` now derives from `locale` when the runtime's `Intl.Locale` exposes
@@ -511,6 +516,10 @@ lands on Feb 28/29, not Mar 3; backs `lyra-date-picker`'s PageUp/PageDown), `cla
   show; on an older runtime it still falls back to Sunday-first silently. **If you need a guaranteed
   locale-correct week start regardless of runtime**, pass an explicit
   `first-day-of-week="mon"` (accepted values: `sun`/`mon`/`tue`/`wed`/`thu`/`fri`/`sat`).
+- Runtime attribute/property inputs are normalized before calendar math or `Intl` formatting:
+  unsupported modes and weekday formats use their documented defaults, month counts cannot exceed
+  the two-grid API, malformed locale tags use the platform locale, and invalid `Date` objects do
+  not replace the current view.
 - (date-input only) — opening the calendar does not move focus into it: `Alt+ArrowDown` leaves focus
   on the text input, and the expand button keeps focus when clicked. The focused opener is
   remembered. Escape and a finalized calendar selection close the popup and return focus to that
@@ -3113,7 +3122,8 @@ a compact call summary is useful, with or without a detail surface behind it.
 - `category: string = ''` — optional grouping label, e.g. `research`
 - `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
   glyph, accent color, and `status-text`; same status vocabulary as `<lyra-tool-result-dialog>` so a
-  call's chip and its detail dialog always agree
+  call's chip and its detail dialog always agree; unknown runtime values render the pending icon,
+  text, and accessible label instead of failing the update
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset

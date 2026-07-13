@@ -676,6 +676,33 @@ it('propagates locale, first-day-of-week and weekday-format to the nested lyra-d
   expect(picker.weekdayFormat).to.equal('narrow');
 });
 
+it('normalizes invalid calendar count and weekday format attributes before propagation', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input months="999" weekday-format="bogus"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+
+  expect(el.months).to.equal(2);
+  expect(el.weekdayFormat).to.equal('short');
+  expect(picker.months).to.equal(2);
+  expect(picker.weekdayFormat).to.equal('short');
+  expect(picker.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(2);
+});
+
+it('falls back to the default locale when a malformed locale is supplied', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input value="2026-07-15" locale="not_a_locale"></lyra-date-input>`,
+  )) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+
+  expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString());
+  expect(picker.shadowRoot!.querySelectorAll('[part="weekday"]')).to.have.length(7);
+});
+
 it('formats the displayed value using the locale property', async () => {
   const el = (await fixture(
     html`<lyra-date-input value="2026-07-15" locale="fr-FR"></lyra-date-input>`,

@@ -138,6 +138,54 @@ it('renders two months when requested', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="month"]').length).to.equal(2);
 });
 
+it('clamps runtime month attributes and direct property writes to at most two calendars', async () => {
+  const el = (await fixture(html`<lyra-date-picker months="3"></lyra-date-picker>`)) as LyraDatePicker;
+  expect(el.months).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(2);
+
+  el.months = 99 as LyraDatePicker['months'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(2);
+
+  el.months = Number.POSITIVE_INFINITY as LyraDatePicker['months'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(1);
+});
+
+it('normalizes invalid mode and weekday-format attributes without throwing', async () => {
+  const el = (await fixture(html`
+    <lyra-date-picker mode="bogus" weekday-format="bogus" locale="not_a_locale"></lyra-date-picker>
+  `)) as LyraDatePicker;
+
+  expect(el.mode).to.equal('single');
+  expect(el.weekdayFormat).to.equal('short');
+  expect(el.shadowRoot!.querySelectorAll('[part="weekday"]')).to.have.length(7);
+  expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(1);
+});
+
+it('uses safe render fallbacks for direct invalid union and locale property writes', async () => {
+  const el = (await fixture(html`<lyra-date-picker></lyra-date-picker>`)) as LyraDatePicker;
+  el.mode = 'bogus' as LyraDatePicker['mode'];
+  el.weekdayFormat = 'bogus' as LyraDatePicker['weekdayFormat'];
+  el.locale = 'not_a_locale';
+  await el.updateComplete;
+
+  expect(el.valueAsDate).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[part="weekday"]')).to.have.length(7);
+  expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(1);
+});
+
+it('ignores an invalid Date passed to goToDate instead of poisoning the calendar view', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent;
+
+  el.goToDate(new Date(Number.NaN));
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal(title);
+  expect(el.shadowRoot!.querySelectorAll('[part="month"]')).to.have.length(1);
+});
+
 it('leaves the two-month view alone when ArrowRight moves into a date already visible in the second grid', async () => {
   // Regression test: onGridKey used to always recenter the view as if the
   // focused cell belonged to the first (offset 0) calendar, so crossing into

@@ -8,6 +8,9 @@ import {
   addMonthsClampingDay,
   clampDate,
   weekdayLabels,
+  monthTitle,
+  normalizeCalendarMonths,
+  normalizeWeekdayFormat,
   resolveFirstDayOfWeek,
 } from './calendar-core.js';
 
@@ -105,4 +108,24 @@ it('produces seven weekday labels', () => {
   const labels = weekdayLabels(1, 'short', 'en-US');
   expect(labels.length).to.equal(7);
   expect(labels[0]).to.be.a('string').with.length.greaterThan(0);
+});
+
+it('normalizes finite month counts and rejects non-finite values', () => {
+  expect(normalizeCalendarMonths(2)).to.equal(2);
+  expect(normalizeCalendarMonths(999)).to.equal(2);
+  expect(normalizeCalendarMonths(-4)).to.equal(1);
+  expect(normalizeCalendarMonths(Number.NaN)).to.equal(1);
+  expect(normalizeCalendarMonths(Number.POSITIVE_INFINITY)).to.equal(1);
+});
+
+it('normalizes invalid weekday formats to short', () => {
+  expect(normalizeWeekdayFormat('narrow')).to.equal('narrow');
+  expect(normalizeWeekdayFormat('bogus')).to.equal('short');
+  expect(normalizeWeekdayFormat(undefined)).to.equal('short');
+});
+
+it('falls back safely for invalid runtime Intl inputs', () => {
+  expect(weekdayLabels(0, 'bogus' as never, 'not_a_locale').length).to.equal(7);
+  expect(monthTitle(2026, 6, 'not_a_locale')).to.be.a('string').and.not.equal('');
+  expect(resolveFirstDayOfWeek(7 as never, 'en-US')).to.equal(0);
 });

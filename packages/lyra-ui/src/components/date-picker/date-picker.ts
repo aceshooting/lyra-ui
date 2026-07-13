@@ -1,4 +1,10 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  type ComplexAttributeConverter,
+  type TemplateResult,
+  type PropertyValues,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -15,7 +21,12 @@ import {
   addMonths,
   addMonthsClampingDay,
   clampDate,
+  dateTimeFormat,
+  normalizeCalendarMode,
+  normalizeCalendarMonths,
+  normalizeWeekdayFormat,
   resolveFirstDayOfWeek,
+  type CalendarMode,
   type WeekdayFormat,
 } from './calendar-core.js';
 
@@ -23,6 +34,21 @@ export interface DateRange {
   from: Date | null;
   to: Date | null;
 }
+
+const modeConverter: ComplexAttributeConverter<CalendarMode> = {
+  fromAttribute: normalizeCalendarMode,
+  toAttribute: normalizeCalendarMode,
+};
+
+const monthsConverter: ComplexAttributeConverter<1 | 2> = {
+  fromAttribute: normalizeCalendarMonths,
+  toAttribute: normalizeCalendarMonths,
+};
+
+const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
+  fromAttribute: normalizeWeekdayFormat,
+  toAttribute: normalizeWeekdayFormat,
+};
 
 /**
  * `<lyra-date-picker>` — an inline month-grid calendar for picking a single date
@@ -41,15 +67,15 @@ export class LyraDatePicker extends LyraElement {
 
   /** ISO value: `YYYY-MM-DD` or `YYYY-MM-DD/YYYY-MM-DD`. */
   @property() value = '';
-  @property() mode: 'single' | 'range' = 'single';
+  @property({ converter: modeConverter }) mode: CalendarMode = 'single';
   @property() min = '';
   @property() max = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) readonly = false;
-  @property({ type: Number }) months: 1 | 2 = 1;
+  @property({ converter: monthsConverter }) months: 1 | 2 = 1;
   @property() locale = '';
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
-  @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
+  @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';
   @property({ type: Boolean, attribute: 'disable-past' }) disablePast = false;
   @property({ type: Boolean, attribute: 'disable-future' }) disableFuture = false;
   @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
@@ -72,6 +98,18 @@ export class LyraDatePicker extends LyraElement {
   // `selection.from`'s month -- only an externally-set `value` should do that.
   private suppressViewSync = false;
 
+  private get effectiveMode(): CalendarMode {
+    return normalizeCalendarMode(this.mode);
+  }
+
+  private get visibleMonths(): 1 | 2 {
+    return normalizeCalendarMonths(this.months);
+  }
+
+  private get effectiveWeekdayFormat(): WeekdayFormat {
+    return normalizeWeekdayFormat(this.weekdayFormat);
+  }
+
   get selection(): DateRange {
     const parts = this.value.split('/');
     return { from: parseISO(parts[0] ?? ''), to: parseISO(parts[1] ?? '') };
@@ -79,7 +117,7 @@ export class LyraDatePicker extends LyraElement {
 
   /** Read-only Date view of a single-mode value. */
   get valueAsDate(): Date | null {
-    return this.mode === 'single' ? this.selection.from : null;
+    return this.effectiveMode === 'single' ? this.selection.from : null;
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -114,7 +152,7 @@ export class LyraDatePicker extends LyraElement {
    *  min/max window). */
   private firstEnabledDate(min: Date | null, max: Date | null, today: Date): Date | null {
     let d = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
-    const lastVisibleMonth = addMonths(d, this.months - 1);
+    const lastVisibleMonth = addMonths(d, this.visibleMonths - 1);
     const boundEnd = new Date(lastVisibleMonth.getFullYear(), lastVisibleMonth.getMonth() + 1, 0);
     for (let i = 0; i < 732 && d <= boundEnd; i++) {
       if (!this.isDisabled(d, min, max, today)) return d;
@@ -125,7 +163,7 @@ export class LyraDatePicker extends LyraElement {
 
   private commit(from: Date | null, to: Date | null, fire: boolean): void {
     const next =
-      this.mode === 'range'
+      this.effectiveMode === 'range'
         ? from && to
           ? `${formatISO(from)}/${formatISO(to)}`
           : from
@@ -150,7 +188,7 @@ export class LyraDatePicker extends LyraElement {
     today.setHours(0, 0, 0, 0);
     if (this.isDisabled(date, min, max, today)) return;
     this.focusedDate = date;
-    if (this.mode === 'range') {
+    if (this.effectiveMode === 'range') {
       const { from, to } = this.selection;
       if (!from || (from && to)) {
         this.commit(date, null, false);
@@ -178,8 +216,8 @@ export class LyraDatePicker extends LyraElement {
   /** Navigate the view to a date and focus it, clamped to `min`/`max`. */
   goToDate(date: string | Date): void {
     const d = typeof date === 'string' ? parseISO(date) : date;
-    if (!d) return;
-    const clamped = clampDate(d, parseISO(this.min), parseISO(this.max));
+    if (!d || !Number.isFinite(d.getTime())) return;
+    const clamped = clampDate(new Date(d.getTime()), parseISO(this.min), parseISO(this.max));
     this.viewDate = new Date(clamped.getFullYear(), clamped.getMonth(), 1);
     this.focusedDate = clamped;
     this.focusPending = true;
@@ -263,9 +301,9 @@ export class LyraDatePicker extends LyraElement {
   private viewDateForFocus(next: Date): Date {
     const firstMonth = new Date(this.viewDate.getFullYear(), this.viewDate.getMonth(), 1);
     const nextMonth = new Date(next.getFullYear(), next.getMonth(), 1);
-    const lastMonth = addMonths(firstMonth, this.months - 1);
+    const lastMonth = addMonths(firstMonth, this.visibleMonths - 1);
     if (nextMonth < firstMonth) return nextMonth;
-    if (nextMonth > lastMonth) return addMonths(nextMonth, -(this.months - 1));
+    if (nextMonth > lastMonth) return addMonths(nextMonth, -(this.visibleMonths - 1));
     return firstMonth;
   }
 
@@ -309,8 +347,8 @@ export class LyraDatePicker extends LyraElement {
     const isToday = isSameDay(date, today);
     const isStart = from && isSameDay(date, from);
     const isEnd = to && isSameDay(date, to);
-    const selected = this.mode === 'single' ? isStart : isStart || isEnd;
-    const inRange = this.mode === 'range' && from && to && date > from && date < to;
+    const selected = this.effectiveMode === 'single' ? isStart : isStart || isEnd;
+    const inRange = this.effectiveMode === 'range' && from && to && date > from && date < to;
     // Falls back to the first *enabled* day across the visible month(s) (see
     // firstEnabledDate()) when there's neither a focusedDate nor a selection,
     // so the grid always has exactly one tabbable cell -- otherwise every
@@ -330,7 +368,7 @@ export class LyraDatePicker extends LyraElement {
     if (outside) parts.push('day-outside');
     if (isToday) parts.push('day-today');
     if (selected) parts.push('day-selected');
-    if (isStart && this.mode === 'range') parts.push('day-range-start');
+    if (isStart && this.effectiveMode === 'range') parts.push('day-range-start');
     if (isEnd) parts.push('day-range-end');
     if (inRange) parts.push('day-range-inner');
 
@@ -364,7 +402,7 @@ export class LyraDatePicker extends LyraElement {
     const month = base.getMonth();
     const matrix = monthMatrix(year, month, fdow);
     const isFirst = offset === 0;
-    const isLast = offset === this.months - 1;
+    const isLast = offset === this.visibleMonths - 1;
     const titleId = this.titleIds[offset];
 
     return html`<div part="month">
@@ -412,12 +450,12 @@ export class LyraDatePicker extends LyraElement {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const fdow = this.fdow;
-    const labels = weekdayLabels(fdow, this.weekdayFormat, this.locale);
+    const labels = weekdayLabels(fdow, this.effectiveWeekdayFormat, this.locale);
     // Hoisted once per render and reused across every day cell, rather than
     // each cell constructing its own Intl.DateTimeFormat via
     // toLocaleDateString() -- mirrors how the weekday-header and month-title
     // labels already share a single formatter instead of one per cell.
-    const dayLabelFmt = new Intl.DateTimeFormat(this.locale || undefined, {
+    const dayLabelFmt = dateTimeFormat(this.locale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -429,7 +467,7 @@ export class LyraDatePicker extends LyraElement {
     const fallbackFocusDate =
       this.focusedDate || selection.from ? null : this.firstEnabledDate(min, max, today);
     const monthEls: TemplateResult[] = [];
-    for (let i = 0; i < this.months; i++) {
+    for (let i = 0; i < this.visibleMonths; i++) {
       monthEls.push(
         this.renderMonth(i, selection, min, max, today, fdow, labels, fallbackFocusDate, dayLabelFmt),
       );

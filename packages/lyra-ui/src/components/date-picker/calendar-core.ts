@@ -1,4 +1,39 @@
 export type WeekdayFormat = 'narrow' | 'short' | 'long';
+export type CalendarMode = 'single' | 'range';
+
+/** Normalize an untyped calendar count to the supported one- or two-month range. */
+export function normalizeCalendarMonths(value: unknown): 1 | 2 {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return 1;
+  return Math.min(2, Math.max(1, Math.trunc(numeric))) as 1 | 2;
+}
+
+/** Normalize an untyped weekday format before passing it to `Intl.DateTimeFormat`. */
+export function normalizeWeekdayFormat(value: unknown): WeekdayFormat {
+  return value === 'narrow' || value === 'long' ? value : 'short';
+}
+
+/** Normalize an untyped picker mode to the single-date default. */
+export function normalizeCalendarMode(value: unknown): CalendarMode {
+  return value === 'range' ? 'range' : 'single';
+}
+
+/**
+ * Construct a date formatter while treating a malformed runtime locale as
+ * the platform default. Attribute values and JavaScript property writes are
+ * not constrained by TypeScript's declarations, so they must not be allowed
+ * to turn a calendar render into a `RangeError`.
+ */
+export function dateTimeFormat(
+  locale: unknown,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  try {
+    return new Intl.DateTimeFormat(typeof locale === 'string' && locale ? locale : undefined, options);
+  } catch {
+    return new Intl.DateTimeFormat(undefined, options);
+  }
+}
 
 /** Parse `YYYY-MM-DD` into a local Date, or null if invalid. */
 export function parseISO(s: string): Date | null {
@@ -79,11 +114,15 @@ export function monthMatrix(year: number, month: number, firstDayOfWeek = 0): Da
 
 /** Localized weekday header labels, ordered from `firstDayOfWeek`. */
 export function weekdayLabels(firstDayOfWeek = 0, format: WeekdayFormat = 'short', locale?: string): string[] {
-  const fmt = new Intl.DateTimeFormat(locale || undefined, { weekday: format });
+  const numericFirstDay = Number(firstDayOfWeek);
+  const start = Number.isFinite(numericFirstDay)
+    ? ((Math.trunc(numericFirstDay) % 7) + 7) % 7
+    : 0;
+  const fmt = dateTimeFormat(locale, { weekday: normalizeWeekdayFormat(format) });
   const labels: string[] = [];
   // 2021-08-01 is a Sunday, so index i maps cleanly to a weekday.
   for (let i = 0; i < 7; i++) {
-    const day = (firstDayOfWeek + i) % 7;
+    const day = (start + i) % 7;
     labels.push(fmt.format(new Date(2021, 7, 1 + day)));
   }
   return labels;
@@ -91,7 +130,7 @@ export function weekdayLabels(firstDayOfWeek = 0, format: WeekdayFormat = 'short
 
 /** Localized "Month YYYY" title. */
 export function monthTitle(year: number, month: number, locale?: string): string {
-  return new Intl.DateTimeFormat(locale || undefined, { month: 'long', year: 'numeric' }).format(
+  return dateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(
     new Date(year, month, 1),
   );
 }
@@ -137,5 +176,5 @@ export function resolveFirstDayOfWeek(value: string, locale?: string): number {
     const derived = locale ? localeFirstDayOfWeek(locale) : null;
     return derived ?? 0;
   }
-  return FDOW[value.toLowerCase()] ?? 0;
+  return typeof value === 'string' ? (FDOW[value.toLowerCase()] ?? 0) : 0;
 }

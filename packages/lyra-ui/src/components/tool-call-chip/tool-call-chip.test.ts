@@ -63,6 +63,30 @@ it('shows a visible status label for every status value, not just a color', asyn
   }
 });
 
+it('falls back to pending for an out-of-union status attribute', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-call-chip name="web_search" status="bogus"></lyra-tool-call-chip>`,
+  )) as LyraToolCallChip;
+
+  expect(el.status).to.equal('pending');
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
+  expect(el.shadowRoot!.querySelector('slot[name="icon"] svg')).to.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.contain('Pending');
+});
+
+it('renders a pending fallback for a direct out-of-union status assignment', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-call-chip name="web_search"></lyra-tool-call-chip>`,
+  )) as LyraToolCallChip;
+
+  el.status = 'bogus' as LyraToolCallChip['status'];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
+  expect(el.shadowRoot!.querySelector('slot[name="icon"] svg')).to.exist;
+  expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.contain('Pending');
+});
+
 it('renders a distinct built-in glyph per status as the icon slot fallback content', async () => {
   const statuses = ['pending', 'running', 'success', 'error', 'denied'] as const;
   const markups = new Set<string>();

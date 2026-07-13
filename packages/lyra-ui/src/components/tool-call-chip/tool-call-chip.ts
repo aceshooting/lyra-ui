@@ -1,4 +1,12 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  svg,
+  nothing,
+  type ComplexAttributeConverter,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -89,6 +97,17 @@ const STATUS_LABEL: Record<ToolCallStatus, string> = {
   denied: 'Denied',
 };
 
+const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
+
+const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
+  fromAttribute(value): ToolCallStatus {
+    return value !== null && STATUS_VALUES.has(value) ? (value as ToolCallStatus) : 'pending';
+  },
+  toAttribute(value): string {
+    return value;
+  },
+};
+
 /** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Sub-second
  *  durations are the common case for a single tool call, so they get the
  *  more precise unit; once a call runs a full second or longer, trimming to
@@ -164,8 +183,11 @@ export class LyraToolCallChip extends LyraElement {
   /** Optional grouping label, e.g. `research`. */
   @property() category = '';
 
-  /** The call's current lifecycle state — drives the glyph, color, and `status-text`. */
-  @property({ reflect: true }) status: ToolCallStatus = 'pending';
+  /**
+   * The call's current lifecycle state — drives the glyph, color, and
+   * `status-text`. Invalid runtime values use the pending presentation.
+   */
+  @property({ reflect: true, converter: statusConverter }) status: ToolCallStatus = 'pending';
 
   /** Short human-readable status text, e.g. `Searching web…`. */
   @property() summary = '';
@@ -289,10 +311,14 @@ export class LyraToolCallChip extends LyraElement {
     this.emit<ToolChipSelectDetail>('lyra-tool-chip-select', { name: this.name, callId: this.callId });
   };
 
+  private get effectiveStatus(): ToolCallStatus {
+    return STATUS_VALUES.has(this.status) ? this.status : 'pending';
+  }
+
   private get accessibleLabel(): string {
     const parts = [this.name || 'Tool call'];
     if (this.summary) parts.push(this.summary);
-    parts.push(STATUS_LABEL[this.status]);
+    parts.push(STATUS_LABEL[this.effectiveStatus]);
     if (this.durationMs != null && Number.isFinite(this.durationMs)) parts.push(formatDuration(this.durationMs));
     return parts.join(' — ');
   }
@@ -301,6 +327,7 @@ export class LyraToolCallChip extends LyraElement {
     const hasCategory = this.category.length > 0;
     const hasSummary = this.summary.length > 0;
     const hasDuration = this.durationMs != null && Number.isFinite(this.durationMs);
+    const status = this.effectiveStatus;
 
     return html`
       <button
@@ -316,7 +343,7 @@ export class LyraToolCallChip extends LyraElement {
         @keydown=${this.onKeyDown}
       >
         <span part="icon" aria-hidden="true">
-          <slot name="icon">${this.icon ? this.icon : STATUS_ICON[this.status]()}</slot>
+          <slot name="icon">${this.icon ? this.icon : STATUS_ICON[status]()}</slot>
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
@@ -324,7 +351,7 @@ export class LyraToolCallChip extends LyraElement {
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">
-          <span part="status-text">${STATUS_LABEL[this.status]}</span>
+          <span part="status-text">${STATUS_LABEL[status]}</span>
           <span part="duration" ?hidden=${!hasDuration}>${hasDuration ? formatDuration(this.durationMs!) : nothing}</span>
         </span>
       </button>
