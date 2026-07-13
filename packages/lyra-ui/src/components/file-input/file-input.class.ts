@@ -154,8 +154,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   };
 
   private statusText(): string {
-    if (this.dragState === 'accept') return 'Release to add the file.';
-    if (this.dragState === 'reject') return 'This file type is not accepted.';
+    if (this.dragState === 'accept') return this.localize('dropzoneReleaseToAdd');
+    if (this.dragState === 'reject') return this.localize('dropzoneRejectedType');
     return this.resultStatus;
   }
 

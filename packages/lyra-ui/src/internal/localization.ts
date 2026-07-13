@@ -45,7 +45,9 @@ export type LyraMessageKey =
   | 'wordCloud'
   | 'notInCatalog'
   | 'sendMessage'
-  | 'stopGenerating';
+  | 'stopGenerating'
+  | 'dropzoneReleaseToAdd'
+  | 'dropzoneRejectedType';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -92,6 +94,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   notInCatalog: 'not in catalog',
   sendMessage: 'Send message',
   stopGenerating: 'Stop generating',
+  dropzoneReleaseToAdd: 'Release to add the file.',
+  dropzoneRejectedType: 'This file type is not accepted.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

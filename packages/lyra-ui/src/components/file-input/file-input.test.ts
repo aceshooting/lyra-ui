@@ -306,6 +306,29 @@ it('announces accept/reject drag state changes via a polite live region', async 
   expect(status.textContent).to.equal('This file type is not accepted.');
 });
 
+it('localizes the drag-preview live-region announcements via this.localize(), not hardcoded English', async () => {
+  const el = (await fixture(
+    html`<lyra-file-input
+      .strings=${{
+        dropzoneReleaseToAdd: 'Relâchez pour ajouter le fichier.',
+        dropzoneRejectedType: "Ce type de fichier n'est pas accepté.",
+      }}
+    ></lyra-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(status.textContent).to.equal('Relâchez pour ajouter le fichier.');
+
+  el.allowedMimeTypes = ['application/pdf'];
+  await el.updateComplete;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(status.textContent).to.equal("Ce type de fichier n'est pas accepté.");
+});
+
 it('announces accepted and rejected selection outcomes through the live region', async () => {
   const el = (await fixture(
     html`<lyra-file-input multiple .allowedMimeTypes=${['text/csv']}></lyra-file-input>`,
