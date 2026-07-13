@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, fixtureSync, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './source-list.js';
 import '../source-card/source-card.js';
 import type { LyraSourceList } from './source-list.js';
@@ -96,6 +96,36 @@ it('exposes a live sourceCount reflecting the slotted children, including on lat
 it('reports sourceCount as 0 for an empty list', async () => {
   const el = (await fixture(html`<lyra-source-list></lyra-source-list>`)) as LyraSourceList;
   expect(el.sourceCount).to.equal(0);
+});
+
+it("keeps willUpdate's pre-count in sync with firstUpdated's authoritative count when a direct child carries a foreign slot attribute, avoiding a wasted second update", async () => {
+  // `fixtureSync` (unlike `fixture`) hands back the element before its first
+  // Lit update microtask has run, so `updated` can be wrapped in time to
+  // observe every update pass triggered by the initial connect -- including
+  // any wasted extra pass caused by `willUpdate`'s pre-count disagreeing with
+  // `firstUpdated`'s slot-based recount.
+  const el = fixtureSync<LyraSourceList>(html`
+    <lyra-source-list>
+      <lyra-source-card title="a.pdf"></lyra-source-card>
+      <span slot="not-a-real-slot">not assigned to the default slot</span>
+    </lyra-source-list>
+  `);
+
+  let updateCount = 0;
+  const originalUpdated = (el as unknown as { updated: (changed: Map<string, unknown>) => void }).updated.bind(el);
+  (el as unknown as { updated: (changed: Map<string, unknown>) => void }).updated = (changed) => {
+    updateCount++;
+    originalUpdated(changed);
+  };
+
+  await el.updateComplete;
+  // Give a wasted cascading update (if any) a chance to run before asserting.
+  await aTimeout(50);
+
+  // Only the `<lyra-source-card>` is assigned to the default slot; the
+  // foreign-slotted `<span>` must not count.
+  expect(el.sourceCount).to.equal(1);
+  expect(updateCount).to.equal(1);
 });
 
 it('is accessible with no cards and collapsed', async () => {

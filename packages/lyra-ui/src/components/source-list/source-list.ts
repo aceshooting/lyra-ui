@@ -64,7 +64,15 @@ export class LyraSourceList extends LyraElement {
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
-      this.slottedCount = this.children.length;
+      // Must count only children assigned to the *default* slot -- same rule
+      // `firstUpdated`/`onSlotChange` apply via `assignedElements()` below --
+      // otherwise a direct child carrying a foreign `slot` attribute makes
+      // this pre-count disagree with the authoritative one, which schedules
+      // a wasted second update (and Lit's dev-mode change-in-update warning).
+      // An explicit `slot=""` still assigns to the default slot per the HTML
+      // slot algorithm, so check the attribute's value rather than its mere
+      // presence.
+      this.slottedCount = Array.from(this.children).filter((el) => !el.getAttribute('slot')).length;
     }
   }
 
