@@ -52,7 +52,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-85 tags across six component families. Every tag has a live, interactive example on the
+92 tags across six component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -64,7 +64,7 @@ mirror, props, events, slots, parts) see
 | Temporal & graph | 6 | two-handle time-range brush, playback scrubber, canvas heatmap, force-directed graph, tree |
 | Charts | 12 | line/bar/pie/doughnut/radar/polar-area/scatter/bubble via Chart.js, plus histogram, box plot, and a dependency-free `lyra-lite-chart` |
 | Map & file input | 2 | MapLibre GL map with legend/choropleth layers, drag-drop file dropzone |
-| Conversation & Agent UI | 46 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, and more — the library's largest family |
+| Conversation & Agent UI | 53 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, avatar/card/stepper/segmented, and more — the library's largest family |
 
 ## Documentation
 

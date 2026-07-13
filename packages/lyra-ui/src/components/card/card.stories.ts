@@ -82,7 +82,7 @@ export const WithAllSlots: Story = {
         alt=""
         style="inline-size:100%; display:block;"
       />
-      <span slot="header" style="font-weight:600;">Rooftop install #4021</span>
+      <span slot="header" style="font-weight:600;">Rooftop install No. 4021</span>
       <button
         slot="actions"
         type="button"

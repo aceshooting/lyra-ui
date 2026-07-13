@@ -22,6 +22,10 @@
             {
               "description": "The label wrapper; visually clipped in icon-only mode.",
               "name": "label"
+            },
+            {
+              "description": "The hover/focus label flyout, only rendered while `tooltip` is set, the item is `icon-only`, and it is hovered or focused.",
+              "name": "tooltip"
             }
           ],
           "slots": [
@@ -112,6 +116,25 @@
             },
             {
               "kind": "field",
+              "name": "onBlurHide",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocusShow",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "showTooltip",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "stopLocaleSubscription",
               "type": {
                 "text": "() => void | undefined"
@@ -121,6 +144,14 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "stopPositioning",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -144,6 +175,26 @@
               "default": "''",
               "description": "Optional link target.",
               "attribute": "target"
+            },
+            {
+              "kind": "field",
+              "name": "tooltip",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by\nthe parent `<lyra-app-rail>` as the viewport narrows) hides it from view -- an explicit,\ndocumented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`\ncomposition. No effect outside icon-only mode, since the label is already visible there.\n`false` (the default) reproduces today's exact output.",
+              "attribute": "tooltip",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "tooltipText",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
             },
             {
               "kind": "method",
@@ -337,6 +388,15 @@
               "default": "''",
               "description": "Optional link target.",
               "fieldName": "target"
+            },
+            {
+              "name": "tooltip",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by\nthe parent `<lyra-app-rail>` as the viewport narrows) hides it from view -- an explicit,\ndocumented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`\ncomposition. No effect outside icon-only mode, since the label is already visible there.\n`false` (the default) reproduces today's exact output.",
+              "fieldName": "tooltip"
             }
           ],
           "superclass": {
@@ -419,7 +479,7 @@
               "name": "resizer"
             },
             {
-              "description": "The mobile hamburger/close toggle button. Hidden via CSS outside `'mobile'` mode.",
+              "description": "The mobile hamburger/close toggle button. Hidden via CSS outside `'mobile'` mode, or entirely via `hideToggle`.",
               "name": "toggle"
             }
           ],
@@ -454,6 +514,17 @@
                 "text": "HTMLElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "dragging",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "`true` for the duration of an active pointer-driven resize drag (not a keyboard step) --\nreflected so a consumer (or this component's own styles) can suppress `[part='base']`'s\n`transition: inline-size` during the drag, which otherwise visibly \"chases\" the pointer\ninstead of tracking it 1:1. Read-only in practice (this component owns the transitions), but\na plain reactive property like every other reflected boolean here.",
+              "attribute": "dragging",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -527,6 +598,17 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hideToggle",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a\nconsumer that already owns an external mobile-menu toggle wired to this rail's own `open`\nproperty. `false` (the default) reproduces today's exact output; note `open` still has no\nbuilt-in external trigger of its own once this is set, since `lyra-toggle` only fires from the\ntoggle button being removed.",
+              "attribute": "hide-toggle",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -1084,6 +1166,24 @@
           ],
           "attributes": [
             {
+              "name": "dragging",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "`true` for the duration of an active pointer-driven resize drag (not a keyboard step) --\nreflected so a consumer (or this component's own styles) can suppress `[part='base']`'s\n`transition: inline-size` during the drag, which otherwise visibly \"chases\" the pointer\ninstead of tracking it 1:1. Read-only in practice (this component owns the transitions), but\na plain reactive property like every other reflected boolean here.",
+              "fieldName": "dragging"
+            },
+            {
+              "name": "hide-toggle",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a\nconsumer that already owns an external mobile-menu toggle wired to this rail's own `open`\nproperty. `false` (the default) reproduces today's exact output; note `open` still has no\nbuilt-in external trigger of its own once this is set, since `lyra-toggle` only fires from the\ntoggle button being removed.",
+              "fieldName": "hideToggle"
+            },
+            {
               "name": "icon-only-breakpoint",
               "type": {
                 "text": "string"
@@ -1577,6 +1677,17 @@
             },
             {
               "kind": "field",
+              "name": "thumbnailOnly",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When both this and `compact` are set, hides `[part=meta]` (the filename/size text) entirely\nfor an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a\nthumbnail-only density purely through props, with no consumer-side CSS. Has no effect for a\nnon-image chip (there is no thumbnail to fall back to showing on its own) or when `compact` is\nunset. `false` (the default) reproduces today's exact output.",
+              "attribute": "thumbnail-only",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "thumbnailSrc",
               "type": {
                 "text": "string"
@@ -1903,6 +2014,15 @@
               "fieldName": "status"
             },
             {
+              "name": "thumbnail-only",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When both this and `compact` are set, hides `[part=meta]` (the filename/size text) entirely\nfor an image-mime attachment, leaving only the thumbnail -- for a consumer wanting a\nthumbnail-only density purely through props, with no consumer-side CSS. Has no effect for a\nnon-image chip (there is no thumbnail to fall back to showing on its own) or when `compact` is\nunset. `false` (the default) reproduces today's exact output.",
+              "fieldName": "thumbnailOnly"
+            },
+            {
               "name": "thumbnail-src",
               "type": {
                 "text": "string"
@@ -2017,8 +2137,12 @@
           "name": "LyraAttachmentTrigger",
           "cssParts": [
             {
-              "description": "The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`. `triggerLabel` lets a host override the single-capability trigger button's `aria-label` (i18n) — see that property's own doc for exactly what it does and doesn't affect.",
+              "description": "The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.",
               "name": "expand-icon"
+            },
+            {
+              "description": "The internal native `<input type=\"file\">` that actually opens the OS file picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override that with `::part(hidden-input)` in the unlikely case their integration needs to. `triggerLabel` lets a host override the single-capability trigger button's `aria-label` (i18n) — see that property's own doc for exactly what it does and doesn't affect.",
+              "name": "hidden-input"
             },
             {
               "description": "The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.",
@@ -2523,6 +2647,864 @@
           "declaration": {
             "name": "*",
             "module": "src/components/attachment-trigger/attachment-trigger.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/avatar/avatar.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-avatar>` — a small, fixed-size identity marker: an image, or an initials fallback when\nno image is set (or the image fails to load). First-party invention (no Web Awesome\nequivalent) -- purely presentational, no built-in interactivity; a consumer wraps it in their\nown `<button>`/`<lyra-menu>` trigger for a user-menu affordance.",
+          "name": "LyraAvatar",
+          "cssParts": [
+            {
+              "description": "The outer circle/square container.",
+              "name": "base"
+            },
+            {
+              "description": "The `<img>`, only rendered while `src` is set and has not failed to load.",
+              "name": "image"
+            },
+            {
+              "description": "The fallback initials text, rendered whenever `image` isn't.",
+              "name": "initials"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "alt",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Image alt text -- required alongside `src` for accessibility.",
+              "attribute": "alt"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "imageFailed",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "initials",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Fallback text (typically 1-2 characters) shown when no image is set, or the image fails to\nload.",
+              "attribute": "initials"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onImageError",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "shape",
+              "type": {
+                "text": "AvatarShape"
+              },
+              "default": "'circle'",
+              "description": "`'circle'` (the default) or `'square'`.",
+              "attribute": "shape",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "size",
+              "type": {
+                "text": "AvatarSize"
+              },
+              "default": "'md'",
+              "description": "Visual size. `'md'` (the default) matches `--lyra-icon-button-size` (2.5rem).",
+              "attribute": "size",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Image URL. Takes priority over `initials` when set and loads successfully; falls back to\n`initials` on a load error.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "tone",
+              "type": {
+                "text": "AvatarTone"
+              },
+              "default": "'neutral'",
+              "description": "Recolors the initials-fallback background/text, mirroring `lyra-chip`'s `tone` vocabulary.\n`'neutral'` (the default) reads as a plain, unaccented circle.",
+              "attribute": "tone",
+              "reflects": true
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "alt",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Image alt text -- required alongside `src` for accessibility.",
+              "fieldName": "alt"
+            },
+            {
+              "name": "initials",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Fallback text (typically 1-2 characters) shown when no image is set, or the image fails to\nload.",
+              "fieldName": "initials"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "shape",
+              "type": {
+                "text": "AvatarShape"
+              },
+              "default": "'circle'",
+              "description": "`'circle'` (the default) or `'square'`.",
+              "fieldName": "shape"
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "AvatarSize"
+              },
+              "default": "'md'",
+              "description": "Visual size. `'md'` (the default) matches `--lyra-icon-button-size` (2.5rem).",
+              "fieldName": "size"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Image URL. Takes priority over `initials` when set and loads successfully; falls back to\n`initials` on a load error.",
+              "fieldName": "src"
+            },
+            {
+              "name": "tone",
+              "type": {
+                "text": "AvatarTone"
+              },
+              "default": "'neutral'",
+              "description": "Recolors the initials-fallback background/text, mirroring `lyra-chip`'s `tone` vocabulary.\n`'neutral'` (the default) reads as a plain, unaccented circle.",
+              "fieldName": "tone"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-avatar",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraAvatar",
+          "declaration": {
+            "name": "LyraAvatar",
+            "module": "src/components/avatar/avatar.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/avatar/avatar.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-avatar",
+          "declaration": {
+            "name": "LyraAvatar",
+            "module": "src/components/avatar/avatar.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/avatar/avatar.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/card/card.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-card>` — a generic, styled bordered content container: the \"small bordered surface with\npadding\" idiom common to hero highlights, clickable grid tiles, and management-list items. A\ndirect `<lyra-*>` counterpart to `<wa-card>`'s contract, staying slot-compatible with\n`lyra-result-card` where they overlap.",
+          "name": "LyraCard",
+          "cssParts": [
+            {
+              "description": "Wrapper around the `actions` slot. Hidden entirely when empty.",
+              "name": "actions"
+            },
+            {
+              "description": "The outer container (a `<div>`, or an `<a>` when `href` is set).",
+              "name": "base"
+            },
+            {
+              "description": "Wrapper around the default slot.",
+              "name": "body"
+            },
+            {
+              "description": "Wrapper around the `footer` slot. Hidden entirely when empty.",
+              "name": "footer"
+            },
+            {
+              "description": "Wrapper around the `header` slot and `actions`. Hidden entirely when both are empty.",
+              "name": "header"
+            },
+            {
+              "description": "Wrapper around the `media` slot. Hidden entirely when empty.",
+              "name": "media"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The card body.",
+              "name": ""
+            },
+            {
+              "description": "Small header controls, rendered alongside the header content.",
+              "name": "actions"
+            },
+            {
+              "description": "Footer content, rendered below the body.",
+              "name": "footer"
+            },
+            {
+              "description": "Header row content, rendered above the body.",
+              "name": "header"
+            },
+            {
+              "description": "Media content (e.g. an image), rendered above the header.",
+              "name": "media"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "appearance",
+              "type": {
+                "text": "CardAppearance"
+              },
+              "default": "'outlined'",
+              "description": "Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)\nis a bordered surface -- the common \"small bordered surface with padding\" idiom.",
+              "attribute": "appearance",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "hasActionsSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasFooterSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHeaderSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasMediaSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "href",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "When set, the card's root renders as a real `<a href=...>` instead of a `<div>` -- for a\nwhole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.",
+              "attribute": "href"
+            },
+            {
+              "kind": "field",
+              "name": "interactive",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opt-in hover/focus-visible treatment (border-color shift, cursor: pointer) for a card used\nas a clickable tile -- purely visual; this component takes no position on what \"activate\"\nmeans unless `href` is also set. `false` (the default) reproduces today's exact static\noutput.",
+              "attribute": "interactive",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onActionsSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFooterSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHeaderSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onMediaSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "appearance",
+              "type": {
+                "text": "CardAppearance"
+              },
+              "default": "'outlined'",
+              "description": "Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)\nis a bordered surface -- the common \"small bordered surface with padding\" idiom.",
+              "fieldName": "appearance"
+            },
+            {
+              "name": "href",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "When set, the card's root renders as a real `<a href=...>` instead of a `<div>` -- for a\nwhole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.",
+              "fieldName": "href"
+            },
+            {
+              "name": "interactive",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opt-in hover/focus-visible treatment (border-color shift, cursor: pointer) for a card used\nas a clickable tile -- purely visual; this component takes no position on what \"activate\"\nmeans unless `href` is also set. `false` (the default) reproduces today's exact static\noutput.",
+              "fieldName": "interactive"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-card",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraCard",
+          "declaration": {
+            "name": "LyraCard",
+            "module": "src/components/card/card.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/card/card.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-card",
+          "declaration": {
+            "name": "LyraCard",
+            "module": "src/components/card/card.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/card/card.class.js"
           }
         }
       ]
@@ -9596,7 +10578,7 @@
               "name": "axis-title"
             },
             {
-              "description": "Each bar rect (type=\"bar\").",
+              "description": "Each bar rect (type=\"bar\"). Carries `data-selected` when its category index is in `selectedIndex`.",
               "name": "bar"
             },
             {
@@ -9887,6 +10869,15 @@
               "default": "'linear'",
               "description": "`type=\"bar\"` only (no effect on `type=\"line\"`): `'linear'` (default) maps a bar's value to\nheight via the standard `niceDomain`-based fraction, unchanged from before this property\nexisted. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lyra-heatmap`'s\nmatrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed\ndataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain\neither way — only the bar marks' own height mapping changes.",
               "attribute": "scale"
+            },
+            {
+              "kind": "field",
+              "name": "selectedIndex",
+              "type": {
+                "text": "number[]"
+              },
+              "default": "[]",
+              "description": "Category indexes to mark `data-selected` on every bar/segment at that index, across every\ndataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the\ndefault) reproduces today's exact output: no bar carries `data-selected`. A consumer's own\n`::part(bar)[data-selected]` (or `[data-selected]` inside the shadow root via a documented\nCSS custom property) rule can then style the highlight -- this component takes no opinion on\nwhat the highlight looks like, only which bars it applies to."
             },
             {
               "kind": "field",
@@ -17530,6 +18521,16 @@
             },
             {
               "kind": "field",
+              "name": "onBaseClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onBaseKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onIconSlotChange",
               "privacy": "private"
             },
@@ -17547,6 +18548,17 @@
               "default": "false",
               "description": "Shows the remove (×) button.",
               "attribute": "removable",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "selected",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opt-in toggle/pressed mode -- when set, `[part='base']` itself becomes focusable and\nkeyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects\n`aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. Has no effect\n(no interactive semantics added to `[part='base']`) when combined with `removable`, since the\nremove button already nests inside `[part='base']` -- axe-core's `nested-interactive` rule\nforbids a focusable descendant of a `role=\"button\"` ancestor, and this component's two real\nuse cases (a chart-series visibility toggle, a category filter chip) never need both at once.\n`false` (the default) reproduces today's exact passive-label-pill output.",
+              "attribute": "selected",
               "reflects": true
             },
             {
@@ -17739,6 +18751,10 @@
           ],
           "events": [
             {
+              "description": "Fired on click, or Enter/Space while focused, when `selected` mode is active (and `removable` is not set). `detail: { value, selected }` -- the chip has already toggled its own `selected` state by the time this fires.",
+              "name": "lyra-chip-select"
+            },
+            {
               "description": "The remove (×) button was activated (click, or Enter/Space while focused — native `<button>` behavior). `detail: { value }` — `value` is `undefined` when the `value` prop was never set. Only rendered while `removable`.",
               "name": "lyra-remove"
             }
@@ -17765,6 +18781,15 @@
               "default": "false",
               "description": "Shows the remove (×) button.",
               "fieldName": "removable"
+            },
+            {
+              "name": "selected",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opt-in toggle/pressed mode -- when set, `[part='base']` itself becomes focusable and\nkeyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects\n`aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. Has no effect\n(no interactive semantics added to `[part='base']`) when combined with `removable`, since the\nremove button already nests inside `[part='base']` -- axe-core's `nested-interactive` rule\nforbids a focusable descendant of a `role=\"button\"` ancestor, and this component's two real\nuse cases (a chart-series visibility toggle, a category filter chip) never need both at once.\n`false` (the default) reproduces today's exact passive-label-pill output.",
+              "fieldName": "selected"
             },
             {
               "name": "tone",
@@ -18392,6 +19417,616 @@
           "declaration": {
             "name": "*",
             "module": "src/components/citation-badge/citation-badge.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/code-block/code-block-core.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-code-block-core>` — a build-lean variant of `<lyra-code-block>` for\na consumer whose `languages` map already covers every language it will\never render. It only ever calls `loadShikiHighlighterCore(this.languages)`\n(see `code-loader.ts`) — never `loadShikiHighlighter()`, the default\n~200-language dynamic-import table loader `<lyra-code-block>` calls\nunconditionally unless its runtime `languagesOnly` flag is `true`. A\nruntime flag on that same module can't be proven always-`true` by a\nbundler, so the unconditional call (and everything shiki's main entry\npoint can reach from it) always stays in the build output regardless of\nhow that flag is used. This component's own module never textually\ncontains a call to (or import of) `loadShikiHighlighter` at all, so a\nconsumer importing this entry point instead of `code-block.js` gets a\ngenuinely shiki-full-table-free build.\n\nA `language` value absent from `languages` always renders the plain\n`<pre><code>` fallback — there is no default/full-table highlighter here\nto fall back to, unlike `<lyra-code-block>`'s dynamic-import path for an\nunmapped language. That fallback is the *default* rendering path, not a\ndegraded one, same as `<lyra-code-block>`'s own plain-text fallback.\n\nEverything else — `code`/`language`/`filename`/`copyable`/`collapsible`/\n`collapsed`/`maxHeight`, the copy button, the collapse header toggle, the\nloading-skeleton behavior while the fine-grained highlighter itself\nresolves — matches `<lyra-code-block>` exactly.",
+          "name": "LyraCodeBlockCore",
+          "cssParts": [
+            {
+              "description": "The outer container.",
+              "name": "base"
+            },
+            {
+              "description": "The scrollable region wrapping the code (or the loading skeleton); respects `max-height`, `hidden` while `collapsible` and `collapsed`.",
+              "name": "body"
+            },
+            {
+              "description": "The rendered `<code>`, same split as `pre` above.",
+              "name": "code"
+            },
+            {
+              "description": "The copy-to-clipboard button, when `copyable`.",
+              "name": "copy-button"
+            },
+            {
+              "description": "The `filename` text, when set.",
+              "name": "filename"
+            },
+            {
+              "description": "The row above the code (filename/language/copy/toggle), present whenever there's anything to put in it.",
+              "name": "header"
+            },
+            {
+              "description": "The `language` badge, when set, so the language is exposed to assistive tech as visible text rather than only a `language` attribute a screen reader would never announce.",
+              "name": "language"
+            },
+            {
+              "description": "The rendered `<pre>` — shiki's own in the highlighted path, this component's own plain one in the fallback path.",
+              "name": "pre"
+            },
+            {
+              "description": "The collapse/expand chevron button, when `collapsible`.",
+              "name": "toggle"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "bodyId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "code",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The raw source text.",
+              "attribute": "code"
+            },
+            {
+              "kind": "field",
+              "name": "collapsed",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the code region is currently hidden. Only has a visible effect\nwhile `collapsible` is also true.",
+              "attribute": "collapsed",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "collapsible",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the code region can be collapsed via a header toggle.",
+              "attribute": "collapsible",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "copy",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "copyTimeoutId",
+              "type": {
+                "text": "ReturnType<typeof setTimeout> | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Shows a copy-to-clipboard button in the header.",
+              "attribute": "copyable",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "filename",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Shown in the header above the code, when set.",
+              "attribute": "filename"
+            },
+            {
+              "kind": "field",
+              "name": "highlightToken",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "highlightedHtml",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null"
+            },
+            {
+              "kind": "field",
+              "name": "highlighter",
+              "type": {
+                "text": "ShikiHighlighterCore | null | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "justCopied",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "language",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "A shiki-recognized language id or alias (e.g. `\"javascript\"`,\n`\"python\"`, `\"json\"`). When unset, or when it isn't a key in\n`languages`, the code renders as plain unhighlighted text — this\ncomponent has no default/full-table highlighter to fall back to.",
+              "attribute": "language"
+            },
+            {
+              "kind": "field",
+              "name": "languages",
+              "type": {
+                "text": "Record<string, ShikiLanguageInput>"
+              },
+              "default": "{}",
+              "description": "Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from\n`shiki/langs/<name>.mjs`). This component has no default/full-table fallback highlighter --\na `language` absent from this map always renders the plain-text fallback. Empty (the\ndefault) never highlights at all."
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "maxHeight",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "A CSS length (e.g. `\"20rem\"`); once set, the code scrolls internally\npast this height instead of growing the page.",
+              "attribute": "max-height"
+            },
+            {
+              "kind": "field",
+              "name": "shikiReady",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "toggleCollapsed",
+              "privacy": "private"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "preSuppliedGrammar",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "ShikiLanguageInput | undefined"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderHeader",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "syncHighlight",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tokenize",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "hl",
+                  "type": {
+                    "text": "ShikiHighlighterCore"
+                  }
+                },
+                {
+                  "name": "lang",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "writeClipboard",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "text",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "The copy button was activated. `detail: { text }` is always the raw `code` value (never the highlighted HTML), and always fires regardless of whether the actual OS clipboard write succeeded — same convention as `<lyra-json-viewer>`'s own copy button.",
+              "name": "lyra-copy"
+            },
+            {
+              "description": "The collapse/expand header button was activated. `detail: { collapsed }` — same event name and shape convention as `<lyra-thinking-panel>`'s own `lyra-toggle`.",
+              "name": "lyra-toggle"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "code",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The raw source text.",
+              "fieldName": "code"
+            },
+            {
+              "name": "collapsed",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the code region is currently hidden. Only has a visible effect\nwhile `collapsible` is also true.",
+              "fieldName": "collapsed"
+            },
+            {
+              "name": "collapsible",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the code region can be collapsed via a header toggle.",
+              "fieldName": "collapsible"
+            },
+            {
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Shows a copy-to-clipboard button in the header.",
+              "fieldName": "copyable"
+            },
+            {
+              "name": "filename",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Shown in the header above the code, when set.",
+              "fieldName": "filename"
+            },
+            {
+              "name": "language",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "A shiki-recognized language id or alias (e.g. `\"javascript\"`,\n`\"python\"`, `\"json\"`). When unset, or when it isn't a key in\n`languages`, the code renders as plain unhighlighted text — this\ncomponent has no default/full-table highlighter to fall back to.",
+              "fieldName": "language"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "max-height",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "A CSS length (e.g. `\"20rem\"`); once set, the code scrolls internally\npast this height instead of growing the page.",
+              "fieldName": "maxHeight"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-code-block-core",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraCodeBlockCore",
+          "declaration": {
+            "name": "LyraCodeBlockCore",
+            "module": "src/components/code-block/code-block-core.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/code-block/code-block-core.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-code-block-core",
+          "declaration": {
+            "name": "LyraCodeBlockCore",
+            "module": "src/components/code-block/code-block-core.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/code-block/code-block-core.class.js"
           }
         }
       ]
@@ -24996,7 +26631,7 @@
               "name": "label"
             },
             {
-              "description": "The dialog panel itself (`role=\"dialog\"` while open). Its max-inline-size is controlled by the `--lyra-dialog-max-width` custom property (default `32rem`).",
+              "description": "The dialog panel itself (`role=\"dialog\"` while open). Shrink-wraps to its content by default, capped at `--lyra-dialog-max-width` (default `32rem`); set `--lyra-dialog-width` for an assertive width instead of only a cap.",
               "name": "panel"
             }
           ],
@@ -25489,6 +27124,394 @@
           "declaration": {
             "name": "*",
             "module": "src/components/dialog/dialog.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/diff-view/diff-line-diff.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "computeLineDiff",
+          "return": {
+            "type": {
+              "text": "DiffOp[]"
+            }
+          },
+          "parameters": [
+            {
+              "name": "oldLines",
+              "type": {
+                "text": "string[]"
+              }
+            },
+            {
+              "name": "newLines",
+              "type": {
+                "text": "string[]"
+              }
+            }
+          ],
+          "description": "A real line-level diff via the classic O(n*m) longest-common-subsequence dynamic program --\nnot a lexical/syntax-highlighting pass, and not \"every removed line then every added line.\"\nFine for the typical size of a tool-call/transcript diff this component targets; a full Myers\nimplementation would be asymptotically faster on very large inputs but isn't needed to fix the\nfiled defect (alignment), only to make it correct."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "computeLineDiff",
+          "declaration": {
+            "name": "computeLineDiff",
+            "module": "src/components/diff-view/diff-line-diff.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/diff-view/diff-view.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-diff-view>` — a real two-string line diff (Myers/LCS-style alignment), rendered as\ninterleaved unified-diff output -- not diff-flavored syntax highlighting over an\nalready-formatted string (`lyra-code-block`'s `language=\"diff\"` only lexically colors a string\nthe consumer already unified-diffed; it has no two-string-compare entry point). First-party\ninvention (no Web Awesome equivalent).",
+          "name": "LyraDiffView",
+          "cssParts": [
+            {
+              "description": "The root wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The copy affordance, only rendered while `copyable`.",
+              "name": "copy-button"
+            },
+            {
+              "description": "A single line. Carries `data-type=\"equal\"|\"add\"|\"remove\"`.",
+              "name": "line"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shows a copy-to-clipboard button for the full unified-diff text. `false` (the default)\nrenders no button.",
+              "attribute": "copyable"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "newText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The \"after\" text. Default `''` renders an all-removals diff of `oldText`."
+            },
+            {
+              "kind": "field",
+              "name": "oldText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The \"before\" text. Default `''` renders an all-additions diff of `newText`."
+            },
+            {
+              "kind": "field",
+              "name": "onCopyClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "unifiedText",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired on copy-button activation. `detail: { text: string }` (the full unified-diff text, regardless of whether the clipboard write actually succeeded).",
+              "name": "lyra-copy"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shows a copy-to-clipboard button for the full unified-diff text. `false` (the default)\nrenders no button.",
+              "fieldName": "copyable"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-diff-view",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraDiffView",
+          "declaration": {
+            "name": "LyraDiffView",
+            "module": "src/components/diff-view/diff-view.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/diff-view/diff-view.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-diff-view",
+          "declaration": {
+            "name": "LyraDiffView",
+            "module": "src/components/diff-view/diff-view.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/diff-view/diff-view.class.js"
           }
         }
       ]
@@ -26786,6 +28809,14 @@
             {
               "description": "Buttons/links shown below the description.",
               "name": "actions"
+            },
+            {
+              "description": "Rich description content (overrides the `description` attribute).",
+              "name": "description"
+            },
+            {
+              "description": "Rich heading content (overrides the `heading` attribute).",
+              "name": "heading"
             }
           ],
           "members": [
@@ -26849,6 +28880,24 @@
             },
             {
               "kind": "field",
+              "name": "hasDescriptionSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHeadingSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "hasIcon",
               "type": {
                 "text": "boolean"
@@ -26884,6 +28933,16 @@
             {
               "kind": "field",
               "name": "onActionsSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onDescriptionSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHeadingSlotChange",
               "privacy": "private"
             },
             {
@@ -30161,6 +32220,15 @@
             },
             {
               "kind": "field",
+              "name": "danglingLinks",
+              "type": {
+                "text": "SimLink[]"
+              },
+              "privacy": "private",
+              "default": "[]"
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -31275,6 +33343,14 @@
                 "text": "HTMLCanvasElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "cellColor",
+              "type": {
+                "text": "(pos: MatrixCellPos | CalendarCellPos, value: number) => string | undefined | undefined"
+              },
+              "description": "Overrides a cell's computed ramp/no-data color entirely for an exact value -- receives the\ncell position (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its\nvalue, return a CSS color string to force that cell to it, or `undefined` to fall back to the\nnormal `colorSteps`/ramp math unchanged. Lets a consumer designate a value as categorically\noutside the ramp (e.g. a real zero-count day rendered as a neutral hairline, distinct from\nboth \"no data\" and the ramp's own lightest step) without a prepended synthetic ramp color,\nwhich can't safely reserve an exact value on a skewed dataset (the bucket selectors round by\ncontinuous ratio, with no equality-based reservation). Unset (the default) reproduces today's\nexact ramp/no-data behavior for every cell."
             },
             {
               "kind": "field",
@@ -32499,7 +34575,7 @@
           ],
           "events": [
             {
-              "description": "Fired on click, or Enter/Space on the focused/hovered cell. `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode. `cellText` overrides the built-in English \"Row X, Col Y: value\" / \"Mon DD: value\" template used for both the hover tooltip and the keyboard live-region announcement.",
+              "description": "Fired on click, or Enter/Space on the focused/hovered cell. `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode. `cellText` overrides the built-in English \"Row X, Col Y: value\" / \"Mon DD: value\" template used for both the hover tooltip and the keyboard live-region announcement. `cellColor` overrides a cell's ramp-computed color entirely for an exact value.",
               "name": "lyra-cell-click"
             }
           ],
@@ -34910,6 +36986,16 @@
             },
             {
               "kind": "field",
+              "name": "escapeHtml",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When `true`, overrides marked's `html` renderer hook to emit the HTML-escaped source text\ninstead of passing raw/sanitized markup through -- for a consumer rendering arbitrary\nalready-written content (e.g. a historical chat/agent transcript full of code/XML/HTML\nsnippets) where a stray angle bracket should render as visible text, not a real DOM element.\nStill lets GFM tables/lists/etc. render normally -- only raw embedded HTML is affected.\n`false` (the default) reproduces today's exact `marked`-default (sanitized-when-`sanitize`)\npassthrough behavior.",
+              "attribute": "escape-html"
+            },
+            {
+              "kind": "field",
               "name": "gfm",
               "type": {
                 "text": "boolean"
@@ -35240,6 +37326,15 @@
               "default": "false",
               "description": "When `true`, `connectedCallback()` skips awaiting `loadMarkdownDeps()`'s\ndynamic `import()` if the shared `marked`/`dompurify` module cache (see\n`markdown-loader.ts`'s `getMarkdownDepsIfLoaded()`) has *already*\nresolved — e.g. because an earlier `<lyra-markdown>` instance on the\npage already finished loading, or the consumer primed the cache\ndirectly by calling `loadMarkdownDeps()` themselves at startup — and\nrenders synchronously instead. When the cache isn't warm yet (most\nnotably: the very first `<lyra-markdown>` ever connected on a page,\nsince nothing has called `loadMarkdownDeps()` before it), this still\nfalls back to the normal async path — a dynamic `import()` can't be\nmade synchronous, so this is a fast path for the common \"already warm\"\ncase, not a hard guarantee. `false` (the default) is byte-identical to\ntoday: always the async `import()`, fallback-text window included.",
               "fieldName": "eagerLoad"
+            },
+            {
+              "name": "escape-html",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When `true`, overrides marked's `html` renderer hook to emit the HTML-escaped source text\ninstead of passing raw/sanitized markup through -- for a consumer rendering arbitrary\nalready-written content (e.g. a historical chat/agent transcript full of code/XML/HTML\nsnippets) where a stray angle bracket should render as visible text, not a real DOM element.\nStill lets GFM tables/lists/etc. render normally -- only raw embedded HTML is affected.\n`false` (the default) reproduces today's exact `marked`-default (sanitized-when-`sanitize`)\npassthrough behavior.",
+              "fieldName": "escapeHtml"
             },
             {
               "name": "gfm",
@@ -39734,6 +41829,464 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/poll-status/poll-status.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-poll-status>` — a \"next scheduled refresh\" countdown with a built-in pause control: a\nticking `M:SS` display counting down to the next scheduled action, a \"Refreshing…\" state at\nzero, and a pause/resume toggle. First-party invention (no Web Awesome equivalent); the\nclosest existing component, `lyra-stream-status`, is scoped to transport/connection-health\nphases, a different concern from a scheduled-interval countdown -- this mirrors its internal\n`<lyra-live-region>` composition for accessible phase-transition announcements.",
+          "name": "LyraPollStatus",
+          "cssParts": [
+            {
+              "description": "The root wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The `M:SS` (or \"Refreshing…\") text.",
+              "name": "countdown"
+            },
+            {
+              "description": "The pulsing status dot.",
+              "name": "indicator"
+            },
+            {
+              "description": "The built-in pause/resume toggle.",
+              "name": "pause-button"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "active",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Whether the poll cycle is running at all. `true` (the default).",
+              "attribute": "active",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "due",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "liveRegion",
+              "type": {
+                "text": "LyraLiveRegion | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "nextInMs",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "Milliseconds until the next scheduled action, as of whenever this was last set -- setting it\n(re)starts the countdown from \"now.\" Unset (the default) shows no countdown.",
+              "attribute": "next-in-ms"
+            },
+            {
+              "kind": "field",
+              "name": "paused",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "User-toggled pause -- while `true`, the countdown display freezes and `lyra-poll-due` never\nfires. `false` (the default).",
+              "attribute": "paused",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "remainingMs",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "targetAt",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "tickTimer",
+              "type": {
+                "text": "ReturnType<typeof setInterval> | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "togglePause",
+              "privacy": "private"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "announce",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "text",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "armTicker",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "disarmTicker",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatCountdown",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when `paused` changes via the built-in button. `detail: boolean`.",
+              "name": "lyra-pause-change"
+            },
+            {
+              "description": "Fired once when the countdown reaches zero (not fired while `paused`).",
+              "name": "lyra-poll-due"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "active",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Whether the poll cycle is running at all. `true` (the default).",
+              "fieldName": "active"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "next-in-ms",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "Milliseconds until the next scheduled action, as of whenever this was last set -- setting it\n(re)starts the countdown from \"now.\" Unset (the default) shows no countdown.",
+              "fieldName": "nextInMs"
+            },
+            {
+              "name": "paused",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "User-toggled pause -- while `true`, the countdown display freezes and `lyra-poll-due` never\nfires. `false` (the default).",
+              "fieldName": "paused"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-poll-status",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPollStatus",
+          "declaration": {
+            "name": "LyraPollStatus",
+            "module": "src/components/poll-status/poll-status.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/poll-status/poll-status.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-poll-status",
+          "declaration": {
+            "name": "LyraPollStatus",
+            "module": "src/components/poll-status/poll-status.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/poll-status/poll-status.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/responsive-panel/responsive-panel.class.ts",
       "declarations": [
         {
@@ -41085,6 +43638,372 @@
           "declaration": {
             "name": "*",
             "module": "src/components/result-card/result-field.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/segmented/segmented.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract\nbuilt in: `role=\"radiogroup\"`/`role=\"radio\"`, roving tabindex, automatic activation (click or\narrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End\nnavigation among non-disabled items. First-party invention (no Web Awesome equivalent) --\n\"choose exactly one of N labeled options, rendered as a button row\" is ubiquitous\nsettings/filter-panel UI.",
+          "name": "LyraSegmented",
+          "cssParts": [
+            {
+              "description": "The `role=\"radiogroup\"` root.",
+              "name": "base"
+            },
+            {
+              "description": "A single `role=\"radio\"` button.",
+              "name": "segment"
+            },
+            {
+              "description": "The segment's label text.",
+              "name": "segment-label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "items",
+              "type": {
+                "text": "SegmentedItem[]"
+              },
+              "default": "[]",
+              "description": "The button row's items."
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "value",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The currently selected item's `value`.",
+              "attribute": "value"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focusItem",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "select",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "item",
+                  "type": {
+                    "text": "SegmentedItem"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when the selected value changes via click or keyboard. `detail: { value }`.",
+              "name": "lyra-change"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "value",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The currently selected item's `value`.",
+              "fieldName": "value"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-segmented",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraSegmented",
+          "declaration": {
+            "name": "LyraSegmented",
+            "module": "src/components/segmented/segmented.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/segmented/segmented.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-segmented",
+          "declaration": {
+            "name": "LyraSegmented",
+            "module": "src/components/segmented/segmented.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/segmented/segmented.class.js"
           }
         }
       ]
@@ -46022,6 +48941,387 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/stepper/stepper.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-stepper>` — ordered multi-step wizard/form navigation: label + index per step,\ncurrent/completed/locked/error state, click-to-jump. First-party invention (no Web Awesome\nequivalent). Fully data-driven and controlled, like `lyra-table`'s `columns`/`rows` -- it never\nmutates `steps` itself; a click or Enter/Space on a non-disabled step fires a cancelable\n`lyra-step-select`, and the host decides whether/how `steps` changes in response (mirroring\n`lyra-dialog-close`'s cancelable-event convention).",
+          "name": "LyraStepper",
+          "cssParts": [
+            {
+              "description": "The root wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "A single step button.",
+              "name": "step"
+            },
+            {
+              "description": "The completed-checkmark glyph, shown for `completed` steps instead of `step-index`.",
+              "name": "step-check"
+            },
+            {
+              "description": "The numbered index chip, shown for `pending`/`current`/`error` steps.",
+              "name": "step-index"
+            },
+            {
+              "description": "The step's label text.",
+              "name": "step-label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "orientation",
+              "type": {
+                "text": "'horizontal' | 'vertical'"
+              },
+              "default": "'horizontal'",
+              "description": "`'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);\n`'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed).",
+              "attribute": "orientation",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "steps",
+              "type": {
+                "text": "StepItem[]"
+              },
+              "default": "[]",
+              "description": "Ordered step data. Never mutated by this component -- see the class doc's controlled-\ncomponent contract. Empty (the default) renders nothing."
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focusStep",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "selectStep",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "step",
+                  "type": {
+                    "text": "StepItem"
+                  }
+                },
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired on click, or Enter/Space while focused, on a non-`disabled` step. `detail: { index, id }`. Cancelable, though this component takes no default action of its own to prevent (it never mutates `steps`) -- `preventDefault()` is available for a host that wants a single place to short-circuit its own listener's follow-up work.",
+              "name": "lyra-step-select"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "orientation",
+              "type": {
+                "text": "'horizontal' | 'vertical'"
+              },
+              "default": "'horizontal'",
+              "description": "`'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);\n`'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed).",
+              "fieldName": "orientation"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-stepper",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraStepper",
+          "declaration": {
+            "name": "LyraStepper",
+            "module": "src/components/stepper/stepper.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/stepper/stepper.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-stepper",
+          "declaration": {
+            "name": "LyraStepper",
+            "module": "src/components/stepper/stepper.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/stepper/stepper.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/stream-status/stream-status.class.ts",
       "declarations": [
         {
@@ -47617,6 +50917,18 @@
             {
               "description": "Each body `<td>`.",
               "name": "cell"
+            },
+            {
+              "description": "The `<tfoot>`, only rendered when at least one column defines `footer`.",
+              "name": "foot"
+            },
+            {
+              "description": "A single footer cell.",
+              "name": "footer-cell"
+            },
+            {
+              "description": "The single footer row.",
+              "name": "footer-row"
             },
             {
               "description": "The `<thead>` element.",
@@ -57189,8 +60501,16 @@
               "name": "header"
             },
             {
+              "description": "Wrapper around the `icon` slot. Hidden entirely when empty.",
+              "name": "icon"
+            },
+            {
               "description": "The panel title text.",
               "name": "label"
+            },
+            {
+              "description": "Wrapper around the label and sublabel.",
+              "name": "label-group"
             },
             {
               "description": "The panel subtitle text.",
@@ -57199,6 +60519,14 @@
             {
               "description": "The wrapper around the label/sublabel.",
               "name": "title"
+            },
+            {
+              "description": "A single view toggle button.",
+              "name": "view-toggle"
+            },
+            {
+              "description": "The header toggle-button group, only rendered when `views` is non-empty.",
+              "name": "view-toggles"
             }
           ],
           "slots": [
@@ -57209,9 +60537,30 @@
             {
               "description": "Header action controls, rendered before the collapse/expand buttons.",
               "name": "actions"
+            },
+            {
+              "description": "Optional leading icon in the title row.",
+              "name": "icon"
+            },
+            {
+              "description": "Rich label content (overrides the `label` attribute).",
+              "name": "label"
+            },
+            {
+              "description": "Rich sublabel content (overrides the `sublabel` attribute).",
+              "name": "sublabel"
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "activeView",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The currently active view's `id` -- defaults to the first entry of `views` (or `''` when\n`views` is empty). Settable directly by a consumer wanting to control the active view\nexternally; also updated internally when a view toggle is clicked."
+            },
             {
               "kind": "field",
               "name": "bodyId",
@@ -57331,6 +60680,33 @@
             },
             {
               "kind": "field",
+              "name": "hasIconSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasSublabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "label",
               "type": {
                 "text": "string"
@@ -57365,6 +60741,21 @@
             },
             {
               "kind": "field",
+              "name": "onIconSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onSublabelSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "overlayHandle",
               "type": {
                 "text": "OverlayHandle | undefined"
@@ -57377,6 +60768,11 @@
               "type": {
                 "text": "() => void | undefined"
               },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "setActiveView",
               "privacy": "private"
             },
             {
@@ -57422,6 +60818,15 @@
               "kind": "field",
               "name": "toggleFullscreen",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "views",
+              "type": {
+                "text": "WidgetView[]"
+              },
+              "default": "[]",
+              "description": "Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card\nchrome. Each entry gets a header toggle button and a `<slot name=\"view-${id}\">`. Empty (the\ndefault) renders today's single unnamed default slot as the sole view, unchanged."
             },
             {
               "kind": "method",
@@ -57594,6 +60999,10 @@
             {
               "description": "`detail: boolean` (the new `fullscreen` state).",
               "name": "lyra-fullscreen-change"
+            },
+            {
+              "description": "Fired when the active view changes via a header toggle click. `detail: string` (the new view's `id`).",
+              "name": "lyra-view-change"
             }
           ],
           "attributes": [

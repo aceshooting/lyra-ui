@@ -29,7 +29,11 @@ const optionalPeers = [
 const bundleEntries = {
   core: {
     fixture: 'core',
-    maxRawBytes: 720_000,
+    // Bumped from 720_000: seven new no-optional-peer components (lyra-avatar, lyra-card,
+    // lyra-stepper, lyra-segmented, lyra-diff-view, lyra-poll-status, lyra-code-block-core) are
+    // all reachable from the root barrel, growing the core bundle by real, intentional feature
+    // code rather than bloat.
+    maxRawBytes: 750_000,
   },
   flag: {
     fixture: 'optional',

@@ -70,6 +70,13 @@ import './components/attachment-trigger/attachment-trigger.js';
 import './components/kbd/kbd.js';
 import './components/result-card/result-card.js';
 import './components/result-card/result-field.js';
+import './components/avatar/avatar.js';
+import './components/card/card.js';
+import './components/stepper/stepper.js';
+import './components/segmented/segmented.js';
+import './components/diff-view/diff-view.js';
+import './components/poll-status/poll-status.js';
+import './components/code-block/code-block-core.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -320,6 +327,19 @@ export type {
   GroupByRecencyOptions,
   RecencyBucket,
 } from './internal/group-by-recency.js';
+export { LyraAvatar } from './components/avatar/avatar.js';
+export type { AvatarSize, AvatarShape, AvatarTone } from './components/avatar/avatar.js';
+export { LyraCard } from './components/card/card.js';
+export type { CardAppearance } from './components/card/card.js';
+export { LyraStepper } from './components/stepper/stepper.js';
+export type { StepItem, StepState } from './components/stepper/stepper.js';
+export { LyraSegmented } from './components/segmented/segmented.js';
+export type { SegmentedItem } from './components/segmented/segmented.js';
+export { LyraDiffView } from './components/diff-view/diff-view.js';
+export { computeLineDiff } from './components/diff-view/diff-line-diff.js';
+export type { DiffOp } from './components/diff-view/diff-line-diff.js';
+export { LyraPollStatus } from './components/poll-status/poll-status.js';
+export { LyraCodeBlockCore } from './components/code-block/code-block-core.js';
 
 export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
 export type { LyraChartEventMap } from './components/chart/chart.js';
@@ -327,6 +347,7 @@ export type { LyraChatComposerEventMap } from './components/chat-composer/chat-c
 export type { LyraChatMessageEventMap } from './components/chat-message/chat-message.js';
 export type { LyraCheckboxEventMap } from './components/checkbox/checkbox.js';
 export type { LyraCodeBlockEventMap } from './components/code-block/code-block.js';
+export type { LyraCodeBlockCoreEventMap } from './components/code-block/code-block-core.js';
 export type { LyraComboboxEventMap } from './components/combobox/combobox.js';
 export type { LyraOptionEventMap } from './components/combobox/option.js';
 export type { LyraConversationItemEventMap } from './components/conversation-item/conversation-item.js';
@@ -344,7 +365,10 @@ export type { LyraMenuItemEventMap } from './components/menu/menu-item.js';
 export type { LyraMenuEventMap } from './components/menu/menu.js';
 export type { LyraModelSelectEventMap } from './components/model-select/model-select.js';
 export type { LyraPlaybackEventMap } from './components/playback/playback.js';
+export type { LyraPollStatusEventMap } from './components/poll-status/poll-status.js';
+export type { LyraSegmentedEventMap } from './components/segmented/segmented.js';
 export type { LyraSliderEventMap } from './components/slider/slider.js';
+export type { LyraStepperEventMap } from './components/stepper/stepper.js';
 export type { LyraStreamStatusEventMap } from './components/stream-status/stream-status.js';
 export type { LyraSwitchEventMap } from './components/switch/switch.js';
 export type { LyraTableEventMap } from './components/table/table.js';
