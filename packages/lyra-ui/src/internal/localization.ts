@@ -97,7 +97,8 @@ export type LyraMessageKey =
   | 'attachmentTriggerCamera'
   | 'attachmentMenuFiles'
   | 'attachmentMenuImage'
-  | 'attachmentMenuCamera';
+  | 'attachmentMenuCamera'
+  | 'checkboxRequired';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -196,6 +197,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   attachmentMenuFiles: 'Upload files',
   attachmentMenuImage: 'Upload a photo',
   attachmentMenuCamera: 'Take a photo',
+  checkboxRequired: 'Please check this box if you want to continue.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

@@ -493,6 +493,25 @@ describe('validity styling', () => {
   });
 });
 
+describe('validationMessage localization', () => {
+  it('defaults to the built-in English validationMessage for a required, unchecked control', async () => {
+    const el = (await fixture(html`<lyra-checkbox required>Agree</lyra-checkbox>`)) as LyraCheckbox;
+    expect(el.validationMessage).to.equal('Please check this box if you want to continue.');
+  });
+
+  it('localizes the validationMessage via this.localize() when .strings overrides checkboxRequired', async () => {
+    const el = (await fixture(html`
+      <lyra-checkbox required .strings=${{ checkboxRequired: 'Veuillez cocher cette case pour continuer.' }}
+        >Agree</lyra-checkbox
+      >
+    `)) as LyraCheckbox;
+    expect(el.validationMessage).to.equal('Veuillez cocher cette case pour continuer.');
+
+    el.checked = true;
+    expect(el.validationMessage).to.equal('');
+  });
+});
+
 it('un-hides the label part when a slotted element mutates its own text content in place', async () => {
   // `slotchange` only fires when the *set* of distributed nodes changes --
   // never for an already-slotted node mutating its own text in place -- so

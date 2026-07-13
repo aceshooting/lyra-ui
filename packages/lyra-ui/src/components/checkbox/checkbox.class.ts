@@ -261,10 +261,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private updateValidity(): void {
     if (this.required && !this.checked) {
-      this.validityController.setValidity(
-        { valueMissing: true },
-        'Please check this box if you want to continue.',
-      );
+      this.validityController.setValidity({ valueMissing: true }, this.localize('checkboxRequired'));
     } else {
       this.validityController.setValidity({});
     }
