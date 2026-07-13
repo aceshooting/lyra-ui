@@ -126,6 +126,15 @@ export const styles = css`
     background: var(--lyra-color-surface);
     box-shadow: var(--lyra-size-1px) 0 0 0 var(--lyra-color-border);
   }
+  [part='header-cell'][data-sticky='end'],
+  [part='cell'][data-sticky='end'] {
+    /* Mirror image of the 'start' rule above: pinned to the inline-end edge
+       instead, with the seam shadow flipped to the opposite physical side
+       since content now scrolls underneath from the other direction. */
+    inset-inline-start: auto;
+    inset-inline-end: var(--lyra-table-sticky-offset, 0);
+    box-shadow: calc(-1 * var(--lyra-size-1px)) 0 0 0 var(--lyra-color-border);
+  }
   [part='foot'] {
     position: sticky;
     inset-block-end: 0;

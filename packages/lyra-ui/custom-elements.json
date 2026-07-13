@@ -16306,6 +16306,17 @@
             },
             {
               "kind": "field",
+              "name": "stoppable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "When `false`, the built-in button never renders as a Stop/cancel control\nwhile busy -- instead it stays a (disabled) Send button, since there is\nno cancellation operation to offer. Defaults to `true`, reproducing\ntoday's Stop-button behavior for every `status` other than `'idle'`.",
+              "attribute": "stoppable",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "strings",
               "type": {
                 "text": "LyraLocaleStrings"
@@ -16578,7 +16589,7 @@
               "name": "lyra-input"
             },
             {
-              "description": "Fired by the built-in button while `status` is `\"sending\"` or `\"streaming\"`. No detail.",
+              "description": "Fired by the built-in button while `status` is `\"sending\"` or `\"streaming\"` and `stoppable` is `true` (the default). No detail.",
               "name": "lyra-stop"
             },
             {
@@ -16631,6 +16642,15 @@
               },
               "default": "'idle'",
               "fieldName": "status"
+            },
+            {
+              "name": "stoppable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "When `false`, the built-in button never renders as a Stop/cancel control\nwhile busy -- instead it stays a (disabled) Send button, since there is\nno cancellation operation to offer. Defaults to `true`, reproducing\ntoday's Stop-button behavior for every `status` other than `'idle'`.",
+              "fieldName": "stoppable"
             },
             {
               "name": "submit-on-enter",
@@ -50907,7 +50927,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `columns[].sticky` pins a column's header/cells to the\ninline-start edge while the table scrolls horizontally.",
+          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `columns[].sticky` pins a column's header/cells to the\ninline-start (default/`true`) or inline-end (`'end'`) edge while the table scrolls horizontally.",
           "name": "LyraTable",
           "cssParts": [
             {

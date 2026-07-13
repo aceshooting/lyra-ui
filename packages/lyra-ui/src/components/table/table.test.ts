@@ -427,6 +427,36 @@ it("gives a sticky column's header and cell the sticky positioning attribute and
   expect(getComputedStyle(stickyCell).boxShadow).to.not.equal('none');
 });
 
+it("normalizes the legacy sticky: true to data-sticky='start' for backward compatibility", async () => {
+  const stickyColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sticky: true, cell: (r) => r.name },
+  ];
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = stickyColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  const stickyHeader = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
+  expect(stickyHeader.getAttribute('data-sticky')).to.equal('start');
+});
+
+it("pins a sticky: 'end' column's header and cell to the inline-end edge instead of inline-start", async () => {
+  const stickyEndColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', sticky: 'end', cell: (r) => r.score },
+  ];
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = stickyEndColumns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  const stickyHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+  const stickyCell = el.shadowRoot!.querySelectorAll('[part="cell"]')[1] as HTMLElement;
+
+  expect(stickyHeader.getAttribute('data-sticky')).to.equal('end');
+  expect(getComputedStyle(stickyHeader).position).to.equal('sticky');
+  expect(getComputedStyle(stickyCell).insetInlineEnd).to.equal('0px');
+});
+
 it('does not emit lyra-row-click and does not swallow the click when a button inside a cell() is clicked', async () => {
   const actionColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', cell: (r) => r.name },

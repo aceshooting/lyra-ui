@@ -17,10 +17,12 @@ export interface TableColumn<T> {
    *  `[part='base']`'s container-query width shrinks; both can be forced back
    *  on via `[part='reveal-columns-button']`. */
   priority?: 'medium' | 'low';
-  /** Pins this column's header/cell to the inline-start edge with
-   *  `position: sticky` so it stays visible while the table scrolls
-   *  horizontally. */
-  sticky?: boolean;
+  /** Pins this column's header/cell to one edge with `position: sticky` so
+   *  it stays visible while the table scrolls horizontally. `true` (legacy)
+   *  and `'start'` both pin to the inline-start edge; `'end'` pins to the
+   *  inline-end edge (e.g. a trailing actions column in a narrow viewport).
+   *  Both directions use CSS logical properties, so RTL flips automatically. */
+  sticky?: boolean | 'start' | 'end';
   /** Renders a sticky-bottom footer cell for this column, computed from every currently-rendered
    *  row (post-sort, pre-pagination) -- e.g. a column total. Omit for a column with no footer
    *  value; a `<tfoot>` renders at all only when at least one column defines this. */
@@ -38,6 +40,15 @@ export interface TableColumn<T> {
  *  activation by the table's own delegated listeners. */
 const INTERACTIVE_SELECTOR =
   'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
+
+/** Normalizes TableColumn.sticky's legacy boolean form (`true` == `'start'`,
+ *  today's only supported direction) alongside the `'start'`/`'end'` union --
+ *  `false`/`undefined` both resolve to "not sticky". */
+function stickyDirection(sticky: boolean | 'start' | 'end' | undefined): 'start' | 'end' | undefined {
+  if (sticky === true) return 'start';
+  if (sticky === 'start' || sticky === 'end') return sticky;
+  return undefined;
+}
 
 /** Encodes a row/column identity key for use as a Map key or a DOM
  *  `data-row-key` attribute value, preserving the distinction between a
@@ -105,7 +116,7 @@ export interface LyraTableEventMap<T = unknown> {
  * `[part='base']` plus a post-render DOM check — or `showAllColumns`
  * force-visible mode is currently active (so there's still a way to toggle
  * it back off). `columns[].sticky` pins a column's header/cells to the
- * inline-start edge while the table scrolls horizontally.
+ * inline-start (default/`true`) or inline-end (`'end'`) edge while the table scrolls horizontally.
  *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
@@ -322,14 +333,30 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  laid-out `offsetWidth` of each earlier sticky column's header cell. */
   private stickyOffsets(): Map<string, number> {
     const offsets = new Map<string, number>();
-    let running = 0;
+    const headerWidth = (key: string): number =>
+      [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].find(
+        (el) => el.dataset.colKey === key,
+      )?.offsetWidth ?? 0;
+    // 'start' columns stack left-to-right in array order (unchanged from
+    // today); 'end' columns stack right-to-left (reverse array order) so a
+    // trailing sticky column sits flush against the edge and an earlier
+    // 'end' column stacks inward from it -- the mirror image of 'start'.
+    // Both directions share the same --lyra-table-sticky-offset custom
+    // property: a column is exclusively 'start' XOR 'end', so there's no
+    // collision, only the CSS rule matching that column's own data-sticky
+    // value ever consumes the value this method wrote for it.
+    let runningStart = 0;
     for (const col of this.columns) {
-      if (!col.sticky) continue;
-      const headerEl = [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].find(
-        (el) => el.dataset.colKey === col.key,
-      );
-      offsets.set(col.key, running);
-      running += headerEl?.offsetWidth ?? 0;
+      if (stickyDirection(col.sticky) !== 'start') continue;
+      offsets.set(col.key, runningStart);
+      runningStart += headerWidth(col.key);
+    }
+    let runningEnd = 0;
+    for (let i = this.columns.length - 1; i >= 0; i--) {
+      const col = this.columns[i];
+      if (stickyDirection(col.sticky) !== 'end') continue;
+      offsets.set(col.key, runningEnd);
+      runningEnd += headerWidth(col.key);
     }
     return offsets;
   }
@@ -566,7 +593,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                   data-col-key=${col.key}
                   data-align=${col.align ?? 'start'}
                   data-priority=${col.priority ?? nothing}
-                  ?data-sticky=${col.sticky}
+                  data-sticky=${stickyDirection(col.sticky) ?? nothing}
                   ?data-sortable=${col.sortable}
                   aria-sort=${col.sortable ? ariaSort : nothing}
                   tabindex=${col.key === focusedCol ? '0' : '-1'}
@@ -603,7 +630,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                         data-col-key=${col.key}
                         data-align=${col.align ?? 'start'}
                         data-priority=${col.priority ?? nothing}
-                        ?data-sticky=${col.sticky}
+                        data-sticky=${stickyDirection(col.sticky) ?? nothing}
                         style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
                       >
                         ${col.cell(row)}
