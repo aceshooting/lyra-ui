@@ -5104,10 +5104,9 @@ theme data.
 
 A human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an
 agent from executing it until a person explicitly approves or denies it, with an optional inline
-"edit the arguments before approving" step. First-party invention (no Web Awesome equivalent). It is
-its own standalone overlay implementation (`role="dialog"`, focus-trapped, Escape/backdrop-dismissible,
-scroll-locking) rather than nesting `<lyra-dialog>` in its shadow template, so it has no dependency on
-the general-purpose dialog component.
+"edit the arguments before approving" step. First-party invention (no Web Awesome equivalent). It
+keeps its own panel template rather than nesting `<lyra-dialog>`, so it has no dependency on the
+general-purpose dialog component, while its modal behavior participates in the shared overlay stack.
 
 Approve/Deny/Edit are built-in chrome, not a `footer` slot a consumer must assemble — there is exactly
 one correct action set for "approve this call". The `footer` slot is offered only for *supplementary*
@@ -5187,10 +5186,9 @@ Initial focus deliberately does *not* land on Approve: approving a tool call is 
 potentially irreversible action, so a user who opens the dialog and reflexively presses Enter/Space
 before reading anything should deny, not approve. Deny gets the initial focus instead — the same
 "focus the safe action" convention a native destructive-confirmation dialog typically follows for its
-own Cancel button. Tab/Shift+Tab are bounded to the panel's own focusable content (shadow-piercingly,
-so `<lyra-json-viewer>`'s internal toggle/copy buttons and any slotted custom element's real focusable
-target are found too) via a locally-duplicated focus-trap helper, the same shape `<lyra-dialog>`'s and
-`<lyra-tool-select-dialog>`'s own overlays use.
+own Cancel button. Tab/Shift+Tab are bounded to the panel's own focusable content, and
+`<lyra-json-viewer>`'s internal controls plus slotted custom-element controls are found through the
+shared composed-tree focus traversal used by the other modal families.
 
 **Known gotchas:**
 - `editable` defaults to `true` and reflects — see the property note above about overriding it with a
@@ -5199,12 +5197,11 @@ target are found too) via a locally-duplicated focus-trap helper, the same shape
 - a consumer flipping `editable` off while an edit is already in progress automatically exits edit mode
   and discards the draft, so an unreachable "Cancel" affordance is never left stranded on screen.
 - reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
-  instance) automatically re-acquires the ref-counted scroll lock and keydown trap it dropped in
-  `disconnectedCallback` — `willUpdate()` alone wouldn't otherwise notice, since disconnect/reconnect
-  fire back-to-back with no update in between.
+  instance) resumes its shared overlay registration and re-acquires the ref-counted scroll lock
+  dropped in `disconnectedCallback` — `willUpdate()` alone wouldn't otherwise notice, since
+  disconnect/reconnect fire back-to-back with no update in between.
 - the Approve button's native `disabled` attribute (while the draft is invalid JSON) automatically
-  excludes it from the Tab trap, since the shared `FOCUSABLE_SELECTOR` used to compute the trap's
-  focusable set already skips disabled controls.
+  excludes it from the shared Tab trap, whose focusable-set computation skips disabled controls.
 
 ---
 

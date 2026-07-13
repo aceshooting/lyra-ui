@@ -202,6 +202,25 @@ it('moves outside focus into the panel when a breakpoint crossing makes it modal
   outside.remove();
 });
 
+it('preserves panel focus when an open overlay becomes inline', async () => {
+  const outside = document.createElement('button');
+  outside.textContent = 'outside';
+  document.body.appendChild(outside);
+  outside.focus();
+
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="overlay" open><button>inside</button></lyra-responsive-panel>`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  expect(document.activeElement?.textContent).to.equal('inside');
+
+  el.mode = 'inline';
+  await el.updateComplete;
+
+  expect(document.activeElement?.textContent).to.equal('inside');
+  outside.remove();
+});
+
 it('closes on backdrop click and emits lyra-close with reason "backdrop"', async () => {
   const el = (await fixture(
     html`<lyra-responsive-panel mode="overlay" open>body</lyra-responsive-panel>`,

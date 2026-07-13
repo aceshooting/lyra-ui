@@ -40,7 +40,7 @@ export const styles = css`
   [part='backdrop'] {
     position: fixed;
     inset: 0;
-    z-index: 999;
+    z-index: var(--lyra-overlay-stack-index, 1000);
     background: var(--lyra-app-rail-overlay-color);
   }
 
@@ -69,7 +69,7 @@ export const styles = css`
     position: fixed;
     inset-block: 0;
     inset-inline-start: 0;
-    z-index: 1000;
+    z-index: calc(var(--lyra-overlay-stack-index, 1000) + 1);
     display: flex;
     flex-direction: column;
     inline-size: min(var(--lyra-app-rail-mobile-width), 85vw);

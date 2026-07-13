@@ -25,7 +25,7 @@ export const styles = css`
     display: flex;
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--lyra-overlay-stack-index, 1000);
   }
   /* Bottom-sheet anchors its panel to the block-end edge instead of
      stretching it full-height like fullscreen does. */

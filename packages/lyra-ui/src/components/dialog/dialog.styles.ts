@@ -10,7 +10,7 @@ export const styles = css`
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: var(--lyra-overlay-stack-index, 1000);
     align-items: center;
     justify-content: center;
     padding: var(--lyra-space-l);

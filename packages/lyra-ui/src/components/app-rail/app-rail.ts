@@ -1,6 +1,7 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { nextId } from '../../internal/a11y.js';
@@ -19,41 +20,6 @@ export interface AppRailModeChangeDetail {
 
 export interface AppRailToggleDetail {
   open: boolean;
-}
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Shadow-piercing so a slotted custom element's real focusable target (e.g.
-// an <input> inside its own shadow root) is found even though the host tag
-// itself doesn't match FOCUSABLE_SELECTOR. Deliberately duplicated from
-// lyra-dialog's identical helper rather than imported/shared -- this
-// component is its own standalone overlay for the mobile state and must not
-// depend on lyra-dialog (see this file's class doc).
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/** Whether `el` is actually laid out/paintable -- `checkVisibility()` (falling
- *  back to `getClientRects().length` where unsupported) correctly follows
- *  flattened-tree/slot assignment, unlike `offsetParent`. Mirrors
- *  lyra-dialog's/lyra-widget's identical helper. */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
 }
 
 // icons.ts has no hamburger/menu glyph and this component must not modify
@@ -107,12 +73,10 @@ export function computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: bool
  * width the way a native OS shell's navigation does, not however much
  * horizontal space a particular layout happens to give it.
  *
- * This is its own standalone focus-trapped overlay implementation for the
- * `'mobile'` state (`role="dialog"`, Escape/backdrop-dismissible,
- * scroll-locking while open) rather than nesting a `<lyra-dialog>` in its
- * shadow template — see `<lyra-dialog>`'s own header comment for why a new
- * overlay-shaped component in this library duplicates that pattern locally
- * instead of composing the previous one. `[part="base"]` (the inline
+ * The `'mobile'` state participates in the library's shared overlay stack,
+ * which supplies focus trapping, Escape/backdrop dismissal, inerting, and
+ * focus restoration without nesting a `<lyra-dialog>` in this component's
+ * shadow template. `[part="base"]` (the inline
  * `'full'`/`'icon-only'` presentation) and `[part="panel"]` (the mobile
  * overlay) are the *same* element promoted in place across modes (mirrors
  * `<lyra-widget>`'s fullscreen mode) — never both at once, and never two
@@ -219,7 +183,8 @@ export class LyraAppRail extends LyraElement {
   private overlayActive = false;
   private justOpened = false;
   private releaseScrollLock?: () => void;
-  private lastTrigger?: HTMLElement;
+  private overlayHandle?: OverlayHandle;
+  private explicitTrigger?: HTMLElement;
   private readonly navId = nextId('app-rail-nav');
 
   /**
@@ -265,12 +230,9 @@ export class LyraAppRail extends LyraElement {
         this.overlayActive = next;
         if (next) {
           this.justOpened = true;
-          this.releaseScrollLock = lockScroll();
-          document.addEventListener('keydown', this.onDocKeyDown);
+          this.activateMobileOverlay();
         } else {
-          this.releaseScrollLock?.();
-          this.releaseScrollLock = undefined;
-          document.removeEventListener('keydown', this.onDocKeyDown);
+          this.deactivateMobileOverlay();
         }
       }
     }
@@ -283,12 +245,7 @@ export class LyraAppRail extends LyraElement {
   protected updated(): void {
     if (this.justOpened) {
       this.justOpened = false;
-      const first = this.getFocusableElements()[0];
-      if (first) {
-        first.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]')?.focus();
-      }
+      this.overlayHandle?.focusInitial();
     }
   }
 
@@ -298,11 +255,16 @@ export class LyraAppRail extends LyraElement {
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
-    // notice the overlay is still active -- restore the scroll lock/trap it
-    // dropped. Mirrors lyra-dialog's/lyra-widget's identical reconnect handling.
-    if (this.hasUpdated && this.overlayActive && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    // notice the overlay is still active -- restore its shared registration
+    // and scroll lock.
+    if (this.hasUpdated && this._mode === 'mobile' && this.open) {
+      if (this.overlayHandle?.isActive()) {
+        this.overlayHandle.resume();
+      } else {
+        this.activateMobileOverlay();
+      }
+      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
   }
 
@@ -311,13 +273,33 @@ export class LyraAppRail extends LyraElement {
     this.teardownMediaQueries();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlayHandle?.suspend();
+  }
+
+  private activateMobileOverlay(): void {
+    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.setOpen(false),
+      onBackdrop: () => this.setOpen(false),
+      restoreFocusTo: this.explicitTrigger,
+    });
+    this.explicitTrigger = undefined;
+  }
+
+  private deactivateMobileOverlay(): void {
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlayHandle?.deactivate();
+    this.overlayHandle = undefined;
   }
 
   private setupMediaQueries(): void {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    this.mqIconOnly = window.matchMedia(`(max-width: ${this.iconOnlyBreakpoint})`);
-    this.mqMobile = window.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
+    const view = this.ownerDocument.defaultView;
+    if (!view?.matchMedia) return;
+    this.mqIconOnly = view.matchMedia(`(max-width: ${this.iconOnlyBreakpoint})`);
+    this.mqMobile = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
     this.mqIconOnly.addEventListener('change', this.onIconOnlyChange);
     this.mqMobile.addEventListener('change', this.onMobileChange);
     this.iconOnlyMatches = this.mqIconOnly.matches;
@@ -368,16 +350,15 @@ export class LyraAppRail extends LyraElement {
     if (this.open === next) return;
     this.open = next;
     this.emit<AppRailToggleDetail>('lyra-toggle', { open: next });
-    if (!next) this.lastTrigger?.focus();
   }
 
   private onToggleClick = (e: MouseEvent): void => {
-    this.lastTrigger = e.currentTarget as HTMLElement;
+    if (!this.open) this.explicitTrigger = e.currentTarget as HTMLElement;
     this.setOpen(!this.open);
   };
 
   private onBackdropClick = (): void => {
-    this.setOpen(false);
+    this.overlayHandle?.dismissBackdrop();
   };
 
   // See the default-slot @slot doc -- any click inside the nav items while
@@ -393,60 +374,6 @@ export class LyraAppRail extends LyraElement {
   private onFooterSlotChange = (e: Event): void => {
     this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
-
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.overlayActive) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.setOpen(false);
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while the overlay is open. Order
-  // follows the header slot, then the nav (default) slot, then the footer
-  // slot -- the same order the flattened tree already tabs through. The
-  // toggle button itself is deliberately excluded, same as a dialog trigger
-  // living outside its own trap.
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const fromSlot = (selector: string): HTMLElement[] => {
-      const slot = root.querySelector<HTMLSlotElement>(selector);
-      return slot ? slot.assignedElements({ flatten: true }).flatMap(collectFocusable) : [];
-    };
-    return [
-      ...fromSlot('slot[name="header"]'),
-      ...fromSlot('slot:not([name])'),
-      ...fromSlot('slot[name="footer"]'),
-    ].filter(isRendered);
-  }
-
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
-  }
 
   render(): TemplateResult {
     const mobile = this._mode === 'mobile';

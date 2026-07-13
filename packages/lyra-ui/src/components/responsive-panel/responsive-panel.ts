@@ -202,7 +202,10 @@ export class LyraResponsivePanel extends LyraElement {
         // and otherwise moves it to the first composed focus target.
         this.focusOverlayAfterUpdate = true;
       } else {
-        this.deactivateOverlayChrome();
+        // Removing modal chrome while the still-open panel becomes inline
+        // must preserve focus in that same panel. Only a real open -> closed
+        // transition restores the opener.
+        this.deactivateOverlayChrome(changed.has('open') && !this.open);
       }
     }
     if (changed.has('open') && !this.open) this.lastTrigger = undefined;
@@ -260,10 +263,10 @@ export class LyraResponsivePanel extends LyraElement {
     });
   }
 
-  private deactivateOverlayChrome(): void {
+  private deactivateOverlayChrome(restoreFocus = true): void {
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    this.overlayHandle?.deactivate();
+    this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
   }
 
