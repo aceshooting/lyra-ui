@@ -158,7 +158,10 @@ export type LyraMessageKey =
   | 'streamStalled'
   | 'streamStallAnnounce'
   | 'streamRecoverAnnounce'
-  | 'streamStallClearedAnnounce';
+  | 'streamStallClearedAnnounce'
+  | 'thinkingPanelLabel'
+  | 'thoughtFor'
+  | 'thinking';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -318,6 +321,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   streamStallAnnounce: 'Connection stalled.',
   streamRecoverAnnounce: 'Connection restored.',
   streamStallClearedAnnounce: 'No longer stalled.',
+  thinkingPanelLabel: 'Thinking',
+  thoughtFor: 'Thought for {duration}',
+  thinking: 'Thinking…',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

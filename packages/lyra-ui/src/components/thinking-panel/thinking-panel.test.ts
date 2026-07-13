@@ -103,6 +103,35 @@ describe('duration display', () => {
     const postHocDuration = postHoc.shadowRoot!.querySelector('[part="duration"]') as HTMLElement;
     expect(postHocDuration.textContent!.trim()).to.equal('Thought for 820ms');
   });
+
+  it('localizes the "Thinking…" pending placeholder via this.localize() when .strings overrides thinking', async () => {
+    const el = (await fixture(
+      html`<lyra-thinking-panel mode="live" .strings=${{ thinking: 'Réflexion…' }}></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const duration = el.shadowRoot!.querySelector('[part="duration"]') as HTMLElement;
+    expect(duration.textContent!.trim()).to.equal('Réflexion…');
+  });
+
+  it('localizes the "Thought for …" text via this.localize() when .strings overrides thoughtFor', async () => {
+    const el = (await fixture(
+      html`<lyra-thinking-panel
+        duration-ms="4200"
+        .strings=${{ thoughtFor: 'Réfléchi pendant {duration}' }}
+      ></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const duration = el.shadowRoot!.querySelector('[part="duration"]') as HTMLElement;
+    expect(duration.textContent!.trim()).to.equal('Réfléchi pendant 4.2s');
+  });
+});
+
+describe('label localization', () => {
+  it('localizes the default "Thinking" label via this.localize() when .strings overrides thinkingPanelLabel', async () => {
+    const el = (await fixture(
+      html`<lyra-thinking-panel .strings=${{ thinkingPanelLabel: 'Raisonnement' }}></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Raisonnement');
+    expect(el.shadowRoot!.querySelector('[part="body"]')!.getAttribute('aria-label')).to.equal('Raisonnement');
+  });
 });
 
 describe('live-mode auto-scroll', () => {

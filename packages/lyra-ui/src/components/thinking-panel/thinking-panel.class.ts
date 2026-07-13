@@ -111,7 +111,8 @@ function formatDuration(ms: number): string {
 export class LyraThinkingPanel extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
-  /** Header text. */
+  /** Header text. Localized (`thinkingPanelLabel`) when left at its default
+   *  `'Thinking'`; any other value is shown as-is. */
   @property() label = 'Thinking';
 
   /** Whether the reasoning transcript is currently shown. Starts collapsed,
@@ -214,9 +215,12 @@ export class LyraThinkingPanel extends LyraElement {
 
   private get durationDisplay(): { text: string; pending: boolean } | null {
     if (this.durationMs != null && Number.isFinite(this.durationMs)) {
-      return { text: `Thought for ${formatDuration(this.durationMs)}`, pending: false };
+      return {
+        text: this.localize('thoughtFor', undefined, { duration: formatDuration(this.durationMs) }),
+        pending: false,
+      };
     }
-    return this.mode === 'live' ? { text: 'Thinking…', pending: true } : null;
+    return this.mode === 'live' ? { text: this.localize('thinking'), pending: true } : null;
   }
 
   // `[part="body"]` is `tabindex="0"` because it's a capped-height,
@@ -230,6 +234,11 @@ export class LyraThinkingPanel extends LyraElement {
   // part of a larger message.
   render(): TemplateResult {
     const duration = this.durationDisplay;
+    // `this.localize()` checks `.strings` overrides before any fallback, so
+    // passing `this.label` as a fallback wouldn't stop a `.strings.thinkingPanelLabel`
+    // override from winning over an explicitly-customized `label` -- bypass
+    // localize() entirely once `label` has been changed from its built-in default.
+    const label = this.label === 'Thinking' ? this.localize('thinkingPanelLabel') : this.label;
 
     return html`
       <div part="base">
@@ -241,7 +250,7 @@ export class LyraThinkingPanel extends LyraElement {
           @click=${this.toggle}
         >
           <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
-          <span part="label">${this.label}</span>
+          <span part="label">${label}</span>
           ${duration
             ? html`<span part="duration" ?data-pending=${duration.pending}
                 >${duration.pending ? html`<span class="pending-dot" aria-hidden="true"></span>` : nothing}${duration.text}</span
@@ -252,7 +261,7 @@ export class LyraThinkingPanel extends LyraElement {
           part="body"
           id=${this.bodyId}
           role="group"
-          aria-label=${this.label}
+          aria-label=${label}
           tabindex="0"
           ?hidden=${!this.expanded}
           @scroll=${this.onScroll}
