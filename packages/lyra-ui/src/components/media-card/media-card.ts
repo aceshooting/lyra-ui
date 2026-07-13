@@ -1,4 +1,4 @@
-import { html, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -87,11 +87,15 @@ function fileGlyph(): SVGTemplateResult {
  * `safeLinkHref()` share a platform-URL-based validator; their sink-specific
  * allowlists explain why `data:` gets two different answers depending on
  * where it is used. An `image`/`video` `kind` whose `src` fails the
- * media-src check falls back to the generic file-chip rendering (which then
- * separately re-validates `src` against the stricter href allowlist for its
- * own download affordance) — this is the "plain preview unavailable state"
- * a dangerous URL degrades to, rather than ever reaching a real media/anchor
- * sink.
+ * media-src check falls back to the generic file-chip rendering — this is
+ * the "plain preview unavailable state" a dangerous URL degrades to, rather
+ * than ever reaching a real media/anchor sink. That fallback also re-checks
+ * `src` against the stricter href allowlist for its own download affordance,
+ * but since the href allowlist is a strict subset of the media-src allowlist,
+ * that re-check can only ever change the outcome for a direct/auto-detected
+ * `kind="file"` `src` — an `image`/`video` `src` that already failed the
+ * wider media-src check necessarily fails the narrower href check too, so
+ * the fallback for those two kinds is always the plain, unclickable `span`.
  *
  * **The `video` case renders its open affordance separately from `base`.**
  * `image`/`file` wrap their *entire* card in one native `<button>`/`<a>` —
@@ -151,6 +155,11 @@ export class LyraMediaCard extends LyraElement {
    *  Falls back to `filename`, then a generic per-kind description. */
   @property() alt = '';
 
+  /** A CSS length (e.g. `"16rem"`); once set, overrides the
+   *  `--lyra-media-card-max-height` custom property for this instance only —
+   *  same contract as `<lyra-document-preview>`'s identically-named prop. */
+  @property({ attribute: 'max-height' }) maxHeight = '';
+
   /** Effective kind used for rendering — `kind` if explicitly set,
    *  otherwise detected from `mime-type`. */
   private get resolvedKind(): MediaCardKind {
@@ -176,8 +185,19 @@ export class LyraMediaCard extends LyraElement {
     return this.alt || this.filename || 'Video attachment';
   }
 
+  /** Per-instance override for `--lyra-media-card-max-height`, applied
+   *  inline on `[part="base"]` -- the only mechanism that reliably wins
+   *  over the `:host{}`-declared default from outside the shadow root. */
+  private get baseStyle(): string | typeof nothing {
+    return this.maxHeight ? `--lyra-media-card-max-height:${this.maxHeight}` : nothing;
+  }
+
   private emitOpen(): CustomEvent<MediaCardOpenDetail> {
-    return this.emit<MediaCardOpenDetail>('lyra-open', { src: this.src, filename: this.filename });
+    // Matches whichever safe-URL sink actually rendered (see the class doc):
+    // falls back to a trimmed raw src so a whitespace-padded, otherwise-unsafe
+    // src still reports the same value the DOM would show if it were safe.
+    const src = safeMediaSrc(this.src) ?? safeLinkHref(this.src) ?? this.src.trim();
+    return this.emit<MediaCardOpenDetail>('lyra-open', { src, filename: this.filename });
   }
 
   private onActivate = (): void => {
@@ -195,7 +215,7 @@ export class LyraMediaCard extends LyraElement {
 
   private renderImage(src: string): TemplateResult {
     return html`
-      <button part="base" type="button" aria-label=${this.accessibleLabel} @click=${this.onActivate}>
+      <button part="base" type="button" style=${this.baseStyle} aria-label=${this.accessibleLabel} @click=${this.onActivate}>
         <img part="media" src=${src} alt=${this.imgAlt} />
       </button>
     `;
@@ -203,7 +223,7 @@ export class LyraMediaCard extends LyraElement {
 
   private renderVideo(src: string): TemplateResult {
     return html`
-      <div part="base">
+      <div part="base" style=${this.baseStyle}>
         <video part="media" controls src=${src} aria-label=${this.videoLabel}></video>
         <button part="open-button" type="button" aria-label=${this.accessibleLabel} @click=${this.onActivate}>
           ${expandIcon()}
@@ -224,6 +244,7 @@ export class LyraMediaCard extends LyraElement {
         <a
           part="base"
           href=${href}
+          style=${this.baseStyle}
           download=${this.filename || ''}
           aria-label=${this.accessibleLabel}
           @click=${this.onLinkClick}
@@ -236,7 +257,7 @@ export class LyraMediaCard extends LyraElement {
     // doc describes: the filename/icon still display, but nothing is
     // clickable (there's nothing safe to point a download/open affordance
     // at, and no built-in lightbox to fall back to for this kind).
-    return html`<span part="base">${content}</span>`;
+    return html`<span part="base" style=${this.baseStyle}>${content}</span>`;
   }
 
   render(): TemplateResult {

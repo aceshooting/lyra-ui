@@ -197,6 +197,29 @@ describe('kind="image"', () => {
     expect(ev.cancelable).to.be.true;
   });
 
+  it('trims a whitespace-padded src in the emitted lyra-open detail to match what is actually rendered', async () => {
+    const el = (await fixture(
+      html`<lyra-media-card src="  https://example.test/a.png  " kind="image" filename="a.png"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    setTimeout(() => base.click());
+    const ev = await oneEvent(el, 'lyra-open');
+    expect(ev.detail).to.deep.equal({ src: 'https://example.test/a.png', filename: 'a.png' });
+  });
+
+  it('falls back to the inert file chip, always a plain SPAN never an A, for a src whose scheme fails the media-src check', async () => {
+    for (const src of ['ftp://example.test/a.png', 'about:blank', 'mailto:a@b.test']) {
+      const el = (await fixture(
+        html`<lyra-media-card src=${src} kind="image" filename="a.png"></lyra-media-card>`,
+      )) as LyraMediaCard;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      // The href allowlist is a strict subset of the media-src allowlist, so
+      // a src that already failed the wider media-src check necessarily
+      // fails the narrower href check too -- see the class doc.
+      expect(base.tagName, src).to.equal('SPAN');
+    }
+  });
+
   it('falls back to the inert file chip when src fails the safe-URL check', async () => {
     const el = (await fixture(
       html`<lyra-media-card src="javascript:alert(1)" kind="image" filename="payload.jpg"></lyra-media-card>`,
@@ -240,6 +263,29 @@ describe('kind="video"', () => {
     expect(el.shadowRoot!.querySelector('video')!.getAttribute('aria-label')).to.equal('clip.mp4');
   });
 
+  it('the open-button aria-label is "Open {filename}", falling back to "Open {alt}" then a generic description', async () => {
+    const withFilename = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.mp4" kind="video" filename="clip.mp4" alt="ignored"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(withFilename.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
+      'Open clip.mp4',
+    );
+
+    const withAltOnly = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.mp4" kind="video" alt="a walkthrough clip"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(withAltOnly.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
+      'Open a walkthrough clip',
+    );
+
+    const withNeither = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.mp4" kind="video"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(withNeither.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
+      'Open video attachment',
+    );
+  });
+
   it('emits lyra-open with { src, filename } when open-button is clicked', async () => {
     const el = (await fixture(
       html`<lyra-media-card src="https://example.test/a.mp4" kind="video" filename="clip.mp4"></lyra-media-card>`,
@@ -256,6 +302,19 @@ describe('kind="video"', () => {
     )) as LyraMediaCard;
     expect(el.shadowRoot!.querySelector('video[part="media"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="file-icon"]')).to.exist;
+  });
+
+  it('falls back to the inert file chip, always a plain SPAN never an A, for a src whose scheme fails the media-src check', async () => {
+    for (const src of ['ftp://example.test/a.mp4', 'about:blank', 'mailto:a@b.test']) {
+      const el = (await fixture(
+        html`<lyra-media-card src=${src} kind="video" filename="clip.mp4"></lyra-media-card>`,
+      )) as LyraMediaCard;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      // The href allowlist is a strict subset of the media-src allowlist, so
+      // a src that already failed the wider media-src check necessarily
+      // fails the narrower href check too -- see the class doc.
+      expect(base.tagName, src).to.equal('SPAN');
+    }
   });
 
   it('renders a real <video> for a data: URI src', async () => {
@@ -364,6 +423,36 @@ describe('kind="file" (generic chip)', () => {
     const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
     link.dispatchEvent(clickEvent);
     expect(clickEvent.defaultPrevented).to.be.false;
+  });
+});
+
+describe('max-height', () => {
+  it('sets the --lyra-media-card-max-height custom property on [part="base"] when given (file-chip span)', async () => {
+    const el = (await fixture(
+      html`<lyra-media-card kind="file" filename="report.pdf" max-height="12rem"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lyra-media-card-max-height').trim()).to.equal('12rem');
+  });
+
+  it('sets the --lyra-media-card-max-height custom property on [part="base"] when given (image button)', async () => {
+    const el = (await fixture(
+      html`<lyra-media-card
+        src="https://example.test/a.png"
+        kind="image"
+        max-height="18rem"
+      ></lyra-media-card>`,
+    )) as LyraMediaCard;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lyra-media-card-max-height').trim()).to.equal('18rem');
+  });
+
+  it('leaves no inline custom property when max-height is unset', async () => {
+    const el = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.png" kind="image"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('--lyra-media-card-max-height')).to.equal('');
   });
 });
 
