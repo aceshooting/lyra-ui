@@ -97,9 +97,20 @@ export class LyraCheckbox extends LyraElement {
   // `assignedNodes` (not `assignedElements`) is checked — the common case is
   // a bare slotted text label, e.g. `<lyra-checkbox>Accept terms</lyra-checkbox>`.
   @state() private hasLabelSlot = false;
+  // Set on the control's first `blur`; gates the `data-invalid`/`aria-invalid`
+  // reflection below so validity styling never flashes on first render,
+  // mirroring `<lyra-combobox>`/`<lyra-select>`'s identical `touched` field.
+  @state() private touched = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
+  // `slotchange` only fires when the *set* of distributed nodes changes, not
+  // when an already-slotted element mutates its own text content in place
+  // (e.g. a consumer filling in a previously-empty `<span>` label) — so
+  // without this, `hasLabelSlot` could stay wrongly `false` forever once a
+  // label starts empty and text is added afterward. Mirrors
+  // `<lyra-option>`'s identical `labelObserver`.
+  private labelObserver?: MutationObserver;
   // What `form.reset()` restores to — captured once from the declarative
   // `checked` content attribute at first connect. A pre-connect `.checked`
   // property assignment changes live state but not the reset default, matching
@@ -226,6 +237,14 @@ export class LyraCheckbox extends LyraElement {
       this._defaultChecked = this.hasAttribute('checked');
     }
     this.updateValidity();
+    this.labelObserver = new MutationObserver(() => this.recomputeHasLabelSlot());
+    this.labelObserver.observe(this, { childList: true, subtree: true, characterData: true });
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.labelObserver?.disconnect();
+    this.labelObserver = undefined;
   }
 
   protected willUpdate(): void {
@@ -247,6 +266,16 @@ export class LyraCheckbox extends LyraElement {
     } else {
       this.validityController.setValidity({});
     }
+    this.reflectInvalid();
+  }
+
+  // Keeps `data-invalid` (styling hook) in lockstep with `aria-invalid`
+  // (rendered from the same expression in `render()`) any time validity
+  // could have changed, rather than waiting on Lit's async `updated()` --
+  // consistent with this component's already-synchronous
+  // `syncFormState()`/setter shape.
+  private reflectInvalid(): void {
+    this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
   }
 
   private syncFormState(): void {
@@ -307,9 +336,23 @@ export class LyraCheckbox extends LyraElement {
     }
   };
 
-  private onSlotChange = (e: Event): void => {
-    const nodes = (e.target as HTMLSlotElement).assignedNodes({ flatten: true });
+  private onSlotChange = (): void => {
+    this.recomputeHasLabelSlot();
+  };
+
+  // Shared by `onSlotChange` (the "set of distributed nodes changed" case)
+  // and `labelObserver` (the "an already-slotted node mutated in place"
+  // case) so both paths agree on what counts as real label content.
+  private recomputeHasLabelSlot(): void {
+    const slot = this.renderRoot.querySelector('slot');
+    if (!slot) return;
+    const nodes = (slot as HTMLSlotElement).assignedNodes({ flatten: true });
     this.hasLabelSlot = nodes.some((n) => (n.textContent ?? '').trim().length > 0);
+  }
+
+  private onBlur = (): void => {
+    this.touched = true;
+    this.reflectInvalid();
   };
 
   render(): TemplateResult {
@@ -321,10 +364,12 @@ export class LyraCheckbox extends LyraElement {
         tabindex=${this.effectiveDisabled ? '-1' : '0'}
         aria-checked=${mixed ? 'mixed' : this.checked ? 'true' : 'false'}
         aria-required=${this.required ? 'true' : nothing}
+        aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
         aria-label=${this.getAttribute('aria-label') || nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}
+        @blur=${this.onBlur}
       >
         <span part="box"> ${mixed ? indeterminateGlyph() : this.checked ? checkmarkGlyph() : nothing} </span>
         <span part="label" ?hidden=${!this.hasLabelSlot}>

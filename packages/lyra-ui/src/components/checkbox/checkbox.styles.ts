@@ -49,6 +49,13 @@ export const styles = css`
     background: var(--lyra-color-brand);
     border-color: var(--lyra-color-brand);
   }
+  /* Gives a required-but-unmet checkbox a persistent visible affordance --
+     matching lyra-combobox/lyra-select's data-invalid styling hook --
+     beyond the transient native validation-bubble popup, which only shows
+     momentarily around reportValidity()/form submission. */
+  :host([data-invalid]) [part='box'] {
+    border-color: var(--lyra-color-danger);
+  }
 
   [part='checkmark'] {
     display: block;

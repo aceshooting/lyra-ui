@@ -247,6 +247,36 @@ it('submits under a programmatically assigned name in the same tick', async () =
   expect(new FormData(form).has('from-attribute')).to.be.false;
 });
 
+it('reflects a click toggle in FormData synchronously, with no await', async () => {
+  // Every other form test in this file awaits `updateComplete` (or an
+  // `oneEvent`-mediated microtask) before reading `FormData` -- that never
+  // exercises whether a *synchronous* reader (e.g. this component's own
+  // `lyra-change` listener, or a submit handler that reads FormData
+  // immediately) sees current data right after the click that changed it.
+  const form = (await fixture(html`
+    <form><lyra-checkbox name="notify" value="yes">Notify me</lyra-checkbox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  base.click();
+  expect(new FormData(form).get('notify')).to.equal('yes');
+
+  base.click();
+  expect(new FormData(form).get('notify')).to.equal(null);
+});
+
+it('reflects a keyboard toggle in FormData synchronously, with no await', async () => {
+  const form = (await fixture(html`
+    <form><lyra-checkbox name="notify" value="yes">Notify me</lyra-checkbox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+  expect(new FormData(form).get('notify')).to.equal('yes');
+});
+
 it('uses "on" as the default form value', async () => {
   const form = (await fixture(html`
     <form><lyra-checkbox name="notify" checked>Notify me</lyra-checkbox></form>
@@ -428,6 +458,58 @@ it('temporarily disables through a fieldset without overwriting the author disab
   expect(explicitlyDisabled.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
   expect(explicitlyDisabled.effectiveDisabled).to.be.true;
   expect(new FormData(form).get('always-disabled')).to.equal(null);
+});
+
+describe('validity styling', () => {
+  it('does not reflect aria-invalid/data-invalid before the control has been touched', async () => {
+    const el = (await fixture(html`<lyra-checkbox required>Agree</lyra-checkbox>`)) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-invalid')).to.equal('false');
+    expect(el.hasAttribute('data-invalid')).to.be.false;
+  });
+
+  it('reflects aria-invalid and data-invalid once a required, unchecked control is blurred', async () => {
+    const el = (await fixture(html`<lyra-checkbox required>Agree</lyra-checkbox>`)) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    base.dispatchEvent(new FocusEvent('blur'));
+    expect(el.hasAttribute('data-invalid'), 'data-invalid is synchronous').to.be.true;
+    await el.updateComplete;
+    expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+    el.checked = true;
+    expect(el.hasAttribute('data-invalid')).to.be.false;
+    await el.updateComplete;
+    expect(base.getAttribute('aria-invalid')).to.equal('false');
+  });
+
+  it('never reflects aria-invalid/data-invalid on a non-required, touched control', async () => {
+    const el = (await fixture(html`<lyra-checkbox>Agree</lyra-checkbox>`)) as LyraCheckbox;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(base.getAttribute('aria-invalid')).to.equal('false');
+    expect(el.hasAttribute('data-invalid')).to.be.false;
+  });
+});
+
+it('un-hides the label part when a slotted element mutates its own text content in place', async () => {
+  // `slotchange` only fires when the *set* of distributed nodes changes --
+  // never for an already-slotted node mutating its own text in place -- so
+  // this exercises the `labelObserver` MutationObserver fallback rather than
+  // `onSlotChange`.
+  const el = (await fixture(html`<lyra-checkbox><span id="lbl"></span></lyra-checkbox>`)) as LyraCheckbox;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(label.hidden).to.be.true;
+
+  const span = el.querySelector('#lbl') as HTMLElement;
+  span.textContent = 'Accept terms';
+  // The MutationObserver callback runs in a separate microtask checkpoint;
+  // give it (and the resulting re-render) a real turn of the event loop.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+
+  expect(label.hidden).to.be.false;
 });
 
 it('does not emit lyra-change for a programmatic .checked assignment', async () => {
