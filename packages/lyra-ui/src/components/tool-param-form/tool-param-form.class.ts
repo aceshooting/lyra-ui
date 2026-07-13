@@ -340,7 +340,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       const prop = props[key];
       const type = (prop as unknown as { type?: unknown })?.type;
       if (type !== 'string' && type !== 'number' && type !== 'integer' && type !== 'boolean') {
-        addError(key, `Unsupported field type "${String(type)}".`);
+        addError(key, this.localize('unsupportedFieldType', undefined, { type: String(type) }));
         flags.customError = true;
         continue;
       }
@@ -348,7 +348,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       const present = Object.prototype.hasOwnProperty.call(effective, key) && effective[key] !== undefined;
       if (!present) {
         if (required.has(key)) {
-          addError(key, 'This field is required.');
+          addError(key, this.localize('fieldRequired'));
           flags.valueMissing = true;
         }
         continue;
@@ -356,38 +356,38 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
       const v = effective[key];
       if (type === 'string' && typeof v !== 'string') {
-        addError(key, 'Must be a string.');
+        addError(key, this.localize('fieldMustBeString'));
         flags.typeMismatch = true;
         continue;
       }
       if (type === 'number' && (typeof v !== 'number' || !Number.isFinite(v))) {
-        addError(key, 'Must be a finite number.');
+        addError(key, this.localize('fieldMustBeNumber'));
         flags.typeMismatch = true;
         continue;
       }
       if (type === 'integer' && (typeof v !== 'number' || !Number.isFinite(v))) {
-        addError(key, 'Must be a whole number.');
+        addError(key, this.localize('fieldMustBeInteger'));
         flags.typeMismatch = true;
         continue;
       }
       if (type === 'integer' && !Number.isInteger(v)) {
-        addError(key, 'Must be a whole number.');
+        addError(key, this.localize('fieldMustBeInteger'));
         flags.stepMismatch = true;
         continue;
       }
       if (type === 'boolean' && typeof v !== 'boolean') {
-        addError(key, 'Must be a boolean.');
+        addError(key, this.localize('fieldMustBeBoolean'));
         flags.typeMismatch = true;
         continue;
       }
 
       if (type === 'string' && Array.isArray(prop.enum) && !prop.enum.includes(v as string)) {
-        addError(key, `Must be one of: ${prop.enum.join(', ')}.`);
+        addError(key, this.localize('fieldMustBeOneOf', undefined, { values: prop.enum.join(', ') }));
         flags.customError = true;
         continue;
       }
       if (prop.const !== undefined && v !== prop.const) {
-        addError(key, `Must equal ${JSON.stringify(prop.const)}.`);
+        addError(key, this.localize('fieldMustEqual', undefined, { value: JSON.stringify(prop.const) }));
         flags.customError = true;
       }
     }
@@ -454,11 +454,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private schemaShapeError(): string {
     const schema = this.schema as unknown;
     if (schema === null || typeof schema !== 'object' || (schema as { type?: unknown }).type !== 'object') {
-      return 'Schema must describe an object.';
+      return this.localize('schemaMustBeObject');
     }
     const properties = (schema as { properties?: unknown }).properties;
     if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) {
-      return 'Schema properties must be a flat object.';
+      return this.localize('schemaPropertiesMustBeFlat');
     }
     return '';
   }
@@ -480,7 +480,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     if (Object.keys(this._validityFlags).length === 0) {
       this.validityController.setValidity({});
     } else {
-      const firstMessage = Object.values(this._errors)[0] ?? this._formError ?? 'The value is invalid.';
+      const firstMessage = Object.values(this._errors)[0] ?? this._formError ?? this.localize('valueInvalid');
       this.validityController.setValidity(this._validityFlags, firstMessage);
     }
   }
@@ -500,7 +500,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       flags = validation.flags;
       formValue = this.serializeEffectiveValue(effective);
     } catch {
-      formError = 'Value must be JSON-serializable.';
+      formError = this.localize('valueMustBeSerializable');
       formValue = null;
     }
 
@@ -646,7 +646,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     // dropping the field or throwing. Still carries id=fieldId like every
     // other control-slot render, since renderField's shared, non-boolean
     // branch above always renders a <label for=fieldId> pointing at it.
-    return html`<p class="unsupported" id=${fieldId}>Unsupported field type "${(prop as { type: string }).type}".</p>`;
+    return html`<p class="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: (prop as { type: string }).type })}</p>`;
   }
 
   private renderField(key: string, prop: ToolParamFormProperty, index: number): TemplateResult {

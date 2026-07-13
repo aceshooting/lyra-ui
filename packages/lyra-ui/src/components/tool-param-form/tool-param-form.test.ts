@@ -323,6 +323,62 @@ it('validates every supported property type and string enum even when fields are
   expect(el.errors.enabled).to.equal('Must be a boolean.');
 });
 
+it('localizes validation messages via .strings, leaving English default output unchanged elsewhere', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      text: { type: 'string' },
+      amount: { type: 'number' },
+      count: { type: 'integer' },
+      enabled: { type: 'boolean' },
+    },
+  };
+  const el = (await fixture(
+    html`<lyra-tool-param-form
+      .schema=${schema}
+      .value=${{ text: 1, amount: '2', count: 2.5, enabled: 'false' }}
+      .strings=${{
+        fieldMustBeString: 'Doit être une chaîne.',
+        fieldMustBeNumber: 'Doit être un nombre fini.',
+        fieldMustBeInteger: 'Doit être un nombre entier.',
+        fieldMustBeBoolean: 'Doit être un booléen.',
+      }}
+    ></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  expect(el.errors.text).to.equal('Doit être une chaîne.');
+  expect(el.errors.amount).to.equal('Doit être un nombre fini.');
+  expect(el.errors.count).to.equal('Doit être un nombre entier.');
+  expect(el.errors.enabled).to.equal('Doit être un booléen.');
+});
+
+it('localizes the unsupported-field-type and schema-shape messages via .strings, with interpolation', async () => {
+  const weirdSchema = {
+    type: 'object',
+    properties: { nested: { type: 'object' } },
+  } as unknown as ToolParamFormSchema;
+  const el = (await fixture(
+    html`<lyra-tool-param-form
+      .schema=${weirdSchema}
+      .strings=${{ unsupportedFieldType: 'Type de champ non pris en charge : "{type}".' }}
+    ></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+  expect(el.errors.nested).to.equal('Type de champ non pris en charge : "object".');
+  await el.updateComplete;
+  expect(field(el, 'nested').querySelector('.unsupported')!.textContent).to.equal(
+    'Type de champ non pris en charge : "object".',
+  );
+
+  const flatSchema = { type: 'object', properties: [] } as unknown as ToolParamFormSchema;
+  const flatEl = (await fixture(
+    html`<lyra-tool-param-form
+      .schema=${flatSchema}
+      .strings=${{ schemaPropertiesMustBeFlat: 'Les propriétés du schéma doivent être un objet plat.' }}
+    ></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+  expect(flatEl.formError).to.equal('Les propriétés du schéma doivent être un objet plat.');
+});
+
 it('rejects non-finite numbers and schema defaults that do not match their declared type', async () => {
   const schema: ToolParamFormSchema = {
     type: 'object',
