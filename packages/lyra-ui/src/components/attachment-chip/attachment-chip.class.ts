@@ -351,7 +351,7 @@ export class LyraAttachmentChip extends LyraElement {
     // supplied) -- hide the part entirely rather than show a literal "0 B".
     const sizeText =
       this.effectiveSize > 0
-        ? formatFileSize(this.effectiveSize, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit], unit))
+        ? formatFileSize(this.effectiveSize, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))
         : '';
     const text = statusText(
       this.status,
