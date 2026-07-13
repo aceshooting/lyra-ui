@@ -33,6 +33,15 @@ function hiddenInput(el: LyraAttachmentTrigger): HTMLInputElement | null {
   return el.shadowRoot!.querySelector('input[type="file"]');
 }
 
+describe('hidden file input', () => {
+  it('is not visible and carries a part name a consumer can hook into', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    const input = hiddenInput(el)!;
+    expect(input.getAttribute('part')).to.equal('hidden-input');
+    expect(getComputedStyle(input).display).to.equal('none');
+  });
+});
+
 function makeFile(name: string, type = 'text/plain'): File {
   return new File(['x'], name, { type });
 }

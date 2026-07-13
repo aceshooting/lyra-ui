@@ -11,6 +11,16 @@ export const styles = css`
     display: contents;
   }
 
+  /* The internal native file input never has a visible surface of its own --
+     the trigger button/menu above are the only affordance a user interacts
+     with; this input exists purely so its synthetic .click() can open the OS
+     file picker. Exposed as a part (see the class doc's @csspart) only so a
+     consumer's ::part(hidden-input) can override this in the unlikely case
+     their integration needs to. */
+  [part='hidden-input'] {
+    display: none;
+  }
+
   /* Shared visual treatment for both the single-capability button
      ([part='trigger']) and the multi-capability button ([part='menu-trigger'])
      slotted into lyra-menu's own trigger slot -- the latter can't reuse

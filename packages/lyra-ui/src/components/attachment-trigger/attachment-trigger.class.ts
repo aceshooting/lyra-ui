@@ -131,6 +131,9 @@ export interface LyraAttachmentTriggerEventMap {
  * @csspart menu - The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lyra-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
+ * @csspart hidden-input - The internal native `<input type="file">` that actually opens the OS file
+ *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
+ *   that with `::part(hidden-input)` in the unlikely case their integration needs to.
  *
  * `triggerLabel` lets a host override the single-capability trigger button's
  * `aria-label` (i18n) — see that property's own doc for exactly what it
@@ -236,6 +239,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   private renderHiddenInput(): TemplateResult {
     return html`
       <input
+        part="hidden-input"
         type="file"
         tabindex="-1"
         aria-hidden="true"
