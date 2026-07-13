@@ -22,7 +22,9 @@ pnpm docs         # Storybook docs site at localhost:6006, demos every component
 ```
 
 Reproduce CI locally with the same sequence CI runs: install --frozen-lockfile, Playwright
-Chromium install, lint, test, build, manifest (see `.github/workflows/ci.yml`).
+Chromium install, lint, test, build, manifest, then a dry-run pack check that the published
+tarball still contains `custom-elements.json`/`llms.txt`/`llms-full.txt` (see
+`.github/workflows/ci.yml`).
 
 ## Making a change
 

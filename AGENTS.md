@@ -57,7 +57,9 @@ pnpm docs                   # Storybook (.storybook/), demos every component liv
 
 Package-local equivalents (from `packages/lyra-ui/`): `pnpm test:watch` also exists. CI
 (`.github/workflows/ci.yml`) runs, in order: install --frozen-lockfile, Playwright Chromium
-install, lint, test, build, manifest — reproduce failures locally with the same sequence.
+install, lint, test, build, manifest, then a `pnpm --filter @aceshooting/lyra-ui pack --dry-run`
+check that the published tarball still contains `custom-elements.json`/`llms.txt`/`llms-full.txt`
+— reproduce failures locally with the same sequence.
 
 ## Coding conventions (every component follows these — deviating needs a strong reason)
 
@@ -83,9 +85,14 @@ install, lint, test, build, manifest — reproduce failures locally with the sam
   class export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the
   barrel — side-effect imports for every component (registers all tags) plus named
   re-exports of classes/types/helpers. `package.json#exports` maps `.`, `./components/*`,
-  `./internal/*`; `sideEffects` is scoped to `**/components/**/*.js` and `dist/lyra.js` only —
-  keep new components' plain class modules free of top-level side effects or tree-shaking
-  breaks for every consumer.
+  `./internal/*`; `sideEffects` is scoped to component modules — both compiled
+  (`**/components/**/*.js`) and source (`**/components/**/*.ts`) — and the barrel, again both
+  compiled (`./dist/lyra.js`) and source (`./src/lyra.ts`). The `.ts` patterns matter because
+  Storybook's production build (`pnpm docs:build`, i.e. the live docs site) imports `src/*.ts`
+  directly rather than `dist/`; without them Rollup can't match those source files against the
+  side-effects globs and tree-shakes away every side-effect-only component import, so no
+  `<lyra-*>` element ever registers on the deployed site. Keep new components' plain class
+  modules free of top-level side effects or tree-shaking breaks for every consumer.
 - **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
   built on `ElementInternals`) where the value fits a plain string (`lyra-date-input`); it calls
   `internals.setValidity()` so `required` participates in native constraint validation
