@@ -48,6 +48,10 @@ function decimalPlaces(n: number): number {
  * to block submission before that default lands, matching how `required`
  * isn't a meaningful constraint on a native range input either.
  *
+ * Clicking anywhere on the track (not just the 16px thumb) jumps the thumb
+ * to that point and continues the same gesture as a drag, matching native
+ * `<input type=range>` click-to-seek.
+ *
  * @customElement lyra-slider
  * @event lyra-input - Fired continuously during an active drag or a
  *   keyboard step (including OS key-repeat while a key is held), mirroring
@@ -135,10 +139,13 @@ export class LyraSlider extends FormAssociated(LyraElement) {
 
   private domain(): { lo: number; hi: number } {
     // A caller-supplied min/max that fails Number attribute conversion
-    // arrives here as NaN; fall back to this property's own default rather
-    // than propagating NaN into every clampValue()/percentOf() caller.
-    const min = isNaN(this.min) ? 0 : this.min;
-    const max = isNaN(this.max) ? 100 : this.max;
+    // arrives here as NaN, and a literal `min="Infinity"`/`max="Infinity"`
+    // arrives as +-Infinity; `isNaN(...)` alone only catches the former, so
+    // test finiteness instead -- otherwise Infinity propagates into every
+    // clampValue()/percentOf() caller (e.g. the midpoint default computing
+    // `0 + Infinity / 2`).
+    const min = Number.isFinite(this.min) ? this.min : 0;
+    const max = Number.isFinite(this.max) ? this.max : 100;
     return { lo: Math.min(min, max), hi: Math.max(min, max) };
   }
 
@@ -156,6 +163,12 @@ export class LyraSlider extends FormAssociated(LyraElement) {
 
   private clampValue(raw: number): number {
     const { lo, hi } = this.domain();
+    // A NaN/Infinity `raw` (e.g. `valueAsNumber = NaN`, or a `value` string
+    // that fails Number conversion) would otherwise propagate straight
+    // through the Math.round/Math.max/Math.min calls below and poison the
+    // submitted FormAssociated value with the literal "NaN"/"Infinity" —
+    // resolve it to a real, finite, in-domain number instead.
+    if (!Number.isFinite(raw)) raw = lo;
     // A non-positive or non-finite step would otherwise divide by zero/NaN
     // below; treat it as "unstepped" instead of propagating NaN.
     const hasStep = Number.isFinite(this.step) && this.step > 0;
@@ -228,10 +241,14 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     this.emit('lyra-change', { value: this.valueAsNumber });
   };
 
-  private onPointerDown = (e: PointerEvent): void => {
-    if (this.effectiveDisabled) return;
-    this.activePointers.add(e.pointerId);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  /** Start tracking `pointerId` as an active drag, transferring pointer
+   *  capture to `captureTarget` and wiring the shared window-level move/end
+   *  listeners. Shared by a pointerdown that starts on the thumb itself and
+   *  one that starts elsewhere on the track (see `onBasePointerDown`), so
+   *  both gestures continue identically from here on. */
+  private beginDrag(pointerId: number, captureTarget: HTMLElement): void {
+    this.activePointers.add(pointerId);
+    captureTarget.setPointerCapture(pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
     // A drag can end without a pointerup: a system gesture / palm rejection
@@ -239,6 +256,39 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // fires `lostpointercapture` — both need the same teardown as pointerup.
     window.addEventListener('pointercancel', this.onPointerUp);
     window.addEventListener('lostpointercapture', this.onPointerUp);
+  }
+
+  private onPointerDown = (e: PointerEvent): void => {
+    if (this.effectiveDisabled) return;
+    this.beginDrag(e.pointerId, e.target as HTMLElement);
+  };
+
+  /** A pointerdown anywhere on `[part="base"]` other than the thumb itself
+   *  (the vast majority of the control's clickable area) jumps the thumb to
+   *  that point and continues the same gesture as a drag, mirroring native
+   *  `<input type=range>` click-to-seek. A pointerdown that started on the
+   *  thumb bubbles up to this same listener too — already fully handled by
+   *  `onPointerDown` above, so it's ignored here via the `e.target === thumb`
+   *  check. Unlike the two-handle `lyra-time-range` (where a track click is
+   *  ambiguous about which handle should move), a single thumb has no such
+   *  ambiguity. */
+  private onBasePointerDown = (e: PointerEvent): void => {
+    if (this.effectiveDisabled) return;
+    const thumb = this.renderRoot.querySelector('[part="thumb"]') as HTMLElement | null;
+    if (!thumb || e.target === thumb) return;
+    const track = this.renderRoot.querySelector('[part="track"]') as HTMLElement | null;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const raw = rect.width === 0 ? 0 : (e.clientX - rect.left) / rect.width;
+    // Mirrors onPointerMove's own RTL handling below.
+    const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
+    const { lo, hi } = this.domain();
+    this.setValue(lo + ratio * (hi - lo), false);
+    this.beginDrag(e.pointerId, thumb);
+    // Keyboard interaction (arrow keys, Home/End, ...) can continue
+    // seamlessly right after the click, exactly as if the user had tabbed to
+    // the thumb and started dragging it directly.
+    thumb.focus();
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -290,6 +340,15 @@ export class LyraSlider extends FormAssociated(LyraElement) {
       this.ensureValue();
       return;
     }
+    if (changed.has('value') && !Number.isFinite(Number(this.value))) {
+      // A caller-assigned `value` that fails Number conversion (a
+      // non-numeric string, or the literal "NaN"/"Infinity") must not
+      // persist forever as the FormAssociated submitted value -- resync it
+      // to the sanitized, finite numeric string `valueAsNumber` already
+      // computes (falling back to the domain midpoint) instead.
+      this.value = String(this.valueAsNumber);
+      return;
+    }
     if ((changed.has('min') || changed.has('max') || changed.has('step')) && this.value !== '') {
       // A narrowed/shifted domain (or a changed step grid) after mount must
       // not leave `value` — and the rendered thumb position it drives —
@@ -308,7 +367,7 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     const { lo, hi } = this.domain();
     const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
     return html`
-      <div part="base">
+      <div part="base" @pointerdown=${this.onBasePointerDown}>
         <div part="track"></div>
         <div part="fill" style=${`inline-size:${pct}%`}></div>
         <div

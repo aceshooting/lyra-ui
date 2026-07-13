@@ -191,6 +191,85 @@ it('drags the thumb with pointer events and emits lyra-input then lyra-change on
   expect(changeDetail!.value).to.equal(50);
 });
 
+it('clicking the track (not the thumb) jumps the thumb to that point and continues the drag', async () => {
+  const el = (await fixture(
+    html`<lyra-slider min="0" max="100" value="20" step="1"></lyra-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+
+  let inputDetail: { value: number } | undefined;
+  el.addEventListener('lyra-input', (e) => (inputDetail = (e as CustomEvent).detail));
+  // Clicking directly on the track at x=150 (75% across a 200px track) should
+  // immediately jump the thumb there, matching native <input type=range>'s
+  // click-to-seek, which this component previously lacked entirely (only the
+  // 16px thumb itself had a pointerdown handler).
+  track.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 2, clientX: 150 }),
+  );
+  expect(inputDetail!.value).to.equal(75);
+  expect(el.valueAsNumber).to.equal(75);
+
+  // The same gesture continues as a drag from the jumped-to point.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 2, clientX: 100 }));
+  expect(el.valueAsNumber).to.equal(50);
+
+  let changeDetail: { value: number } | undefined;
+  el.addEventListener('lyra-change', (e) => (changeDetail = (e as CustomEvent).detail));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 2 }));
+  expect(changeDetail!.value).to.equal(50);
+});
+
+it('does not double-jump when the pointerdown originates on the thumb itself', async () => {
+  const el = (await fixture(
+    html`<lyra-slider min="0" max="100" value="20" step="1"></lyra-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+
+  thumb.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 40 }),
+  );
+  // A pointerdown on the thumb itself (which bubbles up to [part="base"])
+  // must not be treated as a separate track click and jump the value out
+  // from under the thumb-only pointerdown handler.
+  expect(el.valueAsNumber).to.equal(20);
+});
+
+it('focuses the thumb after a track click so keyboard interaction can continue seamlessly', async () => {
+  const el = (await fixture(
+    html`<lyra-slider min="0" max="100" value="20" step="1"></lyra-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(el, 200);
+  track.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 4, clientX: 100 }),
+  );
+  // Compared as a boolean rather than `expect(...).to.equal(thumb)` -- on
+  // failure, chai's default assertion-message formatting walks live DOM
+  // nodes (parentNode/ownerDocument/etc. all hold circular back-references),
+  // which can make a *failing* comparison of two elements pathologically
+  // slow in this browser test environment.
+  expect(el.shadowRoot!.activeElement === thumb).to.be.true;
+});
+
+it('ignores a track click while disabled', async () => {
+  const el = (await fixture(
+    html`<lyra-slider min="0" max="100" value="20" disabled></lyra-slider>`,
+  )) as LyraSlider;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  mockTrackWidth(el, 200);
+  track.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 5, clientX: 150 }),
+  );
+  expect(el.valueAsNumber).to.equal(20);
+});
+
 it('mirrors the drag ratio under dir="rtl", since the track is positioned with inset-inline-start', async () => {
   const el = (await fixture(
     html`<lyra-slider dir="rtl" min="0" max="100" value="20" step="1"></lyra-slider>`,
@@ -308,6 +387,54 @@ it('does not poison value with NaN when step is 0', async () => {
   thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   expect(Number.isNaN(el.valueAsNumber)).to.be.false;
   expect(el.valueAsNumber).to.equal(20);
+});
+
+it('does not poison the submitted value with the literal string "NaN" when valueAsNumber is written NaN', async () => {
+  const form = (await fixture(html`
+    <form><lyra-slider name="temperature" min="0" max="100" value="20"></lyra-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-slider') as LyraSlider;
+  el.valueAsNumber = NaN;
+  await elementUpdated(el);
+  // Before the fix, clampValue(NaN) propagated NaN straight through
+  // Math.max/Math.min, so `value` became the literal string "NaN" and stayed
+  // that way, including in FormData.
+  expect(el.value).to.not.equal('NaN');
+  expect(Number.isFinite(el.valueAsNumber)).to.be.true;
+  expect(new FormData(form).get('temperature')).to.not.equal('NaN');
+});
+
+it('resyncs a post-mount non-numeric value string instead of submitting it as-is', async () => {
+  const form = (await fixture(html`
+    <form><lyra-slider name="temperature" min="0" max="100"></lyra-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-slider') as LyraSlider;
+  el.value = 'not-a-number';
+  await elementUpdated(el);
+  // Before the fix, willUpdate() only re-sanitized an *empty* value string,
+  // so a non-numeric string assigned directly stuck around forever as the
+  // FormAssociated submitted value.
+  expect(el.value).to.not.equal('not-a-number');
+  expect(Number.isFinite(Number(el.value))).to.be.true;
+  expect(new FormData(form).get('temperature')).to.not.equal('not-a-number');
+});
+
+it('does not render invalid CSS or an aria-valuenow="Infinity" when max is Infinity', async () => {
+  // No `value` attribute -- this forces the eager midpoint default
+  // (`ensureValue()`/`defaultNumericValue()`) to compute off the domain
+  // itself, which is where an unguarded Infinity actually poisons things.
+  const el = (await fixture(html`<lyra-slider min="0" max="Infinity"></lyra-slider>`)) as LyraSlider;
+  await elementUpdated(el);
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  // Before the fix, domain()'s `isNaN(this.max)` guard let Infinity straight
+  // through (isNaN(Infinity) is false). The midpoint default then computed
+  // `0 + Infinity / 2` = Infinity, so `value` became the literal string
+  // "Infinity", and percentOf(Infinity) with an infinite span produced
+  // Infinity/Infinity = NaN, rendering `inset-inline-start:NaN%` (invalid
+  // CSS the browser silently drops) and an aria-valuenow of "Infinity".
+  expect(thumb.style.insetInlineStart).to.match(/^-?\d+(\.\d+)?%$/);
+  expect(thumb.getAttribute('aria-valuenow')).to.not.equal('Infinity');
+  expect(Number.isFinite(Number(thumb.getAttribute('aria-valuenow')))).to.be.true;
 });
 
 it('participates in a form: submits the string value under name', async () => {
