@@ -1,7 +1,13 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './heatmap.js';
 import type { LyraHeatmap } from './heatmap.js';
-import { hexToRgb, mixColor, resolveRgb } from './heatmap.js';
+import {
+  MAX_BUCKET_COUNT,
+  hexToRgb,
+  mixColor,
+  normalizeBucketCount,
+  resolveRgb,
+} from './heatmap.js';
 
 it('sets a group role (not img, which conflicts with the canvas\'s focusable descendant) and a summarizing aria-label', async () => {
   const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
@@ -254,11 +260,60 @@ describe('bucket-count', () => {
     expect(el.bucketCount).to.equal(5);
   });
 
+  it('normalizes every numeric shape to a bounded finite integer', () => {
+    expect(normalizeBucketCount(Number.NaN)).to.equal(5);
+    expect(normalizeBucketCount(Number.POSITIVE_INFINITY)).to.equal(5);
+    expect(normalizeBucketCount(Number.NEGATIVE_INFINITY)).to.equal(5);
+    expect(normalizeBucketCount(-100)).to.equal(2);
+    expect(normalizeBucketCount(1)).to.equal(2);
+    expect(normalizeBucketCount(4.9)).to.equal(4);
+    expect(normalizeBucketCount(Number.MAX_VALUE)).to.equal(MAX_BUCKET_COUNT);
+  });
+
+  it('normalizes invalid and out-of-range bucket-count attributes before exposing the property', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" bucket-count="${MAX_BUCKET_COUNT + 1}"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    expect(el.bucketCount).to.equal(MAX_BUCKET_COUNT);
+
+    el.setAttribute('bucket-count', 'not-a-number');
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(5);
+
+    el.setAttribute('bucket-count', '-10');
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(2);
+
+    el.setAttribute('bucket-count', '4.9');
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(4);
+  });
+
+  it('normalizes direct bucketCount assignments before drawing', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+
+    el.bucketCount = MAX_BUCKET_COUNT + 1;
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(MAX_BUCKET_COUNT);
+
+    el.bucketCount = Number.NaN;
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(5);
+
+    el.bucketCount = -10;
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(2);
+
+    el.bucketCount = 4.9;
+    await el.updateComplete;
+    expect(el.bucketCount).to.equal(4);
+  });
+
   it('calendar mode: a non-numeric bucket-count falls back to the default instead of leaving every cell whatever fillStyle the canvas last had', async () => {
     const el = (await fixture(
       html`<lyra-heatmap mode="calendar" bucket-count="abc"></lyra-heatmap>`,
     )) as LyraHeatmap;
-    expect(Number.isNaN(el.bucketCount)).to.equal(true);
+    expect(el.bucketCount).to.equal(5);
     el.days = [
       { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
       { date: '2026-03-02', value: 9 }, // Monday, week 0, weekday 1 (max value)

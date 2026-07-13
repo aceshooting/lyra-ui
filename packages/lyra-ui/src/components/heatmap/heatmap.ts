@@ -20,6 +20,13 @@ const CAL_LABEL_H = 16;
 const CAL_CELL = 11;
 const CAL_GAP = 2;
 const DEFAULT_BUCKET_COUNT = 5;
+/**
+ * A linear RGB ramp cannot contain more than 256 visually distinct integer
+ * steps on any channel. Keeping the bucket count within that bound avoids an
+ * untrusted attribute/property value turning the ramp into an unbounded
+ * allocation without discarding any useful color resolution.
+ */
+export const MAX_BUCKET_COUNT = 256;
 /** Ring stroke width for both the annotation overlay and the keyboard focus ring. */
 const RING_LINE_WIDTH = 2;
 const FALLBACK_FOCUS_RING_COLOR = '#0969da';
@@ -95,33 +102,27 @@ function warnInvalidColor(color: string): void {
   );
 }
 
-const warnedInvalidBucketCounts = new Set<number>();
-
-function warnInvalidBucketCount(value: number): void {
-  if (warnedInvalidBucketCounts.has(value)) return;
-  warnedInvalidBucketCounts.add(value);
-  console.warn(
-    `<lyra-heatmap> received a non-finite bucket-count (${value}); falling back to ${DEFAULT_BUCKET_COUNT}.`,
-  );
-}
-
 /**
- * Normalizes `bucketCount` to a finite integer >= 2. `Math.max(2, bucketCount)`
- * alone stays `NaN` for a non-numeric `bucket-count` attribute (`Math.max`
- * propagates `NaN`), which silently zeroes out the ramp array and makes every
- * cell keep whatever `fillStyle` the previous draw left. A fractional count
- * is floored rather than passed through as-is, so the ramp array's length
- * (built via `Array.from({ length: buckets }, ...)`, which truncates a
- * fractional `length`) always agrees with the index `quartileBucket` computes
- * from the same `buckets` value.
+ * Normalizes a bucket count to the safe, renderable range. Non-finite values
+ * restore the public default; finite values are floored and clamped to
+ * `[2, MAX_BUCKET_COUNT]`. Flooring keeps the ramp array's length in exact
+ * agreement with the count used by `quartileBucket()`.
  */
-function resolveBucketCount(bucketCount: number): number {
+export function normalizeBucketCount(bucketCount: number): number {
   if (!Number.isFinite(bucketCount)) {
-    warnInvalidBucketCount(bucketCount);
     return DEFAULT_BUCKET_COUNT;
   }
-  return Math.max(2, Math.floor(bucketCount));
+  return Math.min(MAX_BUCKET_COUNT, Math.max(2, Math.floor(bucketCount)));
 }
+
+const bucketCountConverter = {
+  fromAttribute(value: string | null): number {
+    return value === null ? DEFAULT_BUCKET_COUNT : normalizeBucketCount(Number(value));
+  },
+  toAttribute(value: number): string {
+    return String(normalizeBucketCount(value));
+  },
+};
 
 /**
  * Resolves any syntactically valid CSS `<color>` — hex, `rgb()`, `hsl()`,
@@ -238,7 +239,18 @@ export class LyraHeatmap extends LyraElement {
   @property({ type: Boolean, attribute: 'fit-to-width' }) fitToWidth = false;
   @property() mode: 'matrix' | 'calendar' = 'matrix';
   @property({ attribute: false }) days: CalendarDay[] = [];
-  @property({ attribute: 'bucket-count', type: Number }) bucketCount = DEFAULT_BUCKET_COUNT;
+  private _bucketCount = DEFAULT_BUCKET_COUNT;
+
+  @property({ attribute: 'bucket-count', converter: bucketCountConverter })
+  get bucketCount(): number {
+    return this._bucketCount;
+  }
+
+  set bucketCount(value: number) {
+    const oldValue = this._bucketCount;
+    this._bucketCount = normalizeBucketCount(value);
+    this.requestUpdate('bucketCount', oldValue);
+  }
   /** Cells to ring-highlight — `row`/`col` in matrix mode, `date` in calendar mode. See `HeatmapAnnotation`. */
   @property({ attribute: false }) annotations: HeatmapAnnotation[] = [];
   /** Formats the per-cell tooltip and keyboard live-region text — receives the cell position
@@ -521,7 +533,9 @@ export class LyraHeatmap extends LyraElement {
     const [scaleLo, scaleHi] = this.scaleEndpoints();
     const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
     const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
-    const buckets = resolveBucketCount(this.bucketCount);
+    // Normalize at the allocation boundary as a final guard even though the
+    // public accessor and attribute converter already normalize their inputs.
+    const buckets = normalizeBucketCount(this.bucketCount);
     const ramp = Array.from({ length: buckets }, (_, i) => mixRgb(loRgb, hiRgb, i / (buckets - 1)));
     const noDataFill = this.noDataFill();
 
