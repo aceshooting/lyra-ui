@@ -104,3 +104,86 @@ for (const tagName of ['lyra-checkbox', 'lyra-switch'] as const) {
     expect(changes).to.equal(0);
   });
 }
+
+for (const tagName of ['lyra-select', 'lyra-model-select'] as const) {
+  it(`${tagName} restores its string value and form entry without a user event`, async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        ${tagName === 'lyra-select'
+          ? html`<lyra-select name="choice"></lyra-select>`
+          : html`<lyra-model-select name="choice"></lyra-model-select>`}
+      </form>
+    `);
+    const control = form.querySelector(tagName) as HTMLElement & {
+      value: string;
+      formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+    };
+    let changes = 0;
+    control.addEventListener('change', () => changes++);
+    control.addEventListener('lyra-change', () => changes++);
+
+    control.value = 'changed';
+    control.formStateRestoreCallback('restored', 'restore');
+
+    expect(control.value).to.equal('restored');
+    expect(new FormData(form).get('choice')).to.equal('restored');
+    expect(changes).to.equal(0);
+  });
+}
+
+it('combobox restores single and multiple selections from name-independent JSON state', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lyra-combobox id="single" name="single"></lyra-combobox>
+      <lyra-combobox id="multiple" name="multiple" multiple></lyra-combobox>
+    </form>
+  `);
+  type RestorableCombobox = HTMLElement & {
+    value: string | string[];
+    formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+  };
+  const single = form.querySelector('#single') as RestorableCombobox;
+  const multiple = form.querySelector('#multiple') as RestorableCombobox;
+  let changes = 0;
+  form.addEventListener('change', () => changes++);
+
+  single.formStateRestoreCallback('["restored"]', 'restore');
+  multiple.formStateRestoreCallback('["a","b"]', 'restore');
+
+  expect(single.value).to.equal('restored');
+  expect(multiple.value).to.deep.equal(['a', 'b']);
+  const data = new FormData(form);
+  expect(data.get('single')).to.equal('restored');
+  expect(data.getAll('multiple')).to.deep.equal(['a', 'b']);
+  expect(changes).to.equal(0);
+
+  expect(() => multiple.formStateRestoreCallback('{"not":"an array"}', 'restore')).not.to.throw();
+  expect(multiple.value).to.deep.equal([]);
+  expect(new FormData(form).has('multiple')).to.be.false;
+});
+
+it('tool-param-form restores a safe object snapshot and rejects malformed state without throwing', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form>
+      <lyra-tool-param-form
+        name="args"
+        .schema=${{ type: 'object', properties: { title: { type: 'string' } } }}
+      ></lyra-tool-param-form>
+    </form>
+  `);
+  const control = form.querySelector('lyra-tool-param-form') as HTMLElement & {
+    value: Record<string, unknown>;
+    formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+  };
+  let inputs = 0;
+  control.addEventListener('lyra-input', () => inputs++);
+
+  control.formStateRestoreCallback('{"title":"Restored"}', 'restore');
+  expect(control.value).to.deep.equal({ title: 'Restored' });
+  expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({ title: 'Restored' });
+
+  expect(() => control.formStateRestoreCallback('[]', 'restore')).not.to.throw();
+  expect(control.value).to.deep.equal({});
+  expect(JSON.parse(new FormData(form).get('args') as string)).to.deep.equal({});
+  expect(inputs).to.equal(0);
+});

@@ -209,6 +209,12 @@ export class LyraModelSelect extends LyraElement {
   formResetCallback(): void {
     this.value = this._defaultValue;
   }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.value = typeof state === 'string' ? state : '';
+  }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     if (disabled) this.hide();

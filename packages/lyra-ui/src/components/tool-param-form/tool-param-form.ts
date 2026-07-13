@@ -426,6 +426,23 @@ export class LyraToolParamForm extends LyraElement {
     this.touchedFields = new Set();
     this.showFormError = false;
   }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    let restored: Record<string, unknown> = {};
+    if (typeof state === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(state);
+        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          restored = parsed as Record<string, unknown>;
+        }
+      } catch {
+        // Invalid persisted state restores the safe empty object.
+      }
+    }
+    this.value = restored;
+  }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
     this.requestUpdate();
@@ -456,7 +473,7 @@ export class LyraToolParamForm extends LyraElement {
 
   /** Pushes the already-computed snapshot into `ElementInternals`. */
   private syncInternals(formValue: string | null): void {
-    this.internals.setFormValue(formValue);
+    this.internals.setFormValue(formValue, formValue);
     if (Object.keys(this._validityFlags).length === 0) {
       this.validityController.setValidity({});
     } else {

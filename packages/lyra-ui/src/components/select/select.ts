@@ -251,6 +251,12 @@ export class LyraSelect extends LyraElement {
   formResetCallback(): void {
     this.value = this._defaultSelected;
   }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    this.value = typeof state === 'string' ? state : '';
+  }
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles.
    * Tracked separately from the consumer's own `disabled` (see

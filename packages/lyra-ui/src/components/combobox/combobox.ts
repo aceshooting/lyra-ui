@@ -260,6 +260,7 @@ export class LyraCombobox extends LyraElement {
   }
 
   private syncFormValue(): void {
+    const state = JSON.stringify(this._selected);
     if (this.multiple) {
       // A FormData form value submits under the keys baked into the FormData
       // itself, bypassing the element's own `name` the way a plain string
@@ -268,14 +269,14 @@ export class LyraCombobox extends LyraElement {
       // inventing a shared key that would merge with any other unnamed
       // combobox in the same form.
       if (!this.name) {
-        this.internals.setFormValue(null);
+        this.internals.setFormValue(null, state);
         return;
       }
       const fd = new FormData();
       for (const v of this._selected) fd.append(this.name, v);
-      this.internals.setFormValue(fd);
+      this.internals.setFormValue(fd, state);
     } else {
-      this.internals.setFormValue(this._selected[0] ?? '');
+      this.internals.setFormValue(this._selected[0] ?? '', state);
     }
   }
 
@@ -289,6 +290,21 @@ export class LyraCombobox extends LyraElement {
   formResetCallback(): void {
     this.value = [...this._defaultSelected];
     this.query = '';
+  }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    let selected: string[] = [];
+    if (typeof state === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(state);
+        if (Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')) selected = parsed;
+      } catch {
+        if (state) selected = [state];
+      }
+    }
+    this.value = this.multiple ? selected : (selected[0] ?? '');
   }
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles.
