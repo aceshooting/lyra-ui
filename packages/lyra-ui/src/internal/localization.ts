@@ -151,7 +151,9 @@ export type LyraMessageKey =
   | 'kbdControlWord'
   | 'kbdOptionWord'
   | 'kbdAltWord'
-  | 'kbdShiftWord';
+  | 'kbdShiftWord'
+  | 'selectValueMissing'
+  | 'select';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -304,6 +306,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdOptionWord: 'Option',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  selectValueMissing: 'Please select an option.',
+  select: 'Select',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

@@ -57,7 +57,12 @@ export interface LyraSelectEventMap {
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
- * @event change - The selection changed.
+ * @event change - The selection changed. Deliberately unprefixed, mirroring native `<select>`'s
+ *   own event name -- contrast `<lyra-slider>`, which uses `lyra-input`/`lyra-change` for its
+ *   analogous value-change pair. Which form controls mirror native unprefixed DOM event names
+ *   (this one, matching `<select>`) versus which use the `lyra-` prefix (`<lyra-slider>`,
+ *   matching `<input type="range">` via a custom name) is a deliberate per-control choice, not
+ *   an incidental divergence.
  * @event input - Fired alongside `change` on every selection change (native
  *   `<select>` doesn't meaningfully distinguish the two either).
  * @event lyra-show - The listbox opened.
@@ -66,6 +71,7 @@ export interface LyraSelectEventMap {
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (positioning anchor).
  * @csspart listbox - The options popover.
+ * @csspart group-label - An option group's heading row (shown when any option declares a `group`).
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
  * @csspart option-label - An option row's label/sub wrapper.
@@ -255,7 +261,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private updateValidity(): void {
     if (this.required && !this._selected) {
-      this.validityController.setValidity({ valueMissing: true }, 'Please select an option.');
+      this.validityController.setValidity({ valueMissing: true }, this.localize('selectValueMissing'));
     } else {
       this.validityController.setValidity({});
     }
@@ -436,6 +442,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.value = option.value;
     this.hide();
     if (changed) {
+      // Deliberately unprefixed -- this control is a direct <select>
+      // counterpart, so its value-change events keep <select>'s own naming
+      // instead of the `lyra-` prefix `<lyra-slider>` uses for its analogous
+      // rename. See the class doc's `change` event entry for the full rule.
       this.emit('input');
       this.emit('change');
     }
@@ -580,7 +590,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     options.forEach((o, i) => {
       if (o.group !== currentGroup) {
         currentGroup = o.group;
-        if (currentGroup) out.push(html`<div class="group-label">${currentGroup}</div>`);
+        if (currentGroup) out.push(html`<div class="group-label" part="group-label">${currentGroup}</div>`);
       }
       const id = `${this.listId}-opt-${i}`;
       const selected = o.value === this._selected;
@@ -641,7 +651,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           aria-expanded=${isSingleOption ? nothing : this.open ? 'true' : 'false'}
           aria-controls=${isSingleOption ? nothing : this.listId}
           aria-activedescendant=${isSingleOption ? nothing : activeId}
-          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Select')}
+          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('select'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}

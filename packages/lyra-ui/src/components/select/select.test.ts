@@ -640,6 +640,43 @@ it('falls back to placeholder when no host aria-label or label is set', async ()
   expect(trigger.getAttribute('aria-label')).to.equal('Choose…');
 });
 
+describe('trigger aria-label localization', () => {
+  it('falls back to the localized "Select" when no aria-label, label, or placeholder is set', async () => {
+    const el = (await fixture(html`<lyra-select></lyra-select>`)) as LyraSelect;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Select');
+  });
+
+  it('localizes the fallback trigger aria-label via this.localize() when .strings overrides select', async () => {
+    const el = (await fixture(
+      html`<lyra-select .strings=${{ select: 'Sélectionner' }}></lyra-select>`,
+    )) as LyraSelect;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Sélectionner');
+  });
+});
+
+describe('validationMessage localization', () => {
+  it('defaults to the built-in English validationMessage for a required, unselected control', async () => {
+    const el = (await fixture(html`
+      <lyra-select required>
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-select>
+    `)) as LyraSelect;
+    expect(el.validationMessage).to.equal('Please select an option.');
+  });
+
+  it('localizes the validationMessage via this.localize() when .strings overrides selectValueMissing', async () => {
+    const el = (await fixture(html`
+      <lyra-select required .strings=${{ selectValueMissing: 'Veuillez sélectionner une option.' }}>
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-select>
+    `)) as LyraSelect;
+    expect(el.validationMessage).to.equal('Veuillez sélectionner une option.');
+
+    el.value = 'a';
+    expect(el.validationMessage).to.equal('');
+  });
+});
+
 describe('single-option combobox default (autoCommitSingleOption unset)', () => {
   const single = () => html`
     <lyra-select>
