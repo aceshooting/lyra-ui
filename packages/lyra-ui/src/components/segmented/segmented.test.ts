@@ -57,8 +57,29 @@ describe('lyra-segmented', () => {
     expect(el.value).to.equal('month'); // 'week' is disabled, skipped
   });
 
+  it('sets aria-label on the radiogroup from the label prop, falling back to a forwarded host aria-label', async () => {
+    const labeled = (await fixture(
+      html`<lyra-segmented label="View" .items=${items()}></lyra-segmented>`,
+    )) as LyraSegmented;
+    const base1 = labeled.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base1.getAttribute('aria-label')).to.equal('View');
+
+    const forwarded = (await fixture(
+      html`<lyra-segmented aria-label="Forwarded label" .items=${items()}></lyra-segmented>`,
+    )) as LyraSegmented;
+    const base2 = forwarded.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base2.getAttribute('aria-label')).to.equal('Forwarded label');
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`<lyra-segmented .items=${items()} value="day"></lyra-segmented>`)) as LyraSegmented;
+    await expect(el).to.be.accessible();
+  });
+
+  it('is accessible when labeled via the label prop', async () => {
+    const el = (await fixture(
+      html`<lyra-segmented label="View" .items=${items()} value="day"></lyra-segmented>`,
+    )) as LyraSegmented;
     await expect(el).to.be.accessible();
   });
 });

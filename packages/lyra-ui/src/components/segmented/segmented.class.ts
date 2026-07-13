@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -38,6 +38,13 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
   /** The currently selected item's `value`. */
   @property() value = '';
+
+  /** Accessible name for the radiogroup, used when no visible label context
+   *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
+   *  as `aria-label` on the `role="radiogroup"` element. A plain `aria-label`
+   *  attribute on the host itself is honored as a fallback when this is left
+   *  unset, matching `<lyra-slider>`. */
+  @property() label = '';
 
   private select(item: SegmentedItem): void {
     if (item.disabled || item.value === this.value) return;
@@ -82,8 +89,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   };
 
   render(): TemplateResult {
+    const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
     return html`
-      <div part="base" role="radiogroup" @keydown=${this.onKeyDown}>
+      <div part="base" role="radiogroup" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${repeat(
           this.items,
           (item) => item.value,

@@ -60,6 +60,29 @@ export const WithDisabledItem: Story = {
   `,
 };
 
+export const AccessibleName: Story = {
+  name: 'Accessible name (label prop)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `label` property sets `aria-label` on the `role="radiogroup"` root. It renders no visible text of its own -- use it when the control has no adjacent heading or wrapping `<label>` to derive an accessible name from.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-segmented
+      label="View"
+      .items=${[
+        { value: 'day', label: 'Day' },
+        { value: 'week', label: 'Week' },
+        { value: 'month', label: 'Month' },
+      ]}
+      value="week"
+    ></lyra-segmented>
+  `,
+};
+
 export const RightToLeft: Story = {
   name: 'Right-to-left',
   render: () => html`
