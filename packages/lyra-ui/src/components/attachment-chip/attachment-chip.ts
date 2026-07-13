@@ -82,11 +82,14 @@ export function formatFileSize(bytes: number): string {
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
- *  `'pending'`/`'done'` render nothing here, they're resting states. */
-function statusText(status: AttachmentChipStatus, progress: number): string {
+ *  `'pending'`/`'done'` render nothing here, they're resting states.
+ *  `clampedProgress` (not the raw `progress`) is what gets displayed, so the
+ *  percentage shown here can never drift from the progressbar's own
+ *  `aria-valuenow`/fill-width, which reads from the same clamped value. */
+function statusText(status: AttachmentChipStatus, progress: number, clampedProgress: number): string {
   if (status === 'error') return 'Upload failed';
   if (status === 'uploading') {
-    return Number.isFinite(progress) && progress > 0 ? `Uploading ${Math.round(Math.min(100, progress))}%` : 'Uploading…';
+    return Number.isFinite(progress) && progress > 0 ? `Uploading ${Math.round(clampedProgress)}%` : 'Uploading…';
   }
   return '';
 }
@@ -131,7 +134,7 @@ function statusText(status: AttachmentChipStatus, progress: number): string {
  * @csspart meta - Wrapper around `name` and `size`.
  * @csspart name - The filename (ellipsis-truncated via CSS; the untruncated name is always available via the native `title` tooltip).
  * @csspart size - The human-readable formatted file size. Hidden when no size is known.
- * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`.
+ * @csspart status-text - The visible text twin of the status accent color — carries the state in text, not just color. Empty/hidden for `pending`/`done`. Gets `role="alert"` for `status="error"` only, so a screen-reader user not already focused on the chip still hears an upload failure; the ticking `'uploading'` readout deliberately stays out of the accessibility tree the same way `<lyra-generation-status>`'s per-second elapsed/token readout does — a live region re-announcing every progress tick would be noise, not information, while a one-shot failure is exactly the kind of infrequent, actionable transition a live region exists for.
  * @csspart progress - The numeric upload progress bar (`role="progressbar"`), shown only while `status="uploading"` and `progress` is a meaningful (>0) number.
  * @csspart progress-fill - The filled portion of `progress`.
  * @csspart spinner - The indeterminate upload spinner, shown instead of `progress` while `status="uploading"` and `progress` is unset/0.
@@ -274,7 +277,7 @@ export class LyraAttachmentChip extends LyraElement {
     // distinguish a genuinely empty file from a size that was simply never
     // supplied) -- hide the part entirely rather than show a literal "0 B".
     const sizeText = this.effectiveSize > 0 ? formatFileSize(this.effectiveSize) : '';
-    const text = statusText(this.status, this.progress);
+    const text = statusText(this.status, this.progress, this.clampedProgress);
     const uploading = this.status === 'uploading';
 
     return html`
@@ -283,7 +286,7 @@ export class LyraAttachmentChip extends LyraElement {
         <span part="meta">
           <span part="name" title=${name || 'Untitled file'}>${displayName}</span>
           <span part="size" ?hidden=${!sizeText}>${sizeText || nothing}</span>
-          <span part="status-text" ?hidden=${!text}>${text || nothing}</span>
+          <span part="status-text" role=${this.status === 'error' ? 'alert' : nothing} ?hidden=${!text}>${text || nothing}</span>
         </span>
         ${uploading
           ? this.hasNumericProgress

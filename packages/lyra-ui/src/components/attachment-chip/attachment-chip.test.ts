@@ -154,6 +154,29 @@ describe('the file property', () => {
     }
   });
 
+  it('revokes the object URL when file is cleared to undefined, falling back to the generic glyph', async () => {
+    const file = makeFile('a.png', 'image/png');
+    const el = (await fixture(html`<lyra-attachment-chip .file=${file}></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    const firstSrc = (el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement).getAttribute('src')!;
+
+    let revoked = '';
+    const original = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url: string) => {
+      revoked = url;
+      original(url);
+    };
+    try {
+      el.file = undefined;
+      await el.updateComplete;
+      expect(revoked).to.equal(firstSrc);
+      const thumb = el.shadowRoot!.querySelector('[part="thumbnail"]') as HTMLElement;
+      expect(thumb.querySelector('img')).to.not.exist;
+      expect(thumb.querySelector('svg')).to.exist;
+    } finally {
+      URL.revokeObjectURL = original;
+    }
+  });
+
   it('revokes the object URL on disconnect', async () => {
     const file = makeFile('a.png', 'image/png');
     const el = (await fixture(html`<lyra-attachment-chip .file=${file}></lyra-attachment-chip>`)) as LyraAttachmentChip;
@@ -213,6 +236,15 @@ describe('status accents and progress', () => {
     expect(bar.getAttribute('aria-valuenow')).to.equal('100');
   });
 
+  it('shows the same clamped number in status-text as the progressbar aria-valuenow, for an out-of-range progress', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip name="a.zip" status="uploading" progress="150"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const bar = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
+    const text = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+    expect(text.textContent).to.equal(`Uploading ${bar.getAttribute('aria-valuenow')}%`);
+  });
+
   it('shows visible status-text (not just color) for uploading and error, none for pending/done', async () => {
     const uploading = (await fixture(
       html`<lyra-attachment-chip status="uploading" progress="30"></lyra-attachment-chip>`,
@@ -229,6 +261,18 @@ describe('status accents and progress', () => {
 
     const done = (await fixture(html`<lyra-attachment-chip status="done"></lyra-attachment-chip>`)) as LyraAttachmentChip;
     expect((done.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).hidden).to.be.true;
+  });
+
+  it('gives status-text role="alert" only for the one-shot error transition, not the ticking uploading readout', async () => {
+    const error = (await fixture(html`<lyra-attachment-chip status="error"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    const errorText = error.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+    expect(errorText.getAttribute('role')).to.equal('alert');
+
+    const uploading = (await fixture(
+      html`<lyra-attachment-chip status="uploading" progress="30"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const uploadingText = uploading.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+    expect(uploadingText.hasAttribute('role')).to.be.false;
   });
 });
 
