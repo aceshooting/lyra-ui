@@ -12,12 +12,13 @@ export const styles = css`
   }
 
   /* Shared visual treatment for both the single-capability button
-     ([part='trigger']) and the multi-capability button slotted into
-     lyra-menu's own trigger slot -- the latter can't itself carry
-     part='trigger' (that name is reserved for the single-capability case,
-     so a consumer's ::part(trigger) selector unambiguously targets exactly
-     one button), so both buttons share this plain class instead of
-     duplicating the same declaration block twice. */
+     ([part='trigger']) and the multi-capability button ([part='menu-trigger'])
+     slotted into lyra-menu's own trigger slot -- the latter can't reuse
+     part='trigger' itself (that name is reserved for the single-capability
+     case, so a consumer's ::part(trigger) selector unambiguously targets
+     exactly one button), so both buttons share this plain class for the
+     declarations that genuinely are identical, on top of each one's own
+     distinct part name. */
   .trigger-button {
     display: inline-flex;
     flex: 0 0 auto;
@@ -59,6 +60,27 @@ export const styles = css`
   }
   .trigger-button svg {
     display: block;
+  }
+
+  /* [part='menu-trigger'] carries a second glyph (the paperclip plus this
+     disclosure chevron) alongside the single-capability [part='trigger']'s
+     one, so it alone needs a gap between them. */
+  [part='menu-trigger'] {
+    gap: var(--lyra-space-xs);
+  }
+
+  /* Disclosure cue for the multi-capability trigger, matching
+     lyra-combobox/lyra-select's own [part='expand-icon'] convention (same
+     chevronIcon() rotated to point down) -- but sized down from their
+     dedicated-touch-target treatment since here it's a second glyph inside
+     one already-compact icon button, not its own separate control. */
+  [part='expand-icon'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 0.75em;
+  }
+  [part='expand-icon'] svg {
+    transform: rotate(90deg);
   }
 
   @media (prefers-reduced-motion: reduce) {

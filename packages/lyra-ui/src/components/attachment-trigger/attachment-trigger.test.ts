@@ -196,6 +196,23 @@ it('renders a lyra-menu with one item per capability, in order, once more than o
   expect(menuTriggerButton(el).getAttribute('aria-label')).to.equal('Add attachment');
 });
 
+it('gives the multi-capability trigger its own stylable part and a disclosure chevron', async () => {
+  const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+  el.capabilities = ['files', 'image'];
+  await el.updateComplete;
+
+  const btn = menuTriggerButton(el);
+  // Distinct from the single-capability button's reserved part='trigger' so
+  // a consumer's ::part(menu-trigger) selector unambiguously targets this
+  // one -- previously this button carried no part at all and was
+  // unreachable from outside the shadow root.
+  expect(btn.getAttribute('part')).to.equal('menu-trigger');
+
+  const expandIcon = btn.querySelector('[part="expand-icon"]');
+  expect(expandIcon, 'chevron disclosure cue, matching combobox/select').to.exist;
+  expect(expandIcon!.querySelector('svg')).to.exist;
+});
+
 it('selecting the files menu item clicks the hidden native input', async () => {
   const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
   el.capabilities = ['files', 'camera'];

@@ -2,6 +2,7 @@ import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { chevronIcon } from '../../internal/icons.js';
 import { styles } from './attachment-trigger.styles.js';
 import type { MenuSelectDetail } from '../menu/menu.js';
 import '../menu/menu.js';
@@ -126,6 +127,8 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
  * actual capture flow.
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
  * @csspart menu - The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.
+ * @csspart menu-trigger - The multi-capability button slotted into `<lyra-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
+ * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
  */
 export class LyraAttachmentTrigger extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -243,12 +246,14 @@ export class LyraAttachmentTrigger extends LyraElement {
       <lyra-menu part="menu" label="Add attachment" @lyra-menu-select=${this.onMenuSelect}>
         <button
           slot="trigger"
+          part="menu-trigger"
           class="trigger-button"
           type="button"
           aria-label="Add attachment"
           ?disabled=${this.disabled}
         >
           ${paperclipIcon()}
+          <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
         ${this.capabilities.map((capability) => {
           const meta = CAPABILITY_META[capability];
