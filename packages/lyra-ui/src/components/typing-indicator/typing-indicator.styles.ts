@@ -19,8 +19,8 @@ export const styles = css`
     align-items: center;
     vertical-align: middle;
     line-height: 1;
-    --lyra-typing-dot-size: 0.5rem;
-    --lyra-typing-gap: 0.25rem;
+    --lyra-typing-dot-size: var(--lyra-space-s);
+    --lyra-typing-gap: var(--lyra-space-xs);
     --lyra-typing-cursor-width: 0.125rem;
     --lyra-typing-cursor-height: 1em;
   }
