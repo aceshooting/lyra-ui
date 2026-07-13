@@ -10,6 +10,11 @@ export interface ChipRemoveDetail {
   value?: string;
 }
 
+export interface ChipSelectDetail {
+  value?: string;
+  selected: boolean;
+}
+
 /**
  * `<lyra-chip>` — a small, content-agnostic pill for a short label: a tag, an
  * active-filter/scope indicator, etc. Distinct from `<lyra-attachment-chip>`
@@ -40,6 +45,9 @@ export interface ChipRemoveDetail {
  * Enter/Space while focused — native `<button>` behavior). `detail: { value }`
  * — `value` is `undefined` when the `value` prop was never set. Only
  * rendered while `removable`.
+ * @event lyra-chip-select - Fired on click, or Enter/Space while focused, when `selected` mode is
+ * active (and `removable` is not set). `detail: { value, selected }` -- the chip has already
+ * toggled its own `selected` state by the time this fires.
  * @csspart base - The pill's root container.
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
@@ -53,6 +61,16 @@ export class LyraChip extends LyraElement {
 
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = false;
+
+  /** Opt-in toggle/pressed mode -- when set, `[part='base']` itself becomes focusable and
+   *  keyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects
+   *  `aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. Has no effect
+   *  (no interactive semantics added to `[part='base']`) when combined with `removable`, since the
+   *  remove button already nests inside `[part='base']` -- axe-core's `nested-interactive` rule
+   *  forbids a focusable descendant of a `role="button"` ancestor, and this component's two real
+   *  use cases (a chart-series visibility toggle, a category filter chip) never need both at once.
+   *  `false` (the default) reproduces today's exact passive-label-pill output. */
+  @property({ type: Boolean, reflect: true }) selected = false;
 
   /** Opaque consumer bookkeeping value — never read, validated, or rendered
    *  by this component itself, only ever echoed back verbatim (including
@@ -105,9 +123,31 @@ export class LyraChip extends LyraElement {
     this.emit<ChipRemoveDetail>('lyra-remove', { value: this.value });
   };
 
+  private onBaseClick = (): void => {
+    if (this.removable) return;
+    this.selected = !this.selected;
+    this.emit<ChipSelectDetail>('lyra-chip-select', { value: this.value, selected: this.selected });
+  };
+
+  private onBaseKeyDown = (e: KeyboardEvent): void => {
+    if (this.removable) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      this.onBaseClick();
+    }
+  };
+
   render(): TemplateResult {
+    const interactive = this.selected && !this.removable;
     return html`
-      <span part="base">
+      <span
+        part="base"
+        role=${interactive ? 'button' : nothing}
+        tabindex=${interactive ? '0' : nothing}
+        aria-pressed=${interactive ? (this.selected ? 'true' : 'false') : nothing}
+        @click=${interactive ? this.onBaseClick : nothing}
+        @keydown=${interactive ? this.onBaseKeyDown : nothing}
+      >
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>

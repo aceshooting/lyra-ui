@@ -55,6 +55,23 @@ export const styles = css`
     line-height: var(--lyra-line-height-snug);
   }
 
+  [part='base'][role='button'] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--lyra-transition-fast);
+  }
+  [part='base'][role='button']:hover {
+    background: color-mix(in srgb, var(--lyra-chip-accent) 8%, var(--lyra-chip-bg));
+  }
+  [part='base'][role='button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='base'][aria-pressed='true'] {
+    background: var(--lyra-chip-bg);
+    border-color: var(--lyra-chip-accent);
+  }
+
   [part='icon'] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -109,7 +126,8 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part='remove-button'] {
+    [part='remove-button'],
+    [part='base'][role='button'] {
       transition: none !important;
     }
   }
