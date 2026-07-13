@@ -958,6 +958,38 @@ describe('minBarHeight', () => {
     const tinyHeight = Number(bars[1]!.getAttribute('height'));
     expect(tinyHeight).to.be.lessThan(4);
   });
+
+  it('does not let a floored tiny segment get overdrawn by the next stacked segment (z-order/gap check)', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        stacked
+        min-bar-height="4"
+        .labels=${['a']}
+        .datasets=${[
+          { label: 'tiny', data: [1] },
+          { label: 'big', data: [1000] },
+        ]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+    expect(bars).to.have.length(2);
+    const tinyTop = Number(bars[0]!.getAttribute('y'));
+    const tinyHeight = Number(bars[0]!.getAttribute('height'));
+    const tinyBottom = tinyTop + tinyHeight;
+    const bigTop = Number(bars[1]!.getAttribute('y'));
+    const bigHeight = Number(bars[1]!.getAttribute('height'));
+    const bigBottom = bigTop + bigHeight;
+    // The floored "tiny" segment (drawn first, bottom of the stack) must occupy a real,
+    // unoccluded pixel span -- "big" (painted after/on top) must start no earlier than
+    // where "tiny" ends, not overlap into "tiny"'s own floored area.
+    expect(tinyHeight).to.be.at.least(4);
+    expect(bigBottom).to.be.closeTo(tinyTop, 0.5);
+    expect(bigTop).to.be.lessThan(bigBottom);
+  });
 });
 
 // --- scale="sqrt" stacked proportionality -----------------------------------------
@@ -1036,5 +1068,40 @@ describe('chartLabel', () => {
     `)) as LyraLiteChart;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('A');
+  });
+});
+
+// --- selectedIndex -------------------------------------------------------------------
+
+describe('selectedIndex', () => {
+  it('reflects data-selected onto every bar at the given category index, across datasets', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        type="bar"
+        .labels=${['a', 'b']}
+        .datasets=${[
+          { label: 'x', data: [1, 2] },
+          { label: 'y', data: [3, 4] },
+        ]}
+        .selectedIndex=${[1]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
+    const selected = bars.filter((b) => b.hasAttribute('data-selected'));
+    expect(selected).to.have.length(2); // both datasets' bar at category index 1
+  });
+
+  it('reflects nothing when selectedIndex is empty (the default)', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 'x', data: [1] }]}></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    el.style.height = '300px';
+    await el.updateComplete;
+    await aTimeout(0);
+    const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
+    expect(bars.some((b) => b.hasAttribute('data-selected'))).to.be.false;
   });
 });

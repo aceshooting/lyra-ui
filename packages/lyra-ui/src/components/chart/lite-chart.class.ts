@@ -147,7 +147,7 @@ export interface LyraLiteChartEventMap {
  * @csspart grid-line - Each horizontal gridline.
  * @csspart axis-label - Each axis tick label.
  * @csspart axis-title - The x/y axis title text, when set.
- * @csspart bar - Each bar rect (type="bar").
+ * @csspart bar - Each bar rect (type="bar"). Carries `data-selected` when its category index is in `selectedIndex`.
  * @csspart line - Each series' stroked line path (type="line").
  * @csspart point - Each series' per-point hit target (type="line").
  * @csspart legend - The legend row, when `legend` is set.
@@ -227,6 +227,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  (that's `skipZero`'s job, not this one's). Unset (the default) reproduces today's
    *  `Math.max(0, y2 - y1)` exactly, with no floor. */
   @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
+  /** Category indexes to mark `data-selected` on every bar/segment at that index, across every
+   *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the
+   *  default) reproduces today's exact output: no bar carries `data-selected`. A consumer's own
+   *  `::part(bar)[data-selected]` (or `[data-selected]` inside the shadow root via a documented
+   *  CSS custom property) rule can then style the highlight -- this component takes no opinion on
+   *  what the highlight looks like, only which bars it applies to. */
+  @property({ attribute: false }) selectedIndex: number[] = [];
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)
    *  keeps today's auto-derived (English-fallback) label exactly. */
@@ -523,8 +530,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       // it, same as it does on top of the internal formula.
       const origin = this.barX ? this.barX(i) : plotX + i * slot;
       const slotStart = origin + (slot - groupW) / 2;
-      let stackPos = 0; // running positive-side offset (in value units) for stacked bars
-      let stackNeg = 0; // running negative-side offset
+      let stackPos = 0; // running positive-side offset (value units) -- kept only for the stackedSqrt branch below
+      let stackNeg = 0; // running negative-side offset (value units) -- kept only for the stackedSqrt branch below
+      // Running PIXEL cursors for the plain (non-sqrt) stacked case: each segment's own edge derives
+      // from wherever the previous (possibly minBarHeight-floored) segment actually ended on screen,
+      // not from re-deriving position from cumulative value -- this is what makes a floored segment's
+      // inflation "push" the next segment instead of being silently overdrawn by it.
+      const zeroY = this.barValueToY(0, plotY, plotH, lo, hi);
+      let posPixelTop = zeroY;
+      let negPixelBottom = zeroY;
       // sqrt-compressed pixel height of this category's positive/negative
       // stack total, computed once per category (not per segment) -- see
       // barValueToY()'s doc comment for why this differs from the old,
@@ -562,19 +576,24 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           }
         } else if (this.stacked) {
           rectX = slotStart;
-          let barValLo: number;
-          let barValHi: number;
           if (v >= 0) {
-            barValLo = stackPos;
-            barValHi = stackPos + v;
+            // A segment's own proportional height (linear scale) depends only on its own value,
+            // not on where it sits in the stack -- compute it in isolation, floor it, then stack
+            // from the running pixel cursor rather than from cumulative value.
+            const naturalH = Math.max(0, zeroY - this.barValueToY(v, plotY, plotH, lo, hi));
+            const segH = this.minBarHeight != null && v !== 0 && naturalH < this.minBarHeight ? this.minBarHeight : naturalH;
+            y2 = posPixelTop;
+            y1 = posPixelTop - segH;
+            posPixelTop = y1;
             stackPos += v;
           } else {
-            barValLo = stackNeg + v;
-            barValHi = stackNeg;
+            const naturalH = Math.max(0, this.barValueToY(v, plotY, plotH, lo, hi) - zeroY);
+            const segH = this.minBarHeight != null && v !== 0 && naturalH < this.minBarHeight ? this.minBarHeight : naturalH;
+            y1 = negPixelBottom;
+            y2 = negPixelBottom + segH;
+            negPixelBottom = y2;
             stackNeg += v;
           }
-          y1 = this.barValueToY(barValHi, plotY, plotH, lo, hi);
-          y2 = this.barValueToY(barValLo, plotY, plotH, lo, hi);
         } else {
           rectX = slotStart + di * (barW + BAR_GAP * slot);
           const zeroClamped = Math.min(hi, Math.max(lo, 0));
@@ -595,12 +614,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         // terminates at its correct baseline (a floored segment "pushes" any
         // segments stacked after it, the same tradeoff a hand-rolled
         // Math.max(2, scaleToLength(...)) floor accepts).
-        if (this.minBarHeight != null && v !== 0 && h < this.minBarHeight) {
+        // The plain-stacked branch above already applies minBarHeight per-segment against a running
+        // pixel cursor (so a floored segment "pushes" the next one) -- applying the floor again here
+        // would double-apply it. Only the non-stacked and stackedSqrt paths still need it here.
+        if (!(this.stacked && !stackedSqrt) && this.minBarHeight != null && v !== 0 && h < this.minBarHeight) {
           const extra = this.minBarHeight - h;
           y1 -= extra;
           h = this.minBarHeight;
         }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
+        const selected = this.selectedIndex.includes(i);
         bars.push(
           this.roundedBars
             ? svg`
@@ -611,6 +634,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
             role="button"
             aria-label=${ariaLabel}
+            ?data-selected=${selected}
             @click=${() => this.emitPoint(di, i)}
             @focus=${() => this.onMarkFocus(markIndex)}
             @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
@@ -627,6 +651,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
             role="button"
             aria-label=${ariaLabel}
+            ?data-selected=${selected}
             @click=${() => this.emitPoint(di, i)}
             @focus=${() => this.onMarkFocus(markIndex)}
             @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
