@@ -1085,21 +1085,28 @@ describe('first-day-of-week (calendar mode)', () => {
     expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
   });
 
-  it('weekday-axis labels stay correct at the actually-anchored positions for a non-Sunday firstDayOfWeek', async () => {
+  it('weekday-axis labels stay Mon/Wed/Fri (re-anchored to the correct rows) for a non-Sunday firstDayOfWeek', async () => {
     const el = (await fixture(
       html`<lyra-heatmap mode="calendar" first-day-of-week="1"></lyra-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
     // 2026-01-19 is a Monday -- with firstDayOfWeek=1, buildCalendarGrid() anchors firstWeekStart
-    // at that exact Monday (daysBackToAnchor is 0 for a Monday date).
+    // at that exact Monday (daysBackToAnchor is 0 for a Monday date), so grid row 0 is Monday,
+    // row 1 Tuesday, ... row 6 Sunday.
     const firstWeekStart = new Date(Date.UTC(2026, 0, 19));
     const labels = (el as unknown as { weekdayLabels: (d: Date) => string[] }).weekdayLabels(firstWeekStart);
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
-    // Row 1 in a Monday-first grid is Tuesday, row 3 is Thursday, row 5 is Saturday -- NOT the
-    // Sunday-first Mon/Wed/Fri a hardcoded-anchor bug would produce.
-    expect(labels[1]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 20)))); // Tuesday
-    expect(labels[3]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 22)))); // Thursday
-    expect(labels[5]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 24)))); // Saturday
+    // The labeled weekdays are always Monday/Wednesday/Friday, independent of the anchor -- with a
+    // Monday-first grid those land on rows 0/2/4 (not the Sunday-first grid's 1/3/5). Each expected
+    // date is an independently fixed Date.UTC(...) call, not a re-derivation of the implementation's
+    // own row formula, so this can actually fail if the row-to-date mapping is wrong.
+    expect(labels[0]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 19)))); // Monday
+    expect(labels[2]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 21)))); // Wednesday
+    expect(labels[4]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 23)))); // Friday
+    expect(labels[1]).to.equal('');
+    expect(labels[3]).to.equal('');
+    expect(labels[5]).to.equal('');
+    expect(labels[6]).to.equal('');
   });
 });
 

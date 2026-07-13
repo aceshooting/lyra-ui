@@ -809,22 +809,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /**
    * Locale-derived weekday-axis labels for the 7 rows drawn down the left of
-   * the calendar grid. Only indices 1, 3, and 5 (relative to `firstWeekStart`)
-   * are filled in — matching today's sparse every-other-day label density —
-   * the rest stay blank. `firstWeekStart` is always the UTC
-   * `firstDayOfWeek`-weekday by construction (see `buildCalendarGrid()`), so
-   * weekday index 0..6 is a fixed positional mapping relative to it (with the
-   * default `firstDayOfWeek` of 0, that's the original Sun..Sat mapping,
-   * unchanged); only the label *text* for indices 1/3/5 is derived here, via
-   * `Intl.DateTimeFormat` on a real UTC date that actually falls on that
-   * weekday, so it follows the runtime locale instead of a hardcoded English
-   * array (see `calendarCellText()`'s tooltip text for the same pattern).
+   * the calendar grid. The labeled weekdays are always Monday, Wednesday, and
+   * Friday — matching today's sparse every-other-day label density — the
+   * rest stay blank. Which *row* each one lands on depends on
+   * `firstDayOfWeek`, since `buildCalendarGrid()` anchors `firstWeekStart`
+   * (and therefore row 0) at that weekday. For each target weekday (using
+   * the standard JS convention, Sunday=0..Saturday=6, so Monday=1,
+   * Wednesday=3, Friday=5), the row is `(weekday - firstDayOfWeek + 7) % 7`;
+   * with the default `firstDayOfWeek` of 0 this reduces to rows 1/3/5,
+   * unchanged. The label *text* for each computed row is derived via
+   * `Intl.DateTimeFormat` on a real UTC date that actually falls on that row,
+   * so it follows the runtime locale instead of a hardcoded English array
+   * (see `calendarCellText()`'s tooltip text for the same pattern).
    */
   private weekdayLabels(firstWeekStart: Date): string[] {
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
     const labels = ['', '', '', '', '', '', ''];
     for (const weekday of [1, 3, 5]) {
-      labels[weekday] = formatter.format(new Date(firstWeekStart.getTime() + weekday * MS_PER_DAY));
+      const row = (weekday - this.firstDayOfWeek + 7) % 7;
+      labels[row] = formatter.format(new Date(firstWeekStart.getTime() + row * MS_PER_DAY));
     }
     return labels;
   }
