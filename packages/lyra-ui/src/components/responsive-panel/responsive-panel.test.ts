@@ -92,6 +92,24 @@ it('uses a real matchMedia query against mobile-breakpoint: an absurdly small br
   expect(panel.hasAttribute('role')).to.be.false;
 });
 
+it('re-evaluates against the new mobile-breakpoint when it changes at runtime while connected in mode="auto"', async () => {
+  const el = (await fixture(
+    html`<lyra-responsive-panel mobile-breakpoint="1px" open>body</lyra-responsive-panel>`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  let panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.hasAttribute('role'), 'starts inline: viewport is wider than 1px').to.be.false;
+
+  // Flips the real matchMedia result for this instance (the test viewport is
+  // never actually below 99999px, so this only proves anything if the
+  // component re-queries matchMedia against the new value and picks up the
+  // now-true match -- a stale belowBreakpoint would leave this stuck inline).
+  el.mobileBreakpoint = '99999px';
+  await el.updateComplete;
+  panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('role'), 'switches to overlay once the new breakpoint matches').to.equal('dialog');
+});
+
 it('hides [part="base"] entirely while closed, in both presentations', async () => {
   const inline = (await fixture(html`<lyra-responsive-panel mode="inline">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
   const overlay = (await fixture(html`<lyra-responsive-panel mode="overlay">body</lyra-responsive-panel>`)) as LyraResponsivePanel;
@@ -165,7 +183,7 @@ it('a live breakpoint crossing while already open in overlay mode engages scroll
   expect(document.documentElement.style.overflow).to.equal('');
 });
 
-it('does not steal focus into the panel merely from a breakpoint crossing while already open (only a genuine open transition does)', async () => {
+it('moves outside focus into the panel when a breakpoint crossing makes it modal', async () => {
   const outside = document.createElement('button');
   outside.textContent = 'outside';
   document.body.appendChild(outside);
@@ -180,7 +198,7 @@ it('does not steal focus into the panel merely from a breakpoint crossing while 
   asAny(el).handleBreakpointChange(true);
   await el.updateComplete;
 
-  expect(document.activeElement).to.equal(outside);
+  expect(document.activeElement?.textContent).to.equal('inside');
   outside.remove();
 });
 
@@ -447,6 +465,83 @@ it('is accessible while open in the overlay presentation with a label', async ()
   )) as LyraResponsivePanel;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('falls back to the header slot content as aria-label when label is unset', async () => {
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="overlay" open
+      ><span slot="header">Filters</span>
+      <p>Filter controls go here.</p></lyra-responsive-panel
+    >`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('aria-label')).to.equal('Filters');
+});
+
+it('prefers a heading element within the header slot over its full text when both are present', async () => {
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="overlay" open
+      ><h2 slot="header">Filters</h2
+      ><button slot="header">Reset</button>
+      <p>Filter controls go here.</p></lyra-responsive-panel
+    >`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('aria-label')).to.equal('Filters');
+});
+
+it('prefers an explicit label over the header slot fallback', async () => {
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="overlay" open label="Explicit label"
+      ><span slot="header">Header text</span></lyra-responsive-panel
+    >`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('aria-label')).to.equal('Explicit label');
+});
+
+it('is accessible while open in the overlay presentation with header-slot content but no label', async () => {
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="overlay" open
+      ><span slot="header">Conversation history</span>
+      <p>History items go here.</p>
+      <div slot="footer"><button>Close</button></div></lyra-responsive-panel
+    >`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('captures lastTrigger only on a genuine open transition, so it survives a later breakpoint crossing into overlay and close() returns focus to the true original trigger (not something focused inside the panel meanwhile)', async () => {
+  const outsideTrigger = document.createElement('button');
+  outsideTrigger.textContent = 'outside trigger';
+  document.body.appendChild(outsideTrigger);
+  outsideTrigger.focus();
+
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="inline" open><button id="inside">inside</button></lyra-responsive-panel>`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+
+  // The user then interacts with something inside the (currently inline/docked) panel.
+  const inside = el.querySelector('#inside') as HTMLButtonElement;
+  inside.focus();
+
+  // Crossing into overlay while still open must not re-capture "inside" as
+  // the trigger, even though the overlay-chrome-engage branch fires here.
+  el.mode = 'auto';
+  (el as any).handleBreakpointChange(true);
+  await el.updateComplete;
+  expect(el.open, 'stays open through the transition').to.be.true;
+
+  el.close('escape');
+  await el.updateComplete;
+
+  expect(document.activeElement).to.equal(outsideTrigger);
+  outsideTrigger.remove();
 });
 
 it('is accessible while open in the bottom-sheet overlay variant', async () => {

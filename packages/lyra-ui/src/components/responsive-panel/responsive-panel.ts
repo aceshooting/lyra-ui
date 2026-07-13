@@ -1,47 +1,12 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { activateOverlay, deepActiveElement, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { styles } from './responsive-panel.styles.js';
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Shadow-piercing so a slotted custom element's real focusable target (e.g.
-// an <input> inside its own shadow root) is found even though the host tag
-// itself doesn't match FOCUSABLE_SELECTOR. Deliberately duplicated from
-// lyra-dialog's identical helper rather than imported/shared -- every
-// overlay-shaped component in this family (lyra-dialog, lyra-widget,
-// lyra-tool-result-dialog, lyra-tool-select-dialog) re-implements this
-// locally rather than nesting a previous overlay component inside its own
-// shadow DOM, because slot-forwarding would break the inner component's own
-// light-DOM scanning.
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/** Whether `el` is actually laid out/paintable -- `checkVisibility()` (falling
- *  back to `getClientRects().length` where unsupported) correctly follows
- *  flattened-tree/slot assignment, unlike `offsetParent`. Mirrors
- *  lyra-dialog's identical helper. */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
-}
+const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
 /** The `mode` property's literal value -- `'auto'` tracks the viewport
  *  breakpoint live; `'inline'`/`'overlay'` force that presentation
@@ -95,18 +60,26 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  * attributes and backdrop element, differ), so lit-html's diffing keeps
  * `[part="body"]` and its `<slot>` as the same DOM node across the
  * transition -- scroll position and focus inside the slotted content survive
- * it for free, with no extra bookkeeping required. The one exception is
- * focus: crossing the breakpoint while already open does *not* forcibly
- * move focus into the panel (unlike an `open` transition, which does) --
- * doing so on a resize could yank focus away from an input the user is
- * actively typing into inside the now-newly-modal panel, which is worse UX
- * than a modal that's very briefly missing its initial focus placement.
+ * it for free. When an open inline panel becomes modal, focus already inside
+ * is preserved and outside focus moves to the first available target. Closing
+ * still returns to the opener captured by the original inline open.
  *
- * The overlay presentation duplicates lyra-dialog's `role="dialog"` +
- * focus-trap + Escape/backdrop-dismiss + scroll-lock mechanics locally
- * rather than nesting a `<lyra-dialog>` inside this component's shadow DOM,
- * per the established precedent for every overlay-shaped component in this
- * family (see lyra-dialog's own module doc).
+ * The overlay presentation uses the library's shared overlay coordinator for
+ * focus trapping, Escape/backdrop dismissal, inerting, and stack ordering,
+ * while retaining this component's own responsive rendering and close event.
+ *
+ * Accessible name (overlay presentation only -- the inline presentation has
+ * no dialog semantics to name): `label`, when set, is used verbatim. When
+ * `label` is empty, this falls back to the `header` slot's content -- a
+ * heading element (`h1`–`h6` or `[role="heading"]`) among the slotted header
+ * content wins if present, otherwise the header slot's full text content is
+ * used, mirroring lyra-dialog's `detectHeading()`/`headingText` fallback (see
+ * dialog.ts's module doc for why this uses `aria-label`, a copied string,
+ * rather than `aria-labelledby`: the header content is light DOM while
+ * `[part="panel"]` lives in this element's shadow tree, and an ID-reference
+ * attribute can't resolve across that boundary). A panel opened without
+ * either `label` or header content still renders `role="dialog"` with no
+ * accessible name -- set one of the two to avoid that.
  *
  * @customElement lyra-responsive-panel
  * @slot - The panel body.
@@ -151,7 +124,8 @@ export class LyraResponsivePanel extends LyraElement {
   @property({ reflect: true }) variant: ResponsivePanelVariant = 'fullscreen';
 
   /** Accessible name for the overlay presentation's `role="dialog"`. Unused in the inline
-   *  presentation, which has no dialog semantics to name. */
+   *  presentation, which has no dialog semantics to name. When empty, falls back to the `header`
+   *  slot's content -- see the class doc for the full fallback order. */
   @property() label = '';
 
   /** CSS length passed to `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`,
@@ -163,15 +137,19 @@ export class LyraResponsivePanel extends LyraElement {
   @state() private effectiveMode: ResponsivePanelEffectiveMode = 'inline';
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
+  /** Fallback accessible name sourced from the `header` slot's content -- see `detectHeadingText()`. */
+  @state() private headingText?: string;
 
   private mediaQuery?: MediaQueryList;
   private releaseScrollLock?: () => void;
   private lastTrigger?: HTMLElement;
-  /** Whether the overlay-only mechanics (scroll-lock, document Escape/Tab trap) are currently
+  private overlayHandle?: OverlayHandle;
+  /** Whether the overlay-only mechanics (scroll-lock and shared overlay registration) are currently
    *  engaged -- derived from `effectiveMode === 'overlay' && open`, tracked separately from those
    *  two properties so willUpdate can diff "was engaged" vs "should be engaged now" regardless of
    *  which of the two changed. */
   private overlayChromeActive = false;
+  private focusOverlayAfterUpdate = false;
   private isFirstUpdate = true;
 
   protected willUpdate(changed: PropertyValues): void {
@@ -179,46 +157,67 @@ export class LyraResponsivePanel extends LyraElement {
     if (this.isFirstUpdate) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
+      this.headingText = this.detectHeadingText();
+    }
+    // Must run before the effectiveMode computation below reads
+    // belowBreakpoint: setupMediaQuery() -> handleBreakpointChange() mutates
+    // belowBreakpoint synchronously, and a runtime mobileBreakpoint change is
+    // otherwise the only kind of change in this method that doesn't itself
+    // touch mode/belowBreakpoint, so computing effectiveMode first would read
+    // the not-yet-updated belowBreakpoint and never get another chance to
+    // react -- a property write from inside willUpdate doesn't schedule a
+    // fresh update, it only folds into the one already in progress.
+    // mobileBreakpoint is present on the very first willUpdate too (Lit's
+    // changed-properties map includes every class-field default from
+    // construction), but connectedCallback() already called setupMediaQuery()
+    // once before this first update runs, so repeating it here would be
+    // redundant -- only a live post-mount change should re-run it.
+    if (!this.isFirstUpdate && changed.has('mobileBreakpoint') && this.isConnected) {
+      this.setupMediaQuery();
     }
     if (this.isFirstUpdate || changed.has('mode') || changed.has('belowBreakpoint')) {
       this.effectiveMode = resolveEffectiveMode(this.mode, this.belowBreakpoint);
     }
-    if (changed.has('mobileBreakpoint') && this.isConnected) {
-      this.setupMediaQuery();
+
+    // Captured on a genuine open transition only, independent of
+    // effectiveMode at that moment -- so it reflects whatever triggered the
+    // open even if a later breakpoint crossing (while still open) switches
+    // the presentation to overlay before close() runs. Deliberately not
+    // folded into the overlayOpen-engage branch below: that branch also
+    // fires when only effectiveMode (not open) changes, which would
+    // re-capture whatever currently has focus (e.g. something inside the
+    // panel) instead of the original external trigger.
+    if (changed.has('open') && this.open) {
+      const active = deepActiveElement(this.ownerDocument);
+      this.lastTrigger = active && typeof (active as HTMLElement).focus === 'function' ? (active as HTMLElement) : undefined;
     }
 
     const overlayOpen = this.effectiveMode === 'overlay' && this.open;
     if (overlayOpen !== this.overlayChromeActive) {
       this.overlayChromeActive = overlayOpen;
       if (overlayOpen) {
-        const active = this.getActiveElement();
-        this.lastTrigger = active instanceof HTMLElement ? active : undefined;
-        this.releaseScrollLock = lockScroll();
-        document.addEventListener('keydown', this.onDocKeyDown);
+        this.activateOverlayChrome();
+        // Once the presentation becomes modal, focus cannot remain behind
+        // it. The manager preserves focus that is already inside the panel
+        // and otherwise moves it to the first composed focus target.
+        this.focusOverlayAfterUpdate = true;
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
-        document.removeEventListener('keydown', this.onDocKeyDown);
+        this.deactivateOverlayChrome();
       }
     }
+    if (changed.has('open') && !this.open) this.lastTrigger = undefined;
   }
 
   // Runs after render (not willUpdate) so [part="panel"] has already landed
   // in the DOM before the fallback .focus() call below can rely on it --
-  // mirrors lyra-dialog's identical ordering rationale. Only a genuine `open`
-  // transition steals focus (see the class doc for why a breakpoint-crossing
-  // while already open deliberately does not).
+  // mirrors lyra-dialog's identical ordering rationale.
   protected updated(changed: PropertyValues): void {
     if (!this.isFirstUpdate && changed.has('effectiveMode')) {
       this.emit<ResponsivePanelModeChangeDetail>('lyra-mode-change', { mode: this.effectiveMode });
     }
-    if (changed.has('open') && this.open && this.effectiveMode === 'overlay') {
-      const first = this.getFocusableElements()[0];
-      if (first) {
-        first.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]')?.focus();
-      }
+    if (this.focusOverlayAfterUpdate) {
+      this.focusOverlayAfterUpdate = false;
+      this.overlayHandle?.focusInitial();
     }
   }
 
@@ -229,10 +228,15 @@ export class LyraResponsivePanel extends LyraElement {
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
     // notice overlay chrome is still supposed to be active -- restore it.
-    // Mirrors lyra-dialog's identical reconnect handling.
-    if (this.hasUpdated && this.overlayChromeActive && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    const overlayOpen = resolveEffectiveMode(this.mode, this.belowBreakpoint) === 'overlay' && this.open;
+    if (this.hasUpdated && overlayOpen) {
+      if (this.overlayHandle?.isActive()) {
+        this.overlayHandle.resume();
+      } else {
+        this.activateOverlayChrome();
+      }
+      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
   }
 
@@ -242,12 +246,35 @@ export class LyraResponsivePanel extends LyraElement {
     this.mediaQuery = undefined;
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlayHandle?.suspend();
+  }
+
+  private activateOverlayChrome(): void {
+    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.close('escape'),
+      onBackdrop: () => this.close('backdrop'),
+      restoreFocusTo: this.lastTrigger ?? null,
+    });
+  }
+
+  private deactivateOverlayChrome(): void {
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlayHandle?.deactivate();
+    this.overlayHandle = undefined;
   }
 
   private setupMediaQuery(): void {
     this.mediaQuery?.removeEventListener('change', this.onMediaChange);
-    this.mediaQuery = window.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
+    const view = this.ownerDocument.defaultView;
+    if (!view?.matchMedia) {
+      this.mediaQuery = undefined;
+      return;
+    }
+    this.mediaQuery = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
     this.mediaQuery.addEventListener('change', this.onMediaChange);
     this.handleBreakpointChange(this.mediaQuery.matches);
   }
@@ -265,11 +292,34 @@ export class LyraResponsivePanel extends LyraElement {
 
   private onHeaderSlotChange = (e: Event): void => {
     this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.headingText = this.detectHeadingText();
   };
 
   private onFooterSlotChange = (e: Event): void => {
     this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
+
+  // Only direct children slotted into `header` are scanned -- same depth
+  // limit lyra-dialog's own detectHeading() applies to its direct children.
+  // A heading tag among them wins (its own text only, so a header slot mixing
+  // a heading with e.g. a trailing icon button doesn't pull the button's
+  // label into the accessible name); otherwise the header slot's combined
+  // text stands in for it, since this component (unlike lyra-dialog) has a
+  // dedicated header slot that's already the conventional place a heading
+  // would go. Recomputed only on slot assignment changes, not on every
+  // render -- same rationale as lyra-dialog's detectHeading().
+  private detectHeadingText(): string | undefined {
+    const headerChildren = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'header');
+    if (headerChildren.length === 0) return undefined;
+    const heading = headerChildren.find((el) => el.matches(HEADING_SELECTOR));
+    if (heading) return heading.textContent?.trim() || undefined;
+    return (
+      headerChildren
+        .map((el) => el.textContent?.trim())
+        .filter(Boolean)
+        .join(' ') || undefined
+    );
+  }
 
   /**
    * Close the panel. `reason` is forwarded as the `lyra-close` detail --
@@ -285,69 +335,15 @@ export class LyraResponsivePanel extends LyraElement {
     if (!this.open) return;
     this.open = false;
     this.emit<ResponsivePanelCloseReason>('lyra-close', reason);
-    if (this.effectiveMode === 'overlay') {
-      this.lastTrigger?.focus();
-    }
   }
 
   private onBackdropClick = (): void => {
-    this.close('backdrop');
+    this.overlayHandle?.dismissBackdrop();
   };
-
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.overlayChromeActive) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.close('escape');
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while overlay chrome is active. Order
-  // follows the header slot, then the body slot, then the footer slot -- the
-  // same order the flattened tree already tabs through.
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const fromSlot = (selector: string): HTMLElement[] => {
-      const slot = root.querySelector<HTMLSlotElement>(selector);
-      return slot ? slot.assignedElements({ flatten: true }).flatMap(collectFocusable) : [];
-    };
-    return [
-      ...fromSlot('slot[name="header"]'),
-      ...fromSlot('slot:not([name])'),
-      ...fromSlot('slot[name="footer"]'),
-    ].filter(isRendered);
-  }
-
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
-  }
 
   render(): TemplateResult {
     const overlay = this.effectiveMode === 'overlay';
+    const accessibleName = this.label || this.headingText;
     return html`
       <div part="base" class=${overlay ? 'overlay' : 'inline'}>
         ${overlay ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}
@@ -355,7 +351,7 @@ export class LyraResponsivePanel extends LyraElement {
           part="panel"
           role=${overlay ? 'dialog' : nothing}
           aria-modal=${overlay ? 'true' : nothing}
-          aria-label=${overlay && this.label ? this.label : nothing}
+          aria-label=${overlay && accessibleName ? accessibleName : nothing}
           tabindex=${overlay ? '-1' : nothing}
         >
           <div part="header" ?hidden=${!this.hasHeaderSlot}>
