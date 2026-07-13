@@ -88,6 +88,37 @@ export const WithDisabledItem: Story = {
   `,
 };
 
+/** A non-`<lyra-menu-item>` control (here, a text filter input) slotted
+ *  alongside the items keeps its own full default keyboard behavior —
+ *  Arrow/Home/End/Enter/Space never get hijacked from it. With
+ *  `close-on-escape-anywhere` set, Escape from that input still closes the
+ *  menu and refocuses the trigger, matching what Escape already does from a
+ *  real item; without it (the default), Escape from the input is left alone. */
+export const SlottedControlWithEscapeAnywhere: Story = {
+  render: () => html`
+    <lyra-menu label="Filtered actions" close-on-escape-anywhere>
+      <button
+        slot="trigger"
+        aria-label="Filtered actions"
+        style="border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);background:var(--lyra-color-surface);cursor:pointer;padding:0.4rem 0.75rem;"
+      >
+        Actions ▾
+      </button>
+      <div style="padding:0.4rem 0.6rem;">
+        <input
+          type="text"
+          placeholder="Filter…"
+          style="inline-size:100%;box-sizing:border-box;padding:0.3rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:var(--lyra-radius);"
+        />
+      </div>
+      <hr />
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+      <lyra-menu-item value="delete" destructive>Delete</lyra-menu-item>
+    </lyra-menu>
+  `,
+};
+
 /** `lyra-menu-select` is the recommended single event to listen to on
  *  `<lyra-menu>` itself, rather than every individual `<lyra-menu-item>`. */
 export const SelectEvent: Story = {

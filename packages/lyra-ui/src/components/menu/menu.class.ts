@@ -58,7 +58,12 @@ export interface LyraMenuEventMap {
  *   behavior proceeds untouched). A printable keypress runs type-ahead:
  *   roving focus jumps to the next non-disabled item whose text starts with
  *   the accumulated buffer, cycling from just after the active item (mirrors
- *   `<lyra-select>`'s identical listbox type-ahead).
+ *   `<lyra-select>`'s identical listbox type-ahead). All of the above (except
+ *   Escape) only respond to keydowns from a real `<lyra-menu-item>` target,
+ *   so a slotted non-item control (e.g. a date input) keeps its own full
+ *   default keyboard behavior. Escape from such a slotted control closes the
+ *   menu too, but only when `closeOnEscapeAnywhere` is set — it defaults to
+ *   `false`, so existing consumers keep today's behavior unchanged.
  * - A click outside both the trigger and the open popup closes it (mirrors
  *   `<lyra-select>`'s `onDocPointer` exactly) — this does *not* refocus the
  *   trigger, since the outside click itself already moved focus somewhere
@@ -117,6 +122,16 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** Accessible name for the `role="menu"` popup — override with something
    *  specific (e.g. "Row actions") when a page has more than one menu. */
   @property() label = 'Menu';
+
+  /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
+   *  events originating from slotted non-item content within `[part="list"]`
+   *  (e.g. a date input or a custom section slotted alongside
+   *  `<lyra-menu-item>`s), not just from a real `<lyra-menu-item>`. Default
+   *  `false` leaves Escape from slotted non-item content with full default
+   *  keyboard behavior, matching every existing consumer. Arrow/Home/End/
+   *  Enter/Space stay scoped to real `<lyra-menu-item>` targets regardless of
+   *  this property — only Escape is affected. */
+  @property({ type: Boolean, attribute: 'close-on-escape-anywhere' }) closeOnEscapeAnywhere = false;
 
   // Plain instance fields, not @state() -- render()'s template never reads
   // either (items render via the plain default <slot>; there is no
@@ -373,7 +388,18 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private onListKeyDown = (e: KeyboardEvent): void => {
-    if (!(e.target instanceof LyraMenuItem)) return;
+    const isItemTarget = e.target instanceof LyraMenuItem;
+    // Escape alone can be opted in (via closeOnEscapeAnywhere) to close the
+    // menu from slotted non-item content too, e.g. a slotted form control --
+    // every other key below stays scoped to real LyraMenuItem targets so it
+    // never hijacks keydown from arbitrary slotted content (the bug the
+    // instanceof guard below exists to prevent).
+    if (e.key === 'Escape' && (isItemTarget || this.closeOnEscapeAnywhere)) {
+      e.preventDefault();
+      this.hide(true);
+      return;
+    }
+    if (!isItemTarget) return;
     const navigable = this.items.filter((i) => this.isNavigable(i));
     const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentNavIndex = current ? navigable.indexOf(current) : -1;
@@ -406,10 +432,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // keydown handler, rather than each row wiring its own keydown.
         e.preventDefault();
         current?.select();
-        break;
-      case 'Escape':
-        e.preventDefault();
-        this.hide(true);
         break;
       case 'Tab':
         // No preventDefault -- the browser's own default Tab navigation is

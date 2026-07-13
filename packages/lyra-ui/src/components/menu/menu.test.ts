@@ -484,6 +484,71 @@ it('still intercepts Arrow/Home/End/Escape from a real LyraMenuItem target (unch
   expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(1);
 });
 
+it('does not close on Escape from slotted non-item content when closeOnEscapeAnywhere is unset (default)', async () => {
+  const el = (await fixture(html`
+    <lyra-menu label="Row actions">
+      <button slot="trigger" aria-label="Row actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <input type="text" />
+    </lyra-menu>
+  `)) as LyraMenu;
+  const input = el.querySelector('input') as HTMLInputElement;
+  el.open = true;
+  await el.updateComplete;
+  input.focus();
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+});
+
+it('closes and refocuses the trigger on Escape from slotted non-item content when closeOnEscapeAnywhere is true', async () => {
+  const el = (await fixture(html`
+    <lyra-menu label="Row actions" close-on-escape-anywhere>
+      <button slot="trigger" aria-label="Row actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <input type="text" />
+    </lyra-menu>
+  `)) as LyraMenu;
+  const btn = trigger(el);
+  const input = el.querySelector('input') as HTMLInputElement;
+  el.open = true;
+  await el.updateComplete;
+  input.focus();
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(document.activeElement).to.equal(btn);
+});
+
+it('still gives Arrow/Home/End/Enter/Space full default behavior from slotted non-item content even when closeOnEscapeAnywhere is true', async () => {
+  const el = (await fixture(html`
+    <lyra-menu label="Row actions" close-on-escape-anywhere>
+      <button slot="trigger" aria-label="Row actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+      <input type="text" />
+    </lyra-menu>
+  `)) as LyraMenu;
+  const input = el.querySelector('input') as HTMLInputElement;
+  el.open = true;
+  await el.updateComplete;
+  input.focus();
+  const before = (el as unknown as { activeIndex: number }).activeIndex;
+
+  for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ']) {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  }
+  await el.updateComplete;
+  // Neither the roving focus nor the open state moved -- confirms Enter/Space
+  // didn't reach current?.select() (which would also close the menu), and
+  // Arrow/Home/End didn't reach setActiveItem() -- only the Escape path was
+  // widened by closeOnEscapeAnywhere, not the instanceof LyraMenuItem guard.
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(before);
+  expect(el.open).to.be.true;
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await expect(el).to.be.accessible();
