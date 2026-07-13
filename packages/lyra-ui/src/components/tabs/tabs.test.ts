@@ -22,6 +22,12 @@ function press(target: HTMLElement, key: string): void {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, composed: true }));
 }
 
+it('never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  expect(getComputedStyle(tablist).overflowY).to.equal('hidden');
+});
+
 it('is accessible with no panel children (empty state)', async () => {
   const el = (await fixture(html`<lyra-tabs></lyra-tabs>`)) as LyraTabs;
   expect(tabButtons(el).length).to.equal(0);
