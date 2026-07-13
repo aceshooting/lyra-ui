@@ -78,11 +78,15 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lyra-radius);
   }
-  [part='menu-item']:hover {
+  [part='menu-item']:hover:not(:disabled) {
     background: var(--lyra-color-brand-quiet);
   }
   [part='menu-item']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='menu-item']:disabled {
+    opacity: var(--lyra-opacity-disabled);
+    cursor: not-allowed;
   }
 `;

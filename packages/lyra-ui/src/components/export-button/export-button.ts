@@ -26,10 +26,16 @@ export class LyraExportButton extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) rows: Record<string, unknown>[] = [];
+  /** Column allow-list (and CSV header labels) for both export formats. Left
+   *  at its default empty array, both formats fall back to the union of the
+   *  rows' own keys instead (see `effectiveColumns()`), rather than CSV
+   *  degrading to a blank file while only JSON had a fallback. */
   @property({ attribute: false }) columns: CsvColumn[] = [];
   @property() filename = 'export';
   @property({ attribute: false }) formats: ExportFormat[] = ['csv'];
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Trigger button text, also feeds the format menu's `aria-label` (as
+   *  "`${label} format`") so assistive tech gets an accessible name for it. */
   @property() label = 'Export';
   @property({ type: Boolean, reflect: true }) open = false;
 
@@ -120,6 +126,12 @@ export class LyraExportButton extends LyraElement {
           this.focusMenuItem(items.length - 1);
         }
         break;
+      case 'Tab':
+        // No preventDefault -- native Tab navigation proceeds untouched, only
+        // the now-stale open menu closes (mirrors lyra-menu's identical
+        // Tab handling).
+        this.closeMenu();
+        break;
     }
   };
 
@@ -150,10 +162,23 @@ export class LyraExportButton extends LyraElement {
     }
   }
 
+  /** Falls back to the union of the rows' own keys when `columns` is left at
+   *  its default empty array, so an unconfigured export still produces a
+   *  proper header + data file instead of blank lines. Both `rowsForExport()`
+   *  and the CSV branch of `doExport()` share this same fallback, rather than
+   *  only the JSON path having one. */
+  private effectiveColumns(): CsvColumn[] {
+    if (this.columns.length > 0) return this.columns;
+    const keys = new Set<string>();
+    for (const row of this.rows) {
+      for (const key of Object.keys(row)) keys.add(key);
+    }
+    return Array.from(keys, (key) => ({ key, label: key }));
+  }
+
   /** Applies the same `columns` allow-list CSV exports use, so JSON can't leak fields CSV hides. */
   private rowsForExport(): Record<string, unknown>[] {
-    if (this.columns.length === 0) return this.rows;
-    const keys = this.columns.map((c) => c.key);
+    const keys = this.effectiveColumns().map((c) => c.key);
     return this.rows.map((row) => {
       const picked: Record<string, unknown> = {};
       for (const key of keys) picked[key] = row[key];
@@ -162,13 +187,18 @@ export class LyraExportButton extends LyraElement {
   }
 
   private doExport(format: ExportFormat): void {
+    if (this.disabled) return;
     this.closeMenu();
     this.triggerEl?.focus();
     const ev = this.emit('lyra-export', { format });
     if (ev.defaultPrevented) return;
 
     if (format === 'csv') {
-      downloadBlob(buildCsv(this.rows, this.columns), `${this.filename}.csv`, 'text/csv;charset=utf-8;');
+      downloadBlob(
+        buildCsv(this.rows, this.effectiveColumns()),
+        `${this.filename}.csv`,
+        'text/csv;charset=utf-8;',
+      );
     } else {
       downloadBlob(JSON.stringify(this.rowsForExport(), null, 2), `${this.filename}.json`, 'application/json');
     }
@@ -195,13 +225,14 @@ export class LyraExportButton extends LyraElement {
         ${this.label}
       </button>
       ${this.formats.length > 1
-        ? html`<div id=${this.menuId} part="menu" role="menu">
+        ? html`<div id=${this.menuId} part="menu" role="menu" aria-label="${this.label} format">
             ${this.formats.map(
               (f) =>
                 html`<button
                   part="menu-item"
                   role="menuitem"
                   type="button"
+                  ?disabled=${this.disabled}
                   @click=${() => this.doExport(f)}
                 >
                   ${f.toUpperCase()}

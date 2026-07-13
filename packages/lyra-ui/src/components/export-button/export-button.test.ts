@@ -151,6 +151,80 @@ it('exports JSON and applies the same columns allow-list CSV uses', async () => 
   expect(JSON.parse(text)).to.deep.equal([{ id: 'a', name: 'Alpha' }]);
 });
 
+it('derives CSV columns from the rows own keys when `columns` is left at its default empty array', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.rows = [
+    { id: 'a', name: 'Alpha' },
+    { id: 'b', name: 'Beta' },
+  ];
+  // `columns` is intentionally left unset (its default `[]`).
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lyra-export-complete');
+  try {
+    trigger.click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+
+  expect(capturedBlob).to.exist;
+  const text = await capturedBlob!.text();
+  expect(text).to.equal('id,name\r\na,Alpha\r\nb,Beta');
+});
+
+it('blocks export via an already-open menu item once disabled is set, even without a re-render', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.rows = rows;
+  el.columns = columns;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+
+  let exported = false;
+  el.addEventListener('lyra-export', () => (exported = true));
+  const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  menuItem.click();
+  await el.updateComplete;
+  expect(exported).to.be.false;
+});
+
+it('closes the menu on Tab without preventing default', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  trigger.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  const tabEvent = new KeyboardEvent('keydown', {
+    key: 'Tab',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  menuItem.dispatchEvent(tabEvent);
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(tabEvent.defaultPrevented).to.be.false;
+});
+
 it('does not open the menu or export when disabled', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   el.rows = rows;
@@ -371,5 +445,15 @@ it('resets to closed on disconnect and re-binds the outside-click listener when 
 
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible with a multi-format menu open, including its accessible name', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  el.open = true;
+  await el.updateComplete;
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  expect(menu.getAttribute('aria-label')).to.equal('Export format');
   await expect(el).to.be.accessible();
 });
