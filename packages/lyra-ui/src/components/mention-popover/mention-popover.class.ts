@@ -126,6 +126,7 @@ function caretClientRect(el: TextControl): DOMRect | null {
 }
 
 export interface LyraMentionPopoverEventMap {
+  'lyra-mention-select': CustomEvent<MentionSelectDetail>;
   'lyra-mention-close': CustomEvent<undefined>;
 }
 /**
@@ -474,6 +475,20 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (item) this.commit(item);
   };
 
+  /** Resolves `emptyText`'s effective text: an explicit override wins verbatim; left at the
+   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
+   *  override applies without requiring `emptyText` itself to be set. */
+  private get effectiveEmptyText(): string {
+    return this.localize('noMatches', this.emptyText === 'No matches' ? undefined : this.emptyText);
+  }
+
+  /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
+   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
+   *  override applies without requiring `label` itself to be set. */
+  private get effectiveLabel(): string {
+    return this.localize('mentionSuggestions', this.label === 'Suggestions' ? undefined : this.label);
+  }
+
   private renderRow(item: MentionItem, index: number, activeId: string): TemplateResult {
     const id = this.rowId(index);
     const active = id === activeId;
@@ -498,12 +513,12 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         part="listbox"
         id=${this._listboxId}
         role="listbox"
-        aria-label=${this.label}
+        aria-label=${this.effectiveLabel}
         @mousedown=${this.onListboxMouseDown}
         @click=${this.onListboxClick}
       >
         ${rows.length === 0
-          ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.emptyText}</div>`
+          ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.effectiveEmptyText}</div>`
           : rows.map((item, i) => this.renderRow(item, i, activeId))}
       </div>
     `;

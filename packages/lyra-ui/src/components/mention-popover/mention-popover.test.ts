@@ -324,6 +324,15 @@ it('defaults the listbox accessible name to "Suggestions", overridable via label
   expect(listbox(el).getAttribute('aria-label')).to.equal('Mention someone');
 });
 
+it('honors a strings override for mentionSuggestions/noMatches while label/emptyText are left at their defaults', async () => {
+  const el = await openWithItems([]);
+  el.strings = { mentionSuggestions: 'Suggestions de mention', noMatches: 'Aucun résultat' };
+  await el.updateComplete;
+  expect(listbox(el).getAttribute('aria-label')).to.equal('Suggestions de mention');
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
+  expect(empty.textContent).to.equal('Aucun résultat');
+});
+
 it('is accessible (empty/closed default state)', async () => {
   const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
   await expect(el).to.be.accessible();
