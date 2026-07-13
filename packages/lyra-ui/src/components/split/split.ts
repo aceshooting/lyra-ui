@@ -148,6 +148,28 @@ export class LyraSplit extends LyraElement {
     if (this.collapse !== 'none') this.armCollapseObserver();
   }
 
+  /** Both branches here derive one reactive property from another with no
+   *  DOM measurement involved, so they belong in `willUpdate()` rather than
+   *  `updated()`: setting a reactive property from `updated()`/
+   *  `firstUpdated()` schedules a *second* update on top of the one that
+   *  just finished, which Lit's dev-mode console flags ("scheduled an
+   *  update ... after an update completed"). Both of these were real and
+   *  reproducible in normal usage, not just test artifacts --
+   *  `ensureSizes()` on any direct `sizes` assignment whose length doesn't
+   *  match `panelCount` (e.g. a consumer correcting a stale layout), and the
+   *  `collapseState` reset on every `collapse` -> `'none'` transition. The
+   *  `collapse !== 'none'` re-arm path in `syncCollapseObserver()` still
+   *  needs a freshly measured container width and stays in `updated()` --
+   *  see `armCollapseObserver()`'s own doc comment for why *that* one is the
+   *  documented exception instead (mirrors virtual-list.ts's
+   *  `attachContainerListeners()`). */
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('sizes') || this.sizes.length === 0) this.ensureSizes();
+    if (changed.has('collapse') && this.collapse === 'none') {
+      this.collapseState = 'wide';
+    }
+  }
+
   private get storageFullKey(): string | undefined {
     return this.storageKey ? `lyra-split:${this.storageKey}:${this.panelCount}` : undefined;
   }
@@ -226,9 +248,8 @@ export class LyraSplit extends LyraElement {
    *  container resize between calls is always picked up — same live read
    *  `onPointerMove` already does via `drag.base.clientWidth/clientHeight`. */
   private getContainerSize(): number {
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
-    if (!base) return 0;
-    return this.orientation === 'vertical' ? base.clientHeight : base.clientWidth;
+    if (!this.baseEl) return 0;
+    return this.orientation === 'vertical' ? this.baseEl.clientHeight : this.baseEl.clientWidth;
   }
 
   /** The physical panel index `collapse: 'start' | 'end'` resolves to, or
@@ -300,13 +321,14 @@ export class LyraSplit extends LyraElement {
   }
 
   /** Reacts to a live `collapse` property change (as opposed to the
-   *  connect/first-render arming above): turns the observer on/off, and
-   *  resets `collapseState` back to its `'wide'` default when collapse is
-   *  switched off so no stale rail/floating styling survives it. */
+   *  connect/first-render arming above): turns the observer on/off. The
+   *  `collapseState` reset for the `'none'` case lives in `willUpdate()`
+   *  instead (see its doc comment) so no stale rail/floating styling
+   *  survives switching collapse off, without the extra render pass a
+   *  property set here would cost. */
   private syncCollapseObserver(): void {
     if (this.collapse === 'none') {
       this.collapseResizeObserver?.disconnect();
-      this.collapseState = 'wide';
       return;
     }
     this.armCollapseObserver();
@@ -362,11 +384,12 @@ export class LyraSplit extends LyraElement {
     // guard also covers a synthetic/programmatic pointerdown that CSS
     // wouldn't stop).
     if (this.isDividerDisabled(index)) return;
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
+    // The divider that dispatched this is itself a child of [part="base"],
+    // so baseEl is guaranteed to be already rendered here.
     this.drags.set(e.pointerId, {
       index,
       startPos: this.orientation === 'vertical' ? e.clientY : e.clientX,
-      base,
+      base: this.baseEl!,
       appliedDelta: 0,
     });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -456,7 +479,6 @@ export class LyraSplit extends LyraElement {
   };
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('sizes') || this.sizes.length === 0) this.ensureSizes();
     if (changed.has('collapse')) this.syncCollapseObserver();
     const panels = [...this.children] as HTMLElement[];
     const current = new Set(panels);

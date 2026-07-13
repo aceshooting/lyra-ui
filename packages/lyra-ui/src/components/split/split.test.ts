@@ -958,6 +958,57 @@ it('reverts to plain wide/percent styling and clears data-collapse-state when co
   }
 });
 
+it('resets collapseState to "wide" from willUpdate(), not updated(), so switching collapse back to "none" does not schedule a redundant extra render', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('floating');
+
+    el.collapse = 'none';
+    // A property set from updated()/firstUpdated() (as opposed to
+    // willUpdate()) leaves `isUpdatePending` true again the moment this
+    // update's own updateComplete resolves, since Lit schedules the
+    // follow-up update synchronously inside updated() but the follow-up
+    // pass itself hasn't run yet -- exactly the condition Lit's own
+    // dev-mode "scheduled an update ... after an update completed" warning
+    // checks for. Resetting `collapseState` in willUpdate() instead means
+    // it's folded into *this* render pass, so no second update is pending
+    // once this one finishes.
+    await el.updateComplete;
+    expect(el.collapseState).to.equal('wide');
+    expect((el as unknown as { isUpdatePending: boolean }).isUpdatePending).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('reconciles a directly-assigned sizes array of the wrong length from willUpdate(), not updated(), avoiding the same redundant-render pattern', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+
+  // A consumer setting `sizes` directly to an array whose length doesn't
+  // match panelCount (stale data, a race with a panel-count change, etc.)
+  // makes `ensureSizes()` actually rewrite `sizes` from within the update
+  // that observed the mismatch -- if that correction ran from updated()
+  // instead of willUpdate() it would schedule a second update on top of the
+  // one that just finished (same class of bug as the collapseState reset
+  // above).
+  el.sizes = [10, 20, 30, 40];
+  await el.updateComplete;
+
+  expect(el.sizes.length).to.equal(2);
+  const sum = el.sizes.reduce((a, b) => a + b, 0);
+  expect(sum).to.be.closeTo(100, 1e-9);
+  expect((el as unknown as { isUpdatePending: boolean }).isUpdatePending).to.be.false;
+});
+
 it('anchors the floating overlay to inset-inline-end for collapse="end" (vs. inset-inline-start for collapse="start")', async () => {
   const spy = installResizeObserverSpy();
   try {
