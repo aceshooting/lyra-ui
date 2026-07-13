@@ -64,12 +64,18 @@ export interface VirtualListGroup {
  *   avoids maintaining two parallel rendering strategies for a difference
  *   that's otherwise just "how is row *i*'s height looked up").
  *
- * The `offsets` array is rebuilt on every update. For the list sizes this
- * component is meant for (a scrollable history sidebar, realistically
- * hundreds to a few thousand rows) that's a trivial `O(n)` arithmetic loop,
- * even at scroll-driven ~60fps; it is *not* the right approach for a
- * hundred-thousand-row list without further work (e.g. a Fenwick/segment
- * tree for `O(log n)` offset queries+updates), which is out of scope here.
+ * The `offsets` array is rebuilt only when `items`, `row-height`, or
+ * `keyFunction` change, or a row's measured height changes -- not on every
+ * update, so a pure scroll-position tick (potentially every rAF while
+ * scrolling) only re-runs the cheap range/visibility math in
+ * `computeRange()`, never the `O(n)` offsets rebuild (which, in
+ * `row-height="auto"` mode, also means a `keyFunction` call per item). For
+ * the list sizes this component is meant for (a scrollable history sidebar,
+ * realistically hundreds to a few thousand rows) that rebuild is a trivial
+ * `O(n)` arithmetic loop even when it does run; it is *not* the right
+ * approach for a hundred-thousand-row list without further work (e.g. a
+ * Fenwick/segment tree for `O(log n)` offset queries+updates), which is out
+ * of scope here.
  *
  * **Accessibility.** The scroll container is `role="list"` and each rendered
  * row is `role="listitem"`, deliberately *not* `listbox`/`option` — this
@@ -152,12 +158,28 @@ export class LyraVirtualList extends LyraElement {
   @state() private containerScrollTop = 0;
   @state() private viewportHeight = 0;
 
-  /** `offsets[i]` = row `i`'s pixel top; `offsets[items.length]` = total content height. Rebuilt every update. */
+  /** `offsets[i]` = row `i`'s pixel top; `offsets[items.length]` = total content height. Rebuilt only when `offsetsDirty` is set -- see `willUpdate()`. */
   private offsets: number[] = [0];
   /** Parsed `rowHeight`: a positive pixel number, or `null` for `'auto'` (measured) mode. */
   private fixedRowHeight: number | null = null;
-  /** `row-height="auto"` per-row measured heights, keyed by `String(keyFunction(item, index))`. */
+  /** `row-height="auto"` per-row measured heights, keyed by
+   *  `String(keyFunction(item, index))`. Pruned to the current `items`'
+   *  live keys whenever `items` changes (see `recomputeOffsets()`), so a
+   *  long-lived instance handed many wholly different `items` arrays over
+   *  its life doesn't grow this map without bound. */
   private readonly measuredHeights = new Map<string, number>();
+  /** True whenever `offsets` needs rebuilding before the next render --
+   *  set initially and whenever `items`/`rowHeight`/`keyFunction` change or
+   *  a row's measured height changes, but *not* on a pure scroll-position
+   *  update, so the `O(n)` rebuild (including a `keyFunction` call per item
+   *  in `row-height="auto"` mode) only runs when something that actually
+   *  affects row heights or ordering changed. */
+  private offsetsDirty = true;
+  /** Set alongside `offsetsDirty` specifically when `items` changed (not
+   *  just `rowHeight`/`keyFunction`/a measurement) -- consumed by the next
+   *  `recomputeOffsets()` call to prune `measuredHeights` entries for keys
+   *  no longer present in `items`. */
+  private itemsChangedPendingPrune = false;
 
   private renderStart = 0;
   private renderEnd = -1;
@@ -181,8 +203,15 @@ export class LyraVirtualList extends LyraElement {
     // firstUpdated() only ever fires once per element instance -- a
     // disconnect/reconnect (e.g. a reparenting drag) needs its own
     // re-attach here, since the container observer/scroll listener were
-    // torn down in disconnectedCallback below.
-    if (this.hasUpdated) this.attachContainerListeners();
+    // torn down in disconnectedCallback below. syncRowObservers() is called
+    // directly here (rather than left for the next Lit render) because a
+    // reconnect that doesn't also change some other reactive property never
+    // triggers one, which would otherwise leave every already-rendered row
+    // permanently unwatched by the freshly created ResizeObserver above.
+    if (this.hasUpdated) {
+      this.attachContainerListeners();
+      this.syncRowObservers();
+    }
   }
 
   disconnectedCallback(): void {
@@ -205,10 +234,21 @@ export class LyraVirtualList extends LyraElement {
 
   protected willUpdate(changed: PropertyValues): void {
     this.isFirstUpdate = !this.hasUpdated;
+    if (changed.has('items') || changed.has('rowHeight') || changed.has('keyFunction')) {
+      this.offsetsDirty = true;
+    }
+    if (changed.has('items')) {
+      this.itemsChangedPendingPrune = true;
+    }
     if (changed.has('rowHeight')) {
       this.fixedRowHeight = this.parseRowHeight(this.rowHeight);
     }
-    this.recomputeOffsets();
+    if (this.offsetsDirty) {
+      this.recomputeOffsets();
+      this.offsetsDirty = false;
+    }
+    // Always cheap: just arithmetic over the already-current offsets +
+    // scroll/viewport state, so this runs on a pure scroll-driven update too.
     this.computeRange();
   }
 
@@ -237,14 +277,31 @@ export class LyraVirtualList extends LyraElement {
     const n = this.items.length;
     const offsets = new Array<number>(n + 1);
     offsets[0] = 0;
+    // Only build the live-keys set (and only when in row-height="auto" mode,
+    // where measuredHeights is actually populated) when items itself changed
+    // -- a measurement-only or rowHeight/keyFunction-only recompute has no
+    // stale entries to prune, so skipping this keeps those cases as cheap as
+    // before.
+    const pruneStale = this.itemsChangedPendingPrune && this.fixedRowHeight == null;
+    const liveKeys = pruneStale ? new Set<string>() : null;
     for (let i = 0; i < n; i++) {
-      const h =
-        this.fixedRowHeight ??
-        this.measuredHeights.get(String(this.keyOf(this.items[i], i))) ??
-        DEFAULT_ROW_ESTIMATE_PX;
+      let h: number;
+      if (this.fixedRowHeight != null) {
+        h = this.fixedRowHeight;
+      } else {
+        const key = String(this.keyOf(this.items[i], i));
+        liveKeys?.add(key);
+        h = this.measuredHeights.get(key) ?? DEFAULT_ROW_ESTIMATE_PX;
+      }
       offsets[i + 1] = offsets[i] + h;
     }
     this.offsets = offsets;
+    this.itemsChangedPendingPrune = false;
+    if (liveKeys) {
+      for (const key of this.measuredHeights.keys()) {
+        if (!liveKeys.has(key)) this.measuredHeights.delete(key);
+      }
+    }
   }
 
   /** First item index whose bottom edge is at/after `offset`. */
@@ -343,7 +400,10 @@ export class LyraVirtualList extends LyraElement {
         changed = true;
       }
     }
-    if (changed) this.requestUpdate();
+    if (changed) {
+      this.offsetsDirty = true;
+      this.requestUpdate();
+    }
   };
 
   /** Keeps the row `ResizeObserver` watching exactly the currently-rendered

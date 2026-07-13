@@ -417,3 +417,110 @@ it('positions rows via a transform instead of a padding-based spacer, so a new m
   expect(styles.cssText).to.match(/\[part=['"]row['"]\][^}]*position:\s*absolute/);
   expect(styles.cssText).to.not.match(/padding-block-start|padding-top/);
 });
+
+it('does not rebuild the offsets array on a pure scroll-position update in row-height="auto" mode', async () => {
+  const items = Array.from({ length: 300 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  // Let the initial measurement pass (and any offsets rebuild it triggers)
+  // fully settle before taking the "before" snapshot.
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  const offsetsBefore = (el as unknown as { offsets: number[] }).offsets;
+
+  // A tiny scroll delta that doesn't move the rendered window at all (rows
+  // are ~48px tall by default) -- a pure scroll-position tick with no
+  // items/rowHeight/keyFunction change and no new row entering view to be
+  // measured for the first time.
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.scrollTop = 5;
+  base.dispatchEvent(new Event('scroll'));
+  await nextFrame();
+  await el.updateComplete;
+
+  const offsetsAfter = (el as unknown as { offsets: number[] }).offsets;
+  expect(offsetsAfter, 'offsets should be the same array instance -- recomputeOffsets() must not have run').to.equal(
+    offsetsBefore,
+  );
+});
+
+it('keeps watching already-rendered rows for height changes after a disconnect/reconnect that changes no other property', async () => {
+  const resizableRender = () => html`<div style="block-size:48px;box-sizing:border-box;">row</div>`;
+  const items = Array.from({ length: 5 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:600px"
+      .items=${items}
+      .renderItem=${resizableRender}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  const spacerBefore = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+  const heightBefore = parseFloat(spacerBefore.style.height);
+
+  // Detach/reattach without touching any other property -- simulates the
+  // reparenting-drag scenario the class doc calls out. No reactive property
+  // changes here, so a Lit re-render must not be the only thing that keeps
+  // row-height measurement alive.
+  const parent = el.parentElement!;
+  parent.removeChild(el);
+  parent.appendChild(el);
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  const content = row.firstElementChild as HTMLElement;
+  content.style.blockSize = '300px';
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  const spacerAfter = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+  const heightAfter = parseFloat(spacerAfter.style.height);
+  expect(heightAfter, 'a mutated row height should still reach the spacer after reconnect').to.be.greaterThan(
+    heightBefore,
+  );
+});
+
+it('prunes stale measuredHeights entries once items changes to a wholly different set of keys', async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      .items=${['a', 'b', 'c']}
+      .renderItem=${renderText}
+      .keyFunction=${stringKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  const measuredHeights = (el as unknown as { measuredHeights: Map<string, number> }).measuredHeights;
+  expect(measuredHeights.has('a')).to.be.true;
+  expect(measuredHeights.has('b')).to.be.true;
+  expect(measuredHeights.has('c')).to.be.true;
+
+  el.items = ['x', 'y'];
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(measuredHeights.has('a'), 'stale key "a" should have been pruned').to.be.false;
+  expect(measuredHeights.has('b'), 'stale key "b" should have been pruned').to.be.false;
+  expect(measuredHeights.has('c'), 'stale key "c" should have been pruned').to.be.false;
+});
