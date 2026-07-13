@@ -1,5 +1,5 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
@@ -79,6 +79,7 @@ export class LyraCheckbox extends LyraElement {
 
   static properties = {
     checked: { type: Boolean, reflect: true, noAccessor: true },
+    indeterminate: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
@@ -89,8 +90,6 @@ export class LyraCheckbox extends LyraElement {
   // semantics: it does not affect `checked`'s own value, and a user
   // interaction (click/keyboard) clears it back to `false`, exactly like the
   // native control does.
-  @property({ type: Boolean, reflect: true }) indeterminate = false;
-
   // Tracks whether the default slot carries any real (non-whitespace)
   // content, so the label wrapper — and the gap next to the box — can
   // collapse to nothing for an icon-only/aria-label-only checkbox instead of
@@ -116,6 +115,7 @@ export class LyraCheckbox extends LyraElement {
   private _fieldsetDisabled = false;
   private _name = '';
   private _checked = false;
+  private _indeterminate = false;
   private _disabled = false;
   private _required = false;
   private _value = 'on';
@@ -133,6 +133,16 @@ export class LyraCheckbox extends LyraElement {
     this._checked = Boolean(next);
     this.syncFormState();
     this.requestUpdate('checked', old);
+  }
+
+  get indeterminate(): boolean {
+    return this._indeterminate;
+  }
+  set indeterminate(next: boolean) {
+    const old = this._indeterminate;
+    this._indeterminate = Boolean(next);
+    this.syncFormState();
+    this.requestUpdate('indeterminate', old);
   }
 
   get disabled(): boolean {
@@ -243,7 +253,8 @@ export class LyraCheckbox extends LyraElement {
     // A native checkbox submits its `value` content attribute (default
     // "on") only while checked, and contributes nothing at all — not even
     // an empty string — while unchecked.
-    this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
+    const state = `${this.checked ? 'checked' : 'unchecked'}${this.indeterminate ? '/indeterminate' : ''}`;
+    this.internals.setFormValue(this.checked ? this.value : null, state);
     this.updateValidity();
   }
 
@@ -254,7 +265,13 @@ export class LyraCheckbox extends LyraElement {
     state: string | File | FormData | null,
     _mode?: 'restore' | 'autocomplete',
   ): void {
-    this.checked = state === 'checked';
+    const oldChecked = this._checked;
+    const oldIndeterminate = this._indeterminate;
+    this._checked = state === 'checked' || state === 'checked/indeterminate';
+    this._indeterminate = state === 'checked/indeterminate' || state === 'unchecked/indeterminate';
+    this.syncFormState();
+    this.requestUpdate('checked', oldChecked);
+    this.requestUpdate('indeterminate', oldIndeterminate);
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;

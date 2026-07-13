@@ -118,6 +118,9 @@ export class LyraSelect extends LyraElement {
   // the reset default. See lyra-combobox's identical `_defaultSelected`.
   private _defaultSelected = '';
   private _defaultCaptured = false;
+  // A restored value must win over declarative selected markup collected by
+  // the first asynchronous slotchange. Cleared by the next ordinary value write.
+  private _restoredStateActive = false;
   // Standard listbox type-ahead: printable keystrokes accumulate into this
   // buffer and reset ~500ms after the last one, so "b" then "a" narrows to
   // "ba" instead of restarting the search on every keystroke.
@@ -222,6 +225,7 @@ export class LyraSelect extends LyraElement {
   }
   set value(next: string) {
     const old = this._selected;
+    this._restoredStateActive = false;
     this._selected = next ?? '';
     this.syncFormValue();
     this.reflectSelected();
@@ -256,6 +260,7 @@ export class LyraSelect extends LyraElement {
     _mode?: 'restore' | 'autocomplete',
   ): void {
     this.value = typeof state === 'string' ? state : '';
+    this._restoredStateActive = true;
   }
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles.
@@ -306,7 +311,7 @@ export class LyraSelect extends LyraElement {
       // the reset default.
       const declared = this.options.filter((o) => o.selected).map((o) => o.value);
       this._defaultSelected = declared[0] ?? '';
-      if (declared.length) {
+      if (declared.length && !this._restoredStateActive) {
         this.value = declared[0];
         return; // `value=`'s setter already called reflectSelected()
       }
@@ -317,7 +322,7 @@ export class LyraSelect extends LyraElement {
       // into the live selection instead of letting reflectSelected() below
       // strip its `selected` attribute back off.
       const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected).map((o) => o.value);
-      if (newlySelected.length) {
+      if (newlySelected.length && !this._restoredStateActive) {
         this.value = newlySelected[newlySelected.length - 1];
         return; // `value=`'s setter already called reflectSelected()
       }

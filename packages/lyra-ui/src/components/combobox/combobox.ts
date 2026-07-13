@@ -134,6 +134,9 @@ export class LyraCombobox extends LyraElement {
   // property assignment never does).
   private _defaultSelected: string[] = [];
   private _defaultCaptured = false;
+  // A restored value must win over declarative selected markup collected by
+  // the first asynchronous slotchange. Cleared by the next ordinary value write.
+  private _restoredStateActive = false;
 
   // Hand-written accessor (mirrors the `value` accessor below, and Task 2's
   // `FormAssociated.name` in `../../internal/form-associated.ts`): a
@@ -244,6 +247,7 @@ export class LyraCombobox extends LyraElement {
   }
   set value(next: string | string[]) {
     const old = this._selected;
+    this._restoredStateActive = false;
     this._selected = Array.isArray(next) ? [...next] : next ? [next] : [];
     this.syncFormValue();
     this.reflectSelected();
@@ -301,10 +305,11 @@ export class LyraCombobox extends LyraElement {
         const parsed: unknown = JSON.parse(state);
         if (Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')) selected = parsed;
       } catch {
-        if (state) selected = [state];
+        // Malformed persisted state restores an empty selection.
       }
     }
     this.value = this.multiple ? selected : (selected[0] ?? '');
+    this._restoredStateActive = true;
   }
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles.
@@ -355,7 +360,7 @@ export class LyraCombobox extends LyraElement {
       // after the user has picked something.
       const declared = this.options.filter((o) => o.selected).map((o) => o.value);
       this._defaultSelected = [...declared];
-      if (declared.length) {
+      if (declared.length && !this._restoredStateActive) {
         this.value = this.multiple ? declared : declared[0];
         return; // `value=`'s setter already called reflectSelected()
       }
@@ -366,7 +371,7 @@ export class LyraCombobox extends LyraElement {
       // into the live selection instead of letting reflectSelected() below
       // strip their `selected` attribute back off.
       const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected).map((o) => o.value);
-      if (newlySelected.length) {
+      if (newlySelected.length && !this._restoredStateActive) {
         this.value = this.multiple
           ? [...new Set([...this._selected, ...newlySelected])]
           : newlySelected[newlySelected.length - 1];
