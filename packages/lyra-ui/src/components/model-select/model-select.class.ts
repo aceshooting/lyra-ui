@@ -499,7 +499,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         ?data-active=${id === activeId}
       >
         <span part="option-label">${entry.label}</span>
-        ${entry.synthetic ? html`<span part="option-badge">not in catalog</span>` : ''}
+        ${entry.synthetic ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>` : ''}
       </div>`;
     });
   }

@@ -133,6 +133,30 @@ it('shows a synthetic, distinctly-marked row for a stale value not present in th
   expect(trigger(el).textContent).to.contain('ancient-model');
 });
 
+it('localizes the synthetic-row "not in catalog" badge via this.localize(), not hardcoded English', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select
+      value="ancient-model"
+      .catalog=${CATALOG}
+      .strings=${{ notInCatalog: 'absent du catalogue' }}
+    ></lyra-model-select>`,
+  )) as LyraModelSelect;
+  el.open = true;
+  await el.updateComplete;
+  const synthetic = rows(el)[rows(el).length - 1];
+  expect(synthetic.querySelector('[part="option-badge"]')!.textContent).to.equal('absent du catalogue');
+});
+
+it('defaults to English "not in catalog" when no strings override is set', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select value="ancient-model" .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  el.open = true;
+  await el.updateComplete;
+  const synthetic = rows(el)[rows(el).length - 1];
+  expect(synthetic.querySelector('[part="option-badge"]')!.textContent).to.equal('not in catalog');
+});
+
 it('does not append a synthetic row when catalog is empty, even for a set value', async () => {
   const el = (await fixture(html`<lyra-model-select value="anything"></lyra-model-select>`)) as LyraModelSelect;
   el.open = true;

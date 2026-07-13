@@ -42,7 +42,8 @@ export type LyraMessageKey =
   | 'keys'
   | 'key'
   | 'trendOf'
-  | 'wordCloud';
+  | 'wordCloud'
+  | 'notInCatalog';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -86,6 +87,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   key: 'key',
   trendOf: 'Trend of {count} values, last {value}',
   wordCloud: 'Word cloud of {count} {word}',
+  notInCatalog: 'not in catalog',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
