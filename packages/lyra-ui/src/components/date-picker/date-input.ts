@@ -71,6 +71,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
   @property() locale = '';
   @property({ type: Number }) months: 1 | 2 = 1;
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
@@ -83,6 +84,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   // Set on the date input's first `blur`; gates the `data-invalid`
   // reflection below so validity styling never flashes on first render.
   @state() private touched = false;
+
+  constructor() {
+    super();
+    this.addEventListener('invalid', () => {
+      this.touched = true;
+    });
+  }
   // `[part]:empty` never matches — the part always contains a literal
   // `<slot>` child element regardless of assigned content — so real
   // emptiness is tracked in JS instead (same fix as lyra-stat's
@@ -464,6 +472,11 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     this.value = typeof state === 'string' ? state : '';
   }
 
+  formResetCallback(): void {
+    super.formResetCallback();
+    this.touched = false;
+  }
+
   private onHintSlotChange = (e: Event): void => {
     this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
@@ -517,7 +530,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             id=${this.inputId}
             part="input"
             type="text"
-            aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Date')}
+            aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.placeholder || 'Date')}
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}

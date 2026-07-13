@@ -112,6 +112,13 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
 
+  constructor() {
+    super();
+    this.addEventListener('invalid', () => {
+      this.touched = true;
+    });
+  }
+
   protected willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasLeadingSlot = this.hasSlotted('leading');
@@ -130,6 +137,11 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
     if (changed.has('value') || changed.has('minRows') || changed.has('maxRows')) {
       this.resizeTextarea();
     }
+  }
+
+  formResetCallback(): void {
+    super.formResetCallback();
+    this.touched = false;
   }
 
   private hasSlotted(name: string): boolean {

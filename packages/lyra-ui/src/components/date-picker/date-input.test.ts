@@ -805,6 +805,14 @@ it('forwards its accessible name and required validity state to the inner input'
   expect(input.getAttribute('aria-required')).to.equal('true');
   expect(input.getAttribute('aria-invalid')).to.equal('false');
 
+  el.setAttribute('aria-label', 'Return date');
+  await el.updateComplete;
+  expect(input.getAttribute('aria-label')).to.equal('Return date');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(input.hasAttribute('aria-label')).to.be.false;
+
   input.dispatchEvent(new FocusEvent('blur'));
   await el.updateComplete;
   expect(input.getAttribute('aria-invalid')).to.equal('true');
@@ -817,6 +825,23 @@ it('forwards its accessible name and required validity state to the inner input'
   await el.updateComplete;
   expect(input.required).to.be.false;
   expect(input.getAttribute('aria-required')).to.equal('false');
+});
+
+it('reveals invalid state after validation and clears touched presentation on form reset', async () => {
+  const form = (await fixture(html`
+    <form><lyra-date-input name="date" required></lyra-date-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-date-input') as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
+  expect(form.reportValidity()).to.be.false;
+  await el.updateComplete;
+  expect(input.getAttribute('aria-invalid')).to.equal('true');
+
+  form.reset();
+  await el.updateComplete;
+  expect(input.getAttribute('aria-invalid')).to.equal('false');
 });
 
 it('forwards custom bad-input validity to the inner input after it is touched', async () => {

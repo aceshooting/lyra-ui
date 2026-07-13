@@ -467,10 +467,11 @@ from the package root**, but worth knowing when reasoning about behavior): `pars
   `internals.setValidity()` and reverts the displayed text to the last valid commit. The visible
   `<input part="input">` mirrors `required` through native `required`/`aria-required` and exposes
   touched outer validity through `aria-invalid`; this includes required, bad-input, and range
-  failures owned by the form-associated host. A host `aria-label` is forwarded to the input and
-  takes precedence over the component's label/placeholder fallback. A parseable typed date outside
-  an active bound is committed instead and reports the precise `rangeUnderflow`/`rangeOverflow`
-  state.
+  failures owned by the form-associated host. A host `aria-label` is reactively forwarded to the
+  input, including later changes/removal, and takes precedence over the component's
+  label/placeholder fallback. Native validation attempts reveal `aria-invalid`; `form.reset()`
+  clears that touched presentation. A parseable typed date outside an active bound is committed
+  instead and reports the precise `rangeUnderflow`/`rangeOverflow` state.
 - (date-input only) — declarative, IDL, reset, and restored values are sanitized to exact ISO dates:
   calendar-invalid or malformed strings become `''` (and therefore `valueMissing` when required),
   while valid dates outside `min`/`max` or `disable-past`/`disable-future` remain submitted and expose
@@ -3228,7 +3229,8 @@ reset like any other text control.
 
 The inner textarea mirrors `required` through native `required`/`aria-required`. Its
 `aria-invalid` remains false until the textarea has been blurred, then follows the host's
-`ElementInternals` validity as `value` or `required` changes.
+`ElementInternals` validity as `value` or `required` changes. A native validation attempt also
+reveals the invalid state, and `form.reset()` clears the touched presentation.
 
 **Properties (own):**
 - `placeholder: string = ''`
