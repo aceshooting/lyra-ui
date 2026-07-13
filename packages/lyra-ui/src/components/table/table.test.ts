@@ -806,3 +806,57 @@ it('does not trigger row activation or preventDefault when Enter is pressed on a
   expect(rowClicked).to.be.false;
   expect(notPrevented).to.be.true;
 });
+
+describe('footer column hook', () => {
+  it('renders a real tfoot when any column has a footer hook', async () => {
+    const withFooter: TableColumn<Row>[] = [
+      ...columns,
+      { key: 'total', label: 'Total', footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0), cell: () => '' },
+    ];
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = withFooter;
+    el.rows = rows;
+    await el.updateComplete;
+    const foot = el.shadowRoot!.querySelector('tfoot[part="foot"]');
+    expect(foot).to.exist;
+    const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
+    expect(footerCells).to.have.length(withFooter.length);
+    expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('4');
+  });
+
+  it('renders no tfoot when no column has a footer hook (unchanged default)', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('tfoot')).to.not.exist;
+  });
+});
+
+describe('cellStyle column hook', () => {
+  it('applies cellStyle to the generated td via styleMap', async () => {
+    const withStyle: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name, cellStyle: (r) => ({ background: r.score > 2 ? 'red' : 'blue' }) },
+    ];
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = withStyle;
+    el.rows = rows;
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')] as HTMLElement[];
+    expect(cells[0]!.style.background).to.equal('red'); // Alpha, score 3
+    expect(cells[1]!.style.background).to.equal('blue'); // Beta, score 1
+  });
+
+  it('coexists with sticky-column offset styling without clobbering it', async () => {
+    const withBoth: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', sticky: true, cellStyle: () => ({ background: 'green' }), cell: (r) => r.name },
+    ];
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = withBoth;
+    el.rows = rows;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    expect(cell.style.background).to.equal('green');
+    expect(cell.style.getPropertyValue('--lyra-table-sticky-offset')).to.not.equal('');
+  });
+});
