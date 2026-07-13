@@ -28,6 +28,9 @@ export const styles = css`
   :host([mode='mobile']) [part='toggle'] {
     display: inline-flex;
   }
+  :host([hide-toggle][mode='mobile']) [part='toggle'] {
+    display: none;
+  }
   [part='toggle']:hover {
     background: var(--lyra-color-brand-quiet);
     color: var(--lyra-color-brand);
@@ -65,6 +68,9 @@ export const styles = css`
   }
   :host([mode='icon-only']) [part='base'] {
     inline-size: var(--lyra-app-rail-icon-width);
+  }
+  :host([dragging]) [part='base'] {
+    transition: none;
   }
 
   [part='resizer'] {
