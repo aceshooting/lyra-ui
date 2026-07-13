@@ -1,5 +1,6 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
@@ -53,10 +54,23 @@ export class LyraTabs extends LyraElement {
     // until *this* component has already rendered one for it, and neither
     // `slotchange` nor any Lit lifecycle hook observes a plain attribute
     // edit (label/disabled) on a light-DOM child at all. A mutation observer
-    // on the host is the only thing that sees either case.
-    this.mutationObserver = new MutationObserver(this.syncTabs);
+    // on the host is the only thing that sees either case. `attributes: true`
+    // alone only reports mutations on the observed node itself (`this`), never
+    // on its children, so `subtree: true` is required too -- but that widens
+    // `childList`/`attributeFilter` to the *entire* descendant tree, including
+    // each panel's own projected content. A panel can legitimately churn its
+    // own children/attributes fast (a streaming log, a live JSON preview), so
+    // every record is filtered down to direct-child mutations only before
+    // triggering a resync, keeping panel-internal churn from forcing a tabs
+    // recompute and re-render on every unrelated mutation.
+    this.mutationObserver = new MutationObserver((records) => {
+      const isDirectChild = (node: Node) => node.parentNode === this;
+      const relevant = records.some((r) => (r.type === 'childList' ? r.target === this : isDirectChild(r.target)));
+      if (relevant) this.syncTabs();
+    });
     this.mutationObserver.observe(this, {
       childList: true,
+      subtree: true,
       attributes: true,
       attributeFilter: ['slot', 'label', 'disabled'],
     });
@@ -181,12 +195,20 @@ export class LyraTabs extends LyraElement {
   }
 
   render(): TemplateResult {
+    // Keyed by `slotName`, not a plain `.map()`: a plain array binding reuses
+    // each rendered DOM node by *position*, so removing e.g. the first tab
+    // would silently relabel the still-focused second button's DOM node into
+    // the (unfocused) third tab's button, leaving real keyboard focus stuck
+    // on a tabindex="-1"/aria-selected="false" button instead of following
+    // the tab it used to represent. Keying by identity keeps each tab's own
+    // DOM node (and any focus on it) attached to that same tab across
+    // additions/removals anywhere in the list.
     return html`
       <div part="base">
         <div part="tablist" role="tablist" aria-orientation="horizontal" @keydown=${this.onTabListKeyDown}>
-          ${this.tabs.map((tab) => this.renderTab(tab))}
+          ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderTab(tab))}
         </div>
-        ${this.tabs.map((tab) => this.renderPanel(tab))}
+        ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}
       </div>
     `;
   }

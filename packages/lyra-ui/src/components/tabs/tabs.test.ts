@@ -198,6 +198,25 @@ it('ArrowRight skips a disabled tab', async () => {
   expect(el.active).to.equal('settings');
 });
 
+it('swaps ArrowLeft/ArrowRight under dir="rtl", matching lyra-split/lyra-tree physical-direction handling', async () => {
+  const el = (await fixture(html`
+    <lyra-tabs dir="rtl">
+      <div slot="input" label="Input">Raw input</div>
+      <div slot="preview" label="Preview">Rendered preview</div>
+      <div slot="settings" label="Settings">Settings form</div>
+    </lyra-tabs>
+  `)) as LyraTabs;
+  const buttons = tabButtons(el);
+
+  press(buttons[0], 'ArrowLeft');
+  await el.updateComplete;
+  expect(el.active).to.equal('preview');
+
+  press(tabButtons(el)[1], 'ArrowRight');
+  await el.updateComplete;
+  expect(el.active).to.equal('input');
+});
+
 it('Home and End jump to the first and last enabled tabs', async () => {
   const el = (await fixture(basic())) as LyraTabs;
   const buttons = tabButtons(el);
@@ -233,6 +252,43 @@ it('picks up a tab added dynamically after connect', async () => {
   expect(tabButtons(el).map((b) => b.dataset.slot)).to.deep.equal(['input', 'preview', 'settings', 'extra']);
 });
 
+it('picks up a disabled attribute toggled on an already-rendered child', async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  const child = el.querySelector('[slot="preview"]')!;
+  child.setAttribute('disabled', '');
+
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const buttons = tabButtons(el);
+  expect(buttons[1].getAttribute('aria-disabled')).to.equal('true');
+});
+
+it('a mutation on a nested descendant (not a direct child) never forces a tabs recompute', async () => {
+  const el = (await fixture(html`
+    <lyra-tabs>
+      <div slot="input" label="Input"><button disabled>nested</button></div>
+      <div slot="preview" label="Preview">Rendered preview</div>
+    </lyra-tabs>
+  `)) as LyraTabs;
+  await el.updateComplete;
+
+  let updateCount = 0;
+  const originalUpdated = (el as unknown as { updated: (changed: Map<string, unknown>) => void }).updated.bind(el);
+  (el as unknown as { updated: (changed: Map<string, unknown>) => void }).updated = (changed) => {
+    updateCount++;
+    originalUpdated(changed);
+  };
+
+  // Matches attributeFilter (`disabled`) but the button is a grandchild, not
+  // a direct child -- a panel is free to churn its own content without the
+  // tabs strip resyncing/re-rendering on every unrelated mutation.
+  el.querySelector('button')!.removeAttribute('disabled');
+
+  await aTimeout(50);
+  expect(updateCount).to.equal(0);
+});
+
 it('reassigns active when the currently-active child is removed', async () => {
   const el = (await fixture(basic())) as LyraTabs;
   expect(el.active).to.equal('input');
@@ -243,4 +299,38 @@ it('reassigns active when the currently-active child is removed', async () => {
 
   expect(el.active).to.equal('preview');
   expect(tabButtons(el).length).to.equal(2);
+});
+
+it('keeps real keyboard focus on the active tab when a tab BEFORE it is removed', async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  tabButtons(el)[1].click();
+  await el.updateComplete;
+  tabButtons(el)[1].focus();
+  expect(el.active).to.equal('preview');
+  expect(el.shadowRoot!.activeElement).to.equal(tabButtons(el)[1]);
+
+  el.querySelector('[slot="input"]')!.remove();
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const focused = el.shadowRoot!.activeElement as HTMLButtonElement | null;
+  expect(el.active).to.equal('preview');
+  expect(focused?.dataset.slot).to.equal('preview');
+  expect(focused?.getAttribute('aria-selected')).to.equal('true');
+});
+
+it('does not steal focus by reassigning it when the invalid-active correction happens with focus elsewhere', async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  const outside = document.createElement('button');
+  document.body.appendChild(outside);
+  outside.focus();
+
+  el.querySelector('[slot="input"]')!.remove();
+
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(el.active).to.equal('preview');
+  expect(document.activeElement).to.equal(outside);
+  outside.remove();
 });
