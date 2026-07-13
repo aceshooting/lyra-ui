@@ -113,6 +113,24 @@ it('only renders the built-in retry button when status="failed", and it emits ly
   expect(fired).to.be.true;
 });
 
+it('keeps focus inside the message when a lyra-retry listener flips status away from failed', async () => {
+  const el = (await fixture(html`<lyra-chat-message status="failed">hi</lyra-chat-message>`)) as LyraChatMessage;
+  // The documented, expected response to `lyra-retry`.
+  el.addEventListener('lyra-retry', () => {
+    el.status = 'sent';
+  });
+
+  const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
+  button.focus();
+  button.click();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="retry-button"]'), 'the retry button is gone once status flips').to.not
+    .exist;
+  expect(el.shadowRoot!.activeElement, 'focus must not have silently reverted to <body>').to.not.be.null;
+  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="bubble"]'));
+});
+
 it('shows visible status text (not color alone) for sending/streaming/failed, and none for sent', async () => {
   const el = (await fixture(html`<lyra-chat-message status="sending">hi</lyra-chat-message>`)) as LyraChatMessage;
   expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal('Sending…');
@@ -169,6 +187,20 @@ it('announces streaming -> sent directly', async () => {
   expect(region.mode).to.equal('polite');
 });
 
+it('still announces streaming -> sent when both are set within the same task, with no render in between', async () => {
+  const el = (await fixture(html`<lyra-chat-message status="sending">hi</lyra-chat-message>`)) as LyraChatMessage;
+
+  // No `await` between these two assignments -- both land in the same
+  // update batch, so Lit's own coalesced `changedProperties` would only
+  // ever remember "sending" (the value before the first of the two sets)
+  // as `status`'s old value, losing the "streaming" transition entirely.
+  el.status = 'streaming';
+  el.status = 'sent';
+  await el.updateComplete;
+
+  expect(liveRegionText(el)).to.equal('Message complete.');
+});
+
 it('hides the header/footer/avatar/badges/attachments/actions wrappers until something is slotted', async () => {
   const el = (await fixture(html`<lyra-chat-message>hi</lyra-chat-message>`)) as LyraChatMessage;
   expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
@@ -183,6 +215,36 @@ it('shows the header once an avatar is slotted, detected on first paint (not jus
   )) as LyraChatMessage;
   expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
   expect((el.shadowRoot!.querySelector('[part="avatar"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+});
+
+it('hides the badges wrapper by default', async () => {
+  const el = (await fixture(html`<lyra-chat-message>hi</lyra-chat-message>`)) as LyraChatMessage;
+  expect((el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+});
+
+it('shows the header and badges once a badge is slotted, detected on first paint (not just via slotchange)', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message><span slot="badges">gpt-5.4</span>hi</lyra-chat-message>`,
+  )) as LyraChatMessage;
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+  expect((el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+});
+
+it('shows/hides the badges wrapper as badges content is added/removed via slotchange', async () => {
+  const el = (await fixture(html`<lyra-chat-message>hi</lyra-chat-message>`)) as LyraChatMessage;
+  const badgesWrapper = el.shadowRoot!.querySelector('[part="badges"]') as HTMLElement;
+  const badgesSlot = el.shadowRoot!.querySelector('slot[name="badges"]') as HTMLSlotElement;
+  expect(badgesWrapper.hasAttribute('hidden')).to.be.true;
+
+  const badge = document.createElement('span');
+  badge.slot = 'badges';
+  el.appendChild(badge);
+  badgesSlot.dispatchEvent(new Event('slotchange'));
+  await el.updateComplete;
+
+  expect(badgesWrapper.hasAttribute('hidden')).to.be.false;
+  // The header itself must also now be visible, purely because of the badges content.
+  expect((el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
 });
 
 it('shows/hides the footer actions wrapper as actions content is added/removed via slotchange', async () => {

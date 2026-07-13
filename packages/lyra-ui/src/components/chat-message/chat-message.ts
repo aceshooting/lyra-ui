@@ -98,7 +98,7 @@ const STATUS_TEXT: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
  * @slot attachments - File/image attachment chips, rendered below the message body.
  * @event lyra-retry - Fired by the built-in retry button, only rendered when `status="failed"`.
  * @event lyra-collapse-toggle - `detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.
- * @csspart bubble - The message bubble root.
+ * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lyra-retry` listener flipping `status` away from `"failed"`).
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
  * @csspart avatar - The wrapper around the `avatar` slot.
  * @csspart badges - The wrapper around the `badges` slot.
@@ -115,12 +115,17 @@ const STATUS_TEXT: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
 export class LyraChatMessage extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
+  // `status` needs a hand-written accessor (see `previousStatus` below) so
+  // it's declared via `static properties` + `noAccessor` rather than
+  // `@property()` directly -- the same pattern `lyra-playback`'s `playing`
+  // uses for the identical reason (a property whose setter must run real
+  // logic on every assignment, not just on the next completed render).
+  static properties = {
+    status: { reflect: true, noAccessor: true },
+  };
+
   /** Who authored the message. Reflects to `data-role` — see the class doc. */
   @property({ reflect: true, attribute: 'data-role' }) role: ChatMessageRole = 'assistant';
-
-  /** Delivery/generation state. Drives the footer's status dot/text and, for
-   *  `"failed"`, the bubble's danger treatment and the built-in retry button. */
-  @property({ reflect: true }) status: ChatMessageStatus = 'sent';
 
   /** When the message was sent/received. Accepts a `Date` or anything
    *  `new Date()` can parse (e.g. an ISO 8601 string); invalid input is
@@ -148,8 +153,45 @@ export class LyraChatMessage extends LyraElement {
   @state() private hasActionsSlot = false;
 
   @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
+  @query('[part="bubble"]') private bubbleEl?: HTMLElement;
 
   private readonly bodyId = nextId('chat-message-body');
+
+  private _status: ChatMessageStatus = 'sent';
+
+  /** The value `status` held immediately before its current one, recorded
+   *  at the point of assignment in the setter below -- *not* derived from
+   *  Lit's `changed`/`changedProperties`, which only ever remembers the
+   *  single oldest value seen since the last completed update. Without this,
+   *  setting `status` to `"streaming"` and then immediately overwriting it
+   *  (e.g. to `"sent"`) within the same task, with no render in between,
+   *  would silently lose the `"streaming"` intermediate value before
+   *  `announceStatusChange` ever gets to see it. */
+  private previousStatus: ChatMessageStatus = 'sent';
+
+  /** True only until the component's first completed update -- gates the
+   *  status-change announcement below so a message never announces
+   *  whatever status it happens to mount with (mirrors the same "not on
+   *  first paint" intent `willUpdate`'s `!this.hasUpdated` check has for the
+   *  slot-presence flags, except `this.hasUpdated` itself is already `true`
+   *  by the time `updated()` runs for the first time, so it can't be reused
+   *  here). */
+  private isMounting = true;
+
+  /** Delivery/generation state. Drives the footer's status dot/text and,
+   *  for `"failed"`, the bubble's danger treatment and the built-in retry
+   *  button. Declared via `static properties` above with a hand-written
+   *  accessor (see `previousStatus`). */
+  get status(): ChatMessageStatus {
+    return this._status;
+  }
+  set status(value: ChatMessageStatus) {
+    const old = this._status;
+    if (value === old) return;
+    this.previousStatus = old;
+    this._status = value;
+    this.requestUpdate('status', old);
+  }
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
@@ -160,15 +202,11 @@ export class LyraChatMessage extends LyraElement {
     }
   }
 
-  // `changed.get('status')` is `undefined` on the very first update (Lit
-  // only records the *first* old value seen since the last completed
-  // update, and the constructor's own field-initializer assignment is that
-  // first change, from the truly-unset internal slot) -- so this naturally
-  // skips announcing whatever status a message happens to mount with, and
-  // only ever fires for a real, later transition.
   protected updated(changed: PropertyValues): void {
-    if (changed.has('status')) {
-      this.announceStatusChange(changed.get('status') as ChatMessageStatus | undefined);
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
+    if (!wasMounting && changed.has('status')) {
+      this.announceStatusChange(this.previousStatus);
     }
   }
 
@@ -186,8 +224,8 @@ export class LyraChatMessage extends LyraElement {
     return this.status === 'sent' ? undefined : STATUS_TEXT[this.status];
   }
 
-  private announceStatusChange(previous: ChatMessageStatus | undefined): void {
-    if (previous === undefined || previous === this.status) return;
+  private announceStatusChange(previous: ChatMessageStatus): void {
+    if (previous === this.status) return;
     const region = this.liveRegion;
     if (!region) return;
     if (this.status === 'failed') {
@@ -221,6 +259,12 @@ export class LyraChatMessage extends LyraElement {
   };
 
   private onRetryClick = (): void => {
+    // A `lyra-retry` listener is documented to respond by flipping `status`
+    // away from `"failed"`, which removes this very button on the next
+    // render. Move focus to the always-rendered bubble first, synchronously,
+    // so it lands somewhere stable inside the message instead of silently
+    // reverting to `<body>` once the button it was on disappears.
+    this.bubbleEl?.focus();
     this.emit('lyra-retry');
   };
 
@@ -234,7 +278,7 @@ export class LyraChatMessage extends LyraElement {
     const showFooter = Boolean(statusText) || Boolean(ts) || this.hasActionsSlot;
 
     return html`
-      <div part="bubble">
+      <div part="bubble" tabindex="-1">
         <div part="header" ?hidden=${!showHeader}>
           <span part="avatar" ?hidden=${!this.hasAvatarSlot}
             ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot
