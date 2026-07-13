@@ -291,12 +291,29 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
           const depth = Math.min(6, Math.max(1, token.depth + headingOffset));
           return `<h${depth} part="heading">${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
         },
+        paragraph(this: OptionalPeerApi, token: OptionalPeerApi) {
+          return `<p part="paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
+        },
+        list(this: OptionalPeerApi, token: OptionalPeerApi) {
+          const ordered = token.ordered;
+          const start = token.start;
+          let body = '';
+          for (const item of token.items) body += this.listitem(item);
+          const tag = ordered ? 'ol' : 'ul';
+          const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
+          return `<${tag} part="list"${startAttr}>\n${body}</${tag}>\n`;
+        },
         code(this: OptionalPeerApi, token: OptionalPeerApi) {
           const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
           const body = `${token.text.replace(/\n$/, '')}\n`;
           const text = token.escaped ? body : escapeHtml(body);
           const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
           return `<pre part="code-block"><code${cls}>${text}</code></pre>\n`;
+        },
+        codespan(this: OptionalPeerApi, token: OptionalPeerApi) {
+          // Mirrors marked's own default codespan() renderer's escaping exactly (it does not
+          // pre-escape token.text itself) -- only the added part="inline-code" differs.
+          return `<code part="inline-code">${escapeHtml(token.text)}</code>`;
         },
         blockquote(this: OptionalPeerApi, token: OptionalPeerApi) {
           return `<blockquote part="blockquote">\n${this.parser.parse(token.tokens)}</blockquote>\n`;

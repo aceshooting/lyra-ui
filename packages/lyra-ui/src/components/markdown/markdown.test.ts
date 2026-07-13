@@ -401,3 +401,36 @@ describe('fallback matrix', () => {
     expect(detail.error).to.equal(boom);
   });
 });
+
+describe('paragraph/list/inline-code parts', () => {
+  it('adds part="paragraph" to rendered <p>', async () => {
+    const el = (await fixture(html`<lyra-markdown content="Hello world"></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]'), 'never rendered', { timeout: 4000 });
+    expect(el.shadowRoot!.querySelector('[part="paragraph"]')!.textContent).to.equal('Hello world');
+  });
+
+  it('adds part="list" to a rendered <ul> and <ol>', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'- a\n- b'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="list"]'), 'never rendered', { timeout: 4000 });
+    expect(el.shadowRoot!.querySelector('[part="list"]')!.tagName).to.equal('UL');
+
+    el.content = '1. a\n2. b';
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="list"]')?.tagName === 'OL', 'never rendered', { timeout: 4000 });
+  });
+
+  it('adds part="inline-code" to a bare inline codespan, but not to a fenced code block\'s <code>', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'some `inline` and:\n\n```\nfenced\n```'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="inline-code"]'), 'never rendered', { timeout: 4000 });
+    expect(el.shadowRoot!.querySelector('[part="inline-code"]')!.textContent).to.equal('inline');
+    const fencedCode = el.shadowRoot!.querySelector('[part="code-block"] code')!;
+    expect(fencedCode.hasAttribute('part')).to.be.false;
+  });
+
+  it('escapes HTML in an inline codespan the same way the default renderer would', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'`<script>`'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="inline-code"]'), 'never rendered', { timeout: 4000 });
+    expect(el.shadowRoot!.querySelector('[part="inline-code"]')!.textContent).to.equal('<script>');
+    expect(el.shadowRoot!.querySelector('script')).to.not.exist;
+  });
+});
