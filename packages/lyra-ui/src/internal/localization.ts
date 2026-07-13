@@ -52,7 +52,10 @@ export type LyraMessageKey =
   | 'fileSizeUnitKb'
   | 'fileSizeUnitMb'
   | 'fileSizeUnitGb'
-  | 'fileSizeUnitTb';
+  | 'fileSizeUnitTb'
+  | 'chartCategory'
+  | 'chartPointLabel'
+  | 'resetZoom';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -106,6 +109,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   fileSizeUnitMb: 'MB',
   fileSizeUnitGb: 'GB',
   fileSizeUnitTb: 'TB',
+  chartCategory: 'Category',
+  chartPointLabel: 'Point {n}',
+  resetZoom: 'Reset zoom',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

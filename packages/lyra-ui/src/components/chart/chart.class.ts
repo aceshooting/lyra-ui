@@ -638,14 +638,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         <caption>${this.accessibleLabel || 'Chart data'}</caption>
         <thead>
           <tr>
-            <th scope="col">Category</th>
+            <th scope="col">${this.localize('chartCategory')}</th>
             ${this.datasets.map((series) => html`<th scope="col">${series.label}</th>`)}
           </tr>
         </thead>
         <tbody>
           ${Array.from({ length: rowCount }, (_, index) => html`
             <tr>
-              <th scope="row">${this.labels[index] ?? `Point ${index + 1}`}</th>
+              <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, { n: index + 1 })}</th>
               ${this.datasets.map((series) => {
                 const value = series.points ? series.points[index]?.y : series.data?.[index];
                 return html`<td>${value == null || !Number.isFinite(value) ? this.localize('noData') : value}</td>`;
@@ -677,7 +677,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         </div>
         ${this.zoom && this.zoomed
           ? html`<button part="reset-zoom-button" type="button" @click=${() => this.resetZoom()}>
-              Reset zoom
+              ${this.localize('resetZoom')}
             </button>`
           : nothing}
       </div>

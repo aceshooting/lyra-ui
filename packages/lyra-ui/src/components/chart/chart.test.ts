@@ -777,3 +777,44 @@ it('does not leak a Chart instance bound to a detached canvas when zoom turns on
   expect((el as any).chart).to.be.undefined;
   expect(instanceBeforeZoom.config.type).to.equal('line');
 });
+
+it('localizes the data table header and per-row fallback label via this.localize()', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = [];
+  el.datasets = [{ label: 'Revenue', data: [1, 2] }];
+  el.strings = { chartCategory: 'Catégorie', chartPointLabel: 'Point {n}' };
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const headerCells = [...el.shadowRoot!.querySelectorAll('table th')];
+  expect(headerCells[0].textContent).to.equal('Catégorie');
+  const rowHeader = el.shadowRoot!.querySelector('tbody th') as HTMLElement;
+  expect(rowHeader.textContent).to.equal('Point 1');
+});
+
+it('defaults to English "Category"/"Point N" when no strings override is set', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = [];
+  el.datasets = [{ label: 'Revenue', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const headerCells = [...el.shadowRoot!.querySelectorAll('table th')];
+  expect(headerCells[0].textContent).to.equal('Category');
+  const rowHeader = el.shadowRoot!.querySelector('tbody th') as HTMLElement;
+  expect(rowHeader.textContent).to.equal('Point 1');
+});
+
+it('localizes the "Reset zoom" button text via this.localize()', async () => {
+  const el = (await fixture(html`<lyra-chart zoom></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['Jan', 'Feb'];
+  el.datasets = [{ label: 'Revenue', data: [1, 2] }];
+  el.strings = { resetZoom: 'Réinitialiser le zoom' };
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  (el as any).zoomed = true;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('[part="reset-zoom-button"]') as HTMLElement;
+  expect(button.textContent!.trim()).to.equal('Réinitialiser le zoom');
+});
