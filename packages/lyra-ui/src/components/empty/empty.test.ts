@@ -2,6 +2,35 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './empty.js';
 import type { LyraEmpty } from './empty.js';
 
+// A stand-in for a component that forwards its own light-DOM content into
+// `lyra-empty`'s slots through nested `<slot>` elements (e.g. a card/widget
+// wrapper that renders `lyra-empty` under the hood and re-projects its own
+// children into it). From `lyra-empty`'s point of view, `this.children` are
+// these forwarding `<slot>` elements themselves, not the consumer's real
+// content, so `willUpdate`'s light-DOM check can't tell whether anything is
+// actually assigned -- only reading the fully flattened slot assignment
+// (what `firstUpdated`'s fallback does) resolves it correctly.
+class EmptySlotForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const empty = document.createElement('lyra-empty');
+    empty.heading = 'Nothing here';
+    const iconSlot = document.createElement('slot');
+    const actionsSlot = document.createElement('slot');
+    actionsSlot.name = 'actions';
+    actionsSlot.slot = 'actions';
+    empty.append(iconSlot, actionsSlot);
+    root.append(empty);
+  }
+}
+customElements.define('empty-slot-forward-wrapper', EmptySlotForwardWrapper);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function asAny(el: LyraEmpty): any {
+  return el;
+}
+
 it('renders heading, description, and slotted content', async () => {
   const el = (await fixture(
     html`<lyra-empty heading="No results" description="Try a different search.">
@@ -87,6 +116,65 @@ it('does not collapse the icon wrapper when icon content carries an explicit emp
   )) as LyraEmpty;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
   expect(icon.hasAttribute('hidden')).to.be.false;
+});
+
+it('reconciles a forwarded slot with no assigned content, via firstUpdated, when willUpdate guessed wrong', async () => {
+  const wrapper = (await fixture(
+    html`<empty-slot-forward-wrapper></empty-slot-forward-wrapper>`,
+  )) as EmptySlotForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lyra-empty') as LyraEmpty;
+  await el.updateComplete;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+
+  // The full lifecycle (willUpdate's guess, plus whatever this browser's
+  // slotchange timing already fixed) already converges on the right answer.
+  expect(icon.hasAttribute('hidden')).to.be.true;
+  expect(actions.hasAttribute('hidden')).to.be.true;
+
+  // Isolate firstUpdated itself from slotchange: force the state back to
+  // willUpdate's naive guess -- which only sees the forwarding `<slot>`
+  // elements as "children" and always assumes content is present -- to
+  // prove firstUpdated alone reconciles against the real, fully-flattened
+  // slot assignment, which is still empty (no content was ever provided to
+  // the wrapper).
+  asAny(el).hasIcon = true;
+  asAny(el).hasActions = true;
+  icon.removeAttribute('hidden');
+  actions.removeAttribute('hidden');
+
+  el.firstUpdated();
+
+  expect(icon.hasAttribute('hidden')).to.be.true;
+  expect(actions.hasAttribute('hidden')).to.be.true;
+});
+
+it('reconciles a forwarded slot with assigned content, via firstUpdated, when willUpdate guessed wrong', async () => {
+  const wrapper = (await fixture(
+    html`<empty-slot-forward-wrapper>
+      <span>icon</span>
+      <button slot="actions">Reset</button>
+    </empty-slot-forward-wrapper>`,
+  )) as EmptySlotForwardWrapper;
+  const el = wrapper.shadowRoot!.querySelector('lyra-empty') as LyraEmpty;
+  await el.updateComplete;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+
+  expect(icon.hasAttribute('hidden')).to.be.false;
+  expect(actions.hasAttribute('hidden')).to.be.false;
+
+  // Force the opposite wrong precondition and prove firstUpdated corrects it
+  // back to visible from the real (non-empty) flattened assignment.
+  asAny(el).hasIcon = false;
+  asAny(el).hasActions = false;
+  icon.setAttribute('hidden', '');
+  actions.setAttribute('hidden', '');
+
+  el.firstUpdated();
+
+  expect(icon.hasAttribute('hidden')).to.be.false;
+  expect(actions.hasAttribute('hidden')).to.be.false;
 });
 
 it('reacts to icon and actions content added or removed after initial mount (slotchange)', async () => {

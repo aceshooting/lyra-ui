@@ -56,27 +56,38 @@ export class LyraEmpty extends LyraElement {
 
   firstUpdated(): void {
     // Fallback reconciliation against the fully-resolved slot assignment
-    // (handles slot-forwarding and any browser where `slotchange` doesn't
-    // fire for content present at parse/upgrade time). A no-op in the
-    // common case since `willUpdate` already set the correct value above.
-    this.checkIconSlot(this.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement);
-    this.checkActionsSlot(this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement);
+    // (handles slot-forwarding — where `this.children` in `willUpdate` above
+    // are forwarding `<slot>` elements rather than the real projected
+    // content, e.g. a wrapper component's own default slot re-slotted into
+    // ours — and any browser where `slotchange` doesn't fire for content
+    // present at parse/upgrade time). This corrects the `hidden` attribute
+    // on the wrapper elements directly rather than through
+    // `hasIcon`/`hasActions`, so this one-shot correction doesn't need to
+    // schedule and wait out a second Lit render pass; the reactive state is
+    // left as `willUpdate` set it and continues to drive only the ongoing
+    // `slotchange` path below.
+    this.reconcileSlotHidden(
+      this.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement,
+      this.shadowRoot!.querySelector('[part="icon"]') as HTMLElement,
+    );
+    this.reconcileSlotHidden(
+      this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement,
+      this.shadowRoot!.querySelector('[part="actions"]') as HTMLElement,
+    );
   }
 
-  private checkIconSlot(slot: HTMLSlotElement): void {
-    this.hasIcon = slot.assignedElements({ flatten: true }).length > 0;
-  }
-
-  private checkActionsSlot(slot: HTMLSlotElement): void {
-    this.hasActions = slot.assignedElements({ flatten: true }).length > 0;
+  private reconcileSlotHidden(slot: HTMLSlotElement, wrapper: HTMLElement): void {
+    wrapper.toggleAttribute('hidden', slot.assignedElements({ flatten: true }).length === 0);
   }
 
   private onIconSlotChange = (e: Event): void => {
-    this.checkIconSlot(e.target as HTMLSlotElement);
+    const slot = e.target as HTMLSlotElement;
+    this.hasIcon = slot.assignedElements({ flatten: true }).length > 0;
   };
 
   private onActionsSlotChange = (e: Event): void => {
-    this.checkActionsSlot(e.target as HTMLSlotElement);
+    const slot = e.target as HTMLSlotElement;
+    this.hasActions = slot.assignedElements({ flatten: true }).length > 0;
   };
 
   render(): TemplateResult {

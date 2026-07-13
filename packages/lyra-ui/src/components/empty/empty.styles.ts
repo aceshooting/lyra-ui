@@ -45,9 +45,6 @@ export const styles = css`
   [part='description']:empty {
     display: none;
   }
-  [part='actions'] {
-    margin-block-start: var(--lyra-space-s);
-  }
   [part='actions'][hidden] {
     display: none;
   }
