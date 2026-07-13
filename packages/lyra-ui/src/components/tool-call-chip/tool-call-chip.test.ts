@@ -220,6 +220,90 @@ describe('detail tooltip', () => {
     await el.updateComplete;
     expect(tooltip.hidden).to.be.true;
   });
+
+  it('keeps the tooltip open via focus after the pointer leaves, closing only once focus is also lost', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-call-chip name="web_search"><p>Query: solar panel efficiency</p></lyra-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.focus();
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.false;
+
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    base.dispatchEvent(new MouseEvent('mouseleave'));
+    await el.updateComplete;
+    // Still focused -- the pointer leaving shouldn't close a tooltip that's
+    // open because of focus, not hover.
+    expect(tooltip.hidden).to.be.false;
+    expect(el.shadowRoot!.activeElement).to.equal(base);
+
+    base.blur();
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.true;
+  });
+
+  it('keeps the tooltip open via hover after blur, closing only once the pointer also leaves', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-call-chip name="web_search"><p>Query: solar panel efficiency</p></lyra-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    base.focus();
+    await el.updateComplete;
+    base.blur();
+    await el.updateComplete;
+    // Still hovered -- blur shouldn't close a tooltip the pointer is still
+    // resting on.
+    expect(tooltip.hidden).to.be.false;
+
+    base.dispatchEvent(new MouseEvent('mouseleave'));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.true;
+  });
+
+  it('closes the tooltip if the slotted detail content is removed while open', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-call-chip name="web_search"><p id="detail">Query: solar panel efficiency</p></lyra-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.false;
+
+    el.querySelector('#detail')!.remove();
+    // slotchange fires asynchronously after the light-DOM mutation.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+    expect(tooltip.hidden).to.be.true;
+  });
+
+  it('associates the trigger with the open tooltip via aria-describedby, using a stable id', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-call-chip name="web_search"><p>Query: solar panel efficiency</p></lyra-tool-call-chip>`,
+    )) as LyraToolCallChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+
+    expect(base.hasAttribute('aria-describedby')).to.be.false;
+
+    base.focus();
+    await el.updateComplete;
+    expect(tooltip.id).to.not.equal('');
+    expect(base.getAttribute('aria-describedby')).to.equal(tooltip.id);
+
+    base.blur();
+    await el.updateComplete;
+    expect(base.hasAttribute('aria-describedby')).to.be.false;
+  });
 });
 
 it('is accessible in the default (empty, no detail) state', async () => {

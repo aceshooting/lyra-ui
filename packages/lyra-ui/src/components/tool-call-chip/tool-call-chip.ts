@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
+import { nextId } from '../../internal/a11y.js';
 
 import { styles } from './tool-call-chip.styles.js';
 
@@ -122,7 +123,12 @@ function formatDuration(ms: number): string {
  * a short preview) shown in a floating tooltip on hover/focus, positioned
  * with `internal/positioner.js`'s `place()` the same way `<lyra-combobox>`
  * positions its listbox. No tooltip is shown at all when the slot carries no
- * content — hovering an empty chip does nothing.
+ * content — hovering an empty chip does nothing. Hover and keyboard focus are
+ * tracked as independent reasons to keep the tooltip open (mirrors
+ * `<lyra-citation-badge>`'s popover), so releasing one modality while the
+ * other is still active doesn't close it, and the trigger button's
+ * `aria-describedby` points at the tooltip's id whenever it's open and has
+ * content, so the association reaches assistive tech too.
  *
  * The `icon` slot overrides the built-in per-status glyph entirely via the
  * platform's own slot-fallback-content mechanism (`<slot
@@ -184,7 +190,15 @@ export class LyraToolCallChip extends LyraElement {
   @state() private hasDetailSlot = false;
   @state() private tooltipOpen = false;
 
+  private readonly tooltipId = nextId('tool-call-chip-tooltip');
   private cleanupPositioner?: () => void;
+  // Hover and focus are tracked as independent "keep it open" reasons --
+  // mirrors lyra-citation-badge's identical hovering/focused pair for the
+  // same hover/focus preview-popover pattern -- so releasing one (e.g. the
+  // pointer leaving while the chip still has keyboard focus) doesn't close a
+  // tooltip the other modality is still holding open.
+  private hovering = false;
+  private focused = false;
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
@@ -211,29 +225,60 @@ export class LyraToolCallChip extends LyraElement {
 
   private onDetailSlotChange = (e: Event): void => {
     this.hasDetailSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    // The slot can be emptied out from under an already-open tooltip (e.g. a
+    // consumer clearing streamed/async preview content) -- nothing left to
+    // show, so don't leave an empty tooltip floating open regardless of
+    // whether hover/focus is still active.
+    if (!this.hasDetailSlot) this.hideTooltip();
   };
 
-  private showTooltip = (): void => {
+  private showTooltip(): void {
     if (!this.hasDetailSlot || this.tooltipOpen) return;
     this.tooltipOpen = true;
-  };
+  }
 
-  // Unconditional on blur/mouseleave, with no "did the pointer move into the
-  // tooltip itself" check -- the default slot is documented as read-only
-  // preview content (raw args, a short snippet), not an interactive surface
-  // meant to retain focus/hover of its own, so this stays as simple as a
-  // native `title` attribute's show/hide instead of adding a second
-  // pointer-tracking region.
-  private hideTooltip = (): void => {
+  // Called both as the actual (unconditional) close -- from onDetailSlotChange
+  // and the Escape handler below, where the tooltip must close regardless of
+  // hover/focus state -- and from onMouseLeave/onBlur once each has already
+  // confirmed the *other* modality isn't still holding the tooltip open. The
+  // default slot is documented as read-only preview content (raw args, a
+  // short snippet), not an interactive surface meant to retain focus/hover of
+  // its own, so there's no "did the pointer move into the tooltip itself"
+  // check needed beyond the hovering/focused pair.
+  private hideTooltip(): void {
     if (!this.tooltipOpen) return;
     this.tooltipOpen = false;
+  }
+
+  private onMouseEnter = (): void => {
+    this.hovering = true;
+    this.showTooltip();
+  };
+
+  private onMouseLeave = (): void => {
+    this.hovering = false;
+    if (this.focused) return;
+    this.hideTooltip();
+  };
+
+  private onFocus = (): void => {
+    this.focused = true;
+    this.showTooltip();
+  };
+
+  private onBlur = (): void => {
+    this.focused = false;
+    if (this.hovering) return;
+    this.hideTooltip();
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     // The native <button> already handles Enter/Space activation on its
     // own -- this only needs to cover dismissing the (non-native) tooltip,
     // the same Escape-to-close convention every other popup in this library
-    // follows (see lyra-combobox's onKeyDown).
+    // follows (see lyra-combobox's onKeyDown). Unconditional close (not
+    // gated on hovering/focused) since Escape is a deliberate dismissal, not
+    // transient pointer/focus travel.
     if (e.key === 'Escape' && this.tooltipOpen) {
       e.stopPropagation();
       this.hideTooltip();
@@ -262,11 +307,12 @@ export class LyraToolCallChip extends LyraElement {
         part="base"
         type="button"
         aria-label=${this.getAttribute('aria-label') || this.accessibleLabel}
+        aria-describedby=${this.hasDetailSlot && this.tooltipOpen ? this.tooltipId : nothing}
         @click=${this.onClick}
-        @mouseenter=${this.showTooltip}
-        @mouseleave=${this.hideTooltip}
-        @focus=${this.showTooltip}
-        @blur=${this.hideTooltip}
+        @mouseenter=${this.onMouseEnter}
+        @mouseleave=${this.onMouseLeave}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
         @keydown=${this.onKeyDown}
       >
         <span part="icon" aria-hidden="true">
@@ -282,7 +328,7 @@ export class LyraToolCallChip extends LyraElement {
           <span part="duration" ?hidden=${!hasDuration}>${hasDuration ? formatDuration(this.durationMs!) : nothing}</span>
         </span>
       </button>
-      <div part="tooltip" role="tooltip" ?hidden=${!this.tooltipOpen}>
+      <div part="tooltip" id=${this.tooltipId} role="tooltip" ?hidden=${!this.tooltipOpen}>
         <slot @slotchange=${this.onDetailSlotChange}></slot>
       </div>
     `;
