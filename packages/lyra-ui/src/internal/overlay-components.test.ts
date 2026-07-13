@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { deepActiveElement } from './overlay-manager.js';
+import { composedContains, deepActiveElement } from './overlay-manager.js';
 import '../components/dialog/dialog.js';
 import '../components/responsive-panel/responsive-panel.js';
 import '../components/tool-select-dialog/tool-select-dialog.js';
@@ -148,6 +148,32 @@ for (const adapter of adapters) {
     await element.updateComplete;
 
     expect(document.activeElement?.getAttribute('data-overlay-trigger')).to.equal(adapter.tag);
+  });
+}
+
+const reconnectAdapters = adapters.filter(({ tag }) =>
+  [
+    'lyra-dialog',
+    'lyra-tool-select-dialog',
+    'lyra-tool-approval-dialog',
+    'lyra-tool-result-dialog',
+  ].includes(tag),
+);
+
+for (const adapter of reconnectAdapters) {
+  it(`${adapter.tag} restores focus inside after synchronous reparenting`, async () => {
+    const element = create(adapter);
+    adapter.activate(element);
+    await element.updateComplete;
+    expect(composedContains(element, deepActiveElement(document))).to.be.true;
+
+    const destination = document.createElement('div');
+    destination.dataset.overlayTest = 'reparent-target';
+    document.body.append(destination);
+    destination.append(element);
+    await Promise.resolve();
+
+    expect(composedContains(element, deepActiveElement(document))).to.be.true;
   });
 }
 

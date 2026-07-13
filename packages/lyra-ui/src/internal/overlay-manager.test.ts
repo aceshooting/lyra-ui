@@ -166,6 +166,74 @@ it('suspends and resumes across synchronous reparenting without losing its focus
   container.remove();
 });
 
+it('preserves the existing stack order when a lower overlay is suspended and resumed in the same document', () => {
+  const bottom = createOverlay(document, 'bottom');
+  const top = createOverlay(document, 'top');
+  const dismissed: string[] = [];
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => dismissed.push('bottom'),
+  });
+  const topHandle = activateOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => dismissed.push('top'),
+  });
+
+  bottomHandle.suspend();
+  const container = document.createElement('div');
+  document.body.append(container);
+  container.append(bottom.host);
+  bottomHandle.resume();
+
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissed).to.deep.equal(['top']);
+  expect(Number(top.host.style.getPropertyValue('--lyra-overlay-stack-index'))).to.be.greaterThan(
+    Number(bottom.host.style.getPropertyValue('--lyra-overlay-stack-index')),
+  );
+
+  topHandle.deactivate({ restoreFocus: false });
+  bottomHandle.deactivate({ restoreFocus: false });
+  container.remove();
+});
+
+it('does not rebase a lower overlay return target when an upper overlay closes', () => {
+  const bottom = createOverlay(document, 'bottom');
+  const top = createOverlay(document, 'top');
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => undefined,
+    restoreFocusTo: top.first,
+  });
+  const topHandle = activateOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => undefined,
+    restoreFocusTo: bottom.first,
+  });
+
+  topHandle.deactivate({ restoreFocus: false });
+  bottomHandle.deactivate();
+
+  expect(document.activeElement?.textContent).to.equal('top first');
+});
+
+it('moves focus into a surviving lower overlay when the top closes without restoring its opener', () => {
+  const bottom = createOverlay(document, 'bottom');
+  const bottomHandle = activateOverlay({ host: bottom.host, panel: () => bottom.panel, onEscape: () => undefined });
+  bottomHandle.focusInitial();
+  const top = createOverlay(document, 'top');
+  const topHandle = activateOverlay({ host: top.host, panel: () => top.panel, onEscape: () => undefined });
+  topHandle.focusInitial();
+
+  topHandle.deactivate({ restoreFocus: false });
+
+  expect(deepActiveElement(document)?.textContent).to.equal('bottom first');
+  bottomHandle.deactivate({ restoreFocus: false });
+});
+
 it('makes modal background paths inert and restores pre-existing inert state', () => {
   const preInert = document.createElement('aside');
   preInert.dataset.overlayBackground = '';
@@ -183,6 +251,80 @@ it('makes modal background paths inert and restores pre-existing inert state', (
   handle.deactivate({ restoreFocus: false });
   expect(background.inert).to.be.false;
   expect(preInert.inert).to.be.true;
+});
+
+it('tracks live application inert changes while keeping modal background inert', async () => {
+  const background = document.createElement('main');
+  background.dataset.overlayBackground = '';
+  background.inert = true;
+  document.body.append(background);
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  background.inert = false;
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(background.inert).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  expect(background.inert).to.be.false;
+});
+
+it('restores original inert state after a managed background is detached and reinserted', async () => {
+  const background = document.createElement('main');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  background.remove();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(background.inert).to.be.false;
+
+  document.body.prepend(background);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(background.inert).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  expect(background.inert).to.be.false;
+});
+
+it('tracks live inert intent for a managed sibling inside a consumer shadow root', async () => {
+  const app = document.createElement('div');
+  const shadow = app.attachShadow({ mode: 'open' });
+  const background = document.createElement('aside');
+  const overlay = createOverlay(document, 'shadow-dialog');
+  shadow.append(background, overlay.host);
+  document.body.append(app);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(background.inert).to.be.true;
+
+  background.inert = false;
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(background.inert).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  expect(background.inert).to.be.false;
+  app.remove();
+});
+
+it('inerts a shadow-root sibling added while its modal overlay is open', async () => {
+  const app = document.createElement('div');
+  const shadow = app.attachShadow({ mode: 'open' });
+  const overlay = createOverlay(document, 'shadow-dialog');
+  shadow.append(overlay.host);
+  document.body.append(app);
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  const added = document.createElement('aside');
+  shadow.prepend(added);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(added.inert).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  expect(added.inert).to.be.false;
+  app.remove();
 });
 
 it('scopes its stack and key listener to the overlay ownerDocument', () => {
@@ -268,4 +410,101 @@ it('collects rendered focus targets through slots and nested shadow roots', () =
   expect(focusable.length).to.equal(1);
   expect(focusable[0].tagName).to.equal('INPUT');
   wrapper.remove();
+});
+
+it('skips visibility-hidden focus targets and focuses the next rendered target', () => {
+  const overlay = createOverlay(document, 'dialog');
+  overlay.first.style.visibility = 'hidden';
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+  });
+
+  handle.focusInitial();
+
+  expect(deepActiveElement(document)?.textContent).to.equal('dialog last');
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('models each native radio group as one Tab stop', () => {
+  const root = document.createElement('div');
+  const unchecked = document.createElement('input');
+  unchecked.type = 'radio';
+  unchecked.name = 'choice';
+  unchecked.dataset.radio = 'unchecked';
+  const checked = document.createElement('input');
+  checked.type = 'radio';
+  checked.name = 'choice';
+  checked.checked = true;
+  checked.dataset.radio = 'checked';
+  const otherGroup = document.createElement('input');
+  otherGroup.type = 'radio';
+  otherGroup.name = 'other';
+  otherGroup.dataset.radio = 'other';
+  const unnamed = document.createElement('input');
+  unnamed.type = 'radio';
+  unnamed.dataset.radio = 'unnamed';
+  root.append(unchecked, checked, otherGroup, unnamed);
+  document.body.append(root);
+
+  const focusable = collectFocusableElements(root);
+
+  expect(focusable.map((element) => element.dataset.radio)).to.deep.equal(['checked', 'other', 'unnamed']);
+  root.remove();
+});
+
+it('traverses fallback content of an unassigned slot', () => {
+  const hostName = `overlay-slot-fallback-${Math.random().toString(36).slice(2)}`;
+  customElements.define(
+    hostName,
+    class extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        const slot = document.createElement('slot');
+        const fallback = document.createElement('button');
+        fallback.textContent = 'fallback';
+        slot.append(fallback);
+        shadow.append(slot);
+      }
+    },
+  );
+  const host = document.createElement(hostName);
+  document.body.append(host);
+
+  const focusable = collectFocusableElements(host);
+
+  expect(focusable.length).to.equal(1);
+  expect(focusable[0].textContent).to.equal('fallback');
+  host.remove();
+});
+
+it('does not traverse slot fallback content when assigned text suppresses it', () => {
+  const hostName = `overlay-slot-text-${Math.random().toString(36).slice(2)}`;
+  customElements.define(
+    hostName,
+    class extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        const slot = document.createElement('slot');
+        const fallback = document.createElement('button');
+        fallback.textContent = 'fallback';
+        slot.append(fallback);
+        shadow.append(slot);
+      }
+    },
+  );
+  const host = document.createElement(hostName);
+  host.textContent = 'assigned text';
+  document.body.append(host);
+  const suppressedFallback = host.shadowRoot!.querySelector('button')!;
+  suppressedFallback.checkVisibility = () => true;
+
+  const focusable = collectFocusableElements(host);
+
+  expect(focusable.length).to.equal(0);
+  host.remove();
 });

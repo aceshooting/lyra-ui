@@ -186,6 +186,7 @@ export class LyraToolSelectDialog extends LyraElement {
     if (this.hasUpdated && this.open) {
       this.releaseScrollLock ??= lockScroll(this.ownerDocument);
       this.activateOverlay();
+      queueMicrotask(() => this.overlay?.focusInitial());
     }
   }
 

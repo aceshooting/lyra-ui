@@ -274,6 +274,7 @@ export class LyraToolResultDialog extends LyraElement {
       } else {
         this.activateOverlay();
       }
+      queueMicrotask(() => this.overlay?.focusInitial());
     }
   }
 

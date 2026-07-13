@@ -115,6 +115,7 @@ export class LyraDialog extends LyraElement {
       } else {
         this.activateOverlay();
       }
+      queueMicrotask(() => this.overlay?.focusInitial());
     }
   }
 

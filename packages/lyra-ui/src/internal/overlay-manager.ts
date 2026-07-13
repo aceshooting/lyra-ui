@@ -67,6 +67,7 @@ interface OverlayEntry {
   registered: boolean;
   wasTopmostOnSuspend: boolean;
   suspendGeneration: number;
+  stackOrder: number;
   state: OverlayDocumentState;
   previousStackValue: string;
   previousStackPriority: string;
@@ -76,8 +77,11 @@ interface OverlayEntry {
 interface OverlayDocumentState {
   document: Document;
   stack: OverlayEntry[];
+  nextStackOrder: number;
   inerted: Map<HTMLElement, boolean>;
+  pendingInertWrites: Map<HTMLElement, boolean[]>;
   observer?: MutationObserver;
+  observedRoots: Set<Document | ShadowRoot>;
   inertUpdateQueued: boolean;
   onKeyDown: (event: KeyboardEvent) => void;
 }
@@ -127,6 +131,7 @@ function hasInertAncestor(element: Element): boolean {
 
 function isRendered(element: HTMLElement): boolean {
   if (element.hidden || element.getAttribute('aria-hidden') === 'true' || hasInertAncestor(element)) return false;
+  if (element.ownerDocument.defaultView?.getComputedStyle(element).visibility !== 'visible') return false;
   return element.checkVisibility ? element.checkVisibility() : element.getClientRects().length > 0;
 }
 
@@ -138,7 +143,12 @@ function isTabbable(element: HTMLElement): boolean {
 function collectFocusable(element: Element, result: HTMLElement[]): void {
   if (element.matches(FOCUSABLE_SELECTOR) && isTabbable(element as HTMLElement)) result.push(element as HTMLElement);
   if (isSlot(element)) {
-    for (const assigned of element.assignedElements({ flatten: true })) collectFocusable(assigned, result);
+    const hasAssignedNodes = element.assignedNodes().length > 0;
+    const assigned = element
+      .assignedNodes({ flatten: true })
+      .filter((node): node is Element => node.nodeType === 1);
+    const children = hasAssignedNodes ? assigned : Array.from(element.children);
+    for (const child of children) collectFocusable(child, result);
     return;
   }
   const container: Element | ShadowRoot = element.shadowRoot ?? element;
@@ -153,7 +163,36 @@ export function collectFocusableElements(root: Element | ShadowRoot): HTMLElemen
   } else {
     for (const child of Array.from(root.children)) collectFocusable(child, result);
   }
+  const radioGroups: Array<{
+    name: string;
+    form: HTMLFormElement | null;
+    root: Node;
+    members: HTMLInputElement[];
+  }> = [];
+  for (const element of result) {
+    if (element.localName !== 'input') continue;
+    const input = element as HTMLInputElement;
+    if (input.type !== 'radio' || input.name === '') continue;
+    let group = radioGroups.find(
+      (candidate) =>
+        candidate.name === input.name && candidate.form === input.form && candidate.root === input.getRootNode(),
+    );
+    if (!group) {
+      group = { name: input.name, form: input.form, root: input.getRootNode(), members: [] };
+      radioGroups.push(group);
+    }
+    group.members.push(input);
+  }
+  const excludedRadios = new Set<HTMLInputElement>();
+  for (const group of radioGroups) {
+    const tabStop = group.members.find((radio) => radio.checked) ?? group.members[0];
+    for (const radio of group.members) {
+      if (radio !== tabStop) excludedRadios.add(radio);
+    }
+  }
+
   return result
+    .filter((element) => !excludedRadios.has(element as HTMLInputElement))
     .map((element, index) => ({ element, index }))
     .sort((a, b) => {
       const aPositive = a.element.tabIndex > 0;
@@ -181,8 +220,11 @@ function focusEntry(entry: OverlayEntry, backwards = false, preserveCurrent = tr
   const preferred = entry.options.preferredInitialFocus?.() ?? null;
   if (preferred && composedContains(panel, preferred) && tryFocus(preferred)) return;
   const focusable = collectFocusableElements(panel);
-  const target = backwards ? focusable[focusable.length - 1] : focusable[0];
-  if (!tryFocus(target ?? null)) panel.focus();
+  const ordered = backwards ? focusable.reverse() : focusable;
+  for (const target of ordered) {
+    if (tryFocus(target)) return;
+  }
+  panel.focus();
 }
 
 function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: KeyboardEvent): void {
@@ -220,24 +262,76 @@ function scheduleInertUpdate(state: OverlayDocumentState): void {
   });
 }
 
+function handleMutations(state: OverlayDocumentState, records: MutationRecord[]): void {
+  let needsInertUpdate = false;
+  for (let index = 0; index < records.length; index++) {
+    const record = records[index];
+    if (record.type === 'childList') {
+      needsInertUpdate = true;
+      continue;
+    }
+    if (record.type !== 'attributes' || record.attributeName !== 'inert') continue;
+    const element = record.target as HTMLElement;
+    let nextRecord: MutationRecord | undefined;
+    for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
+      const candidate = records[nextIndex];
+      if (candidate.type === 'attributes' && candidate.attributeName === 'inert' && candidate.target === element) {
+        nextRecord = candidate;
+        break;
+      }
+    }
+    const newValue = nextRecord ? nextRecord.oldValue !== null : element.hasAttribute('inert');
+    const pending = state.pendingInertWrites.get(element);
+    if (pending?.[0] === newValue) {
+      pending.shift();
+      if (pending.length === 0) state.pendingInertWrites.delete(element);
+      continue;
+    }
+    if (state.inerted.has(element)) {
+      state.inerted.set(element, newValue);
+      needsInertUpdate = true;
+    }
+  }
+  if (needsInertUpdate) scheduleInertUpdate(state);
+}
+
+const mutationObserverOptions: MutationObserverInit = {
+  attributeFilter: ['inert'],
+  attributeOldValue: true,
+  attributes: true,
+  childList: true,
+  subtree: true,
+};
+
+function observeMutationRoot(state: OverlayDocumentState, root: Document | ShadowRoot): void {
+  if (!state.observer || state.observedRoots.has(root)) return;
+  state.observer.observe(root === state.document ? state.document.documentElement : root, mutationObserverOptions);
+  state.observedRoots.add(root);
+}
+
 function startState(state: OverlayDocumentState): void {
   state.document.addEventListener('keydown', state.onKeyDown);
   const Observer = state.document.defaultView?.MutationObserver ?? MutationObserver;
-  state.observer = new Observer(() => scheduleInertUpdate(state));
-  state.observer.observe(state.document.documentElement, { childList: true, subtree: true });
+  state.observer = new Observer((records) => handleMutations(state, records));
+  observeMutationRoot(state, state.document);
 }
 
 function stopState(state: OverlayDocumentState): void {
   state.document.removeEventListener('keydown', state.onKeyDown);
   state.observer?.disconnect();
   state.observer = undefined;
+  state.observedRoots.clear();
+  state.pendingInertWrites.clear();
 }
 
 function createState(doc: Document): OverlayDocumentState {
   const state = {} as OverlayDocumentState;
   state.document = doc;
   state.stack = [];
+  state.nextStackOrder = 0;
   state.inerted = new Map();
+  state.pendingInertWrites = new Map();
+  state.observedRoots = new Set();
   state.inertUpdateQueued = false;
   state.onKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing) return;
@@ -259,16 +353,29 @@ function stateFor(doc: Document): OverlayDocumentState {
   return states.get(doc) ?? createState(doc);
 }
 
-function restoreInert(state: OverlayDocumentState): void {
-  for (const [element, previous] of state.inerted) element.inert = previous;
-  state.inerted.clear();
+function setInertByManager(state: OverlayDocumentState, element: HTMLElement, value: boolean): void {
+  if (element.inert === value) return;
+  if (state.observer && state.observedRoots.has(element.getRootNode() as Document | ShadowRoot)) {
+    let pending = state.pendingInertWrites.get(element);
+    if (!pending) {
+      pending = [];
+      state.pendingInertWrites.set(element, pending);
+    }
+    pending.push(value);
+  } else {
+    // No mutation record will be delivered for a detached element or for an
+    // element in a shadow root outside this state's observed document tree.
+    state.pendingInertWrites.delete(element);
+  }
+  element.inert = value;
 }
 
-function inertElement(state: OverlayDocumentState, element: Element): void {
+function inertElement(state: OverlayDocumentState, element: Element, desired: Set<HTMLElement>): void {
   if (!('inert' in element)) return;
   const htmlElement = element as HTMLElement;
+  desired.add(htmlElement);
   if (!state.inerted.has(htmlElement)) state.inerted.set(htmlElement, htmlElement.inert);
-  htmlElement.inert = true;
+  setInertByManager(state, htmlElement, true);
 }
 
 function pathParent(element: Element): ParentNode | null {
@@ -287,6 +394,10 @@ function composedChildren(parent: ParentNode): Element[] {
   return 'children' in parent ? Array.from((parent as ParentNode & { children: HTMLCollectionOf<Element> }).children) : [];
 }
 
+function isShadowRoot(node: ParentNode): node is ShadowRoot {
+  return node.nodeType === 11 && 'host' in node;
+}
+
 function addAllowedPath(allowed: Map<ParentNode, Set<Element>>, host: HTMLElement, doc: Document): void {
   let current: Element | null = host;
   while (current && current !== doc.body && current !== doc.documentElement) {
@@ -303,7 +414,6 @@ function addAllowedPath(allowed: Map<ParentNode, Set<Element>>, host: HTMLElemen
 }
 
 function applyTopmostInert(state: OverlayDocumentState): void {
-  restoreInert(state);
   let modalIndex = -1;
   for (let index = state.stack.length - 1; index >= 0; index--) {
     if (state.stack[index].options.modal !== false) {
@@ -311,16 +421,23 @@ function applyTopmostInert(state: OverlayDocumentState): void {
       break;
     }
   }
-  if (modalIndex === -1) return;
-
-  const allowed = new Map<ParentNode, Set<Element>>();
-  for (const entry of state.stack.slice(modalIndex)) {
-    if (entry.options.host.isConnected) addAllowedPath(allowed, entry.options.host, state.document);
-  }
-  for (const [parent, children] of allowed) {
-    for (const child of composedChildren(parent)) {
-      if (!children.has(child)) inertElement(state, child);
+  const desired = new Set<HTMLElement>();
+  if (modalIndex !== -1) {
+    const allowed = new Map<ParentNode, Set<Element>>();
+    for (const entry of state.stack.slice(modalIndex)) {
+      if (entry.options.host.isConnected) addAllowedPath(allowed, entry.options.host, state.document);
     }
+    for (const [parent, children] of allowed) {
+      if (isShadowRoot(parent)) observeMutationRoot(state, parent);
+      for (const child of composedChildren(parent)) {
+        if (!children.has(child)) inertElement(state, child, desired);
+      }
+    }
+  }
+  for (const [element, intended] of state.inerted) {
+    if (desired.has(element)) continue;
+    setInertByManager(state, element, intended);
+    state.inerted.delete(element);
   }
 }
 
@@ -338,11 +455,14 @@ function updateStackStyles(state: OverlayDocumentState): void {
   });
 }
 
-function registerEntry(entry: OverlayEntry, state: OverlayDocumentState): void {
+function registerEntry(entry: OverlayEntry, state: OverlayDocumentState, preserveStackOrder = false): void {
   if (state.stack.length === 0) startState(state);
+  if (!preserveStackOrder || entry.state !== state) entry.stackOrder = state.nextStackOrder++;
   entry.state = state;
   entry.registered = true;
-  state.stack.push(entry);
+  const nextIndex = state.stack.findIndex((candidate) => candidate.stackOrder > entry.stackOrder);
+  if (nextIndex === -1) state.stack.push(entry);
+  else state.stack.splice(nextIndex, 0, entry);
   updateStackStyles(state);
   applyTopmostInert(state);
 }
@@ -357,14 +477,14 @@ function unregisterEntry(entry: OverlayEntry): boolean {
   entry.wasTopmostOnSuspend = wasTopmost;
   restoreStackStyle(entry);
   updateStackStyles(state);
-  if (state.stack.length === 0) stopState(state);
   applyTopmostInert(state);
+  if (state.stack.length === 0) stopState(state);
   return wasTopmost;
 }
 
 function rebaseReturnTargets(entry: OverlayEntry): void {
   for (const candidate of entry.state.stack) {
-    if (candidate === entry) continue;
+    if (candidate === entry || candidate.stackOrder <= entry.stackOrder) continue;
     if (candidate.restoreFocusTo && composedContains(entry.options.host, candidate.restoreFocusTo)) {
       candidate.restoreFocusTo = entry.restoreFocusTo;
     }
@@ -384,7 +504,13 @@ function deactivateEntry(entry: OverlayEntry, restoreFocus: boolean): void {
   entry.active = false;
   entry.suspendGeneration++;
   if (hostEntries.get(entry.options.host) === entry) hostEntries.delete(entry.options.host);
-  if (restoreFocus && wasTopmost) restoreEntryFocus(entry);
+  if (!wasTopmost) return;
+  if (restoreFocus) {
+    restoreEntryFocus(entry);
+    return;
+  }
+  const next = entry.state.stack[entry.state.stack.length - 1];
+  if (next) focusEntry(next);
 }
 
 /**
@@ -409,6 +535,7 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   entry.wasTopmostOnSuspend = false;
   entry.suspendGeneration = 0;
   entry.state = stateFor(doc);
+  entry.stackOrder = -1;
   entry.previousStackValue = options.host.style.getPropertyValue(STACK_PROPERTY);
   entry.previousStackPriority = options.host.style.getPropertyPriority(STACK_PROPERTY);
   entry.handle = {
@@ -433,7 +560,8 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
     resume: () => {
       if (!entry.active || entry.registered) return;
       entry.suspendGeneration++;
-      registerEntry(entry, stateFor(entry.options.host.ownerDocument));
+      const state = stateFor(entry.options.host.ownerDocument);
+      registerEntry(entry, state, entry.state === state);
     },
     isTopmost: () =>
       entry.active && entry.registered && entry.state.stack[entry.state.stack.length - 1] === entry,
