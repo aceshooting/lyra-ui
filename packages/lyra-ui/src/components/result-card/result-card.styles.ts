@@ -28,7 +28,6 @@ export const styles = css`
     min-inline-size: 0;
     color: var(--lyra-color-text);
     font-weight: 600;
-    font-size: 0.8125rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

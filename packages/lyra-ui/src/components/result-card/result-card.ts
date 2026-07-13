@@ -26,7 +26,10 @@ import { styles } from './result-card.styles.js';
  * `actions` is still observed) but `hidden` whenever there is no `title`
  * and no `actions` content — an untitled, action-less card has no visible
  * header bar at all.
- * @csspart title - The title text.
+ * @csspart title - The title text. Truncates with an ellipsis when it
+ * overflows; carries its own native `title` attribute (the full string) so
+ * hovering the truncated text reveals it via the browser's default tooltip,
+ * scoped to just this element rather than the whole card.
  * @csspart actions - The wrapper around the `actions` slot. `hidden`
  * whenever the slot has no assigned content.
  * @csspart body - The wrapper around the default slot.
@@ -35,7 +38,10 @@ export class LyraResultCard extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   /** Small heading for the card. Leave unset for an untitled card (e.g. a
-   *  bare block of `<lyra-result-field>` rows with no natural heading). */
+   *  bare block of `<lyra-result-field>` rows with no natural heading).
+   *  Rendered into the truncating `[part="title"]` span, which also carries
+   *  this value as its own `title` attribute so the disclosure tooltip is
+   *  scoped to that element rather than the whole host. */
   @property() title = '';
 
   // See `<lyra-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
@@ -61,7 +67,7 @@ export class LyraResultCard extends LyraElement {
     return html`
       <div part="base">
         <div part="header" ?hidden=${!hasHeader}>
-          ${hasTitle ? html`<span part="title">${this.title}</span>` : nothing}
+          ${hasTitle ? html`<span part="title" title=${this.title}>${this.title}</span>` : nothing}
           <div part="actions" ?hidden=${!this.hasActionsSlot}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>

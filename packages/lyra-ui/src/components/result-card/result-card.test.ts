@@ -61,6 +61,45 @@ it('keeps the header hidden->visible transition working for actions added after 
   expect(header.hasAttribute('hidden'), 'header appears once actions is populated').to.be.false;
 });
 
+it('reacts to a title being set after initial mount, updating both the header visibility and the title text', async () => {
+  const el = (await fixture(html`<lyra-result-card>body</lyra-result-card>`)) as LyraResultCard;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  expect(header.hasAttribute('hidden'), 'starts untitled, so no header').to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="title"]'), 'no title span while untitled').to.not.exist;
+
+  el.title = 'Deployment result';
+  await el.updateComplete;
+
+  expect(header.hasAttribute('hidden'), 'header appears once a title is assigned').to.be.false;
+  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  expect(title.textContent).to.equal('Deployment result');
+
+  el.title = 'Renamed result';
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Renamed result');
+
+  el.title = '';
+  await el.updateComplete;
+
+  expect(header.hasAttribute('hidden'), 'header hides again once title is cleared').to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+});
+
+it('exposes the full title text on the truncating [part="title"] span via its own title attribute, scoped away from the host', async () => {
+  const longTitle =
+    'A very long tool result title that is guaranteed to overflow a narrow fixed-width card and get ellipsis-truncated';
+  const el = (await fixture(
+    html`<lyra-result-card title=${longTitle} style="max-inline-size: 8rem;">body</lyra-result-card>`,
+  )) as LyraResultCard;
+  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+
+  expect(title.scrollWidth, 'sanity check: the text actually overflows its box').to.be.greaterThan(
+    title.clientWidth,
+  );
+  expect(title.getAttribute('title')).to.equal(longTitle);
+});
+
 it('always renders the body wrapper around the default slot', async () => {
   const el = (await fixture(html`<lyra-result-card>plain body text</lyra-result-card>`)) as LyraResultCard;
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
