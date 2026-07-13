@@ -342,6 +342,41 @@ it('reflects the fullscreen-button aria-pressed and aria-label with the fullscre
   expect(btn.getAttribute('aria-label')).to.equal('Exit fullscreen');
 });
 
+it('localizes the collapse/fullscreen/view-group aria-labels and the fullscreen dialog fallback via .strings', async () => {
+  const el = (await fixture(html`
+    <lyra-widget
+      collapsible
+      expandable
+      .views=${[{ id: 'chart', ariaLabel: 'Chart view' }]}
+      .strings=${{
+        dockPanelCollapse: 'Réduire',
+        dockPanelExpand: 'Développer',
+        widgetExitFullscreen: 'Quitter le plein écran',
+        widgetExpandToFullscreen: 'Passer en plein écran',
+        widgetViewGroup: 'Vue du panneau',
+        widgetFullscreenPanel: 'Panneau plein écran',
+      }}
+    >
+      <div slot="view-chart">chart content</div>
+    </lyra-widget>
+  `)) as LyraWidget;
+
+  expect(el.shadowRoot!.querySelector('[part="view-toggles"]')!.getAttribute('aria-label')).to.equal('Vue du panneau');
+
+  const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+  expect(collapseBtn.getAttribute('aria-label')).to.equal('Réduire');
+  collapseBtn.click();
+  await el.updateComplete;
+  expect(collapseBtn.getAttribute('aria-label')).to.equal('Développer');
+
+  const fullscreenBtn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
+  expect(fullscreenBtn.getAttribute('aria-label')).to.equal('Passer en plein écran');
+  fullscreenBtn.click();
+  await el.updateComplete;
+  expect(fullscreenBtn.getAttribute('aria-label')).to.equal('Quitter le plein écran');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Panneau plein écran');
+});
+
 it('exits fullscreen on Escape and returns focus to the trigger button', async () => {
   const el = (await fixture(html`<lyra-widget label="x" expandable>content</lyra-widget>`)) as LyraWidget;
   const btn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;

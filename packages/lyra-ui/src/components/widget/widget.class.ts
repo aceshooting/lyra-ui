@@ -258,7 +258,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         part="base"
         role=${this.fullscreen ? 'dialog' : nothing}
         aria-modal=${this.fullscreen ? 'true' : nothing}
-        aria-label=${this.fullscreen ? (hasLabel ? this.label : 'Fullscreen panel') : nothing}
+        aria-label=${this.fullscreen ? (hasLabel ? this.label : this.localize('widgetFullscreenPanel')) : nothing}
         tabindex=${this.fullscreen ? '-1' : nothing}
         style=${this.fullscreenInset ? `--lyra-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
       >
@@ -280,7 +280,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>
           ${this.views.length > 0
-            ? html`<div part="view-toggles" role="group" aria-label="Panel view">
+            ? html`<div part="view-toggles" role="group" aria-label=${this.localize('widgetViewGroup')}>
                 ${this.views.map((v) => {
                   // `label` supplies the accessible name via its own visible text, same as
                   // before -- aria-label is only ever added for an icon-only toggle (`label`
@@ -302,7 +302,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 part="collapse-button"
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
-                aria-label=${this.collapsed ? 'Expand panel' : 'Collapse panel'}
+                aria-label=${this.collapsed ? this.localize('dockPanelExpand') : this.localize('dockPanelCollapse')}
                 aria-controls=${this.bodyId}
                 style="transform:rotate(${this.collapsed ? '0deg' : '90deg'})"
                 @click=${this.toggleCollapsed}
@@ -315,7 +315,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 part="fullscreen-button"
                 type="button"
                 aria-pressed=${this.fullscreen ? 'true' : 'false'}
-                aria-label=${this.fullscreen ? 'Exit fullscreen' : 'Expand to fullscreen'}
+                aria-label=${this.fullscreen ? this.localize('widgetExitFullscreen') : this.localize('widgetExpandToFullscreen')}
                 @click=${this.toggleFullscreen}
               >
                 <slot name="fullscreen-icon">${this.fullscreen ? closeIcon() : expandIcon()}</slot>

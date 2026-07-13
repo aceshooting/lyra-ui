@@ -111,6 +111,10 @@ export type LyraMessageKey =
   | 'dockPanelCollapse'
   | 'dockPanelExpand'
   | 'dockPanelResize'
+  | 'widgetFullscreenPanel'
+  | 'widgetViewGroup'
+  | 'widgetExitFullscreen'
+  | 'widgetExpandToFullscreen'
   | 'documentPreviewAlt'
   | 'documentPreviewUrlNotAllowed'
   | 'documentPreviewFailedToLoad'
@@ -290,6 +294,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   dockPanelCollapse: 'Collapse panel',
   dockPanelExpand: 'Expand panel',
   dockPanelResize: 'Resize panel',
+  widgetFullscreenPanel: 'Fullscreen panel',
+  widgetViewGroup: 'Panel view',
+  widgetExitFullscreen: 'Exit fullscreen',
+  widgetExpandToFullscreen: 'Expand to fullscreen',
   documentPreviewAlt: 'Document preview',
   documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
   documentPreviewFailedToLoad: 'Failed to load document.',
