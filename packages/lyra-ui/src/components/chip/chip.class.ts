@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { closeIcon } from '../../internal/icons.js';
@@ -45,9 +45,10 @@ export interface ChipSelectDetail {
  * Enter/Space while focused — native `<button>` behavior). `detail: { value }`
  * — `value` is `undefined` when the `value` prop was never set. Only
  * rendered while `removable`.
- * @event lyra-chip-select - Fired on click, or Enter/Space while focused, when `selected` mode is
- * active (and `removable` is not set). `detail: { value, selected }` -- the chip has already
- * toggled its own `selected` state by the time this fires.
+ * @event lyra-chip-select - Fired on click, or Enter/Space while focused, once the chip has
+ * opted into toggle mode (via `selected` or `toggleable`) and `removable` is not set.
+ * `detail: { value, selected }` -- the chip has already toggled its own `selected` state by the
+ * time this fires.
  * @csspart base - The pill's root container.
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
@@ -62,15 +63,29 @@ export class LyraChip extends LyraElement {
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = false;
 
-  /** Opt-in toggle/pressed mode -- when set, `[part='base']` itself becomes focusable and
+  /** Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the
+   *  common way to start a chip already pressed) opts the chip into toggle mode automatically, so
+   *  `<lyra-chip selected>` alone is enough: `[part='base']` becomes focusable and
    *  keyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects
-   *  `aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. Has no effect
-   *  (no interactive semantics added to `[part='base']`) when combined with `removable`, since the
-   *  remove button already nests inside `[part='base']` -- axe-core's `nested-interactive` rule
-   *  forbids a focusable descendant of a `role="button"` ancestor, and this component's two real
-   *  use cases (a chart-series visibility toggle, a category filter chip) never need both at once.
-   *  `false` (the default) reproduces today's exact passive-label-pill output. */
+   *  `aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. That opt-in
+   *  (tracked by `toggleable`, see below) persists once made, so toggling `selected` back to
+   *  `false` never strips the chip's interactivity -- a chip a user has clicked "off" must stay
+   *  clickable to turn it back "on". Has no effect (no interactive semantics added to
+   *  `[part='base']`) when combined with `removable`, since the remove button already nests inside
+   *  `[part='base']` -- axe-core's `nested-interactive` rule forbids a focusable descendant of a
+   *  `role="button"` ancestor, and this component's two real use cases (a chart-series visibility
+   *  toggle, a category filter chip) never need both at once. `false` (the default, with
+   *  `toggleable` also left at its default) reproduces today's exact passive-label-pill output. */
   @property({ type: Boolean, reflect: true }) selected = false;
+
+  /** Explicit opt-in into `selected`'s toggle/pressed interactive mode, independent of the
+   *  *current* value of `selected`. Setting `selected` to `true` at any point opts in
+   *  automatically (see its doc comment) and keeps this `true` from then on, which is enough for
+   *  a chip that starts already pressed. Set `toggleable` directly for a chip that must be
+   *  clickable from the outset while starting **unselected** -- e.g. an initially-inactive
+   *  category filter chip -- since `selected`'s own default (`false`) can't be distinguished from
+   *  "never opted in" on its own. */
+  @property({ type: Boolean, reflect: true }) toggleable = false;
 
   /** Opaque consumer bookkeeping value — never read, validated, or rendered
    *  by this component itself, only ever echoed back verbatim (including
@@ -83,9 +98,16 @@ export class LyraChip extends LyraElement {
   // `<lyra-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
   @state() private hasIconSlot = false;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
+    }
+    // Sticky opt-in: once `selected` has been true at any point, `toggleable` latches on and
+    // never resets, so toggling `selected` back to false later can't un-opt the chip out of
+    // toggle mode. `toggleable` can also be set directly up front for a chip that starts
+    // unselected (selected's own default) but must still be interactive from the outset.
+    if (changed.has('selected') && this.selected) {
+      this.toggleable = true;
     }
   }
 
@@ -138,15 +160,19 @@ export class LyraChip extends LyraElement {
   };
 
   render(): TemplateResult {
-    const interactive = this.selected && !this.removable;
+    // `toggleMode` is sticky (see `toggleable`'s doc comment) and gates the chip's structural
+    // interactivity, so it survives `selected` toggling back to false. `pressed` tracks only the
+    // *current* value, for `aria-pressed`.
+    const toggleMode = this.toggleable && !this.removable;
+    const pressed = this.selected && !this.removable;
     return html`
       <span
         part="base"
-        role=${interactive ? 'button' : nothing}
-        tabindex=${interactive ? '0' : nothing}
-        aria-pressed=${interactive ? (this.selected ? 'true' : 'false') : nothing}
-        @click=${interactive ? this.onBaseClick : nothing}
-        @keydown=${interactive ? this.onBaseKeyDown : nothing}
+        role=${toggleMode ? 'button' : nothing}
+        tabindex=${toggleMode ? '0' : nothing}
+        aria-pressed=${pressed ? 'true' : nothing}
+        @click=${toggleMode ? this.onBaseClick : nothing}
+        @keydown=${toggleMode ? this.onBaseKeyDown : nothing}
       >
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>

@@ -192,4 +192,55 @@ describe('selected', () => {
     const el = (await fixture(html`<lyra-chip selected>Tag</lyra-chip>`)) as LyraChip;
     await expect(el).to.be.accessible();
   });
+
+  it('stays clickable after toggling off -- a second click flips selected back to true', async () => {
+    // Regression test: [part=base]'s interactive semantics used to be gated on the *current*
+    // live value of `selected`, so the very first click (which flips selected to false) stripped
+    // role/tabindex/handlers on the next render and the chip could never be clicked again.
+    const el = (await fixture(html`<lyra-chip selected value="v1">Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    setTimeout(() => base.click());
+    const off = await oneEvent(el, 'lyra-chip-select');
+    expect(off.detail).to.deep.equal({ value: 'v1', selected: false });
+    expect(el.selected).to.be.false;
+    await el.updateComplete;
+
+    // Still focusable/clickable even though the live value is now false.
+    expect(base.getAttribute('role')).to.equal('button');
+    expect(base.getAttribute('tabindex')).to.equal('0');
+
+    setTimeout(() => base.click());
+    const on = await oneEvent(el, 'lyra-chip-select');
+    expect(on.detail).to.deep.equal({ value: 'v1', selected: true });
+    expect(el.selected).to.be.true;
+    await el.updateComplete;
+    expect(base.getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('supports opting into toggle mode while starting unselected via the toggleable property', async () => {
+    // A category-filter chip typically starts inactive (selected=false) but must still be
+    // clickable from the outset -- `selected` alone can't signal that (its own default is also
+    // false), so `toggleable` is the explicit opt-in for this starting state.
+    const el = (await fixture(html`<lyra-chip toggleable value="v1">Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('button');
+    expect(base.getAttribute('tabindex')).to.equal('0');
+    expect(el.selected).to.be.false;
+
+    setTimeout(() => base.click());
+    const ev = await oneEvent(el, 'lyra-chip-select');
+    expect(ev.detail).to.deep.equal({ value: 'v1', selected: true });
+    expect(el.selected).to.be.true;
+  });
+
+  it('is accessible once toggled off (still interactive, now unselected)', async () => {
+    const el = (await fixture(html`<lyra-chip selected>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    setTimeout(() => base.click());
+    await oneEvent(el, 'lyra-chip-select');
+    await el.updateComplete;
+    expect(base.getAttribute('role')).to.equal('button');
+    await expect(el).to.be.accessible();
+  });
 });

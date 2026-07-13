@@ -18625,7 +18625,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Opt-in toggle/pressed mode -- when set, `[part='base']` itself becomes focusable and\nkeyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects\n`aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. Has no effect\n(no interactive semantics added to `[part='base']`) when combined with `removable`, since the\nremove button already nests inside `[part='base']` -- axe-core's `nested-interactive` rule\nforbids a focusable descendant of a `role=\"button\"` ancestor, and this component's two real\nuse cases (a chart-series visibility toggle, a category filter chip) never need both at once.\n`false` (the default) reproduces today's exact passive-label-pill output.",
+              "description": "Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the\ncommon way to start a chip already pressed) opts the chip into toggle mode automatically, so\n`<lyra-chip selected>` alone is enough: `[part='base']` becomes focusable and\nkeyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects\n`aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. That opt-in\n(tracked by `toggleable`, see below) persists once made, so toggling `selected` back to\n`false` never strips the chip's interactivity -- a chip a user has clicked \"off\" must stay\nclickable to turn it back \"on\". Has no effect (no interactive semantics added to\n`[part='base']`) when combined with `removable`, since the remove button already nests inside\n`[part='base']` -- axe-core's `nested-interactive` rule forbids a focusable descendant of a\n`role=\"button\"` ancestor, and this component's two real use cases (a chart-series visibility\ntoggle, a category filter chip) never need both at once. `false` (the default, with\n`toggleable` also left at its default) reproduces today's exact passive-label-pill output.",
               "attribute": "selected",
               "reflects": true
             },
@@ -18653,6 +18653,17 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "toggleable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Explicit opt-in into `selected`'s toggle/pressed interactive mode, independent of the\n*current* value of `selected`. Setting `selected` to `true` at any point opts in\nautomatically (see its doc comment) and keeps this `true` from then on, which is enough for\na chip that starts already pressed. Set `toggleable` directly for a chip that must be\nclickable from the outset while starting **unselected** -- e.g. an initially-inactive\ncategory filter chip -- since `selected`'s own default (`false`) can't be distinguished from\n\"never opted in\" on its own.",
+              "attribute": "toggleable",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -18819,7 +18830,7 @@
           ],
           "events": [
             {
-              "description": "Fired on click, or Enter/Space while focused, when `selected` mode is active (and `removable` is not set). `detail: { value, selected }` -- the chip has already toggled its own `selected` state by the time this fires.",
+              "description": "Fired on click, or Enter/Space while focused, once the chip has opted into toggle mode (via `selected` or `toggleable`) and `removable` is not set. `detail: { value, selected }` -- the chip has already toggled its own `selected` state by the time this fires.",
               "name": "lyra-chip-select"
             },
             {
@@ -18856,8 +18867,17 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Opt-in toggle/pressed mode -- when set, `[part='base']` itself becomes focusable and\nkeyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects\n`aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. Has no effect\n(no interactive semantics added to `[part='base']`) when combined with `removable`, since the\nremove button already nests inside `[part='base']` -- axe-core's `nested-interactive` rule\nforbids a focusable descendant of a `role=\"button\"` ancestor, and this component's two real\nuse cases (a chart-series visibility toggle, a category filter chip) never need both at once.\n`false` (the default) reproduces today's exact passive-label-pill output.",
+              "description": "Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the\ncommon way to start a chip already pressed) opts the chip into toggle mode automatically, so\n`<lyra-chip selected>` alone is enough: `[part='base']` becomes focusable and\nkeyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects\n`aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`. That opt-in\n(tracked by `toggleable`, see below) persists once made, so toggling `selected` back to\n`false` never strips the chip's interactivity -- a chip a user has clicked \"off\" must stay\nclickable to turn it back \"on\". Has no effect (no interactive semantics added to\n`[part='base']`) when combined with `removable`, since the remove button already nests inside\n`[part='base']` -- axe-core's `nested-interactive` rule forbids a focusable descendant of a\n`role=\"button\"` ancestor, and this component's two real use cases (a chart-series visibility\ntoggle, a category filter chip) never need both at once. `false` (the default, with\n`toggleable` also left at its default) reproduces today's exact passive-label-pill output.",
               "fieldName": "selected"
+            },
+            {
+              "name": "toggleable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Explicit opt-in into `selected`'s toggle/pressed interactive mode, independent of the\n*current* value of `selected`. Setting `selected` to `true` at any point opts in\nautomatically (see its doc comment) and keeps this `true` from then on, which is enough for\na chip that starts already pressed. Set `toggleable` directly for a chip that must be\nclickable from the outset while starting **unselected** -- e.g. an initially-inactive\ncategory filter chip -- since `selected`'s own default (`false`) can't be distinguished from\n\"never opted in\" on its own.",
+              "fieldName": "toggleable"
             },
             {
               "name": "tone",

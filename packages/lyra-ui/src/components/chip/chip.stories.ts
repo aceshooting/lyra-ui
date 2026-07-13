@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './chip.js';
 import './chip-group.js';
+import type { ChipSelectDetail } from './chip.js';
 
 const meta: Meta = {
   title: 'Chip',
@@ -110,6 +111,33 @@ export const Events: Story = {
       <p id="chip-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
     </div>
   `,
+};
+
+export const ToggleSelection: Story = {
+  name: 'selected/toggleable -- opt-in toggle mode, both directions',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Setting `selected` opts `[part=base]` into toggle/pressed interactive semantics (role="button", tabindex, keyboard activation, a reflected aria-pressed) and clicking flips it, firing `lyra-chip-select` -- that opt-in survives toggling `selected` back off, so a chip that starts selected (the chart-series toggle on the left) stays clickable after the first click turns it off. A chip that must be clickable from the outset while starting **unselected** (an inactive category filter, on the right) sets `toggleable` explicitly instead of relying on `selected` alone.',
+      },
+    },
+  },
+  render: () => {
+    const log = (e: CustomEvent<ChipSelectDetail>) => {
+      const out = document.getElementById('chip-toggle-log');
+      if (out) out.textContent = `lyra-chip-select: ${JSON.stringify(e.detail)}`;
+    };
+    return html`
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <lyra-chip tone="brand" selected value="series-a" @lyra-chip-select=${log}>Series A</lyra-chip>
+        <lyra-chip tone="brand" toggleable value="category:beta" @lyra-chip-select=${log}>Category: Beta</lyra-chip>
+      </div>
+      <p id="chip-toggle-log" style="font-family: monospace; margin-top: 0.5rem;">
+        No event fired yet. Click a chip, then click it again -- it stays clickable both ways.
+      </p>
+    `;
+  },
 };
 
 export const GroupBasic: Story = {
