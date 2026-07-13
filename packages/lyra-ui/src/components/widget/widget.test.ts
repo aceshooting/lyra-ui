@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './widget.js';
 import type { LyraWidget } from './widget.js';
 import { styles } from './widget.styles.js';
@@ -23,6 +23,72 @@ it('renders label and sublabel in the header', async () => {
   )) as LyraWidget;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Load profile');
   expect(el.shadowRoot!.querySelector('[part="sublabel"]')!.textContent).to.equal('Last 7 days');
+});
+
+describe('icon slot', () => {
+  it('renders a leading icon from the icon slot', async () => {
+    const el = (await fixture(
+      html`<lyra-widget label="Load"><svg slot="icon" width="16" height="16"></svg>content</lyra-widget>`,
+    )) as LyraWidget;
+    const iconSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    expect(iconSlot.assignedElements().length).to.equal(1);
+  });
+});
+
+describe('rich label/sublabel', () => {
+  it('lets the label slot override the label attribute instead of concatenating both', async () => {
+    const el = (await fixture(
+      html`<lyra-widget label="attr"><span slot="label">rich</span>content</lyra-widget>`,
+    )) as LyraWidget;
+    const slot = el.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
+    const assigned = slot.assignedElements({ flatten: true });
+    expect(assigned.length).to.equal(1);
+    expect(assigned[0].textContent).to.equal('rich');
+  });
+
+  it('renders label/sublabel as plain strings when no slot content is provided (unchanged default)', async () => {
+    const el = (await fixture(html`<lyra-widget label="Load" sublabel="Last 7 days">content</lyra-widget>`)) as LyraWidget;
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Load');
+    expect(el.shadowRoot!.querySelector('[part="sublabel"]')!.textContent).to.equal('Last 7 days');
+  });
+});
+
+describe('views', () => {
+  it('defaults to a single unnamed body slot when views is unset (unchanged today)', async () => {
+    const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
+    const bodySlot = el.shadowRoot!.querySelector('[part="body"] slot:not([name])') as HTMLSlotElement;
+    expect(bodySlot).to.exist;
+    expect(bodySlot.assignedNodes({ flatten: true }).map((n) => n.textContent).join('')).to.include('content');
+  });
+
+  it('renders a header toggle per view and a named slot per view when views is set', async () => {
+    const el = (await fixture(html`
+      <lyra-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+        <div slot="view-chart">chart content</div>
+        <div slot="view-table">table content</div>
+      </lyra-widget>
+    `)) as LyraWidget;
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')];
+    expect(toggles).to.have.length(2);
+    expect(el.shadowRoot!.querySelector('slot[name="view-chart"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('slot[name="view-table"]')).to.exist;
+  });
+
+  it('switches the active view on click and emits lyra-view-change', async () => {
+    const el = (await fixture(html`
+      <lyra-widget label="Usage" .views=${[{ id: 'chart', label: 'Chart' }, { id: 'table', label: 'Table' }]}>
+        <div slot="view-chart">chart content</div>
+        <div slot="view-table">table content</div>
+      </lyra-widget>
+    `)) as LyraWidget;
+    await el.updateComplete;
+    expect(el.activeView).to.equal('chart');
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')] as HTMLButtonElement[];
+    setTimeout(() => toggles[1]!.click());
+    const ev = await oneEvent(el, 'lyra-view-change');
+    expect(ev.detail).to.equal('table');
+    expect(el.activeView).to.equal('table');
+  });
 });
 
 it('truncates long label/sublabel text instead of wrapping and growing the header', async () => {

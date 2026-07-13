@@ -12,9 +12,16 @@ import { nextId } from '../../internal/a11y.js';
 import { chevronIcon, closeIcon, expandIcon } from '../../internal/icons.js';
 import { styles } from './widget.styles.js';
 
+export interface WidgetView {
+  id: string;
+  label: string;
+  icon?: TemplateResult;
+}
+
 export interface LyraWidgetEventMap {
   'lyra-collapse-change': CustomEvent<boolean>;
   'lyra-fullscreen-change': CustomEvent<boolean>;
+  'lyra-view-change': CustomEvent<string>;
 }
 /**
  * `<lyra-widget>` — a titled panel shell with an optional collapse toggle and
@@ -24,15 +31,24 @@ export interface LyraWidgetEventMap {
  *
  * @customElement lyra-widget
  * @slot - The panel body.
+ * @slot icon - Optional leading icon in the title row.
+ * @slot label - Rich label content (overrides the `label` attribute).
+ * @slot sublabel - Rich sublabel content (overrides the `sublabel` attribute).
  * @slot actions - Header action controls, rendered before the collapse/expand buttons.
  * @event lyra-collapse-change - `detail: boolean` (the new `collapsed` state).
  * @event lyra-fullscreen-change - `detail: boolean` (the new `fullscreen` state).
+ * @event lyra-view-change - Fired when the active view changes via a header toggle click.
+ *   `detail: string` (the new view's `id`).
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
  * @csspart title - The wrapper around the label/sublabel.
+ * @csspart icon - Wrapper around the `icon` slot. Hidden entirely when empty.
+ * @csspart label-group - Wrapper around the label and sublabel.
  * @csspart label - The panel title text.
  * @csspart sublabel - The panel subtitle text.
  * @csspart actions - The wrapper around the `actions` slot.
+ * @csspart view-toggles - The header toggle-button group, only rendered when `views` is non-empty.
+ * @csspart view-toggle - A single view toggle button.
  * @csspart collapse-button - The collapse/expand toggle button.
  * @csspart fullscreen-button - The fullscreen toggle button.
  * @csspart body - The wrapper around the default slot (the panel body).
@@ -57,8 +73,20 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ attribute: 'fullscreen-inset' }) fullscreenInset = '';
   /** Tighter header/body padding for constrained spaces. */
   @property({ type: Boolean, reflect: true }) compact = false;
+  /** Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card
+   *  chrome. Each entry gets a header toggle button and a `<slot name="view-${id}">`. Empty (the
+   *  default) renders today's single unnamed default slot as the sole view, unchanged. */
+  @property({ attribute: false }) views: WidgetView[] = [];
+
+  /** The currently active view's `id` -- defaults to the first entry of `views` (or `''` when
+   *  `views` is empty). Settable directly by a consumer wanting to control the active view
+   *  externally; also updated internally when a view toggle is clicked. */
+  @property({ attribute: false }) activeView = '';
 
   @state() private hasActionsSlot = false;
+  @state() private hasIconSlot = false;
+  @state() private hasLabelSlot = false;
+  @state() private hasSublabelSlot = false;
 
   private releaseScrollLock?: () => void;
   private overlayHandle?: OverlayHandle;
@@ -68,6 +96,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
+      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasSublabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sublabel');
     }
     if (changed.has('fullscreen')) {
       if (this.fullscreen) {
@@ -75,6 +106,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       } else {
         this.deactivateFullscreenOverlay();
       }
+    }
+    if (changed.has('views') && !this.views.some((v) => v.id === this.activeView)) {
+      this.activeView = this.views[0]?.id ?? '';
     }
   }
 
@@ -152,6 +186,24 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onIconSlotChange = (e: Event): void => {
+    this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onLabelSlotChange = (e: Event): void => {
+    this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onSublabelSlotChange = (e: Event): void => {
+    this.hasSublabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private setActiveView = (id: string): void => {
+    if (id === this.activeView) return;
+    this.activeView = id;
+    this.emit('lyra-view-change', id);
+  };
+
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
     this.emit('lyra-collapse-change', this.collapsed);
@@ -194,12 +246,33 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       >
         <div part="header">
           <div part="title">
-            ${hasLabel ? html`<span part="label">${this.label}</span>` : nothing}
-            ${hasSublabel ? html`<span part="sublabel">${this.sublabel}</span>` : nothing}
+            <span part="icon" ?hidden=${!this.hasIconSlot}>
+              <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
+            </span>
+            <div part="label-group">
+              ${hasLabel || this.hasLabelSlot
+                ? html`<span part="label"><slot name="label" @slotchange=${this.onLabelSlotChange}>${this.label}</slot></span>`
+                : nothing}
+              ${hasSublabel || this.hasSublabelSlot
+                ? html`<span part="sublabel"><slot name="sublabel" @slotchange=${this.onSublabelSlotChange}>${this.sublabel}</slot></span>`
+                : nothing}
+            </div>
           </div>
           <div part="actions" ?hidden=${!this.hasActionsSlot}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>
+          ${this.views.length > 0
+            ? html`<div part="view-toggles" role="group" aria-label="Panel view">
+                ${this.views.map(
+                  (v) => html`<button
+                    part="view-toggle"
+                    type="button"
+                    aria-pressed=${v.id === this.activeView ? 'true' : 'false'}
+                    @click=${() => this.setActiveView(v.id)}
+                  >${v.icon ?? nothing}${v.label}</button>`,
+                )}
+              </div>`
+            : nothing}
           ${this.collapsible
             ? html`<button
                 part="collapse-button"
@@ -226,7 +299,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             : nothing}
         </div>
         <div part="body" id=${this.bodyId} ?hidden=${this.collapsed}>
-          <slot></slot>
+          ${this.views.length === 0
+            ? html`<slot></slot>`
+            : this.views.map(
+                (v) => html`<div ?hidden=${v.id !== this.activeView}><slot name="view-${v.id}"></slot></div>`,
+              )}
         </div>
       </div>
     `;
