@@ -9,6 +9,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { nextId } from '../../internal/a11y.js';
+import { isRtl } from '../../internal/rtl.js';
 import { styles } from './date-picker.styles.js';
 import {
   monthMatrix,
@@ -322,12 +323,24 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       }
       return null;
     };
+    // The grid's cells are laid out via `grid-template-columns` with no
+    // explicit `direction` override, so under `dir="rtl"` the browser mirrors
+    // the column order itself (day 1 of the week renders at the inline-start
+    // edge, which `direction` puts on the right) -- the same auto-mirroring
+    // `<lyra-tabs>`/`<lyra-split>`/`<lyra-tree>` rely on for their own
+    // row/track layouts. So ArrowLeft/ArrowRight must swap which physical key
+    // advances a day, or keyboard nav would point the opposite way from what
+    // the mirrored grid shows. ArrowUp/ArrowDown move by week (the block
+    // axis), which `direction` never affects, so those stay as-is.
+    const rtl = isRtl(this);
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next: Date | null = null;
     switch (e.key) {
-      case 'ArrowLeft':
+      case backwardKey:
         next = firstEnabledFrom(step(current, -1), -1);
         break;
-      case 'ArrowRight':
+      case forwardKey:
         next = firstEnabledFrom(step(current, 1), 1);
         break;
       case 'ArrowUp':

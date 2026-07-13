@@ -307,6 +307,44 @@ it('moves roving focus one day left/right with ArrowLeft/ArrowRight', async () =
   expect(el.shadowRoot!.activeElement).to.equal(focused);
 });
 
+it('swaps ArrowLeft/ArrowRight under dir="rtl", since the day grid mirrors visually (no explicit direction override on [part="grid"])', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker dir="rtl" value="2026-07-15"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowLeft');
+  await el.updateComplete;
+  let focused = el.shadowRoot!.querySelector('[data-date="2026-07-16"]') as HTMLButtonElement;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+
+  dispatchGridKey(el, 'ArrowRight');
+  await el.updateComplete;
+  focused = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+});
+
+it('does not swap ArrowUp/ArrowDown under dir="rtl" (direction only affects the horizontal inline axis)', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker dir="rtl" value="2026-07-15"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  dispatchGridKey(el, 'ArrowDown');
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.querySelector('[data-date="2026-07-22"]') as HTMLButtonElement).getAttribute('tabindex'),
+  ).to.equal('0');
+
+  dispatchGridKey(el, 'ArrowUp');
+  await el.updateComplete;
+  expect(
+    (el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement).getAttribute('tabindex'),
+  ).to.equal('0');
+});
+
 it('moves roving focus one week up/down with ArrowUp/ArrowDown', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
