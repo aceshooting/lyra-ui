@@ -119,6 +119,16 @@ export type LyraMessageKey =
   | 'generationStatusToken'
   | 'generationStatusTokens'
   | 'graphDataList'
+  | 'selectTools'
+  | 'searchToolsPlaceholder'
+  | 'useDefaultTools'
+  | 'toolSelectCustomizeHint'
+  | 'noMatchesQuery'
+  | 'toolSelectNoneAvailable'
+  | 'toolSelectSummary'
+  | 'toolCount'
+  | 'toolCountPlural'
+  | 'otherCategory'
   | 'mentionSuggestions'
   | 'temperature'
   | 'selectModel'
@@ -288,6 +298,16 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
   graphDataList: 'Graph data',
+  selectTools: 'Select tools',
+  searchToolsPlaceholder: 'Search tools…',
+  useDefaultTools: 'Use default tools',
+  toolSelectCustomizeHint: 'Turn off to choose individual tools.',
+  noMatchesQuery: 'No tools match "{query}".',
+  toolSelectNoneAvailable: 'No tools available.',
+  toolSelectSummary: '{selected} of {total} tools enabled',
+  toolCount: '{count} tool',
+  toolCountPlural: '{count} tools',
+  otherCategory: 'Other',
   mentionSuggestions: 'Suggestions',
   temperature: 'Temperature',
   selectModel: 'Select a model…',

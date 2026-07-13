@@ -207,6 +207,16 @@ describe('search filtering', () => {
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('No tools available.');
   });
 
+  it('localizes the no-tools-available message via .strings', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-select-dialog
+        .tools=${[]}
+        .strings=${{ toolSelectNoneAvailable: 'Aucun outil disponible.' }}
+      ></lyra-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('Aucun outil disponible.');
+  });
+
   it('honors a custom filter override in place of the default name/description match', async () => {
     const el = (await fixture(
       html`<lyra-tool-select-dialog .tools=${TOOLS}></lyra-tool-select-dialog>`,

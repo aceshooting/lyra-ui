@@ -317,8 +317,15 @@ export class LyraToolSelectDialog extends LyraElement {
     return html`
       <div part="category" role="group" aria-labelledby=${headingId}>
         <h3 part="category-heading" id=${headingId}>
-          ${group.category}<span part="category-count" aria-hidden="true">${group.tools.length}</span
-          ><span class="sr-only">${group.tools.length} tool${group.tools.length === 1 ? '' : 's'}</span>
+          ${group.category === OTHER_CATEGORY ? this.localize('otherCategory') : group.category}<span
+            part="category-count"
+            aria-hidden="true"
+            >${group.tools.length}</span
+          ><span class="sr-only"
+            >${this.localize(group.tools.length === 1 ? 'toolCount' : 'toolCountPlural', undefined, {
+              count: group.tools.length,
+            })}</span
+          >
         </h3>
         <ul part="category-list">
           ${group.tools.map((tool) => this.renderTool(tool))}
@@ -330,6 +337,11 @@ export class LyraToolSelectDialog extends LyraElement {
   render(): TemplateResult {
     const groups = this.groups;
     const hasTools = this.tools.length > 0;
+    const label = this.localize('selectTools', this.label === 'Select tools' ? undefined : this.label);
+    const searchPlaceholder = this.localize(
+      'searchToolsPlaceholder',
+      this.searchPlaceholder === 'Search tools…' ? undefined : this.searchPlaceholder,
+    );
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -340,16 +352,23 @@ export class LyraToolSelectDialog extends LyraElement {
         tabindex="-1"
       >
         <div part="header">
-          <h2 part="title" id=${this.titleId}>${this.label}</h2>
-          <p part="subtitle" ?hidden=${!hasTools}>${this.selected.length} of ${this.tools.length} tools enabled</p>
+          <h2 part="title" id=${this.titleId}>${label}</h2>
+          <p
+            part="subtitle"
+            ?hidden=${!hasTools}
+            >${this.localize('toolSelectSummary', undefined, {
+              selected: this.selected.length,
+              total: this.tools.length,
+            })}</p
+          >
         </div>
         <div part="search-row">
           <input
             part="search-input"
             type="search"
             .value=${this.query}
-            placeholder=${this.searchPlaceholder}
-            aria-label=${this.searchPlaceholder}
+            placeholder=${searchPlaceholder}
+            aria-label=${searchPlaceholder}
             @input=${this.onSearchInput}
           />
         </div>
@@ -359,16 +378,18 @@ export class LyraToolSelectDialog extends LyraElement {
             ?checked=${this.useDefaults}
             @lyra-change=${this.onDefaultsToggle}
           >
-            Use default tools
+            ${this.localize('useDefaultTools')}
           </lyra-switch>
           ${this.useDefaults
-            ? html`<p part="defaults-hint">Turn off to choose individual tools.</p>`
+            ? html`<p part="defaults-hint">${this.localize('toolSelectCustomizeHint')}</p>`
             : nothing}
         </div>
         <div part="body">
           ${groups.length === 0
             ? html`<p part="empty">
-                ${hasTools ? html`No tools match "${this.query}".` : 'No tools available.'}
+                ${hasTools
+                  ? this.localize('noMatchesQuery', undefined, { query: this.query })
+                  : this.localize('toolSelectNoneAvailable')}
               </p>`
             : groups.map((group) => this.renderCategory(group))}
         </div>
