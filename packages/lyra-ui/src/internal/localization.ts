@@ -81,7 +81,9 @@ export type LyraMessageKey =
   | 'statusError'
   | 'statusDenied'
   | 'maximize'
-  | 'restore';
+  | 'restore'
+  | 'wordCloudWord'
+  | 'wordCloudWords';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -164,6 +166,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   statusDenied: 'Denied',
   maximize: 'Maximize',
   restore: 'Restore',
+  wordCloudWord: 'word',
+  wordCloudWords: 'words',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

@@ -167,7 +167,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
         'aria-label',
         this.localize('wordCloud', undefined, {
           count: this.cachedLayout.placed.length,
-          word: this.cachedLayout.placed.length === 1 ? 'word' : 'words',
+          word: this.localize(this.cachedLayout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
         }),
       );
     }

@@ -335,3 +335,16 @@ it('defines a dark-mode palette with readable fallback colors', () => {
   );
   expect(styles.cssText).to.match(/--lyra-word-cloud-color-8:\s*var\(--lyra-color-chart-8\)/);
 });
+
+it("localizes the wordCloud aria-label's pluralized noun via this.localize()", async () => {
+  const el = (await fixture(html`<lyra-word-cloud .words=${WORDS}></lyra-word-cloud>`)) as LyraWordCloud;
+  el.strings = { wordCloudWords: 'mots' };
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} mots`);
+});
+
+it('defaults to English "word"/"words" when no strings override is set', async () => {
+  const el = (await fixture(html`<lyra-word-cloud .words=${WORDS}></lyra-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} words`);
+});
