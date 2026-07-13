@@ -2,10 +2,11 @@
 
 > Free, clean-room Lit web components — a companion to Web Awesome that reimplements several
 > Web Awesome Pro components as open-source equivalents (same attributes/slots/events/CSS parts,
-> just a `lyra-` prefix instead of `wa-`) plus a number of extras with no Web Awesome counterpart.
-> Token-compatible with Web Awesome — every component resolves its styling through Web Awesome's
-> `--wa-*` design tokens first, with `--lyra-*` fallbacks — so it looks native inside a Web
-> Awesome-themed app and works standalone with no theme at all.
+> just a `lyra-` prefix instead of `wa-`), plus a number of extras with no Web Awesome counterpart.
+
+Token-compatible with Web Awesome: every component resolves its styling through Web Awesome's
+`--wa-*` design tokens first, with `--lyra-*` fallbacks, so it looks native inside a Web
+Awesome-themed app and works standalone with no theme at all.
 
 ## Docs
 
