@@ -39,7 +39,7 @@ export const styles = css`
     font-size: 0.8125rem;
     line-height: 1.4;
   }
-  [part='excerpt']:empty {
+  [part='excerpt'][hidden] {
     display: none;
   }
   [part='toggle'] {

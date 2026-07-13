@@ -32,6 +32,21 @@ it('renders a non-numeric page label as-is', async () => {
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('notes.txt — p. iv');
 });
 
+it('strips the host-level title attribute after syncing it into the title property, avoiding a native tooltip', async () => {
+  const el = (await fixture(html`<lyra-source-card title="annual_report.pdf"></lyra-source-card>`)) as LyraSourceCard;
+  expect(el.title).to.equal('annual_report.pdf');
+  expect(el.hasAttribute('title')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('annual_report.pdf');
+});
+
+it('strips a title attribute set programmatically after connection too', async () => {
+  const el = (await fixture(html`<lyra-source-card></lyra-source-card>`)) as LyraSourceCard;
+  el.setAttribute('title', 'late.pdf');
+  await el.updateComplete;
+  expect(el.title).to.equal('late.pdf');
+  expect(el.hasAttribute('title')).to.be.false;
+});
+
 it('always renders the excerpt slot content', async () => {
   const el = (await fixture(
     html`<lyra-source-card title="a.pdf"><span slot="excerpt">Preview text</span></lyra-source-card>`,
@@ -39,6 +54,28 @@ it('always renders the excerpt slot content', async () => {
   const excerptSlot = el.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
   expect(excerptSlot.assignedElements()[0].textContent).to.equal('Preview text');
   expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hidden).to.be.false;
+});
+
+it('hides the excerpt wrapper when no excerpt content is slotted', async () => {
+  const el = (await fixture(html`<lyra-source-card title="a.pdf"></lyra-source-card>`)) as LyraSourceCard;
+  expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hidden).to.be.true;
+});
+
+it('reveals the excerpt wrapper reactively when excerpt content is added after initial mount', async () => {
+  const el = (await fixture(html`<lyra-source-card title="a.pdf"></lyra-source-card>`)) as LyraSourceCard;
+  const excerptPart = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+  expect(excerptPart.hidden).to.be.true;
+
+  const excerptSlot = el.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
+  const excerpt = document.createElement('span');
+  excerpt.slot = 'excerpt';
+  excerpt.textContent = 'Preview text';
+  const slotChanged = oneEvent(excerptSlot, 'slotchange');
+  el.appendChild(excerpt);
+  await slotChanged;
+  await el.updateComplete;
+
+  expect(excerptPart.hidden).to.be.false;
 });
 
 it('does not render a show-more toggle when the full slot is empty', async () => {
@@ -79,6 +116,26 @@ it('reveals a toggle reactively when full-slot content is added after initial mo
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.exist;
+});
+
+it('collapses the full wrapper and removes the toggle when its only slotted content is removed while expanded', async () => {
+  const el = (await fixture(
+    html`<lyra-source-card title="a.pdf"><span slot="full" id="full-content">Full text.</span></lyra-source-card>`,
+  )) as LyraSourceCard;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  toggle.click();
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.false;
+
+  const fullSlot = el.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
+  const fullContent = el.querySelector('#full-content')!;
+  const slotChanged = oneEvent(fullSlot, 'slotchange');
+  fullContent.remove();
+  await slotChanged;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="toggle"]')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
 });
 
 it('toggles the full wrapper and fires lyra-expand with sourceId and the new state', async () => {

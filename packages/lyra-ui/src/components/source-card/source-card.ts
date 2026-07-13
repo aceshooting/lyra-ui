@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -31,10 +31,12 @@ export interface SourceCardOpenDetail {
  * card's `id`/`source-id`. See the `@example` below.
  *
  * @customElement lyra-source-card
- * @slot excerpt - A short preview, always visible.
+ * @slot excerpt - A short preview. When left empty, the `excerpt` part
+ * collapses away entirely rather than leaving an empty gap in the card.
  * @slot full - The complete source text/chunk, hidden behind the "Show
  * more"/"Show less" toggle. When left empty, no toggle renders at all — a
- * card with no `full` content simply has no expand affordance.
+ * card with no `full` content simply has no expand affordance. Removing all
+ * `full`-slotted content while expanded automatically collapses it back.
  * @event lyra-expand - The per-card "Show more"/"Show less" toggle was
  * activated. `detail: { sourceId, expanded }`.
  * @event lyra-open - The title was activated. `detail: { sourceId, href }` —
@@ -45,7 +47,7 @@ export interface SourceCardOpenDetail {
  * viewer, etc).
  * @csspart base - The outer container.
  * @csspart title - The clickable title/page heading (`<button>`).
- * @csspart excerpt - The wrapper around the `excerpt` slot.
+ * @csspart excerpt - The wrapper around the `excerpt` slot, `hidden` when the slot has no assigned content.
  * @csspart full - The wrapper around the `full` slot, `hidden` while collapsed.
  * @csspart toggle - The "Show more"/"Show less" button. Only rendered when the `full` slot has content.
  *
@@ -76,7 +78,12 @@ export class LyraSourceCard extends LyraElement {
   /** Stable identifier matching a `<lyra-citation-badge>` elsewhere on the page. */
   @property({ attribute: 'source-id' }) sourceId = '';
 
-  /** The source's display title, e.g. a filename. */
+  /** The source's display title, e.g. a filename. Rendered only as the
+   *  title button's own text -- a bare host-level `title` attribute (the
+   *  browser's global tooltip attribute) is actively stripped once Lit has
+   *  synced it into this property, so the card never grows an unsolicited
+   *  native tooltip repeating the same text. See `attributeChangedCallback`
+   *  and `updated` below. */
   @property() title = '';
 
   /** Optional page reference, e.g. `12` or `"iv"` — rendered as-is (never
@@ -91,23 +98,60 @@ export class LyraSourceCard extends LyraElement {
   // `<slot>` child regardless of assigned content, so CSS `:empty` never
   // matches; real emptiness is tracked in JS instead.
   @state() private hasFullSlot = false;
+  @state() private hasExcerptSlot = false;
   @state() private fullExpanded = false;
 
   private readonly fullId = nextId('source-card-full');
 
+  // Guards the `removeAttribute('title')` call in `updated()` below: removing
+  // an observed attribute fires `attributeChangedCallback` synchronously just
+  // like setting one does, and without this flag Lit would treat the removal
+  // as a fresh (empty) attribute value and reset the `title` property right
+  // back to `null`, losing the value it just finished syncing in.
+  private stripHostTitleAttr = false;
+
   protected willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasFullSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'full');
+      this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
     }
   }
 
   firstUpdated(): void {
-    const slot = this.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
-    this.hasFullSlot = slot.assignedElements({ flatten: true }).length > 0;
+    const fullSlot = this.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
+    const fullCount = fullSlot.assignedElements({ flatten: true }).length;
+    this.hasFullSlot = fullCount > 0;
+    if (fullCount === 0) this.fullExpanded = false;
+
+    const excerptSlot = this.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
+    this.hasExcerptSlot = excerptSlot.assignedElements({ flatten: true }).length > 0;
+  }
+
+  attributeChangedCallback(name: string, old: string | null, value: string | null): void {
+    if (name === 'title' && this.stripHostTitleAttr) return;
+    super.attributeChangedCallback(name, old, value);
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    if (changed.has('title') && this.hasAttribute('title')) {
+      // The attribute has already been converted into the `title` property
+      // by this point (that's how it got here), so the DOM attribute itself
+      // is now redundant -- and, left in place, would make the whole card
+      // show a native tooltip repeating the title text on hover.
+      this.stripHostTitleAttr = true;
+      this.removeAttribute('title');
+      this.stripHostTitleAttr = false;
+    }
   }
 
   private onFullSlotChange = (e: Event): void => {
-    this.hasFullSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    const count = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
+    this.hasFullSlot = count > 0;
+    if (count === 0) this.fullExpanded = false;
+  };
+
+  private onExcerptSlotChange = (e: Event): void => {
+    this.hasExcerptSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
   private get titleText(): string {
@@ -128,7 +172,9 @@ export class LyraSourceCard extends LyraElement {
     return html`
       <div part="base">
         <button part="title" type="button" @click=${this.onTitleClick}>${this.titleText}</button>
-        <div part="excerpt"><slot name="excerpt"></slot></div>
+        <div part="excerpt" ?hidden=${!this.hasExcerptSlot}>
+          <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
+        </div>
         ${this.hasFullSlot
           ? html`<button
               part="toggle"
