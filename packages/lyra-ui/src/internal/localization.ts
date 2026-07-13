@@ -153,7 +153,8 @@ export type LyraMessageKey =
   | 'kbdAltWord'
   | 'kbdShiftWord'
   | 'selectValueMissing'
-  | 'select';
+  | 'select'
+  | 'sourceListDefaultLabel';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -308,6 +309,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdShiftWord: 'Shift',
   selectValueMissing: 'Please select an option.',
   select: 'Select',
+  sourceListDefaultLabel: 'Sources',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

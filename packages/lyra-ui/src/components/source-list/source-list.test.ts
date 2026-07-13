@@ -28,6 +28,13 @@ it('prefers label-plural over label when both are set', async () => {
   expect(el.shadowRoot!.querySelector('[part="header"]')!.textContent!.trim()).to.equal('3 sources');
 });
 
+it('localizes the fallback "Sources" header text via this.localize() when .strings overrides sourceListDefaultLabel', async () => {
+  const el = (await fixture(
+    html`<lyra-source-list .strings=${{ sourceListDefaultLabel: 'Origines' }}></lyra-source-list>`,
+  )) as LyraSourceList;
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.textContent!.trim()).to.equal('Origines');
+});
+
 it('hides [part="list"] from the accessibility tree while collapsed, shows it while expanded', async () => {
   const el = (await fixture(
     html`<lyra-source-list><lyra-source-card title="a.pdf"></lyra-source-card></lyra-source-list>`,

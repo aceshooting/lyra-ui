@@ -15,13 +15,14 @@ export interface SourceListToggleDetail {
  * children, plain composition — no `.items` array prop, the same shape
  * `<lyra-split>`'s panels take) behind a single clickable header.
  *
- * This library has no built-in i18n/pluralization (see `<lyra-empty>`'s plain
- * `description` prop for the same stance), so the header text is entirely
- * consumer-supplied: `label-plural` (e.g. `"3 sources"`) wins when set,
- * falling back to `label`, falling back to the literal word `"Sources"` — see
- * each property's own doc. `sourceCount` (a read-only, live-updated count of
- * the currently-slotted children) is exposed for a consumer who wants to
- * build that string reactively instead of hand-counting DOM children.
+ * This library has no built-in pluralization (see `<lyra-empty>`'s plain
+ * `description` prop for a similar stance), so anything beyond the final
+ * fallback is entirely consumer-supplied: `label-plural` (e.g. `"3 sources"`)
+ * wins when set, falling back to `label`, falling back to a localized
+ * `"Sources"` (via `this.localize()`) — see each property's own doc.
+ * `sourceCount` (a read-only, live-updated count of the currently-slotted
+ * children) is exposed for a consumer who wants to build that string
+ * reactively instead of hand-counting DOM children.
  *
  * The card list is removed from the accessibility tree (not just visually
  * hidden) while collapsed, via the native `hidden` attribute on
@@ -101,7 +102,8 @@ export class LyraSourceList extends LyraElement {
   };
 
   render(): TemplateResult {
-    const headerText = this.labelPlural || this.label || 'Sources';
+    const headerText =
+      this.labelPlural || this.label || this.localize('sourceListDefaultLabel');
 
     return html`
       <div part="base">
