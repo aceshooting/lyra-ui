@@ -1,5 +1,132 @@
 # Changelog
 
+## 2.3.0
+
+### Minor Changes
+
+- a1b2f8e: `lyra-app-rail` gains `dragging` (reflected boolean, true for the duration of a pointer-driven
+  resize -- not a keyboard step -- so its own `[part='base']` transition suppresses during the drag
+  instead of visibly "chasing" the pointer) and `hideToggle` (suppresses the built-in mobile hamburger
+  button for a consumer that owns its own external toggle wired to `open`).
+- e9075b8: `lyra-app-rail-item` gains an opt-in `tooltip` property: a hover/focus flyout showing the item's
+  label text while `icon-only` hides it from view, using the library's existing Floating-UI-backed
+  `place()` positioner -- an explicit, documented alternative to hand-rolling a `::part()`+`::after`
+  tooltip composition.
+- 8160548: `lyra-attachment-chip`'s `compact` variant now also shrinks font-size and gap (via new
+  `--lyra-attachment-chip-compact-font-size`/`-compact-gap` custom properties), not just
+  border/radius/padding/thumbnail-size. Also adds `thumbnailOnly`, which -- combined with `compact`
+  on an image-mime chip -- hides the filename/size text entirely for a pure thumbnail density with
+  no consumer-side CSS.
+- 099fa8a: Add `lyra-avatar`: a small, fixed-size identity marker (image, or an initials fallback) for a
+  user-menu trigger or similar identity affordance -- `size`/`shape`/`tone` variants mirror
+  `lyra-chip`'s existing tone vocabulary for consistency.
+- bf9d442: Add `lyra-card`: a generic bordered content container (`appearance` variants mirroring `wa-card`,
+  `header`/`media`/`footer`/`actions` slots) for the "small bordered surface with padding" idiom
+  common across hero highlights and clickable grid tiles -- a real `lyra-ui` parity counterpart to
+  `wa-card`, which this library otherwise mirrors 1:1.
+- f9ecffd: `lyra-chip` gains an opt-in `selected`/pressed interactive mode: `[part='base']` becomes
+  keyboard-activatable and reflects `aria-pressed`, toggling on click/Enter/Space and emitting
+  `lyra-chip-select`. Not combinable with `removable` (avoids a nested-interactive a11y violation);
+  today's passive-label-pill usage is unaffected since `selected` defaults to `false`.
+- db24359: Add `lyra-code-block-core`: a build-lean variant of `lyra-code-block` for a consumer whose
+  `languages` map already covers every language it renders. Unlike `languagesOnly` (a runtime flag
+  on `lyra-code-block` itself, which a bundler can't prove always-true and so can't tree-shake),
+  `lyra-code-block-core` is a genuinely separate module that never references shiki's full
+  ~200-language default entry point at all -- importing it instead of `code-block.js` gives a real
+  compile-time exclusion of that table from the build output.
+- 83ba36c: `lyra-dialog` gains `--lyra-dialog-width`, unset by default -- when set, the panel actually
+  stretches to that width instead of only shrink-wrapping its content capped at
+  `--lyra-dialog-max-width`, which was a real gotcha for anyone porting from `wa-dialog`'s
+  assertive `--width` token.
+- a1d7030: Add `lyra-diff-view`: a real two-string line diff (LCS-aligned), rendered as interleaved
+  unified-diff output -- unlike diff-flavored syntax highlighting over an already-formatted string,
+  this computes the alignment itself, so a one-line change inside a longer block renders as one
+  red/green pair near the change instead of every old line then every new line.
+- b56abda: `lyra-empty`'s `heading`/`description` gain the same slot-override-attribute treatment
+  `lyra-stat`'s `caption`/`sub` already have -- a consumer can now pass rich mid-sentence content
+  (e.g. an inline `<code>` reference) while the plain-string attribute stays the default.
+- 4324a73: `lyra-graph` now renders a link whose `target` isn't a real node as a short dashed stub off the
+  source's position, instead of silently dropping it -- for a wiki-style `[[link]]`/broken-reference
+  visualization where "this edge exists but its endpoint doesn't" is a meaningful state, not noise.
+  A dangling `source` is still dropped (no position to draw a stub from).
+- 1e71d71: Rewrite `lyra-heatmap`'s two weekday-axis-label tests to assert against independently fixed dates
+  instead of re-deriving the implementation's own formula, which could never fail regardless of
+  correctness -- the underlying `weekdayLabels()`/`firstDayOfWeek` anchoring was already correct.
+  Also add `cellColor`, an optional per-cell color override function (mirroring the existing
+  `cellText`/`cellInteractive` shape) that bypasses the color ramp entirely for an exact value.
+- 2e74ea0: Fix `lyra-lite-chart`'s `minBarHeight` z-order bug for stacked bars: a floored near-zero segment
+  was being overdrawn by the segment stacked on top of it, since each segment's position was derived
+  independently from cumulative value rather than from where the previous (possibly-floored) segment
+  actually ended on screen. Also add `selectedIndex: number[]`, reflecting `data-selected` onto every
+  bar at a given category index across all datasets, for highlighting a whole selected column.
+- 00f3b37: `lyra-markdown` gains `escapeHtml`, an opt-in property overriding `marked`'s `html` renderer hook
+  to emit escaped text instead of parsed/sanitized markup -- for a consumer rendering arbitrary
+  already-written content (transcripts, logs) where a stray angle bracket should render as visible
+  text rather than a real DOM element, without giving up GFM tables/lists/etc.
+- d3fbf36: Add `lyra-poll-status`: a "next scheduled refresh" countdown with a built-in pause control -- a
+  ticking M:SS display, a "Refreshing…" due state, and an internal live region announcing phase
+  transitions, mirroring `lyra-stream-status`'s own composition for a different concern (a scheduled
+  interval, not transport/connection health).
+- b5464bd: Add `lyra-segmented`: a single-select button row with the WAI-ARIA APG `radiogroup` contract
+  (role="radio", roving tabindex, automatic-activation Arrow/Home/End navigation) built in --
+  "choose exactly one of N labeled options" is ubiquitous settings/filter-panel UI that otherwise
+  gets hand-rolled without keyboard/ARIA semantics every time.
+- 551f272: `lyra-select` gains `--lyra-select-trigger-height`, unset (auto) by default -- when a consumer sets
+  it, the trigger resolves to exactly that height (both floor and cap) instead of only being
+  floored by `--lyra-select-trigger-min-height`, for pixel-matching a sibling form field in the same
+  row without a blunt `::part(trigger){block-size:...}` override.
+- 1fddbdc: Add `lyra-stepper`: ordered multi-step wizard navigation (label + index, current/completed/
+  locked/error state, click-to-jump, horizontal/vertical orientation). Fully data-driven and
+  controlled -- like `lyra-table`, it never mutates its own `steps` data, firing a cancelable
+  `lyra-step-select` event and leaving state updates to the host, so gating a jump behind an
+  external validity check (e.g. "does the target step's data exist yet") is a normal listener, not a
+  workaround.
+- 60dbf18: `lyra-table` gains two per-column hooks: `footer(rows)`, rendered in a real sticky-bottom
+  `<tfoot>` (only when at least one column defines it) -- e.g. a totals row; and `cellStyle(row)`,
+  applied via `styleMap` directly to the generated `<td>` -- e.g. a computed heat-tint background --
+  which coexists safely with the existing sticky-column offset styling.
+- 6ce5b87: Add a new `./testing` subpath exporting `installHappyDomFormAssociatedShims()` -- an opt-in,
+  environment-guarded polyfill for `HTMLElement.prototype.attachInternals`, for a downstream
+  consumer's own Vitest+happy-dom test suite (happy-dom has no `ElementInternals` implementation,
+  and every form-associated `lyra-*` component calls `attachInternals()` unconditionally in its
+  constructor). Not used by this package's own tests, which already run against real browsers.
+- 25254f2: `lyra-widget` gains a leading `icon` slot, rich `label`/`sublabel` slot overrides (mirroring
+  `lyra-stat`'s `caption`/`sub` pattern), and a `views` property driving a built-in header toggle
+  group plus one named slot per entry -- for a chart/table (or similar) toggle inside the same card
+  chrome, so a consumer no longer has to hand-roll that shell around a bare default slot.
+
+### Patch Changes
+
+- 062f036: Fix `lyra-attachment-trigger`'s internal hidden `<input type="file">` actually rendering as a
+  visible, focusable-adjacent element in normal document flow — it now has `display: none` by
+  default (and a new `hidden-input` CSS part, for the rare integration that needs to override that).
+- 9094b39: Fix `lyra-chart` losing a user's legend-toggled hidden-dataset state on every data-driven redraw --
+  `draw()` now snapshots each dataset's `isDatasetVisible()` state before reassigning `chart.data` and
+  restores it via `setDatasetVisibility()` afterward, since Chart.js's own dataset-object identity
+  changes on every reactive update from a live-polling consumer.
+- a413c8c: Fix `lyra-chip-group`'s "+N"/"Show less" overflow toggle hardcoding English strings instead of using
+  the library's own existing `localize()`/`strings` override mechanism, which every other component
+  with translatable text already uses (including the identical `showMore`/`showLess` keys, already
+  consumed by `lyra-source-card`).
+- 4010bc4: `lyra-menu`'s `onListKeyDown` now ignores a keydown whose target isn't a real `<lyra-menu-item>`,
+  matching the same `instanceof LyraMenuItem` guard `onItemSelect`/`onListFocusIn` already use --
+  previously it unconditionally intercepted Arrow/Home/End/Enter/Space/Escape/Tab from any keydown
+  bubbling through `[part="list"]`, including from non-item slotted content (e.g. a custom-range
+  date input), hijacking keystrokes meant for it. Note: Escape/Tab now also only close the menu when
+  the event originates from a real item -- a slotted non-item control gets fully default keyboard
+  behavior instead.
+- a5a055f: Fix `lyra-split`'s fixed-percent panels not reserving space for the auto-inserted divider between
+  them, causing a deterministic `(panelCount - 1) * dividerWidth` container overflow in the default
+  (uncollapsed) state. Panels now get a nonzero `flex-shrink` so they absorb the dividers' own width
+  instead of the row overflowing.
+- 18003f0: Fix `lyra-stat`'s `[part='base']` not stretching to fill its host in a CSS Grid -- a stat tile with
+  a longer `sub`/breakdown-rows line rendered visibly taller than its row-mates. `block-size: 100%` on
+  `[part='base']` now matches the convention `lyra-word-cloud`/`lyra-context-meter` already use.
+- 55c384e: Fix `lyra-tabs`'s `tablist` part showing a phantom vertical scrollbar on a tablist with no
+  vertically-overflowing content — `overflow-x: auto` alone can leave the y axis's computed overflow
+  at `auto` too per the CSS overflow spec, which sub-pixel rounding can trip; `overflow-y: hidden` is
+  now explicit, since the tablist is never meant to scroll vertically.
+
 ## 2.2.0
 
 ### Minor Changes
