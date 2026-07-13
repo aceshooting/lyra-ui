@@ -276,7 +276,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? defaultFormatTimestamp;
-    const displayTitle = this.title || 'Untitled conversation';
+    const displayTitle = this.title || this.localize('untitledConversation');
     const showRenameButton = this.editable && !this.renaming;
     // Shared between the rename button and the input it opens: the input is
     // where focus actually lands, so it needs the same row-specific

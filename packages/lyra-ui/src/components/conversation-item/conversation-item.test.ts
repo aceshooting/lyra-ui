@@ -38,6 +38,14 @@ it('falls back to "Untitled conversation" when title is empty', async () => {
   expect(optionEl(el).getAttribute('aria-label')).to.equal('Untitled conversation');
 });
 
+it('localizes the untitled-conversation fallback via this.localize() when .strings overrides untitledConversation', async () => {
+  const el = (await fixture(html`
+    <lyra-conversation-item .strings=${{ untitledConversation: 'Conversation sans titre' }}></lyra-conversation-item>
+  `)) as LyraConversationItem;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Conversation sans titre');
+  expect(optionEl(el).getAttribute('aria-label')).to.equal('Conversation sans titre');
+});
+
 it('renders the given title, with a title tooltip attribute for the full text', async () => {
   const el = (await fixture(
     html`<lyra-conversation-item title="Migrating the table component"></lyra-conversation-item>`,
