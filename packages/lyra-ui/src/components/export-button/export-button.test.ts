@@ -457,3 +457,35 @@ it('is accessible with a multi-format menu open, including its accessible name',
   expect(menu.getAttribute('aria-label')).to.equal('Export format');
   await expect(el).to.be.accessible();
 });
+
+describe('label localization', () => {
+  it('defaults the trigger button text to the built-in English "Export"', async () => {
+    const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+    expect(trigger.textContent!.trim()).to.equal('Export');
+  });
+
+  it('localizes the default trigger label via .strings (exportButtonLabel) when label is left unset', async () => {
+    const el = (await fixture(html`
+      <lyra-export-button .strings=${{ exportButtonLabel: 'Exporter' }}></lyra-export-button>
+    `)) as LyraExportButton;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+    expect(trigger.textContent!.trim()).to.equal('Exporter');
+  });
+
+  it('still honors an explicit label attribute when no .strings override applies', async () => {
+    const el = (await fixture(
+      html`<lyra-export-button label="Télécharger"></lyra-export-button>`,
+    )) as LyraExportButton;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+    expect(trigger.textContent!.trim()).to.equal('Télécharger');
+  });
+
+  it('lets a .strings override for exportButtonLabel win over an explicit label attribute (per resolveLyraString precedence)', async () => {
+    const el = (await fixture(html`
+      <lyra-export-button label="Télécharger" .strings=${{ exportButtonLabel: 'Exporter' }}></lyra-export-button>
+    `)) as LyraExportButton;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+    expect(trigger.textContent!.trim()).to.equal('Exporter');
+  });
+});

@@ -38,7 +38,12 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property({ attribute: false }) formats: ExportFormat[] = ['csv'];
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Trigger button text, also feeds the format menu's `aria-label` (as
-   *  "`${label} format`") so assistive tech gets an accessible name for it. */
+   *  "`${label} format`") so assistive tech gets an accessible name for it.
+   *  Left at its default English `'Export'`, the rendered text instead
+   *  comes from `this.localize('exportButtonLabel', ...)` -- override-able
+   *  via `.strings`/`registerLyraLocale()` -- same convention as
+   *  `lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this
+   *  attribute explicitly for a one-off override that always wins. */
   @property() label = 'Export';
   @property({ type: Boolean, reflect: true }) open = false;
 
@@ -214,7 +219,15 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     else this.open ? this.closeMenu() : this.openMenu();
   }
 
+  /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
+   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
+   *  override applies without requiring `label` itself to be set. */
+  private get effectiveLabel(): string {
+    return this.localize('exportButtonLabel', this.label === 'Export' ? undefined : this.label);
+  }
+
   render(): TemplateResult {
+    const label = this.effectiveLabel;
     return html`
       <button
         part="trigger"
@@ -225,10 +238,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         aria-controls=${this.formats.length > 1 ? this.menuId : nothing}
         @click=${() => this.onTriggerClick()}
       >
-        ${this.label}
+        ${label}
       </button>
       ${this.formats.length > 1
-        ? html`<div id=${this.menuId} part="menu" role="menu" aria-label="${this.label} format">
+        ? html`<div id=${this.menuId} part="menu" role="menu" aria-label="${label} format">
             ${this.formats.map(
               (f) =>
                 html`<button

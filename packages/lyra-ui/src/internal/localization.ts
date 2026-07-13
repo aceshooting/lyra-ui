@@ -114,7 +114,8 @@ export type LyraMessageKey =
   | 'documentPreviewAlt'
   | 'documentPreviewUrlNotAllowed'
   | 'documentPreviewFailedToLoad'
-  | 'documentPreviewGenericError';
+  | 'documentPreviewGenericError'
+  | 'exportButtonLabel';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -230,6 +231,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
   documentPreviewFailedToLoad: 'Failed to load document.',
   documentPreviewGenericError: 'Something went wrong.',
+  exportButtonLabel: 'Export',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
