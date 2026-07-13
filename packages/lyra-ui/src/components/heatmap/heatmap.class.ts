@@ -677,7 +677,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   } {
     const steps = this.colorSteps;
     if (steps && steps.length >= 2) {
-      const key = `steps ${steps.join(' ')}`;
+      const key = `steps ${steps.join(' ')}`;
       if (this.cachedRamp?.key === key) return this.cachedRamp;
       const colors = steps.map((c) => {
         const [r, g, b] = resolveRgb(c, FALLBACK_SCALE_LO);

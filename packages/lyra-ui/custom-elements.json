@@ -415,6 +415,10 @@
               "name": "panel"
             },
             {
+              "description": "The `resizable` opt-in's drag handle. Only rendered while `resizable` and `mode` is `'full'`.",
+              "name": "resizer"
+            },
+            {
               "description": "The mobile hamburger/close toggle button. Hidden via CSS outside `'mobile'` mode.",
               "name": "toggle"
             }
@@ -445,6 +449,14 @@
             },
             {
               "kind": "field",
+              "name": "baseEl",
+              "type": {
+                "text": "HTMLElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -470,6 +482,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveRailWidthPx",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "description": "The rail's current effective width in px, whether or not `railWidthPx` has ever been\nexplicitly set — falls back to the live measured width of `[part=base]` so the resizer's\n`aria-valuenow` and the first drag/keyboard step's start-width reflect the real rendered\nwidth even before a consumer ever sets `railWidthPx`.",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -561,6 +583,26 @@
             },
             {
               "kind": "field",
+              "name": "maxRailWidthPx",
+              "type": {
+                "text": "number"
+              },
+              "default": "440",
+              "description": "Maximum `railWidthPx` a drag/keyboard resize can reach.",
+              "attribute": "max-rail-width-px"
+            },
+            {
+              "kind": "field",
+              "name": "minRailWidthPx",
+              "type": {
+                "text": "number"
+              },
+              "default": "190",
+              "description": "Minimum `railWidthPx` a drag/keyboard resize can reach.",
+              "attribute": "min-rail-width-px"
+            },
+            {
+              "kind": "field",
               "name": "mobileBreakpoint",
               "type": {
                 "text": "string"
@@ -648,6 +690,26 @@
             },
             {
               "kind": "field",
+              "name": "onResizerKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onResizerPointerDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onResizerPointerMove",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onResizerPointerUp",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onToggleClick",
               "privacy": "private"
             },
@@ -681,11 +743,66 @@
             },
             {
               "kind": "field",
+              "name": "preferredMode",
+              "type": {
+                "text": "'full' | 'icon-only' | null | undefined"
+              },
+              "description": "Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the\n`mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual\ncollapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail\nviewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class\ndoc) — that continues to take full priority, unchanged. Unset (the default, `null`)\nreproduces today's exact breakpoint-only behavior.",
+              "attribute": "preferred-mode"
+            },
+            {
+              "kind": "field",
+              "name": "railWidthPx",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "The rail's current width in px while `resizable` — settable/gettable. Unset defers to the\n`--lyra-app-rail-width` CSS token's own resolved width.",
+              "attribute": "rail-width-px"
+            },
+            {
+              "kind": "field",
               "name": "releaseScrollLock",
               "type": {
                 "text": "() => void | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "resizable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opts a continuously draggable width in for the `'full'` state — exposes a `[part=\"resizer\"]`\nhandle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to\n`[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the\nchosen width to survive a reload should listen for `lyra-rail-resize` and persist `widthPx`\nitself. `false` (the default) renders no resizer and leaves the fixed-width\n`--lyra-app-rail-width` CSS token exactly as before this property existed.",
+              "attribute": "resizable",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "resizePointerId",
+              "type": {
+                "text": "number | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "resizeStartWidth",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "resizeStartX",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
             },
             {
               "kind": "field",
@@ -957,6 +1074,10 @@
               "name": "lyra-mode-change"
             },
             {
+              "description": "The `resizable` rail's width changed via drag or keyboard stepping. Not fired when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.",
+              "name": "lyra-rail-resize"
+            },
+            {
               "description": "The mobile overlay opened or closed — via the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a breakpoint/forced mode change leaving `'mobile'` while open. Not fired when a consumer sets `open` directly (mirrors `<lyra-dialog>`'s `open`/`close()` split). `detail: AppRailToggleDetail`.",
               "name": "lyra-toggle"
             }
@@ -994,6 +1115,24 @@
               }
             },
             {
+              "name": "max-rail-width-px",
+              "type": {
+                "text": "number"
+              },
+              "default": "440",
+              "description": "Maximum `railWidthPx` a drag/keyboard resize can reach.",
+              "fieldName": "maxRailWidthPx"
+            },
+            {
+              "name": "min-rail-width-px",
+              "type": {
+                "text": "number"
+              },
+              "default": "190",
+              "description": "Minimum `railWidthPx` a drag/keyboard resize can reach.",
+              "fieldName": "minRailWidthPx"
+            },
+            {
               "name": "mobile-breakpoint",
               "type": {
                 "text": "string"
@@ -1018,6 +1157,31 @@
               "default": "false",
               "description": "Whether the mobile floating overlay is shown. Only meaningful while\n`mode` is `'mobile'` — the value is preserved (not reset) while another\nmode is active, but no overlay chrome renders until `mode` is\n`'mobile'` again. Set this directly, or use the built-in toggle button\n— there is no separate `show()`/`hide()` pair.",
               "fieldName": "open"
+            },
+            {
+              "name": "preferred-mode",
+              "type": {
+                "text": "'full' | 'icon-only' | null | undefined"
+              },
+              "description": "Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the\n`mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual\ncollapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail\nviewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class\ndoc) — that continues to take full priority, unchanged. Unset (the default, `null`)\nreproduces today's exact breakpoint-only behavior.",
+              "fieldName": "preferredMode"
+            },
+            {
+              "name": "rail-width-px",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "The rail's current width in px while `resizable` — settable/gettable. Unset defers to the\n`--lyra-app-rail-width` CSS token's own resolved width.",
+              "fieldName": "railWidthPx"
+            },
+            {
+              "name": "resizable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opts a continuously draggable width in for the `'full'` state — exposes a `[part=\"resizer\"]`\nhandle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to\n`[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the\nchosen width to survive a reload should listen for `lyra-rail-resize` and persist `widthPx`\nitself. `false` (the default) renders no resizer and leaves the fixed-width\n`--lyra-app-rail-width` CSS token exactly as before this property existed.",
+              "fieldName": "resizable"
             }
           ],
           "superclass": {
@@ -1047,9 +1211,16 @@
               "type": {
                 "text": "boolean"
               }
+            },
+            {
+              "name": "preferredMode",
+              "optional": true,
+              "type": {
+                "text": "'full' | 'icon-only' | null"
+              }
             }
           ],
-          "description": "Pure breakpoint-to-mode resolver, kept separate from the `matchMedia`\nwiring below so it's directly unit-testable without resizing a real\nbrowser window. `mobileMatches` wins over `iconOnlyMatches` when both are\ntrue (the viewport is narrower than both breakpoints at once)."
+          "description": "Pure breakpoint-to-mode resolver, kept separate from the `matchMedia`\nwiring below so it's directly unit-testable without resizing a real\nbrowser window. `mobileMatches` wins over everything else when true (the\nviewport is narrower than both breakpoints at once); otherwise\n`preferredMode` (when set) wins over `iconOnlyMatches` — a manual\npreference for the full/icon-only axis specifically, while the mobile\nbreakpoint continues to be tracked automatically regardless."
         }
       ],
       "exports": [
@@ -1157,6 +1328,17 @@
               },
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "compact",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy\nchip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.\na composer's pending-attachment tray) without hand-tuning several `::part()` custom\nproperties individually. `false` (the default) is visually identical to today.",
+              "attribute": "compact",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -1405,6 +1587,16 @@
             },
             {
               "kind": "field",
+              "name": "untitledLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Untitled file'",
+              "description": "Override for the empty-name fallback shown (and used as the `title` tooltip) when neither\n`file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`,\nreproducing today's exact hardcoded text byte-for-byte.",
+              "attribute": "untitled-label"
+            },
+            {
+              "kind": "field",
               "name": "uploadFailedLabel",
               "type": {
                 "text": "string"
@@ -1617,6 +1809,15 @@
           ],
           "attributes": [
             {
+              "name": "compact",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy\nchip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.\na composer's pending-attachment tray) without hand-tuning several `::part()` custom\nproperties individually. `false` (the default) is visually identical to today.",
+              "fieldName": "compact"
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -1709,6 +1910,15 @@
               "default": "''",
               "description": "Thumbnail image URL, used only while `file` is unset (a real `File`'s\nthumbnail always comes from a generated object URL instead — see the\nclass doc). Unlike the other independent props this one has no\n`file`-derived equivalent to defer to for a non-image file; it's simply\nrendered whenever present.",
               "fieldName": "thumbnailSrc"
+            },
+            {
+              "name": "untitled-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Untitled file'",
+              "description": "Override for the empty-name fallback shown (and used as the `title` tooltip) when neither\n`file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`,\nreproducing today's exact hardcoded text byte-for-byte.",
+              "fieldName": "untitledLabel"
             },
             {
               "name": "upload-failed-label",
@@ -1963,6 +2173,15 @@
               },
               "description": "Overrides the single-capability trigger button's `aria-label`, which\notherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.\n`'Attach files'`). Set this to localize the accessible name; leave it\nunset to keep the built-in English default. Only affects the\nsingle-capability button ([part='trigger']) — the multi-capability\nmenu's own trigger keeps its fixed `'Add attachment'` label regardless.",
               "attribute": "trigger-label"
+            },
+            {
+              "kind": "field",
+              "name": "triggerTitle",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse\nuser's hover tooltip, distinct from `triggerLabel`'s accessible-name (`aria-label`) role.\nApplies to both the single-capability `[part=trigger]` button and the multi-capability\n`[part=menu-trigger]` button. Unset (the default): no `title` attribute, unchanged from\nbefore this property existed.",
+              "attribute": "trigger-title"
             },
             {
               "kind": "method",
@@ -2228,6 +2447,14 @@
               },
               "description": "Overrides the single-capability trigger button's `aria-label`, which\notherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.\n`'Attach files'`). Set this to localize the accessible name; leave it\nunset to keep the built-in English default. Only affects the\nsingle-capability button ([part='trigger']) — the multi-capability\nmenu's own trigger keeps its fixed `'Add attachment'` label regardless.",
               "fieldName": "triggerLabel"
+            },
+            {
+              "name": "trigger-title",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse\nuser's hover tooltip, distinct from `triggerLabel`'s accessible-name (`aria-label`) role.\nApplies to both the single-capability `[part=trigger]` button and the multi-capability\n`[part=menu-trigger]` button. Unset (the default): no `title` attribute, unchanged from\nbefore this property existed.",
+              "fieldName": "triggerTitle"
             }
           ],
           "superclass": {
@@ -8992,6 +9219,15 @@
             },
             {
               "kind": "field",
+              "name": "chartLabel",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly.",
+              "attribute": "chart-label"
+            },
+            {
+              "kind": "field",
               "name": "datasets",
               "type": {
                 "text": "LiteSeries[]"
@@ -9113,6 +9349,15 @@
               },
               "description": "Caps how many x-axis category labels render text once `this.labels.length` exceeds it,\ndecimating roughly evenly while always keeping the first and last label. Bars themselves\nalways render regardless — only the axis text is decimated. Unset (the default) renders every\nlabel, unchanged from before this property existed. Works in either `layout` mode.",
               "attribute": "max-labels"
+            },
+            {
+              "kind": "field",
+              "name": "minBarHeight",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "A pixel floor for a bar/stacked-segment's rendered height, for a nonzero value that would\notherwise round to sub-pixel and become visually indistinguishable from absent (while still\nbeing focusable/tab-stoppable/announced) — a real accessibility/visibility gap for\nheterogeneous-magnitude stacked data. `type=\"bar\"` only; a value of exactly `0` is unaffected\n(that's `skipZero`'s job, not this one's). Unset (the default) reproduces today's\n`Math.max(0, y2 - y1)` exactly, with no floor.",
+              "attribute": "min-bar-height"
             },
             {
               "kind": "field",
@@ -9349,7 +9594,7 @@
                   }
                 }
               ],
-              "description": "A value-to-y-pixel mapping for a bar's top/bottom edge. `'linear'` (the\ndefault) is the standard `niceDomain`-fraction formula, unchanged from\nbefore `scale` existed. `'sqrt'` instead compresses via\n`Math.sqrt(value / domainMax)` (mirroring `lyra-heatmap`'s matrix-mode\n`sqrt` branch), clamping `value` to `[0, hi]` first since a negative\ninput has no real square root — bar charts using `scale=\"sqrt\"` are\nexpected to carry non-negative data, same assumption as the heatmap\nprecedent this mirrors."
+              "description": "A value-to-y-pixel mapping for a bar's top/bottom edge. `'linear'` (the\ndefault) is the standard `niceDomain`-fraction formula. `'sqrt'`\ncompresses via `Math.sqrt(value / domainMax)`, clamping `value` to\n`[0, hi]` first since a negative input has no real square root.\n\nNOT used for the `stacked && scale === 'sqrt'` case — that combination's\nproportionality (compress the bar's *total* height once, then split it\nlinearly by each segment's share) is computed directly in `renderBars()`,\nsince a per-segment call here (compressing each segment's absolute\ncumulative stack position independently) is exactly the non-proportional\nbug this method's stacked callers used to have."
             },
             {
               "kind": "method",
@@ -9904,6 +10149,14 @@
               "fieldName": "beginAtZero"
             },
             {
+              "name": "chart-label",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly.",
+              "fieldName": "chartLabel"
+            },
+            {
               "name": "height",
               "type": {
                 "text": "string"
@@ -9957,6 +10210,14 @@
               },
               "description": "Caps how many x-axis category labels render text once `this.labels.length` exceeds it,\ndecimating roughly evenly while always keeping the first and last label. Bars themselves\nalways render regardless — only the axis text is decimated. Unset (the default) renders every\nlabel, unchanged from before this property existed. Works in either `layout` mode.",
               "fieldName": "maxLabels"
+            },
+            {
+              "name": "min-bar-height",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "A pixel floor for a bar/stacked-segment's rendered height, for a nonzero value that would\notherwise round to sub-pixel and become visually indistinguishable from absent (while still\nbeing focusable/tab-stoppable/announced) — a real accessibility/visibility gap for\nheterogeneous-magnitude stacked data. `type=\"bar\"` only; a value of exactly `0` is unaffected\n(that's `skipZero`'s job, not this one's). Unset (the default) reproduces today's\n`Math.max(0, y2 - y1)` exactly, with no floor.",
+              "fieldName": "minBarHeight"
             },
             {
               "name": "pad-left",
@@ -17373,6 +17634,16 @@
             },
             {
               "kind": "field",
+              "name": "languagesOnly",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When `true`, skips the default `loadShikiHighlighter()` call in `connectedCallback()`\nentirely — for a consumer whose `languages` map already covers every language every instance\nwill ever render, so the bundler has no reachable path from this component to shiki's\n~200-language dynamic-import table. A `language` value absent from `languages` while this is\n`true` renders the plain-text fallback (no attempt to fall back to the now-unloaded default\nhighlighter) rather than hanging. `false` (the default) reproduces today's unconditional\n`loadShikiHighlighter()` call exactly.",
+              "attribute": "languages-only"
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -17704,6 +17975,15 @@
               "default": "''",
               "description": "A shiki-recognized language id or alias (e.g. `\"javascript\"`,\n`\"python\"`, `\"json\"`). When unset, or when shiki doesn't recognize it,\nthe code renders as plain unhighlighted text regardless of whether\nshiki itself is available.",
               "fieldName": "language"
+            },
+            {
+              "name": "languages-only",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When `true`, skips the default `loadShikiHighlighter()` call in `connectedCallback()`\nentirely — for a consumer whose `languages` map already covers every language every instance\nwill ever render, so the bundler has no reachable path from this component to shiki's\n~200-language dynamic-import table. A `language` value absent from `languages` while this is\n`true` renders the plain-text fallback (no attempt to fall back to the now-unloaded default\nhighlighter) rather than hanging. `false` (the default) reproduces today's unconditional\n`loadShikiHighlighter()` call exactly.",
+              "fieldName": "languagesOnly"
             },
             {
               "name": "locale",
@@ -23524,6 +23804,16 @@
             },
             {
               "kind": "field",
+              "name": "noLightDismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.",
+              "attribute": "no-light-dismiss"
+            },
+            {
+              "kind": "field",
               "name": "onBackdropClick",
               "privacy": "private"
             },
@@ -23794,7 +24084,7 @@
           ],
           "events": [
             {
-              "description": "`detail: DialogCloseReason`. Fired whenever the dialog is dismissed via Escape, a backdrop click, the built-in close button (`closable`), a `close()` call, or (with reason `'unmount'`) removal from the DOM by anything else while still open.",
+              "description": "`detail: DialogCloseReason`. Cancelable — a listener calling `preventDefault()` stops the dialog from closing, for every dismissal path (Escape, backdrop, the built-in close button, or a consumer's own `close()` call). Fired whenever the dialog is dismissed via Escape, a backdrop click, the built-in close button (`closable`), a `close()` call, or (with reason `'unmount'`, not cancelable in practice since the element is already being removed) removal from the DOM by anything else while still open.",
               "name": "lyra-dialog-close"
             }
           ],
@@ -23837,6 +24127,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "name": "no-light-dismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.",
+              "fieldName": "noLightDismiss"
             },
             {
               "name": "open",
@@ -29247,6 +29546,42 @@
         },
         {
           "kind": "function",
+          "name": "linearBucket",
+          "return": {
+            "type": {
+              "text": "number"
+            }
+          },
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "name": "lo",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "name": "hi",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "name": "steps",
+              "type": {
+                "text": "number"
+              }
+            }
+          ],
+          "description": "Linear (non-quantile) bucket index in `[0, steps-1]` for `value` in `[lo, hi]` — mirrors\n`linearAlpha()`'s own min-max normalization (matrix mode's default continuous color mapping),\ndiscretized into `steps` buckets instead of a continuous alpha. Used when a discrete\n`colorSteps` ramp replaces the default continuous 2-endpoint interpolation for the `'linear'`\nscale case (the `'sqrt'` scale already has its own discrete `sqrtStep()`)."
+        },
+        {
+          "kind": "function",
           "name": "minMax",
           "return": {
             "type": {
@@ -29300,6 +29635,14 @@
           "name": "linearAlpha",
           "declaration": {
             "name": "linearAlpha",
+            "module": "src/components/heatmap/heatmap-scale.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "linearBucket",
+          "declaration": {
+            "name": "linearBucket",
             "module": "src/components/heatmap/heatmap-scale.ts"
           }
         },
@@ -29433,6 +29776,14 @@
             },
             {
               "kind": "field",
+              "name": "cellInteractive",
+              "type": {
+                "text": "(pos: MatrixCellPos | CalendarCellPos, value: number) => boolean | undefined"
+              },
+              "description": "Opts individual cells out of the interaction model — receives the cell position and its\nvalue, return `false` to make that cell present-but-non-interactive (no hover tooltip,\nclick, or keyboard roving-focus stop), without losing the layout/color-ramp machinery. Lets\na consumer omit a future/out-of-range date from interaction, or mark a zero-value cell as\nnon-interactive, without ~300+ meaningless keyboard tab stops on a dense grid. Unset (the\ndefault) keeps every cell interactive, unchanged from before this property existed."
+            },
+            {
+              "kind": "field",
               "name": "cellSize",
               "type": {
                 "text": "number"
@@ -29463,6 +29814,14 @@
                 "text": "MediaQueryList | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "colorSteps",
+              "type": {
+                "text": "string[] | undefined"
+              },
+              "description": "A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly\ninterpolating between the two `--lyra-heatmap-scale-lo`/`-hi` endpoints — lets a consumer\nbring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both\n`mode`s and both `scale` values, discretizing whichever scale would otherwise interpolate\ncontinuously into `colorSteps.length` buckets instead. Unset (the default, or fewer than 2\nentries) keeps today's 2-endpoint interpolation exactly."
             },
             {
               "kind": "field",
@@ -30016,6 +30375,50 @@
             },
             {
               "kind": "method",
+              "name": "firstInteractiveCalendarCell",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "CalendarCellPos | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "weekCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "Calendar-mode analogue of `firstInteractiveMatrixCell()`."
+            },
+            {
+              "kind": "method",
+              "name": "firstInteractiveMatrixCell",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "MatrixCellPos | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "rows",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "cols",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "The first interactive matrix cell in row-major order, or `null` if every cell is excluded —\nused by `onMatrixKeyDown()`'s first-arrow-press case."
+            },
+            {
+              "kind": "method",
               "name": "focusRingColor",
               "privacy": "private",
               "return": {
@@ -30097,6 +30500,25 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "isCellInteractive",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pos",
+                  "type": {
+                    "text": "CellPos"
+                  }
+                }
+              ],
+              "description": "Dispatches to the host-provided `cellInteractive` predicate when set, otherwise `true`\n(every cell interactive, today's unchanged default)."
             },
             {
               "kind": "method",
@@ -30193,6 +30615,98 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "nextInteractiveCalendarCell",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "CalendarCellPos"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "week",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "weekday",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "dWeek",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "dWeekday",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "weekCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "Calendar-mode analogue of `nextInteractiveMatrixCell()`."
+            },
+            {
+              "kind": "method",
+              "name": "nextInteractiveMatrixCell",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "MatrixCellPos"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "row",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "col",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "dRow",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "dCol",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "rows",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "cols",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "Steps from `(row, col)` by `(dRow, dCol)` repeatedly, skipping non-interactive cells, until\nan interactive cell is found or the grid edge is reached (in which case the original\nposition is returned unchanged, matching today's clamp-at-edge behavior). Bounded: each\niteration strictly approaches the edge, so this always terminates."
             },
             {
               "kind": "method",
@@ -30659,6 +31173,14 @@
           },
           "default": "256",
           "description": "A linear RGB ramp cannot contain more than 256 visually distinct integer\nsteps on any channel. Keeping the bucket count within that bound avoids an\nuntrusted attribute/property value turning the ramp into an unbounded\nallocation without discarding any useful color resolution."
+        },
+        {
+          "kind": "variable",
+          "name": "col"
+        },
+        {
+          "kind": "variable",
+          "name": "row"
         }
       ],
       "exports": [
@@ -42070,6 +42592,14 @@
               },
               "privacy": "private",
               "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "dividerLabel",
+              "type": {
+                "text": "(index: number, panelCount: number) => string | undefined"
+              },
+              "description": "Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index\nand the total panel count (`lyra-split` supports N panels, so a single fixed string can't\nexpress every divider's label; a function can). Unset (the default) keeps today's exact\n`` `Resize divider between panel ${i + 1} and panel ${i + 2}` `` template."
             },
             {
               "kind": "field",
