@@ -90,7 +90,14 @@ export type LyraMessageKey =
   | 'pollPaused'
   | 'pollPausedAnnounce'
   | 'pollResumedAnnounce'
-  | 'pollRefreshingAnnounce';
+  | 'pollRefreshingAnnounce'
+  | 'attachmentAdd'
+  | 'attachmentTriggerFiles'
+  | 'attachmentTriggerImage'
+  | 'attachmentTriggerCamera'
+  | 'attachmentMenuFiles'
+  | 'attachmentMenuImage'
+  | 'attachmentMenuCamera';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -182,6 +189,13 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pollPausedAnnounce: 'Paused.',
   pollResumedAnnounce: 'Resumed.',
   pollRefreshingAnnounce: 'Refreshing now.',
+  attachmentAdd: 'Add attachment',
+  attachmentTriggerFiles: 'Attach files',
+  attachmentTriggerImage: 'Attach an image',
+  attachmentTriggerCamera: 'Use camera',
+  attachmentMenuFiles: 'Upload files',
+  attachmentMenuImage: 'Upload a photo',
+  attachmentMenuCamera: 'Take a photo',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

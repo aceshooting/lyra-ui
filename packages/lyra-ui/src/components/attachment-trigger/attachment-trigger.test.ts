@@ -72,7 +72,7 @@ it('uses an image-specific aria-label for a single image capability', async () =
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach an image');
 });
 
-it('leaves the CAPABILITY_META-derived aria-label untouched when trigger-label is unset', async () => {
+it('leaves the localized default aria-label untouched when trigger-label is unset', async () => {
   const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
   expect(el.triggerLabel).to.be.undefined;
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
@@ -306,6 +306,53 @@ it('ignores capability activation from a menu item while disabled', async () => 
 
   expect(cameraFired).to.be.false;
   expect(inputClicked).to.be.false;
+});
+
+// --- localization ---
+
+describe('localization', () => {
+  it('localizes the single-capability trigger aria-label via this.localize()', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-trigger
+        .strings=${{ attachmentTriggerFiles: 'Joindre des fichiers', attachmentTriggerCamera: 'Utiliser la caméra' }}
+      ></lyra-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
+
+    el.capabilities = ['camera'];
+    await el.updateComplete;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Utiliser la caméra');
+  });
+
+  it('localizes the multi-capability menu trigger aria-label and lyra-menu label via this.localize()', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-trigger .strings=${{ attachmentAdd: 'Ajouter une pièce jointe' }}></lyra-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    el.capabilities = ['files', 'image'];
+    await el.updateComplete;
+
+    expect(menuTriggerButton(el).getAttribute('aria-label')).to.equal('Ajouter une pièce jointe');
+    expect(menuEl(el).getAttribute('label')).to.equal('Ajouter une pièce jointe');
+  });
+
+  it('localizes each menu item label via this.localize()', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-trigger
+        .strings=${{
+          attachmentMenuFiles: 'Téléverser des fichiers',
+          attachmentMenuImage: 'Téléverser une photo',
+          attachmentMenuCamera: 'Prendre une photo',
+        }}
+      ></lyra-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    el.capabilities = ['files', 'image', 'camera'];
+    await el.updateComplete;
+
+    const [filesItem, imageItem, cameraItem] = menuItems(el);
+    expect(filesItem.textContent?.trim()).to.equal('Téléverser des fichiers');
+    expect(imageItem.textContent?.trim()).to.equal('Téléverser une photo');
+    expect(cameraItem.textContent?.trim()).to.equal('Prendre une photo');
+  });
 });
 
 // --- accessibility ---

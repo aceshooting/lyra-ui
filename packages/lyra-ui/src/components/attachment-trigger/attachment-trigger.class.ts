@@ -74,16 +74,16 @@ function cameraIcon(): SVGTemplateResult {
 interface CapabilityMeta {
   /** Icon shown on the single-capability trigger button and next to the menu item. */
   icon: () => SVGTemplateResult;
-  /** `aria-label` for the single-capability trigger button. */
-  triggerLabel: string;
-  /** Label text for the multi-capability menu item. */
-  menuLabel: string;
+  /** Localization key for the single-capability trigger button's `aria-label`. */
+  triggerKey: string;
+  /** Localization key for the multi-capability menu item's label text. */
+  menuKey: string;
 }
 
 const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
-  files: { icon: paperclipIcon, triggerLabel: 'Attach files', menuLabel: 'Upload files' },
-  image: { icon: imageIcon, triggerLabel: 'Attach an image', menuLabel: 'Upload a photo' },
-  camera: { icon: cameraIcon, triggerLabel: 'Use camera', menuLabel: 'Take a photo' },
+  files: { icon: paperclipIcon, triggerKey: 'attachmentTriggerFiles', menuKey: 'attachmentMenuFiles' },
+  image: { icon: imageIcon, triggerKey: 'attachmentTriggerImage', menuKey: 'attachmentMenuImage' },
+  camera: { icon: cameraIcon, triggerKey: 'attachmentTriggerCamera', menuKey: 'attachmentMenuCamera' },
 };
 
 export interface LyraAttachmentTriggerEventMap {
@@ -152,11 +152,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   @property() accept = '';
 
   /** Overrides the single-capability trigger button's `aria-label`, which
-   *  otherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.
-   *  `'Attach files'`). Set this to localize the accessible name; leave it
-   *  unset to keep the built-in English default. Only affects the
+   *  otherwise comes from `this.localize()` (e.g. `'Attach files'`, localizable
+   *  via `.strings`/`registerLyraLocale()`). Set this for a one-off override;
+   *  leave it unset to keep the localized default. Only affects the
    *  single-capability button ([part='trigger']) — the multi-capability
-   *  menu's own trigger keeps its fixed `'Add attachment'` label regardless. */
+   *  menu's own trigger keeps its own `'Add attachment'` label regardless. */
   @property({ attribute: 'trigger-label' }) triggerLabel?: string;
 
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
@@ -257,7 +257,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         part="trigger"
         class="trigger-button"
         type="button"
-        aria-label=${this.triggerLabel ?? meta.triggerLabel}
+        aria-label=${this.localize(meta.triggerKey, this.triggerLabel)}
         title=${this.triggerTitle ?? nothing}
         ?disabled=${this.disabled}
         @click=${this.onTriggerClick}
@@ -268,14 +268,15 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
 
   private renderMenu(): TemplateResult {
+    const addLabel = this.localize('attachmentAdd');
     return html`
-      <lyra-menu part="menu" label="Add attachment" @lyra-menu-select=${this.onMenuSelect}>
+      <lyra-menu part="menu" label=${addLabel} @lyra-menu-select=${this.onMenuSelect}>
         <button
           slot="trigger"
           part="menu-trigger"
           class="trigger-button"
           type="button"
-          aria-label="Add attachment"
+          aria-label=${addLabel}
           title=${this.triggerTitle ?? nothing}
           ?disabled=${this.disabled}
         >
@@ -287,7 +288,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
           return html`
             <lyra-menu-item value=${capability}>
               <span slot="icon">${meta.icon()}</span>
-              ${meta.menuLabel}
+              ${this.localize(meta.menuKey)}
             </lyra-menu-item>
           `;
         })}
