@@ -185,6 +185,34 @@ describe('hover/focus preview popover', () => {
     expect(popover.hidden, 'should be hidden once the grace period elapses').to.be.true;
   });
 
+  it('cancels a pending hide when hover returns before the grace period elapses', async () => {
+    const el = (await fixture(
+      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+    )) as LyraCitationBadge;
+    const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+    const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    expect(popover.hidden).to.be.false;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    await el.updateComplete;
+
+    // Re-enter well within the 200ms grace period -- this must cancel the
+    // scheduled hide outright, not just leave the popover open transiently
+    // until the stale timer catches up with it.
+    wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    expect(popover.hidden).to.be.false;
+
+    // Wait past when the original hide timer would have fired. If it wasn't
+    // actually cancelled, the popover silently closes here despite hover
+    // having returned.
+    await aTimeout(300);
+    expect(popover.hidden, 'the stale hide timer must not fire after hover returned').to.be.false;
+  });
+
   it('shows on focusin and hides immediately (no grace period) on focusout when preview content is slotted', async () => {
     const el = (await fixture(
       html`<lyra-citation-badge index="1"><p>report.pdf, page 4</p></lyra-citation-badge>`,
@@ -258,6 +286,38 @@ describe('hover/focus preview popover', () => {
     )) as LyraCitationBadge;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     expect(popover.hasAttribute('tabindex')).to.be.false;
+  });
+
+  it('shows the popover for preview content that is plain text with no wrapping element', async () => {
+    const el = (await fixture(
+      html`<lyra-citation-badge index="5">No source has confirmed this yet.</lyra-citation-badge>`,
+    )) as LyraCitationBadge;
+    const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+    const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(popover.hidden).to.be.true;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    expect(popover.hidden, 'bare slotted text should count as real preview content').to.be.false;
+  });
+
+  it('force-closes an already-open popover when its preview content is removed from the slot', async () => {
+    const el = (await fixture(
+      html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
+    )) as LyraCitationBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+
+    base.focus();
+    await el.updateComplete;
+    expect(popover.hidden).to.be.false;
+
+    el.querySelector('p')!.remove();
+    // slotchange fires asynchronously after the light-DOM mutation.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await el.updateComplete;
+
+    expect(popover.hidden, 'popover must close once its preview content is emptied out from under it').to.be.true;
   });
 });
 

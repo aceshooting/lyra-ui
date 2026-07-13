@@ -39,6 +39,18 @@ const STATUS_LABEL: Record<CitationBadgeStatus, string> = {
 // travel, so they close immediately.
 const HIDE_DELAY_MS = 200;
 
+// The default slot's preview content is often plain text (see the Statuses
+// story: "No source has confirmed this yet.") with no wrapping element at
+// all, so an Element-only check (e.g. Array.from(children)/assignedElements)
+// never counts it. Mirrors result-field.ts's hasRealContent: a node counts as
+// real preview content if it's an element not assigned to some other named
+// slot, or non-whitespace text.
+function isRealPreviewNode(n: Node): boolean {
+  return n.nodeType === Node.ELEMENT_NODE
+    ? !(n as Element).hasAttribute('slot')
+    : (n.textContent ?? '').trim().length > 0;
+}
+
 /**
  * `<lyra-citation-badge>` — an inline `[n]` citation marker with a hover/
  * focus preview popover and confidence/verification-status coloring. Used
@@ -136,7 +148,7 @@ export class LyraCitationBadge extends LyraElement {
 
   protected willUpdate(): void {
     if (!this.hasUpdated) {
-      this.hasPreviewSlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      this.hasPreviewSlot = Array.from(this.childNodes).some(isRealPreviewNode);
     }
   }
 
@@ -163,7 +175,7 @@ export class LyraCitationBadge extends LyraElement {
   }
 
   private onSlotChange = (e: Event): void => {
-    this.hasPreviewSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasPreviewSlot = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(isRealPreviewNode);
     // The slot can be emptied out from under an already-open popover (e.g. a
     // consumer clearing preview content asynchronously) — nothing left to
     // show, so don't leave an empty panel floating open.
@@ -178,9 +190,15 @@ export class LyraCitationBadge extends LyraElement {
   // method names on every HTMLElement subclass, so reusing them here would
   // be a same-name-different-signature override error.
   private showPreview(): void {
-    if (!this.hasPreviewSlot || this.popoverOpen) return;
+    if (!this.hasPreviewSlot) return;
+    // Cancel any pending hide unconditionally -- including when the popover
+    // is already open -- so hover/focus returning within the grace period
+    // (pointerenter -> pointerleave -> pointerenter before HIDE_DELAY_MS)
+    // actually cancels the scheduled hide instead of leaving it armed to
+    // fire later regardless of the now-restored hover/focus state.
     clearTimeout(this.hideTimer);
     this.hideTimer = undefined;
+    if (this.popoverOpen) return;
     this.popoverOpen = true;
   }
 
