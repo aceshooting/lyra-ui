@@ -2,6 +2,7 @@ import { expect, waitUntil, fixture, html } from '@open-wc/testing';
 import { toast } from './toaster.js';
 import './toast.js';
 import type { LyraToast } from './toast.js';
+import type { LyraToastItem } from './toast-item.js';
 import { styles } from './toast.styles.js';
 
 it('mounts a singleton region and shows an item', async () => {
@@ -39,6 +40,26 @@ it('renders an action button when provided', async () => {
   expect(clicked).to.be.true;
 });
 
+it('styles the appended action button through the design-token system instead of leaving it browser-default', async () => {
+  // toast-item.styles.ts previously had no ::slotted(button) rule at all, so
+  // the <button> toaster.ts appends for `action` rendered with completely
+  // unstyled UA chrome (a boxed, beveled button) instead of matching the
+  // rest of the token-driven design.
+  const { item } = toast({
+    message: 'undo me',
+    duration: 0,
+    action: { label: 'Undo', onClick: () => {} },
+  });
+  const el = await item;
+  const btn = el.querySelector('button')!;
+  const computed = getComputedStyle(btn);
+  expect(computed.borderStyle, 'the default UA button border must be removed').to.equal('none');
+  expect(computed.backgroundColor, 'the default UA button background must be removed').to.equal(
+    'rgba(0, 0, 0, 0)',
+  );
+  expect(computed.cursor).to.equal('pointer');
+});
+
 it('reflects the placement property on <lyra-toast>', async () => {
   const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
   expect(region.getAttribute('placement')).to.equal('top-end');
@@ -66,6 +87,21 @@ it('create() on the region resolves to the item', async () => {
   const item = await region.create('direct', { variant: 'warning', duration: 0 });
   expect(item.variant).to.equal('warning');
   expect(item.textContent).to.contain('direct');
+});
+
+it("create() with no options leaves every field at <lyra-toast-item>'s own declared defaults", async () => {
+  // create() must not hardcode its own copy of each default -- it should
+  // defer entirely to whatever `document.createElement('lyra-toast-item')`
+  // already sets, so this stays correct even if toast-item.ts's own
+  // property defaults ever change.
+  const probe = document.createElement('lyra-toast-item') as LyraToastItem;
+  const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
+  const item = await region.create('defaults only');
+
+  expect(item.variant).to.equal(probe.variant);
+  expect(item.duration).to.equal(probe.duration);
+  expect(item.size).to.equal(probe.size);
+  expect(item.withIcon).to.equal(probe.withIcon);
 });
 
 it('is accessible as a bare region with no toasts open', async () => {

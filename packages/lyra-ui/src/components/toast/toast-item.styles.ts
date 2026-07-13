@@ -91,6 +91,32 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
+  /* toaster.ts's action option (and the WithIcon/Triggers stories) append a
+     plain light-DOM button as a sibling of the message text -- without
+     this, it renders with the browser's unstyled default button chrome,
+     clashing with the rest of the token-driven design. Styled as an inline
+     text action (matching the toast's own accent color) rather than a
+     boxed button, since it sits directly after the message inside the
+     content part rather than in its own layout slot. */
+  ::slotted(button) {
+    display: inline-block;
+    margin-inline-start: var(--lyra-space-s);
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-weight: bold;
+    color: var(--accent-color);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  ::slotted(button:hover) {
+    color: var(--lyra-color-text);
+  }
+  ::slotted(button:focus-visible) {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
   [part='close-button'] {
     flex: 0 0 auto;
     margin-inline-start: auto;

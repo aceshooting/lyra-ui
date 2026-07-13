@@ -73,14 +73,7 @@ export class LyraToastItem extends LyraElement {
   private focused = false;
   @state() private hiding = false;
 
-  protected updated(changed: PropertyValues): void {
-    if (changed.has('variant')) {
-      // Assertive for actionable severities, polite otherwise. Re-evaluated
-      // on every `variant` change (not just the first render) so a toast
-      // reassigned to `danger`/`warning` after creation is announced as an
-      // interruption instead of keeping its original, now-stale role.
-      this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
-    }
+  protected willUpdate(changed: PropertyValues): void {
     // `elapsedMs`/`duration` are re-read fresh every time the timer is
     // (re)scheduled, so a `duration` change while paused (hovering/focused)
     // or before the timer has ever started needs no action here -- the next
@@ -89,9 +82,27 @@ export class LyraToastItem extends LyraElement {
     // not only while a timer is already actively counting down -- this also
     // covers duration flipping from disabled (0/Infinity) back to a positive
     // value, which previously never had `this.timer !== undefined` to gate on.
+    //
+    // This runs in willUpdate() (before render), not updated(), because a
+    // duration shortened below the already-elapsed time makes resumeTimer()
+    // call hide(), which sets the `hiding` state property synchronously --
+    // doing that from updated() sets a reactive property after Lit considers
+    // the update cycle finished, scheduling a redundant extra render pass.
+    // willUpdate() runs before that cycle is considered complete, so the same
+    // set just folds into the render already in progress.
     if (changed.has('duration') && this.timerStarted && !this.hovering && !this.focused) {
       this.pauseTimer();
       this.resumeTimer();
+    }
+  }
+
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('variant')) {
+      // Assertive for actionable severities, polite otherwise. Re-evaluated
+      // on every `variant` change (not just the first render) so a toast
+      // reassigned to `danger`/`warning` after creation is announced as an
+      // interruption instead of keeping its original, now-stale role.
+      this.setAttribute('role', this.variant === 'danger' || this.variant === 'warning' ? 'alert' : 'status');
     }
   }
 

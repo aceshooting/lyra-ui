@@ -99,6 +99,42 @@ it('hides promptly when duration is shortened below the already-elapsed time', a
   expect(el.isConnected).to.be.false;
 });
 
+it('does not schedule a redundant re-render when a shortened duration forces hide() from within its own update cycle', async () => {
+  // Lit's dev-mode warns ("scheduled an update ... after an update
+  // completed") whenever a reactive property is set from updated() rather
+  // than willUpdate(), because that forces a second, wasted render pass on
+  // top of the one that just ran. resumeTimer() (called via the `duration`
+  // handling above) sets the `hiding` state property when it decides to call
+  // hide() -- that handling must live in willUpdate(), not updated(), for
+  // this scenario specifically since it's the one where remaining <= 0 makes
+  // resumeTimer() call hide() synchronously, during the same tick.
+  //
+  // Reset Lit's own dedupe set first so this doesn't silently pass just
+  // because an earlier test already tripped (and thus suppressed) the exact
+  // same warning string.
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  if (globalWarnings) {
+    [...globalWarnings].filter((w) => w.includes('scheduled an update')).forEach((w) => globalWarnings.delete(w));
+  }
+
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(
+      html`<lyra-toast-item duration="5000">msg</lyra-toast-item>`,
+    )) as LyraToastItem;
+    await aTimeout(50);
+    el.duration = 10; // already behind elapsedMs -- resumeTimer() calls hide() synchronously
+    await oneEvent(el, 'lyra-after-hide');
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  const messages = calls.flat().map(String);
+  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.false;
+});
+
 it('restarts the timer when duration changes from disabled (0) back to a positive value', async () => {
   const el = (await fixture(html`<lyra-toast-item duration="0">msg</lyra-toast-item>`)) as LyraToastItem;
   await aTimeout(20);

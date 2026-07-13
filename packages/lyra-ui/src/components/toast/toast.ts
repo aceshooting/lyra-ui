@@ -38,10 +38,15 @@ export class LyraToast extends LyraElement {
   /** Create and append a toast item programmatically; resolves to the item. */
   async create(message: string, options: ToastCreateOptions = {}): Promise<LyraToastItem> {
     const item = document.createElement('lyra-toast-item') as LyraToastItem;
-    item.variant = options.variant ?? 'neutral';
-    item.duration = options.duration ?? 5000;
-    item.size = options.size ?? 'm';
-    item.withIcon = options.withIcon ?? false;
+    // Only assign what the caller actually specified -- a freshly-created
+    // <lyra-toast-item> already carries its own property defaults, so
+    // falling back to a literal here (e.g. `?? 5000`) would duplicate those
+    // defaults in a second place that has no way of staying in sync if the
+    // property declaration in toast-item.ts ever changes.
+    if (options.variant !== undefined) item.variant = options.variant;
+    if (options.duration !== undefined) item.duration = options.duration;
+    if (options.size !== undefined) item.size = options.size;
+    if (options.withIcon !== undefined) item.withIcon = options.withIcon;
     item.textContent = message;
     this.appendChild(item);
     await item.updateComplete;
