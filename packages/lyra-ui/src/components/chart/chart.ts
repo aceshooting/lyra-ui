@@ -31,6 +31,23 @@ export type LyraChartType =
   | 'polarArea'
   | 'bubble';
 
+const CHART_TYPES = new Set<LyraChartType>([
+  'line',
+  'bar',
+  'scatter',
+  'pie',
+  'doughnut',
+  'radar',
+  'polarArea',
+  'bubble',
+]);
+
+function normalizeChartType(value: unknown): LyraChartType {
+  return typeof value === 'string' && CHART_TYPES.has(value as LyraChartType)
+    ? (value as LyraChartType)
+    : 'line';
+}
+
 /**
  * Recursively merges `override` onto `base`, matching JSON-merge semantics:
  * plain objects are merged key-by-key at every depth; arrays, functions, and
@@ -113,7 +130,8 @@ function deepMerge<T>(base: T, override: unknown): T {
 export class LyraChart extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
-  @property() type: LyraChartType = 'line';
+  @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
+  type: LyraChartType = 'line';
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) datasets: Series[] = [];
   @property({ type: Boolean }) legend = false;
@@ -445,7 +463,7 @@ export class LyraChart extends LyraElement {
    */
   private effectiveType(): import('chart.js').ChartType {
     return (
-      (this.config?.type as import('chart.js').ChartType | undefined) ?? (this.type as import('chart.js').ChartType)
+      (this.config?.type as import('chart.js').ChartType | undefined) ?? normalizeChartType(this.type)
     );
   }
 

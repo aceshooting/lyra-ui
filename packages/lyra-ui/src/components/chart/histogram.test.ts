@@ -17,6 +17,23 @@ it('locks .type to "bar" — assigning a different value at runtime (e.g. via a 
   expect(el.type).to.equal('bar');
 });
 
+it('normalizes unsafe HTML `bins` values before they reach the binning pass', () => {
+  const el = document.createElement('lyra-histogram') as LyraHistogram;
+
+  el.setAttribute('bins', String(Number.MAX_SAFE_INTEGER));
+  expect(el.bins).to.equal(1_000);
+
+  el.setAttribute('bins', '3.9');
+  expect(el.bins).to.equal(3);
+
+  el.setAttribute('bins', 'Infinity');
+  expect(el.bins).to.equal(0);
+
+  el.values = [0, 1];
+  el.bins = Number.MAX_SAFE_INTEGER;
+  expect(binnedBuckets(el)).to.have.length(1_000);
+});
+
 it('memoizes the binning pass, reusing the same bucket array while `values`/`bins` are unchanged', async () => {
   const el = (await fixture(html`<lyra-histogram bins="5"></lyra-histogram>`)) as LyraHistogram;
   el.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];

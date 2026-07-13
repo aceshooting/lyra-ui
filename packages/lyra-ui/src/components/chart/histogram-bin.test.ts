@@ -49,6 +49,12 @@ it('floors a fractional binCount instead of producing a mismatched bucket array'
   expect(buckets.length).to.equal(3);
 });
 
+it('caps an enormous finite binCount before allocating the bucket array', () => {
+  const buckets = binValues([0, 10], Number.MAX_SAFE_INTEGER);
+  expect(buckets.length).to.equal(1_000);
+  expect(buckets.reduce((sum, b) => sum + b.count, 0)).to.equal(2);
+});
+
 it('drops non-finite samples instead of throwing', () => {
   const buckets = binValues([1, 2, NaN, Infinity, -Infinity, 3], 2);
   expect(buckets.reduce((sum, b) => sum + b.count, 0)).to.equal(3);

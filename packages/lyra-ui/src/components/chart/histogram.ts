@@ -2,7 +2,11 @@ import { property } from 'lit/decorators.js';
 import { LyraChart, lockChartType, type Series } from './chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
-import { binValues, type HistogramBucket } from './histogram-bin.js';
+import {
+  binValues,
+  normalizeHistogramBinCount,
+  type HistogramBucket,
+} from './histogram-bin.js';
 import { styles } from './histogram.styles.js';
 
 /**
@@ -21,7 +25,8 @@ export class LyraHistogram extends LyraChart {
 
   override type = 'bar' as const;
 
-  @property({ type: Number }) bins = 10;
+  @property({ converter: { fromAttribute: (value) => normalizeHistogramBinCount(value) } })
+  bins = 10;
   @property({ attribute: false }) values: number[] = [];
   @property() label = 'Frequency';
 }
@@ -38,12 +43,13 @@ const bucketCache = new WeakMap<
 >();
 
 export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {
+  const bins = normalizeHistogramBinCount(el.bins);
   const cached = bucketCache.get(el);
-  if (cached && cached.values === el.values && cached.bins === el.bins) {
+  if (cached && cached.values === el.values && cached.bins === bins) {
     return cached.buckets;
   }
-  const buckets = binValues(el.values, el.bins);
-  bucketCache.set(el, { values: el.values, bins: el.bins, buckets });
+  const buckets = binValues(el.values, bins);
+  bucketCache.set(el, { values: el.values, bins, buckets });
   return buckets;
 }
 

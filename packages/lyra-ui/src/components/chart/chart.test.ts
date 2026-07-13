@@ -27,6 +27,21 @@ it('renders a canvas and builds a Chart.js instance once chart.js loads', async 
   expect(canvas).to.exist;
 });
 
+it('normalizes an invalid HTML `type` attribute before it can reach Chart.js', () => {
+  const el = document.createElement('lyra-chart') as LyraChart;
+  el.setAttribute('type', 'unregistered-controller');
+
+  expect(el.type).to.equal('line');
+  expect((el as any).buildConfig().type).to.equal('line');
+});
+
+it('falls back to line when an untyped runtime write assigns an invalid chart type', () => {
+  const el = document.createElement('lyra-chart') as LyraChart;
+  (el as unknown as { type: string }).type = 'unregistered-controller';
+
+  expect((el as any).buildConfig().type).to.equal('line');
+});
+
 it('updates in place (same Chart instance) when only data changes', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'bar';

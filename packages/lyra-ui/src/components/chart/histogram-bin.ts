@@ -3,14 +3,23 @@ export interface HistogramBucket {
   count: number;
 }
 
+export const MAX_HISTOGRAM_BINS = 1_000;
+
+/** Converts an untyped bucket count to a bounded, non-negative integer. */
+export function normalizeHistogramBinCount(binCount: unknown): number {
+  const numeric = typeof binCount === 'number' ? binCount : Number(binCount);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.min(MAX_HISTOGRAM_BINS, Math.max(0, Math.floor(numeric)));
+}
+
 /** Splits `values` into `binCount` equal-width buckets and counts membership.
  *  Non-finite `binCount` (or <= 0) yields no buckets; a fractional `binCount`
- *  is floored; non-finite samples in `values` are dropped rather than
- *  corrupting bucket-index math. */
+ *  is floored and an excessive count is capped; non-finite samples in
+ *  `values` are dropped rather than corrupting bucket-index math. */
 export function binValues(values: number[], binCount: number): HistogramBucket[] {
   const finite = values.filter((v) => Number.isFinite(v));
-  if (finite.length === 0 || !Number.isFinite(binCount)) return [];
-  const bins = Math.floor(binCount);
+  if (finite.length === 0) return [];
+  const bins = normalizeHistogramBinCount(binCount);
   if (bins <= 0) return [];
 
   let lo = finite[0];
