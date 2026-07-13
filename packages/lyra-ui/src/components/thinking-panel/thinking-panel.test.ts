@@ -176,6 +176,122 @@ describe('live-mode auto-scroll', () => {
 
     expect(body.scrollHeight - body.scrollTop - body.clientHeight).to.be.lessThan(2);
   });
+
+  it('jumps to the bottom when an already-expanded panel\'s mode transitions to live', async () => {
+    const el = (await fixture(
+      html`<lyra-thinking-panel mode="post-hoc">${longText}</lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const body = await forceSmallBody(el);
+    // post-hoc never auto-jumps on expand -- starts at the top.
+    expect(body.scrollTop).to.equal(0);
+
+    // Reader scrolls partway down while reviewing the finished transcript.
+    body.scrollTop = 10;
+    body.dispatchEvent(new Event('scroll'));
+
+    el.mode = 'live';
+    await el.updateComplete;
+
+    expect(
+      body.scrollHeight - body.scrollTop - body.clientHeight,
+      'mode transitioning to live while already expanded should reset to anchored and jump to the bottom',
+    ).to.be.lessThan(2);
+  });
+
+  it('keeps following new content after a mode transition to live, even if a prior expand-while-live no-op left `expanded` unchanged', async () => {
+    // Mirrors LiveStreamingDemo's second run: `expanded` is set to `true`
+    // again (a no-op -- already true, so Lit's `changed` map never contains
+    // 'expanded') alongside a real `mode` transition to 'live'. Only the mode
+    // transition should be needed to reset stickToBottom and start following.
+    const el = (await fixture(
+      html`<lyra-thinking-panel mode="post-hoc" expanded>${longText}</lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const body = await forceSmallBody(el);
+    body.scrollTop = 10;
+    body.dispatchEvent(new Event('scroll'));
+
+    el.expanded = true; // no-op, already true
+    el.mode = 'live'; // real transition
+    await el.updateComplete;
+
+    el.appendChild(document.createTextNode('New reasoning content appended right after the mode flip. '));
+    await twoFrames();
+
+    expect(
+      body.scrollHeight - body.scrollTop - body.clientHeight,
+      'should still be following after the mode transition even though `expanded` itself did not change',
+    ).to.be.lessThan(2);
+  });
+
+  it('re-checks the auto-scroll guard inside the coalesced rAF callback, so a scroll-away between scheduling and firing is respected', async () => {
+    const el = (await fixture(html`<lyra-thinking-panel mode="live"></lyra-thinking-panel>`)) as LyraThinkingPanel;
+    const body = await forceSmallBody(el);
+
+    for (let i = 0; i < 20; i++) {
+      el.appendChild(document.createTextNode(`Line ${i} of streamed reasoning content. `));
+    }
+    await twoFrames();
+    expect(body.scrollHeight - body.scrollTop - body.clientHeight).to.be.lessThan(2);
+
+    // Intercept (but do not run) the next requestAnimationFrame callback so
+    // the test can fully control the ordering between the mutation being
+    // observed and the coalesced frame actually firing.
+    const originalRaf = window.requestAnimationFrame;
+    let capturedCallback: FrameRequestCallback | undefined;
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      capturedCallback = cb;
+      return 1;
+    }) as typeof window.requestAnimationFrame;
+
+    try {
+      el.appendChild(document.createTextNode('A fresh chunk that schedules a coalesced rAF. '));
+      // MutationObserver callbacks run as a microtask; flushing a couple of
+      // microtask turns is enough for onContentMutated to have run and
+      // scheduled (captured) the frame, without invoking it yet.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(capturedCallback, 'the mutation should have scheduled exactly one rAF callback').to.exist;
+
+      // The reader scrolls away in the window between scheduling and firing.
+      body.scrollTop = 0;
+      body.dispatchEvent(new Event('scroll'));
+      expect(body.scrollTop).to.equal(0);
+    } finally {
+      window.requestAnimationFrame = originalRaf;
+    }
+
+    // Now let the previously-captured frame actually run.
+    capturedCallback!(0);
+
+    expect(
+      body.scrollTop,
+      'must not be yanked back to the bottom -- the reader scrolled away before this frame fired',
+    ).to.equal(0);
+  });
+});
+
+describe('body keyboard accessibility', () => {
+  it('is a focusable, named group so a keyboard-only reader can scroll a long transcript', async () => {
+    const el = (await fixture(
+      html`<lyra-thinking-panel label="Reasoning" expanded>content</lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+
+    expect(body.getAttribute('tabindex')).to.equal('0');
+    expect(body.getAttribute('role')).to.equal('group');
+    expect(body.getAttribute('aria-label')).to.equal('Reasoning');
+
+    body.focus();
+    expect(el.shadowRoot!.activeElement).to.equal(body);
+  });
+});
+
+describe('body scroll containment', () => {
+  it('sets overscroll-behavior: contain on the scrollable body', async () => {
+    const el = (await fixture(html`<lyra-thinking-panel expanded></lyra-thinking-panel>`)) as LyraThinkingPanel;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(getComputedStyle(body).overscrollBehavior).to.equal('contain');
+  });
 });
 
 it('is accessible with no content and collapsed', async () => {

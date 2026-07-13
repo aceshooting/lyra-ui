@@ -106,6 +106,11 @@ export const LiveStreamingDemo: Story = {
 
       root.querySelector('[data-start]')!.addEventListener('click', () => {
         content.textContent = '';
+        // On a second (or later) run, `expanded` is already `true` (a no-op)
+        // but `mode` genuinely transitions from 'post-hoc' back to 'live' --
+        // that transition alone resets stick-to-bottom and jumps to the
+        // latest content, so a reader who scrolled up during the previous
+        // run doesn't silently stop auto-following this time.
         panel.mode = 'live';
         panel.durationMs = undefined;
         panel.expanded = true;

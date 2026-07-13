@@ -105,7 +105,9 @@ function formatDuration(ms: number): string {
  * @csspart label - The `label` text.
  * @csspart duration - The formatted duration / "Thinking…" placeholder, when shown.
  * @csspart toggle - The chevron indicator inside the header.
- * @csspart body - The wrapper around the default slot, `hidden` while collapsed.
+ * @csspart body - The wrapper around the default slot, `hidden` while
+ * collapsed. Independently keyboard-focusable (`tabindex="0"`, `role="group"`
+ * named from `label`) since it's its own capped-height scrollable region.
  */
 export class LyraThinkingPanel extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -161,12 +163,12 @@ export class LyraThinkingPanel extends LyraElement {
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('expanded') && this.expanded && this.mode === 'live') {
-      // Opening a live panel always jumps straight to the newest content and
-      // resets the sticky-bottom flag, so it starts following again
-      // regardless of wherever the body happened to be scrolled the last
-      // time it was collapsed. `'post-hoc'` deliberately skips this -- see
-      // the class doc's Auto-scroll section.
+    if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
+      // Opening a live panel -- or a still-expanded panel later becoming
+      // `'live'` -- always jumps straight to the newest content and resets
+      // the sticky-bottom flag, so it starts following again regardless of
+      // wherever the body happened to be scrolled beforehand. `'post-hoc'`
+      // deliberately skips this -- see the class doc's Auto-scroll section.
       this.stickToBottom = true;
       this.scrollToBottom();
     }
@@ -197,7 +199,12 @@ export class LyraThinkingPanel extends LyraElement {
     if (this.scrollRafId !== undefined) return;
     this.scrollRafId = requestAnimationFrame(() => {
       this.scrollRafId = undefined;
-      this.scrollToBottom();
+      // Re-check the same guard here, not just in the caller: mode/expanded/
+      // stickToBottom can all change in the ~1-frame window between this
+      // mutation being observed and this callback actually firing (e.g. the
+      // reader scrolling away mid-frame), and this is the only place that
+      // reflects state as of the moment the scroll would actually happen.
+      if (this.mode === 'live' && this.expanded && this.stickToBottom) this.scrollToBottom();
     });
   };
 
@@ -213,6 +220,15 @@ export class LyraThinkingPanel extends LyraElement {
     return this.mode === 'live' ? { text: 'Thinking…', pending: true } : null;
   }
 
+  // `[part="body"]` is `tabindex="0"` because it's a capped-height,
+  // independently-scrollable region -- with no other focusable content of
+  // its own (e.g. plain text, or a non-interactive `<lyra-streaming-text>`),
+  // it would otherwise be unreachable by keyboard, same reasoning
+  // code-block.ts's and virtual-list.ts's own identical `[part="body"]`/
+  // `[part="base"]` tabindex document. `role="group"` (rather than a page
+  // landmark role) plus `aria-label` gives it an accessible name without
+  // claiming navigation significance for what is, structurally, just one
+  // part of a larger message.
   render(): TemplateResult {
     const duration = this.durationDisplay;
 
@@ -233,7 +249,15 @@ export class LyraThinkingPanel extends LyraElement {
               >`
             : nothing}
         </button>
-        <div part="body" id=${this.bodyId} ?hidden=${!this.expanded} @scroll=${this.onScroll}>
+        <div
+          part="body"
+          id=${this.bodyId}
+          role="group"
+          aria-label=${this.label}
+          tabindex="0"
+          ?hidden=${!this.expanded}
+          @scroll=${this.onScroll}
+        >
           <slot></slot>
         </div>
       </div>

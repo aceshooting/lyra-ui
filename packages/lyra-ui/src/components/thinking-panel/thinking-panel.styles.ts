@@ -96,6 +96,12 @@ export const styles = css`
   [part='body'] {
     max-block-size: var(--lyra-thinking-panel-max-block-size);
     overflow-y: auto;
+    /* Reaching this region's own top/bottom edge stops there instead of
+       chaining the scroll into the host page -- this is precisely the
+       component that tracks and respects the reader scrolling within it, so
+       it shouldn't hand that scroll off to the page underneath it. Same
+       convention as virtual-list.styles.ts's own auto-scrolling region. */
+    overscroll-behavior: contain;
     padding: var(--lyra-space-m);
     border-block-start: 1px solid var(--lyra-color-border);
     color: var(--lyra-color-text-quiet);
