@@ -5,6 +5,11 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lyra-space-s);
+    /* Derived from --lyra-icon-button-size (0.35 * 2.5rem = 0.875rem, the
+       prior bare literal) so the rendered play/pause SVG icon (icons render
+       at width/height: 1em, so this font-size directly controls its pixel
+       size) tracks the button's own token instead of drifting from it. */
+    --lyra-playback-icon-size: calc(var(--lyra-icon-button-size) * 0.35);
   }
   [part='base'] {
     display: flex;
@@ -22,7 +27,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.875rem;
+    font-size: var(--lyra-playback-icon-size);
   }
   [part='play-button']:hover {
     border-color: var(--lyra-color-brand);

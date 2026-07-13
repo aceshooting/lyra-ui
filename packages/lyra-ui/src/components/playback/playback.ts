@@ -7,12 +7,20 @@ import { styles } from './playback.styles.js';
 
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
 
-let warnedInvalidInterval = false;
+// Deduplicated per distinct bad value (like the analogous one-time warnings
+// in lyra-heatmap/lyra-word-cloud) rather than a single once-ever flag, so a
+// later, genuinely different bad value is never silently swallowed by an
+// earlier, unrelated one.
+const warnedInvalidIntervals = new Set<number>();
 function warnInvalidInterval(value: number): void {
-  if (warnedInvalidInterval) return;
-  warnedInvalidInterval = true;
+  if (warnedInvalidIntervals.has(value)) return;
+  warnedInvalidIntervals.add(value);
+  // The clamp fires for *any* value below the floor, not only non-finite
+  // ones (e.g. an ordinary `interval-ms="10"`) -- report the reason that
+  // actually applies instead of always claiming "non-finite or non-positive".
+  const reason = Number.isFinite(value) ? `below the ${MIN_INTERVAL_MS}ms floor` : 'non-finite';
   console.warn(
-    `<lyra-playback> received a non-finite or non-positive interval-ms (${value}); clamping to ${MIN_INTERVAL_MS}ms.`,
+    `<lyra-playback> interval-ms (${value}) is ${reason}; clamping to ${MIN_INTERVAL_MS}ms.`,
   );
 }
 
@@ -78,9 +86,11 @@ export class LyraPlayback extends LyraElement {
     this.requestUpdate('playing', old);
   }
 
-  /** Largest index reachable at the current `length` (never negative). */
+  /** Largest index reachable at the current `length` (never negative, and
+   * never NaN — a non-finite `length` falls back to 0 rather than leaking a
+   * literal "NaN" into the rendered slider's `max` attribute). */
   private get maxIndex(): number {
-    return Math.max(0, this.length - 1);
+    return Number.isFinite(this.length) ? Math.max(0, this.length - 1) : 0;
   }
 
   disconnectedCallback(): void {
@@ -90,6 +100,15 @@ export class LyraPlayback extends LyraElement {
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('hidden') && this.hidden) this.pause();
+    // A non-finite `length`/`index` (e.g. externally assigned NaN) must not
+    // linger: `maxIndex` already falls back to a safe value for rendering,
+    // but `next()`/`previous()` compare `index`/`length` directly and would
+    // otherwise stay permanently bricked (NaN comparisons are always
+    // false). Checked unconditionally — not just under the `length` branch
+    // below — so a corrupted `index` alone still self-heals on the very next
+    // update, without requiring `length` to also change.
+    if (!Number.isFinite(this.length)) this.length = 0;
+    if (!Number.isFinite(this.index)) this.index = 0;
     if (changed.has('length')) {
       // If length is externally reduced to <= 1 while playing, the timer
       // would otherwise keep firing forever — and the play button (the only
@@ -130,10 +149,18 @@ export class LyraPlayback extends LyraElement {
       warnInvalidInterval(delay);
       delay = MIN_INTERVAL_MS;
     }
-    this.timer = window.setTimeout(() => {
+    // Self-identifying: a synchronous pause()+play() (or a synchronous
+    // play() from a 'lyra-pause'/'lyra-step' listener) invoked while this
+    // callback is running schedules its own new timer and overwrites
+    // `this.timer` before this callback resumes. Only the timer that is
+    // still the current one is allowed to reschedule itself — every other,
+    // now-superseded chain quietly stops instead of spawning a second,
+    // untracked chain that pause()/disconnectedCallback() can never reach.
+    const id = window.setTimeout(() => {
       this.tick();
-      if (this.playing) this.scheduleTick();
+      if (this.playing && this.timer === id) this.scheduleTick();
     }, delay);
+    this.timer = id;
   }
 
   private tick(): void {

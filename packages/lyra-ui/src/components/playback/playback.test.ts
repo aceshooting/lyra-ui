@@ -2,6 +2,36 @@ import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './playback.js';
 import type { LyraPlayback } from './playback.js';
 
+it('does not leak an untracked duplicate timer chain when play() is called synchronously from a lyra-step listener during tick()', async () => {
+  const el = (await fixture(
+    html`<lyra-playback length="1000" interval-ms="15"></lyra-playback>`,
+  )) as LyraPlayback;
+  let reentered = false;
+  el.addEventListener('lyra-step', () => {
+    // Simulate a consumer that reacts to every step by synchronously
+    // restarting playback (e.g. debouncing a pause/resume toggle). This
+    // fires from inside the in-flight tick()'s own setTimeout callback.
+    if (!reentered) {
+      reentered = true;
+      el.pause();
+      el.play();
+    }
+  });
+
+  el.play();
+  // Let the reentrant pause()+play() cycle above happen on the very first
+  // tick, then explicitly pause from the outside.
+  await aTimeout(25);
+  el.pause();
+  const indexAfterPause = el.index;
+
+  // If a second, untracked setTimeout chain leaked out of the reentrant
+  // pause()+play() cycle, the index keeps climbing here even though pause()
+  // (and disconnectedCallback()) believe playback is fully stopped.
+  await aTimeout(150);
+  expect(el.index).to.equal(indexAfterPause);
+});
+
 it('advances the index on each tick and wraps when loop is true', async () => {
   const el = (await fixture(
     html`<lyra-playback length="3" interval-ms="10"></lyra-playback>`,
@@ -108,6 +138,44 @@ it('goTo() never produces a negative index when length is at its default (0)', a
   el.goTo(0);
 
   expect(el.index).to.be.at.least(0);
+});
+
+it('does not leak a literal "NaN" into the rendered slider max when length is non-finite, even before the next update flushes', async () => {
+  const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+
+  el.length = NaN;
+  // goTo() reads the `maxIndex` getter synchronously, before willUpdate()
+  // has had a chance to run and normalize `length` back to a finite value --
+  // this isolates the getter's own guard from the willUpdate self-heal below.
+  el.goTo(5);
+
+  expect(Number.isNaN(el.index)).to.be.false;
+  await el.updateComplete;
+  const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+  expect(slider.max).to.not.equal('NaN');
+});
+
+it('self-heals a non-finite length back to a finite value on the next update', async () => {
+  const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+
+  el.length = NaN;
+  await el.updateComplete;
+
+  expect(Number.isFinite(el.length)).to.be.true;
+});
+
+it('self-heals a non-finite index back to a valid value on the next update, without requiring length to also change', async () => {
+  const el = (await fixture(html`<lyra-playback length="5" index="2"></lyra-playback>`)) as LyraPlayback;
+
+  el.index = NaN;
+  await el.updateComplete;
+
+  // Before the fix, `next()`/`previous()` compare `index`/`length` directly
+  // and stay permanently bricked once `index` is NaN (NaN comparisons are
+  // always false), with nothing to ever recover them.
+  expect(Number.isFinite(el.index)).to.be.true;
+  el.next();
+  expect(el.index).to.be.greaterThan(0);
 });
 
 it('re-reads interval-ms fresh instead of baking the original value into the timer for the whole play session', async () => {
@@ -255,4 +323,50 @@ it('clamps a non-positive interval-ms instead of hammering a zero-delay tick loo
   // clamped to a sane minimum, only a handful of ticks land in 50ms.
   expect(el.index).to.be.lessThan(20);
   el.pause();
+});
+
+it('warns with a reason that matches the actual cause: "below the Xms floor" for a merely-small value, "non-finite" for NaN', async () => {
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    // 12 (not 10, which many earlier tests already used) so this assertion
+    // does not depend on being the first test in the file to warn about it --
+    // the warning is deduplicated per distinct value, not globally.
+    const small = (await fixture(
+      html`<lyra-playback length="5" interval-ms="12"></lyra-playback>`,
+    )) as LyraPlayback;
+    small.play();
+    small.pause();
+
+    const invalid = (await fixture(
+      html`<lyra-playback length="5" interval-ms="NaN"></lyra-playback>`,
+    )) as LyraPlayback;
+    invalid.play();
+    invalid.pause();
+
+    expect(calls.length).to.equal(2);
+    expect(calls[0][0]).to.contain('(12)');
+    expect(calls[0][0]).to.contain('below the 16ms floor');
+    expect(calls[1][0]).to.contain('(NaN)');
+    expect(calls[1][0]).to.contain('non-finite');
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+it('derives the play/pause icon size from --lyra-icon-button-size via a token, not a bare literal', async () => {
+  const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+  const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+
+  // Default rendering is unchanged from the pre-refactor bare 0.875rem (14px)
+  // literal.
+  expect(getComputedStyle(button).fontSize).to.equal('14px');
+
+  // Overriding the icon-button-size token must move the icon size with it --
+  // proof the icon size is now backed by a design token instead of a bare
+  // literal that can never respond to it.
+  el.style.setProperty('--lyra-icon-button-size', '100px');
+  await el.updateComplete;
+  expect(getComputedStyle(button).fontSize).to.equal('35px');
 });
