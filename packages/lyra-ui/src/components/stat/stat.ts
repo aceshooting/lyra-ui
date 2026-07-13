@@ -1,9 +1,9 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { chevronIcon } from '../../internal/icons.js';
-import { srOnly } from '../../internal/a11y.js';
+import { nextId, srOnly } from '../../internal/a11y.js';
 import { styles } from './stat.styles.js';
 
 export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
@@ -31,7 +31,9 @@ export interface StatRow {
  * @csspart icon - Container for the leading icon slot.
  * @csspart label - The label text.
  * @csspart value-row - Wrapper around the value and unit.
- * @csspart value - The value text.
+ * @csspart value - The value text. Accessibly labelled by the `label` part (via
+ *   `aria-labelledby`) whenever `label` is set, so tabbing directly to this
+ *   (focusable when `exactValue` is set) control still announces which metric it is.
  * @csspart unit - The unit text.
  * @csspart trend - The trend pill.
  * @csspart sub - Container for the `sub` attribute/slot.
@@ -41,7 +43,8 @@ export interface StatRow {
  * @csspart row - A single breakdown row (one per `rows` entry).
  * @csspart row-label - The label text of a breakdown row.
  * @csspart row-value - The value text of a breakdown row. Shows the row's `exactValue` (if any) as
- *   a hover/focus tooltip, same as the headline `value`.
+ *   a hover/focus tooltip, same as the headline `value`, and is accessibly labelled by its
+ *   `row-label` (via `aria-labelledby`) the same way the headline `value` is.
  */
 export class LyraStat extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -82,12 +85,26 @@ export class LyraStat extends LyraElement {
   @state() private hasSparkSlot = false;
   @state() private hasSubSlot = false;
 
-  protected willUpdate(): void {
+  // Stable id pairing `[part='label']` with `[part='value']` via
+  // aria-labelledby, so a keyboard user tabbing straight to the (focusable,
+  // tooltip-bearing) value still gets an accessible name like "Revenue
+  // $1.2K" instead of the bare value.
+  private readonly labelId = nextId('stat-label');
+  private readonly valueId = `${this.labelId}-value`;
+  // One id per `rows` entry, regenerated only when the `rows` array itself is
+  // reassigned (not on every render) so `aria-labelledby` references stay
+  // stable across unrelated re-renders.
+  @state() private rowLabelIds: string[] = [];
+
+  protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
       this.hasCaptionSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'caption');
       this.hasSparkSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'spark');
       this.hasSubSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sub');
+    }
+    if (changed.has('rows')) {
+      this.rowLabelIds = this.rows.map(() => nextId('stat-row-label'));
     }
   }
 
@@ -108,7 +125,12 @@ export class LyraStat extends LyraElement {
   };
 
   render(): TemplateResult {
-    const hasTrend = !isNaN(this.trend);
+    // Lit's built-in Number converter maps a removed/absent attribute to
+    // `null`, not NaN, even though the property is typed `number` — so
+    // `isNaN(this.trend)` alone is false for a cleared attribute and the pill
+    // would reappear showing a fabricated "unchanged, 0%". Treat null/undefined
+    // the same as NaN here instead of trusting the static type.
+    const hasTrend = this.trend != null && !isNaN(this.trend);
     const rawDirection = this.trend > 0 ? 'up' : this.trend < 0 ? 'down' : 'flat';
     const isGood = rawDirection === 'flat' ? null : rawDirection === this.goodDirection;
     // The trend pill previously rendered literal ▲/▼ glyphs — font-dependent
@@ -133,9 +155,14 @@ export class LyraStat extends LyraElement {
         <span part="icon" ?hidden=${!this.hasIcon}
           ><slot @slotchange=${this.onIconSlotChange}></slot
         ></span>
-        <span part="label">${this.label}</span>
+        <span part="label" id=${this.labelId}>${this.label}</span>
         <div part="value-row">
-          <span part="value" title=${this.exactValue || nothing} tabindex=${this.exactValue ? '0' : nothing}
+          <span
+            part="value"
+            id=${this.valueId}
+            title=${this.exactValue || nothing}
+            tabindex=${this.exactValue ? '0' : nothing}
+            aria-labelledby=${this.label ? `${this.labelId} ${this.valueId}` : nothing}
             >${this.value}</span
           >
           <span part="unit">${this.unit}</span>
@@ -151,7 +178,7 @@ export class LyraStat extends LyraElement {
             </span>`
           : nothing}
         <div part="sub" ?hidden=${!hasSub}>
-          ${this.sub}<slot name="sub" @slotchange=${this.onSubSlotChange}></slot>
+          <slot name="sub" @slotchange=${this.onSubSlotChange}>${this.sub}</slot>
         </div>
         <div part="spark" ?hidden=${!this.hasSparkSlot}>
           <slot name="spark" @slotchange=${this.onSparkSlotChange}></slot>
@@ -160,19 +187,23 @@ export class LyraStat extends LyraElement {
           <slot name="caption" @slotchange=${this.onCaptionSlotChange}>${this.caption}</slot>
         </div>
         <div part="rows" ?hidden=${this.rows.length === 0}>
-          ${this.rows.map(
-            (row) => html`
+          ${this.rows.map((row, i) => {
+            const rowLabelId = this.rowLabelIds[i];
+            const rowValueId = `${rowLabelId}-value`;
+            return html`
               <div part="row">
-                <span part="row-label">${row.label}</span>
+                <span part="row-label" id=${rowLabelId}>${row.label}</span>
                 <span
                   part="row-value"
+                  id=${rowValueId}
                   title=${row.exactValue || nothing}
                   tabindex=${row.exactValue ? '0' : nothing}
+                  aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}
                   >${row.value}</span
                 >
               </div>
-            `,
-          )}
+            `;
+          })}
         </div>
       </div>
     `;

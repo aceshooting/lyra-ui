@@ -22,6 +22,15 @@ it('hides the trend pill when trend is NaN, shows it with direction otherwise', 
   expect(trend.getAttribute('data-direction')).to.equal('down');
 });
 
+it('hides the trend pill again after the trend attribute is removed', async () => {
+  const el = (await fixture(html`<lyra-stat label="x" value="1" trend="5"></lyra-stat>`)) as LyraStat;
+  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.exist;
+
+  el.removeAttribute('trend');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="trend"]')).to.not.exist;
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lyra-stat label="Revenue" value="12.4" trend="3"></lyra-stat>`,
@@ -408,6 +417,46 @@ it('shows the exact value as a title tooltip on the headline value, and makes it
   expect(valueEl.getAttribute('tabindex')).to.equal('0');
 });
 
+it('associates the focusable value with its label via aria-labelledby', async () => {
+  const el = (await fixture(
+    html`<lyra-stat label="Revenue" value="$1.2K" exact-value="$1,204.37"></lyra-stat>`,
+  )) as LyraStat;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  const labelledBy = valueEl.getAttribute('aria-labelledby');
+  expect(labelledBy).to.be.a('string').and.not.empty;
+  const combinedText = labelledBy!
+    .split(' ')
+    .map((id) => el.shadowRoot!.getElementById(id)!.textContent!.trim())
+    .join(' ');
+  expect(combinedText).to.equal('Revenue $1.2K');
+});
+
+it('does not add aria-labelledby to the value when there is no label', async () => {
+  const el = (await fixture(html`<lyra-stat value="42"></lyra-stat>`)) as LyraStat;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+  expect(valueEl.hasAttribute('aria-labelledby')).to.be.false;
+});
+
+it('associates each row value with its row label via aria-labelledby', async () => {
+  const el = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
+  el.rows = [
+    { label: 'Direct', value: '64%' },
+    { label: 'Referral', value: '21%' },
+  ];
+  await el.updateComplete;
+
+  const rowEls = Array.from(el.shadowRoot!.querySelectorAll('[part="row"]'));
+  const combined = rowEls.map((row) => {
+    const rowValue = row.querySelector('[part="row-value"]') as HTMLElement;
+    const labelledBy = rowValue.getAttribute('aria-labelledby')!;
+    return labelledBy
+      .split(' ')
+      .map((id) => el.shadowRoot!.getElementById(id)!.textContent!.trim())
+      .join(' ');
+  });
+  expect(combined).to.deep.equal(['Direct 64%', 'Referral 21%']);
+});
+
 it('does not make the value focusable when exact-value is unset', async () => {
   const el = (await fixture(html`<lyra-stat value="42"></lyra-stat>`)) as LyraStat;
   const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
@@ -423,6 +472,20 @@ it('renders a sub line distinct from caption', async () => {
   expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent!.trim()).to.equal(
     'Updated 2h ago',
   );
+});
+
+it('lets the sub slot override the sub attribute instead of concatenating both', async () => {
+  const el = (await fixture(
+    html`<lyra-stat value="1" sub="attr"><span slot="sub">rich</span></lyra-stat>`,
+  )) as LyraStat;
+  // Same reasoning as the caption test above: the `sub` attribute's fallback
+  // text lives *inside* the `<slot>` in the shadow tree, so `textContent`
+  // (which walks the un-flattened shadow tree) always reports it regardless
+  // of assignment — assert via the slot's real assignment instead.
+  const slot = el.shadowRoot!.querySelector('slot[name="sub"]') as HTMLSlotElement;
+  const assigned = slot.assignedElements({ flatten: true });
+  expect(assigned.length).to.equal(1);
+  expect(assigned[0].textContent).to.equal('rich');
 });
 
 it('hides the sub part when unset', async () => {
