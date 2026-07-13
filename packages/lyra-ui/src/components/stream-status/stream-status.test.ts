@@ -78,6 +78,27 @@ it('recordActivity() while streaming resets the stall deadline instead of just r
   expect(stalled).to.be.true;
 });
 
+it('re-arms the stall timer with the new deadline the moment stallThresholdMs changes mid-stream', async () => {
+  const el = (await fixture(
+    html`<lyra-stream-status phase="streaming" stall-threshold-ms="500"></lyra-stream-status>`,
+  )) as LyraStreamStatus;
+  let stalled = false;
+  el.addEventListener('lyra-stall', () => (stalled = true));
+
+  // Shortening the threshold well below the already-armed 500ms deadline
+  // must take effect immediately -- if the already-running timer were left
+  // alone (the pre-fix behavior), nothing would fire within this window.
+  el.stallThresholdMs = 40;
+  await el.updateComplete;
+
+  await aTimeout(120);
+  expect(
+    stalled,
+    'a shortened stall-threshold-ms must apply immediately, not on the next recordActivity()/phase change',
+  ).to.be.true;
+  expect(el.phase).to.equal('stalled');
+});
+
 it('recordActivity() recovers from stalled, firing lyra-recover, and can stall again later', async () => {
   const el = (await fixture(
     html`<lyra-stream-status phase="streaming" stall-threshold-ms="40"></lyra-stream-status>`,
@@ -122,6 +143,19 @@ it('fires lyra-recover for any direct assignment out of "stalled", even to a pha
   el.phase = 'connecting';
   await ev;
   expect(el.phase).to.equal('connecting');
+  // The event still fires unconditionally, but landing on "connecting" is
+  // the host abandoning the stall, not the stream recovering -- the
+  // announced text must say so, not claim "restored".
+  expect(liveRegionText(el)).to.equal('No longer stalled.');
+});
+
+it('announces a neutral message, never "restored", when a stall is abandoned to idle', async () => {
+  const el = (await fixture(html`<lyra-stream-status phase="stalled"></lyra-stream-status>`)) as LyraStreamStatus;
+  const ev = oneEvent(el, 'lyra-recover');
+  el.phase = 'idle';
+  await ev;
+  expect(el.phase).to.equal('idle');
+  expect(liveRegionText(el)).to.equal('No longer stalled.');
 });
 
 it('does not fire lyra-stall/lyra-recover again for a no-op reassignment to the same phase', async () => {
@@ -183,32 +217,53 @@ it('renders the message part (default slot) only while phase="stalled", with a b
   await el.updateComplete;
   const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
   expect(message).to.exist;
-  const slot = message.querySelector('slot') as HTMLSlotElement;
-  // `slot.textContent` would only ever show the fallback children Lit put
-  // inside the <slot> element itself, regardless of real assignment -- per
-  // the platform's own slot semantics that's not the same as what's actually
-  // displayed, so this reads the flattened *assigned* (here: fallback,
-  // since nothing real is slotted) nodes instead, mirroring
-  // lyra-tool-call-chip's identical `assignedNodes({flatten: true})` check.
-  const text = slot
-    .assignedNodes({ flatten: true })
-    .map((n) => n.textContent)
-    .join('')
-    .trim();
-  expect(text).to.equal('Taking longer than usual…');
+  // The default message is rendered as a sibling of the <slot>, not as
+  // native <slot> fallback content (see isRealMessageNode()'s doc comment
+  // for why), so the rendered part's own textContent is what's actually
+  // displayed -- unlike reading `slot.assignedNodes()`, which would show
+  // nothing at all once fallback content is no longer how this is rendered.
+  expect(message.textContent!.trim()).to.equal('Taking longer than usual…');
+});
+
+it('shows the built-in default message even when the only assigned node is whitespace-only, matching ordinary indented markup', async () => {
+  // Mirrors the DefaultStalledMessage story's shape verbatim: a newline plus
+  // indentation before the slotted <button> is itself a whitespace-only text
+  // node assigned to the *default* slot. Native <slot> fallback content is
+  // suppressed by any assigned node, whitespace or not, which previously
+  // left this message area blank in exactly this common, unremarkable case.
+  const el = (await fixture(html`
+    <lyra-stream-status phase="stalled">
+      <button slot="actions">Retry</button>
+    </lyra-stream-status>
+  `)) as LyraStreamStatus;
+  const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
+  expect(message.textContent!.trim()).to.equal('Taking longer than usual…');
 });
 
 it('slotted default-slot content overrides the built-in stalled message', async () => {
   const el = (await fixture(
     html`<lyra-stream-status phase="stalled">Custom stall copy</lyra-stream-status>`,
   )) as LyraStreamStatus;
-  const slot = el.shadowRoot!.querySelector('[part="message"] slot') as HTMLSlotElement;
+  const message = el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
+  // `message.textContent` never reflects real assigned/distributed content
+  // (that lives in the light DOM, a different tree from the shadow tree
+  // `textContent` walks) -- only `assignedNodes({flatten: true})` shows what
+  // the <slot> actually renders, mirroring lyra-tool-call-chip's identical
+  // check.
+  const slot = message.querySelector('slot') as HTMLSlotElement;
   const text = slot
     .assignedNodes({ flatten: true })
     .map((n) => n.textContent)
     .join('')
     .trim();
   expect(text).to.equal('Custom stall copy');
+  // The built-in default must not *also* render alongside real slotted
+  // content. It would only ever show up as a literal sibling text node in
+  // the shadow tree itself (rendered when hasMessageContent is false), so
+  // `message.textContent` -- which does reflect that literal sibling, even
+  // though it can't reflect the slot's distributed content -- must be
+  // empty here.
+  expect(message.textContent!.trim()).to.equal('');
 });
 
 it('always renders the actions slot wrapper regardless of phase, hidden only while nothing is slotted', async () => {
@@ -252,6 +307,40 @@ it('clears the stall timer on disconnect so it cannot fire on a detached element
   el.remove();
   await aTimeout(150);
   expect(stalled, 'a disconnected element must not still transition to stalled').to.be.false;
+});
+
+it('re-arms the stall timer on reconnect while still "streaming", e.g. after being moved elsewhere in the page', async () => {
+  const el = (await fixture(
+    html`<lyra-stream-status phase="streaming" stall-threshold-ms="60"></lyra-stream-status>`,
+  )) as LyraStreamStatus;
+  let stalled = false;
+  el.addEventListener('lyra-stall', () => (stalled = true));
+
+  // Reparenting fires disconnectedCallback (which disarms the timer) then
+  // connectedCallback, with `phase` never changing -- no `updated()` cycle
+  // runs to re-arm it, so only connectedCallback() itself can resume
+  // detection here.
+  const parent = el.parentNode!;
+  parent.removeChild(el);
+  parent.appendChild(el);
+
+  await aTimeout(120);
+  expect(stalled, 'reconnecting mid-stream must resume stall detection, not leave it disarmed').to.be.true;
+  expect(el.phase).to.equal('stalled');
+});
+
+it('does not arm a stall timer on connect while phase is not "streaming"', async () => {
+  const el = (await fixture(html`<lyra-stream-status stall-threshold-ms="40"></lyra-stream-status>`)) as LyraStreamStatus;
+  let stalled = false;
+  el.addEventListener('lyra-stall', () => (stalled = true));
+
+  const parent = el.parentNode!;
+  parent.removeChild(el);
+  parent.appendChild(el);
+
+  await aTimeout(80);
+  expect(stalled).to.be.false;
+  expect(el.phase).to.equal('idle');
 });
 
 it('never arms a timer for a non-positive stall-threshold-ms', async () => {
