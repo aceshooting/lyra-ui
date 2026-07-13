@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small, fixed-size identity marker: an image, or an initials fallback when no image is set (or the image fails to load). Purely presentational — a consumer wraps it in their own `<button>`/`<lyra-menu>` trigger for a user-menu affordance.',
+          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lyra-menu>` trigger for a user-menu affordance.',
       },
     },
   },
@@ -21,6 +21,33 @@ type Story = StoryObj;
 export const InitialsOnly: Story = {
   name: 'Initials only (no image)',
   render: () => html`<lyra-avatar initials="AB"></lyra-avatar>`,
+};
+
+export const IconOnly: Story = {
+  name: 'Icon/glyph content (e.g. a chat role marker)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Default-slotted content (an inline SVG here) takes priority over both `src` and `initials` — useful for a chat UI distinguishing an "AI" avatar from a "user" avatar by role glyph rather than a photo or initials. Set `alt` alongside the icon for an accessible name, since the glyph itself is treated as decorative.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lyra-avatar tone="brand" alt="AI assistant">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4L12 2z"></path>
+        </svg>
+      </lyra-avatar>
+      <lyra-avatar tone="neutral" alt="You">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </lyra-avatar>
+    </div>
+  `,
 };
 
 export const WithImage: Story = {

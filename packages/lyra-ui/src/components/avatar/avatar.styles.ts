@@ -47,6 +47,21 @@ export const styles = css`
   :host([shape='square']) [part='base'] {
     border-radius: var(--lyra-radius);
   }
+  [part='icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  [part='icon'] ::slotted(svg) {
+    display: block;
+  }
+  /* The native [hidden] UA rule alone would lose to [part='icon']'s own
+     'display: inline-flex' above at equal specificity -- same fix
+     lyra-chip's/lyra-stat's identical [part='icon'][hidden] already applies. */
+  [part='icon'][hidden] {
+    display: none;
+  }
   [part='image'] {
     inline-size: 100%;
     block-size: 100%;

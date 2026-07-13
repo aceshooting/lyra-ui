@@ -8,28 +8,39 @@ export type AvatarShape = 'circle' | 'square';
 export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 
 /**
- * `<lyra-avatar>` — a small, fixed-size identity marker: an image, or an initials fallback when
- * no image is set (or the image fails to load). First-party invention (no Web Awesome
- * equivalent) -- purely presentational, no built-in interactivity; a consumer wraps it in their
- * own `<button>`/`<lyra-menu>` trigger for a user-menu affordance.
+ * `<lyra-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an
+ * image, or an initials fallback, in that priority order (whichever's set takes over from the
+ * next). First-party invention (no Web Awesome equivalent) -- purely presentational, no built-in
+ * interactivity; a consumer wraps it in their own `<button>`/`<lyra-menu>` trigger for a
+ * user-menu affordance.
  *
  * @customElement lyra-avatar
+ * @slot - Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to
+ *   mark a chat message avatar as "AI" vs. "user" with a role glyph instead of a photo or
+ *   initials. Takes priority over both `src` and `initials`. The glyph itself is treated as
+ *   decorative (`aria-hidden`); set `alt` alongside it for an accessible name.
  * @csspart base - The outer circle/square container.
- * @csspart image - The `<img>`, only rendered while `src` is set and has not failed to load.
- * @csspart initials - The fallback initials text, rendered whenever `image` isn't.
+ * @csspart icon - Wrapper around the default-slotted icon/glyph content. Only rendered while the
+ *   slot has assigned content.
+ * @csspart image - The `<img>`, only rendered while `src` is set and has not failed to load (and
+ *   no icon content is slotted).
+ * @csspart initials - The fallback initials text, rendered whenever neither slotted content nor
+ *   `image` is.
  */
 export class LyraAvatar extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
-  /** Fallback text (typically 1-2 characters) shown when no image is set, or the image fails to
-   *  load. */
+  /** Fallback text (typically 1-2 characters) shown when no icon/image is set, or the image
+   *  fails to load. */
   @property() initials = '';
 
-  /** Image URL. Takes priority over `initials` when set and loads successfully; falls back to
-   *  `initials` on a load error. */
+  /** Image URL. Takes priority over `initials` when set and loads successfully (but not over
+   *  slotted icon content); falls back to `initials` on a load error. */
   @property() src?: string;
 
-  /** Image alt text -- required alongside `src` for accessibility. */
+  /** Alt text -- required alongside `src` for accessibility, and also used as the accessible
+   *  name (via `aria-label`) when showing icon-only slotted content, since a decorative glyph
+   *  has no text of its own for a screen reader to read. */
   @property() alt = '';
 
   /** Visual size. `'md'` (the default) matches `--lyra-icon-button-size` (2.5rem). */
@@ -44,17 +55,45 @@ export class LyraAvatar extends LyraElement {
 
   @state() private imageFailed = false;
 
+  // `[part='icon']:empty` never matches because the part always contains a literal `<slot>`
+  // child -- same fix `lyra-empty`/`lyra-stat` already established. Track real slot assignment
+  // in JS instead.
+  @state() private hasIcon = false;
+
+  protected willUpdate(): void {
+    // Set from light-DOM children before the first render so the initial paint already reflects
+    // any icon content present at parse time, rather than waiting a render behind `slotchange`.
+    if (!this.hasUpdated) {
+      this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+    }
+  }
+
   private onImageError = (): void => {
     this.imageFailed = true;
   };
 
+  private onIconSlotChange = (e: Event): void => {
+    this.hasIcon = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   render(): TemplateResult {
-    const showImage = !!this.src && !this.imageFailed;
+    const showImage = !this.hasIcon && !!this.src && !this.imageFailed;
+    const showInitials = !this.hasIcon && !showImage;
     return html`
-      <span part="base">
+      <span
+        part="base"
+        role=${this.hasIcon && this.alt ? 'img' : nothing}
+        aria-label=${this.hasIcon && this.alt ? this.alt : nothing}
+      >
+        <span part="icon" aria-hidden="true" ?hidden=${!this.hasIcon}
+          ><slot @slotchange=${this.onIconSlotChange}></slot
+        ></span>
         ${showImage
           ? html`<img part="image" src=${this.src!} alt=${this.alt} @error=${this.onImageError} />`
-          : html`<span part="initials" aria-hidden=${this.alt ? 'true' : nothing}>${this.initials}</span>`}
+          : nothing}
+        ${showInitials
+          ? html`<span part="initials" aria-hidden=${this.alt ? 'true' : nothing}>${this.initials}</span>`
+          : nothing}
       </span>
     `;
   }
