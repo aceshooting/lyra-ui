@@ -161,6 +161,11 @@ it('resolves a region subtag to its country', async () => {
   expect((await img(el)).getAttribute('src')).to.contain('us.svg');
 });
 
+it('resolves a region subtag past a 4-letter script subtag to its country (zh-Hant-TW -> Taiwan, not the zh base language default of China)', async () => {
+  const el = (await fixture(html`<lyra-flag language="zh-Hant-TW"></lyra-flag>`)) as LyraFlag;
+  expect((await img(el)).getAttribute('src')).to.contain('tw.svg');
+});
+
 it('honors a custom label for accessibility', async () => {
   const el = (await fixture(html`<lyra-flag country="fr" label="Français"></lyra-flag>`)) as LyraFlag;
   expect((await img(el)).getAttribute('alt')).to.equal('Français');

@@ -12,7 +12,7 @@ export const styles = css`
     display: block;
     block-size: 100%;
     inline-size: 100%;
-    border-radius: var(--lyra-flag-radius, 2px);
+    border-radius: var(--lyra-flag-radius, calc(var(--lyra-radius) * 0.33));
     box-shadow: 0 0 0 1px var(--lyra-color-border) inset;
     object-fit: cover;
   }

@@ -6,7 +6,7 @@ import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../skeleton/skeleton.js';
 
-type FlagVariant = 'compact' | 'standard' | 'detailed';
+export type FlagVariant = 'compact' | 'standard' | 'detailed';
 type FlagUrlResolver = (code: string, options?: { variant?: FlagVariant }) => Promise<string | undefined>;
 
 /**
@@ -31,6 +31,15 @@ export async function loadFlagUrl(
 }
 
 /**
+ * One `Intl.DisplayNames` instance per locale, shared across every `<lyra-flag>` on the page.
+ * Constructing one is an ICU locale-data lookup, and `displayNameFor()` runs on every `render()`
+ * pass for a flag without an explicit `label` (e.g. toggling `round`), not just on country/language
+ * change -- multi-flag lists (language pickers, country lists) would otherwise pay this cost once
+ * per element per render. Mirrors the module-level caching `flagUrlResolver` already gets above.
+ */
+const displayNamesCache = new Map<string, Intl.DisplayNames>();
+
+/**
  * Resolves an ISO 3166-1 alpha-2 region code to a human-readable, localized
  * display name (e.g. `'FR'` -> `'France'`) via `Intl.DisplayNames`, for use as
  * the default accessible name (`alt`) instead of a bare code read
@@ -40,7 +49,13 @@ export async function loadFlagUrl(
  */
 function displayNameFor(code: string): string {
   try {
-    return new Intl.DisplayNames([navigator.language], { type: 'region' }).of(code.toUpperCase()) ?? code.toUpperCase();
+    const locale = navigator.language;
+    let dn = displayNamesCache.get(locale);
+    if (!dn) {
+      dn = new Intl.DisplayNames([locale], { type: 'region' });
+      displayNamesCache.set(locale, dn);
+    }
+    return dn.of(code.toUpperCase()) ?? code.toUpperCase();
   } catch {
     return code.toUpperCase();
   }

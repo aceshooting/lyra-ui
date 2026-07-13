@@ -63,12 +63,15 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
 
 /**
  * Resolve a BCP-47-ish language tag to a flag country code.
- * A region subtag wins (`en-US` → `us`); otherwise the base language is mapped.
+ * A region subtag wins (`en-US` → `us`); otherwise the base language is mapped. The region subtag
+ * isn't always in the second position -- a script subtag (e.g. `zh-Hant-TW`, ISO 15924, always 4
+ * letters) can sit between the base language and the region, so every subtag after the base is
+ * scanned for the first 2-letter alpha match rather than assuming it's always `parts[1]`.
  */
 export function languageToCountry(language: string): string | undefined {
   const parts = language.toLowerCase().split(/[-_]/);
   const base = parts[0];
-  const region = parts[1];
-  if (region && ALPHA2_RE.test(region)) return region;
+  const region = parts.slice(1).find((part) => ALPHA2_RE.test(part));
+  if (region) return region;
   return LANGUAGE_TO_COUNTRY[base];
 }
