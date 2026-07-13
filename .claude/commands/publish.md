@@ -1,0 +1,122 @@
+---
+description: Release a new version of @aceshooting/lyra-ui and/or @aceshooting/lyra-flags — full CI-equivalent gate, a lightweight regression spot-check, then the interactive release script.
+---
+
+Release workflow for this monorepo. `$ARGUMENTS` is optional — a target version like `2.2.2`
+the user expects this release to become. It is a **sanity check, not an override**: this repo has
+no way to force an arbitrary version number (`scripts/publish.sh` derives the bump entirely from
+pending `.changeset/*.md` severities via `pnpm changeset version`). If `$ARGUMENTS` is given,
+compute what the pending changesets would actually produce (current version + highest pending
+bump severity) and tell the user immediately if it doesn't match what they expect, before doing
+anything else — don't silently proceed on a mismatch, and don't hand-edit `package.json`'s version
+to force it.
+
+Follow every step below in order. Do not skip a step because a prior one "looked fine" — this
+command exists because three real regressions (a widespread dropped-JSDoc manifest bug, a
+regressed Storybook theme-color check, a stale root README) shipped in 2.2.0 despite
+`scripts/publish.sh`'s own lint/test/build gate passing clean. That gate is narrower than full CI;
+this command exists to close that gap.
+
+## 1. Preflight sanity
+
+- `git status --short` — the tree must be clean before you start (untracked files under
+  `docs/superpowers/` are fine — that directory is locally gitignored via `.git/info/exclude`,
+  not the shared `.gitignore`; ignore it). If anything else is dirty, stop and tell the user what's
+  pending instead of committing it yourself.
+- `git fetch origin main --quiet && git merge-base --is-ancestor origin/main HEAD` — confirm local
+  `main` isn't behind or diverged from `origin/main`.
+- `npm whoami` and `gh auth status` — both must succeed. If either fails, stop with a clear message
+  (don't attempt `npm login`/`gh auth login` yourself).
+- `ls .changeset/*.md | grep -v README.md` — list pending changesets. If there are none, stop:
+  there's nothing to release.
+
+## 2. Full CI-equivalent gate
+
+`scripts/publish.sh` only runs `pnpm --filter <pkg> run lint/test/build/manifest` per selected
+package — it does **not** run any of the root-level checks below, which is exactly how the 2.2.0
+regressions slipped through. Run every one of these from the repo root, in order, and stop at the
+first failure (report it, don't try to auto-fix silently — the user should see what broke):
+
+```bash
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm test
+pnpm --filter @aceshooting/lyra-ui test:coverage
+pnpm build
+pnpm manifest
+pnpm manifest:check
+git diff --exit-code -- packages/lyra-ui/custom-elements.json   # manifest must already be committed/fresh
+pnpm readme:check
+pnpm docs:build
+pnpm storybook:check
+pnpm storybook:check-theme
+pnpm check:packed-consumer
+```
+
+These are the exact steps `.github/workflows/ci.yml`'s `build-test` job runs. If you want extra
+confidence, also run the `platform-contracts` job's suite locally: `pnpm --filter @aceshooting/lyra-ui test:platform` (needs Firefox/WebKit via Playwright).
+
+## 3. Lightweight regression spot-check
+
+This is deliberately **not** a full re-audit of every historically-completed finding in
+`docs/superpowers/feature_requests/lyra_improvement_done.md` (that took ~9 parallel agents and
+several minutes of wall-clock time when last run, and found the 3 regressions this command now
+guards against structurally). Instead, scope it to what's actually changing this release:
+
+```bash
+git diff --stat $(git describe --tags --match 'lyra-ui@*' --abbrev=0)..HEAD -- packages/lyra-ui
+```
+
+For every component `*.class.ts` that changed:
+- If it has `@csspart`/`@event` JSDoc, confirm `custom-elements.json` still has non-empty
+  `cssParts`/`events` for that class (the exact 2.2.0 bug: a class doc comment sitting directly
+  above an `export interface XEventMap` — or, for form-associated components, an intermediate
+  `XBase` class — instead of directly above `export class X`, silently drops it; step 2's
+  `manifest:check` catches this now via its fixed JSDoc-vs-rendered-part cross-check, but only if
+  step 2 actually ran).
+- If any `*.stories.ts` changed, `storybook:check-theme` (step 2) already covers raw-color
+  regressions — no extra action needed here, just don't skip step 2.
+
+If the diff is large (a broad refactor, many components touched, or several concurrent sessions
+worked in this tree recently), tell the user and ask before running the full ledger re-audit
+instead of this spot-check — it's the right call for a big release, but expensive to run by
+default on every patch.
+
+## 4. Run the release
+
+Run `scripts/publish.sh` (add `--upgrade-deps` only if the user explicitly asked for a dependency
+upgrade as part of this release — it's off by default and pulls in `pnpm -r up --latest`, which can
+introduce unrelated major-version bumps). It is fully interactive:
+
+- `"Which package(s) do you want to release now?"` → `all`, unless the user specified a narrower
+  scope.
+- (only with `--upgrade-deps`) a dependency-diff confirmation → actually show the user the diff
+  first; don't answer `yes` on their behalf.
+- The final `"Type 'yes' to publish the package(s) above to npm..."` review gate → **this is the
+  point of no return**: a real `npm publish`, which cannot be cleanly unpublished after ~72h. Only
+  answer this autonomously if the user has already told you, in this conversation, to publish
+  without a further check-in — otherwise stop here and show them the version/tag/publish review
+  the script printed, and wait for explicit confirmation.
+
+Drive the interactive prompts with piped stdin once you know the exact answers, e.g.:
+
+```bash
+printf 'all\nyes\n' | bash scripts/publish.sh
+```
+
+Don't reuse that exact string blindly — if step 1 or 3 surfaced anything unusual (multiple
+packages with pending changesets, an unexpected version mismatch against `$ARGUMENTS`), the answers
+need to match what you actually intend to do.
+
+## 5. Post-release
+
+- `npm view @aceshooting/lyra-ui version` (and `@aceshooting/lyra-flags` if it was released too) —
+  confirm it matches what was just published.
+- `gh repo view aceshooting/lyra-ui --json description` — the GitHub repo's "About" description is
+  **not** covered by `readme:check` or any other automated check (it lives in GitHub's own repo
+  settings, not a file in this repo) and has gone stale before (it said "35 elements" while the
+  manifest had 85 tags). If the tag count or headline feature set changed this release, update it:
+  `gh repo edit aceshooting/lyra-ui --description "..."`.
+- Report to the user: old → new version per package, a summary of what shipped (the changeset
+  descriptions that were just consumed), the npm and GitHub Release links, and anything you had to
+  fix along the way that wasn't already captured by a changeset.
