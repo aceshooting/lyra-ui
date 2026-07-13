@@ -99,21 +99,21 @@ it('moves the roving focus with ArrowDown/ArrowUp, wrapping past either end', as
   const [first, second, third] = items(el);
   expect(document.activeElement).to.equal(first);
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(second);
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(third);
 
   // Wraps past the last item back to the first.
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(first);
 
   // Wraps backward past the first item to the last.
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(third);
 });
@@ -124,11 +124,11 @@ it('Home/End jump to the first/last item', async () => {
   await el.updateComplete;
   const [first, , third] = items(el);
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(third);
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(first);
 });
@@ -140,7 +140,7 @@ it('selects the active item with Enter and closes, refocusing the trigger', asyn
   await el.updateComplete;
 
   setTimeout(() =>
-    list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+    (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
   );
   const ev = await oneEvent(el, 'lyra-menu-select');
   expect(ev.detail).to.deep.equal({ value: 'rename' });
@@ -154,7 +154,7 @@ it('selects the active item with Space, same as Enter', async () => {
   await el.updateComplete;
 
   setTimeout(() =>
-    list(el).dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
+    (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
   );
   const ev = await oneEvent(el, 'lyra-menu-select');
   expect(ev.detail).to.deep.equal({ value: 'rename' });
@@ -185,7 +185,7 @@ it('skips a disabled item during ArrowDown navigation', async () => {
   const [a, , c] = items(el);
   expect(document.activeElement).to.equal(a);
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(c);
 });
@@ -224,7 +224,7 @@ it('closes on Escape and returns focus to the trigger', async () => {
   await el.updateComplete;
   expect(el.open).to.be.true;
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(document.activeElement).to.equal(btn);
@@ -385,7 +385,7 @@ it('resyncs the roving activeIndex when focus lands on an item outside setActive
   // Without the focusin resync, activeIndex would still be stuck on `a`'s
   // stale position, so ArrowDown here would jump to `c` instead of wrapping
   // back around to `a` (the only navigable item after the unresolvable `b`).
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(a);
 });
@@ -397,7 +397,7 @@ it('closes on Tab without preventing the default focus-advance behavior', async 
   expect(el.open).to.be.true;
 
   const ev = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-  list(el).dispatchEvent(ev);
+  (document.activeElement as HTMLElement).dispatchEvent(ev);
   await el.updateComplete;
   expect(el.open).to.be.false;
   // Unlike Escape, Tab must NOT call e.preventDefault() -- the browser's own
@@ -411,7 +411,7 @@ it('jumps the roving focus with type-ahead to the next non-disabled item whose t
   await el.updateComplete;
   const [, duplicate] = items(el); // Rename, Duplicate, Delete
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(duplicate);
 });
@@ -422,9 +422,9 @@ it('accumulates the type-ahead buffer across quick keystrokes to narrow the matc
   await el.updateComplete;
   const [, , destroy] = items(el); // Rename, Duplicate, Delete
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true, cancelable: true }));
   await el.updateComplete;
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(destroy);
 });
@@ -442,9 +442,46 @@ it('skips a disabled item during type-ahead even when its text would otherwise m
   await el.updateComplete;
   const [, , blueberry] = items(el);
 
-  list(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
   await el.updateComplete;
   expect(document.activeElement).to.equal(blueberry);
+});
+
+it('does not intercept Arrow/Home/End/Escape from a non-LyraMenuItem child slotted into the default slot', async () => {
+  const el = (await fixture(html`
+    <lyra-menu label="Row actions">
+      <button slot="trigger" aria-label="Row actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+      <input type="text" />
+    </lyra-menu>
+  `)) as LyraMenu;
+  const input = el.querySelector('input') as HTMLInputElement;
+  el.show();
+  await el.updateComplete;
+  input.focus();
+  const before = (el as unknown as { activeIndex: number }).activeIndex;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(before);
+  expect(el.open).to.be.true; // Escape from this same non-item target is exercised separately below
+});
+
+it('still intercepts Arrow/Home/End/Escape from a real LyraMenuItem target (unchanged)', async () => {
+  const el = (await fixture(html`
+    <lyra-menu label="Row actions">
+      <button slot="trigger" aria-label="Row actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+      <lyra-menu-item value="duplicate">Duplicate</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  el.show();
+  await el.updateComplete;
+  const menuItems = items(el);
+  menuItems[0]!.focus();
+  menuItems[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(1);
 });
 
 it('is accessible while closed', async () => {

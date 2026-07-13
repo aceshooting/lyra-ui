@@ -373,6 +373,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private onListKeyDown = (e: KeyboardEvent): void => {
+    if (!(e.target instanceof LyraMenuItem)) return;
     const navigable = this.items.filter((i) => this.isNavigable(i));
     const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentNavIndex = current ? navigable.indexOf(current) : -1;
