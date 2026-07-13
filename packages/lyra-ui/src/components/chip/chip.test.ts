@@ -144,3 +144,52 @@ it('is accessible in a populated removable state with an icon and a non-neutral 
   `)) as LyraChip;
   await expect(el).to.be.accessible();
 });
+
+describe('selected', () => {
+  it('is not interactive by default (no role/tabindex on [part=base])', async () => {
+    const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.be.null;
+    expect(base.hasAttribute('tabindex')).to.be.false;
+  });
+
+  it('becomes keyboard-activatable and toggles on click when selected is opted into', async () => {
+    // The fixture opts into selected mode by starting already selected/pressed -- the same
+    // boolean both enables `[part='base']`'s interactive semantics and represents its current
+    // pressed value (see the property's own doc comment), so a chip that starts `selected`
+    // starts already reflecting `aria-pressed="true"`; clicking it toggles that value off.
+    const el = (await fixture(html`<lyra-chip selected value="v1">Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('button');
+    expect(base.getAttribute('tabindex')).to.equal('0');
+    expect(base.getAttribute('aria-pressed')).to.equal('true');
+
+    setTimeout(() => base.click());
+    const ev = await oneEvent(el, 'lyra-chip-select');
+    expect(ev.detail).to.deep.equal({ value: 'v1', selected: false });
+    expect(el.selected).to.be.false;
+    await el.updateComplete;
+    expect(base.getAttribute('aria-pressed')).to.be.null;
+  });
+
+  it('toggles via Enter/Space while focused, preventing default Space page-scroll', async () => {
+    const el = (await fixture(html`<lyra-chip selected>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })));
+    await oneEvent(el, 'lyra-chip-select');
+    expect(el.selected).to.be.false;
+  });
+
+  it('does not make [part=base] interactive when combined with removable', async () => {
+    const el = (await fixture(html`<lyra-chip selected removable>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.be.null;
+    expect(base.hasAttribute('tabindex')).to.be.false;
+    await expect(el).to.be.accessible(); // no nested-interactive violation
+  });
+
+  it('is accessible when selected and interactive', async () => {
+    const el = (await fixture(html`<lyra-chip selected>Tag</lyra-chip>`)) as LyraChip;
+    await expect(el).to.be.accessible();
+  });
+});
