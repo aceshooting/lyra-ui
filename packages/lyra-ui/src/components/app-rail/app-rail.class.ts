@@ -1,10 +1,11 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon } from '../../internal/icons.js';
+import { isRtl } from '../../internal/rtl.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 
@@ -20,6 +21,10 @@ export interface AppRailModeChangeDetail {
 
 export interface AppRailToggleDetail {
   open: boolean;
+}
+
+export interface AppRailResizeDetail {
+  widthPx: number;
 }
 
 // icons.ts has no hamburger/menu glyph and this component must not modify
@@ -50,11 +55,19 @@ function menuIcon(): SVGTemplateResult {
 /**
  * Pure breakpoint-to-mode resolver, kept separate from the `matchMedia`
  * wiring below so it's directly unit-testable without resizing a real
- * browser window. `mobileMatches` wins over `iconOnlyMatches` when both are
- * true (the viewport is narrower than both breakpoints at once).
+ * browser window. `mobileMatches` wins over everything else when true (the
+ * viewport is narrower than both breakpoints at once); otherwise
+ * `preferredMode` (when set) wins over `iconOnlyMatches` — a manual
+ * preference for the full/icon-only axis specifically, while the mobile
+ * breakpoint continues to be tracked automatically regardless.
  */
-export function computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: boolean): AppRailMode {
+export function computeAppRailMode(
+  iconOnlyMatches: boolean,
+  mobileMatches: boolean,
+  preferredMode?: 'full' | 'icon-only' | null,
+): AppRailMode {
   if (mobileMatches) return 'mobile';
+  if (preferredMode) return preferredMode;
   if (iconOnlyMatches) return 'icon-only';
   return 'full';
 }
@@ -105,6 +118,8 @@ export function computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: bool
  *   open, or a breakpoint/forced mode change leaving `'mobile'` while open.
  *   Not fired when a consumer sets `open` directly (mirrors `<lyra-dialog>`'s
  *   `open`/`close()` split). `detail: AppRailToggleDetail`.
+ * @event lyra-rail-resize - The `resizable` rail's width changed via drag or keyboard stepping.
+ *   Not fired when a consumer sets `railWidthPx` directly. `detail: AppRailResizeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
  * @csspart header - The wrapper around the `header` slot.
  * @csspart nav - The wrapper around the default (nav items) slot.
@@ -114,6 +129,8 @@ export function computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: bool
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
+ * @csspart resizer - The `resizable` opt-in's drag handle. Only rendered while `resizable` and
+ *   `mode` is `'full'`.
  *
  * @example
  * Use the item contract so the visible label collapses while its accessible
@@ -161,6 +178,32 @@ export class LyraAppRail extends LyraElement {
    *  role while the mobile overlay is open. */
   @property() label = 'Navigation';
 
+  /** Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the
+   *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
+   *  collapse toggle that should still yield to a genuinely too-narrow-for-any-inline-rail
+   *  viewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class
+   *  doc) — that continues to take full priority, unchanged. Unset (the default, `null`)
+   *  reproduces today's exact breakpoint-only behavior. */
+  @property({ attribute: 'preferred-mode' }) preferredMode?: 'full' | 'icon-only' | null;
+
+  /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
+   *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
+   *  `[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the
+   *  chosen width to survive a reload should listen for `lyra-rail-resize` and persist `widthPx`
+   *  itself. `false` (the default) renders no resizer and leaves the fixed-width
+   *  `--lyra-app-rail-width` CSS token exactly as before this property existed. */
+  @property({ type: Boolean, reflect: true }) resizable = false;
+
+  /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
+   *  `--lyra-app-rail-width` CSS token's own resolved width. */
+  @property({ type: Number, attribute: 'rail-width-px' }) railWidthPx?: number;
+
+  /** Minimum `railWidthPx` a drag/keyboard resize can reach. */
+  @property({ type: Number, attribute: 'min-rail-width-px' }) minRailWidthPx = 190;
+
+  /** Maximum `railWidthPx` a drag/keyboard resize can reach. */
+  @property({ type: Number, attribute: 'max-rail-width-px' }) maxRailWidthPx = 440;
+
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
 
@@ -182,6 +225,11 @@ export class LyraAppRail extends LyraElement {
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
   private readonly navId = nextId('app-rail-nav');
+
+  @query('[part="base"]') private baseEl?: HTMLElement;
+  private resizePointerId?: number;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
 
   private syncSlottedItems(): void {
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('[part="nav"] > slot');
@@ -220,6 +268,15 @@ export class LyraAppRail extends LyraElement {
     this.setEffectiveMode(next);
   }
 
+  /** The rail's current effective width in px, whether or not `railWidthPx` has ever been
+   *  explicitly set — falls back to the live measured width of `[part=base]` so the resizer's
+   *  `aria-valuenow` and the first drag/keyboard step's start-width reflect the real rendered
+   *  width even before a consumer ever sets `railWidthPx`. */
+  private get effectiveRailWidthPx(): number {
+    if (this.railWidthPx != null) return this.railWidthPx;
+    return this.baseEl?.getBoundingClientRect().width ?? 240;
+  }
+
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
@@ -228,6 +285,9 @@ export class LyraAppRail extends LyraElement {
     if (this.hasUpdated && (changed.has('iconOnlyBreakpoint') || changed.has('mobileBreakpoint'))) {
       this.teardownMediaQueries();
       this.setupMediaQueries();
+    }
+    if (this.hasUpdated && changed.has('preferredMode') && !this.forced) {
+      this.applyComputedMode();
     }
     if (changed.has('open') || changed.has('mode')) {
       const next = this._mode === 'mobile' && this.open;
@@ -247,11 +307,21 @@ export class LyraAppRail extends LyraElement {
   // content have already landed in the DOM before the focus call below can
   // rely on them -- mirrors lyra-dialog's/lyra-widget's identical ordering
   // rationale.
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
     this.syncSlottedItems();
     if (this.justOpened) {
       this.justOpened = false;
       this.overlayHandle?.focusInitial();
+    }
+    if (
+      (changed.has('railWidthPx') || changed.has('resizable') || changed.has('mode') || !this.hasUpdated) &&
+      this.baseEl
+    ) {
+      if (this.resizable && this.railWidthPx != null && this._mode === 'full') {
+        this.baseEl.style.setProperty('inline-size', `${this.railWidthPx}px`);
+      } else {
+        this.baseEl.style.removeProperty('inline-size');
+      }
     }
   }
 
@@ -280,6 +350,10 @@ export class LyraAppRail extends LyraElement {
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
+    window.removeEventListener('pointermove', this.onResizerPointerMove);
+    window.removeEventListener('pointerup', this.onResizerPointerUp);
+    window.removeEventListener('pointercancel', this.onResizerPointerUp);
+    window.removeEventListener('lostpointercapture', this.onResizerPointerUp);
   }
 
   private activateMobileOverlay(): void {
@@ -335,7 +409,7 @@ export class LyraAppRail extends LyraElement {
   };
 
   private applyComputedMode(): void {
-    this.setEffectiveMode(computeAppRailMode(this.iconOnlyMatches, this.mobileMatches));
+    this.setEffectiveMode(computeAppRailMode(this.iconOnlyMatches, this.mobileMatches, this.preferredMode));
   }
 
   private setEffectiveMode(next: AppRailMode): void {
@@ -384,6 +458,53 @@ export class LyraAppRail extends LyraElement {
     this.syncSlottedItems();
   };
 
+  private onResizerPointerDown = (e: PointerEvent): void => {
+    this.resizePointerId = e.pointerId;
+    this.resizeStartX = e.clientX;
+    this.resizeStartWidth = this.effectiveRailWidthPx;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    window.addEventListener('pointermove', this.onResizerPointerMove);
+    window.addEventListener('pointerup', this.onResizerPointerUp);
+    window.addEventListener('pointercancel', this.onResizerPointerUp);
+    window.addEventListener('lostpointercapture', this.onResizerPointerUp);
+  };
+
+  private onResizerPointerMove = (e: PointerEvent): void => {
+    if (e.pointerId !== this.resizePointerId) return;
+    let delta = e.clientX - this.resizeStartX;
+    if (isRtl(this)) delta = -delta;
+    const next = Math.min(this.maxRailWidthPx, Math.max(this.minRailWidthPx, this.resizeStartWidth + delta));
+    this.railWidthPx = next;
+    this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
+  };
+
+  private onResizerPointerUp = (e: PointerEvent): void => {
+    if (e.pointerId !== this.resizePointerId) return;
+    this.resizePointerId = undefined;
+    window.removeEventListener('pointermove', this.onResizerPointerMove);
+    window.removeEventListener('pointerup', this.onResizerPointerUp);
+    window.removeEventListener('pointercancel', this.onResizerPointerUp);
+    window.removeEventListener('lostpointercapture', this.onResizerPointerUp);
+  };
+
+  private onResizerKeyDown = (e: KeyboardEvent): void => {
+    const rtl = isRtl(this);
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const step = 8;
+    if (e.key === forwardKey) {
+      e.preventDefault();
+      const next = Math.min(this.maxRailWidthPx, this.effectiveRailWidthPx + step);
+      this.railWidthPx = next;
+      this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
+    } else if (e.key === backwardKey) {
+      e.preventDefault();
+      const next = Math.max(this.minRailWidthPx, this.effectiveRailWidthPx - step);
+      this.railWidthPx = next;
+      this.emit<AppRailResizeDetail>('lyra-rail-resize', { widthPx: next });
+    }
+  };
+
   render(): TemplateResult {
     const mobile = this._mode === 'mobile';
     return html`
@@ -392,7 +513,7 @@ export class LyraAppRail extends LyraElement {
         type="button"
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.navId}
-        aria-label=${this.open ? this.localize('closeNavigation') : `${this.localize('open')} navigation`}
+        aria-label=${this.open ? this.localize('closeNavigation') : this.localize('openNavigation')}
         @click=${this.onToggleClick}
       >
         ${this.open ? closeIcon() : menuIcon()}
@@ -417,6 +538,20 @@ export class LyraAppRail extends LyraElement {
           <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
         </div>
       </div>
+      ${this.resizable && this._mode === 'full'
+        ? html`<div
+            part="resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label=${this.localize('resizeNavigation')}
+            aria-valuenow=${Math.round(this.effectiveRailWidthPx)}
+            aria-valuemin=${this.minRailWidthPx}
+            aria-valuemax=${this.maxRailWidthPx}
+            tabindex="0"
+            @pointerdown=${this.onResizerPointerDown}
+            @keydown=${this.onResizerKeyDown}
+          ></div>`
+        : nothing}
     `;
   }
 }

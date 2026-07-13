@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { registerLyraLocale, setLyraLocale } from './localization.js';
+import { registerLyraLocale, setLyraLocale, LYRA_DEFAULT_STRINGS } from './localization.js';
 import '../components/sparkline/sparkline.js';
 import type { LyraSparkline } from '../components/sparkline/sparkline.js';
 
@@ -34,4 +34,9 @@ it('updates connected components when the active locale changes', async () => {
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal('Second');
   setLyraLocale('en');
+});
+
+it('includes openNavigation and resizeNavigation in the default English strings', () => {
+  expect(LYRA_DEFAULT_STRINGS.openNavigation).to.equal('Open navigation');
+  expect(LYRA_DEFAULT_STRINGS.resizeNavigation).to.equal('Resize navigation');
 });

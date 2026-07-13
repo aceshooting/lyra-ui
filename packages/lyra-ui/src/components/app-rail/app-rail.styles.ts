@@ -52,6 +52,7 @@ export const styles = css`
      part attribute switches between the two names per render, so the two
      rulesets below are always mutually exclusive on it. */
   [part='base'] {
+    position: relative; /* anchors [part="resizer"] */
     display: flex;
     flex-direction: column;
     inline-size: var(--lyra-app-rail-width);
@@ -64,6 +65,31 @@ export const styles = css`
   }
   :host([mode='icon-only']) [part='base'] {
     inline-size: var(--lyra-app-rail-icon-width);
+  }
+
+  [part='resizer'] {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: calc(var(--lyra-size-3px) * -0.5);
+    inline-size: var(--lyra-size-3px);
+    background: transparent;
+    cursor: col-resize;
+    touch-action: none;
+  }
+  /* Transparent hit-slop: widens the draggable/tappable box along the resize axis only, without
+     changing the resizer's visible 3px width -- mirrors lyra-split's own [part="divider"]::before. */
+  [part='resizer']::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline: var(--lyra-size-neg-6px);
+  }
+  [part='resizer']:hover {
+    background: var(--lyra-color-brand);
+  }
+  [part='resizer']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
 
   [part='panel'] {

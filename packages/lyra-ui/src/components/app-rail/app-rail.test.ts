@@ -570,3 +570,109 @@ it('is accessible with the mobile overlay open', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+// -- toggle button i18n --------------------------------------------------
+
+describe('toggle button i18n', () => {
+  it('uses the openNavigation message key (not a hardcoded "Open" + " navigation" concatenation) when closed', async () => {
+    const el = (await fixture(html`<lyra-app-rail mode="mobile"></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal('Open navigation');
+  });
+
+  it('honors a strings override for openNavigation', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail mode="mobile" .strings=${{ openNavigation: 'Ouvrir la navigation' }}></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal('Ouvrir la navigation');
+  });
+});
+
+// -- preferredMode --------------------------------------------------------
+
+describe('preferredMode', () => {
+  it('computeAppRailMode: preferredMode wins over iconOnlyMatches, but mobileMatches always wins over preferredMode', () => {
+    expect(computeAppRailMode(false, false, 'icon-only')).to.equal('icon-only');
+    expect(computeAppRailMode(true, false, 'full')).to.equal('full');
+    expect(computeAppRailMode(false, true, 'full')).to.equal('mobile');
+    expect(computeAppRailMode(false, false, null)).to.equal('full');
+    expect(computeAppRailMode(true, false, undefined)).to.equal('icon-only');
+  });
+
+  it('applies preferredMode on the live element while unforced, and yields to the mobile breakpoint', async () => {
+    const el = (await fixture(html`<lyra-app-rail preferred-mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    expect(el.mode).to.equal('icon-only');
+  });
+
+  it('does not override an explicitly forced mode', async () => {
+    const el = (await fixture(html`<lyra-app-rail preferred-mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
+    el.mode = 'full';
+    await el.updateComplete;
+    expect(el.mode).to.equal('full');
+  });
+});
+
+// -- resizable --------------------------------------------------------------
+
+describe('resizable', () => {
+  it('renders no resizer when resizable is false (default)', async () => {
+    const el = (await fixture(html`<lyra-app-rail></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
+  });
+
+  it('renders a resizer with role="separator" and correct aria bounds only in \'full\' mode', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]')!;
+    expect(resizer.getAttribute('role')).to.equal('separator');
+    expect(resizer.getAttribute('aria-valuenow')).to.equal('240');
+    expect(resizer.getAttribute('aria-valuemin')).to.equal('190');
+    expect(resizer.getAttribute('aria-valuemax')).to.equal('440');
+    expect(resizer.getAttribute('aria-label')).to.equal('Resize navigation');
+  });
+
+  it('does not render a resizer in icon-only or mobile mode even when resizable', async () => {
+    const el = (await fixture(html`<lyra-app-rail resizable mode="icon-only"></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="resizer"]')).to.not.exist;
+  });
+
+  it('ArrowRight/ArrowLeft on the resizer steps railWidthPx and emits lyra-rail-resize, clamped to bounds', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    let detail: { widthPx: number } | undefined;
+    el.addEventListener('lyra-rail-resize', (e) => (detail = (e as CustomEvent).detail));
+
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(el.railWidthPx).to.equal(248);
+    expect(detail).to.deep.equal({ widthPx: 248 });
+
+    el.railWidthPx = 438;
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(el.railWidthPx).to.equal(440); // clamped to maxRailWidthPx
+
+    el.railWidthPx = 192;
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(el.railWidthPx).to.equal(190); // clamped to minRailWidthPx
+  });
+
+  it('sets [part=base]\'s inline-size from railWidthPx only while resizable and in \'full\' mode', async () => {
+    const el = (await fixture(html`<lyra-app-rail resizable rail-width-px="300"></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.style.getPropertyValue('inline-size')).to.equal('300px');
+    el.mode = 'icon-only';
+    await el.updateComplete;
+    expect(base.style.getPropertyValue('inline-size')).to.equal('');
+  });
+});
