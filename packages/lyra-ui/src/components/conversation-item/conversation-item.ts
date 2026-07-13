@@ -157,7 +157,9 @@ export class LyraConversationItem extends LyraElement {
   @property({ type: Boolean, reflect: true }) active = false;
 
   /** Whether inline-rename is available at all. When `false`, the rename
-   *  button never renders and the row can never enter its editing state. */
+   *  button never renders and the row can never enter its editing state. If
+   *  flipped to `false` while a rename is already open, the in-progress edit
+   *  is cancelled (discarded, like Escape) rather than left committable. */
   @property({ type: Boolean, reflect: true }) editable = true;
 
   @state() private renaming = false;
@@ -166,9 +168,16 @@ export class LyraConversationItem extends LyraElement {
 
   @query('[part="title-input"]') private titleInput?: HTMLInputElement;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+    }
+    // `editable` documents that flipping it false can never leave a rename
+    // committable -- without this, toggling it mid-edit would strand the
+    // input mounted (and still submittable via Enter/blur) since nothing
+    // else observes `editable` while `renaming` is already true.
+    if (changed.has('editable') && !this.editable && this.renaming) {
+      this.cancelRename();
     }
   }
 
@@ -274,6 +283,11 @@ export class LyraConversationItem extends LyraElement {
     const formatter = this.formatTimestamp ?? defaultFormatTimestamp;
     const displayTitle = this.title || 'Untitled conversation';
     const showRenameButton = this.editable && !this.renaming;
+    // Shared between the rename button and the input it opens: the input is
+    // where focus actually lands, so it needs the same row-specific
+    // accessible name (not a generic one) to disambiguate which row a
+    // screen-reader user is editing.
+    const renameLabel = `Rename ${displayTitle}`;
 
     return html`
       <div part="base">
@@ -292,7 +306,7 @@ export class LyraConversationItem extends LyraElement {
                   part="title-input"
                   type="text"
                   .value=${this.draftTitle}
-                  aria-label="Rename conversation"
+                  aria-label=${renameLabel}
                   @input=${this.onTitleInputChange}
                   @keydown=${this.onTitleInputKeyDown}
                   @blur=${this.onTitleInputBlur}
@@ -306,7 +320,7 @@ export class LyraConversationItem extends LyraElement {
           ? html`<button
               part="rename-button"
               type="button"
-              aria-label=${`Rename ${displayTitle}`}
+              aria-label=${renameLabel}
               @click=${this.onRenameButtonClick}
             >
               ${pencilIcon()}

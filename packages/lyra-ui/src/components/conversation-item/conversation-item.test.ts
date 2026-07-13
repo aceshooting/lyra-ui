@@ -195,11 +195,46 @@ describe('inline rename', () => {
     expect(el.shadowRoot!.activeElement).to.equal(input);
   });
 
+  it('gives the rename input the same row-specific accessible name as the rename button', async () => {
+    const el = (await fixture(
+      html`<lyra-conversation-item title="Migrating the table component"></lyra-conversation-item>`,
+    )) as LyraConversationItem;
+    const btn = el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Rename Migrating the table component');
+    btn.click();
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).to.equal('Rename Migrating the table component');
+  });
+
   it('does not activate rename when editable is false', async () => {
     const el = (await fixture(
       html`<lyra-conversation-item title="A" .editable=${false}></lyra-conversation-item>`,
     )) as LyraConversationItem;
     expect(el.shadowRoot!.querySelector('[part="title-input"]')).to.not.exist;
+  });
+
+  it('cancels an in-progress rename (discarding the draft) when editable flips to false', async () => {
+    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+    input.value = 'Should be discarded';
+    input.dispatchEvent(new Event('input'));
+
+    let renameFired = false;
+    el.addEventListener('lyra-rename', () => (renameFired = true));
+
+    el.editable = false;
+    await el.updateComplete;
+
+    expect(renameFired, 'flipping editable false must not commit the draft').to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="title-input"]'), 'input must be unmounted').to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Old name');
+    // The now-editable=false row must also not silently expose a rename
+    // button that could reopen a fresh edit.
+    expect(el.shadowRoot!.querySelector('[part="rename-button"]')).to.not.exist;
   });
 
   it('does not fire lyra-select when the rename button is clicked', async () => {
