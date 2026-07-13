@@ -12414,6 +12414,17 @@
             },
             {
               "kind": "method",
+              "name": "emitValueEvents",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Dispatches the platform-style value-event pair used by non-text user\ninteractions. Text editing keeps and exposes the original InputEvent\nfrom the shadow input so its data/inputType metadata is not lost."
+            },
+            {
+              "kind": "method",
               "name": "pickRow",
               "privacy": "private",
               "return": {
@@ -12578,12 +12589,18 @@
           ],
           "events": [
             {
-              "description": "The selection changed.",
-              "name": "change"
+              "name": "input",
+              "type": {
+                "text": "InputEvent | Event"
+              },
+              "description": "The user typed in the filter or changed the selection. Text edits expose the original InputEvent; selection changes emit a bubbling, composed, non-cancelable Event."
             },
             {
-              "description": "The user typed in the filter or changed the selection.",
-              "name": "input"
+              "name": "change",
+              "type": {
+                "text": "Event"
+              },
+              "description": "The selection changed through user interaction. A bubbling, composed, non-cancelable Event."
             },
             {
               "description": "The listbox opened.",

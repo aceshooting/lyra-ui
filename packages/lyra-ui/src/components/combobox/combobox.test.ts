@@ -15,10 +15,168 @@ const basic = () => html`
 async function typeQuery(el: LyraCombobox, text: string) {
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
   input.value = text;
-  input.dispatchEvent(new Event('input'));
+  input.dispatchEvent(
+    new InputEvent('input', {
+      bubbles: true,
+      composed: true,
+      data: text,
+      inputType: 'insertText',
+    }),
+  );
   await el.updateComplete;
   return input;
 }
+
+it('exposes exactly one composed InputEvent when the user types', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const inputEvents: Event[] = [];
+  let changeCount = 0;
+  el.addEventListener('input', (event) => inputEvents.push(event));
+  el.addEventListener('change', () => changeCount++);
+
+  await typeQuery(el, 'ban');
+
+  expect(inputEvents.length).to.equal(1);
+  expect(inputEvents[0].constructor.name).to.equal('InputEvent');
+  expect(inputEvents[0].bubbles).to.be.true;
+  expect(inputEvents[0].composed).to.be.true;
+  expect(inputEvents[0].cancelable).to.be.false;
+  expect((inputEvents[0].target as Element).localName).to.equal('lyra-combobox');
+  expect((inputEvents[0] as InputEvent).data).to.equal('ban');
+  expect((inputEvents[0] as InputEvent).inputType).to.equal('insertText');
+  expect((inputEvents[0] as InputEvent).isComposing).to.be.false;
+  expect(changeCount).to.equal(0);
+});
+
+it('emits one native input/change pair, in order, when a row changes the selection', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
+
+  (el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement).click();
+
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
+  expect(events.every((event) => !event.cancelable)).to.be.true;
+});
+
+it('emits one native input/change pair for keyboard selection', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  el.open = true;
+  await el.updateComplete;
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+});
+
+it('emits one native input/change pair for both adding and toggling off a multiple value', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.open = true;
+  await el.updateComplete;
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
+
+  (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+
+  events.length = 0;
+  await el.updateComplete;
+  (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+});
+
+it('emits the same native input/change pair when a selected tag is removed', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ['a', 'b'];
+  await el.updateComplete;
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
+
+  (el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLButtonElement).click();
+
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.every((event) => !event.cancelable)).to.be.true;
+});
+
+it('emits the native input/change pair when Backspace removes the last tag', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ['a'];
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+
+  expect(el.value).to.deep.equal([]);
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
+});
+
+it('emits one input/change pair and one lyra-clear event when cleared', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.withClear = true;
+  el.value = 'a';
+  await el.updateComplete;
+  const events: Event[] = [];
+  el.addEventListener('input', (event) => events.push(event));
+  el.addEventListener('change', (event) => events.push(event));
+  el.addEventListener('lyra-clear', (event) => events.push(event));
+
+  (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
+
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change', 'lyra-clear']);
+  expect(events.slice(0, 2).map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.slice(0, 2).every((event) => !event.cancelable)).to.be.true;
+});
+
+it('does not emit input/change for programmatic values or re-picking the current single value', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  let eventCount = 0;
+  el.addEventListener('input', () => eventCount++);
+  el.addEventListener('change', () => eventCount++);
+
+  el.value = 'a';
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
+
+  expect(eventCount).to.equal(0);
+});
+
+it('keeps programmatic multiple-value writes silent', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  let eventCount = 0;
+  el.addEventListener('input', () => eventCount++);
+  el.addEventListener('change', () => eventCount++);
+
+  el.value = ['a', 'b'];
+  await el.updateComplete;
+
+  expect(eventCount).to.equal(0);
+});
 
 it('filters options and emits change on select (single)', async () => {
   const el = (await fixture(basic())) as LyraCombobox;

@@ -204,8 +204,13 @@ shared `FormAssociated` mixin — see gotchas).
 string; disabled?: boolean }` — the row shape both the async `source` and the light-DOM
 `<lyra-option>` path normalize to internally.
 
-**Events:** `change` (native-style — selection changed), `input` (native-style — typed or selection
-changed), `lyra-show`, `lyra-hide`, `lyra-clear`
+**Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
+as exactly one host `input` event and does not fire `change`. An actual user selection mutation —
+pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or clear — emits exactly
+one bubbling/composed, non-cancelable plain `input` `Event`, immediately followed by the same shape
+of `change` `Event`. Re-picking the current single value and programmatic/default/reset/restore
+writes are silent. The clear button emits one `lyra-clear` after its `input`/`change` pair.
+`lyra-show` and `lyra-hide` report listbox visibility transitions.
 
 **Slots:** default (`<lyra-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided)

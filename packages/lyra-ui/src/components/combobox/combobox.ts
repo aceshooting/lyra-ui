@@ -35,8 +35,11 @@ export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
- * @event change - The selection changed.
- * @event input - The user typed in the filter or changed the selection.
+ * @event {Event} change - The selection changed through user interaction. A bubbling,
+ * composed, non-cancelable Event.
+ * @event {InputEvent | Event} input - The user typed in the filter or changed the selection. Text
+ * edits expose the original InputEvent; selection changes emit a bubbling,
+ * composed, non-cancelable Event.
  * @event lyra-show - The listbox opened.
  * @event lyra-hide - The listbox closed.
  * @event lyra-clear - The value was cleared.
@@ -538,8 +541,19 @@ export class LyraCombobox extends LyraElement {
     }
   }
 
+  /** Dispatches the platform-style value-event pair used by non-text user
+   * interactions. Text editing keeps and exposes the original InputEvent
+   * from the shadow input so its data/inputType metadata is not lost. */
+  private emitValueEvents(): void {
+    const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
+    const init: EventInit = { bubbles: true, composed: true };
+    this.dispatchEvent(new EventConstructor('input', init));
+    this.dispatchEvent(new EventConstructor('change', init));
+  }
+
   private pickRow(row: ComboboxSourceRow): void {
     if (this.effectiveDisabled || row.disabled) return;
+    const selectionChanged = this.multiple || this._selected[0] !== row.value;
     this._selectedLabelCache.set(row.value, row.label);
     if (this.multiple) {
       const set = new Set(this._selected);
@@ -556,21 +570,23 @@ export class LyraCombobox extends LyraElement {
     // and whatever `asyncRows` holds for the next time it reopens in single
     // mode) matches the now-empty input instead of the stale prior query.
     if (this.source) this.runSource(this.query);
-    this.emit('input');
-    this.emit('change');
+    if (selectionChanged) this.emitValueEvents();
   }
 
   private removeValue(value: string): void {
-    this.value = this._selected.filter((v) => v !== value);
-    this.emit('change');
+    const next = this._selected.filter((v) => v !== value);
+    if (next.length === this._selected.length) return;
+    this.value = next;
+    this.emitValueEvents();
   }
 
   private clear(): void {
+    if (this._selected.length === 0) return;
     this.value = [];
     this.query = '';
     if (this.source) this.runSource(this.query);
+    this.emitValueEvents();
     this.emit('lyra-clear');
-    this.emit('change');
   }
 
   private onInput = (e: Event): void => {
@@ -578,7 +594,6 @@ export class LyraCombobox extends LyraElement {
     this.activeIndex = -1;
     this.show();
     if (this.source) this.runSource(this.query);
-    this.emit('input');
   };
 
   private runSource(query: string): void {
