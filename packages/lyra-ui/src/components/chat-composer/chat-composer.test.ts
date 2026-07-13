@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './chat-composer.js';
 import type { LyraChatComposer } from './chat-composer.js';
 
@@ -221,6 +221,32 @@ it('hides the chips wrapper when the chips slot is empty, shows it once populate
   expect(chips.hidden).to.be.false;
 });
 
+it('re-hides the chips wrapper once its slot becomes empty again', async () => {
+  // The empty-to-populated direction above is covered; a regression that
+  // fails to re-hide once the slot empties back out (e.g. a naive
+  // `.length > 0` check that never re-runs, or one that only ever flips
+  // true) would go uncaught without this round trip -- mirrors the
+  // trailing slot's own append-then-remove round trip below.
+  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const chips = el.shadowRoot!.querySelector('[part="chips"]') as HTMLElement;
+  const slot = el.shadowRoot!.querySelector('slot[name="chips"]') as HTMLSlotElement;
+
+  const chip = document.createElement('span');
+  chip.slot = 'chips';
+  chip.textContent = 'file.pdf';
+  let slotChanged = oneEvent(slot, 'slotchange');
+  el.appendChild(chip);
+  await slotChanged;
+  await el.updateComplete;
+  expect(chips.hidden).to.be.false;
+
+  slotChanged = oneEvent(slot, 'slotchange');
+  el.removeChild(chip);
+  await slotChanged;
+  await el.updateComplete;
+  expect(chips.hidden).to.be.true;
+});
+
 it('hides the leading wrapper when the leading slot is empty, shows it once populated', async () => {
   const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
   const leading = el.shadowRoot!.querySelector('[part="leading"]') as HTMLElement;
@@ -234,6 +260,28 @@ it('hides the leading wrapper when the leading slot is empty, shows it once popu
   await slotChanged;
   await el.updateComplete;
   expect(leading.hidden).to.be.false;
+});
+
+it('re-hides the leading wrapper once its slot becomes empty again', async () => {
+  // Same round-trip gap as the chips slot above: only the empty-to-populated
+  // direction was previously covered.
+  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  const leading = el.shadowRoot!.querySelector('[part="leading"]') as HTMLElement;
+  const slot = el.shadowRoot!.querySelector('slot[name="leading"]') as HTMLSlotElement;
+
+  const btn = document.createElement('button');
+  btn.slot = 'leading';
+  let slotChanged = oneEvent(slot, 'slotchange');
+  el.appendChild(btn);
+  await slotChanged;
+  await el.updateComplete;
+  expect(leading.hidden).to.be.false;
+
+  slotChanged = oneEvent(slot, 'slotchange');
+  el.removeChild(btn);
+  await slotChanged;
+  await el.updateComplete;
+  expect(leading.hidden).to.be.true;
 });
 
 it('renders declaratively-slotted leading/chips content without waiting on the first slotchange', async () => {
@@ -316,6 +364,31 @@ it('grows the textarea height as multi-line content is typed, then switches to i
   );
   expect(ta.style.overflowY, 'content taller than max-rows must switch to internal scrolling').to.equal('auto');
   expect(ta.scrollHeight).to.be.greaterThan(ta.clientHeight);
+});
+
+it('re-fits the textarea height when the host narrows, with no value/min-rows/max-rows change', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-composer style="display: block; width: 600px" min-rows="1" max-rows="10"></lyra-chat-composer>`,
+  )) as LyraChatComposer;
+  const ta = textareaOf(el);
+
+  el.value =
+    'This message is long enough to wrap across several lines once the composer gets a lot narrower than it started.';
+  await el.updateComplete;
+  const wideHeight = parseFloat(ta.style.height);
+
+  // Narrowing the host (a responsive breakpoint, a sidebar toggle, a window
+  // resize, an orientation change) never touches value/min-rows/max-rows, so
+  // only a ResizeObserver on the textarea's own box -- not the updated()
+  // property-change gate -- can catch this and re-run resizeTextarea().
+  el.style.width = '140px';
+  await waitUntil(
+    () => parseFloat(ta.style.height) > wideHeight,
+    'textarea height must grow once the ResizeObserver reports the narrower width',
+    { timeout: 2000 },
+  );
+  const narrowHeight = parseFloat(ta.style.height);
+  expect(narrowHeight).to.be.greaterThan(wideHeight);
 });
 
 it('participates in a form: submits its value under name', async () => {
@@ -434,6 +507,30 @@ it('formDisabledCallback disables the control via a fieldset', async () => {
   // `_fieldsetDisabled`/`effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
+});
+
+it('dims the base part via the :disabled pseudo-class when disabled only through an ancestor fieldset', async () => {
+  // effectiveDisabled correctly gates the textarea/button underneath even
+  // when disabled purely by fieldset cascading (see the test above), but
+  // that alone doesn't prove the *visual* treatment follows -- the base
+  // part's opacity/cursor styling is keyed off a CSS selector
+  // (:host(:disabled)), not effectiveDisabled, so it needs its own
+  // assertion. Mirrors lyra-checkbox's identical fieldset/computed-style
+  // coverage.
+  const form = (await fixture(html`
+    <form>
+      <fieldset disabled>
+        <lyra-chat-composer name="message"></lyra-chat-composer>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(el.disabled).to.be.false;
+  expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
+  expect(getComputedStyle(base).opacity).to.equal('0.5');
+  expect(getComputedStyle(base).cursor).to.equal('not-allowed');
 });
 
 it('is accessible in the default, empty state', async () => {

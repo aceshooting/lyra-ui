@@ -60,7 +60,12 @@ function stopIcon(): SVGTemplateResult {
  * border at runtime (`resizeTextarea()`) rather than assuming a fixed
  * px-per-row constant, so it stays correct under a consumer's own font-size/
  * line-height overrides. It grows between `min-rows` and `max-rows`, then
- * switches to internal scrolling.
+ * switches to internal scrolling. A `ResizeObserver` on the textarea itself
+ * re-runs the same fit whenever its *width* changes (a responsive
+ * breakpoint, a sidebar toggling, a window resize, an orientation change)
+ * even though `value`/`min-rows`/`max-rows` never did -- a narrower box
+ * wraps the same text across more lines, so the previously-fitted height
+ * would otherwise go stale and clip content with no scrollbar to reveal it.
  *
  * Enter-to-send (only active while `submit-on-enter` is true, the default):
  * plain Enter submits and is prevented from inserting a newline; Shift+Enter
@@ -111,6 +116,8 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
   @state() private touched = false;
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
+  private textareaResizeObserver?: ResizeObserver;
+  private textareaResizeRaf?: number;
 
   constructor() {
     super();
@@ -130,6 +137,14 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
   protected firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     this.resizeTextarea();
+    this.armTextareaResizeObserver();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.textareaResizeObserver?.disconnect();
+    if (this.textareaResizeRaf !== undefined) cancelAnimationFrame(this.textareaResizeRaf);
+    this.textareaResizeRaf = undefined;
   }
 
   protected updated(changed: PropertyValues): void {
@@ -180,6 +195,54 @@ export class LyraChatComposer extends FormAssociated(LyraElement) {
     const next = Math.min(Math.max(contentHeight, minHeight), maxHeight);
     ta.style.height = `${next}px`;
     ta.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';
+  }
+
+  /**
+   * Re-fits the textarea whenever its own box *width* changes, independent
+   * of any `value`/`min-rows`/`max-rows` update -- `updated()` above only
+   * reacts to those, so a pure layout change (a responsive breakpoint, a
+   * sidebar collapsing/expanding, a window resize, an orientation change)
+   * would otherwise leave the height pinned at whatever it last was, even
+   * though the same text now wraps across a different number of lines.
+   * Mirrors split.ts's `collapseResizeObserver`/virtual-list.ts's
+   * `containerResizeObserver`/lite-chart.ts's `resizeObserver`.
+   *
+   * Only reacts to an actual inline-size change rather than calling
+   * `resizeTextarea()` unconditionally on every callback: `resizeTextarea()`
+   * itself sets `ta.style.height`, a *block*-size change on the very element
+   * being observed, which would otherwise re-trigger this same observer
+   * every tick. Diffing against the last-seen width (same technique as
+   * split.ts keying its collapse state off `contentBoxSize[0].inlineSize`)
+   * keeps a same-width, height-only callback from doing anything.
+   *
+   * The actual recompute is deferred one animation frame rather than run
+   * synchronously inside the callback: `ResizeObserver`'s spec re-delivers,
+   * within the same notification pass, to any observed element resized by
+   * its own callback -- mutating `ta.style.height` synchronously here would
+   * do exactly that to the very box just observed, and the browser reports
+   * it as "ResizeObserver loop completed with undelivered notifications"
+   * (a real, user-visible console error, not just noise). Deferring the
+   * mutation to the next frame -- outside that notification pass -- avoids
+   * ever resizing the observed element from inside its own callback.
+   */
+  private armTextareaResizeObserver(): void {
+    const ta = this.textareaEl;
+    if (!ta || this.textareaResizeObserver) return;
+    let lastWidth = ta.getBoundingClientRect().width;
+    this.textareaResizeObserver = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentBoxSize?.[0];
+      const width = box ? box.inlineSize : (entries[0]?.contentRect.width ?? lastWidth);
+      // A sub-pixel-only difference (common with fractional layout/zoom)
+      // isn't worth a recompute.
+      if (Math.abs(width - lastWidth) < 0.5) return;
+      lastWidth = width;
+      if (this.textareaResizeRaf !== undefined) cancelAnimationFrame(this.textareaResizeRaf);
+      this.textareaResizeRaf = requestAnimationFrame(() => {
+        this.textareaResizeRaf = undefined;
+        this.resizeTextarea();
+      });
+    });
+    this.textareaResizeObserver.observe(ta);
   }
 
   private onTextareaInput = (e: Event): void => {
