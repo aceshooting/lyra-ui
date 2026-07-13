@@ -204,6 +204,41 @@ describe('languages (fine-grained shiki opt-in)', () => {
   });
 });
 
+describe('languagesOnly', () => {
+  it('skips loadShikiHighlighter() entirely -- shikiReady never becomes true even after settling', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block languages-only language="bash" .code=${'echo hi'}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    // Give any (erroneously still-kicked-off) default loader a turn to resolve.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await el.updateComplete;
+    expect(internalsOf(el).shikiReady).to.be.false;
+    // With no languages map entry for 'bash' either, it renders the plain-text fallback, not a
+    // stuck skeleton or a thrown error.
+    expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal('echo hi');
+  });
+
+  it('still highlights via the languages map fast path while languagesOnly is true', async () => {
+    const bashLang = await import('shiki/langs/bash.mjs').catch(() => null);
+    if (!bashLang) return; // shiki not installed in this environment -- covered elsewhere
+    const el = (await fixture(html`
+      <lyra-code-block
+        languages-only
+        language="bash"
+        .languages=${{ bash: bashLang.default }}
+        .code=${'echo hi'}
+      ></lyra-code-block>
+    `)) as LyraCodeBlock;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="code"]')?.innerHTML.includes('span'), 'never highlighted', { timeout: 8000 });
+  });
+
+  it('defaults to false -- the default loader still runs unconditionally (regression)', async () => {
+    const el = (await fixture(html`<lyra-code-block language="bash" .code=${'echo hi'}></lyra-code-block>`)) as LyraCodeBlock;
+    await waitUntil(() => internalsOf(el).shikiReady, 'shiki never finished loading', { timeout: 8000 });
+    expect(internalsOf(el).shikiReady).to.be.true;
+  });
+});
+
 describe('fallback matrix (reaching into private state to exercise both paths deterministically)', () => {
   it('falls back to plain text when the shiki peer failed to load, even though language is set', async () => {
     const el = (await fixture(

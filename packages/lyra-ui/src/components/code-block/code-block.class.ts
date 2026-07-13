@@ -153,6 +153,15 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  back to that default dynamic-import path unchanged. */
   @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
 
+  /** When `true`, skips the default `loadShikiHighlighter()` call in `connectedCallback()`
+   *  entirely — for a consumer whose `languages` map already covers every language every instance
+   *  will ever render, so the bundler has no reachable path from this component to shiki's
+   *  ~200-language dynamic-import table. A `language` value absent from `languages` while this is
+   *  `true` renders the plain-text fallback (no attempt to fall back to the now-unloaded default
+   *  highlighter) rather than hanging. `false` (the default) reproduces today's unconditional
+   *  `loadShikiHighlighter()` call exactly. */
+  @property({ type: Boolean, attribute: 'languages-only' }) languagesOnly = false;
+
   // `null` covers every reason the plain-text fallback is showing: shiki
   // isn't installed, `language` is unset, or `language` isn't shiki-
   // recognized -- `render()` doesn't need to (and can't usefully) tell these
@@ -179,6 +188,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
+    if (this.languagesOnly) return;
     void loadShikiHighlighter().then((hl) => {
       this.highlighter = hl;
       this.shikiReady = true;
@@ -218,7 +228,10 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   }
 
   protected updated(): void {
-    const showingSkeleton = !this.shikiReady && !!this.language && !this.preSuppliedGrammar();
+    // `languagesOnly` skips the default loader entirely (see connectedCallback()), so
+    // `shikiReady` never becomes true for it -- treat that as "nothing to wait for" rather than
+    // "still loading", the same way a `preSuppliedGrammar()` match already does.
+    const showingSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
     if (showingSkeleton) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
   }
@@ -362,7 +375,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // small piece of a larger document.
   render(): TemplateResult {
     const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
-    const showSkeleton = !this.shikiReady && !!this.language && !this.preSuppliedGrammar();
+    // See updated()'s identical condition for why languagesOnly is excluded here too.
+    const showSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
     const bodyLabel = this.filename || (this.language ? `${this.language} code` : 'Code');
 
