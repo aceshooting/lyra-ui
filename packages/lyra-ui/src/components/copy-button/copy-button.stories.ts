@@ -26,7 +26,7 @@ export const InACornerOverlay: Story = {
   name: 'In a corner overlay',
   render: () => html`
     <div
-      style="position: relative; inline-size: 20rem; padding: 1rem; border: 1px solid #ccc; border-radius: 0.5rem;"
+      style="position: relative; inline-size: 20rem; padding: 1rem; border: 1px solid var(--lyra-color-border); border-radius: 0.5rem;"
     >
       <pre style="margin: 0; white-space: pre-wrap;">npm install @aceshooting/lyra-ui</pre>
       <div style="position: absolute; top: 0.5rem; inset-inline-end: 0.5rem;">
