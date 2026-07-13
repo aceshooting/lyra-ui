@@ -145,6 +145,20 @@ it('builds an aria-label from name, summary, status and duration', async () => {
   expect(base.getAttribute('aria-label')).to.equal('web_search — Searching web… — Running — 1.5s');
 });
 
+it('localizes the status labels and the unnamed-tool fallback via .strings', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-call-chip
+      status="running"
+      .strings=${{ statusRunning: 'En cours', toolCall: 'Appel d’outil' }}
+    ></lyra-tool-call-chip>
+  `)) as LyraToolCallChip;
+  expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('En cours');
+  expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('Appel d’outil');
+  expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.equal(
+    'Appel d’outil — En cours',
+  );
+});
+
 it('lets an explicit host aria-label override the computed one', async () => {
   const el = (await fixture(
     html`<lyra-tool-call-chip name="web_search" aria-label="Custom label"></lyra-tool-call-chip>`,

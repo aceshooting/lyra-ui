@@ -87,13 +87,27 @@ const STATUS_ICON: Record<ToolCallStatus, () => SVGTemplateResult> = {
   denied: deniedIcon,
 };
 
-/** Visible (not just color-coded) text for every status. */
+/** Visible (not just color-coded) text for every status -- English fallback
+ *  values only; STATUS_LABEL_KEY below supplies the localize() key for each,
+ *  and STATUS_VALUES (right below) still derives its allowed-value set from
+ *  this object's keys, unaffected by localization. Mirrors
+ *  `<lyra-tool-result-dialog>`'s identical STATUS_LABEL/STATUS_LABEL_KEY split. */
 const STATUS_LABEL: Record<ToolCallStatus, string> = {
   pending: 'Pending',
   running: 'Running',
   success: 'Success',
   error: 'Error',
   denied: 'Denied',
+};
+
+/** localize() key for each status's visible label -- see STATUS_LABEL for
+ *  the English fallback text. */
+const STATUS_LABEL_KEY: Record<ToolCallStatus, string> = {
+  pending: 'statusPending',
+  running: 'statusRunning',
+  success: 'statusSuccess',
+  error: 'statusError',
+  denied: 'statusDenied',
 };
 
 const STATUS_VALUES = new Set<string>(Object.keys(STATUS_LABEL));
@@ -315,9 +329,9 @@ export class LyraToolCallChip extends LyraElement {
   }
 
   private get accessibleLabel(): string {
-    const parts = [this.name || 'Tool call'];
+    const parts = [this.name || this.localize('toolCall')];
     if (this.summary) parts.push(this.summary);
-    parts.push(STATUS_LABEL[this.effectiveStatus]);
+    parts.push(this.localize(STATUS_LABEL_KEY[this.effectiveStatus]));
     if (this.durationMs != null && Number.isFinite(this.durationMs)) parts.push(formatDuration(this.durationMs));
     return parts.join(' — ');
   }
@@ -346,11 +360,11 @@ export class LyraToolCallChip extends LyraElement {
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
-          <span part="name">${this.name || 'Tool call'}</span>
+          <span part="name">${this.name || this.localize('toolCall')}</span>
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">
-          <span part="status-text">${STATUS_LABEL[status]}</span>
+          <span part="status-text">${this.localize(STATUS_LABEL_KEY[status])}</span>
           <span part="duration" ?hidden=${!hasDuration}>${hasDuration ? formatDuration(this.durationMs!) : nothing}</span>
         </span>
       </button>
