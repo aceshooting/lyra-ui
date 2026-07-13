@@ -466,6 +466,124 @@ describe('scroll lock', () => {
   });
 });
 
+describe('localization', () => {
+  it('defaults the heading, generic tool-name fallback, and args-editor label to English', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog .args=${ARGS} open></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(el.shadowRoot!.querySelector('h2')!.textContent!.trim()).to.equal('Approve tool call?');
+
+    editButton(el).click();
+    await el.updateComplete;
+    expect(textarea(el).getAttribute('aria-label')).to.equal('Tool call arguments (JSON)');
+  });
+
+  it('localizes the heading and generic tool-name fallback via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        .args=${ARGS}
+        open
+        .strings=${{ toolApprovalHeading: 'Approuver l’appel {tool} ?', toolApprovalGenericTool: 'outil' }}
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    const heading = el.shadowRoot!.querySelector('h2')!;
+    expect(heading.textContent!.trim()).to.equal('Approuver l’appel outil ?');
+    expect(heading.querySelector('[part="tool-name"]')!.textContent).to.equal('outil');
+  });
+
+  it('does not use the generic tool-name fallback once tool-name is set', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        tool-name="web_search"
+        .args=${ARGS}
+        open
+        .strings=${{ toolApprovalGenericTool: 'outil' }}
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('web_search');
+  });
+
+  it('localizes the args-editor aria-label via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        .args=${ARGS}
+        open
+        .strings=${{ toolApprovalArgsLabel: 'Arguments de l’appel (JSON)' }}
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    expect(textarea(el).getAttribute('aria-label')).to.equal('Arguments de l’appel (JSON)');
+  });
+
+  it('defaults the Deny/Edit/Approve button labels to English', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog .args=${ARGS} open></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(denyButton(el).textContent!.trim()).to.equal('Deny');
+    expect(editButton(el).textContent!.trim()).to.equal('Edit');
+    expect(approveButton(el).textContent!.trim()).to.equal('Approve');
+  });
+
+  it('localizes the Deny/Approve button labels via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        .args=${ARGS}
+        open
+        .strings=${{ deny: 'Refuser', approve: 'Approuver' }}
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(denyButton(el).textContent!.trim()).to.equal('Refuser');
+    expect(approveButton(el).textContent!.trim()).to.equal('Approuver');
+  });
+
+  it('localizes the Edit/Cancel toggle button label via this.localize(), reusing the shared "cancel" key while editing', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        .args=${ARGS}
+        open
+        .strings=${{ edit: 'Modifier', cancel: 'Annuler' }}
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    expect(editButton(el).textContent!.trim()).to.equal('Modifier');
+
+    editButton(el).click();
+    await el.updateComplete;
+    expect(editButton(el).textContent!.trim()).to.equal('Annuler');
+  });
+
+  it('localizes the invalid-JSON fallback error message via this.localize() when the caught error has no message', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        .args=${ARGS}
+        open
+        .strings=${{ invalidJson: 'JSON invalide.' }}
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+
+    // JSON.parse always throws a real Error with a non-empty message, so the
+    // this.localize('invalidJson') fallback branch is otherwise unreachable
+    // through normal input -- stub JSON.parse for this one assertion to
+    // exercise the `err instanceof Error` false branch directly.
+    const originalParse = JSON.parse;
+    JSON.parse = () => {
+      // eslint-disable-next-line no-throw-literal
+      throw 'not an Error instance';
+    };
+    try {
+      setTextareaValue(el, '{ anything }');
+      await el.updateComplete;
+    } finally {
+      JSON.parse = originalParse;
+    }
+
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(error.textContent).to.equal('JSON invalide.');
+  });
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(
     html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lyra-tool-approval-dialog>`,

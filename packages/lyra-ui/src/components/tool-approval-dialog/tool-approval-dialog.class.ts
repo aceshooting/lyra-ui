@@ -259,7 +259,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       JSON.parse(value);
       this.draftError = '';
     } catch (err) {
-      this.draftError = err instanceof Error ? err.message : 'Invalid JSON.';
+      this.draftError = err instanceof Error ? err.message : this.localize('invalidJson');
     }
   };
 
@@ -286,6 +286,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   render(): TemplateResult {
     const hasError = this.editing && this.draftError.length > 0;
+    // Split (rather than interpolate outright) so `toolName` can still land in
+    // its own `part="tool-name"` node -- the localized template supplies the
+    // surrounding text either side of the `{tool}` placeholder.
+    const [headingBefore, headingAfter] = this.localize(
+      'toolApprovalHeading',
+      'Approve {tool} call?',
+    ).split('{tool}');
+    const toolName = this.toolName || this.localize('toolApprovalGenericTool');
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -296,7 +304,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         tabindex="-1"
       >
         <div part="header">
-          <h2 id=${this.titleId}>Approve <span part="tool-name">${this.toolName || 'tool'}</span> call?</h2>
+          <h2 id=${this.titleId}>${headingBefore}<span part="tool-name">${toolName}</span>${headingAfter ?? ''}</h2>
         </div>
         <div part="body">
           ${this.editing
@@ -305,7 +313,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   part="args-editor"
                   spellcheck="false"
                   autocomplete="off"
-                  aria-label="Tool call arguments (JSON)"
+                  aria-label=${this.localize('toolApprovalArgsLabel')}
                   aria-invalid=${hasError ? 'true' : 'false'}
                   aria-describedby=${hasError ? this.errorId : nothing}
                   .value=${this.draftText}
@@ -317,14 +325,14 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         </div>
         <div part="footer">
           <slot name="footer"></slot>
-          <button part="deny-button" type="button" @click=${this.onDeny}>Deny</button>
+          <button part="deny-button" type="button" @click=${this.onDeny}>${this.localize('deny')}</button>
           ${this.editable
             ? html`<button part="edit-button" type="button" @click=${this.toggleEdit}>
-                ${this.editing ? 'Cancel' : 'Edit'}
+                ${this.editing ? this.localize('cancel') : this.localize('edit')}
               </button>`
             : nothing}
           <button part="approve-button" type="button" ?disabled=${hasError} @click=${this.onApprove}>
-            Approve
+            ${this.localize('approve')}
           </button>
         </div>
       </div>

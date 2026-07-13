@@ -161,7 +161,14 @@ export type LyraMessageKey =
   | 'streamStallClearedAnnounce'
   | 'thinkingPanelLabel'
   | 'thoughtFor'
-  | 'thinking';
+  | 'thinking'
+  | 'toolApprovalHeading'
+  | 'toolApprovalGenericTool'
+  | 'toolApprovalArgsLabel'
+  | 'deny'
+  | 'edit'
+  | 'approve'
+  | 'invalidJson';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -324,6 +331,13 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   thinkingPanelLabel: 'Thinking',
   thoughtFor: 'Thought for {duration}',
   thinking: 'Thinking…',
+  toolApprovalHeading: 'Approve {tool} call?',
+  toolApprovalGenericTool: 'tool',
+  toolApprovalArgsLabel: 'Tool call arguments (JSON)',
+  deny: 'Deny',
+  edit: 'Edit',
+  approve: 'Approve',
+  invalidJson: 'Invalid JSON.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
