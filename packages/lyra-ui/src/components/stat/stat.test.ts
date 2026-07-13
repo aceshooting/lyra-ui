@@ -38,6 +38,14 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('stretches [part=base] to fill the host, matching lyra-word-cloud/lyra-context-meter\'s convention', async () => {
+  const el = (await fixture(html`<lyra-stat label="Revenue" value="12.4"></lyra-stat>`)) as LyraStat;
+  el.style.blockSize = '200px';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).blockSize).to.equal('200px');
+});
+
 it('collapses the icon part when no default-slot content is provided', async () => {
   const el = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
