@@ -244,6 +244,148 @@ it('preserves manual toggle overrides across a data reassignment with the same s
   expect(toggleAfter.getAttribute('aria-expanded')).to.equal('true');
 });
 
+it('renders a self-referencing value without a stack overflow, showing a circular marker instead of recursing', async () => {
+  const o: Record<string, unknown> = { name: 'root' };
+  o.self = o;
+  const el = await withData(o);
+
+  // The `self` key itself is rendered exactly once -- recursing into it
+  // again (and again...) would either blow the stack or render it an
+  // unbounded number of times.
+  const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent);
+  expect(keys.filter((k) => k === 'self')).to.have.length(1);
+
+  const values = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).map((v) => v.textContent);
+  expect(values).to.include('Circular reference');
+
+  const marker = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).find(
+    (v) => v.textContent === 'Circular reference',
+  );
+  expect(marker!.getAttribute('data-type')).to.equal('circular');
+
+  // The circular node has no children to toggle -- it renders as a leaf.
+  const selfRow = Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+    (row) => row.querySelector('[part="key"]')?.textContent === 'self',
+  ) as HTMLElement;
+  expect((selfRow.querySelector('[part="toggle"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+});
+
+it('renders a bigint value via String() instead of throwing from JSON.stringify', async () => {
+  const el = await withData({ count: 10n });
+  const values = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).map((v) => v.textContent);
+  expect(values).to.include('10');
+});
+
+it('copies a bigint value without throwing, downgrading it to a plain string', async () => {
+  const el = await withData({ count: 10n });
+  el.copyable = true;
+  await el.updateComplete;
+
+  const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+  setTimeout(() => toolbarButton.click());
+  const event = await oneEvent(el, 'lyra-copy');
+  expect(event.detail.text).to.equal(JSON.stringify({ count: '10' }, null, 2));
+});
+
+it('does not re-walk the data tree to recompute search state on a toggle-only re-render', async () => {
+  let accesses = 0;
+  const trackedChild = new Proxy(
+    { value: 'no match here' },
+    {
+      get(target, prop, receiver) {
+        accesses++;
+        return Reflect.get(target, prop, receiver);
+      },
+    },
+  );
+  const el = (await fixture(html`<lyra-json-viewer></lyra-json-viewer>`)) as LyraJsonViewer;
+  // "hidden" (depth 1) starts collapsed from this very first render (data,
+  // collapsed-depth, and search are all assigned before the first await, so
+  // Lit batches them into one update) -- normal rendering never descends
+  // into it, so any access to trackedChild can only come from the search
+  // walk itself, which -- unlike rendering -- traverses the whole tree
+  // regardless of what's currently expanded.
+  el.data = { other: { a: 1 }, hidden: { nested: trackedChild } };
+  el.collapsedDepth = 1;
+  el.search = 'no-match-anywhere';
+  await el.updateComplete;
+
+  const accessesAfterFirstRender = accesses;
+  // Sanity check: the initial search walk did reach into the collapsed
+  // subtree, so the counter is a meaningful signal for the assertion below.
+  expect(accessesAfterFirstRender).to.be.greaterThan(0);
+
+  // "other" (not "hidden") is toggled, so `data`/`search` are unchanged --
+  // this is an `expandedOverrides`-only re-render.
+  const otherRow = Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+    (row) => row.querySelector('[part="key"]')?.textContent === 'other',
+  ) as HTMLElement;
+  const toggle = otherRow.querySelector('[part="toggle"]') as HTMLButtonElement;
+  toggle.click();
+  await el.updateComplete;
+
+  expect(accesses).to.equal(accessesAfterFirstRender);
+});
+
+it('prunes stale expandedOverrides entries once their path no longer exists after a data reassignment', async () => {
+  const el = await withData({ old: { deep: { x: 1 } } });
+  el.collapsedDepth = 0;
+  await el.updateComplete;
+
+  const rootToggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  rootToggle.click();
+  await el.updateComplete;
+
+  const oldToggle = (
+    Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+      (row) => row.querySelector('[part="key"]')?.textContent === 'old',
+    ) as HTMLElement
+  ).querySelector('[part="toggle"]') as HTMLButtonElement;
+  oldToggle.click();
+  await el.updateComplete;
+  expect(oldToggle.getAttribute('aria-expanded')).to.equal('true');
+
+  // Remove the "old" key entirely -- its ["old"] override has nothing left
+  // to apply to.
+  el.data = { fresh: 1 };
+  await el.updateComplete;
+
+  // Reintroduce an unrelated "old" node that coincidentally reuses the
+  // exact same path key ('["old"]'). If the stale override had survived,
+  // this brand-new node would render already-expanded despite
+  // collapsed-depth="0" defaulting everything closed.
+  el.data = { old: { other: 2 } };
+  await el.updateComplete;
+
+  const newOldToggle = (
+    Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+      (row) => row.querySelector('[part="key"]')?.textContent === 'old',
+    ) as HTMLElement
+  ).querySelector('[part="toggle"]') as HTMLButtonElement;
+  expect(newOldToggle.getAttribute('aria-expanded')).to.equal('false');
+});
+
+it('gives each per-node copy button a distinct aria-label naming its own key', async () => {
+  const el = await withData(sample);
+  el.copyable = true;
+  await el.updateComplete;
+
+  const ageButton = (
+    Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+      (row) => row.querySelector('[part="key"]')?.textContent === 'age',
+    ) as HTMLElement
+  ).querySelector('[part="copy-button"]') as HTMLButtonElement;
+  const nameButton = (
+    Array.from(el.shadowRoot!.querySelectorAll('.row')).find(
+      (row) => row.querySelector('[part="key"]')?.textContent === 'name',
+    ) as HTMLElement
+  ).querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+  expect(ageButton.getAttribute('aria-label')).to.equal('Copy age');
+  expect(nameButton.getAttribute('aria-label')).to.equal('Copy name');
+  expect(ageButton.getAttribute('aria-label')).to.not.equal(nameButton.getAttribute('aria-label'));
+});
+
 it('renders a root primitive with no key label', async () => {
   const el = await withData('just a string');
   const value = el.shadowRoot!.querySelector('[part="value"]');

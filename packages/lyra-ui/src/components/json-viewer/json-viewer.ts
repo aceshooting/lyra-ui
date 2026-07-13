@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -15,12 +15,19 @@ interface SearchState {
   valueMatches: Set<string>;
   /** Stringified paths of every *ancestor* of a match -- not the match itself. */
   forceExpand: Set<string>;
+  /**
+   * Every path key reachable in the tree as of the last walk -- populated
+   * regardless of whether `search` is set, so `expandedOverrides` can be
+   * pruned down to it whenever `data` changes.
+   */
+  paths: Set<string>;
 }
 
 const EMPTY_SEARCH: SearchState = {
   keyMatches: new Set(),
   valueMatches: new Set(),
   forceExpand: new Set(),
+  paths: new Set(),
 };
 
 function isPlainContainer(value: unknown): value is Record<string, unknown> {
@@ -49,7 +56,12 @@ function valueType(value: unknown): JsonValueType {
 function formatPrimitive(value: unknown, type: JsonValueType): string {
   switch (type) {
     case 'string':
-      return JSON.stringify(value);
+      // `type` here also covers valueType()'s function/symbol/bigint
+      // fallback (see the comment there) -- JSON.stringify() throws a
+      // TypeError for a BigInt, so only an actual string gets the
+      // quoted/escaped treatment; everything else falls back to a plain
+      // String() coercion, which renders "sensibly" without throwing.
+      return typeof value === 'string' ? JSON.stringify(value) : String(value);
     case 'null':
       return 'null';
     case 'undefined':
@@ -81,10 +93,10 @@ function previewText(value: unknown, type: 'object' | 'array', count: number): s
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.
  * @csspart key - An object property key or array index label.
- * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`) for per-type coloring, and `data-match` while it matches `search`.
+ * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, and `data-match` while it matches `search`.
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
- * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`) or a per-node one (only rendered when `copyable`).
+ * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
  */
 export class LyraJsonViewer extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -100,8 +112,18 @@ export class LyraJsonViewer extends LyraElement {
   /** Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. */
   @property() search = '';
 
-  /** Per-path (`JSON.stringify(path)`) explicit expand/collapse, overriding the `collapsedDepth`/search defaults once a node's toggle has been used. */
+  /**
+   * Per-path (`JSON.stringify(path)`) explicit expand/collapse, overriding
+   * the `collapsedDepth`/search defaults once a node's toggle has been used.
+   * Pruned in `willUpdate()` (to the paths still reachable in the tree)
+   * whenever `data` changes, so a long-lived instance bound to reshaping
+   * data -- this component's own stated streaming use case -- doesn't
+   * accumulate one entry per path ever toggled for the life of the instance.
+   */
   @state() private expandedOverrides = new Map<string, boolean>();
+
+  /** Memoized result of the last `computeSearch()` walk -- see `willUpdate()`. */
+  private searchState: SearchState = EMPTY_SEARCH;
 
   private isExpanded(pathKey: string, depth: number, forceExpand: Set<string>): boolean {
     const override = this.expandedOverrides.get(pathKey);
@@ -130,19 +152,33 @@ export class LyraJsonViewer extends LyraElement {
   }
 
   private copy(value: unknown): void {
-    const text = value === undefined ? 'undefined' : JSON.stringify(value, null, 2);
+    const text =
+      value === undefined
+        ? 'undefined'
+        : // A BigInt anywhere inside `value` (not just at the root) throws a
+          // TypeError from the default JSON.stringify() serializer the same
+          // way formatPrimitive()'s unguarded call used to -- the replacer
+          // downgrades it to its decimal string form instead.
+          JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
     this.writeClipboard(text);
     this.emit('lyra-copy', { text });
   }
 
-  /** Builds the key/value-match sets and the ancestor-paths-of-a-match set that `search` drives. */
+  /**
+   * Builds the key/value-match sets, the ancestor-paths-of-a-match set that
+   * `search` drives, and the full set of path keys reachable in the tree
+   * (`paths`, used to prune `expandedOverrides` -- see `willUpdate()`).
+   * Guards against a self-referencing `data` the same way `renderNode()`
+   * does: a container value already on the current recursion path is
+   * treated as a leaf instead of being walked again.
+   */
   private computeSearch(): SearchState {
     const query = this.search.trim().toLowerCase();
-    if (!query) return EMPTY_SEARCH;
-
     const keyMatches = new Set<string>();
     const valueMatches = new Set<string>();
     const forceExpand = new Set<string>();
+    const paths = new Set<string>();
+    const ancestors = new WeakSet<object>();
 
     const markAncestors = (path: JsonPathSegment[]): void => {
       for (let i = path.length - 1; i >= 0; i--) forceExpand.add(JSON.stringify(path.slice(0, i)));
@@ -150,31 +186,38 @@ export class LyraJsonViewer extends LyraElement {
 
     const walk = (value: unknown, path: JsonPathSegment[], keyLabel?: string): void => {
       const pathKey = JSON.stringify(path);
-      let hit = false;
-      if (keyLabel !== undefined && keyLabel.toLowerCase().includes(query)) {
-        keyMatches.add(pathKey);
-        hit = true;
-      }
+      paths.add(pathKey);
       const type = valueType(value);
-      if (type !== 'object' && type !== 'array' && formatPrimitive(value, type).toLowerCase().includes(query)) {
-        valueMatches.add(pathKey);
-        hit = true;
+      if (query) {
+        let hit = false;
+        if (keyLabel !== undefined && keyLabel.toLowerCase().includes(query)) {
+          keyMatches.add(pathKey);
+          hit = true;
+        }
+        if (type !== 'object' && type !== 'array' && formatPrimitive(value, type).toLowerCase().includes(query)) {
+          valueMatches.add(pathKey);
+          hit = true;
+        }
+        if (hit) markAncestors(path);
       }
-      if (hit) markAncestors(path);
-      for (const [k, v] of entriesOf(value)) walk(v, [...path, k], String(k));
+      if ((type === 'object' || type === 'array') && !ancestors.has(value as object)) {
+        ancestors.add(value as object);
+        for (const [k, v] of entriesOf(value)) walk(v, [...path, k], String(k));
+        ancestors.delete(value as object);
+      }
     };
 
     walk(this.data, []);
-    return { keyMatches, valueMatches, forceExpand };
+    return { keyMatches, valueMatches, forceExpand, paths };
   }
 
-  private renderCopyButton(value: unknown): TemplateResult | typeof nothing {
+  private renderCopyButton(value: unknown, label: string | undefined): TemplateResult | typeof nothing {
     if (!this.copyable) return nothing;
     return html`
       <button
         part="copy-button"
         type="button"
-        aria-label="Copy value"
+        aria-label="Copy ${label ?? 'value'}"
         @click=${(e: Event) => {
           e.stopPropagation();
           this.copy(value);
@@ -191,10 +234,16 @@ export class LyraJsonViewer extends LyraElement {
     keyLabel: string | undefined,
     depth: number,
     search: SearchState,
+    ancestors: WeakSet<object>,
   ): TemplateResult {
     const pathKey = JSON.stringify(path);
     const type = valueType(value);
-    const isContainer = type === 'object' || type === 'array';
+    // A container value already on the current recursion path (i.e. `data`
+    // self-references, directly or through a longer cycle) gets rendered as
+    // a leaf marker instead of recursing again -- recursing would blow the
+    // stack instead of degrading gracefully.
+    const isCircular = (type === 'object' || type === 'array') && ancestors.has(value as object);
+    const isContainer = (type === 'object' || type === 'array') && !isCircular;
     const entries = isContainer ? entriesOf(value) : [];
     const hasEntries = entries.length > 0;
     const expanded = hasEntries && this.isExpanded(pathKey, depth, search.forceExpand);
@@ -202,6 +251,18 @@ export class LyraJsonViewer extends LyraElement {
     const toggleLabel = keyLabel ?? (type === 'array' ? 'array' : type === 'object' ? 'object' : 'value');
     const openBracket = type === 'array' ? '[' : '{';
     const closeBracket = type === 'array' ? ']' : '}';
+
+    // Computed eagerly -- in this same synchronous call, rather than left for
+    // lit-html's `repeat` directive to invoke lazily during commit -- so the
+    // `ancestors.add()`/`.delete()` pair below brackets exactly the values on
+    // the real recursive descent through *this* subtree, regardless of
+    // whenever lit-html itself gets around to resolving the directive.
+    let childRows: TemplateResult[] = [];
+    if (isContainer && expanded) {
+      ancestors.add(value as object);
+      childRows = entries.map(([k, v]) => this.renderNode(v, [...path, k], String(k), depth + 1, search, ancestors));
+      ancestors.delete(value as object);
+    }
 
     const headRow = html`
       <div class="row" style=${indentStyle}>
@@ -221,18 +282,24 @@ export class LyraJsonViewer extends LyraElement {
           ? html`<span part="key" ?data-match=${search.keyMatches.has(pathKey)}>${keyLabel}</span
               ><span class="colon">:</span>`
           : nothing}
-        ${isContainer
+        ${isCircular
           ? html`
               <span part="bracket">${openBracket}</span>
-              ${hasEntries && !expanded
-                ? html`<span class="preview">${previewText(value, type, entries.length)}</span>`
-                : nothing}
-              ${!expanded ? html`<span part="bracket">${closeBracket}</span>` : nothing}
+              <span part="value" data-type="circular">Circular reference</span>
+              <span part="bracket">${closeBracket}</span>
             `
-          : html`<span part="value" data-type=${type} ?data-match=${search.valueMatches.has(pathKey)}
-              >${formatPrimitive(value, type)}</span
-            >`}
-        ${this.renderCopyButton(value)}
+          : isContainer
+            ? html`
+                <span part="bracket">${openBracket}</span>
+                ${hasEntries && !expanded
+                  ? html`<span class="preview">${previewText(value, type, entries.length)}</span>`
+                  : nothing}
+                ${!expanded ? html`<span part="bracket">${closeBracket}</span>` : nothing}
+              `
+            : html`<span part="value" data-type=${type} ?data-match=${search.valueMatches.has(pathKey)}
+                >${formatPrimitive(value, type)}</span
+              >`}
+        ${this.renderCopyButton(value, toggleLabel)}
       </div>
     `;
 
@@ -251,7 +318,7 @@ export class LyraJsonViewer extends LyraElement {
               ${repeat(
                 entries,
                 ([k]) => JSON.stringify([...path, k]),
-                ([k, v]) => this.renderNode(v, [...path, k], String(k), depth + 1, search),
+                (_entry, i) => childRows[i],
               )}
             </div>
             <div class="row" style=${indentStyle}>
@@ -263,8 +330,29 @@ export class LyraJsonViewer extends LyraElement {
     `;
   }
 
+  protected willUpdate(changed: PropertyValues): void {
+    if (!this.hasUpdated || changed.has('data') || changed.has('search')) {
+      const next = this.computeSearch();
+      if (!this.hasUpdated || changed.has('data')) {
+        // A path with no entry in `next.paths` no longer exists anywhere in
+        // the new tree, so its override has nothing left to apply to --
+        // dropping it here (rather than never, as before) is what keeps a
+        // long-lived instance bound to reshaping data from accumulating one
+        // Map entry per distinct path ever toggled over its whole lifetime.
+        let pruned: Map<string, boolean> | null = null;
+        for (const key of this.expandedOverrides.keys()) {
+          if (!next.paths.has(key)) {
+            pruned ??= new Map(this.expandedOverrides);
+            pruned.delete(key);
+          }
+        }
+        if (pruned) this.expandedOverrides = pruned;
+      }
+      this.searchState = next;
+    }
+  }
+
   render(): TemplateResult {
-    const search = this.computeSearch();
     return html`
       <div part="base" style=${this.maxHeight ? `--lyra-json-viewer-max-height:${this.maxHeight}` : nothing}>
         ${this.copyable
@@ -279,7 +367,7 @@ export class LyraJsonViewer extends LyraElement {
               </button>
             </div>`
           : nothing}
-        <div part="tree">${this.renderNode(this.data, [], undefined, 0, search)}</div>
+        <div part="tree">${this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet())}</div>
       </div>
     `;
   }

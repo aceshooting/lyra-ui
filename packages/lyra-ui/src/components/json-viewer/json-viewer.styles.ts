@@ -133,7 +133,8 @@ export const styles = css`
     color: var(--lyra-color-warning);
   }
   [part='value'][data-type='null'],
-  [part='value'][data-type='undefined'] {
+  [part='value'][data-type='undefined'],
+  [part='value'][data-type='circular'] {
     color: var(--lyra-color-text-quiet);
     font-style: italic;
   }
