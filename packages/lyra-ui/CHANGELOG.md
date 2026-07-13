@@ -1,5 +1,52 @@
 # Changelog
 
+## 2.2.0
+
+### Minor Changes
+
+- ff41aba: `lyra-app-rail`: add a `resizable` opt-in (drag + keyboard-steppable `[part="resizer"]` handle,
+  `railWidthPx`/`minRailWidthPx`/`maxRailWidthPx`, `lyra-rail-resize` event) for the `'full'` state's
+  width; add `preferredMode` to manually prefer `'full'`/`'icon-only'` while the mobile breakpoint
+  keeps tracking automatically; and fix the mobile toggle button's `aria-label` to use a proper
+  `openNavigation` message key (consistent with the existing `closeNavigation` key) instead of
+  concatenating a hardcoded `" navigation"` suffix onto a partially-localized string.
+- 3b1a404: `lyra-app-rail-item`: add an `active` property that reflects `aria-current="page"` onto the
+  internal link/button, mirroring `lyra-conversation-item`'s existing `active` pattern.
+- 3b7a98b: `lyra-attachment-chip`: fix the uploading progressbar/spinner's `aria-label` to actually use
+  `uploadingLabel` (previously hardcoded, unlike the adjacent visible status text); add an
+  `untitledLabel` override for the empty-name fallback; add a `compact` density variant.
+- 49be9e4: `lyra-attachment-trigger`: add a `triggerTitle` property forwarded to the internal trigger
+  button(s)' native `title` (a sighted-mouse-user hover tooltip, distinct from `triggerLabel`'s
+  `aria-label` role); reduce the internal `.trigger-button:hover` rule's specificity via `:where()`
+  so a consumer's `::part(trigger):hover` override wins without needing `!important`.
+- 4d04843: `lyra-code-block`: add a `languagesOnly` opt-in that skips the default `loadShikiHighlighter()`
+  call entirely, so a consumer whose `languages` map already covers every language it renders has no
+  bundler-reachable path to shiki's full per-language dynamic-import table.
+- 2968d7b: Add `lyra-copy-button`: a standalone icon-only copy-to-clipboard button for a plain text `value`,
+  with no positioning opinion of its own — for a consumer needing just the copy/checkmark-swap
+  affordance without adopting `lyra-code-block`'s or `lyra-json-viewer`'s full content model.
+- 49be9e4: `lyra-dialog`: add `noLightDismiss` to opt out of backdrop-click dismissal, and make `close()`
+  actually respect a `lyra-dialog-close` listener's `preventDefault()` (the event is now genuinely
+  `cancelable: true`) for every dismissal path — Escape, backdrop, the built-in close button, and a
+  consumer's own `close()` call.
+- 6958595: `lyra-heatmap`: add a `cellInteractive` predicate to opt individual cells out of hit-testing and
+  keyboard roving focus, and a `colorSteps` discrete-array ramp as an alternative to the 2-endpoint
+  `--lyra-heatmap-scale-lo`/`-hi` linear interpolation (governs both `mode`s and both `scale`
+  values). Also adds test coverage confirming `firstDayOfWeek`'s calendar-mode weekday-axis labels
+  are correct for a non-Sunday-first week (the underlying computation was already correct; only the
+  test combining the two was missing).
+- 2c6fc82: `lyra-lite-chart`: add a `minBarHeight`/`min-bar-height` pixel floor for near-zero stacked
+  segments, fix `scale="sqrt"` proportionality for stacked bars (previously compressed each
+  segment's absolute cumulative stack position independently instead of the bar's total height
+  split linearly by segment share), and add a `chartLabel`/`chart-label` override for the chart's
+  auto-derived `aria-label`.
+- e29b2f9: `lyra-markdown`: add `part="paragraph"`, `part="list"` (both `<ul>` and `<ol>`), and
+  `part="inline-code"` (bare inline codespans only, not a fenced code block's `<code>`, which
+  already has its own `part="code-block"` wrapper) so a consumer's `::part()` CSS can reach plain
+  text elements that previously had no themeable hook.
+- 3b7a98b: `lyra-split`: add a `dividerLabel` function property overriding the auto-inserted divider's
+  hardcoded English `aria-label` template.
+
 ## 2.1.0
 
 ### Minor Changes
