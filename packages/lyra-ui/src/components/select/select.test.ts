@@ -793,3 +793,20 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('lets a consumer pin an exact trigger height via --lyra-select-trigger-height, bypassing the min-height floor', async () => {
+  const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
+  el.style.setProperty('--lyra-select-trigger-height', '43px');
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(getComputedStyle(trigger).blockSize).to.equal('43px');
+});
+
+it('leaves today\'s min-height-floor-only behavior unchanged when the override is unset', async () => {
+  const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(getComputedStyle(trigger).blockSize).to.not.equal('0px');
+  // No forced block-size -- the trigger's rendered height still comes from its own
+  // padding/line-height/border, only floored by --lyra-select-trigger-min-height as before.
+});

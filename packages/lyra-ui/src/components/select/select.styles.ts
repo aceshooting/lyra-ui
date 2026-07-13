@@ -6,6 +6,10 @@ export const styles = css`
     --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-s);
     --lyra-select-trigger-min-height: var(--lyra-size-2-5rem);
     --lyra-select-font-size: var(--lyra-font-size-md);
+    /* Unset (the default) leaves min-block-size as a floor only, exactly as before this property
+       existed. Set it to force an exact trigger height (e.g. to pixel-match a sibling text field in
+       the same row) -- this both floors and caps the trigger at that height. */
+    --lyra-select-trigger-height: auto;
   }
   :host([size='xs']) {
     --lyra-select-trigger-padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
@@ -54,7 +58,8 @@ export const styles = css`
     justify-content: space-between;
     gap: var(--lyra-space-xs);
     inline-size: 100%;
-    min-block-size: var(--lyra-select-trigger-min-height);
+    min-block-size: var(--lyra-select-trigger-height, var(--lyra-select-trigger-min-height));
+    block-size: var(--lyra-select-trigger-height, auto);
     padding: var(--lyra-select-trigger-padding);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
