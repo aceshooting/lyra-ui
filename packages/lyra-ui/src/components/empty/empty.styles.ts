@@ -32,7 +32,7 @@ export const styles = css`
     color: var(--lyra-color-text);
     margin: 0;
   }
-  [part='heading']:empty {
+  [part='heading'][hidden] {
     display: none;
   }
   :host([compact]) [part='heading'] {
@@ -42,7 +42,7 @@ export const styles = css`
     font-size: var(--lyra-font-size-md-sm);
     margin: 0;
   }
-  [part='description']:empty {
+  [part='description'][hidden] {
     display: none;
   }
   [part='actions'][hidden] {
