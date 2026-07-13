@@ -183,7 +183,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   private updateValidity(): void {
     if (this.required && !this.checked) {
-      this.validityController.setValidity({ valueMissing: true }, 'Please turn this on.');
+      this.validityController.setValidity({ valueMissing: true }, this.localize('switchRequired'));
     } else {
       this.validityController.setValidity({});
     }

@@ -184,6 +184,23 @@ it('updates validity synchronously when required changes', async () => {
   expect(el.checkValidity()).to.be.true;
 });
 
+describe('validationMessage localization', () => {
+  it('defaults to the built-in English validationMessage for a required, unchecked control', async () => {
+    const el = (await fixture(html`<lyra-switch required>Agree</lyra-switch>`)) as LyraSwitch;
+    expect(el.validationMessage).to.equal('Please turn this on.');
+  });
+
+  it('localizes the validationMessage via this.localize() when .strings overrides switchRequired', async () => {
+    const el = (await fixture(html`
+      <lyra-switch required .strings=${{ switchRequired: 'Veuillez activer ceci.' }}>Agree</lyra-switch>
+    `)) as LyraSwitch;
+    expect(el.validationMessage).to.equal('Veuillez activer ceci.');
+
+    el.checked = true;
+    expect(el.validationMessage).to.equal('');
+  });
+});
+
 it('submits under a programmatically assigned name in the same tick', async () => {
   const form = (await fixture(html`
     <form><lyra-switch value="yes" checked>Notify me</lyra-switch></form>
