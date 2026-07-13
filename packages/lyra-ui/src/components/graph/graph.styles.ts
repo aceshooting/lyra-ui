@@ -18,6 +18,10 @@ export const styles = css`
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
+  [part='link'][data-dangling] {
+    stroke-dasharray: var(--lyra-size-2px) var(--lyra-size-2px);
+    opacity: var(--lyra-opacity-disabled);
+  }
   [part='node'] {
     /* --lyra-node-fill is set inline per-node (see graph.ts) from GraphNode.color;
        falls back to the brand token when a node doesn't supply one. An inline

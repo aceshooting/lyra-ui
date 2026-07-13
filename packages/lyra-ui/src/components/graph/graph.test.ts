@@ -687,7 +687,7 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
   otherContainer.remove();
 });
 
-it('silently drops a link whose target id has no matching node, without throwing, and still renders the valid links', async () => {
+it('renders a dangling-target link as a stub off the source instead of dropping it', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b
   el.links = [...links, { source: 'a', target: 'does-not-exist' }];
@@ -695,13 +695,13 @@ it('silently drops a link whose target id has no matching node, without throwing
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
     timeout: NODE_COUNT_TIMEOUT,
   });
-  // Give the simulation a moment to tick — a dangling link that slipped
-  // through would hand d3-force an undefined node and throw from onTick().
   await aTimeout(200);
 
-  const linkEls = el.shadowRoot!.querySelectorAll('[part="link"]');
-  expect(linkEls.length).to.equal(1);
-  expect((linkEls[0] as SVGLineElement).getAttribute('aria-label')).to.equal('Link from A to B');
+  const linkEls = [...el.shadowRoot!.querySelectorAll('[part="link"]')];
+  expect(linkEls).to.have.length(2); // the real a-b link, plus a dangling stub off 'a'
+  const stub = linkEls.find((l) => l.hasAttribute('data-dangling'))!;
+  expect(stub).to.exist;
+  expect(stub.getAttribute('aria-hidden')).to.equal('true');
 });
 
 it('silently drops a link whose source id has no matching node, without throwing, and still renders the valid links', async () => {

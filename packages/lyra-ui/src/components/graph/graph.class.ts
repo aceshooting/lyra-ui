@@ -15,6 +15,10 @@ export interface GraphNode {
   radius?: number;
   color?: string;
 }
+/** A link whose `target` id has no matching node renders as a short dashed stub off `source`'s
+ *  own position instead of being silently dropped -- e.g. for a wiki-style `[[link]]` reference to
+ *  a not-yet-created page. A link whose `source` id has no matching node is still dropped
+ *  entirely (there is no position to draw a stub from). */
 export interface GraphLink {
   source: string;
   target: string;
@@ -33,7 +37,13 @@ type SimulationLinkDatum<N extends SimulationNodeDatum> = import('d3-force').Sim
 interface SimNode extends GraphNode, SimulationNodeDatum {}
 interface SimLink extends SimulationLinkDatum<SimNode> {
   width?: number;
+  /** `true` when `target` couldn't be resolved to a real node -- `target` is then a synthetic,
+   *  non-simulated position (kept in sync with `source` every tick), rendered as a short dead-end
+   *  stub instead of a real edge, and excluded from `forceLink`'s own simulation input. */
+  dangling?: boolean;
 }
+
+const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -144,6 +154,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
+  private danglingLinks: SimLink[] = [];
   /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
   @state() private activeGraphItem = 0;
   @state() private graphLiveText = '';
@@ -350,6 +361,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    * this component's highest-frequency code path.
    */
   private onTick(): void {
+    for (const l of this.danglingLinks) {
+      const source = l.source as SimNode;
+      const target = l.target as SimNode;
+      target.x = (source.x ?? 0) + STUB_OFFSET_PX;
+      target.y = (source.y ?? 0) + STUB_OFFSET_PX;
+    }
     this.simNodes.forEach((n, i) => {
       const circle = this.nodeEls[i];
       if (circle) {
@@ -393,9 +410,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       return prev ? { ...prev, ...n } : { ...n };
     });
     const byId = new Map(nodes.map((n) => [n.id, n]));
-    const links: SimLink[] = this.links
-      .filter((l) => byId.has(l.source) && byId.has(l.target))
-      .map((l) => ({ ...l, source: byId.get(l.source)!, target: byId.get(l.target)! }));
+    const resolvedLinks: SimLink[] = [];
+    const danglingLinks: SimLink[] = [];
+    for (const l of this.links) {
+      const source = byId.get(l.source);
+      if (!source) continue; // no real position to draw a stub from -- stays dropped, unchanged
+      const target = byId.get(l.target);
+      if (target) {
+        resolvedLinks.push({ ...l, source, target });
+      } else {
+        danglingLinks.push({
+          ...l,
+          source,
+          target: { id: l.target, x: source.x, y: source.y } as SimNode,
+          dangling: true,
+        });
+      }
+    }
+    const links = resolvedLinks; // stubs never enter d3-force's own simulation input
+    this.danglingLinks = danglingLinks;
 
     // Give brand-new nodes (no carried-over position from prevById above) a
     // deterministic starting x/y, keyed by node id, instead of leaving them
@@ -560,6 +593,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 @click=${() => this.onLinkClick(l)}
                 @focus=${() => this.onGraphItemFocus(itemIndex)}
                 @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
+              ></line>`;
+            })}
+            ${this.danglingLinks.map((l) => {
+              const source = l.source as SimNode;
+              const target = l.target as SimNode;
+              return svg`<line
+                part="link"
+                data-dangling
+                aria-hidden="true"
+                x1=${source.x ?? 0}
+                y1=${source.y ?? 0}
+                x2=${target.x ?? 0}
+                y2=${target.y ?? 0}
               ></line>`;
             })}
             ${this.simNodes.map((n, nodeIndex) => {
