@@ -23,7 +23,9 @@ export interface RejectedFile {
  * accessible name always comes from `label`, so icon-only slot content
  * remains announced correctly.
  * @event lyra-files - `detail: { files, rejected }`, fired on drop and manual selection.
- * @csspart base, input, status
+ * @csspart base - The dropzone's root, clickable/focusable container.
+ * @csspart input - The visually-hidden native `<input type="file">`.
+ * @csspart status - The visually-hidden live region announcing drag accept/reject state.
  */
 export class LyraFileInput extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -96,8 +98,11 @@ export class LyraFileInput extends LyraElement {
   };
 
   private onDragOver = (e: DragEvent): void => {
-    if (this.disabled) return;
+    // Always suppress the browser's default drop action (e.g. navigating the
+    // whole page to the dropped file), even while disabled — only the
+    // subsequent classification/emit logic is gated on `disabled`.
     e.preventDefault();
+    if (this.disabled) return;
   };
 
   private onDragLeave = (e: DragEvent): void => {
@@ -108,8 +113,10 @@ export class LyraFileInput extends LyraElement {
   };
 
   private onDrop = (e: DragEvent): void => {
-    if (this.disabled) return;
+    // Same rationale as `onDragOver`: prevent the browser's default drop
+    // action unconditionally, before the `disabled` gate.
     e.preventDefault();
+    if (this.disabled) return;
     this.dragCounter = 0;
     this.dragState = 'default';
     const files = [...(e.dataTransfer?.files ?? [])];

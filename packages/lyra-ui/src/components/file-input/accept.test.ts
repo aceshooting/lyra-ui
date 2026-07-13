@@ -22,6 +22,11 @@ it('accepts anything when accept is empty', () => {
   expect(matchesAccept(file('a.exe', 'application/x-msdownload'), '')).to.be.true;
 });
 
+it('matches any file against the bare */* wildcard', () => {
+  expect(matchesAccept(file('a.png', 'image/png'), '*/*')).to.be.true;
+  expect(matchesAccept(file('a.csv', 'text/csv'), '*/*')).to.be.true;
+});
+
 it('does not throw and does not match an extension pattern when name is unavailable', () => {
   // Simulates a DataTransferItem cast as File (dragenter preview, pre-drop): has
   // `.type` but no `.name`.

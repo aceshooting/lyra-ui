@@ -153,6 +153,19 @@ it('does not accept drops while disabled', async () => {
   expect(fired).to.be.false;
 });
 
+it('still calls preventDefault on dragover/drop while disabled, so the browser does not navigate to the dropped file', async () => {
+  const el = (await fixture(html`<lyra-file-input disabled></lyra-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const dragOverEvent = new DragEvent('dragover', { bubbles: true, cancelable: true });
+  base.dispatchEvent(dragOverEvent);
+  expect(dragOverEvent.defaultPrevented).to.be.true;
+
+  const dropEvent = new DragEvent('drop', { bubbles: true, cancelable: true });
+  base.dispatchEvent(dropEvent);
+  expect(dropEvent.defaultPrevented).to.be.true;
+});
+
 it('keeps the "accept"/"reject" preview state while a drag moves across nested child elements', async () => {
   const el = (await fixture(
     html`<lyra-file-input><span>drop here</span></lyra-file-input>`,

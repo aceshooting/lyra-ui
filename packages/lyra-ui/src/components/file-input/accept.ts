@@ -28,6 +28,7 @@ export function matchesAccept(file: File, accept: string, assumeExtensionMatch =
 
   return parts.some((p) => {
     if (p.startsWith('.')) return name === undefined ? assumeExtensionMatch : name.endsWith(p);
+    if (p === '*/*') return true;
     if (p.endsWith('/*')) return type.startsWith(p.slice(0, -1));
     return type === p;
   });
