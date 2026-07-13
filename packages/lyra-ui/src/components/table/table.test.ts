@@ -635,6 +635,53 @@ it('moves the roving tabindex between header cells with ArrowRight/ArrowLeft and
   expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
 });
 
+it('swaps ArrowLeft/ArrowRight header navigation under dir="rtl", matching a native table\'s own mirrored column order', async () => {
+  const el = (await fixture(
+    html`<lyra-table dir="rtl"></lyra-table>`,
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const [nameHeader, scoreHeader] = [
+    ...el.shadowRoot!.querySelectorAll('[part="header-cell"]'),
+  ] as HTMLElement[];
+
+  // Under RTL, ArrowRight moves toward the *start* of DOM order (the visual
+  // right edge, since the table mirrors columns) -- the opposite of LTR.
+  nameHeader.focus();
+  nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+
+  nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(scoreHeader);
+
+  scoreHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(nameHeader);
+});
+
+it('does not swap ArrowUp/ArrowDown row navigation under dir="rtl" (direction only affects the horizontal column axis)', async () => {
+  const el = (await fixture(
+    html`<lyra-table dir="rtl"></lyra-table>`,
+  )) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+
+  firstRow.focus();
+  firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(secondRow);
+
+  secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement).to.equal(firstRow);
+});
+
 it('moves the roving tabindex between rows with ArrowDown/ArrowUp, and ArrowUp from the first row returns focus to the header', async () => {
   const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
   el.columns = columns;

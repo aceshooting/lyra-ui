@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { isRtl } from '../../internal/rtl.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../internal/icons.js';
 import '../empty/empty.class.js';
@@ -488,7 +489,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const headers = this.visibleHeaders();
     const index = headers.indexOf(th);
     if (index < 0) return;
-    const rtl = getComputedStyle(this).direction === 'rtl';
+    // A native <table> already mirrors column visual order under RTL on its
+    // own (no logical-property help needed, unlike flex/grid layouts), so
+    // ArrowRight/ArrowLeft's *meaning* has to flip here to keep moving in the
+    // visual direction the key name promises -- same contract as this repo's
+    // other isRtl() callers (see internal/rtl.ts).
+    const rtl = isRtl(this);
     switch (e.key) {
       case 'ArrowLeft':
         e.preventDefault();
