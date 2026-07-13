@@ -1056,3 +1056,173 @@ it('recovers loading=false when source() throws synchronously instead of returni
   await aTimeout(250);
   expect((el as unknown as { loading: boolean }).loading).to.be.false;
 });
+
+it('resolves a programmatically-set value to its label from asyncRows, warming the fetch before the listbox ever opens (single-select)', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.source = async () => [
+    { value: 'a', label: 'Apple' },
+    { value: 'b', label: 'Banana' },
+  ];
+  // Set the value first, then let the element render -- this must warm
+  // `asyncRows` on its own, without the listbox ever having been opened.
+  el.value = 'b';
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(el.open).to.be.false;
+  expect(input.value).to.equal('Banana');
+});
+
+it('resolves a programmatically-set value to its label from asyncRows in multi-select tag chips', async () => {
+  const el = (await fixture(html`<lyra-combobox multiple></lyra-combobox>`)) as LyraCombobox;
+  el.source = async () => [
+    { value: 'a', label: 'Apple' },
+    { value: 'b', label: 'Banana' },
+  ];
+  el.value = ['a', 'b'];
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  const tagLabels = Array.from(el.shadowRoot!.querySelectorAll('[part="tag"]')).map((t) => t.textContent?.trim());
+  expect(tagLabels).to.deep.equal(['Apple', 'Banana']);
+});
+
+it('resets an abandoned single-select filter query on close (Escape) so a reopen does not show stale text', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  const input = await typeQuery(el, 'ban');
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(1);
+
+  // Dismiss via Escape without picking a row.
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+
+  el.open = true;
+  await el.updateComplete;
+  const reopenedInput = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(reopenedInput.value).to.equal('');
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(3);
+});
+
+it('resets an abandoned single-select filter query on close (blur) so a reopen does not show stale text', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  const input = await typeQuery(el, 'ban');
+  input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+
+  el.open = true;
+  await el.updateComplete;
+  const reopenedInput = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(reopenedInput.value).to.equal('');
+});
+
+it('keeps a preserved out-of-cap selection in its own group instead of duplicating the group header at the tail', async () => {
+  const el = (await fixture(html`<lyra-combobox multiple max-render="4"></lyra-combobox>`)) as LyraCombobox;
+  for (const v of ['a0', 'a1', 'a2', 'a3', 'a4', 'a5']) {
+    const opt = document.createElement('lyra-option');
+    opt.value = v;
+    opt.setAttribute('group', 'Fruits');
+    opt.textContent = v;
+    el.appendChild(opt);
+  }
+  for (const v of ['b0', 'b1', 'b2']) {
+    const opt = document.createElement('lyra-option');
+    opt.value = v;
+    opt.setAttribute('group', 'Vegetables');
+    opt.textContent = v;
+    el.appendChild(opt);
+  }
+  await el.updateComplete;
+
+  // 'b0' precedes 'a4' in `_selected` even though 'a4' comes first in
+  // document order -- the old append-at-the-tail logic rendered them in
+  // this (wrong) relative order, splitting the "Fruits" group into two
+  // blocks separated by "Vegetables" and duplicating its header.
+  el.value = ['b0', 'a4'];
+  el.open = true;
+  await el.updateComplete;
+
+  const groupLabels = Array.from(el.shadowRoot!.querySelectorAll('.group-label')).map((n) => n.textContent);
+  expect(groupLabels).to.deep.equal(['Fruits', 'Vegetables']);
+});
+
+it('uses a custom loadingText instead of the hardcoded default while a source call is pending', async () => {
+  const el = (await fixture(html`<lyra-combobox loading-text="Fetching…"></lyra-combobox>`)) as LyraCombobox;
+  el.source = () => new Promise(() => {});
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('.loading')!.textContent).to.equal('Fetching…');
+});
+
+it('uses a custom overflowText with a {n} token substitution instead of the hardcoded default', async () => {
+  const el = (await fixture(
+    html`<lyra-combobox max-render="3" overflow-text="Only 3 shown, {n} hidden"></lyra-combobox>`,
+  )) as LyraCombobox;
+  for (let i = 0; i < 10; i++) {
+    const opt = document.createElement('lyra-option');
+    opt.value = `${i}`;
+    opt.textContent = `Item ${i}`;
+    el.appendChild(opt);
+  }
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.equal(
+    'Only 3 shown, 7 hidden',
+  );
+});
+
+it('jumps to the first row on Home and the last navigable row on End', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  el.open = true;
+  await el.updateComplete;
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  await el.updateComplete;
+  let activeRow = el.shadowRoot!.getElementById(input.getAttribute('aria-activedescendant')!);
+  expect(activeRow?.textContent).to.contain('Apple');
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  activeRow = el.shadowRoot!.getElementById(input.getAttribute('aria-activedescendant')!);
+  expect(activeRow?.textContent).to.contain('Cherry');
+});
+
+it('skips a trailing disabled option so End lands on the last navigable row', async () => {
+  const el = (await fixture(html`
+    <lyra-combobox>
+      <lyra-option value="a">Apple</lyra-option>
+      <lyra-option value="b">Banana</lyra-option>
+      <lyra-option value="c" disabled>Cherry</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  el.open = true;
+  await el.updateComplete;
+
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  const activeRow = el.shadowRoot!.getElementById(input.getAttribute('aria-activedescendant')!);
+  expect(activeRow?.textContent).to.contain('Banana');
+});

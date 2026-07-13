@@ -78,6 +78,10 @@ export class LyraCombobox extends LyraElement {
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
   @property({ attribute: 'empty-text' }) emptyText = 'No results';
+  /** Status copy shown in the listbox while a `source` fetch is in flight. */
+  @property({ attribute: 'loading-text' }) loadingText = 'Loading…';
+  /** Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count. */
+  @property({ attribute: 'overflow-text' }) overflowText = '+{n} more — refine your search';
   @property({ attribute: false }) filter: OptionFilter | null = null;
   @property({ attribute: false }) source: ComboboxSource | null = null;
   @property({ attribute: 'max-render', type: Number }) maxRender = 200;
@@ -102,6 +106,11 @@ export class LyraCombobox extends LyraElement {
   @state() private asyncRows: ComboboxSourceRow[] = [];
   private sourceTimer?: ReturnType<typeof setTimeout>;
   private sourceToken = 0;
+  // Guards the proactive `asyncRows` warm-up in `willUpdate()` below so it
+  // fires at most once per mount instead of re-running (and endlessly
+  // resetting the debounce timer) on every subsequent render while the fetch
+  // is still in flight.
+  private _sourceWarmed = false;
   private _selectedLabelCache = new Map<string, string>();
   // Rebuilt once per render (in render(), before renderRows()) from the
   // currently-visible row set -- backs the delegated listbox click/mousedown
@@ -190,6 +199,16 @@ export class LyraCombobox extends LyraElement {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+    }
+    // In source (async) mode, `labelFor()` can only resolve a programmatically
+    // -set value's label from `asyncRows` -- and nothing normally populates
+    // `asyncRows` until the listbox is actually opened. Fire the fetch once,
+    // independent of `open`, so the closed input / multi-select tag chips can
+    // already show the real label the very first time they render (the
+    // common "edit an existing record" case) instead of the raw value string.
+    if (!this._sourceWarmed && this.source && this._selected.length && this.asyncRows.length === 0) {
+      this._sourceWarmed = true;
+      this.runSource('');
     }
   }
 
@@ -396,7 +415,19 @@ export class LyraCombobox extends LyraElement {
   }
 
   private labelFor(value: string): string {
-    return this._selectedLabelCache.get(value) ?? this.options.find((o) => o.value === value)?.label ?? value;
+    // Checked in order: an explicit pick's own label (works even after the
+    // source rows backing it have since changed), a slotted `<lyra-option>`
+    // (local mode), then the last-fetched async row set (source mode) -- a
+    // value set programmatically (e.g. `el.value = 'b'` before the listbox
+    // has ever been opened) has no chance to have populated the first two,
+    // so without this last fallback it would render as the raw value string
+    // instead of its label.
+    return (
+      this._selectedLabelCache.get(value) ??
+      this.options.find((o) => o.value === value)?.label ??
+      this.asyncRows.find((r) => r.value === value)?.label ??
+      value
+    );
   }
 
   /** The current row set in a source-agnostic shape, before capping. */
@@ -416,13 +447,26 @@ export class LyraCombobox extends LyraElement {
   private get renderedRows(): { rows: ComboboxSourceRow[]; overflow: number } {
     const all = this.effectiveRows;
     if (all.length <= this.maxRender) return { rows: all, overflow: 0 };
+    const originalIndex = new Map(all.map((r, i) => [r, i]));
     const capped = all.slice(0, this.maxRender);
     const cappedValues = new Set(capped.map((r) => r.value));
+    let appendedOutOfCap = false;
     for (const v of this._selected) {
       if (!cappedValues.has(v)) {
         const selectedRow = all.find((r) => r.value === v);
-        if (selectedRow) capped.push(selectedRow);
+        if (selectedRow) {
+          capped.push(selectedRow);
+          appendedOutOfCap = true;
+        }
       }
+    }
+    if (appendedOutOfCap) {
+      // A preserved out-of-cap selection was just tacked onto the very end,
+      // regardless of its own `group` -- stable-sort back by each row's
+      // original position so it lands among its own group's other rows
+      // instead of forcing renderRows() to emit that group's label a second
+      // time after whatever group happens to trail the cap.
+      capped.sort((a, b) => originalIndex.get(a)! - originalIndex.get(b)!);
     }
     return { rows: capped, overflow: all.length - capped.length };
   }
@@ -451,6 +495,14 @@ export class LyraCombobox extends LyraElement {
     if (!this.open) return;
     this.open = false;
     this.activeIndex = -1;
+    // Single-select mode only shows `query` while `open` (see `displayValue`
+    // above) -- but dismissing without picking a row (blur, Escape, or an
+    // outside click) previously left an abandoned filter string sitting in
+    // `query` forever, so the *next* reopen would reappear with stale text
+    // and re-filter the list from it. Multiple mode is unaffected: its input
+    // always shows `query` regardless of `open`, by design (a persistent
+    // search box next to the tags).
+    if (!this.multiple) this.query = '';
   }
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) this.hide();
@@ -764,12 +816,12 @@ export class LyraCombobox extends LyraElement {
           @click=${this.onListboxClick}
         >
           ${this.loading
-            ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">Loading…</div>`
+            ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">${this.loadingText}</div>`
             : rows.length === 0
               ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.emptyText}</div>`
               : html`${this.renderRows(rows, activeId)}
                   ${overflow > 0
-                    ? html`<div part="option-overflow">+${overflow} more — refine your search</div>`
+                    ? html`<div part="option-overflow">${this.overflowText.replace('{n}', String(overflow))}</div>`
                     : ''}`}
         </div>
         <div id="combobox-error" part="error" ?hidden=${!hasError}>
