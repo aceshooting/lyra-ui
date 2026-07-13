@@ -247,6 +247,17 @@ it('shows a synthetic suggestion for a stale value in free-text mode', async () 
 
 // -- Form participation -----------------------------------------------------
 
+it('is present in FormData as "" when never touched, like a native <input>', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lyra-model-select name="model" .catalog=${CATALOG}></lyra-model-select>
+    </form>
+  `)) as HTMLFormElement;
+  const fd = new FormData(form);
+  expect(fd.has('model')).to.be.true;
+  expect(fd.get('model')).to.equal('');
+});
+
 it('participates in a form: value reflects in FormData on submit', async () => {
   const form = (await fixture(html`
     <form>

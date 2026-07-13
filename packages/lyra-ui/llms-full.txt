@@ -3718,7 +3718,8 @@ emitting `lyra-change`.
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
 - `value: string` — getter/setter (hand-rolled, not the `FormAssociated` mixin); the current model id,
-  `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously.
+  `''` when nothing is selected. Writing it calls `internals.setFormValue()` synchronously. A named,
+  untouched model-select contributes `''` to `FormData` instead of omitting its key.
 
 **Mode switching:** `closedMode` (private) is `true` whenever `normalizedCatalog.length > 0 &&
 !allowCustom` — a non-empty `catalog` with `allowCustom` left `false` renders the closed dropdown

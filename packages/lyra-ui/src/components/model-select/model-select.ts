@@ -105,6 +105,10 @@ export class LyraModelSelect extends LyraElement {
     super();
     this.internals = this.attachInternals();
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
+    // Native <input> always has a submission value ("") from construction —
+    // without this, a control whose `value` is never touched is entirely
+    // absent from FormData instead of present as "" (see form-associated.ts).
+    this.internals.setFormValue('');
   }
 
   get form(): HTMLFormElement | null {
