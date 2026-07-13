@@ -44,16 +44,24 @@ export class LyraSparkline extends LyraElement {
   @property({ type: Number }) max?: number;
 
   private points(): ReadonlyArray<readonly [number, number]> {
+    // Non-finite samples (NaN/undefined/null from upstream computed data)
+    // can't be plotted or compared -- drop them up front so one bad point
+    // can't inject a literal "NaN" into the path `d` string and truncate
+    // every point that follows it.
+    const raw = this.values.filter((n): n is number => Number.isFinite(n));
     // Auto min/max is scanned from the full, pre-decimation `values` -- doing
     // this after decimating would silently narrow the scale to whatever the
     // sampled subset happens to contain, which can clip or misproportion a
-    // real extreme value that decimation happened to drop.
-    const raw = this.values;
+    // real extreme value that decimation happened to drop. Skip the scan
+    // entirely when both bounds are already given explicitly -- its result
+    // would just be discarded.
     let autoLo = raw[0];
     let autoHi = raw[0];
-    for (const n of raw) {
-      if (n < autoLo) autoLo = n;
-      if (n > autoHi) autoHi = n;
+    if (this.min === undefined || this.max === undefined) {
+      for (const n of raw) {
+        if (n < autoLo) autoLo = n;
+        if (n > autoHi) autoHi = n;
+      }
     }
     const lo = this.min ?? autoLo;
     const hi = this.max ?? autoHi;
@@ -69,9 +77,17 @@ export class LyraSparkline extends LyraElement {
   protected willUpdate(): void {
     const v = this.values;
     this.setAttribute('role', 'img');
+    const last = v.at(-1);
+    // Real-world computed data (ratios, averages, percentages) carries
+    // floating-point noise that isn't meaningful to announce -- round it for
+    // the label the same way a human-facing value would be formatted.
+    const formattedLast =
+      typeof last === 'number' && Number.isFinite(last)
+        ? last.toLocaleString(undefined, { maximumFractionDigits: 2 })
+        : last;
     this.setAttribute(
       'aria-label',
-      v.length ? `Trend of ${v.length} values, last ${v.at(-1)}` : 'No data',
+      v.length ? `Trend of ${v.length} values, last ${formattedLast}` : 'No data',
     );
   }
 
@@ -92,7 +108,11 @@ export class LyraSparkline extends LyraElement {
       const slot = VIEW / pts.length;
       const barWidth = Math.min(4, Math.max(1, slot * 0.7));
       const bars = pts.map(([x, y]) => {
-        const barY = Math.min(y, VIEW);
+        // Clamp symmetrically: a value below an explicit `min` pushes `y`
+        // above VIEW, and a value above an explicit `max` pushes it below 0 --
+        // only clamping one side left the other free to draw a negative-y,
+        // oversized rect that bled outside the sparkline's box.
+        const barY = Math.min(VIEW, Math.max(0, y));
         return svg`<rect part="bar" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${VIEW - barY}"></rect>`;
       });
       return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
@@ -100,10 +120,15 @@ export class LyraSparkline extends LyraElement {
       </svg>`;
     }
 
+    // pts can end up empty even though `values` itself isn't -- e.g. every
+    // entry was non-finite and got filtered out -- so the single-point
+    // fallback below can't assume pts[0] exists.
     const d =
       pts.length > 1
         ? pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ')
-        : `M${pts[0][0]},${pts[0][1]} L${pts[0][0]},${pts[0][1]}`;
+        : pts.length === 1
+          ? `M${pts[0][0]},${pts[0][1]} L${pts[0][0]},${pts[0][1]}`
+          : '';
 
     return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
       ${this.type === 'area' ? svg`<path part="area" d="${d} L${VIEW},${VIEW} L0,${VIEW} Z"></path>` : ''}

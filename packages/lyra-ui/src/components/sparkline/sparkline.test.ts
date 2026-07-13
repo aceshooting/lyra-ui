@@ -67,6 +67,40 @@ it('clamps bar height instead of going negative when a value is below an explici
   }
 });
 
+it('clamps bar y/height instead of overflowing when a value is above an explicit max', async () => {
+  const el = (await fixture(
+    `<lyra-sparkline type="bar" max="3"></lyra-sparkline>`,
+  )) as LyraSparkline;
+  el.values = [1, 5, 8];
+  await el.updateComplete;
+  const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
+  expect(rects.length).to.equal(3);
+  for (const rect of rects) {
+    expect(Number(rect.getAttribute('y'))).to.be.at.least(0);
+    expect(Number(rect.getAttribute('height'))).to.be.at.most(100);
+  }
+});
+
+it('skips non-finite values instead of letting one bad sample truncate the path', async () => {
+  const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
+  el.values = [1, 3, NaN, 2, undefined as unknown as number, 5];
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]')!;
+  const d = path.getAttribute('d')!;
+  expect(d).not.to.contain('NaN');
+  expect(d).not.to.contain('undefined');
+  // 1, 3, 2, 5 survive (NaN and undefined dropped) -> one M + three L commands.
+  const commands = d.match(/[ML][^ML]*/g)!;
+  expect(commands.length).to.equal(4);
+});
+
+it('formats the last value in aria-label instead of announcing raw float noise', async () => {
+  const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
+  el.values = [1, 2, 3.456789123];
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Trend of 3 values, last 3.46');
+});
+
 it('does not throw on very large data arrays', async () => {
   const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
   el.values = Array.from({ length: 150000 }, (_, i) => i);
