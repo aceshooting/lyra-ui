@@ -18,6 +18,7 @@
     "docs:build": "pnpm manifest:check && storybook build -o storybook-static",
     "storybook:check-theme": "node scripts/check-storybook-theme.mjs",
     "storybook:check": "node scripts/check-storybook.mjs",
+    "readme:check": "node scripts/check-readme-freshness.mjs",
     "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
     "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
     "storybook": "storybook dev -p 6006",
