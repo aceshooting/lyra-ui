@@ -2,6 +2,23 @@
   "name": "@aceshooting/lyra-ui",
   "version": "2.0.0",
   "description": "Free, clean-room Lit web components — a companion to Web Awesome.",
+  "keywords": [
+    "web-components",
+    "custom-elements",
+    "lit",
+    "lit-element",
+    "design-system",
+    "component-library",
+    "ui-library",
+    "dashboard",
+    "data-table",
+    "charts",
+    "data-visualization",
+    "chat-ui",
+    "agent-ui",
+    "web-awesome",
+    "storybook"
+  ],
   "license": "MIT",
   "type": "module",
   "author": {

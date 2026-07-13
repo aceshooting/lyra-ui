@@ -1,0 +1,29 @@
+<!--
+  Injected into the manager's <head>, after the templated <title> (see template.ejs in the
+  installed `storybook` package) — auto-picked up by Storybook's `managerHead` preset purely by
+  existing at this path (core-server/presets/common-preset.js reads `<configDir>/manager-head.html`
+  verbatim, no main.js wiring needed). The actual page <title> is set via `title` in main.js, not
+  here — see the comment there for why a second <title> element in this file wouldn't work.
+-->
+<meta
+  name="description"
+  content="Lyra UI is a free, open-source, clean-room Lit web component library — a companion to Web Awesome. Token-compatible, MIT-licensed alternatives to Web Awesome's Pro form controls and chart family, plus dozens of original dashboard, chat/agent UI, and data-visualization components with no Web Awesome equivalent at all."
+/>
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://aceshooting.github.io/lyra-ui/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Lyra UI" />
+<meta property="og:url" content="https://aceshooting.github.io/lyra-ui/" />
+<meta property="og:title" content="Lyra UI — free, open Web Awesome companion component library" />
+<meta
+  property="og:description"
+  content="Free, open-source, clean-room Lit web components — token-compatible with Web Awesome. Live examples, source, and API reference for every component."
+/>
+
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Lyra UI — free, open Web Awesome companion component library" />
+<meta
+  name="twitter:description"
+  content="Free, open-source, clean-room Lit web components — token-compatible with Web Awesome. Live examples, source, and API reference for every component."
+/>

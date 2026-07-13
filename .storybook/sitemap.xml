@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Best-effort sitemap: the docs home page plus every component/Introduction "docs" entry's
+  ?path= URL. Storybook is a client-routed SPA (one index.html for every entry — no separate
+  static HTML per story), so these query-string URLs all resolve to the same document; they're
+  still valid, bookmarkable, distinct crawl targets and are the convention other deployed
+  Storybook sites use in their own sitemaps.
+
+  Generated from a real build's storybook-static/index.json (`entries[id].type === 'docs'`), not
+  hand-derived from Storybook's title -> id sanitize() regex, so it can't drift from the actual
+  slug algorithm. Regenerate after adding/renaming/removing a component or its `title:` by running
+  `pnpm docs:build` once and re-running the id extraction (see the SEO/discoverability task notes
+  for the one-off script) — this file does not regenerate itself as part of the build.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://aceshooting.github.io/lyra-ui/</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/apprail--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/attachmentchip--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/attachmenttrigger--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-bar--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-boxplot--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-bubble--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-chart--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-doughnut--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-histogram--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-line--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-litechart--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-pie--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-polararea--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-radar--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/charts-scatter--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/chatcomposer--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/chatmessage--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/checkbox--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/chip--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/citationbadge--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/codeblock--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/combobox--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/contextmeter--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/conversationitem--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/datepicker-inline--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/datepicker-withinput--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/dialog--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/dockpanel--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/documentpreview--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/empty--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/exportbutton--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/fileinput--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/flag--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/gauge--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/generationstatus--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/graph--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/heatmap--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/introduction--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/jsonviewer--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/kbd--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/liveregion--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/map--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/markdown--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/mediacard--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/mentionpopover--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/menu--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/modelselect--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/modelsettingspanel--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/playback--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/responsivepanel--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/resultcard--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/select--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/skeleton--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/slider--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/sourcecard--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/sourcelist--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/sparkline--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/split--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/stat--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/streamingtext--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/streamstatus--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/switch--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/table--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/tabs--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/thinkingpanel--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/timerange--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toast--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toolapprovaldialog--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toolcallchip--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toolparamform--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toolresultdialog--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toolresultview--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/toolselectdialog--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/tree--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/typingindicator--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/virtuallist--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/widget--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/wordcloud--docs</loc></url>
+</urlset>
