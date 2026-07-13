@@ -119,6 +119,11 @@ export type LyraMessageKey =
   | 'generationStatusToken'
   | 'generationStatusTokens'
   | 'graphDataList'
+  | 'mediaCardUntitledFile'
+  | 'mediaCardOpenName'
+  | 'mediaCardOpenAttachment'
+  | 'mediaCardImageAttachment'
+  | 'mediaCardVideoAttachment'
   | 'kbdEscapeVisual'
   | 'kbdEscapeWord'
   | 'kbdTabWord'
@@ -264,6 +269,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
   graphDataList: 'Graph data',
+  mediaCardUntitledFile: 'Untitled file',
+  mediaCardOpenName: 'Open {name}',
+  mediaCardOpenAttachment: 'Open {kind} attachment',
+  mediaCardImageAttachment: 'Image attachment',
+  mediaCardVideoAttachment: 'Video attachment',
   kbdEscapeVisual: 'Esc',
   kbdEscapeWord: 'Escape',
   kbdTabWord: 'Tab',

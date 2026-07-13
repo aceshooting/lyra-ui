@@ -15,6 +15,10 @@ export interface MediaCardOpenDetail {
   filename: string;
 }
 
+export interface LyraMediaCardEventMap {
+  'lyra-open': CustomEvent<MediaCardOpenDetail>;
+}
+
 /** Validates `url` for an `<img>`/`<video>` source. Kept as a public wrapper
  * so existing imports and generated API metadata remain stable. */
 export function safeMediaSrc(url: string): string | null {
@@ -133,7 +137,7 @@ function fileGlyph(): SVGTemplateResult {
  * @csspart open-button - The explicit "open" affordance rendered next to
  * `[part="media"]` for `kind="video"` only — see the class doc.
  */
-export class LyraMediaCard extends LyraElement {
+export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** The media URL. Always re-validated against a safe-scheme allowlist
@@ -166,22 +170,24 @@ export class LyraMediaCard extends LyraElement {
   }
 
   private get displayFilename(): string {
-    return this.filename || 'Untitled file';
+    return this.filename || this.localize('mediaCardUntitledFile', 'Untitled file');
   }
 
   /** Accessible name for the card's own actionable element (`base` or, for
    *  video, `open-button`) — always phrased as the action it performs. */
   private get accessibleLabel(): string {
     const name = this.filename || this.alt;
-    return name ? `Open ${name}` : `Open ${this.resolvedKind} attachment`;
+    return name
+      ? this.localize('mediaCardOpenName', 'Open {name}', { name })
+      : this.localize('mediaCardOpenAttachment', 'Open {kind} attachment', { kind: this.resolvedKind });
   }
 
   private get imgAlt(): string {
-    return this.alt || this.filename || 'Image attachment';
+    return this.alt || this.filename || this.localize('mediaCardImageAttachment', 'Image attachment');
   }
 
   private get videoLabel(): string {
-    return this.alt || this.filename || 'Video attachment';
+    return this.alt || this.filename || this.localize('mediaCardVideoAttachment', 'Video attachment');
   }
 
   /** Per-instance override for `--lyra-media-card-max-height`, applied

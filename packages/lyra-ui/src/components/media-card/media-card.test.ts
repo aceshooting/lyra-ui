@@ -456,6 +456,84 @@ describe('max-height', () => {
   });
 });
 
+describe('string localization', () => {
+  it('defaults every built-in fallback string to English', async () => {
+    const el = (await fixture(html`<lyra-media-card></lyra-media-card>`)) as LyraMediaCard;
+    expect(el.shadowRoot!.querySelector('[part="filename"]')!.textContent).to.equal('Untitled file');
+
+    // The generic "Open {kind} attachment" branch of accessibleLabel only
+    // renders as an aria-label on an interactive element -- the plain inert
+    // <span> fallback (no safe href, no name) has no accessible action at
+    // all -- so exercise it via the <a> case (a safe href, no filename/alt).
+    const genericOpen = (await fixture(
+      html`<lyra-media-card src="https://example.test/report.pdf" kind="file"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(genericOpen.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Open file attachment',
+    );
+
+    const image = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.png" kind="image"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect((image.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('Image attachment');
+    expect(image.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Open image attachment',
+    );
+
+    const video = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.mp4" kind="video"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(video.shadowRoot!.querySelector('video')!.getAttribute('aria-label')).to.equal('Video attachment');
+    expect(video.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
+      'Open video attachment',
+    );
+
+    const named = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.png" kind="image" filename="a.png"></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Open a.png');
+  });
+
+  it('honors a strings override for every mediaCard* key', async () => {
+    const overrides = {
+      mediaCardUntitledFile: 'Fichier sans titre',
+      mediaCardOpenName: 'Ouvrir {name}',
+      mediaCardOpenAttachment: 'Ouvrir la pièce jointe {kind}',
+      mediaCardImageAttachment: 'Pièce jointe image',
+      mediaCardVideoAttachment: 'Pièce jointe vidéo',
+    };
+
+    const untitled = (await fixture(
+      html`<lyra-media-card kind="file" .strings=${overrides}></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(untitled.shadowRoot!.querySelector('[part="filename"]')!.textContent).to.equal('Fichier sans titre');
+
+    const openFallback = (await fixture(
+      html`<lyra-media-card src="https://example.test/report.pdf" kind="file" .strings=${overrides}></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(openFallback.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Ouvrir la pièce jointe file',
+    );
+
+    const openNamed = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.png" kind="image" filename="a.png" .strings=${overrides}></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(openNamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Ouvrir a.png',
+    );
+
+    const image = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.png" kind="image" .strings=${overrides}></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect((image.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('Pièce jointe image');
+
+    const video = (await fixture(
+      html`<lyra-media-card src="https://example.test/a.mp4" kind="video" .strings=${overrides}></lyra-media-card>`,
+    )) as LyraMediaCard;
+    expect(video.shadowRoot!.querySelector('video')!.getAttribute('aria-label')).to.equal('Pièce jointe vidéo');
+  });
+});
+
 describe('accessibility', () => {
   it('is accessible in the default (empty) state', async () => {
     const el = (await fixture(html`<lyra-media-card></lyra-media-card>`)) as LyraMediaCard;
