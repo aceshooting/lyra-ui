@@ -46,7 +46,11 @@ export const styles = css`
       background-color var(--lyra-transition-fast),
       color var(--lyra-transition-fast);
   }
-  .trigger-button:hover:not(:disabled) {
+  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
+     -- (0,1,0) total, functionally identical selection to \`.trigger-button:hover:not(:disabled)\`
+     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
+     \`::part(trigger):hover\` override ((0,1,1)) without that consumer needing !important. */
+  :where(.trigger-button):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lyra-color-text) 8%, transparent);
     color: var(--lyra-color-text);
   }

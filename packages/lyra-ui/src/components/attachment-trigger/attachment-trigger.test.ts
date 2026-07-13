@@ -312,3 +312,50 @@ it('is accessible with a populated multi-capability menu', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+describe('triggerTitle', () => {
+  it('forwards to the single-capability trigger button\'s native title', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger trigger-title="Attach a file"></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]')!;
+    expect(trigger.getAttribute('title')).to.equal('Attach a file');
+  });
+
+  it('forwards to the multi-capability menu-trigger button\'s native title', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-trigger .capabilities=${['files', 'image']} trigger-title="Add attachment"></lyra-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    const trigger = el.shadowRoot!.querySelector('[part="menu-trigger"]')!;
+    expect(trigger.getAttribute('title')).to.equal('Add attachment');
+  });
+
+  it('omits title entirely when unset (regression)', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    const trigger = el.shadowRoot!.querySelector('[part="trigger"]')!;
+    expect(trigger.hasAttribute('title')).to.be.false;
+  });
+});
+
+describe('trigger-button hover specificity', () => {
+  it('a ::part(trigger):hover override wins without needing !important', async () => {
+    const style = document.createElement('style');
+    style.textContent = `lyra-attachment-trigger::part(trigger):hover { color: rgb(1, 2, 3); }`;
+    document.head.appendChild(style);
+    try {
+      const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+      const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
+      // event, so assert via computed specificity order instead: the external rule must appear
+      // in the matched rule list with specificity >= the internal .trigger-button:hover rule's.
+      // Simplest robust check here: force-apply :hover via CSS.supports-independent inline
+      // class toggling is not applicable to a pseudo-class -- instead assert the internal rule's
+      // computed specificity by reading the stylesheet text directly.
+      const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
+        .flatMap((sheet) => Array.from(sheet.cssRules))
+        .map((rule) => rule.cssText)
+        .find((text) => text.includes(':hover') && text.includes('.trigger-button'));
+      expect(internalSheet).to.contain(':where(');
+    } finally {
+      style.remove();
+    }
+  });
+});

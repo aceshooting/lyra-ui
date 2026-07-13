@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './dialog.js';
 import type { LyraDialog } from './dialog.js';
 import { styles } from './dialog.styles.js';
@@ -505,6 +505,70 @@ describe('stacked dialogs', () => {
     bottom.close('api');
     await top.updateComplete;
     await bottom.updateComplete;
+  });
+});
+
+describe('noLightDismiss', () => {
+  it('a backdrop click does nothing when true', async () => {
+    const el = (await fixture(html`<lyra-dialog no-light-dismiss open>Body</lyra-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+    backdrop.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
+
+  it('a backdrop click still dismisses when false (default, regression)', async () => {
+    const el = (await fixture(html`<lyra-dialog open>Body</lyra-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+    backdrop.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+});
+
+describe('close() respects preventDefault()', () => {
+  it('a lyra-dialog-close listener calling preventDefault() stops the dialog from closing, for every close path', async () => {
+    const el = (await fixture(html`<lyra-dialog open closable>Body</lyra-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    el.addEventListener('lyra-dialog-close', (e) => e.preventDefault());
+
+    // Escape.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    // Close button.
+    (el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement).click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    // Backdrop.
+    (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    // A consumer's own close() call.
+    el.close('api');
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
+
+  it('close() still closes normally when nothing calls preventDefault() (regression)', async () => {
+    const el = (await fixture(html`<lyra-dialog open>Body</lyra-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    el.close('api');
+    expect(el.open).to.be.false;
+  });
+
+  it('lyra-dialog-close is cancelable', async () => {
+    const el = (await fixture(html`<lyra-dialog open>Body</lyra-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lyra-dialog-close');
+    el.close('api');
+    const event = await listener;
+    expect((event as Event).cancelable).to.be.true;
   });
 });
 

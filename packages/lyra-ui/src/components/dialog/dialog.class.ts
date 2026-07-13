@@ -74,10 +74,12 @@ export type DialogCloseReason =
  * @customElement lyra-dialog
  * @slot - The dialog body.
  * @slot footer - Action buttons, rendered in a bottom row.
- * @event lyra-dialog-close - `detail: DialogCloseReason`. Fired whenever the
- *   dialog is dismissed via Escape, a backdrop click, the built-in close
- *   button (`closable`), a `close()` call, or (with reason `'unmount'`)
- *   removal from the DOM by anything else while still open.
+ * @event lyra-dialog-close - `detail: DialogCloseReason`. Cancelable — a listener calling
+ *   `preventDefault()` stops the dialog from closing, for every dismissal path (Escape, backdrop,
+ *   the built-in close button, or a consumer's own `close()` call). Fired whenever the dialog is
+ *   dismissed via Escape, a backdrop click, the built-in close button (`closable`), a `close()`
+ *   call, or (with reason `'unmount'`, not cancelable in practice since the element is already
+ *   being removed) removal from the DOM by anything else while still open.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open). Its
  *   max-inline-size is controlled by the `--lyra-dialog-max-width` custom
@@ -113,6 +115,12 @@ export class LyraDialog extends LyraElement {
    *  `close()` path Escape/backdrop-dismiss already use, with reason
    *  `'close-button'`. */
   @property({ type: Boolean, attribute: 'closable' }) closable = false;
+
+  /** Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s
+   *  `light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since
+   *  backdrop-dismiss has always been this component's default behavior. `false` (the default)
+   *  reproduces today's exact backdrop-dismiss behavior. */
+  @property({ type: Boolean, attribute: 'no-light-dismiss' }) noLightDismiss = false;
 
   @state() private hasFooterSlot = false;
   @state() private headingText?: string;
@@ -220,11 +228,13 @@ export class LyraDialog extends LyraElement {
    */
   close(reason: DialogCloseReason = 'api'): void {
     if (!this.open) return;
+    const event = this.emit<DialogCloseReason>('lyra-dialog-close', reason, { cancelable: true });
+    if (event.defaultPrevented) return;
     this.open = false;
-    this.emit<DialogCloseReason>('lyra-dialog-close', reason);
   }
 
   private onBackdropClick = (): void => {
+    if (this.noLightDismiss) return;
     this.overlay?.dismissBackdrop();
   };
 

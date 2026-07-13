@@ -156,6 +156,13 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  menu's own trigger keeps its fixed `'Add attachment'` label regardless. */
   @property({ attribute: 'trigger-label' }) triggerLabel?: string;
 
+  /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
+   *  user's hover tooltip, distinct from `triggerLabel`'s accessible-name (`aria-label`) role.
+   *  Applies to both the single-capability `[part=trigger]` button and the multi-capability
+   *  `[part=menu-trigger]` button. Unset (the default): no `title` attribute, unchanged from
+   *  before this property existed. */
+  @property({ attribute: 'trigger-title' }) triggerTitle?: string;
+
   /** Forwarded to the hidden file input's own `multiple` attribute. */
   @property({ type: Boolean, reflect: true }) multiple = true;
 
@@ -247,6 +254,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         class="trigger-button"
         type="button"
         aria-label=${this.triggerLabel ?? meta.triggerLabel}
+        title=${this.triggerTitle ?? nothing}
         ?disabled=${this.disabled}
         @click=${this.onTriggerClick}
       >
@@ -264,6 +272,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
           class="trigger-button"
           type="button"
           aria-label="Add attachment"
+          title=${this.triggerTitle ?? nothing}
           ?disabled=${this.disabled}
         >
           ${paperclipIcon()}
