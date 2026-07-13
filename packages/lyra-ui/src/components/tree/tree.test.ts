@@ -161,6 +161,29 @@ it('expandAll()/collapseAll() toggle every parent node', async () => {
   expect(root.expanded).to.be.false;
 });
 
+it('expandAll() does not mark leaf nodes as expanded, so a following collapseAll() can still reset every parent', async () => {
+  const withLeaf = [
+    { id: '1', label: 'Root', children: [{ id: '1.1', label: 'Child' }] },
+    { id: '2', label: 'Leaf' },
+  ];
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = withLeaf;
+  await el.updateComplete;
+  const leaf = [...el.querySelectorAll('lyra-tree-node')].find(
+    (n) => (n as any).item.id === '2',
+  ) as unknown as LyraTreeNode;
+
+  await el.expandAll();
+
+  expect(leaf.expanded).to.be.false;
+  expect((leaf as unknown as HTMLElement).hasAttribute('expanded')).to.be.false;
+
+  el.collapseAll();
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as unknown as LyraTreeNode;
+  expect(root.expanded).to.be.false;
+});
+
 it('resolves an awaited expandAll() only once every descendant at every depth has actually expanded', async () => {
   const deep = [
     {
@@ -574,6 +597,53 @@ it('swaps which arrow key expands/collapses under dir="rtl"', async () => {
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(root.expanded).to.be.false;
+});
+
+it('keeps arrow-key navigation correct after a node\'s `item` is mutated directly, with no `data` reassignment or toggle event', async () => {
+  const nested = [
+    {
+      id: 'root',
+      label: 'Root',
+      children: [
+        { id: 'a', label: 'A' },
+        { id: 'b', label: 'B' },
+      ],
+    },
+  ];
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = nested;
+  await el.updateComplete;
+  const root = el.querySelector('lyra-tree-node') as unknown as LyraTreeNode;
+  root.expand();
+  await el.updateComplete;
+  (root as unknown as HTMLElement).focus();
+
+  // Warm up the visible-node list by navigating into A, then B, before the
+  // direct mutation below -- this is what exposes a stale memoized cache.
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  const a = root.shadowRoot!.querySelector('lyra-tree-node') as unknown as LyraTreeNode;
+  expect(deepActiveElement()).to.equal(a as unknown as Element);
+
+  (a as unknown as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const b = root.shadowRoot!.querySelectorAll('lyra-tree-node')[1] as unknown as LyraTreeNode;
+  expect(deepActiveElement()).to.equal(b as unknown as Element);
+
+  // Legitimate direct write path (also used by this file's own
+  // "reorders a nested children array" test above) -- no `data`
+  // reassignment on `<lyra-tree>`, no `lyra-node-toggle` event.
+  root.item = { ...root.item, children: [...root.item.children!, { id: 'c', label: 'C' }] };
+  await root.updateComplete;
+
+  (b as unknown as HTMLElement).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const c = root.shadowRoot!.querySelectorAll('lyra-tree-node')[2] as unknown as LyraTreeNode;
+  expect(deepActiveElement()).to.equal(c as unknown as Element);
 });
 
 it('keeps arrow-key navigation correct after expandAll() reveals nodes that were not previously visible', async () => {

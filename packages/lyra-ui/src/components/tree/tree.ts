@@ -52,21 +52,19 @@ export class LyraTree extends LyraElement {
   }
 
   /**
-   * Memoized result of the last `visibleNodeElements()` walk. Every keydown
-   * (ArrowUp/Down/Home/End especially) reads the full visible-node list, and
-   * rebuilding it means a `shadowRoot.querySelectorAll` per currently-expanded
-   * node -- invalidated below on the only two things that can change which
-   * nodes are visible: a `data` reassignment, or a node expanding/collapsing.
+   * Every currently *visible* (ancestor-expanded) node, top-to-bottom.
+   *
+   * Recomputed on every call rather than memoized: `item`/`expanded` are
+   * plain public settable properties on `<lyra-tree-node>` (not just
+   * reachable through this class's own `data` setter or the bubbling
+   * `lyra-node-toggle` event), so a cache keyed off those two entry points
+   * alone would go stale the moment a caller mutated a node directly --
+   * e.g. `node.item = { ...node.item, children: [...] }` to append a child
+   * in place. This walk only runs from user-paced `keydown` handling (never
+   * a hot render-loop path), so the cost of a `shadowRoot.querySelectorAll`
+   * per currently-expanded node is not worth trading for that staleness risk.
    */
-  private cachedVisible: LyraTreeNode[] | null = null;
-
-  private invalidateVisibleCache(): void {
-    this.cachedVisible = null;
-  }
-
-  /** Every currently *visible* (ancestor-expanded) node, top-to-bottom. */
   private visibleNodeElements(): LyraTreeNode[] {
-    if (this.cachedVisible) return this.cachedVisible;
     const acc: LyraTreeNode[] = [];
     const walk = (nodes: LyraTreeNode[]): void => {
       for (const n of nodes) {
@@ -75,7 +73,6 @@ export class LyraTree extends LyraElement {
       }
     };
     walk(this.nodeElements);
-    this.cachedVisible = acc;
     return acc;
   }
 
@@ -90,7 +87,6 @@ export class LyraTree extends LyraElement {
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('data')) {
-      this.invalidateVisibleCache();
       // `document.activeElement` collapses to the outermost light-DOM node
       // even when the real focus target is a nested descendant several
       // shadow roots down, so this also catches a focused nested node whose
@@ -165,7 +161,6 @@ export class LyraTree extends LyraElement {
    * same-value, no-op assignment for them.
    */
   private onNodeActivate = (e: Event): void => {
-    if (e.type === 'lyra-node-toggle') this.invalidateVisibleCache();
     this.activeId = (e as CustomEvent<{ id: string }>).detail.id;
   };
 
@@ -272,13 +267,18 @@ export class LyraTree extends LyraElement {
    * -- callers that immediately read `visibleNodeElements()`-derived state
    * (or call `collapseAll()` right after) should `await` this instead of
    * firing it and moving on.
+   *
+   * Guarded on `n.hasChildren`, matching `expand()`'s own invariant -- a leaf
+   * node's `expanded` must never be set to `true`, since `collapse()` (and
+   * this method's own counterpart, `collapseAll()`) refuse to act on a node
+   * that's `!hasChildren`, which would otherwise leave the leaf permanently
+   * stuck with a reflected `expanded` attribute nothing can clear.
    */
   async expandAll(): Promise<void> {
     const setAll = async (nodes: LyraTreeNode[]): Promise<void> => {
       await Promise.all(
         nodes.map(async (n) => {
-          n.expanded = true;
-          this.invalidateVisibleCache();
+          if (n.hasChildren) n.expanded = true;
           await n.updateComplete;
           await setAll(this.childrenOf(n));
         }),
