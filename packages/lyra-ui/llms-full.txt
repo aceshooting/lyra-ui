@@ -49,39 +49,59 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   `{ bubbles: true, composed: true, cancelable: true }` `CustomEvent` and returns it, so callers can
   do `const ev = this.emit('lyra-export', {...}); if (ev.defaultPrevented) return;`.
 - **`FormAssociated(Base)`** mixin (`internal/form-associated.ts`) — makes a `LitElement`
-  form-associated: `static formAssociated = true`, `attachInternals()` in the constructor. Adds
-  properties `name: string`, `value: string` (hand-written accessor via Lit's `noAccessor` so
-  `internals.setFormValue()` fires synchronously on assignment, not on the async update cycle),
-  `disabled: boolean` (reflected), `required: boolean` (reflected). Provides
+  form-associated: `static formAssociated = true`, `attachInternals()` in the constructor (which also
+  eagerly calls `internals.setFormValue('')`, so an untouched control is present in `FormData` as
+  `""` from construction — matching native `<input>` — instead of being absent). Adds properties
+  `name: string`, `value: string`, `disabled: boolean` (reflected), `required: boolean` (reflected) —
+  **all four** use a hand-written accessor via Lit's `noAccessor` (not a plain reactive property), so
+  the attribute write/`internals` call fires synchronously on assignment instead of on Lit's async
+  update cycle (e.g. `internals.setFormValue()` runs synchronously off `value`; `disabled`'s
+  attribute reflection lands before same-tick form APIs run). Provides
   `checkValidity()`/`reportValidity()` (delegate to `internals`), readonly `form`, `labels`,
-  `validity`, `validationMessage`, and `willValidate` getters, `formDisabledCallback(disabled)`,
-  and a real `updateValidity()` that calls `internals.setValidity({ valueMissing: true }, ...)`
-  whenever `required` is set and `value === ''` (re-run on every `value`/`required` change and once
-  from `connectedCallback()`) — so `checkValidity()`/`reportValidity()`/`:invalid`/`:user-invalid`
-  now reflect real constraint state instead of always reporting valid. `formResetCallback()`
-  restores the value captured from the element's original `value` *content attribute* (native
-  `defaultValue` semantics), not a hardcoded blank — only a later `setAttribute('value', ...)` or
-  declarative markup updates that captured default; assigning the `.value` IDL property never does.
-  `formStateRestoreCallback()` restores string state synchronously without emitting a user event.
-  `lyra-date-input`, `lyra-chat-composer`, and `lyra-slider` use this mixin; controls with non-string
-  values and controls whose defaults come from child markup hand-roll an
-  equivalent independently instead (same `setValidity`/default-capture behavior — `lyra-combobox`
-  needs its own copy because its value can be an array in `multiple` mode, `lyra-select` because its
-  default is captured from a declared-`selected` `<lyra-option>` rather than a `value` content
-  attribute — see each component's own gotchas for where its copy diverges from the mixin).
-  Every form-associated control exposes the same five readonly native-like getters.
+  `validity`, `validationMessage`, `willValidate`, and `effectiveDisabled` getters —
+  `effectiveDisabled` is own `disabled` OR an ancestor `<fieldset disabled>`'s cascaded state;
+  `formDisabledCallback(fieldsetDisabled)` stores that ancestor state in a private field rather than
+  writing into `disabled` itself, so `disabled` always reflects only the consumer's own
+  attribute/property (never mutated by fieldset cascading, matching native `<input>`) — **read
+  `effectiveDisabled`, not `disabled`, to get the merged state**. A real `updateValidity()` calls
+  `internals.setValidity({ valueMissing: true }, ...)` whenever `required` is set and `value === ''`
+  (re-run on every `value`/`required` change and once from `connectedCallback()`) — so
+  `checkValidity()`/`reportValidity()`/`:invalid`/`:user-invalid` now reflect real constraint state
+  instead of always reporting valid. Validity is routed through an internal
+  `AnchoredValidityController` (`internal/anchored-validity.ts`): it calls
+  `internals.setValidity(flags, message, anchor)` with `anchor` = the first focusable descendant in
+  the shadow root (`input:not([type='hidden']), textarea, select, button,
+  [tabindex]:not([tabindex='-1'])`), re-resolved after every render — required because the browser
+  can't focus the (non-focusable) custom-element host itself when `reportValidity()`/native
+  validation UI tries to focus the invalid control. `formResetCallback()` restores the value captured
+  from the element's original `value` *content attribute* (native `defaultValue` semantics), not a
+  hardcoded blank — only a later `setAttribute('value', ...)` or declarative markup updates that
+  captured default; assigning the `.value` IDL property never does. `formStateRestoreCallback()`
+  restores string state synchronously without emitting a user event. `lyra-date-input`,
+  `lyra-chat-composer`, and `lyra-slider` use this mixin; controls with non-string values and
+  controls whose defaults come from child markup hand-roll an equivalent independently instead (same
+  `setValidity`/default-capture behavior — `lyra-combobox` needs its own copy because its value can
+  be an array in `multiple` mode, `lyra-select` because its default is captured from a
+  declared-`selected` `<lyra-option>` rather than a `value` content attribute — see each component's
+  own gotchas for where its copy diverges from the mixin). Every form-associated control exposes the
+  same six readonly native-like getters (`form`, `labels`, `validity`, `validationMessage`,
+  `willValidate`, `effectiveDisabled`), including `lyra-time-range`, whose form association exists
+  only for fieldset-cascaded disablement and has no submission-value/state-restoration contract.
 - **`positioner.ts` → `place(anchor, popup, opts?): () => void`** — thin wrapper over
   `@floating-ui/dom`'s `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (to match the
   popup's own `position:fixed` CSS — otherwise it lands offset by the page scroll position),
   middleware `offset(opts.offset ?? 4)`, `flip()`, `shift({ padding: 8 })`, default
   `placement: 'bottom-start'`. Returns a cleanup function that stops the `autoUpdate` loop — call it
   in `disconnectedCallback()`. Used by `lyra-combobox`, `lyra-select`, `lyra-date-input`,
-  `lyra-export-button`.
+  `lyra-export-button`, `lyra-model-select`, `lyra-mention-popover`, `lyra-tool-call-chip`,
+  `lyra-citation-badge`, and `lyra-menu` (which resolves its `placement` through
+  `rtlAwarePlacement()` first — see `rtl.ts` below — before handing it to `place()`).
 - **`tokens.styles.ts` → `tokens`** (a `css` template prepended to every component's stylesheet) —
   the whole design-token layer. Every value chains through a `--wa-*` Web Awesome token first, with
   a hard-coded fallback, e.g. `--lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da)`. Full
   set: `--lyra-color-surface / -text / -text-quiet / -border / -brand / -brand-quiet / -success /
-  -warning / -danger`, `--lyra-color-on-brand / -on-success / -on-warning / -on-danger` (paired
+  -success-quiet / -warning / -warning-quiet / -danger / -danger-quiet`,
+  `--lyra-color-on-brand / -on-success / -on-warning / -on-danger` (paired
   text/icon colors for content painted on the corresponding solid semantic fill; the standalone
   fallbacks switch from light content in light mode to dark content on the brighter dark-mode
   fills), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
@@ -105,6 +125,16 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
 - **`scroll-lock.ts` → `lockScroll(): () => void`** — ref-counted `document.documentElement`
   scroll lock (used by `lyra-widget`'s fullscreen mode); safe to acquire/release more than once
   concurrently, restores the original `overflow` only once the last outstanding lock releases.
+- **`overlay-manager.ts` → `activateOverlay(options): OverlayHandle`** — per-`Document`
+  coordination for `lyra-dialog`, overlay-mode `lyra-responsive-panel`, the three tool dialogs,
+  mobile `lyra-app-rail`, and fullscreen `lyra-widget`. Overlays from different families share one
+  visual/topmost stack: only the top entry handles Escape, Tab trapping, and backdrop dismissal.
+  Content outside the active modal's composed path is inert, including lower overlays and page
+  content added while it is open. Focus traversal crosses slots and open shadow roots; activation
+  preserves focus already inside but moves outside focus into the panel, and an open-state close
+  restores the still-connected opener even after a direct property/attribute transition. Nested
+  closes restore into the surviving overlay before eventually returning to the original page
+  trigger.
 - **`rtl.ts` → `isRtl(el): boolean`** — reads `getComputedStyle(el).direction === 'rtl'`, for the
   pointer/keyboard math (drag ratios, arrow-key direction) in `lyra-split`, `lyra-time-range`, and
   `lyra-dock-panel` that reasons about physical left/right and can't rely on logical CSS properties
@@ -153,16 +183,20 @@ shared `FormAssociated` mixin — see gotchas).
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
 - `emptyText: string = 'No results'` (attribute `empty-text`)
+- `loadingText: string = 'Loading…'` (attribute `loading-text` — listbox row shown while a `source`
+  fetch is in flight)
+- `overflowText: string = '+{n} more — refine your search'` (attribute `overflow-text` — listbox row
+  shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count)
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
   matches `label`/`searchText` case-insensitively; ignored while `source` is set)
 - `source: ComboboxSource | null = null` (attribute: false — `(query: string) =>
   Promise<ComboboxSourceRow[]>`; when set, replaces the light-DOM `<lyra-option>` list with an async
-  lookup, debounced ~200ms after each keystroke and re-run on clear/pick. A "Loading…" row is shown
+  lookup, debounced ~200ms after each keystroke and re-run on clear/pick. `loadingText` is shown
   while a call is in flight; a stale in-flight call that resolves after a newer one (or after
   disconnect) is dropped via a monotonic token)
 - `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
-  keeping the current selection visible even if it's outside the cap; the excess shows as an
-  "+N more — refine your search" row instead of being dropped silently)
+  keeping the current selection visible even if it's outside the cap; the excess renders as one
+  `overflowText` row instead of being dropped silently)
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
 
@@ -312,7 +346,9 @@ control's accessible description.
 (the leading status dot, when a row's `dotColor` is set), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lyra-select-trigger-padding`, `--lyra-select-trigger-min-height`,
+`--lyra-select-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
+`lyra-toast-item`'s `--padding`/`--font-size` use.
 
 **Optional peer deps:** none.
 
@@ -374,6 +410,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `disablePast: boolean = false` (attribute `disable-past`)
 - `disableFuture: boolean = false` (attribute `disable-future`)
 - `withOutsideDays: boolean = false` (attribute `with-outside-days`)
+- `previousLabel: string = 'Previous month'` (attribute `previous-label` — accessible label for the
+  previous-month nav button; override for a non-English `locale`)
+- `nextLabel: string = 'Next month'` (attribute `next-label` — accessible label for the next-month
+  nav button)
 
 **Getters:** `selection: { from: Date|null; to: Date|null }`, `valueAsDate: Date | null` (single
 mode only)
@@ -422,6 +462,11 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 **Properties (own, continued):**
 - `errorText: string = ''` (attribute `error-text` — static error copy; overridden by slotted
   `error` content when provided)
+- `clearLabel: string = 'Clear'` (attribute `clear-label` — accessible label for the clear button)
+- `openLabel: string = 'Open calendar'` (attribute `open-label` — accessible label for the
+  calendar-toggle button)
+- `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
+  `role="dialog"` calendar popover)
 
 **Methods:** `show()`, `hide()`, `clear()`
 
@@ -447,9 +492,11 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 
 `calendar-core.ts` exports the pure date math both components share (**internal — not re-exported
 from the package root**, but worth knowing when reasoning about behavior): `parseISO`, `formatISO`,
-`isSameDay`, `addMonths`, `clampDate`, `monthMatrix(year, month, firstDayOfWeek)`,
-`weekdayLabels(firstDayOfWeek, format, locale)`, `monthTitle(year, month, locale)`,
-`resolveFirstDayOfWeek(value, locale?)`.
+`isSameDay`, `addMonths`, `addMonthsClampingDay(date, n)` (like `addMonths` but clamps the result to
+the target month's last day instead of overflowing into the month after — e.g. Jan 31 + 1 month
+lands on Feb 28/29, not Mar 3; backs `lyra-date-picker`'s PageUp/PageDown), `clampDate`,
+`monthMatrix(year, month, firstDayOfWeek)`, `weekdayLabels(firstDayOfWeek, format, locale)`,
+`monthTitle(year, month, locale)`, `resolveFirstDayOfWeek(value, locale?)`.
 
 **Known gotchas:**
 - `first-day-of-week="auto"` now derives from `locale` when the runtime's `Intl.Locale` exposes
@@ -459,10 +506,12 @@ from the package root**, but worth knowing when reasoning about behavior): `pars
   show; on an older runtime it still falls back to Sunday-first silently. **If you need a guaranteed
   locale-correct week start regardless of runtime**, pass an explicit
   `first-day-of-week="mon"` (accepted values: `sun`/`mon`/`tue`/`wed`/`thu`/`fri`/`sat`).
-- (date-input only) — opening the calendar doesn't move focus into it (`show()` only flips
-  `open`) — a keyboard user opening via `Alt+ArrowDown` lands on a visible popover with focus still
-  on the text input. Escape *does* close it from anywhere inside the form control (including the
-  nested picker's own day/nav buttons), returning focus to the expand button.
+- (date-input only) — opening the calendar does not move focus into it: `Alt+ArrowDown` leaves focus
+  on the text input, and the expand button keeps focus when clicked. The focused opener is
+  remembered. Escape and a finalized calendar selection close the popup and return focus to that
+  same connected element; a direct `.open = false` also restores it when focus would otherwise
+  remain inside the now-hidden popup. Outside-pointer dismissal deliberately leaves focus at the
+  clicked target.
 - (date-input only) — typing an unparseable string and blurring/committing sets `badInput` via
   `internals.setValidity()` and reverts the displayed text to the last valid commit. The visible
   `<input part="input">` mirrors `required` through native `required`/`aria-required` and exposes
@@ -629,11 +678,14 @@ the reviewed family (pure CSS cascade, no JS/`getComputedStyle` bridging needed)
   a glance-value sparkline, worth reconsidering if it's ever the *sole* representation of a metric.
 - flat data (every value equal, so the auto-computed range spans zero) now renders a centered
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
-  series renders a visible flat line (a zero-length path was previously invisible). A `type="bar"`
-  series past 500 points is decimated to at most 500 rendered `<rect>`s (evenly sampled, not
-  aggregated/averaged) so an unbounded `values` array can't turn directly into that many shadow-DOM
-  nodes; `line`/`area` types have no such cap (they already collapse to one `<path>` regardless of
-  point count).
+  series renders a visible flat line (a zero-length path was previously invisible). **Every** `type`
+  (`line`/`area`/`bar`) decimates a `values` array past 500 points down to at most 500 plotted
+  samples — evenly sampled by index, always keeping the first and last value exactly, not
+  aggregated/averaged. `type="bar"` caps at 500 rendered `<rect>`s directly; `line`/`area` cap the
+  point count baked into the single `<path>`'s `d` string instead (an uncapped path string also
+  grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
+  scanned from the *full* pre-decimation `values` array, so a real extreme value that decimation
+  happens to drop can't silently narrow the rendered scale.
 
 ---
 
@@ -654,9 +706,16 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
   name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
 - `round: boolean = false` (reflected — circular crop)
-- `detailed: boolean = false` (reflected — requests the pristine, pre-optimization source SVG
-  instead of the default icon-optimized one; a no-op for the majority of codes whose source art was
-  never large enough to need optimizing. Has no effect when `src` is set. See gotchas.)
+- `variant?: 'compact' | 'standard' | 'detailed'` (attribute `variant`, not reflected — picks a
+  fidelity tier for the ~65 codes whose source art embeds a coat of arms/seal/emblem; every other
+  code resolves to the same file regardless of `variant`. `'compact'` = a tiny WebP raster for
+  icon-scale use (menus, language pickers, ~12–28px); `'standard'` (the effective default, when both
+  `variant` and `detailed` are unset) = the icon-optimized vector for card/row sizes (~28–96px);
+  `'detailed'` = the pristine full-fidelity vector for hero-scale display. Takes precedence over the
+  deprecated `detailed` below. No effect when `src` is set.)
+- `detailed: boolean = false` (reflected — **deprecated: use `variant="detailed"` instead**. Kept as
+  an alias for one minor cycle — when `variant` is left unset, `detailed` still maps to the detailed
+  tier — scheduled for removal in the next major. No effect when `src` is set.)
 
 **Events:** none.
 
@@ -664,8 +723,10 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 **CSS parts:** `image`
 
-**Themeable custom properties:** `--lyra-flag-radius` (default `2px`, non-`round` corner radius);
-also consumes `--lyra-color-border` (the inset ring around the flag image).
+**Themeable custom properties:** `--lyra-flag-radius` (default `calc(var(--lyra-radius) * 0.33)` —
+≈2px at the library's default `--lyra-radius` of `0.375rem`; scales with `--lyra-radius` unless
+overridden directly — non-`round` corner radius); also consumes `--lyra-color-border` (the inset
+ring around the flag image).
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
 image; without it, renders an empty template (see gotchas).
@@ -678,6 +739,8 @@ need different defaults).
 ```html
 <lyra-flag country="fr" label="France"></lyra-flag>
 <lyra-flag language="en-US" round></lyra-flag>
+<lyra-flag country="es" variant="compact"></lyra-flag>  <!-- tiny WebP raster, icon-scale -->
+<lyra-flag country="es" variant="detailed"></lyra-flag> <!-- pristine full-fidelity vector -->
 ```
 
 ```bash
@@ -715,12 +778,16 @@ pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> r
   shipped ~28 KB total, not all 249). If you already have a flag's URL at build time, `src` skips
   the peer-package round trip (and its loading-skeleton flash) entirely.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
-  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship a second, pristine full-detail source SVG alongside
-  the default icon-optimized one (`flagUrl(code, { variant: 'detailed' })`, or `detailed` on
-  `<lyra-flag>`) — the default variant is the one `country`/`language` resolve to unless `detailed`
-  is set, and is what almost every consumer wants (an icon-scale rendering, ~65% smaller on average
-  for the 65 affected codes, no visible fidelity loss at that scale). `detailed` is a safe no-op for
-  the other 184 codes — same file either way.
+  arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the `variant`
+  property (`flagUrl(code, { variant })` under the hood): `"compact"` — a tiny WebP raster for
+  icon-scale use (menus, language pickers, dense lists); `"standard"` — the default, the
+  icon-optimized vector for card/row sizes, ~65% smaller on average than the pristine source for the
+  65 affected codes with no visible fidelity loss at that scale; `"detailed"` — the pristine
+  full-fidelity vector, for hero-scale display where the extra illustrative detail is actually
+  visible. The other 184 codes resolve to the same file regardless of `variant` — a safe no-op. The
+  older boolean `detailed` attribute predates `variant` and is now **deprecated**
+  (`variant="detailed"` is the replacement); left unset, `variant` falls back to honoring `detailed`
+  for one more minor version before removal.
 
 ---
 
@@ -774,6 +841,9 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 - `effect: 'pulse'|'sheen' = 'pulse'` (reflected)
 - `width?: string`
 - `height?: string`
+- `label: string = 'Loading…'` — accessible name for this instance's own `role="status"` (rendered as
+  visually-hidden text inside `[part="base"]`); override with a description of what's actually
+  loading, e.g. `label="Loading chart"`
 
 **Events:** none.
 
@@ -788,16 +858,18 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 
 ```html
 <lyra-skeleton variant="circle" width="3rem" height="3rem"></lyra-skeleton>
-<lyra-skeleton variant="text"></lyra-skeleton>
+<lyra-skeleton variant="text" label="Loading name"></lyra-skeleton>
 ```
 
 **Known gotchas:**
-- every instance is an independent, simultaneously-firing `role="status"` live region
-  (via `willUpdate` setting `role="status"` plus visually-hidden "Loading…" text). A realistic
-  loading state (e.g. a 10×5 skeleton table = 50 instances) mounts 50 separate live regions at
-  nearly the same tick — expect screen readers to announce "Loading…" dozens of times, not once.
-  There's no grouping primitive to dedupe this; if it matters, wrap your own single `role="status"`
-  region around a set of skeletons and mark the individual ones `aria-hidden`.
+- every instance is an independent, simultaneously-firing `role="status"` live region (set via
+  `willUpdate`) with its own visually-hidden `label` text (default `"Loading…"`). A realistic loading
+  state (e.g. a 10×5 skeleton table = 50 instances) mounts 50 separate live regions at nearly the same
+  tick — expect screen readers to announce the label dozens of times, not once, even if every
+  instance shares the same default `label`. A more specific per-instance `label` doesn't fix the
+  fan-out by itself; there's still no grouping primitive to dedupe it — if it matters, wrap your own
+  single `role="status"` region around the set of skeletons and mark the individual ones
+  `aria-hidden`.
 - no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
   yourself.
 - Respects `prefers-reduced-motion` (both effects) — safe to leave as-is for that concern.
@@ -849,7 +921,10 @@ render one itself), `sub` (rich sub-line content — overrides the `sub` attribu
 is provided)
 
 **CSS parts:** `base`, `icon`, `label`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
-`caption`, `rows`, `row`, `row-label`, `row-value`
+`caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
+it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
+`exactValue`-focusable value still announces e.g. "Revenue $1.2K", not just the bare value); each
+`[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
 
 **Themeable custom properties:** shared tokens only (`--lyra-color-success/-warning/-danger` drive
 the `variant`-colored value text and up/down trend pill; `--lyra-color-brand` drives `emphasis`'s
@@ -885,7 +960,9 @@ of `rows` — this component only renders and emits intents.
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
   `[part='reveal-columns-button']`; `sticky` pins that column's header cell/cells to the inline-start
-  edge (`position: sticky`) while the table scrolls horizontally
+  edge (`position: sticky`) while the table scrolls horizontally — multiple `sticky` columns stack
+  left-to-right (each measures every earlier sticky column's rendered width via
+  `--lyra-table-sticky-offset`) instead of overlapping at the same edge
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -898,7 +975,10 @@ of `rows` — this component only renders and emits intents.
 - `rows: T[] = []` (attribute: false)
 - `sortKey: string = ''` (attribute `sort-key`)
 - `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
-- `rowKey?: (row: T) => string | number` (attribute: false)
+- `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
+  DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
+  when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
+  sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong row
 - `selectedKey: string | number | null = null` (attribute: false) — **single**-selection only
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel: string = 'Load more'` (attribute `more-label`)
@@ -945,18 +1025,23 @@ body's `max-block-size`).
 - only single-row selection is modeled (`selectedKey: string | number | null`);
   there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
   a `cell()` callback if you need multi-select.
-- no `caption`/`aria-label` property, so the rendered `role="grid"` has no accessible name
-  distinguishing it from any other grid on the page.
+- no `caption`/`aria-label` *property* exists, but a plain `aria-label` HTML attribute set on the
+  host **is** forwarded into the shadow-DOM `<table role="grid">` (read via
+  `this.getAttribute('aria-label')` at render time — a plain global-attribute read, not a reactive
+  Lit `@property`): `<lyra-table aria-label="Scores">` gives the grid an accessible name; omit it and
+  the shadow table simply has none.
 - Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
   body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
   body, Down from the header enters the body's roving stop and Up from the body's first row returns
   to the header, Enter/Space still only sort/activate — a genuine strength versus most siblings in
   this family. A `priority`-hidden header/cell is skipped when computing the visible header stops,
   so arrow-key navigation never strands the roving stop on a hidden column.
-- a `cell()` template can render its own interactive content (a button, link, input, etc.) without
-  it being swallowed by row/column activation: clicks and Enter/Space landing on (or bubbling
-  through) anything matching `button, a[href], input, select, textarea, [role="button"]` are left
-  alone by the table's own delegated `click`/`keydown` handlers.
+- a `cell()` template can render its own interactive content without it being swallowed by
+  row/column activation: clicks and Enter/Space landing on (or bubbling through) anything matching
+  `button, a[href], input, select, textarea, [role="button"], [role="combobox"], [role="listbox"],
+  [role="slider"]`, **or any custom element** (any tag name containing a hyphen — e.g. a
+  `<lyra-select>`/`<lyra-combobox>` rendered inside a `cell()`), are left alone by the table's own
+  delegated `click`/`keydown` handlers instead of triggering `lyra-sort`/`lyra-row-click`.
 
 ---
 
@@ -1019,15 +1104,18 @@ opens a small menu).
 
 **Properties:**
 - `rows: Record<string, unknown>[] = []` (attribute: false)
-- `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`; also acts as a field allow-list
-  for **both** export formats when non-empty (CSV always projected through `columns`; JSON now picks
-  the same `columns[].key` set rather than dumping every field on `rows`, so it can't leak a field
-  CSV would have hidden) — leave `columns` empty to export every field of `rows` as-is in JSON
+- `columns: CsvColumn[] = []` (attribute: false) — `{ key, label }`; acts as a field allow-list **and**
+  CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
+  JSON fall back to the union of the rows' own keys (`key`/`label` both set to the key name) instead
+  of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
+  export still produces a proper header + data file in either format
 - `filename: string = 'export'`
 - `formats: ExportFormat[] = ['csv']` (attribute: false; `ExportFormat = 'csv' | 'json'` **only** —
   no XLSX despite the family sometimes being described as covering it)
-- `disabled: boolean = false` (reflected)
-- `label: string = 'Export'`
+- `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
+  the trigger
+- `label: string = 'Export'` — trigger button text; also feeds the format-choice menu's `aria-label`
+  as `` `${label} format` `` so assistive tech gets an accessible name for the menu
 - `open: boolean = false` (reflected)
 
 **Events:** `lyra-export` (`detail: { format }`, **cancelable** — call `preventDefault()` to
@@ -1226,10 +1314,10 @@ fullscreen panel/backdrop — it overrides the default `var(--lyra-space-l)` ins
 both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/body padding.
 
 **Known gotchas:**
-- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) restores the
-  scroll lock and the Tab-trap `keydown` listener if `fullscreen` was still `true` across the
-  move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in between, so
-  `willUpdate()` alone wouldn't otherwise notice.
+- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
+  shared overlay registration and re-acquires the scroll lock if `fullscreen` was still `true`
+  across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
+  between, so `willUpdate()` alone wouldn't otherwise notice.
 - `collapsed` hides the body via `hidden` rather than an animated height transition — collapsing is
   instant, not a slide.
 
@@ -1240,13 +1328,23 @@ both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/b
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
 out via an outward Archimedean-spiral search — heaviest word placed first, each word spiraling from
 the center until it clears every word already placed. Unlike sibling `lyra-sparkline`/`lyra-heatmap`
-(one `role="img"` glyph standing in for an aggregate value), each word here is its own focusable
-`role="button"`, since the individual words are the meaningful interactive content.
+(one `role="img"` glyph standing in for an aggregate value), the individual words here *are* the
+meaningful interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
+its own tab stop would be a poor keyboard experience. Instead, like `lyra-heatmap`'s cells, the whole
+`[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
+focus cursor to the next word in **declaration order** (not weight/placement order),
+`ArrowLeft`/`ArrowUp` to the previous, `Home`/`End` to the first/last, and `Enter`/`Space` fires
+`lyra-word-click` for the currently-focused word. A `[part="focus-ring"]` `<rect>` is drawn around
+the focused word (absent until a word has actually been focused via keyboard or click), and a
+visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) announces
+`"${text}, ${weight}"` on every focus move.
 
 **Properties:**
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
-  string, group?: string }`; `weight` drives font size, `color` overrides the palette for that word,
-  `group` shares one palette color across every word with the same `group` value
+  string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
+  `0` for sizing purposes only — the original value is still echoed verbatim in `lyra-word-click`'s
+  `detail`), `color` overrides the palette for that word, `group` shares one palette color across
+  every word with the same `group` value
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word
 - `scale: 'linear'|'sqrt' = 'linear'` — `sqrt` compresses the weight→font-size mapping so one heavy
@@ -1256,12 +1354,20 @@ the center until it clears every word already placed. Unlike sibling `lyra-spark
 - `palette?: string[]` (attribute: false) — custom categorical colors, cycled by word index (or by
   `group`); defaults to the `--lyra-word-cloud-color-1..8` tokens
 
+**Methods:** `refreshTheme(): void` — forces a relayout so the `--lyra-font` custom property is
+re-read from computed style (font-family affects the canvas text measurement layout depends on);
+call this from your own theme-toggle handler, since there's no global theme-change event to
+subscribe to automatically (mirrors `lyra-chart`'s `refreshTheme()`).
+
 **Events:** `lyra-word-click` (`detail: { text, weight, group }`, fires on click, or Enter/Space on
-a focused word)
+the currently-focused word — a no-op if nothing is focused yet)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `svg`, `word` (each `<text>`), `empty` (the no-data placeholder)
+**CSS parts:** `base`, `svg`, `word` (each `<text>`), `focus-ring` (the rect around the roving-focus
+cursor's word), `live-region` (visually-hidden `role="status" aria-live="polite"` announcement text),
+`empty` (the no-data placeholder — hardcoded `"No data"` text, no property to customize it, unlike
+`lyra-empty`/`lyra-table`)
 
 **Themeable custom properties:** `--lyra-word-cloud-color-1` through `-8` (the default categorical
 palette, a data-driven literal exception like `lyra-heatmap`'s scale-ramp endpoints — exposed as
@@ -1282,20 +1388,31 @@ retheme-able custom properties instead of hardcoded), plus shared tokens (`--lyr
 </script>
 ```
 
+The host itself gets `role="group"` and an auto-computed `aria-label` (e.g. `"Word cloud of 12
+words"` / `"Word cloud of 1 word"`, counting only words actually rendered — post `MAX_WORDS`-cap and
+post-drop, not the raw `words.length`) **unless** the host already carried its own `role`/`aria-label`
+attribute at first render. That opt-out check runs exactly once (the very first update) and is never
+re-checked afterwards, so setting `role`/`aria-label` yourself *after* the component has already
+rendered at least once only sticks until the next `words`-driven relayout, which overwrites it back
+to the auto default — set it in the initial markup (or before first paint) to opt out permanently.
+
 **Known gotchas:**
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lyra-sparkline`'s
-  `MAX_BARS` DOM-node-count guard) — anything beyond that is silently dropped from layout (not
-  rendered, not an error); a pathological input (e.g. one huge word repeated many times) can also
-  exhaust the spiral search's radius bound and get dropped the same way.
-- every word is its own tab stop (`tabindex="0"` `role="button"`), not a single roving-tabindex
-  container like `lyra-heatmap` — fine for a modest word count, but tabbing through a cloud near the
-  150-word cap is a lot of stops; there's no non-visual "get the whole word+weight list at once"
-  alternative yet.
-- text width is measured via a detached `<canvas>` 2D context (`ctx.measureText`), not the actual
-  rendered SVG glyph metrics — close enough for collision-avoidance spacing, but not pixel-exact.
+  `MAX_BARS` DOM-node-count guard) — over the cap, the **heaviest** 150 survive and the rest are
+  dropped, regardless of where they fell in the input array (it is not simply "first 150 in, rest
+  dropped"). A pathological input (e.g. one huge word repeated many times) can also exhaust the
+  spiral search's radius bound and get dropped the same way; blank/whitespace-only `text` is dropped
+  too. Every drop reason logs one deduplicated `console.warn` per distinct skipped-count (not one
+  warning per word, and not repeated twice for the same count) — nothing throws.
+- text width is measured via a detached `<canvas>` 2D context (`ctx.measureText`) at a hardcoded
+  `font-weight: 600` matching `[part='word']`'s own default CSS — close enough for
+  collision-avoidance spacing, but not pixel-exact, and overriding `[part='word']`'s `font-weight` via
+  `::part()` desyncs measurement from what's actually painted (looser/denser packing, not a crash).
 - rotation (`orientations="mixed"`) is genuinely random per layout (`Math.random()`, not seeded), so
   which words render rotated changes on every re-layout (any `words`/`minFontSize`/`maxFontSize`/
   `scale`/`orientations` change) — don't rely on rotation being stable across renders.
+- only one word is ever in the page's tab sequence at a time (the roving cursor on `[part="svg"]`) —
+  there's no way to Tab directly to the Nth word; arrow-key/Home/End your way there, or click it.
 
 ---
 
@@ -1304,7 +1421,10 @@ retheme-able custom properties instead of hardcoded), plus shared tokens (`--lyr
 ## `lyra-time-range`
 
 A two-handle brush/scrubber over a numeric domain (no date logic — callers map their own time axis
-onto `[min, max]`).
+onto `[min, max]`). Form-associated (`static formAssociated = true`, via `ElementInternals`): an
+ancestor `<fieldset disabled>` disables both handles and every preset button through an internal
+`effectiveDisabled` getter, the same way it would a native `<input>`, without ever mutating the
+consumer-facing `disabled` property/attribute itself.
 
 **Properties:**
 - `min: number = 0`
@@ -1313,6 +1433,8 @@ onto `[min, max]`).
 - `end: number = 100`
 - `step: number = 1`
 - `disabled: boolean = false` (reflected)
+- `startLabel: string = 'Range start'` (attribute `start-label`) — `aria-label` for the start handle
+- `endLabel: string = 'Range end'` (attribute `end-label`) — `aria-label` for the end handle
 - `presets: TimeRangePreset[] = []` (attribute: false) — `TimeRangePreset { label: string; start:
   number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
@@ -1328,9 +1450,10 @@ key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
 
 **Themeable custom properties:** shared tokens only — `--lyra-color-border`, `--lyra-color-brand`,
-`--lyra-color-surface`, `--lyra-shadow` (track/handles), plus (for `presets`) `--lyra-color-text`,
-`--lyra-color-on-brand` (the active preset button's text), `--lyra-radius`, `--lyra-space-xs/-s`,
-`--lyra-transition-fast`, `--lyra-focus-ring-*`. No component-local tokens.
+`--lyra-color-surface`, `--lyra-shadow` (track/handles), `--lyra-opacity-disabled` (`:host([disabled])`
+dimming), plus (for `presets`) `--lyra-color-text`, `--lyra-color-on-brand` (the active preset
+button's text), `--lyra-radius`, `--lyra-space-xs/-s`, `--lyra-transition-fast`,
+`--lyra-focus-ring-*`. No component-local tokens.
 
 **Optional peer deps:** none.
 
@@ -1364,6 +1487,12 @@ key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
   moves both independently instead of the second pointer hijacking which handle the first pointer's
   moves apply to; `pointercancel`/`lostpointercapture` (not just `pointerup`) both end a drag, same
   fix as `lyra-split`.
+- `startLabel`/`endLabel` only override each handle's `aria-label`; they don't affect
+  `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (still raw numbers) or any visible text.
+- An ancestor `<fieldset disabled>` toggling is reflected via `formDisabledCallback` into
+  `effectiveDisabled` (tracked separately from the consumer's own `disabled`), so re-enabling the
+  fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice
+  versa — mirrors `lyra-combobox`'s identical pattern.
 
 ---
 
@@ -1392,7 +1521,8 @@ tick and manual step)
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-s`, `--lyra-color-border`,
 `--lyra-color-surface`, `--lyra-color-text`, `--lyra-color-brand`, `--lyra-icon-button-size` (the
-play button's box).
+play button's box), `--lyra-opacity-disabled` (play button/slider dimming at `length <= 1`),
+`--lyra-focus-ring-*`.
 
 **Optional peer deps:** none.
 
@@ -1414,6 +1544,9 @@ play button's box).
   long-lived `setInterval`), so `intervalMs` is re-read fresh before every tick — changing
   `interval-ms` while `playing` takes effect on the very next step instead of only after a
   pause/play cycle.
+- `interval-ms` is floored to 16ms (~one animation frame): a non-finite or lower value ticks at
+  16ms instead, with a `console.warn` the first time each distinct bad value is seen (deduplicated
+  per value, not a single once-ever flag).
 - No `aria-valuetext`/visible "N of M" position label on the range input.
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
   announcement of the Play/Pause state change.
@@ -1457,8 +1590,9 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
   position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
-  Unset (the default) falls back to the built-in English "Row X, Col Y: value" / "Mon DD: value"
-  template — additive, not breaking.
+  Unset (the default) falls back to the built-in English "Row X, Col Y: value" (matrix) / "Jan 15:
+  value" — short month + day, **not** a weekday abbreviation (calendar) — template. Additive, not
+  breaking.
 - `columnX?: (index: number) => number` (attribute: false, calendar mode only) — overrides the
   internal week-column x-coordinate formula (`CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP)`) used
   consistently across drawing, hit-testing, the focus ring, and month-label positioning, so a
@@ -1491,7 +1625,9 @@ visible regardless of what it's drawn over). `--lyra-heatmap-tooltip-bg` (defaul
 `var(--lyra-color-surface)`) and `--lyra-heatmap-tooltip-text` (default `var(--lyra-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
 directly, no `getComputedStyle` bridging needed. Also consumes `--lyra-color-text-quiet` (axis label
-color) and `--lyra-space-xs`.
+color), `--lyra-space-xs`, `--lyra-radius`/`--lyra-shadow` (tooltip box), and `--lyra-focus-ring-width`/
+`--lyra-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
+same color as `--lyra-heatmap-focus-ring-color`).
 
 **Optional peer deps:** none.
 
@@ -1550,7 +1686,8 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 **Properties:**
 - `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string; radius?:
-  number; color?: string }`
+  number; color?: string }`; `radius` is clamped to `[6, 24]` (an unset/non-finite value falls back
+  to the midpoint, `15`) so a node can never render invisibly small or absurdly large
 - `links: GraphLink[] = []` (attribute: false) — `GraphLink { source: string; target: string;
   width?: number }` (source/target are node ids; links whose endpoints don't resolve are silently
   dropped)
@@ -1572,7 +1709,8 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 **CSS parts:** `base`, `svg`, `node`, `link`, `label`
 
 **Themeable custom properties:** `--lyra-node-fill` (set inline per-node from `GraphNode.color`,
-falls back to `--lyra-color-brand`); also uses `--lyra-color-border`, `--lyra-color-text`.
+falls back to `--lyra-color-brand`); also uses `--lyra-color-border` (link stroke), `--lyra-color-text`
++ `--lyra-font` (label text), `--lyra-focus-ring-*` (node/link `:focus-visible` outline).
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
 together; lazy-`import()`ed once per page, `console.warn` once and renders empty if missing —
@@ -1599,6 +1737,10 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 - `chargeStrength`/`linkDistance` **are** live-reactive post-mount now (retuned on the existing
   force objects and the simulation nudged via `alpha(0.3).restart()`) — no need to also touch
   `nodes`/`links` to see the effect.
+- `width`/`height` are also live-reactive post-mount: changing either re-centers the `forceCenter`
+  force on the new midpoint and nudges the simulation via `alpha(0.1).restart()`, in addition to
+  resizing the rendered `viewBox` — both branches apply independently, so setting `width` and
+  `chargeStrength` in the same synchronous batch retunes both, not just one.
 - zoom is bounded via `minZoom`/`maxZoom` (`d3-zoom`'s `.scaleExtent(...)`, live-reactive); pan/
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
@@ -1661,7 +1803,9 @@ observed internally to keep the roving `activeId` in sync with clicks).
 **CSS parts:** `base`
 
 **Themeable custom properties:** shared tokens `--lyra-space-xs`/`-s`, `--lyra-color-brand-quiet`,
-`--lyra-color-text-quiet`, `--lyra-color-border`, `--lyra-radius`.
+`--lyra-color-text-quiet`, `--lyra-color-border`, `--lyra-color-text`, `--lyra-radius`,
+`--lyra-focus-ring-*` (row `:focus-visible` ring, driven by `:host(:focus-visible)` since the host
+itself is the focusable `role="treeitem"`).
 
 **Optional peer deps:** none.
 
@@ -1778,11 +1922,16 @@ properties only cascade downward); `--lyra-chart-grid-color` (default `var(--lyr
 (default `var(--lyra-color-text)`), `--lyra-chart-tooltip-bg` (default `var(--lyra-color-surface)`),
 `--lyra-chart-tooltip-text` (default `var(--lyra-color-text)`) — each resolved fresh via
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
-`var()` directly), driving the grid lines, tick labels, legend text, and tooltip background/text
-respectively; plus shared `--lyra-space-xs`.
+`var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
+`y2Label` title text reuses `--lyra-chart-tick-color` too — there's no separate title-color token),
+legend text, and tooltip background/text respectively; plus shared `--lyra-space-xs`.
 
-**Optional peer deps:** `chart.js`, `chartjs-plugin-zoom` (lazy-loaded once per page via
-`chart-loader.ts`; registers only the tree-shaken controller/element/scale subset used).
+**Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
+regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
+later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
+has a hard dependency on `hammerjs`). Both loads are memoized once per page via `chart-loader.ts`
+(`loadChartJs()` / `loadChartJsWithZoom()`), registering only the tree-shaken controller/element/scale
+subset actually used.
 
 ```html
 <lyra-chart type="line" x-label="Day" y-label="kWh" legend></lyra-chart>
@@ -1802,20 +1951,26 @@ respectively; plus shared `--lyra-space-xs`.
   a consumer flipping something upstream (e.g. a `data-theme` attribute) that doesn't otherwise
   change any `lyra-chart` property must call `refreshTheme()` itself to make Chart.js re-read the
   `--lyra-chart-*` tokens above.
-- generated `scales` are type-appropriate: no scale at all for `lyra-pie-chart`/
-  `lyra-doughnut-chart`, and a single radial `r` scale (respecting `beginAtZero`) for
-  `lyra-radar-chart`/`lyra-polar-area-chart`, instead of always generating the cartesian `x`/`y`/`y2`
-  block. `xLabel`/`yLabel`/`y2Label` are still silently inert for all four of those subclasses (a
+- generated `scales` are keyed off the *effective* type (`config.type` ?? `type`, see
+  `effectiveType()`) and are type-appropriate: no scale at all for `type="pie"`/`"doughnut"` (true of
+  `<lyra-chart type="pie">` directly, not just the `lyra-pie-chart`/`lyra-doughnut-chart` subclasses),
+  and a single radial `r` scale (respecting `beginAtZero`) for `type="radar"`/`"polarArea"`
+  (`lyra-radar-chart`/`lyra-polar-area-chart`), instead of always generating the cartesian `x`/`y`/
+  `y2` block. `xLabel`/`yLabel`/`y2Label` are still silently inert for all four of those types (a
   radial scale and "no scale" both have nowhere to put an axis title) — reach a titled radial scale
   only via raw `config`.
 - No `chartjs-plugin-annotation` is registered by default — reachable only by importing it
   separately and using the raw `config` passthrough (Chart.js's registry is a global singleton).
-- while the `chart.js` peer is resolving, the host shows a `<lyra-skeleton variant="rect">` with
-  `aria-busy="true"` (same lazy-load pattern as `lyra-graph`/`lyra-map`/`lyra-flag`); Chart.js's own
-  ~1s draw-in animation is skipped under `prefers-reduced-motion: reduce`. The raw `config`
-  passthrough is deep-merged with `__proto__`/`constructor`/`prototype` keys skipped unconditionally,
-  so a JSON-sourced `config` (e.g. parsed from an API response) can't reach up and pollute
-  `Object.prototype` through the merge.
+- while the `chart.js` peer is resolving, `render()` swaps in a `<lyra-skeleton variant="rect">` for
+  the canvas, and the **host element itself** (not the skeleton) carries `aria-busy="true"` — set/
+  cleared in `updated()` off the private `loading` state (same lazy-load pattern as
+  `lyra-graph`/`lyra-map`/`lyra-flag`). Chart.js's own ~1000ms draw-in animation only ever fires on
+  initial construction or a type change that rebuilds the `Chart` instance (every in-place data
+  update already passes `'none'` to `Chart#update()` and never animates regardless); that
+  construction-time animation is additionally skipped outright under `prefers-reduced-motion: reduce`.
+  The raw `config` passthrough is deep-merged with `__proto__`/`constructor`/`prototype` keys skipped
+  unconditionally, so a JSON-sourced `config` (e.g. parsed from an API response) can't reach up and
+  pollute `Object.prototype` through the merge.
 - lazy-redraw + memoization: an `IntersectionObserver` gates `draw()` — while the host is scrolled
   off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
   single redraw fires once it re-enters the viewport). Independently, a content-signature check
@@ -2049,12 +2204,16 @@ raw `map` escape hatch for anything unexposed.
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied)
 - `markers: MapMarker[] = []` (attribute: false) — `MapMarker { id?: string; lngLat: [number,
-  number]; color?: string; label?: string; html?: string }`; reconciled by `id` (falling back to a
-  `lng,lat` key when `id` is omitted) so an unchanged marker isn't torn down and recreated on every
-  `markers` reassignment — its `lngLat` **and** its popup content (`html`/`label`, in that
-  precedence) are both updated in place, and the popup is removed if a later update sets neither.
-  `html` is rendered via `Popup.setHTML()` — **raw markup, inline event handlers included** — only
-  pass trusted content, sanitize anything derived from user input first.
+  number]; color?: string; label?: string; unsafeHtml?: string }`; reconciled by `id` (falling back
+  to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
+  when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
+  reassignment — its `lngLat` **and** its popup content (`unsafeHtml`/`label`, in that precedence)
+  are both updated in place, and the popup is removed if a later update sets neither. `unsafeHtml` is
+  rendered via `Popup.setHTML()` — **raw markup, inline event handlers included** — only pass trusted
+  content, sanitize anything derived from user input first; prefer `label` (`Popup.setText()`,
+  escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
+  can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
+  gotchas.
 
 **Getters:** `map` → the raw `maplibregl.Map` instance.
 
@@ -2066,7 +2225,7 @@ exists and was hit)
 
 **CSS parts:** `base`, `container`, `legend`, `legend-swatch`
 
-**Themeable custom properties:** shared tokens only — `--lyra-space-s`, `--lyra-color-surface`,
+**Themeable custom properties:** shared tokens only — `--lyra-space-xs/-s`, `--lyra-color-surface`,
 `--lyra-color-border`, `--lyra-shadow`, `--lyra-radius`.
 
 **Optional peer deps:** `maplibre-gl` (lazy-loaded; consumer must **separately** `import
@@ -2100,16 +2259,27 @@ exists and was hit)
   about.
 - Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
   hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
+- a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
+  `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
+  currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
+  accepted side effect of the reconstruction fallback, not a bug.
 - No click-select visual highlight on choropleth features (no `setFeatureState` call) — clicking
   only fires the event, no built-in visual feedback. Popups are still only reachable declaratively
-  through `markers`' `html`/`label` — a choropleth-feature click still has no built-in popup, only the
-  raw `lyra-map-click` event.
+  through `markers`' `unsafeHtml`/`label` — a choropleth-feature click still has no built-in popup,
+  only the raw `lyra-map-click` event.
 - `LegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
   to the legend swatch's `background`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
   swatch renders).
 - while the `maplibre-gl` peer is resolving, the host shows a `<lyra-skeleton variant="rect">` with
   `aria-busy="true"` in place of the map container.
+- construction of the real `maplibregl.Map` (and its WebGL context) is additionally gated on this
+  element being observed intersecting the viewport (`IntersectionObserver`), independent of whether
+  the `maplibre-gl` peer has already loaded — an off-screen `<lyra-map>` swaps its skeleton for the
+  empty `[part="container"]` div as soon as the peer resolves, but `map` stays `undefined` and
+  `lyra-map-load` never fires until the element is actually scrolled into view. Deliberate: caps
+  concurrent WebGL contexts when many `<lyra-map>`s sit in one dashboard/grid. Skipped entirely
+  (constructs immediately once the peer loads) when `IntersectionObserver` itself is unavailable.
 
 ---
 
@@ -2147,7 +2317,9 @@ element carrying the drag accept/reject announcement)
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-xs`, `--lyra-space-l`,
 `--lyra-color-border`, `--lyra-radius`, `--lyra-color-surface`, `--lyra-color-text-quiet`,
-`--lyra-color-success` (drag-accept state), `--lyra-color-danger` (drag-reject state).
+`--lyra-color-success` (drag-accept state), `--lyra-color-danger` (drag-reject state),
+`--lyra-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
+`--lyra-opacity-disabled` (`:host([disabled])` dimming).
 
 **Optional peer deps:** none.
 
@@ -2203,12 +2375,20 @@ default/`footer` slots.
 
 **Methods:** `close(reason: DialogCloseReason = 'api'): void` — closes the dialog, emits
 `lyra-dialog-close` with `reason`, and returns focus to whatever had it right before the dialog
-opened. `DialogCloseReason = 'escape' | 'backdrop' | 'api' | string` — `'escape'`/`'backdrop'` are
-emitted by the dialog's own built-in dismiss triggers; any other string is whatever a caller passes
-(e.g. a footer Cancel button calling `dlg.close('cancel')`, or `confirm()`'s own `'confirm'`/`'cancel'`).
+opened. `DialogCloseReason = 'escape' | 'backdrop' | 'api' | 'unmount' | string` —
+`'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers; `'unmount'` is
+emitted automatically if the dialog is removed from the DOM while still `open` by anything other
+than its own `close()` (a consumer's own cleanup code, a parent re-render that drops it); any other
+string is whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or
+`confirm()`'s own `'confirm'`/`'cancel'`).
 
 **Events:** `lyra-dialog-close` (`detail: DialogCloseReason`) — fired on every dismissal path
-(Escape, backdrop click, or any `close()` call).
+(Escape, backdrop click, any `close()` call, or an `'unmount'` removal as above).
+
+**Stacking:** participates in the shared per-document overlay stack described above. A dialog can be
+stacked with another dialog or any other modal family; only the visually topmost overlay receives
+Escape, Tab trapping, or backdrop dismissal, while overlays beneath remain open until the top one
+closes.
 
 **Slots:** default (the dialog body), `footer` (action buttons, rendered in a bottom row, hidden
 entirely when empty)
@@ -2258,8 +2438,8 @@ and an ID-reference attribute can't resolve across that boundary.
   `aria-label`; set `label` instead for a title that needs to change live.
 - Only *direct* children are scanned for a heading — one nested several layers deep, or inside a
   slotted custom element's own shadow root, is left to the consumer to label explicitly via `label`.
-- A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) restores the
-  scroll lock and the Escape/Tab-trap `keydown` listener if `open` was still `true` across the
+- A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
+  shared overlay registration and re-acquires the scroll lock if `open` was still `true` across the
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in between, so
   `willUpdate()` alone wouldn't otherwise notice.
 - Tab-trap focus order follows the default (body) slot, then the `footer` slot — the same order the
@@ -2338,7 +2518,7 @@ one becomes each tab's panel.
 row of tab buttons), `tab` (a single tab button), `panel` (a single `role="tabpanel"` wrapper, one
 per tab, hidden unless active)
 
-**Themeable custom properties:** shared tokens only — `--lyra-space-s/-m`,
+**Themeable custom properties:** shared tokens only — `--lyra-space-xs/-s/-m`,
 `--lyra-color-border/-text-quiet/-text/-brand`, `--lyra-transition-fast`, `--lyra-radius`,
 `--lyra-focus-ring-width/-color/-offset`, `--lyra-opacity-disabled`.
 
@@ -2397,8 +2577,8 @@ showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeter
 `label` (wrapper around the default slot)
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-s`, `--lyra-icon-button-size`,
-`--lyra-color-border/-surface/-on-brand/-brand/-text`, `--lyra-radius`, `--lyra-transition-fast`,
-`--lyra-focus-ring-width/-color/-offset`, `--lyra-opacity-disabled`.
+`--lyra-color-border/-surface/-on-brand/-brand/-text/-danger`, `--lyra-radius`,
+`--lyra-transition-fast`, `--lyra-focus-ring-width/-color/-offset`, `--lyra-opacity-disabled`.
 
 **Optional peer deps:** none.
 
@@ -2496,7 +2676,9 @@ A collapsible, copyable tree view for an arbitrary JSON-serializable value (obje
 number, boolean, null, or `undefined`). Serves as a fallback renderer wherever a raw payload needs
 inspecting without a bespoke view. Expand/collapse state is keyed by structural path (not object
 identity), so it survives a `data` reassignment that keeps the same shape — e.g. a streaming result
-being patched in place.
+being patched in place. A container value that self-references (directly or through a longer cycle)
+renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
+stack overflow on cyclic `data`.
 
 **Properties:**
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
@@ -2518,12 +2700,14 @@ context, older browser, a stubbed-out test environment), so a consumer can still
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
-tree), `key` (an object property key or array index label), `value` (a primitive value's text —
-carries `data-type` of `string`/`number`/`boolean`/`null`/`undefined` for per-type coloring, and
-`data-match` while it matches `search`), `bracket` (a `{`, `}`, `[`, or `]` delimiter), `toggle` (a
-container node's expand/collapse button; hidden but present for row alignment on leaf/empty nodes),
-`copy-button` (a copy-to-clipboard button — the top-level one in `toolbar`, or a per-node one; only
-rendered when `copyable`)
+tree), `key` (an object property key or array index label, `data-match` while it matches `search`),
+`value` (a primitive value's text — carries `data-type` of
+`string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, and `data-match`
+while it matches `search`), `bracket` (a `{`, `}`, `[`, or `]` delimiter), `toggle` (a container
+node's expand/collapse button; hidden but present for row alignment on leaf/empty nodes),
+`copy-button` (a copy-to-clipboard button — the top-level one in `toolbar` (aria-label "Copy JSON to
+clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); only rendered when
+`copyable`)
 
 **Themeable custom properties:** `--lyra-json-viewer-max-height` (default `none` — grows with content
 until `max-height` is set), `--lyra-json-viewer-font` (default `ui-monospace, SFMono-Regular, Menlo,
@@ -2615,7 +2799,7 @@ window and flushes immediately.
 
 **Slots:** none.
 
-**CSS parts:** `region` — the visually-hidden element carrying `role`/`aria-live`.
+**CSS parts:** `region` — the visually-hidden element carrying `role`/`aria-live`/`aria-atomic="true"`.
 
 **Themeable custom properties:** none component-specific — the region is hidden via the shared
 `.sr-only` helper class (`internal/a11y.ts`), not tokenized CSS.
@@ -2684,9 +2868,12 @@ fired whenever rendering falls back to plain text — see the fallback matrix be
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
-**CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output), `heading`
-(every rendered `<h1>`–`<h6>`), `code-block` (every rendered fenced/indented `<pre>`), `link` (every
-rendered `<a>`), `table` (every rendered `<table>`), `blockquote` (every rendered `<blockquote>`)
+**CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; carries
+`data-fallback` while showing the plain-text fallback — still-loading peers or a failed render —
+so a consumer can target `lyra-markdown [part='content'][data-fallback]` to style it distinctly),
+`heading` (every rendered `<h1>`–`<h6>`), `code-block` (every rendered fenced/indented `<pre>`),
+`link` (every rendered `<a>`), `table` (every rendered `<table>`), `blockquote` (every rendered
+`<blockquote>`)
 
 **Themeable custom properties:** `--lyra-markdown-font-mono` (default `ui-monospace, SFMono-Regular,
 Menlo, Consolas, monospace` — the code/code-block font; component-specific since no shared
@@ -2751,9 +2938,10 @@ a `<lyra-markdown>`, a custom template, anything) and this component only suppli
 chrome: alignment/coloring by `role`, an avatar/badges header row, an optional collapse toggle, an
 attachments strip, and a status-aware footer (a live-updating status dot + text, the formatted
 `timestamp`, a built-in retry affordance for `status="failed"`, and an `actions` slot for everything
-else). No built-in copy button is rendered — slot a copy control into `actions` and fire `lyra-copy`
-from it if you want one (matching `<lyra-json-viewer>`'s copy-affordance event name for anything
-listening at the conversation-surface level).
+else). No built-in copy button is rendered — slot a copy control into `actions` and fire
+`lyra-copy` (`detail: { text: string }`) from it if you want one (matching `<lyra-json-viewer>`'s
+and `<lyra-code-block>`'s copy-affordance event name/shape, for anything listening at the
+conversation-surface level).
 
 **Properties:**
 - `role: ChatMessageRole = 'assistant'` (`'user' | 'assistant' | 'system'`) — reflects to
@@ -2989,8 +3177,9 @@ sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, 
 ## `lyra-tool-result-view`
 
 Renders a tool call's result via whichever custom renderer a host app has registered for it,
-falling back to `<lyra-json-viewer>` whenever no renderer matches, a renderer's optional `load()`
-rejects, or its `render()` throws. First-party invention (no Web Awesome equivalent). This component
+falling back to `<lyra-json-viewer>` whenever no renderer matches, a candidate renderer's
+`matches()` predicate throws during dispatch, a renderer's optional `load()` rejects, or its
+`render()` throws. First-party invention (no Web Awesome equivalent). This component
 owns none of the actual visual weight of a populated tool result — that's entirely whatever the
 registered renderer returns; `<lyra-tool-result-view>` is just the dispatch + fallback + loading-state
 shell around it.
@@ -3011,8 +3200,9 @@ shell around it.
   once more fallback kinds land
 
 **Events:** `lyra-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
-before falling back to `<lyra-json-viewer>`, whether because no renderer matched, a renderer's
-`load()` rejected, or its `render()` threw.
+before falling back to `<lyra-json-viewer>`, whether because no renderer matched, a candidate
+renderer's `matches()` predicate threw during dispatch, a renderer's `load()` rejected, or its
+`render()` threw.
 
 **Slots:** none.
 
@@ -3130,10 +3320,10 @@ registerToolRenderer('web_search', {
 A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer
 typically places a `<lyra-tabs>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
 Awesome equivalent). This component knows nothing about what's inside that slot — it only supplies
-the modal chrome around it. It is its own standalone overlay implementation (`role="dialog"`,
-focus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than nesting a `<lyra-dialog>` in
-its shadow template, so that slot-forwarding doesn't put a forwarding `<slot>` where a slotted
-`<lyra-tabs>`'s own light-DOM child scan expects real projected content.
+the modal chrome around it. It keeps its own shadow template rather than nesting a `<lyra-dialog>`,
+so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lyra-tabs>`'s own light-DOM
+child scan expects real projected content, while its modal behavior participates in the shared
+overlay stack.
 
 **Properties:**
 - `open: boolean = false` (reflected) — whether the dialog is open; set this (or call `close()`) —
@@ -3184,8 +3374,8 @@ tokens `--lyra-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-s
   @lyra-maximize-change=${(e) => console.log('maximized:', e.detail)}
 >
   <lyra-tabs slot="body">
-    <lyra-tab-panel label="Preview">…</lyra-tab-panel>
-    <lyra-tab-panel label="JSON"><lyra-json-viewer .data=${result}></lyra-json-viewer></lyra-tab-panel>
+    <div slot="preview" label="Preview">…</div>
+    <div slot="json" label="JSON"><lyra-json-viewer .data=${result}></lyra-json-viewer></div>
   </lyra-tabs>
   <button slot="footer">Rerun</button>
 </lyra-tool-result-dialog>
@@ -3203,14 +3393,13 @@ open/close lifecycle — unlike `<lyra-widget>`'s fullscreen mode there's no sep
 state, so no additional scroll-lock/focus-trap bookkeeping is needed for that transition alone.
 
 **Known gotchas:**
-- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) restores the
-  scroll lock and the document `keydown` listener if `open` was still `true` across the move —
-  `disconnectedCallback`/`connectedCallback` fire back-to-back with no intervening update, so
-  `willUpdate` never reruns to notice `open` didn't change
-- this component deliberately does **not** compose `<lyra-dialog>` internally, even though the two
-  share nearly identical overlay mechanics (focus trap, scroll lock, Escape/backdrop dismiss) — the
-  duplication is intentional so a slotted `<lyra-tabs>` (or any other light-DOM-scanning child) sees
-  real projected content rather than a forwarding `<slot>` from a nested dialog
+- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
+  shared overlay registration and re-acquires the scroll lock if `open` was still `true` across the
+  move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no intervening update, so
+  `willUpdate` never reruns to notice `open` did not change
+- this component deliberately does **not** compose `<lyra-dialog>` internally; it keeps its own
+  panel template so a slotted `<lyra-tabs>` (or any other light-DOM-scanning child) sees real
+  projected content rather than a forwarding `<slot>`, while still sharing the overlay stack
 - `close()` is a no-op when `open` is already `false` — calling it twice in a row only fires
   `lyra-dialog-close` once
 - the `maximize`/`close` buttons are always the first elements in the Tab order while open,
@@ -3288,7 +3477,11 @@ entirely when it has assigned content)
 Auto-resize (`resizeTextarea()`) reads the textarea's own *computed* line-height/padding/border at
 call time rather than assuming a fixed px-per-row constant, so it stays correct under a consumer's
 own font-size/line-height overrides; it grows between `min-rows` and `max-rows`, then switches to
-internal scrolling (`overflow-y: auto`) past `max-rows`. Enter-to-send only fires while
+internal scrolling (`overflow-y: auto`) past `max-rows`. A `ResizeObserver` on the textarea itself
+also re-runs this fit (one animation frame later, to avoid a `ResizeObserver`-loop console error)
+whenever the textarea's own *width* changes — a sidebar collapsing, a responsive breakpoint, a
+window resize — even though `value`/`min-rows`/`max-rows` never did, since the same text now wraps
+across a different number of lines. Enter-to-send only fires while
 `submit-on-enter` is `true` (the default): plain Enter submits and prevents the default newline;
 Shift+Enter always inserts a newline regardless of `submit-on-enter`; an IME composition step
 (checked via `isComposing`, with `keyCode === 229` as a defense-in-depth fallback for browsers that
@@ -3422,7 +3615,9 @@ reads as stalled.
 - `stallThresholdMs: number = 10000` (attribute `stall-threshold-ms`) — how long `phase` may stay
   `'streaming'` with no `recordActivity()` call before the component auto-transitions to
   `'stalled'`. A non-finite or `<= 0` value disables the stall timer entirely (arming becomes a
-  no-op, so the phase will never auto-stall).
+  no-op, so the phase will never auto-stall). Changing this value while already `'streaming'`
+  re-arms the timer immediately against the new value, rather than waiting for the next
+  `recordActivity()` call or phase change.
 
 **Methods:**
 - `recordActivity(): void` — call on every semantic (non-heartbeat) frame received while
@@ -3483,8 +3678,13 @@ the instant `phase` becomes anything else, including a host-driven reassignment 
 on. Phase transitions into/out of `'stalled'` are announced through an internal
 `<lyra-live-region>` rather than a hand-rolled `aria-live` region: entering `'stalled'` announces
 "Connection stalled." with `mode="assertive"` (a stall can need the user's attention before they
-give up and navigate away); recovering announces "Connection restored." with `mode="polite"` (good
-news doesn't need to interrupt). Calling `recordActivity()` itself never announces anything, no
+give up and navigate away). Leaving `'stalled'` always announces with `mode="polite"` (good news
+doesn't need to interrupt), but the *wording* depends on the destination phase: "Connection
+restored." only when leaving `'stalled'` for `'streaming'` (a genuine recovery, typically via
+`recordActivity()`); a neutral "No longer stalled." when the destination is `'idle'`/`'connecting'`
+instead (the host gave up on the stream, which is not the same thing as it recovering — a
+screen-reader user must not be told the opposite of what a sighted user sees). Calling
+`recordActivity()` itself never announces anything, no
 matter how often the host calls it — only the phase *transition* announces, exactly once. The
 decorative indicator dot is `aria-hidden` (a color/motion cue only) and only pulses while
 `phase="streaming"`; `'stalled'` is styled as a warning tone, not danger, since a stall is usually
@@ -3504,6 +3704,10 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
   `phase`.
 - `phase` remains directly settable at all times; assigning `'stalled'` yourself fires `lyra-stall`
   and the assertive announcement exactly as if the timer had fired.
+- reconnecting the element while still `phase === 'streaming'` (e.g. a drag-and-drop reparent that
+  keeps the same instance) automatically re-arms the stall timer in `connectedCallback` —
+  `disconnectedCallback` always disarms it, and disconnect/reconnect fire back-to-back with no
+  `updated()` cycle in between, so nothing else would otherwise notice.
 - The `actions` slot's wrapper is always present in the DOM and toggled with the `hidden` attribute
   based on slotted content, not gated by `phase` — content placed there is visible regardless of
   the current phase.
@@ -3593,13 +3797,17 @@ so it isn't clipped by the container's own `overflow: auto`).
 ```
 
 Every row — in both `row-height` modes — is positioned by a `transform: translateY(offset)` computed
-from a single cumulative offsets array rebuilt on every update, rather than by page flow; this is what
-lets a small DOM window exist while the scrollbar still reflects the true total content height. In
-`row-height="auto"` mode, unmeasured rows contribute a fixed estimate to that array until their real
-`ResizeObserver`-reported height lands, so only rows after a newly-measured one shift on each
-measurement rather than the whole list reflowing. The offsets rebuild is an `O(n)` loop appropriate for
-hundreds to a few thousand rows (a scrollable history sidebar); it is not the right approach for a
-hundred-thousand-row list without further work.
+from a single cumulative offsets array, rather than by page flow; this is what lets a small DOM window
+exist while the scrollbar still reflects the true total content height. That array is rebuilt only
+when `items`, `row-height`, or `keyFunction` change, or a row's measured height changes — **not** on
+every update, so a pure scroll-position tick (potentially every `rAF` while scrolling) only re-runs the
+cheap range/visibility math, never the `O(n)` offsets rebuild (which, in `row-height="auto"` mode, also
+means a `keyFunction` call per item). In `row-height="auto"` mode, unmeasured rows contribute a fixed
+estimate to that array until their real `ResizeObserver`-reported height lands, so only rows after a
+newly-measured one shift on each measurement rather than the whole list reflowing. The offsets rebuild,
+when it does run, is an `O(n)` loop appropriate for hundreds to a few thousand rows (a scrollable
+history sidebar); it is not the right approach for a hundred-thousand-row list without further work
+(e.g. a Fenwick/segment tree for `O(log n)` offset queries+updates).
 
 **Known gotchas:**
 - `items`, `renderItem`, `keyFunction`, and `groups` are all `attribute: false` — they must be set as
@@ -3638,7 +3846,9 @@ First-party invention (no Web Awesome equivalent).
 - `active: boolean = false` (reflected) — whether this is the currently-selected/open session; drives
   the brand-quiet background treatment.
 - `editable: boolean = true` (reflected) — whether inline-rename is available at all. When `false`, the
-  rename button never renders and the row can never enter its editing state.
+  rename button never renders and the row can never enter its editing state; flipping it to `false`
+  while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
+  than leaving it stranded and still committable.
 
 **Events:** `lyra-select` (no detail payload — identify the row via the platform `id` attribute on the
 event's `target`/`currentTarget`, the same convention `<lyra-attachment-chip>` uses; fires on a click on
@@ -3694,6 +3904,9 @@ just visually swapping content.
   single-click `lyra-select`.
 - While renaming, `[part="option"]` has no `role`/`tabindex`/`aria-selected`/`aria-label` at all — a
   screen reader briefly stops announcing it as a listbox option for the duration of the edit.
+- Setting `editable = false` mid-rename silently discards the in-progress draft (no `lyra-rename`
+  fires) — a consumer toggling `editable` off (e.g. in response to some other row entering rename
+  mode) should not expect the previous edit to be committed first.
 
 ---
 
@@ -3722,7 +3935,7 @@ emitting `lyra-change`.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `placeholder: string = ''`
-- `name: string = ''`
+- `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `open: boolean = false` (reflected)
@@ -3751,8 +3964,12 @@ from a real catalog pick)
 
 **Slots:** none.
 
-**CSS parts:** `trigger`, `combobox`, `combobox-input`, `provider-badge`, `listbox`, `option`,
-`option-label`, `option-badge`
+**CSS parts:** `trigger` (closed-dropdown mode's `<button role="combobox">`, also its positioning
+anchor), `combobox` (free-text mode's input container, also its positioning anchor), `combobox-input`
+(the free-text `<input>`), `provider-badge` (the optional leading `provider` label), `listbox` (the
+options popover, shared by both modes), `option`, `option-label`, `option-badge` (the "not in
+catalog" badge on a synthetic stale-value row), `expand-icon` (the dropdown chevron, present in both
+modes)
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-xs/-s`,
 `--lyra-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lyra-radius`, `--lyra-shadow`,
@@ -3798,7 +4015,10 @@ A numeric range control (e.g. an LLM "temperature" setting). **Form-associated**
 `FormAssociated` mixin (`name`, `value`, `disabled`, `required` all inherited). Mirrors native `<input
 type="range">` semantics: `value` is the string form-submitted via the mixin, `valueAsNumber` is the
 ergonomic numeric accessor (matching native `<input type=range>`'s IDL attribute of the same name) kept
-in sync with it in both directions. First-party invention (no Web Awesome equivalent).
+in sync with it in both directions. Clicking anywhere on `[part="base"]` (not just the thumb) jumps the
+thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
+click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
+seamlessly right after. First-party invention (no Web Awesome equivalent).
 
 **Properties:**
 - `min: number = 0`
@@ -3873,10 +4093,9 @@ native range input either.
 ## `lyra-tool-select-dialog`
 
 A category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are
-available in a conversation. Its own standalone overlay implementation (`role="dialog"`, focus-trapped,
-Escape/backdrop-dismissible, scroll-locking) rather than nesting `<lyra-dialog>` in its shadow template —
-duplicated locally the same way `<lyra-tool-result-dialog>` does, so this component has no dependency on
-the general-purpose dialog. First-party invention (no Web Awesome equivalent).
+available in a conversation. It keeps its own panel template rather than nesting `<lyra-dialog>`, so
+it has no dependency on the general-purpose dialog, while its modal behavior participates in the
+shared overlay stack. First-party invention (no Web Awesome equivalent).
 
 **Exported types:**
 - `ToolSelectDialogTool { id: string; name: string; description?: string; category?: string; icon?:
@@ -3930,7 +4149,7 @@ assigned elements.
 the backdrop scrim color; component-specific since no shared overlay token exists, mirrors
 `<lyra-dialog>`'s/`<lyra-tool-result-dialog>`'s identical pattern), plus shared `--lyra-space-*`,
 `--lyra-color-surface/-border/-text/-text-quiet/-warning`, `--lyra-radius`, `--lyra-shadow`,
-`--lyra-focus-ring-width/-color/-offset`, `--lyra-opacity-disabled`, `--lyra-icon-button-size`.
+`--lyra-focus-ring-width/-color/-offset`, `--lyra-opacity-disabled`.
 
 **Optional peer deps:** none — internally renders `<lyra-checkbox>` and `<lyra-switch>`, both bundled
 dependencies of this package imported directly, not optional peers.
@@ -3972,7 +4191,7 @@ checkboxes for editing.
   into a trailing "Other" bucket that's always rendered last. A category left with zero matches after
   filtering is dropped entirely, not rendered as an empty heading.
 - Reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
-  instance) automatically re-acquires the scroll lock and keydown trap it dropped in
+  instance) resumes its shared overlay registration and re-acquires the scroll lock dropped in
   `disconnectedCallback`.
 - The search input is the first focusable element in the panel and receives focus automatically on open.
 
@@ -4016,10 +4235,10 @@ popover on hover/focus. This is *not* the badge's visible content (the badge alw
 **Themeable custom properties:** `--lyra-citation-badge-accent` / `--lyra-citation-badge-bg` /
 `--lyra-citation-badge-border` (internal per-status accent variables, not typically overridden
 directly — set instead by the `:host([status=...])` rules), plus shared tokens
-`--lyra-color-text-quiet`, `--lyra-color-success` / `-success-quiet`, `--lyra-color-warning` /
-`-warning-quiet`, `--lyra-color-danger` / `-danger-quiet`, `--lyra-radius`, `--lyra-color-surface`,
-`--lyra-color-border`, `--lyra-shadow`, `--lyra-space-s`/`-m`, `--lyra-transition-fast`,
-`--lyra-focus-ring-*`.
+`--lyra-color-text-quiet`, `--lyra-color-text`, `--lyra-color-success` / `-success-quiet`,
+`--lyra-color-warning` / `-warning-quiet`, `--lyra-color-danger` / `-danger-quiet`, `--lyra-radius`,
+`--lyra-color-surface`, `--lyra-color-border`, `--lyra-shadow`, `--lyra-space-s`/`-m`,
+`--lyra-transition-fast`, `--lyra-focus-ring-*`.
 
 **Optional peer deps:** none.
 
@@ -4122,13 +4341,15 @@ while collapsed).
   component never navigates on its own (a controlled component, the same convention
   `<lyra-tool-call-chip>`'s `lyra-tool-chip-select` follows); a listener decides what "open" means.
 
-**Slots:** `excerpt` (a short preview, always visible), `full` (the complete source text/chunk,
-hidden behind the "Show more"/"Show less" toggle — when left empty, no toggle renders at all).
+**Slots:** `excerpt` (a short preview; when left empty, the `excerpt` part collapses away entirely —
+its wrapper is `hidden`, not just visually empty), `full` (the complete source text/chunk, hidden
+behind the "Show more"/"Show less" toggle — when left empty, no toggle renders at all; removing all
+`full`-slotted content while expanded auto-collapses it back).
 
 **CSS parts:** `base` (outer container), `title` (the clickable title/page heading, a `<button>`),
-`excerpt` (wrapper around the `excerpt` slot), `full` (wrapper around the `full` slot, `hidden` while
-collapsed), `toggle` (the "Show more"/"Show less" button — only rendered when the `full` slot has
-content).
+`excerpt` (wrapper around the `excerpt` slot, `hidden` when the slot has no assigned content), `full`
+(wrapper around the `full` slot, `hidden` while collapsed), `toggle` (the "Show more"/"Show less"
+button — only rendered when the `full` slot has content).
 
 **Themeable custom properties:** shared tokens only — `--lyra-color-border`, `--lyra-color-surface`,
 `--lyra-color-text` / `-text-quiet`, `--lyra-color-brand`, `--lyra-radius`, `--lyra-space-xs`/`-s`,
@@ -4175,6 +4396,10 @@ time.
   independent of the parent list's `expanded`/`lyra-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
+- `lyra-source-card` actively strips a bare host-level `title` attribute right after Lit syncs it into
+  the `title` property — otherwise the whole card would grow an unsolicited native tooltip repeating
+  the title text on hover. Set `title` only as a property/attribute meant to become the rendered
+  heading; don't rely on it surviving as a DOM attribute afterward.
 
 ---
 
@@ -4259,10 +4484,10 @@ exposed standalone so a consumer can compute or unit-test the same three-state r
 real browser window. `mobileMatches` wins over `iconOnlyMatches` when both are true (the viewport is
 narrower than both breakpoints at once).
 
-This is its own standalone focus-trapped overlay implementation for the `'mobile'` state
-(`role="dialog"` while open, Escape/backdrop-dismissible, scroll-locking) rather than nesting a
-`<lyra-dialog>` in its shadow template. It's a plain `<div>` with an explicit `role="navigation"`
-(swapping to `role="dialog"` while the overlay is open) rather than a literal `<nav>` tag, since a
+The mobile state keeps its own panel template rather than nesting `<lyra-dialog>`, while its modal
+behavior participates in the shared overlay stack. It is a plain `<div>` with an explicit
+`role="navigation"` (swapping to `role="dialog"` while the overlay is open) rather than a literal
+`<nav>` tag, since a
 `<nav>`'s implicit role can't be overridden to `role="dialog"` without an `aria-allowed-role`
 violation. In `'icon-only'` mode, slotted nav items lose their visible text label — give each one a
 real accessible name (`aria-label`, visually hidden text, or `title`) regardless, since this
@@ -4288,10 +4513,10 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
   selector (`translateX(100%)`), not through the shared `internal/rtl.ts` JS helper used for pointer/
   keyboard math elsewhere in this library — a physical `transform` isn't expressible with logical
   properties, so this one case is handled purely in CSS.
-- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) restores the
-  scroll lock and the Tab-trap `keydown` listener if the overlay was still active across the move —
-  `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in between, so
-  `willUpdate()` alone wouldn't otherwise notice.
+- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
+  shared overlay registration and re-acquires the scroll lock if the overlay was still active
+  across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
+  between, so `willUpdate()` alone wouldn't otherwise notice.
 
 ---
 
@@ -4311,8 +4536,14 @@ sidebar that's a permanent docked pane on a wide screen but a modal on a phone.
   presentation's visual treatment: `'fullscreen'` covers the whole viewport; `'bottom-sheet'` slides
   up from the bottom and doesn't cover the full height. Has no visual effect while the effective
   presentation resolves to `'inline'`.
-- `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`. Unused in
-  the inline presentation, which has no dialog semantics to name.
+- `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
+  verbatim when set. When empty, falls back to the `header` slot's content: a heading element
+  (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present, otherwise the
+  header slot's combined text content is used (mirrors `lyra-dialog`'s `detectHeading()` fallback,
+  via `aria-label` rather than `aria-labelledby` since the header content is light DOM while
+  `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content still
+  renders `role="dialog"` with no accessible name. Unused in the inline presentation, which has no
+  dialog semantics to name.
 - `mobileBreakpoint: string = '768px'` (attribute `mobile-breakpoint`) — CSS length passed to
   `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`, whether the effective
   presentation is `'overlay'` (below/at this width) or `'inline'` (above it).
@@ -4354,16 +4585,13 @@ shared token exists), plus shared tokens (`--lyra-color-border`, `--lyra-color-s
 
 Breakpoint detection uses `matchMedia('(max-width: ' + mobileBreakpoint + ')')`, re-evaluated live
 while connected — resizing/rotating a device that crosses the breakpoint while `mode="auto"` (the
-default) updates the effective presentation without unmounting or re-creating the slotted content:
-inline and overlay presentation share the exact same shadow DOM structure (only a CSS class, and the
-overlay-only `role`/`aria-modal` attributes and backdrop element, differ), so lit-html's diffing
-keeps `[part="body"]` and its `<slot>` as the same DOM node across the transition — scroll position
-and focus inside the slotted content survive it for free. The one exception is focus: crossing the
-breakpoint while already open does *not* forcibly move focus into the panel (unlike a genuine `open`
-transition, which does) — doing so on a resize could yank focus away from an input the user is
-actively typing into inside the now-newly-modal panel. The overlay presentation duplicates
-`<lyra-dialog>`'s `role="dialog"` + focus-trap + Escape/backdrop-dismiss + scroll-lock mechanics
-locally rather than nesting a `<lyra-dialog>` inside this component's shadow DOM.
+default) updates the effective presentation without unmounting or re-creating the slotted content.
+Inline and overlay presentations share the same shadow DOM, so slotted content and scroll position
+survive the transition. Focus already inside the panel is preserved. If focus is outside when an
+open inline panel becomes an overlay, focus moves to the first composed focus target (falling back
+to the panel), so it cannot remain behind `aria-modal="true"`. Closing restores the element captured
+when the panel originally opened, even when that original open happened inline. The overlay
+presentation participates in the shared modal stack rather than nesting a `<lyra-dialog>`.
 
 The package root also exports the pure `resolveEffectiveMode(mode: ResponsivePanelMode,
 belowBreakpoint: boolean): ResponsivePanelEffectiveMode` resolver — renamed on export to
@@ -4376,17 +4604,18 @@ exposed standalone so a consumer can compute or unit-test the same resolution wi
 window.
 
 **Known gotchas:**
-- setting `open = true`/`open = false` directly does not fire `lyra-close` and does not run the
-  focus-return-to-trigger logic either — only calling `close()` does both; a consumer that toggles
-  the property directly instead of calling `close()` silently loses both behaviors.
-- crossing the breakpoint while the panel is already open does not move focus into it, unlike a
-  genuine `open` transition — see above; don't rely on a resize alone to place initial focus.
+- assigning `open` directly still does not emit `lyra-close`; use `close()` when the dismissal
+  event/reason is required. While overlay chrome is active, however, the `true` → `false` state
+  transition restores opener focus regardless of whether it came from `close()`, a property write,
+  or attribute removal.
+- crossing inline → overlay while already open preserves focus that is already inside and moves
+  outside focus into the panel; do not expect focus to remain on page content behind the modal.
 - `variant="bottom-sheet"` has no visible effect at all while the effective presentation is
   `'inline'` — it only changes the overlay presentation's anchoring/height.
-- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) restores the
-  scroll lock and the Tab-trap `keydown` listener if overlay chrome was still active across the move
-  — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in between, so
-  `willUpdate()` alone wouldn't otherwise notice.
+- a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
+  shared overlay registration and re-acquires the scroll lock if overlay chrome was still active
+  across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
+  between, so `willUpdate()` alone wouldn't otherwise notice.
 - the exported pure function is named `resolveEffectiveMode` in the component module but re-exported
   from the package root as `resolveResponsivePanelEffectiveMode` — importing the un-prefixed name
   from `@aceshooting/lyra-ui` will fail.
@@ -4422,10 +4651,13 @@ own listbox.
   also wants to wire `aria-controls`.
 
 **Methods:** `handleKeyDown(e: KeyboardEvent): boolean` — the host's own text-control `keydown`
-handler calls this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight),
-`Enter`/`Tab` (commits the highlighted row, no-op that returns `false` if nothing is highlighted),
-and `Escape` (closes with no selection). Returns `true` when the key was intercepted
-(`preventDefault()` already called) and the host should not also act on it.
+handler calls this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight) and
+`Enter`/`Tab` (commits the highlighted row) — both pairs return `false` with no `preventDefault()`
+when `filteredItems` is empty, letting the keystroke fall through to the host's own control unchanged
+(e.g. the textarea's caret still moves to the next line on ArrowDown when there's nothing to
+navigate); `Escape` always closes with no selection and returns `true`. Returns `true` whenever the
+key was intercepted (`preventDefault()` already called) and the host should not also act on it,
+`false` otherwise (including for any key this method doesn't recognize).
 
 **Exported types:** `MentionItem { id: string; label: string; description?: string; icon?: string
 }`; `MentionFilter = (item: MentionItem, query: string) => boolean`; `MentionSelectDetail { id:
@@ -4505,6 +4737,10 @@ fresh `query` is the proxy for "the caret may have moved").
   `open` or reassigning `anchor`.
 - `activeIndex` resets to `0` whenever `query` or `items` changes, but not when only `anchor`
   changes — reassigning `anchor` alone preserves whatever row was last highlighted.
+- There's no persisted "selection" the way `<lyra-combobox>`'s own listbox has one — a mention is
+  either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
+  here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
+  WAI-ARIA combobox-with-list-autocomplete pattern), not a separate persisted value.
 
 ---
 
@@ -4542,10 +4778,11 @@ of the stream arrives.
 **CSS parts:** `base`, `cursor` (only rendered while `streaming` is `true`)
 
 **Themeable custom properties:** `--lyra-streaming-text-cursor-width` (default `0.125rem` — the
-cursor bar's inline size; component-specific, since no shared "inline cursor bar" token exists,
-the same pattern `<lyra-typing-indicator>`'s own `--lyra-typing-cursor-width`/`-height` use), plus
-shared `--lyra-space-xs` (cursor's `margin-inline-start`) and `--lyra-transition-base` (blink
-animation cycle length).
+cursor bar's inline size), `--lyra-streaming-text-cursor-height` (default `1em`) — both
+component-specific, since no shared "inline cursor bar" token exists, the same pattern
+`<lyra-typing-indicator>`'s own `--lyra-typing-cursor-width`/`-height` use, plus shared
+`--lyra-space-xs` (cursor's `margin-inline-start`) and `--lyra-transition-base` (blink animation
+cycle length).
 
 **Optional peer deps:** none — internally imports and auto-registers `<lyra-markdown>` for
 Markdown-mode rendering (a side-effect import; the host never needs to import or register it
@@ -4570,8 +4807,9 @@ purely as a generic "coalesce rapid calls, flush the latest" timing primitive �
 class's usual DOM/ARIA plumbing. Within any `coalesce-ms` window, only the *last* `content` value
 assigned actually reaches the rendered DOM. Two cases always bypass the throttle and flush
 immediately: the very first `content` assignment after mount, and any transition of `streaming`
-from `true` to `false`, so the final chunk of a finished stream can never be left stranded mid-
-window.
+between `true` and `false` in *either* direction — so the final chunk of a finished stream can
+never be left stranded mid-window, and a stream restarting on a reused element can never keep
+showing the previous stream's stale final content for the length of the window.
 
 Rendering itself is never reimplemented here: Markdown mode composes `<lyra-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop;
@@ -4584,8 +4822,10 @@ happens to end with.
 **Known gotchas:**
 - `content` must always be the complete string so far, never a delta — this component does no
   accumulation of its own.
-- Only the very *first* `content` assignment after mount bypasses `coalesceMs` — every later
-  assignment is throttled normally until `streaming` flips to `false`.
+- Only the very *first* `content` assignment after mount bypasses `coalesceMs` unconditionally —
+  every later assignment is throttled normally except when it lands in the same update as a
+  `streaming` transition (either `true → false` or `false → true`), which also forces an immediate
+  flush.
 - `markdown="false"` (any string value other than exactly `"false"` is treated as `true` by the
   converter) forces plain-text mode even if the text obviously contains Markdown syntax.
 - Purely presentational: no events, and it does not announce anything to assistive tech itself — a
@@ -4653,8 +4893,8 @@ Live-mode auto-scroll ("stick to bottom") is the classic chat-transcript convent
 user has manually scrolled up to re-read earlier content (tracked via a `scroll` listener on
 `[part="body"]`: every user-driven scroll records whether the body was left within 48px of its own
 max scroll position, and only a mutation that arrives while that's still true triggers a follow-up
-scroll). Opening an already-`'live'` panel always resets this to "anchored" and jumps to the latest
-content. New content is detected via a `MutationObserver` on this element's own light DOM
+scroll). Opening an already-`'live'` panel — or a still-`expanded` panel later becoming `'live'` —
+always resets this to "anchored" and jumps to the latest content. New content is detected via a `MutationObserver` on this element's own light DOM
 (`childList`+`subtree`+`characterData`), not `slotchange`, since streamed reasoning typically
 appends chunks to an existing node's `textContent` rather than re-slotting a whole new element per
 token; scroll-to-bottom calls are coalesced to at most one per animation frame under a fast token
@@ -4666,9 +4906,11 @@ stream.
   `<lyra-markdown>` re-rendering its shadow tree after a `content` change). A slotted element whose
   own internal updates should drive auto-scroll needs to append/mutate visible light-DOM text
   itself (as `<lyra-streaming-text>` does), or the host can call `scrollToBottom()` directly.
-- Switching `mode` from `'post-hoc'` to `'live'` while the panel is already `expanded` does not by
-  itself jump to the bottom or reset stickiness — only an `expanded` transition to `true` while
-  `mode === 'live'` does that.
+- Either half of the pair can trigger the jump-to-bottom/reset-stickiness behavior, as long as the
+  *other* half already holds: an `expanded` transition to `true` while `mode` is already `'live'`,
+  **or** a `mode` transition to `'live'` while the panel is already `expanded`, both jump to the
+  bottom and reset stickiness. Only a change that leaves the panel in some other combination
+  (collapsed, or `mode !== 'live'`) skips it.
 - The sticky-bottom flag starts `true` internally, so a panel that mounts already `expanded` and
   `mode="live"` follows its very first content mutation even before any `scroll` event has fired.
 
@@ -4684,17 +4926,24 @@ equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
 - `active: boolean = false` (reflected) — whether generation is currently in progress. The
   elapsed-time ticker (a ~1s `setInterval`) runs only while this is `true`.
 - `startedAt?: number` (attribute `started-at`) — epoch-ms timestamp of when generation began.
-  Optional — when unset while `active` is `true`, this component captures `Date.now()` itself the
-  moment `active` becomes `true` and counts from there instead.
+  Optional — when unset, or set to a value that fails to parse as a finite number (e.g. an ISO-8601
+  date string, which `type: Number` conversion turns into `NaN`), while `active` is `true`, this
+  component captures `Date.now()` itself the moment `active` becomes `true` and counts from there
+  instead — an invalid value is treated identically to "unset", never rendered as literal `"NaNs"`.
 - `tokenCount?: number` (attribute `token-count`) — running token count so far. Omitted from the
   readout entirely (no `tokens` segment) while unset.
 - `tokensPerSecond?: number` (attribute `tokens-per-second`) — host-computed tokens/sec figure,
   used as-is when set. When unset, derived from `token-count`/elapsed time instead (see prose).
-- `showStop: boolean = true` (attribute `show-stop`) — whether the built-in Stop button renders at
-  all. **Not reflected**, and its class-field default is `true` — assign `false` via a PROPERTY
-  binding, e.g. `.showStop=${false}` — a `?show-stop=${false}` boolean-attribute binding can never
-  override a `true` default, since removing an attribute that was never present fires no
-  `attributeChangedCallback` (see AGENTS.md).
+- `showStop: boolean = true` (attribute `show-stop`, **not reflected**) — whether the built-in Stop
+  button renders at all. Uses a string-value-aware `ComplexAttributeConverter` (not Lit's default
+  presence-based `type: Boolean`), so a plain-HTML `show-stop="false"` content attribute correctly
+  turns it off — the literal string `"false"` maps to `false`; the attribute's mere presence with any
+  other value (or no value) maps to `true`. A Lit template can instead use a `.showStop=${false}`
+  property binding. **Caveat:** a `?show-stop=${false}` boolean-attribute *binding* still can't turn
+  it off when the attribute was never present in markup to begin with — that binding only ever
+  removes the attribute when falsy, and removing an attribute that's already absent fires no
+  `attributeChangedCallback` (see AGENTS.md); use `.showStop=${false}` or the plain
+  `show-stop="false"` string form instead.
 
 **Events:** `lyra-stop` (no detail payload — `this.emit('lyra-stop')` is called with no second
 argument, so `event.detail` is `null`, not `undefined`) — fired when the built-in Stop button is
@@ -4745,8 +4994,10 @@ something that announces state *transitions* instead. The Stop button gets a nor
 `aria-label="Stop generating"`, no different from any other icon-only button in this library.
 
 **Known gotchas:**
-- `showStop` defaults to `true` and is not a reflected property — see the property list above for
-  the property-vs-attribute-binding footgun this creates.
+- `showStop` defaults to `true` and is not a reflected property. Its `ComplexAttributeConverter`
+  makes the plain content attribute `show-stop="false"` work correctly, but a `?show-stop=${false}`
+  Lit boolean-attribute *binding* still can't turn it off starting from absent markup — see the
+  property list above for the exact footgun.
 - The derived `tokens-per-second` figure only appears once `elapsedMs >= 1000`; before that, the
   `throughput` part simply doesn't render — supply `tokens-per-second` yourself for a stable figure
   from the very first tick.
@@ -4784,7 +5035,9 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   code scrolls internally past this height instead of growing the page
 
 **Events:** `lyra-copy` (`detail: { text: string }` — always the raw `code` value, never the
-highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded)
+highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
+`lyra-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
+button is activated, same event name/shape convention as `<lyra-thinking-panel>`'s own `lyra-toggle`)
 
 **Slots:** none.
 
@@ -5148,6 +5401,11 @@ internal shadow-DOM button; `<lyra-menu>` is the sole owner of this element's `t
 - `destructive: boolean = false` (reflected — tints the row with `--lyra-color-danger`, for a
   dangerous action like "Delete")
 
+**Methods:** `select(): void` — fires `lyra-menu-item-select` (no-op while `disabled`). Called
+internally by this element's own click handler and by `<lyra-menu>`'s Enter/Space keydown handling
+of the roving-focused item; also the cleanest way for a consumer/test to trigger selection
+programmatically instead of clicking the shadow-DOM `[part="base"]` element (see the gotcha below).
+
 **Events:** `lyra-menu-item-select` (no detail payload — `this.emit('lyra-menu-item-select')` is
 called with no second argument, so `event.detail` is `null`, not `undefined`; fires on click, or
 when the parent `<lyra-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
@@ -5182,17 +5440,24 @@ The popup is always rendered in the DOM (never `display:none`) so `.focus()` cal
 work synchronously the instant it opens — closed state is conveyed via `visibility`/`opacity`
 instead. `visibility` is an inherited CSS property that pierces the `<slot>` projection boundary, so
 every closed-state `<lyra-menu-item>` is automatically excluded from sequential (Tab-key)
-navigation with no separate JS bookkeeping. Once open, ArrowDown/ArrowUp move the roving focus among
-non-disabled items and wrap past either end; Home/End jump to the first/last non-disabled item;
-Enter/Space activate the focused item; Escape closes and refocuses the trigger. A click outside both
-the trigger and the open popup also closes it, but deliberately does *not* refocus the trigger — the
-outside click itself already moved focus somewhere the user chose.
+navigation with no separate JS bookkeeping. ArrowDown/ArrowUp *on the trigger while closed* also
+opens the menu, focusing the first/last non-disabled item respectively (mirrors native `<select>`).
+Once open, ArrowDown/ArrowUp move the roving focus among non-disabled items and wrap past either end
+(unlike `<lyra-select>`'s clamped listbox nav); Home/End jump to the first/last non-disabled item;
+Enter/Space activate the focused item; Escape closes and refocuses the trigger; Tab closes without
+`preventDefault()`, letting the browser's own Tab navigation proceed untouched. A printable keypress
+runs type-ahead: roving focus jumps to the next non-disabled item whose text starts with the
+accumulated buffer (cycling from just after the active item, buffer resets ~500ms after the last
+keystroke) — mirrors `<lyra-select>`'s identical listbox type-ahead. A click outside both the trigger
+and the open popup also closes it, but deliberately does *not* refocus the trigger — the outside
+click itself already moved focus somewhere the user chose.
 
 **Known gotchas:**
 - `<lyra-menu-item>`'s click handler lives on an inner shadow-DOM element (`[part="base"]`), not the
   host — calling `.click()` directly on the `<lyra-menu-item>` host element in a test does **not**
-  trigger selection; you must click (or dispatch on) the element returned by
-  `menuItemEl.shadowRoot.querySelector('[part="base"]')`.
+  trigger selection; either click (or dispatch on) the element returned by
+  `menuItemEl.shadowRoot.querySelector('[part="base"]')`, or just call the item's own `select()`
+  method directly.
 - `lyra-show`/`lyra-hide` are suppressed on the very first render even if `open` is already `true`
   in markup — only later `open` transitions fire them.
 - `lyra-menu-item-select` carries no detail payload (`event.detail === null`); read
@@ -5336,6 +5601,10 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
 - `layout: 'vertical' | 'compact' = 'vertical'` (reflected) — `vertical` stacks full-width rows with
   visible labels; `compact` runs the same two rows side by side with a smaller, uppercase temperature
   caption, for toolbars/sidebars where the vertical layout's height doesn't fit.
+- `disabled: boolean = false` (reflected) — disables the panel as a unit by forwarding to *both*
+  internal `lyra-model-select` and `lyra-slider`; a wrapping `<fieldset disabled>` alone would not
+  reach either, since a form-associated control's own `disabled` IDL property/attribute is never
+  mutated by fieldset cascading.
 
 **Events:** `lyra-change` — `detail: { modelValue: string; inCatalog: boolean; temperature: number }`.
 Fires whenever *either* child control's own `lyra-change` fires, and always carries the full current
@@ -5370,7 +5639,13 @@ internally (both imported unconditionally as side effects, not optional).
 The internal `lyra-slider` renders with its own value readout suppressed (`.showValue=${false}`);
 the current temperature is instead shown via this component's own `[part="temperature-value"]` span,
 which interpolates `temperature` verbatim with no `toFixed`/formatting applied — a value like `0.1`
-shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit.
+shows as `0.1`, and any floating-point noise a slider drag produces would render digit-for-digit. The
+panel's own `temperature` property mirrors the nested slider's *live* value on every one of its
+`lyra-input` events (drag/key-repeat), not just its committed `lyra-change` — so `temperature` (and
+the visible readout) tick continuously during a drag, but the panel's own `lyra-change` event only
+fires once the slider's own `lyra-change` commits (pointerup/keyup) or the model changes; reading
+`.temperature` mid-drag will already reflect the live position even though no `lyra-change` has fired
+yet for it.
 
 **Known gotchas:**
 - `catalog` is JS-only (`attribute: false`) — set it via a property binding (`.catalog=`), never as
@@ -5412,8 +5687,8 @@ capacity), `segment` (one occupied segment — carries `data-tone` for styling),
 
 **Themeable custom properties:** no component-specific custom properties; consumes shared tokens
 `--lyra-space-xs`, `--lyra-color-text-quiet`, `--lyra-font`, `--lyra-radius`, `--lyra-color-border`,
-`--lyra-color-brand`, `--lyra-color-success`, `--lyra-color-warning`, `--lyra-color-danger`,
-`--lyra-transition-base`.
+`--lyra-color-surface` (the bar variant's inter-segment seam), `--lyra-color-brand`,
+`--lyra-color-success`, `--lyra-color-warning`, `--lyra-color-danger`, `--lyra-transition-base`.
 
 **Optional peer deps:** none.
 
@@ -5434,15 +5709,17 @@ capacity), `segment` (one occupied segment — carries `data-tone` for styling),
 `role="img"` and a computed `aria-label` are set imperatively on the *host* element itself in
 `willUpdate` (mirroring `lyra-gauge`'s "meter" role convention) — every internal node (`track`,
 `segment`, the ring's `<svg>`, `label`) is `aria-hidden`, so a screen reader gets one meaningful
-summary string instead of the raw markup. That summary's "used" figure is the plain, unclamped sum of
-`segments[].value` (`"150,000 of 128,000 used"` is possible if segments overshoot `total`), even
-though the *visual* meter itself never overflows: each segment's ratio is clamped so the running
-cumulative fill across all segments can never exceed 100% of the bar/ring — an over-`total` `segments`
-array renders as a fully (not over-) filled meter, with later segments truncated or squeezed to zero
-width/arc-length as the budget runs out. `total <= 0` (or non-finite) renders zero segments — an empty
-track/ring — regardless of what's in `segments`. Ring geometry (a 40-radius circle, 12px stroke,
-centered at 50,50) intentionally matches `lyra-gauge`'s own radial numbers, so the two circular-meter
-components in the library share one visual scale.
+summary string instead of the raw markup. That summary's "used" figure is the sum of
+`segments[].value`, clamped to `total` whenever `total > 0` so the announced text can never claim
+more than 100% used (e.g. `segments` summing to `150000` against `total="128000"` still announces
+`"128,000 of 128,000 used"`) — matching what the *visual* meter shows, since each segment's ratio is
+independently clamped so the running cumulative fill across all segments can never exceed 100% of the
+bar/ring either: an over-`total` `segments` array renders as a fully (not over-) filled meter, with
+later segments truncated or squeezed to zero width/arc-length as the budget runs out. `total <= 0`
+(or non-finite) renders zero segments — an empty track/ring — and the announced summary falls back to
+just `"{used} used"` with no `"of {total}"` clause, regardless of what's in `segments`. Ring geometry
+(a 40-radius circle, 12px stroke, centered at 50,50) intentionally matches `lyra-gauge`'s own radial
+numbers, so the two circular-meter components in the library share one visual scale.
 
 **Known gotchas:**
 - The ring variant's per-segment `<title>` and the bar variant's per-segment `title=` attribute are
@@ -5580,10 +5857,21 @@ way to get a `<pre>`'s text content from a URL — gated behind a generation-cou
 (`lyra-tool-result-view`'s `resolve()` uses the identical pattern) so a `src` reassigned mid-fetch
 can't have a stale response clobber a newer one.
 
+Every `src` is validated (via `internal/safe-url.ts`) against a scheme allowlist specific to the DOM/
+API sink it's about to reach: `fetch(src)` (text preview) and an `<img src>` (image preview) both
+allow relative URLs plus `http:`, `https:`, `blob:`, and `data:`; the download `<a href>` deliberately
+excludes `data:` (following a `data:text/html` URL can create an active document, unlike using it as
+inert media/fetch data). A `src` that fails its sink's check never reaches `fetch()`/`<img>`/the
+anchor: the text preview renders `[part="error"]` with `"Document URL is not allowed."`, the image
+preview silently falls back to the generic download-or-`unsupported`-slot fallback, and the generic
+fallback simply omits `[part="download-link"]` entirely.
+
 **Properties:**
 - `src: string = ''` — URL to fetch (for `text`/`application/json`) or display (`image`, or as the
   generic fallback's download `href`). Optional — gracefully absent while, e.g., a conversion is
-  still in progress.
+  still in progress. Validated per-sink before use — see the URL-safety note above; an unsafe/
+  malformed value is treated as if `src` were unusable for that sink, never passed to `fetch()`/
+  `<img>`/the anchor.
 - `mimeType: string = ''` (attribute `mime-type`) — drives format dispatch (see above).
 - `filename: string = ''` — shown in the header and used as the download link's suggested filename.
 - `status: 'idle' | 'converting' | 'ready' | 'error' = 'idle'` (reflected) — host-owned lifecycle
@@ -5614,7 +5902,8 @@ download fallback for any `mime-type` this component doesn't natively support. I
 `spinner` (indeterminate `role="status"`, or `role="progressbar"` once numeric progress is known —
 used both for `status="converting"` and this component's own in-flight text fetch), `error`
 (`role="alert"` — used both for `status="error"` and a failed text fetch), `download-link` (only
-rendered when `src` is set)
+rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
+above; excludes `data:` even though the other two sinks allow it)
 
 **Themeable custom properties:** `--lyra-document-preview-max-height` (default `none`) — the
 consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` means the preview grows
@@ -5669,6 +5958,13 @@ available, the region becomes a standard `role="progressbar"` instead, self-desc
   just via two different mechanisms depending on timing.
 - `download-link` (and thus `lyra-download`) only renders/fires when `src` is set — a generic-fallback
   state with no `src` shows only the file glyph and message, with no download affordance at all.
+- `download-link` also never renders for a `data:` URL, even though `data:` is accepted for text/image
+  sinks — a `src="data:..."` document renders/fetches fine but falls back to no download affordance
+  in the generic state.
+- A `src` that fails its sink's URL-safety check does **not** raise `lyra-render-error` — that event is
+  reserved for a `fetch()` that was actually attempted and failed at the network layer; an unsafe/
+  malformed `src` is silently treated as unusable instead (a rendered `[part="error"]` message for
+  text, a silent fallback for image/download).
 
 ---
 
@@ -5690,13 +5986,20 @@ final.
   filename, and folded into the accessible name.
 - `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
   back to `filename`, then a generic per-kind description.
+- `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
+  overrides the `--lyra-media-card-max-height` custom property for this instance only (applied
+  inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
+  shadow root) — same contract as `<lyra-document-preview>`'s identically-named prop.
 
 **Events:** `lyra-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
-card (or, for `kind="video"`, its separate `open-button`) is activated. This component never
-navigates on its own for `image`/`video` — a host decides what "open" means. The `file`-chip case is
-the exception: when `src` passes the stricter href safety check, the chip is a real `<a href
-download>` so a bare drop-in still does something useful, but `lyra-open` fires first — a host
-calling `preventDefault()` on it suppresses that default download/open so it can substitute its own
+card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
+safe-URL sink actually rendered (`safeMediaSrc(src) ?? safeLinkHref(src) ?? src.trim()`), not
+necessarily the raw `src` property verbatim — a whitespace-padded value is trimmed, so `detail.src`
+always matches what the DOM would show if it were safe. This component never navigates on its own
+for `image`/`video` — a host decides what "open" means. The `file`-chip case is the exception: when
+`src` passes the stricter href safety check, the chip is a real `<a href download>` so a bare
+drop-in still does something useful, but `lyra-open` fires first — a host calling
+`preventDefault()` on it suppresses that default download/open so it can substitute its own
 handling.
 
 **Slots:** none.
@@ -5706,8 +6009,13 @@ an `<a>` or `<span>` for the file-chip fallback depending on href safety), `medi
 `<video>`), `file-icon`, `filename` (file-chip fallback only), `open-button` (video only — see
 below).
 
-**Themeable custom properties:** shared tokens only — `--lyra-space-xs`/`-s`, `--lyra-color-border`,
-`--lyra-color-surface`, `--lyra-color-text`/`-text-quiet`, `--lyra-radius`, `--lyra-focus-ring-*`.
+**Themeable custom properties:** `--lyra-media-card-max-height` (default `20rem` — caps `[part="media"]`'s
+block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
+`<lyra-document-preview>`'s identical `--lyra-document-preview-max-height`; override per-instance via
+the `max-height` attribute instead of this property directly). Plus shared tokens
+`--lyra-space-xs`/`-s`, `--lyra-color-border`, `--lyra-color-surface`, `--lyra-color-text`/`-text-quiet`,
+`--lyra-color-brand` (hover border), `--lyra-radius`, `--lyra-icon-button-size` (video's `open-button`
+sizing), `--lyra-focus-ring-*`, `--lyra-transition-fast`.
 
 **Optional peer deps:** none.
 
@@ -5786,10 +6094,13 @@ native wrapper's own camera API).
 
 **CSS parts:** `trigger` (the single-capability button, only rendered when
 `capabilities.length === 1`), `menu` (the `lyra-menu` wrapper, only rendered when
-`capabilities.length > 1`).
+`capabilities.length > 1`), `menu-trigger` (the multi-capability button slotted into `lyra-menu`'s own
+`trigger` slot, only rendered when `capabilities.length > 1`), `expand-icon` (the disclosure chevron
+inside the multi-capability trigger button, only rendered when `capabilities.length > 1`).
 
-**Themeable custom properties:** shared tokens only — `--lyra-space-xs`, `--lyra-color-text`,
-`--lyra-icon-button-size`, `--lyra-focus-ring-*`, `--lyra-opacity-disabled`, `--lyra-radius`.
+**Themeable custom properties:** shared tokens only — `--lyra-space-xs`, `--lyra-color-text`/
+`-text-quiet`, `--lyra-icon-button-size`, `--lyra-focus-ring-*`, `--lyra-opacity-disabled`,
+`--lyra-radius`, `--lyra-transition-fast`.
 
 **Optional peer deps:** none.
 
@@ -5843,13 +6154,14 @@ string.
 
 **Slots:** default — an escape hatch for fully custom key-cap content (e.g. an icon instead of a
 text glyph). When it has any real (non-whitespace) content, it replaces the `keys`-driven rendering
-entirely and this component stops asserting its own `aria-label`, leaving the slotted content to
-carry its own accessible name.
+entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
+content to carry its own accessible name — a host-supplied `aria-label` attribute is still forwarded
+onto the rendered chip in either mode, custom content included.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-xs`, `--lyra-color-surface`/
-`-border`/`-text-quiet`, `--lyra-radius`, `--lyra-font`.
+`-border`/`-text`/`-text-quiet`, `--lyra-radius`, `--lyra-font`.
 
 **Optional peer deps:** none.
 
@@ -5868,7 +6180,10 @@ The rendered chip carries `role="img"` with a single spelled-out `aria-label` (e
 rather than exposing each glyph/`+`-separator as separate accessible-tree text, since the individual
 pieces aren't real words and would read worse piecemeal than as one label — glyphs like ⌘/⇧/⌥ are
 not reliably announced by every screen reader/platform combination, which is exactly why the
-spelled-out word form exists at all.
+spelled-out word form exists at all. An empty `keys` with no explicit `aria-label` override and no
+slotted content renders nothing visible and is marked `aria-hidden="true"` (no `role="img"`) instead
+of exposing a nameless image element — `role`/`aria-hidden` are both derived from the same
+computed-label value so the two can never disagree.
 
 ---
 
@@ -5896,7 +6211,10 @@ title).
 
 **CSS parts:** `base` (outer bordered container), `header` (present in the DOM at all times so a
 later `slotchange` on `actions` is still observed, but `hidden` whenever there's no `title` and no
-`actions` content), `title`, `actions` (`hidden` whenever the slot has no assigned content), `body`.
+`actions` content), `title` (truncates with an ellipsis when it overflows; carries its own native
+`title` attribute — the full string — so hovering the truncated text reveals it via the browser's
+default tooltip, scoped to just this element rather than the whole card), `actions` (`hidden`
+whenever the slot has no assigned content), `body`.
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-xs`/`-s`, `--lyra-color-border`/
 `-surface`/`-text`, `--lyra-radius`.
