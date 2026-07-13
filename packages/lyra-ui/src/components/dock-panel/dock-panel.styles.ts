@@ -20,11 +20,25 @@ export const styles = css`
   :host([edge='start']),
   :host([edge='end']) {
     block-size: 100%;
-    min-inline-size: var(--lyra-dock-panel-collapsed-size);
   }
   :host([edge='top']),
   :host([edge='bottom']) {
     inline-size: 100%;
+  }
+  /* The collapsed-rail floor only applies once actually collapsed -- scoped
+     here rather than to the bare [edge] selectors above, so it can never
+     override a smaller explicit min-size (resolved in JS by
+     resolveBoundsPx()) while expanded. An unconditional floor here would
+     silently win over a min-size below the rail token's width, since a CSS
+     min-inline-size/min-block-size always wins over an inline size style
+     regardless of what value applySize() computed and announced via
+     aria-valuenow. */
+  :host([edge='start'][collapsed]),
+  :host([edge='end'][collapsed]) {
+    min-inline-size: var(--lyra-dock-panel-collapsed-size);
+  }
+  :host([edge='top'][collapsed]),
+  :host([edge='bottom'][collapsed]) {
     min-block-size: var(--lyra-dock-panel-collapsed-size);
   }
 

@@ -75,6 +75,16 @@ it('applies the size property as the host block-size for a top/bottom edge', asy
   expect(el.getBoundingClientRect().height).to.be.closeTo(150, 1);
 });
 
+it('lets an explicit min-size below the collapsed-rail token width render while expanded', async () => {
+  // --lyra-icon-button-size (the collapsed-rail token) is 2.5rem = 40px --
+  // an unconditional CSS min-inline-size floor at that width used to win
+  // over this smaller explicit size/min-size even though nothing here is
+  // collapsed.
+  const el = await dockedFixture('size="24px" min-size="24px" max-size="200px"');
+  await elementUpdated(el);
+  expect(el.getBoundingClientRect().width).to.be.closeTo(24, 1);
+});
+
 it('resizes via keyboard and emits lyra-resize with a px size in the detail', async () => {
   const el = await dockedFixture('size="300px" min-size="100px" max-size="500px"');
   await elementUpdated(el);
@@ -225,6 +235,64 @@ it('preserves the last expanded size across a collapse/expand round trip', async
   expect(el.collapsed).to.equal(false);
   expect(el.size).to.equal('280px');
   expect(el.getBoundingClientRect().width).to.be.closeTo(280, 1);
+});
+
+it('rotates the collapse-toggle chevron toward the pinned edge when expanded, away when collapsed', async () => {
+  // edge="end" in LTR is physically pinned to the right: expanded, the
+  // chevron (which points right at 0deg by default) should point straight
+  // at that pinned edge; collapsed, it should flip to point away (left).
+  const endLtr = await dockedFixture('collapsible', 'end');
+  await elementUpdated(endLtr);
+  const chevron = (el: LyraDockPanel) =>
+    el.shadowRoot!.querySelector('[part="collapse-toggle"] span') as HTMLElement;
+  expect(chevron(endLtr).style.transform).to.equal('rotate(0deg)');
+  endLtr.collapsed = true;
+  await elementUpdated(endLtr);
+  expect(chevron(endLtr).style.transform).to.equal('rotate(180deg)');
+
+  // Mirrored case: edge="start" under dir="rtl" is *also* physically pinned
+  // to the right (the inline-start side flips to the right under RTL), so
+  // it must match the edge="end" LTR case exactly.
+  const rtlWrapper = (await fixture(
+    html`<div dir="rtl" style="position: relative; height: 10rem; display: flex;">
+      <lyra-dock-panel edge="start" collapsible></lyra-dock-panel>
+    </div>`,
+  )) as HTMLDivElement;
+  const startRtl = rtlWrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+  await elementUpdated(startRtl);
+  expect(chevron(startRtl).style.transform).to.equal('rotate(0deg)');
+  startRtl.collapsed = true;
+  await elementUpdated(startRtl);
+  expect(chevron(startRtl).style.transform).to.equal('rotate(180deg)');
+});
+
+it('keeps aria-valuemax/aria-valuenow live against a passive container resize', async () => {
+  const wrapper = (await fixture(
+    `<div style="position: relative; width: 400px; height: 20rem; display: flex;">
+      <div style="flex: 1;">main</div>
+      <lyra-dock-panel edge="end" size="100px" min-size="50px"></lyra-dock-panel>
+    </div>`,
+  )) as HTMLDivElement;
+  const el = wrapper.querySelector('lyra-dock-panel') as LyraDockPanel;
+  await elementUpdated(el);
+  const handle = () => el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const initialMax = handle().getAttribute('aria-valuemax');
+  expect(initialMax).to.equal('400');
+
+  // Grow the container without touching any property on the panel itself --
+  // nothing here schedules a Lit re-render on its own, so this only reaches
+  // aria-valuemax/aria-valuenow via the panel's own ResizeObserver on its
+  // parent.
+  wrapper.style.width = '800px';
+  await new Promise<void>((resolve) => {
+    const ro = new ResizeObserver(() => {
+      ro.disconnect();
+      resolve();
+    });
+    ro.observe(wrapper);
+  });
+  await elementUpdated(el);
+  expect(handle().getAttribute('aria-valuemax')).to.equal('800');
 });
 
 it('is accessible in its default state (no collapsible, resizable handle only)', async () => {

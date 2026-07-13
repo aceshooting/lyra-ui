@@ -134,10 +134,19 @@ export class LyraDockPanel extends LyraElement {
 
   private drag: DragState | null = null;
   private readonly contentId = nextId('dock-panel-content');
+  // Keeps aria-valuemax/aria-valuenow (and the %/max-size fallback they're
+  // derived from) live against a *passive* container resize -- window
+  // resize, a sibling collapsing, a media query -- none of which touch any
+  // reactive property here, so without this they'd otherwise only refresh
+  // on the next unrelated Lit re-render. Mirrors lyra-split's own
+  // collapseResizeObserver technique, just observing the containing element
+  // instead of the component's own base.
+  private containerResizeObserver?: ResizeObserver;
 
   connectedCallback(): void {
     super.connectedCallback();
     this.applyHostSize();
+    this.armContainerResizeObserver();
   }
 
   disconnectedCallback(): void {
@@ -147,6 +156,19 @@ export class LyraDockPanel extends LyraElement {
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
     window.removeEventListener('lostpointercapture', this.onPointerUp);
+    this.containerResizeObserver?.disconnect();
+  }
+
+  /** Creates (idempotently) and (re-)observes the containing element with a
+   *  `ResizeObserver` that just requests a re-render on every callback --
+   *  `containerPx()`/`currentSizePx()` already read the live DOM on every
+   *  render, so there's no separate cached value to update here, only the
+   *  render that was otherwise never being triggered. A no-op when not yet
+   *  connected (no `parentElement`). */
+  private armContainerResizeObserver(): void {
+    if (!this.parentElement) return;
+    this.containerResizeObserver ??= new ResizeObserver(() => this.requestUpdate());
+    this.containerResizeObserver.observe(this.parentElement);
   }
 
   // Applied in willUpdate (before render), not updated (after render): the
@@ -296,7 +318,7 @@ export class LyraDockPanel extends LyraElement {
     if (this.edge === 'top') return this.collapsed ? 90 : -90;
     if (this.edge === 'bottom') return this.collapsed ? -90 : 90;
     const pinnedPhysicalEnd = this.edge === 'end' ? !isRtl(this) : isRtl(this);
-    return this.collapsed === pinnedPhysicalEnd ? 0 : 180;
+    return this.collapsed !== pinnedPhysicalEnd ? 0 : 180;
   }
 
   private handleTemplate(): TemplateResult | typeof nothing {
