@@ -844,11 +844,15 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       } else {
         // clamp() mixes units natively, so a constrained panel stays pinned
         // between its px bounds across container resizes with no extra
-        // ResizeObserver — the browser re-evaluates it on every layout pass.
+        // ResizeObserver -- the browser re-evaluates it on every layout pass.
+        // flex-shrink: 1 (not 0) lets the row's panels absorb the auto-inserted
+        // dividers' own combined width instead of the row's total content width
+        // overflowing the container by (panelCount - 1) * dividerWidth, which
+        // flex-shrink: 0 previously could not.
         panel.style.flex =
           constraint && (constraint.minPx != null || constraint.maxPx != null)
-            ? `0 0 clamp(${constraint.minPx ?? NO_MIN_PX}px, ${percent}%, ${constraint.maxPx ?? NO_MAX_PX}px)`
-            : `0 0 ${percent}%`;
+            ? `0 1 clamp(${constraint.minPx ?? NO_MIN_PX}px, ${percent}%, ${constraint.maxPx ?? NO_MAX_PX}px)`
+            : `0 1 ${percent}%`;
       }
       panel.style.order = String(i * 2);
 
