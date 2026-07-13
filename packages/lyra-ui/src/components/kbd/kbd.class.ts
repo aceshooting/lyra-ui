@@ -12,6 +12,26 @@ export interface KbdKeyLabel {
   word: string;
 }
 
+/** Resolves a localization key to its localized text, falling back to
+ *  `fallback` (the built-in English default) when no override applies --
+ *  matches `LyraElement.localize()`'s own `(key, fallback)` shape, so a
+ *  component can pass `(key, fallback) => this.localize(key, fallback)`
+ *  directly. */
+export type KbdLocalize = (key: string, fallback: string) => string;
+
+interface NamedKeyLabel {
+  visual: string;
+  /** Localization key for `visual`, present only when it's real spelled/
+   *  abbreviated text a locale would want to control -- omitted for the
+   *  glyph-only visuals (e.g. `'↵'`, `'⌫'`, the arrow glyphs), which aren't
+   *  translatable words. */
+  visualKey?: string;
+  word: string;
+  /** Localization key for `word` -- every named key has one; `word` is
+   *  always spelled-out text, never a bare glyph. */
+  wordKey: string;
+}
+
 // A deliberately small map — just the modifier-adjacent/navigation keys
 // common enough in real shortcuts to be worth a friendly glyph. Anything not
 // listed here (e.g. 'f1', 'k', a punctuation key) falls through to the
@@ -21,25 +41,27 @@ export interface KbdKeyLabel {
 // 'plus'/'minus' exist specifically so a shortcut that includes a literal
 // "+" or "-" key (e.g. the classic zoom-in shortcut) has a way to say so:
 // the '+'-separated `keys` grammar can't itself carry a literal "+" token
-// (it's the delimiter), so callers spell it as the word instead.
-const NAMED_KEY_LABELS: Record<string, KbdKeyLabel> = {
-  enter: { visual: '↵', word: 'Enter' },
-  esc: { visual: 'Esc', word: 'Escape' },
-  escape: { visual: 'Esc', word: 'Escape' },
-  tab: { visual: 'Tab', word: 'Tab' },
-  space: { visual: 'Space', word: 'Space' },
-  backspace: { visual: '⌫', word: 'Backspace' },
-  delete: { visual: 'Del', word: 'Delete' },
-  home: { visual: 'Home', word: 'Home' },
-  end: { visual: 'End', word: 'End' },
-  pageup: { visual: 'PgUp', word: 'Page Up' },
-  pagedown: { visual: 'PgDn', word: 'Page Down' },
-  arrowup: { visual: '↑', word: 'Arrow Up' },
-  arrowdown: { visual: '↓', word: 'Arrow Down' },
-  arrowleft: { visual: '←', word: 'Arrow Left' },
-  arrowright: { visual: '→', word: 'Arrow Right' },
-  plus: { visual: '+', word: 'Plus' },
-  minus: { visual: '−', word: 'Minus' },
+// (it's the delimiter), so callers spell it as the word instead. Their own
+// `visual` ('+'/'−') is a bare punctuation symbol, not a translatable word,
+// so (like the glyph-only entries) it has no `visualKey`.
+const NAMED_KEY_LABELS: Record<string, NamedKeyLabel> = {
+  enter: { visual: '↵', word: 'Enter', wordKey: 'kbdEnterWord' },
+  esc: { visual: 'Esc', visualKey: 'kbdEscapeVisual', word: 'Escape', wordKey: 'kbdEscapeWord' },
+  escape: { visual: 'Esc', visualKey: 'kbdEscapeVisual', word: 'Escape', wordKey: 'kbdEscapeWord' },
+  tab: { visual: 'Tab', visualKey: 'kbdTabWord', word: 'Tab', wordKey: 'kbdTabWord' },
+  space: { visual: 'Space', visualKey: 'kbdSpaceWord', word: 'Space', wordKey: 'kbdSpaceWord' },
+  backspace: { visual: '⌫', word: 'Backspace', wordKey: 'kbdBackspaceWord' },
+  delete: { visual: 'Del', visualKey: 'kbdDeleteVisual', word: 'Delete', wordKey: 'kbdDeleteWord' },
+  home: { visual: 'Home', visualKey: 'kbdHomeWord', word: 'Home', wordKey: 'kbdHomeWord' },
+  end: { visual: 'End', visualKey: 'kbdEndWord', word: 'End', wordKey: 'kbdEndWord' },
+  pageup: { visual: 'PgUp', visualKey: 'kbdPageUpVisual', word: 'Page Up', wordKey: 'kbdPageUpWord' },
+  pagedown: { visual: 'PgDn', visualKey: 'kbdPageDownVisual', word: 'Page Down', wordKey: 'kbdPageDownWord' },
+  arrowup: { visual: '↑', word: 'Arrow Up', wordKey: 'kbdArrowUpWord' },
+  arrowdown: { visual: '↓', word: 'Arrow Down', wordKey: 'kbdArrowDownWord' },
+  arrowleft: { visual: '←', word: 'Arrow Left', wordKey: 'kbdArrowLeftWord' },
+  arrowright: { visual: '→', word: 'Arrow Right', wordKey: 'kbdArrowRightWord' },
+  plus: { visual: '+', word: 'Plus', wordKey: 'kbdPlusWord' },
+  minus: { visual: '−', word: 'Minus', wordKey: 'kbdMinusWord' },
 };
 
 /**
@@ -50,28 +72,48 @@ const NAMED_KEY_LABELS: Record<string, KbdKeyLabel> = {
  * the module-scope platform constant directly) so both the macOS and
  * non-macOS branches are directly unit-testable without having to spoof
  * `navigator` in a browser test environment that only ever runs as one
- * platform.
+ * platform. `localize`, likewise, is an optional parameter (rather than this
+ * function reaching for a component instance's `this.localize()` itself) for
+ * the same reason -- every existing 2-arg call keeps returning the literal
+ * built-in English defaults unchanged; only `<lyra-kbd>`'s own `render()`
+ * passes one, bound to `this.localize()`.
  */
-export function shortcutTokenLabel(rawToken: string, isMac: boolean): KbdKeyLabel {
+export function shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel {
   const token = rawToken.trim();
   const lower = token.toLowerCase();
+  const resolve = (key: string | undefined, fallback: string): string =>
+    key && localize ? localize(key, fallback) : fallback;
 
   // 'mod' is the platform-neutral primary modifier: Command on macOS,
   // Control everywhere else. 'ctrl' is deliberately distinct — it always
   // means the literal Control key, even on macOS, for shortcuts that are
   // specifically Ctrl-based (e.g. terminal Ctrl+C) rather than
   // platform-adapted.
-  if (lower === 'mod') return isMac ? { visual: '⌘', word: 'Command' } : { visual: 'Ctrl', word: 'Control' };
-  if (lower === 'ctrl' || lower === 'control') return { visual: 'Ctrl', word: 'Control' };
-  if (lower === 'alt') return isMac ? { visual: '⌥', word: 'Option' } : { visual: 'Alt', word: 'Alt' };
-  if (lower === 'shift') return { visual: '⇧', word: 'Shift' };
+  if (lower === 'mod') {
+    return isMac
+      ? { visual: '⌘', word: resolve('kbdCommandWord', 'Command') }
+      : { visual: resolve('kbdControlVisual', 'Ctrl'), word: resolve('kbdControlWord', 'Control') };
+  }
+  if (lower === 'ctrl' || lower === 'control') {
+    return { visual: resolve('kbdControlVisual', 'Ctrl'), word: resolve('kbdControlWord', 'Control') };
+  }
+  if (lower === 'alt') {
+    return isMac
+      ? { visual: '⌥', word: resolve('kbdOptionWord', 'Option') }
+      : { visual: resolve('kbdAltWord', 'Alt'), word: resolve('kbdAltWord', 'Alt') };
+  }
+  if (lower === 'shift') return { visual: '⇧', word: resolve('kbdShiftWord', 'Shift') };
 
   const named = NAMED_KEY_LABELS[lower];
-  if (named) return named;
+  if (named) {
+    return { visual: resolve(named.visualKey, named.visual), word: resolve(named.wordKey, named.word) };
+  }
 
   // Anything else renders as typed (preserving the caller's own casing),
   // except a bare single letter/digit, which is upper-cased for a
-  // consistent key-cap look ('k' and 'K' both render 'K').
+  // consistent key-cap look ('k' and 'K' both render 'K'). Neither branch is
+  // a translatable word (an arbitrary key letter/digit, or an unrecognized
+  // token rendered verbatim), so neither ever consults `localize`.
   if (token.length === 1) {
     const upper = token.toUpperCase();
     return { visual: upper, word: upper };
@@ -81,12 +123,12 @@ export function shortcutTokenLabel(rawToken: string, isMac: boolean): KbdKeyLabe
 
 /** Splits a `keys` string (e.g. `'mod+shift+p'`) into its resolved token
  *  labels, dropping empty segments from stray/leading/trailing `+`s. */
-export function parseShortcut(keys: string, isMac: boolean): KbdKeyLabel[] {
+export function parseShortcut(keys: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel[] {
   return keys
     .split('+')
     .map((t) => t.trim())
     .filter((t) => t.length > 0)
-    .map((t) => shortcutTokenLabel(t, isMac));
+    .map((t) => shortcutTokenLabel(t, isMac, localize));
 }
 
 /**
@@ -200,7 +242,7 @@ export class LyraKbd extends LyraElement {
       `;
     }
 
-    const tokens = parseShortcut(this.keys, IS_MAC);
+    const tokens = parseShortcut(this.keys, IS_MAC, (key, fallback) => this.localize(key, fallback));
     // role="img" treats the chip as one opaque unit (matching
     // lyra-context-meter's/lyra-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so

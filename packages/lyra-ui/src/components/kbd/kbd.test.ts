@@ -50,6 +50,91 @@ describe('shortcutTokenLabel (pure, parameterized on isMac)', () => {
     expect(shortcutTokenLabel('F1', false)).to.deep.equal({ visual: 'F1', word: 'F1' });
     expect(shortcutTokenLabel('PageDown-ish', false)).to.deep.equal({ visual: 'PageDown-ish', word: 'PageDown-ish' });
   });
+
+  it('resolves the built-in English text unchanged when no localize callback is passed (existing 2-arg calls)', () => {
+    expect(shortcutTokenLabel('esc', false)).to.deep.equal({ visual: 'Esc', word: 'Escape' });
+  });
+
+  it('routes every localizable visual/word through the optional localize callback, by key', () => {
+    const calls: Array<{ key: string; fallback: string }> = [];
+    const localize = (key: string, fallback: string): string => {
+      calls.push({ key, fallback });
+      return `[${key}]`;
+    };
+
+    expect(shortcutTokenLabel('mod', false, localize)).to.deep.equal({
+      visual: '[kbdControlVisual]',
+      word: '[kbdControlWord]',
+    });
+    expect(shortcutTokenLabel('mod', true, localize)).to.deep.equal({ visual: '⌘', word: '[kbdCommandWord]' });
+    expect(shortcutTokenLabel('ctrl', false, localize)).to.deep.equal({
+      visual: '[kbdControlVisual]',
+      word: '[kbdControlWord]',
+    });
+    expect(shortcutTokenLabel('alt', false, localize)).to.deep.equal({ visual: '[kbdAltWord]', word: '[kbdAltWord]' });
+    expect(shortcutTokenLabel('alt', true, localize)).to.deep.equal({ visual: '⌥', word: '[kbdOptionWord]' });
+    expect(shortcutTokenLabel('shift', false, localize)).to.deep.equal({ visual: '⇧', word: '[kbdShiftWord]' });
+    expect(shortcutTokenLabel('esc', false, localize)).to.deep.equal({
+      visual: '[kbdEscapeVisual]',
+      word: '[kbdEscapeWord]',
+    });
+    expect(shortcutTokenLabel('escape', false, localize)).to.deep.equal({
+      visual: '[kbdEscapeVisual]',
+      word: '[kbdEscapeWord]',
+    });
+    expect(shortcutTokenLabel('tab', false, localize)).to.deep.equal({ visual: '[kbdTabWord]', word: '[kbdTabWord]' });
+    expect(shortcutTokenLabel('space', false, localize)).to.deep.equal({
+      visual: '[kbdSpaceWord]',
+      word: '[kbdSpaceWord]',
+    });
+    expect(shortcutTokenLabel('backspace', false, localize)).to.deep.equal({ visual: '⌫', word: '[kbdBackspaceWord]' });
+    expect(shortcutTokenLabel('delete', false, localize)).to.deep.equal({
+      visual: '[kbdDeleteVisual]',
+      word: '[kbdDeleteWord]',
+    });
+    expect(shortcutTokenLabel('home', false, localize)).to.deep.equal({
+      visual: '[kbdHomeWord]',
+      word: '[kbdHomeWord]',
+    });
+    expect(shortcutTokenLabel('end', false, localize)).to.deep.equal({ visual: '[kbdEndWord]', word: '[kbdEndWord]' });
+    expect(shortcutTokenLabel('pageup', false, localize)).to.deep.equal({
+      visual: '[kbdPageUpVisual]',
+      word: '[kbdPageUpWord]',
+    });
+    expect(shortcutTokenLabel('pagedown', false, localize)).to.deep.equal({
+      visual: '[kbdPageDownVisual]',
+      word: '[kbdPageDownWord]',
+    });
+    expect(shortcutTokenLabel('enter', false, localize)).to.deep.equal({ visual: '↵', word: '[kbdEnterWord]' });
+    expect(shortcutTokenLabel('arrowup', false, localize)).to.deep.equal({ visual: '↑', word: '[kbdArrowUpWord]' });
+    expect(shortcutTokenLabel('arrowdown', false, localize)).to.deep.equal({
+      visual: '↓',
+      word: '[kbdArrowDownWord]',
+    });
+    expect(shortcutTokenLabel('arrowleft', false, localize)).to.deep.equal({
+      visual: '←',
+      word: '[kbdArrowLeftWord]',
+    });
+    expect(shortcutTokenLabel('arrowright', false, localize)).to.deep.equal({
+      visual: '→',
+      word: '[kbdArrowRightWord]',
+    });
+    expect(shortcutTokenLabel('plus', false, localize)).to.deep.equal({ visual: '+', word: '[kbdPlusWord]' });
+    expect(shortcutTokenLabel('minus', false, localize)).to.deep.equal({ visual: '−', word: '[kbdMinusWord]' });
+
+    // Fallback passed to every localize() call must be the exact built-in
+    // English default (so a locale registry that only overrides *some* keys
+    // still gets a correct fallback for the rest).
+    expect(calls).to.deep.include({ key: 'kbdControlWord', fallback: 'Control' });
+    expect(calls).to.deep.include({ key: 'kbdEscapeVisual', fallback: 'Esc' });
+    expect(calls).to.deep.include({ key: 'kbdPageDownWord', fallback: 'Page Down' });
+  });
+
+  it('does not route an unrecognized token (bare letter/digit or as-typed) through localize -- these are not translatable words', () => {
+    const localize = (): string => 'SHOULD NOT BE CALLED';
+    expect(shortcutTokenLabel('k', false, localize)).to.deep.equal({ visual: 'K', word: 'K' });
+    expect(shortcutTokenLabel('F1', false, localize)).to.deep.equal({ visual: 'F1', word: 'F1' });
+  });
 });
 
 describe('parseShortcut', () => {
@@ -69,6 +154,14 @@ describe('parseShortcut', () => {
 
   it('returns an empty array for an empty string', () => {
     expect(parseShortcut('', false)).to.deep.equal([]);
+  });
+
+  it('threads an optional localize callback through to every resolved token', () => {
+    const localize = (key: string): string => `[${key}]`;
+    expect(parseShortcut('mod+k', false, localize)).to.deep.equal([
+      { visual: '[kbdControlVisual]', word: '[kbdControlWord]' },
+      { visual: 'K', word: 'K' },
+    ]);
   });
 });
 
@@ -214,6 +307,47 @@ describe('default slot override', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="key"]').length).to.equal(0);
 
     document.body.removeChild(el);
+  });
+});
+
+describe('localization', () => {
+  it('renders the built-in English key-cap text and aria-label with no override', async () => {
+    const el = (await fixture(html`<lyra-kbd keys="mod+k"></lyra-kbd>`)) as LyraKbd;
+    const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
+    expect(keys).to.deep.equal(['Ctrl', 'K']);
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'Control+K',
+    );
+  });
+
+  it('localizes both the key-cap visual text and the aria-label word via .strings', async () => {
+    const el = (await fixture(html`
+      <lyra-kbd
+        keys="mod+esc"
+        .strings=${{
+          kbdControlVisual: 'Strg',
+          kbdControlWord: 'Steuerung',
+          kbdEscapeVisual: 'Esc',
+          kbdEscapeWord: 'Escape-Taste',
+        }}
+      ></lyra-kbd>
+    `)) as LyraKbd;
+    const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
+    expect(keys).to.deep.equal(['Strg', 'Esc']);
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'Steuerung+Escape-Taste',
+    );
+  });
+
+  it('localizes a glyph-only modifier\'s word (used only in the aria-label, not the key cap) via .strings', async () => {
+    const el = (await fixture(html`
+      <lyra-kbd keys="shift" .strings=${{ kbdShiftWord: 'Majuscule' }}></lyra-kbd>
+    `)) as LyraKbd;
+    const keys = Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((k) => k.textContent?.trim());
+    expect(keys).to.deep.equal(['⇧']);
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'Majuscule',
+    );
   });
 });
 

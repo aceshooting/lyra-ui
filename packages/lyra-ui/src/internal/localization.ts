@@ -118,7 +118,33 @@ export type LyraMessageKey =
   | 'exportButtonLabel'
   | 'generationStatusToken'
   | 'generationStatusTokens'
-  | 'graphDataList';
+  | 'graphDataList'
+  | 'kbdEscapeVisual'
+  | 'kbdEscapeWord'
+  | 'kbdTabWord'
+  | 'kbdSpaceWord'
+  | 'kbdDeleteVisual'
+  | 'kbdDeleteWord'
+  | 'kbdHomeWord'
+  | 'kbdEndWord'
+  | 'kbdPageUpVisual'
+  | 'kbdPageUpWord'
+  | 'kbdPageDownVisual'
+  | 'kbdPageDownWord'
+  | 'kbdEnterWord'
+  | 'kbdBackspaceWord'
+  | 'kbdArrowUpWord'
+  | 'kbdArrowDownWord'
+  | 'kbdArrowLeftWord'
+  | 'kbdArrowRightWord'
+  | 'kbdPlusWord'
+  | 'kbdMinusWord'
+  | 'kbdCommandWord'
+  | 'kbdControlVisual'
+  | 'kbdControlWord'
+  | 'kbdOptionWord'
+  | 'kbdAltWord'
+  | 'kbdShiftWord';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -238,6 +264,32 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
   graphDataList: 'Graph data',
+  kbdEscapeVisual: 'Esc',
+  kbdEscapeWord: 'Escape',
+  kbdTabWord: 'Tab',
+  kbdSpaceWord: 'Space',
+  kbdDeleteVisual: 'Del',
+  kbdDeleteWord: 'Delete',
+  kbdHomeWord: 'Home',
+  kbdEndWord: 'End',
+  kbdPageUpVisual: 'PgUp',
+  kbdPageUpWord: 'Page Up',
+  kbdPageDownVisual: 'PgDn',
+  kbdPageDownWord: 'Page Down',
+  kbdEnterWord: 'Enter',
+  kbdBackspaceWord: 'Backspace',
+  kbdArrowUpWord: 'Arrow Up',
+  kbdArrowDownWord: 'Arrow Down',
+  kbdArrowLeftWord: 'Arrow Left',
+  kbdArrowRightWord: 'Arrow Right',
+  kbdPlusWord: 'Plus',
+  kbdMinusWord: 'Minus',
+  kbdCommandWord: 'Command',
+  kbdControlVisual: 'Ctrl',
+  kbdControlWord: 'Control',
+  kbdOptionWord: 'Option',
+  kbdAltWord: 'Alt',
+  kbdShiftWord: 'Shift',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
