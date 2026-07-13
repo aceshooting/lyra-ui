@@ -18,6 +18,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-combobox',
   'lyra-context-meter',
   'lyra-conversation-item',
+  'lyra-copy-button',
   'lyra-date-input',
   'lyra-date-picker',
   'lyra-dialog',

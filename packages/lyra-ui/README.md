@@ -129,7 +129,7 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Components
 
-The catalog below lists all 84 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 85 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -155,6 +155,7 @@ API details.
 | `<lyra-table>` | — (extra) | Presentational, sort/select-aware data table; a column's responsive `priority` (`medium`/`low`) hides it first as the container narrows, with a reveal-columns button to force hidden columns back |
 | `<lyra-gauge>` | — (extra) | Radial or linear meter |
 | `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
+| `<lyra-copy-button>` | — (extra) | Standalone icon-only copy-to-clipboard button for a plain text value, no positioning opinion |
 | `<lyra-split>` | — (extra) | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
 | `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 | `<lyra-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |

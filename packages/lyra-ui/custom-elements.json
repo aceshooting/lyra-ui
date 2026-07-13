@@ -20455,6 +20455,342 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/copy-button/copy-button.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "",
+          "name": "LyraCopyButton",
+          "members": [
+            {
+              "kind": "field",
+              "name": "copyTimeoutId",
+              "type": {
+                "text": "ReturnType<typeof setTimeout> | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "justCopied",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "value",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The plain text to copy.",
+              "attribute": "value"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "writeClipboard",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "text",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "value",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The plain text to copy.",
+              "fieldName": "value"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-copy-button",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraCopyButton",
+          "declaration": {
+            "name": "LyraCopyButton",
+            "module": "src/components/copy-button/copy-button.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/copy-button/copy-button.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-copy-button",
+          "declaration": {
+            "name": "LyraCopyButton",
+            "module": "src/components/copy-button/copy-button.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/copy-button/copy-button.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/date-picker/calendar-core.ts",
       "declarations": [
         {

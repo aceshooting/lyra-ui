@@ -30,7 +30,7 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lyra-sparkline`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
 - **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
   `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`,
-  `lyra-split`, `lyra-widget`, `lyra-word-cloud` (zero-dependency SVG word/tag cloud).
+  `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud` (zero-dependency SVG word/tag cloud).
 - **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
   `lyra-playback`, `lyra-heatmap` (matrix and calendar layouts), `lyra-graph` (needs the optional peer
   deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.

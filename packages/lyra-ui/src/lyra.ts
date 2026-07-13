@@ -13,6 +13,7 @@ import './components/stat/stat.js';
 import './components/table/table.js';
 import './components/gauge/gauge.js';
 import './components/export-button/export-button.js';
+import './components/copy-button/copy-button.js';
 import './components/split/split.js';
 import './components/time-range/time-range.js';
 import './components/playback/playback.js';
@@ -102,6 +103,7 @@ export { LyraExportButton } from './components/export-button/export-button.js';
 export type { ExportFormat } from './components/export-button/export-button.js';
 export { escapeCsvField, buildCsv, downloadBlob } from './components/export-button/csv.js';
 export type { CsvColumn } from './components/export-button/csv.js';
+export { LyraCopyButton } from './components/copy-button/copy-button.js';
 export { LyraSplit } from './components/split/split.js';
 export type {
   PanelConstraint,
