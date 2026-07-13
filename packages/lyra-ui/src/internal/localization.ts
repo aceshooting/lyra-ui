@@ -24,6 +24,7 @@ export type LyraMessageKey =
   | 'expandMessage'
   | 'collapseMessage'
   | 'showMore'
+  | 'showMoreCount'
   | 'showLess'
   | 'retry'
   | 'remove'
@@ -66,6 +67,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   expandMessage: 'Expand message',
   collapseMessage: 'Collapse message',
   showMore: 'Show more',
+  showMoreCount: 'Show {count} more',
   showLess: 'Show less',
   retry: 'Retry',
   remove: 'Remove',
