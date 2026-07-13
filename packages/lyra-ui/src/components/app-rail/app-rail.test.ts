@@ -77,6 +77,13 @@ it('switches to icon-only and emits lyra-mode-change when the icon-only query st
 
   expect(el.mode).to.equal('icon-only');
   expect((ev.detail as AppRailModeChangeDetail).mode).to.equal('icon-only');
+  await el.updateComplete;
+  // `mode`'s custom accessor is registered via `static properties` with
+  // `noAccessor: true` rather than `@property()` -- confirms Lit's generic
+  // reflect-on-update step still fires off the manual `requestUpdate('mode',
+  // old)` call in setEffectiveMode, not just for the attribute a consumer
+  // set before upgrade.
+  expect(el.getAttribute('mode')).to.equal('icon-only');
 });
 
 it('switches to mobile when the mobile query matches, overriding a matching icon-only query', async () => {
@@ -218,6 +225,43 @@ it('setting open directly does not emit lyra-toggle (mirrors lyra-dialog open/cl
   expect(fired).to.be.false;
 });
 
+// -- RTL mobile panel offset ------------------------------------------------
+
+it('flips the mobile panel\'s offscreen transform under dir="rtl", mirroring the LTR closed-state transform', async () => {
+  const ltrEl = (await fixture(
+    html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`,
+  )) as LyraAppRail;
+  await ltrEl.updateComplete;
+  const ltrPanel = ltrEl.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const ltrTransform = getComputedStyle(ltrPanel).transform;
+
+  // dir="rtl" is set on the fixture markup itself (not mutated after
+  // connection) so the RTL computed style is this element's very first
+  // style resolution -- mutating it post-connect would instead trigger the
+  // real transition on `transform` declared alongside these rules, making
+  // an immediate getComputedStyle() read a mid-transition value rather than
+  // the final one.
+  const rtlEl = (await fixture(
+    html`<lyra-app-rail mode="mobile" dir="rtl"><button>a</button></lyra-app-rail>`,
+  )) as LyraAppRail;
+  await rtlEl.updateComplete;
+  const rtlPanel = rtlEl.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const rtlTransform = getComputedStyle(rtlPanel).transform;
+
+  expect(rtlPanel.matches(':dir(rtl)')).to.be.true;
+  expect(rtlTransform).to.not.equal(ltrTransform);
+
+  // Both resolve to a 2D matrix() whose tx component (m41) is the only
+  // difference -- LTR slides fully offscreen to the left (negative), RTL's
+  // :host(:dir(rtl)) override mirrors that to the right (positive), by the
+  // exact same magnitude since only the sign of the translateX flips.
+  const ltrTx = new DOMMatrixReadOnly(ltrTransform).m41;
+  const rtlTx = new DOMMatrixReadOnly(rtlTransform).m41;
+  expect(ltrTx).to.be.lessThan(0);
+  expect(rtlTx).to.be.greaterThan(0);
+  expect(rtlTx).to.equal(-ltrTx);
+});
+
 // -- mobile overlay: dismissal paths ---------------------------------------
 
 it('closes on backdrop click', async () => {
@@ -341,6 +385,22 @@ it('returns focus to the toggle button after closing', async () => {
   // it makes `document.activeElement` resolve to the *host*, not the button
   // itself, so the check has to look inside the shadow root directly.
   expect(el.shadowRoot!.activeElement).to.equal(toggle);
+});
+
+it('returns focus to whatever triggered it (via Escape) even when opened by setting `open` directly rather than clicking the built-in toggle', async () => {
+  const el = (await fixture(html`<lyra-app-rail mode="mobile"><button>a</button></lyra-app-rail>`)) as LyraAppRail;
+  const outsideTrigger = document.createElement('button');
+  document.body.appendChild(outsideTrigger);
+  outsideTrigger.focus();
+
+  el.open = true;
+  await el.updateComplete;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(document.activeElement).to.equal(outsideTrigger);
+  outsideTrigger.remove();
 });
 
 // -- scroll lock --------------------------------------------------------
