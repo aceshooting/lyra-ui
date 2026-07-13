@@ -81,6 +81,16 @@ it('renders a finite dashoffset instead of NaN when max is Infinity', async () =
   expect(fill.getAttribute('stroke-dashoffset')).to.not.include('NaN');
 });
 
+it('blanks the value part instead of printing the literal word when value is Infinity or -Infinity', async () => {
+  const positive = (await fixture(html`<lyra-gauge value="Infinity" max="100"></lyra-gauge>`)) as LyraGauge;
+  const positiveValue = positive.shadowRoot!.querySelector('[part="value"]')!;
+  expect(positiveValue.textContent).to.equal('');
+
+  const negative = (await fixture(html`<lyra-gauge value="-Infinity" max="100"></lyra-gauge>`)) as LyraGauge;
+  const negativeValue = negative.shadowRoot!.querySelector('[part="value"]')!;
+  expect(negativeValue.textContent).to.equal('');
+});
+
 it('does not emit an Infinity aria-valuemax', async () => {
   const el = (await fixture(html`<lyra-gauge value="5" max="Infinity"></lyra-gauge>`)) as LyraGauge;
   expect(el.getAttribute('aria-valuemax')).to.not.equal('Infinity');

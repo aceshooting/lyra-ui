@@ -46,7 +46,11 @@ const RADIAL_ARC_LENGTH = (SWEEP_DEG / 360) * 2 * Math.PI * RADIUS;
  * generic gauge widget exists in Web Awesome.
  *
  * @customElement lyra-gauge
- * @csspart base, track, fill, value, label
+ * @csspart base - The root `<svg>`.
+ * @csspart track - The background track arc/line.
+ * @csspart fill - The animated fill arc/line.
+ * @csspart value - The value text.
+ * @csspart label - The label text.
  */
 export class LyraGauge extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -60,23 +64,39 @@ export class LyraGauge extends LyraElement {
    * An empty string is treated the same as unset and falls back to the numeric `value`. */
   @property({ attribute: false }) valueLabel?: string;
 
+  // Normalizes a reversed min > max domain by swapping lo/hi, but only once
+  // both bounds are finite -- shared by `ratio` (fill geometry) and
+  // `willUpdate` (aria-value* trio) so the two can never silently diverge.
+  private get domain(): { lo: number; hi: number } {
+    const bothFinite = Number.isFinite(this.min) && Number.isFinite(this.max);
+    return bothFinite
+      ? { lo: Math.min(this.min, this.max), hi: Math.max(this.min, this.max) }
+      : { lo: this.min, hi: this.max };
+  }
+
   private get ratio(): number {
-    if (!Number.isFinite(this.value) || !Number.isFinite(this.min) || !Number.isFinite(this.max)) return 0;
-    const lo = Math.min(this.min, this.max);
-    const hi = Math.max(this.min, this.max);
+    if (!Number.isFinite(this.value)) return 0;
+    const { lo, hi } = this.domain;
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0;
     const span = hi - lo || 1;
     return Math.min(1, Math.max(0, (this.value - lo) / span));
   }
 
+  /** The text rendered/announced for the current value: `valueLabel` when set,
+   * else the numeric `value`, blanked (like the ARIA attributes and fill) when
+   * `value` is non-finite (NaN/undefined/Infinity/-Infinity). */
+  private get displayText(): string {
+    return this.valueLabel || (!Number.isFinite(this.value) ? '' : String(this.value));
+  }
+
   protected willUpdate(): void {
     this.setAttribute('role', 'meter');
-    const finiteTrio = Number.isFinite(this.value) && Number.isFinite(this.min) && Number.isFinite(this.max);
     // Normalize a reversed min > max domain the same way `ratio` does, so the
     // announced aria-value* trio always agrees with the visual fill instead
     // of aria-valuenow pinning to one bound regardless of `value` (and
     // aria-valuemin/valuemax reporting an inverted, invalid ARIA range).
-    const lo = Number.isFinite(this.min) && Number.isFinite(this.max) ? Math.min(this.min, this.max) : this.min;
-    const hi = Number.isFinite(this.min) && Number.isFinite(this.max) ? Math.max(this.min, this.max) : this.max;
+    const { lo, hi } = this.domain;
+    const finiteTrio = Number.isFinite(this.value) && Number.isFinite(lo) && Number.isFinite(hi);
     if (finiteTrio) {
       const clamped = Math.min(hi, Math.max(lo, this.value));
       this.setAttribute('aria-valuenow', String(clamped));
@@ -94,7 +114,7 @@ export class LyraGauge extends LyraElement {
   }
 
   private renderRadial(): TemplateResult {
-    const text = this.valueLabel || (isNaN(this.value) ? '' : String(this.value));
+    const text = this.displayText;
     // Dashoffset counts down from the full arc length (nothing revealed) to 0
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
     // path" technique, which transitions smoothly via plain CSS.
@@ -114,7 +134,7 @@ export class LyraGauge extends LyraElement {
   }
 
   private renderLinear(): TemplateResult {
-    const text = this.valueLabel || (isNaN(this.value) ? '' : String(this.value));
+    const text = this.displayText;
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     return html`<svg part="base" viewBox="0 0 100 20" preserveAspectRatio="none">
       <line part="track" x1="0" y1=${LINEAR_BAR_Y} x2="100" y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
