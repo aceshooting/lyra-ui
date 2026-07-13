@@ -154,8 +154,10 @@ export class LyraSourceCard extends LyraElement {
   };
 
   private get titleText(): string {
-    const base = this.title || 'Untitled source';
-    return this.page == null || this.page === '' ? base : `${base} — p. ${this.page}`;
+    const base = this.title || this.localize('untitledSource');
+    return this.page == null || this.page === ''
+      ? base
+      : this.localize('sourcePageSuffix', undefined, { base, page: this.page });
   }
 
   private onTitleClick = (): void => {

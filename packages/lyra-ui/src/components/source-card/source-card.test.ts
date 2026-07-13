@@ -213,3 +213,17 @@ it('is accessible fully populated and expanded', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('localizes the "Untitled source" fallback via this.localize()', async () => {
+  const el = (await fixture(
+    html`<lyra-source-card .strings=${{ untitledSource: 'Source sans titre' }}></lyra-source-card>`,
+  )) as LyraSourceCard;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('Source sans titre');
+});
+
+it('localizes the page-suffix format via this.localize()', async () => {
+  const el = (await fixture(
+    html`<lyra-source-card title="Report" .page=${4} .strings=${{ sourcePageSuffix: '{base}, page {page}' }}></lyra-source-card>`,
+  )) as LyraSourceCard;
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('Report, page 4');
+});

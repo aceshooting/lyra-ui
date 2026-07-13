@@ -71,7 +71,9 @@ export type LyraMessageKey =
   | 'copyDiff'
   | 'jsonArray'
   | 'jsonObject'
-  | 'jsonValue';
+  | 'jsonValue'
+  | 'untitledSource'
+  | 'sourcePageSuffix';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -144,6 +146,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   jsonArray: 'array',
   jsonObject: 'object',
   jsonValue: 'value',
+  untitledSource: 'Untitled source',
+  sourcePageSuffix: '{base} — p. {page}',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
