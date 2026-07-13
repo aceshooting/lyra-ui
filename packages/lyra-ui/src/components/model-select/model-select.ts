@@ -140,7 +140,14 @@ export class LyraModelSelect extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
+    this.cleanup = undefined;
     document.removeEventListener('pointerdown', this.onDocPointer);
+    // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
+    // `updated()`'s `open`-driven branch -- without this, `open` stays
+    // `true` across the disconnect/reconnect and `changed.has('open')` never
+    // fires again, leaving the listbox rendered open with no positioning and
+    // no outside-click listener.
+    this.open = false;
   }
 
   attributeChangedCallback(name: string, old: string | null, val: string | null): void {

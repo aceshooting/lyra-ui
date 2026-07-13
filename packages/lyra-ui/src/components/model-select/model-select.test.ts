@@ -468,6 +468,20 @@ it('closes the popup on a pointerdown outside the element', async () => {
   expect(el.open).to.be.false;
 });
 
+it('re-binds positioning after a disconnect+reconnect while open, ending up closed rather than half-open with no listeners', async () => {
+  const el = (await fixture(html`<lyra-model-select open .catalog=${CATALOG}></lyra-model-select>`)) as LyraModelSelect;
+  await el.updateComplete;
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  // `disconnectedCallback()` resets `open` to `false` -- asserting that
+  // directly is what actually distinguishes the fix from the pre-fix bug
+  // (a stranded, unclosable, unpositioned listbox with no outside-pointerdown
+  // listener re-attached).
+  expect(el.open).to.be.false;
+});
+
 it('does not open when disabled', async () => {
   const el = (await fixture(
     html`<lyra-model-select disabled .catalog=${CATALOG}></lyra-model-select>`,
