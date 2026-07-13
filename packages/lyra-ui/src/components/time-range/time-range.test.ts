@@ -587,9 +587,9 @@ it('keeps infinities out of domain geometry and ARIA attributes', async () => {
   )) as LyraTimeRange;
   const handles = [...el.shadowRoot!.querySelectorAll('[role="slider"]')] as HTMLElement[];
   handles.forEach((handle) => {
-    expect(handle.getAttribute('aria-valuemin')).to.not.include('Infinity');
-    expect(handle.getAttribute('aria-valuemax')).to.not.include('Infinity');
-    expect(handle.getAttribute('aria-valuenow')).to.not.include('Infinity');
+    expect(handle.getAttribute('aria-valuemin') ?? '').to.not.include('Infinity');
+    expect(handle.getAttribute('aria-valuemax') ?? '').to.not.include('Infinity');
+    expect(handle.getAttribute('aria-valuenow') ?? '').to.not.include('Infinity');
     expect(handle.getAttribute('style')).to.not.match(/NaN|Infinity/);
   });
 });

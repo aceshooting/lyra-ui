@@ -1107,11 +1107,9 @@ gauge-specific custom property exists).
   element instead.
 - Divide-by-zero guarded (`max - min || 1`), and radial/linear share one component via the `type`
   attribute.
-- a non-finite `value`/`min`/`max` (e.g. left `NaN` mid-binding) no longer leaks a literal `"NaN"`
-  into `aria-valuenow`/`aria-valuemax`/the rendered value text — the affected ARIA attribute is
-  omitted entirely instead, and a finite `value` is clamped into `[min, max]` before being written
-  to `aria-valuenow` (the SVG arc/bar fill was already clamped via `ratio`; the ARIA number now
-  matches what's drawn).
+- non-finite `value` text remains blank, while non-finite `min`/`max` use finite default domain
+  bounds; no `NaN`/`Infinity` value leaks into the SVG geometry or ARIA attributes, and a finite
+  value is clamped into the resolved domain before being announced.
 
 ---
 
@@ -1530,6 +1528,8 @@ button's text), `--lyra-radius`, `--lyra-space-xs/-s`, `--lyra-transition-fast`,
   moves both independently instead of the second pointer hijacking which handle the first pointer's
   moves apply to; `pointercancel`/`lostpointercapture` (not just `pointerup`) both end a drag, same
   fix as `lyra-split`.
+- Non-finite domain/handle values use finite fallback geometry, and non-finite or negative steps are
+  treated as unstepped; invalid values never become `NaN`/`Infinity` CSS or ARIA strings.
 - `startLabel`/`endLabel` only override each handle's `aria-label`; they don't affect
   `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (still raw numbers) or any visible text.
 - An ancestor `<fieldset disabled>` toggling is reflected via `formDisabledCallback` into
@@ -1587,9 +1587,12 @@ play button's box), `--lyra-opacity-disabled` (play button/slider dimming at `le
   long-lived `setInterval`), so `intervalMs` is re-read fresh before every tick — changing
   `interval-ms` while `playing` takes effect on the very next step instead of only after a
   pause/play cycle.
-- `interval-ms` is floored to 16ms (~one animation frame): a non-finite or lower value ticks at
-  16ms instead, with a `console.warn` the first time each distinct bad value is seen (deduplicated
-  per value, not a single once-ever flag).
+- `length` and `index` are normalized to finite non-negative integer counts, with `index` clamped
+  into `[0, length)`; fractional, negative, `NaN`, infinite, and oversized values cannot poison
+  end conditions or the slider.
+- `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
+  lower value ticks at 16ms, while an oversized value uses the timer ceiling. Each distinct invalid
+  value is warned once (deduplicated per value, not a single once-ever flag).
 - No `aria-valuetext`/visible "N of M" position label on the range input.
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
   announcement of the Play/Pause state change.

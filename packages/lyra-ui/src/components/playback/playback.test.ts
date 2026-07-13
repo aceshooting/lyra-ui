@@ -180,7 +180,7 @@ it('self-heals a non-finite index back to a valid value on the next update, with
 
 it('normalizes non-finite, negative, fractional, and oversized navigation values', async () => {
   const el = (await fixture(html`<lyra-playback length="3.9" index="2.9"></lyra-playback>`)) as LyraPlayback;
-  expect(el.length).to.equal(3.9);
+  expect(el.length).to.equal(3);
   el.goTo(Number.NaN);
   expect(el.index).to.equal(0);
 
