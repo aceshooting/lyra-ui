@@ -195,6 +195,12 @@ export class LyraAttachmentChip extends LyraElement {
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = true;
 
+  /** Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy
+   *  chip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.
+   *  a composer's pending-attachment tray) without hand-tuning several `::part()` custom
+   *  properties individually. `false` (the default) is visually identical to today. */
+  @property({ type: Boolean, reflect: true }) compact = false;
+
   /** Verb used in the remove button's `aria-label`, interpolated as
    *  `` `${removeLabel} ${displayName}` `` -- override for i18n/locale.
    *  Defaults to `'Remove'`, reproducing today's exact `"Remove ${displayName}"`
@@ -218,6 +224,11 @@ export class LyraAttachmentChip extends LyraElement {
    *  i18n/locale. Defaults to `'Upload failed'`, reproducing today's exact
    *  text byte-for-byte. */
   @property({ attribute: 'upload-failed-label' }) uploadFailedLabel = 'Upload failed';
+
+  /** Override for the empty-name fallback shown (and used as the `title` tooltip) when neither
+   *  `file` nor `name` supply a filename -- for i18n/locale. Defaults to `'Untitled file'`,
+   *  reproducing today's exact hardcoded text byte-for-byte. */
+  @property({ attribute: 'untitled-label' }) untitledLabel = 'Untitled file';
 
   // The object URL created for `file`'s image thumbnail, plus the exact
   // `File` it was created for (so a later `file` re-assignment to a
@@ -311,7 +322,7 @@ export class LyraAttachmentChip extends LyraElement {
 
   render(): TemplateResult {
     const name = this.effectiveName;
-    const displayName = name || 'Untitled file';
+    const displayName = name || this.untitledLabel;
     // A `0`-byte size reads the same as "unknown" here (there's no prop to
     // distinguish a genuinely empty file from a size that was simply never
     // supplied) -- hide the part entirely rather than show a literal "0 B".
@@ -329,7 +340,7 @@ export class LyraAttachmentChip extends LyraElement {
       <div part="base">
         <span part="thumbnail" aria-hidden="true">${this.renderThumbnail()}</span>
         <span part="meta">
-          <span part="name" title=${name || 'Untitled file'}>${displayName}</span>
+          <span part="name" title=${name || this.untitledLabel}>${displayName}</span>
           <span part="size" ?hidden=${!sizeText}>${sizeText || nothing}</span>
           <span part="status-text" role=${this.status === 'error' ? 'alert' : nothing} ?hidden=${!text}>${text || nothing}</span>
         </span>
@@ -342,12 +353,12 @@ export class LyraAttachmentChip extends LyraElement {
                   aria-valuenow=${Math.round(this.clampedProgress)}
                   aria-valuemin="0"
                   aria-valuemax="100"
-                  aria-label=${`Uploading ${displayName}`}
+                  aria-label=${`${this.uploadingLabel} ${displayName}`}
                 >
                   <div part="progress-fill" style=${`inline-size:${this.clampedProgress}%`}></div>
                 </div>
               `
-            : html`<span part="spinner" role="status" aria-label=${`Uploading ${displayName}`}></span>`
+            : html`<span part="spinner" role="status" aria-label=${`${this.uploadingLabel} ${displayName}`}></span>`
           : nothing}
         ${this.status === 'error'
           ? html`<button part="retry-button" type="button" aria-label=${`${this.localize('retry', this.retryLabel === 'Retry' ? undefined : this.retryLabel)} ${displayName}`} @click=${this.onRetryClick}>

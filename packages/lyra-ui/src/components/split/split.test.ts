@@ -1373,3 +1373,30 @@ it('closes the floating drawer on backdrop click', async () => {
     spy.restore();
   }
 });
+
+describe('dividerLabel', () => {
+  it('overrides the divider aria-label template when set', async () => {
+    const el = (await fixture(html`
+      <lyra-split>
+        <div>a</div>
+        <div>b</div>
+      </lyra-split>
+    `)) as LyraSplit;
+    el.dividerLabel = (index: number, panelCount: number) => `Diviseur ${index + 1} sur ${panelCount - 1}`;
+    await el.updateComplete;
+    const divider = el.shadowRoot!.querySelector('[part="divider"]')!;
+    expect(divider.getAttribute('aria-label')).to.equal('Diviseur 1 sur 1');
+  });
+
+  it('falls back to the built-in English template when unset (regression)', async () => {
+    const el = (await fixture(html`
+      <lyra-split>
+        <div>a</div>
+        <div>b</div>
+      </lyra-split>
+    `)) as LyraSplit;
+    await el.updateComplete;
+    const divider = el.shadowRoot!.querySelector('[part="divider"]')!;
+    expect(divider.getAttribute('aria-label')).to.equal('Resize divider between panel 1 and panel 2');
+  });
+});

@@ -438,6 +438,58 @@ describe('label overrides (i18n)', () => {
   });
 });
 
+describe('uploadingLabel wiring', () => {
+  it('wires uploadingLabel into the progressbar aria-label, not just the visible status text', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip
+        name="report.pdf"
+        status="uploading"
+        progress="42"
+        uploading-label="Envoi de"
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    const progress = el.shadowRoot!.querySelector('[part="progress"]')!;
+    expect(progress.getAttribute('aria-label')).to.equal('Envoi de report.pdf');
+  });
+
+  it('wires uploadingLabel into the spinner aria-label when progress is indeterminate', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip name="report.pdf" status="uploading" uploading-label="Envoi de"></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]')!;
+    expect(spinner.getAttribute('aria-label')).to.equal('Envoi de report.pdf');
+  });
+});
+
+describe('untitledLabel', () => {
+  it('overrides the empty-name fallback shown as the name and used as the title tooltip', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip untitled-label="Fichier sans titre"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    const name = el.shadowRoot!.querySelector('[part="name"]')!;
+    expect(name.textContent).to.equal('Fichier sans titre');
+    expect(name.getAttribute('title')).to.equal('Fichier sans titre');
+  });
+
+  it('defaults to "Untitled file" (unchanged from before this property existed)', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    expect(el.untitledLabel).to.equal('Untitled file');
+    const name = el.shadowRoot!.querySelector('[part="name"]')!;
+    expect(name.textContent).to.equal('Untitled file');
+  });
+});
+
+describe('compact', () => {
+  it('defaults to false, unchanged visual chrome', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip name="a.png"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    expect(el.compact).to.be.false;
+    expect(el.hasAttribute('compact')).to.be.false;
+  });
+
+  it('reflects the compact attribute when set', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip compact name="a.png"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    expect(el.hasAttribute('compact')).to.be.true;
+  });
+});
+
 it('is accessible in the default (empty) state', async () => {
   const el = (await fixture(html`<lyra-attachment-chip></lyra-attachment-chip>`)) as LyraAttachmentChip;
   await expect(el).to.be.accessible();
