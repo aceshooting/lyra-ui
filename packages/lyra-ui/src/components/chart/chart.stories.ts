@@ -105,11 +105,11 @@ export const ThemedTokens: Story = {
         height="16rem"
         style="
           width: 22rem;
-          --lyra-chart-grid-color: #e5484d;
-          --lyra-chart-tick-color: #e5484d;
-          --lyra-chart-legend-color: #e5484d;
-          --lyra-chart-tooltip-bg: #1a1a1a;
-          --lyra-chart-tooltip-text: #fff;
+          --lyra-chart-grid-color: var(--lyra-color-danger);
+          --lyra-chart-tick-color: var(--lyra-color-danger);
+          --lyra-chart-legend-color: var(--lyra-color-danger);
+          --lyra-chart-tooltip-bg: var(--lyra-color-text);
+          --lyra-chart-tooltip-text: var(--lyra-color-surface);
         "
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}

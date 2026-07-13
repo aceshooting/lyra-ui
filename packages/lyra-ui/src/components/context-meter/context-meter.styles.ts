@@ -7,8 +7,8 @@ export const styles = css`
   }
   :host([variant='ring']) {
     display: inline-block;
-    inline-size: 8em;
-    block-size: 8em;
+    inline-size: var(--lyra-size-8em);
+    block-size: var(--lyra-size-8em);
   }
 
   [part='base'] {
@@ -22,7 +22,7 @@ export const styles = css`
   }
 
   [part='label'] {
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
     font-family: var(--lyra-font);
   }
@@ -33,7 +33,7 @@ export const styles = css`
     display: flex;
     align-items: stretch;
     overflow: hidden;
-    block-size: 0.5rem;
+    block-size: var(--lyra-size-0-5rem);
     border-radius: calc(var(--lyra-radius) * 0.5);
     /* Quiet neutral fill for the unfilled remainder -- deliberately lighter
        than a 'neutral'-tone segment (var(--lyra-color-border) at full
@@ -54,7 +54,7 @@ export const styles = css`
      quantities instead of merging into one block. Logical property keeps it
      RTL-correct without extra math. */
   [part='segment']:not(:first-of-type) {
-    border-inline-start: 1px solid var(--lyra-color-surface);
+    border-inline-start: var(--lyra-border-width-thin) solid var(--lyra-color-surface);
   }
   [part='segment'][data-tone='brand'] {
     background: var(--lyra-color-brand);
@@ -103,7 +103,7 @@ export const styles = css`
   :host([variant='ring']) [part='label'] {
     text-anchor: middle;
     fill: var(--lyra-color-text-quiet);
-    font-size: 0.625rem;
+    font-size: var(--lyra-font-size-2xs);
     text-transform: uppercase;
   }
 

@@ -17,8 +17,8 @@ export const styles = css`
        — and have more complete glyph coverage — in the UI font than in a
        monospace stack that may not even ship those symbols. */
     font-family: var(--lyra-font);
-    font-size: 0.8125rem;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-snug);
     color: var(--lyra-color-text-quiet);
   }
 
@@ -27,23 +27,23 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: 1.5em;
-    padding: 0.0625rem var(--lyra-space-xs);
-    border: 1px solid var(--lyra-color-border);
+    min-inline-size: var(--lyra-size-1-5em);
+    padding: var(--lyra-size-0-0625rem) var(--lyra-space-xs);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: calc(var(--lyra-radius) * 0.6);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
-    font-weight: 500;
+    font-weight: var(--lyra-font-weight-medium);
     /* A subtle bottom-weighted inset shadow reads as a slightly-raised
        physical key cap rather than a flat label chip, echoing the
        lyra-chip/lyra-checkbox box's own bordered-box treatment. */
-    box-shadow: inset 0 -1px 0 var(--lyra-color-border);
+    box-shadow: inset 0 var(--lyra-size-neg-1px) 0 var(--lyra-color-border);
   }
 
   .sep {
-    margin-inline: 0.1875rem;
+    margin-inline: var(--lyra-size-0-1875rem);
     color: var(--lyra-color-text-quiet);
-    font-size: 0.75em;
+    font-size: var(--lyra-size-0-75em);
     user-select: none;
   }
 

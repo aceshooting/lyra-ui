@@ -20,29 +20,29 @@ export default meta;
 type Story = StoryObj;
 
 const buttonStyle =
-  'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid #ccc; border-radius:0.375rem; background:#fff; cursor:pointer;';
+  'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:0.375rem; background:var(--lyra-color-surface); cursor:pointer;';
 
 export const Phases: Story = {
   render: () => html`
     <div style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;">
       <div>
-        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">idle</p>
+        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">idle</p>
         <lyra-stream-status phase="idle"></lyra-stream-status>
       </div>
       <div>
-        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
           connecting
         </p>
         <lyra-stream-status phase="connecting"></lyra-stream-status>
       </div>
       <div>
-        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
           streaming
         </p>
         <lyra-stream-status phase="streaming"></lyra-stream-status>
       </div>
       <div>
-        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">stalled</p>
+        <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">stalled</p>
         <lyra-stream-status phase="stalled">
           <button slot="actions" style=${buttonStyle}>Retry</button>
         </lyra-stream-status>
@@ -99,7 +99,7 @@ export const LiveDemo: Story = {
           <button style=${buttonStyle} data-connect>Connect</button>
           <button style=${buttonStyle} data-activity>Record activity</button>
         </div>
-        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
           <code>stall-threshold-ms="2000"</code> here (vs. the real default of 10000) so the demo doesn't
           require a long wait — click Connect, then either keep clicking "Record activity" within 2s of
           each other to stay streaming, or stop clicking and watch it stall on its own.

@@ -11,8 +11,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     max-inline-size: 100%;
-    font-size: 0.8125rem;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-snug);
     color: var(--lyra-color-text-quiet);
   }
 
@@ -39,7 +39,7 @@ export const styles = css`
   [part='tokens']::before,
   [part='throughput']::before {
     content: '·';
-    margin-inline: 0.4em;
+    margin-inline: var(--lyra-size-0-4em);
     opacity: 0.6;
   }
 
@@ -50,11 +50,11 @@ export const styles = css`
     justify-content: center;
     /* Same "shrink the shared icon-button token for a compact inline
        control" idiom as lyra-attachment-chip's retry-/remove-button. */
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
     margin-inline-start: var(--lyra-space-s);
     padding: 0;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: 50%;
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);

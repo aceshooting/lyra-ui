@@ -305,8 +305,8 @@ describe('cursor', () => {
 
   it('sizes the cursor bar from themeable --lyra-streaming-text-cursor-width/-height custom properties, not hardcoded literals', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lyra-streaming-text-cursor-width: 0.125rem;');
-    expect(css).to.include('--lyra-streaming-text-cursor-height: 1em;');
+    expect(css).to.include('--lyra-streaming-text-cursor-width: var(--lyra-size-0-125rem);');
+    expect(css).to.include('--lyra-streaming-text-cursor-height: var(--lyra-size-1em);');
     expect(css).to.include('inline-size: var(--lyra-streaming-text-cursor-width);');
     expect(css).to.include('block-size: var(--lyra-streaming-text-cursor-height);');
   });

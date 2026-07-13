@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
     position: relative;
-    block-size: var(--lyra-chart-height, 280px);
+    block-size: var(--lyra-chart-height, var(--lyra-size-280px));
     /* Chart.js renders to canvas, not the DOM, so it can't consume CSS
        var() directly — chart.ts's themeColors() resolves these once per
        draw() via getComputedStyle, same pattern as heatmap.ts's scale-lo/-hi.
@@ -35,9 +35,9 @@ export const styles = css`
     position: absolute;
     inset-block-start: var(--lyra-space-xs);
     inset-inline-end: var(--lyra-space-xs);
-    font-size: 0.75rem;
-    padding: 0.15rem 0.5rem;
-    border: 1px solid var(--lyra-color-border);
+    font-size: var(--lyra-font-size-xs);
+    padding: var(--lyra-size-0-15rem) var(--lyra-size-0-5rem);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);

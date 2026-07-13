@@ -3,7 +3,9 @@ import { FLAG_LOADERS_DETAILED } from './flags/generated-detailed.js';
 import { FLAG_LOADERS_COMPACT } from './flags/generated-compact.js';
 
 /**
- * Resolves the URL of a flag SVG shipped in this package, fetching only that one flag.
+ * Resolves the URL of one flag SVG. The browser fetches only the requested flag at runtime; a
+ * bundler may still emit the complete reachable lazy-chunk graph because every supported code is
+ * represented by a literal loader import. See the package README for artifact-pruning options.
  *
  * Backing story: this used to be a synchronous lookup into `FLAG_URLS`, a single object literal
  * with one `new URL('./xx.svg', import.meta.url)` per code, evaluated eagerly the moment the
@@ -25,9 +27,8 @@ import { FLAG_LOADERS_COMPACT } from './flags/generated-compact.js';
  * `import`s the eager map, so loading it doesn't drag in `flags/eager.js` too. A dynamic
  * `import()` of a literal specifier is exactly the pattern bundlers use to create a genuinely
  * separate, lazily-fetched chunk per file — calling `flagUrl('fr')` only ever triggers a network
- * fetch for `fr`'s chunk, never the other 248 (confirmed with a real Vite build: referencing 2
- * codes produced 2 non-trivial chunks and shipped only those 2 flag assets; the rest were
- * unfetched, never-imported build outputs). Every loader module (see `flags/loaders/*.js`) itself
+ * fetch for `fr`'s chunk; the other flags are not fetched until requested. Every loader module
+ * (see `flags/loaders/*.js`) itself
  * uses `new URL(literal, import.meta.url)`, and every `import()` here uses a literal `.js`
  * specifier — never a bundler-specific suffix like `?url` — so this still works completely
  * unbundled (a plain browser `<script type="module">`, Node, `@web/test-runner`'s unbundled

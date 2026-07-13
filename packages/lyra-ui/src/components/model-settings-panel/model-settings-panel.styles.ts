@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
-    max-inline-size: 28rem;
+    max-inline-size: var(--lyra-size-28rem);
   }
   [part='base'] {
     display: flex;
@@ -12,7 +12,7 @@ export const styles = css`
     gap: var(--lyra-space-l);
     box-sizing: border-box;
     padding: var(--lyra-space-l);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
   }
@@ -41,16 +41,16 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='temperature-label'] {
-    font-size: 0.8125rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-sm);
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
     white-space: nowrap;
   }
   [part='temperature-value'] {
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
     font-variant-numeric: tabular-nums;
-    min-inline-size: 2.5ch;
+    min-inline-size: var(--lyra-size-2-5ch);
     text-align: end;
   }
 
@@ -70,14 +70,14 @@ export const styles = css`
   }
   :host([layout='compact']) [part='model-row'],
   :host([layout='compact']) [part='temperature-row'] {
-    flex: 1 1 12rem;
-    min-inline-size: 10rem;
+    flex: 1 1 var(--lyra-size-12rem);
+    min-inline-size: var(--lyra-size-10rem);
   }
   :host([layout='compact']) [part='temperature-label'] {
-    font-size: 0.6875rem;
-    font-weight: 700;
+    font-size: var(--lyra-size-0-6875rem);
+    font-weight: var(--lyra-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--lyra-size-0-04em);
     color: var(--lyra-color-text-quiet);
   }
 `;

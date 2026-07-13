@@ -9,7 +9,7 @@ export const styles = css`
   :host {
     display: block;
     position: relative;
-    block-size: var(--lyra-chart-height, 280px);
+    block-size: var(--lyra-chart-height, var(--lyra-size-280px));
     /* Same theme tokens as chart.styles.ts's :host — Chart.js renders to
        canvas, not the DOM, so it can't consume CSS var() directly;
        box-plot.ts's themeColors() resolves these once per draw() via

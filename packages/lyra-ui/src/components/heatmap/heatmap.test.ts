@@ -364,12 +364,12 @@ it('matrix mode: scale="sqrt" buckets the low value exactly to the ramp\'s lo en
   const ctx = canvas.getContext('2d')!;
   const dpr = window.devicePixelRatio || 1;
   // sqrtStep(1, 100, 7) === 0, so the first cell (value 1) should be exactly
-  // the ramp's lo endpoint (#cde2fb) — the linear scale would instead mix in
+  // the ramp's lo endpoint (#ddf4ff) — the linear scale would instead mix in
   // 10% of the hi endpoint for this same value, since it never reaches 0.
   const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
-  expect(pixel[0]).to.equal(0xcd);
-  expect(pixel[1]).to.equal(0xe2);
-  expect(pixel[2]).to.equal(0xfb);
+  expect(pixel[0]).to.equal(0xdd);
+  expect(pixel[1]).to.equal(0xf4);
+  expect(pixel[2]).to.equal(0xff);
 });
 
 it('matrix mode (default): is unaffected by the new mode/days properties', async () => {
@@ -1205,12 +1205,12 @@ describe('calendar-mode scale (extends the existing matrix-only property)', () =
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
     // sqrtStep(1, 100, 5) === 0, so the low-value cell is exactly the ramp's
-    // lo endpoint (#cde2fb) — the default quartile scale instead lands it in
+    // lo endpoint (#ddf4ff) — the default quartile scale instead lands it in
     // a middle bucket (rank 1/2 of 2 sorted values), a visibly different color.
     const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(20 * dpr), 1, 1).data;
-    expect(pixel[0]).to.equal(0xcd);
-    expect(pixel[1]).to.equal(0xe2);
-    expect(pixel[2]).to.equal(0xfb);
+    expect(pixel[0]).to.equal(0xdd);
+    expect(pixel[1]).to.equal(0xf4);
+    expect(pixel[2]).to.equal(0xff);
   });
 
   it('defaults to the quartile scale (unchanged), not sqrt, for the same skewed value set', async () => {

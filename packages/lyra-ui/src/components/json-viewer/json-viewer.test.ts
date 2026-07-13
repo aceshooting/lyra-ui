@@ -123,6 +123,19 @@ it('does not render a copy button by default', async () => {
   expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
 });
 
+it('gives tree toggles and copy controls the shared minimum hit area', async () => {
+  const el = await withData(sample);
+  el.copyable = true;
+  await el.updateComplete;
+
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+  expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(copy).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(copy).minBlockSize).to.equal('40px');
+});
+
 it('renders a top-level copy button when copyable, and emits lyra-copy with the full JSON on click', async () => {
   const el = await withData(sample);
   el.copyable = true;

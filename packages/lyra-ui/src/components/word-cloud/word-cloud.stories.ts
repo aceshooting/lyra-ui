@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'WordCloud',
@@ -60,7 +61,12 @@ export const CustomPalette: Story = {
     html`<lyra-word-cloud
       style="height: 20rem"
       .words=${WORDS}
-      .palette=${['#e63946', '#f1a208', '#2a9d8f', '#264653']}
+      .palette=${[
+        storyColor('danger'),
+        storyColor('warning'),
+        storyColor('success'),
+        storyColor('brand'),
+      ]}
     ></lyra-word-cloud>`,
 };
 

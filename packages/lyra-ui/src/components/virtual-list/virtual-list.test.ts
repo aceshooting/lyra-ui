@@ -13,6 +13,32 @@ const numberKey = (item: unknown) => item as number;
 const stringKey = (item: unknown) => item as string;
 const renderText = (item: unknown, index: number) => html`item ${item}#${index}`;
 
+it('does not schedule a Lit update from the initial container measurement', async () => {
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  globalWarnings?.forEach((warning) => {
+    if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+  });
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(
+      html`<lyra-virtual-list
+        style="--lyra-virtual-list-height:200px"
+        row-height="40"
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
+});
+
 it('is accessible with an empty items array', async () => {
   const el = (await fixture(
     html`<lyra-virtual-list

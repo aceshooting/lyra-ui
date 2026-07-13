@@ -9,7 +9,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lyra-space-xs);
     padding: var(--lyra-space-s);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
   }
@@ -21,8 +21,8 @@ export const styles = css`
     margin: 0;
     color: var(--lyra-color-brand);
     font: inherit;
-    font-weight: 600;
-    font-size: 0.875rem;
+    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lyra-font-size-md-sm);
     text-align: start;
     cursor: pointer;
   }
@@ -36,8 +36,8 @@ export const styles = css`
   }
   [part='excerpt'] {
     color: var(--lyra-color-text-quiet);
-    font-size: 0.8125rem;
-    line-height: 1.4;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-1-4);
   }
   [part='excerpt'][hidden] {
     display: none;
@@ -50,8 +50,8 @@ export const styles = css`
     margin: 0;
     color: var(--lyra-color-brand);
     font: inherit;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-xs);
+    font-weight: var(--lyra-font-weight-semibold);
     cursor: pointer;
   }
   [part='toggle']:hover {
@@ -59,10 +59,10 @@ export const styles = css`
   }
   [part='full'] {
     padding-block-start: var(--lyra-space-xs);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     color: var(--lyra-color-text);
-    font-size: 0.8125rem;
-    line-height: 1.4;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-1-4);
   }
   [part='full'][hidden] {
     display: none;

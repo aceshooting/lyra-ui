@@ -11,12 +11,12 @@ registerToolRenderer('get_weather', {
     const r = result as { location: string; tempC: number; conditions: string };
     return html`
       <div
-        style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1px solid #d0d7de;border-radius:0.5rem;max-width:20rem;"
+        style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border:1px solid var(--lyra-color-border);border-radius:0.5rem;max-width:20rem;"
       >
         <span style="font-size:1.75rem;">${r.conditions === 'Rain' ? '🌧️' : '☀️'}</span>
         <div>
           <div style="font-weight:600;">${r.location}</div>
-          <div style="color:#57606a;font-size:0.875rem;">${r.tempC}°C · ${r.conditions}</div>
+          <div style="color:var(--lyra-color-text-quiet);font-size:0.875rem;">${r.tempC}°C · ${r.conditions}</div>
         </div>
       </div>
     `;
@@ -47,7 +47,7 @@ registerToolRenderer('slow_dashboard_widget', {
         () =>
           resolve({
             render: (result) =>
-              html`<div style="padding:1rem;border:1px dashed #d0d7de;border-radius:0.5rem;max-width:20rem;">
+              html`<div style="padding:1rem;border:1px dashed var(--lyra-color-border);border-radius:0.5rem;max-width:20rem;">
                 Loaded after a delay — ${JSON.stringify(result)}
               </div>`,
           }),

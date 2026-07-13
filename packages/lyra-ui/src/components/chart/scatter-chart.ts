@@ -1,22 +1,5 @@
-import { LyraChart, lockChartType } from './chart.js';
+export * from './scatter-chart.class.js';
+import { LyraScatterChart } from './scatter-chart.class.js';
 import { defineElement } from '../../internal/prefix.js';
-
-/**
- * `<lyra-scatter-chart>` — `<lyra-chart>` with `type` locked to `"scatter"`. Feed
- * points via `Series.points`.
- *
- * @customElement lyra-scatter-chart
- */
-export class LyraScatterChart extends LyraChart {
-  declare type: 'scatter';
-}
-
-lockChartType(LyraScatterChart, 'scatter');
-
+import "./chart.js";
 defineElement('scatter-chart', LyraScatterChart);
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'lyra-scatter-chart': LyraScatterChart;
-  }
-}

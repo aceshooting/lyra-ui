@@ -20,15 +20,15 @@ export const styles = css`
     padding: var(--lyra-space-xs);
   }
   [part='icon'] {
-    font-size: 2rem;
-    line-height: 1;
+    font-size: var(--lyra-font-size-3xl);
+    line-height: var(--lyra-line-height-none);
     color: var(--lyra-color-border);
   }
   [part='icon'][hidden] {
     display: none;
   }
   [part='heading'] {
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
     margin: 0;
   }
@@ -36,10 +36,10 @@ export const styles = css`
     display: none;
   }
   :host([compact]) [part='heading'] {
-    font-weight: 400;
+    font-weight: var(--lyra-font-weight-normal);
   }
   [part='description'] {
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
     margin: 0;
   }
   [part='description']:empty {

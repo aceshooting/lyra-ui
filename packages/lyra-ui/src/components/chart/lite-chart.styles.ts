@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
     position: relative;
-    block-size: var(--lyra-chart-height, 280px);
+    block-size: var(--lyra-chart-height, var(--lyra-size-280px));
     /* Same token names/fallback chain as chart.ts's --lyra-chart-* — a host
        already theming lyra-chart gets lyra-lite-chart themed for free, and
        vice versa. Unlike chart.ts (canvas-rendered, can't consume var()
@@ -15,6 +15,14 @@ export const styles = css`
     --lyra-chart-legend-color: var(--lyra-color-text);
     --lyra-chart-tooltip-bg: var(--lyra-color-surface);
     --lyra-chart-tooltip-text: var(--lyra-color-text);
+    --lyra-chart-color-1: var(--lyra-color-chart-1);
+    --lyra-chart-color-2: var(--lyra-color-chart-2);
+    --lyra-chart-color-3: var(--lyra-color-chart-3);
+    --lyra-chart-color-4: var(--lyra-color-chart-4);
+    --lyra-chart-color-5: var(--lyra-color-chart-5);
+    --lyra-chart-color-6: var(--lyra-color-chart-6);
+    --lyra-chart-color-7: var(--lyra-color-chart-7);
+    --lyra-chart-color-8: var(--lyra-color-chart-8);
   }
   [part='base'] {
     position: relative;
@@ -46,13 +54,13 @@ export const styles = css`
   }
   [part='axis-label'] {
     fill: var(--lyra-chart-tick-color);
-    font-size: 10px;
+    font-size: var(--lyra-size-10px);
     font-family: var(--lyra-font-family, inherit);
   }
   [part='axis-title'] {
     fill: var(--lyra-chart-tick-color);
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--lyra-size-11px);
+    font-weight: var(--lyra-font-weight-semibold);
     font-family: var(--lyra-font-family, inherit);
   }
   [part='bar'] {
@@ -61,7 +69,7 @@ export const styles = css`
   [part='bar']:focus-visible,
   [part='point']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: 1px;
+    outline-offset: var(--lyra-size-1px);
   }
   [part='line'] {
     fill: none;
@@ -80,14 +88,14 @@ export const styles = css`
   [part='legend-item'] {
     display: inline-flex;
     align-items: center;
-    gap: 0.35em;
-    font-size: 0.8rem;
+    gap: var(--lyra-size-0-35em);
+    font-size: var(--lyra-size-0-8rem);
     color: var(--lyra-chart-legend-color);
   }
   [part='legend-swatch'] {
-    inline-size: 0.7em;
-    block-size: 0.7em;
-    border-radius: 2px;
+    inline-size: var(--lyra-size-0-7em);
+    block-size: var(--lyra-size-0-7em);
+    border-radius: var(--lyra-size-2px);
     flex: 0 0 auto;
   }
 `;

@@ -7,14 +7,17 @@ export const styles = css`
        --wa-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-dialog's --lyra-dialog-overlay-color and
        lyra-tool-result-dialog's --lyra-tool-result-dialog-overlay-color). */
-    --lyra-tool-select-dialog-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-tool-select-dialog-overlay-color: var(--lyra-color-overlay);
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
     align-items: center;
     justify-content: center;
-    padding: var(--lyra-space-l);
+    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
+    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
+    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
+    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -28,10 +31,10 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
-    inline-size: min(30rem, 100%);
-    block-size: min(38rem, 100%);
+    inline-size: min(var(--lyra-size-30rem), 100%);
+    block-size: min(var(--lyra-size-38rem), 100%);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     overflow: hidden;
@@ -41,12 +44,12 @@ export const styles = css`
   }
   [part='title'] {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-md);
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='subtitle'] {
     margin: var(--lyra-space-xs) 0 0;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   [part='subtitle'][hidden] {
@@ -60,7 +63,7 @@ export const styles = css`
     inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lyra-space-s) var(--lyra-space-m);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: inherit;
@@ -76,7 +79,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lyra-space-xs);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='defaults-hint'] {
     margin: 0;
@@ -86,8 +89,8 @@ export const styles = css`
        in switch.styles.ts, not exposed as tokens), so this indent is
        coupled to that fixed geometry rather than derived from an unrelated
        component's token. */
-    padding-inline-start: calc(2.25rem + var(--lyra-space-s));
-    font-size: 0.75rem;
+    padding-inline-start: calc(var(--lyra-size-2-25rem) + var(--lyra-space-s));
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
   }
 
@@ -101,7 +104,7 @@ export const styles = css`
     margin: 0;
     padding: var(--lyra-space-l) 0;
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
     text-align: center;
   }
 
@@ -116,14 +119,14 @@ export const styles = css`
     align-items: baseline;
     gap: var(--lyra-space-xs);
     margin: 0 0 var(--lyra-space-s);
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: var(--lyra-font-size-xs);
+    font-weight: var(--lyra-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--lyra-size-0-04em);
     color: var(--lyra-color-text-quiet);
   }
   [part='category-count'] {
-    font-weight: 400;
+    font-weight: var(--lyra-font-weight-normal);
     text-transform: none;
     letter-spacing: normal;
   }
@@ -150,22 +153,22 @@ export const styles = css`
   [part='tool-checkbox']::part(label) {
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: var(--lyra-size-0-125rem);
   }
   [part='tool-name'] {
     display: inline-flex;
     align-items: center;
     gap: var(--lyra-space-xs);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-md-sm);
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
   }
   [part='tool-icon'] {
-    line-height: 1;
+    line-height: var(--lyra-line-height-none);
   }
   [part='tool-description'] {
     display: block;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   [part='tool-disabled-reason'] {
@@ -174,7 +177,7 @@ export const styles = css`
        inherits its indent for free from ::part(label)'s column layout
        above instead of needing its own guessed padding. */
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-warning);
   }
 
@@ -184,7 +187,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='footer'][hidden] {
     display: none;

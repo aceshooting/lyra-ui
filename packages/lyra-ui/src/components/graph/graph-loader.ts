@@ -1,17 +1,18 @@
-import type * as ForceModule from 'd3-force';
-import type * as DragModule from 'd3-drag';
-import type * as ZoomModule from 'd3-zoom';
-import type * as SelectionModule from 'd3-selection';
+import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
+
+type D3Module = OptionalPeerApi;
 
 export interface D3Modules {
-  forceSimulation: typeof ForceModule.forceSimulation;
-  forceLink: typeof ForceModule.forceLink;
-  forceManyBody: typeof ForceModule.forceManyBody;
-  forceCenter: typeof ForceModule.forceCenter;
-  forceCollide: typeof ForceModule.forceCollide;
-  drag: typeof DragModule.drag;
-  zoom: typeof ZoomModule.zoom;
-  select: typeof SelectionModule.select;
+  forceSimulation: <Node extends D3Module = D3Module>(nodes?: Iterable<Node>) => D3Module;
+  forceLink: <Node extends D3Module = D3Module, Link extends D3Module = D3Module>(
+    links?: Iterable<Link>,
+  ) => D3Module;
+  forceManyBody: <Node extends D3Module = D3Module>() => D3Module;
+  forceCenter: (x?: number, y?: number) => D3Module;
+  forceCollide: <Node extends D3Module = D3Module>(radius?: number | ((node: Node) => number)) => D3Module;
+  drag: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>() => D3Module;
+  zoom: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>() => D3Module;
+  select: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>(node?: Element) => D3Module;
 }
 
 /**
@@ -22,10 +23,10 @@ export interface D3Modules {
  * actually uninstall any of the four packages.
  */
 export async function loadD3Modules(
-  importForce: () => Promise<typeof ForceModule> = () => import('d3-force'),
-  importDrag: () => Promise<typeof DragModule> = () => import('d3-drag'),
-  importZoom: () => Promise<typeof ZoomModule> = () => import('d3-zoom'),
-  importSelection: () => Promise<typeof SelectionModule> = () => import('d3-selection'),
+  importForce: () => Promise<D3Module> = () => import('d3-force') as Promise<D3Module>,
+  importDrag: () => Promise<D3Module> = () => import('d3-drag') as Promise<D3Module>,
+  importZoom: () => Promise<D3Module> = () => import('d3-zoom') as Promise<D3Module>,
+  importSelection: () => Promise<D3Module> = () => import('d3-selection') as Promise<D3Module>,
 ): Promise<D3Modules | null> {
   try {
     const [force, dragMod, zoomMod, selectionMod] = await Promise.all([

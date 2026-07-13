@@ -7,10 +7,10 @@ export const styles = css`
        can retheme any of them without a raw literal leaking into the public
        API (same rationale as lyra-dialog's --lyra-dialog-overlay-color and
        lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-app-rail-width: 15rem;
-    --lyra-app-rail-icon-width: 4rem;
-    --lyra-app-rail-mobile-width: 18rem;
-    --lyra-app-rail-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-app-rail-width: var(--lyra-size-15rem);
+    --lyra-app-rail-icon-width: var(--lyra-size-4rem);
+    --lyra-app-rail-mobile-width: var(--lyra-size-18rem);
+    --lyra-app-rail-overlay-color: var(--lyra-color-overlay);
   }
 
   [part='toggle'] {
@@ -19,7 +19,7 @@ export const styles = css`
     justify-content: center;
     min-inline-size: var(--lyra-icon-button-size);
     min-block-size: var(--lyra-icon-button-size);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
@@ -40,7 +40,7 @@ export const styles = css`
   [part='backdrop'] {
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
     background: var(--lyra-app-rail-overlay-color);
   }
 
@@ -56,8 +56,9 @@ export const styles = css`
     flex-direction: column;
     inline-size: var(--lyra-app-rail-width);
     block-size: 100%;
-    border-inline-end: 1px solid var(--lyra-color-border);
+    border-inline-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     background: var(--lyra-color-surface);
+    padding-block-end: var(--lyra-safe-area-bottom);
     overflow-y: auto;
     transition: inline-size var(--lyra-transition-base);
   }
@@ -69,11 +70,12 @@ export const styles = css`
     position: fixed;
     inset-block: 0;
     inset-inline-start: 0;
-    z-index: calc(var(--lyra-overlay-stack-index, 1000) + 1);
+    z-index: calc(var(--lyra-overlay-stack-index, var(--lyra-layer-modal)) + 1);
     display: flex;
     flex-direction: column;
     inline-size: min(var(--lyra-app-rail-mobile-width), 85vw);
     background: var(--lyra-color-surface);
+    padding-block-end: var(--lyra-safe-area-bottom);
     box-shadow: var(--lyra-shadow);
     overflow-y: auto;
     transform: translateX(-100%);
@@ -93,14 +95,14 @@ export const styles = css`
 
   [part='header'] {
     padding: var(--lyra-space-m);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='header'][hidden] {
     display: none;
   }
   [part='footer'] {
     padding: var(--lyra-space-m);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='footer'][hidden] {
     display: none;

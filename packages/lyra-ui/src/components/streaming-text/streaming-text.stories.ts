@@ -22,7 +22,7 @@ export default meta;
 type Story = StoryObj;
 
 const buttonStyle =
-  'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid #ccc; border-radius:0.375rem; background:#fff; cursor:pointer;';
+  'font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:0.375rem; background:var(--lyra-color-surface); cursor:pointer;';
 
 export const PlainTextStreaming: Story = {
   render: () =>
@@ -108,13 +108,13 @@ export const LiveTokenStream: Story = {
 
     return html`
       <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
-        <div style="border:1px solid var(--lyra-color-border, #ddd); border-radius:0.5rem; padding:0.75rem;">
+        <div style="border:1px solid var(--lyra-color-border); border-radius:0.5rem; padding:0.75rem;">
           <lyra-streaming-text coalesce-ms="50" ${ref(elRef)}></lyra-streaming-text>
         </div>
         <div>
           <button style=${buttonStyle} @click=${start}>Start streaming</button>
         </div>
-        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
           Tokens arrive every 20ms — faster than the 50ms <code>coalesce-ms</code> window — so several
           tokens land per rendered frame instead of one DOM update per token.
         </p>
@@ -168,13 +168,13 @@ export const CoalescingComparison: Story = {
     return html`
       <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
         <div>
-          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
             coalesce-ms="0"
           </p>
           <lyra-streaming-text markdown="false" coalesce-ms="0" ${ref(fastRef)}></lyra-streaming-text>
         </div>
         <div>
-          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+          <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
             coalesce-ms="300"
           </p>
           <lyra-streaming-text markdown="false" coalesce-ms="300" ${ref(slowRef)}></lyra-streaming-text>

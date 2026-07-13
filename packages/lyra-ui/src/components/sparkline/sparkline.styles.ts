@@ -3,8 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    inline-size: 6em;
-    block-size: 1.5em;
+    inline-size: var(--lyra-size-6em);
+    block-size: var(--lyra-size-1-5em);
     vertical-align: middle;
   }
   svg {

@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
+import { styles } from './lite-chart.styles.js';
 
 async function mount(tpl: ReturnType<typeof html>): Promise<LyraLiteChart> {
   const el = (await fixture(tpl)) as LyraLiteChart;
@@ -206,6 +207,22 @@ it('uses a series-provided color for its bar fill, and a default palette color o
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(rects[0].getAttribute('fill')).to.equal('#ff0000');
   expect(rects[1].getAttribute('fill')).to.be.a('string').and.not.equal('#ff0000');
+});
+
+it('allows the categorical palette to be rethemed through semantic chart color variables', async () => {
+  const el = await mount(html`<lyra-lite-chart
+    style="--lyra-chart-color-2: rgb(1 2 3)"
+    type="bar"
+    .labels=${['only']}
+    .datasets=${[
+      { label: 'A', data: [1] },
+      { label: 'B', data: [1] },
+    ]}
+  ></lyra-lite-chart>`);
+  const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  expect(styles.cssText).to.match(/--lyra-chart-color-1:\s*var\(--lyra-color-chart-1\)/);
+  expect(rects[1].getAttribute('fill')).to.equal('var(--lyra-chart-color-2)');
+  expect(getComputedStyle(rects[1]).fill).to.equal('rgb(1, 2, 3)');
 });
 
 it('draws a gridline at the y=0 baseline when beginAtZero is true (the default)', async () => {

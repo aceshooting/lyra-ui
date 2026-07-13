@@ -6,13 +6,17 @@ export const styles = css`
     /* Fullscreen scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
        --wa-*-overlay token exists in the design system to resolve through). */
-    --lyra-widget-overlay-color: rgb(0 0 0 / 0.5);
-    --lyra-widget-fullscreen-inset: var(--lyra-space-l);
+    --lyra-widget-overlay-color: var(--lyra-color-overlay);
+    --lyra-widget-fullscreen-inset:
+      max(var(--lyra-space-l), var(--lyra-safe-area-top))
+      max(var(--lyra-space-l), var(--lyra-safe-area-inline-end))
+      max(var(--lyra-space-l), var(--lyra-safe-area-bottom))
+      max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
   }
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow: hidden;
@@ -22,7 +26,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-s) var(--lyra-space-m);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='title'] {
     display: flex;
@@ -37,10 +41,10 @@ export const styles = css`
     white-space: nowrap;
   }
   [part='label'] {
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='sublabel'] {
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   [part='actions'] {
@@ -87,12 +91,12 @@ export const styles = css`
     position: fixed;
     inset: var(--lyra-widget-fullscreen-inset, 0);
     background: var(--lyra-widget-overlay-color);
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
   }
   :host([fullscreen]) [part='base'] {
     position: fixed;
     inset: var(--lyra-widget-fullscreen-inset);
-    z-index: calc(var(--lyra-overlay-stack-index, 1000) + 1);
+    z-index: calc(var(--lyra-overlay-stack-index, var(--lyra-layer-modal)) + 1);
     box-shadow: var(--lyra-shadow);
   }
   :host([fullscreen]) [part='body'] {

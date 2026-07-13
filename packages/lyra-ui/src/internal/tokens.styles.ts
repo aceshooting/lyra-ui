@@ -23,10 +23,155 @@ export const tokens = css`
     --lyra-color-on-success: var(--wa-color-success-on-loud, #fff);
     --lyra-color-on-warning: var(--wa-color-warning-on-loud, #fff);
     --lyra-color-on-danger: var(--wa-color-danger-on-loud, #fff);
+    --lyra-color-overlay: var(--wa-color-overlay, rgb(0 0 0 / 0.5));
+    --lyra-color-no-data: var(--wa-color-no-data, rgb(128 128 128 / 25%));
+    --lyra-font-mono: var(--wa-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
     --lyra-space-xs: var(--wa-space-xs, 0.25rem);
     --lyra-space-s: var(--wa-space-s, 0.5rem);
     --lyra-space-m: var(--wa-space-m, 0.75rem);
     --lyra-space-l: var(--wa-space-l, 1rem);
+    /* Semantic type, density, border, radius, and layer scales. Component styles consume
+       these names; the exact fallback values remain centralized here so a theme can retune
+       typography and geometry without editing every component. */
+    --lyra-space-2xs: var(--wa-space-2xs, 0.125rem);
+    --lyra-space-2xl: var(--wa-space-2xl, 2rem);
+    --lyra-font-size-2xs: var(--wa-font-size-2xs, 0.625rem);
+    --lyra-font-size-xs: var(--wa-font-size-xs, 0.75rem);
+    --lyra-font-size-sm: var(--wa-font-size-sm, 0.8125rem);
+    --lyra-font-size-md-sm: var(--wa-font-size-md-sm, 0.875rem);
+    --lyra-font-size-md: var(--wa-font-size-md, 1rem);
+    --lyra-font-size-lg: var(--wa-font-size-lg, 1.125rem);
+    --lyra-font-size-xl: var(--wa-font-size-xl, 1.25rem);
+    --lyra-font-size-2xl: var(--wa-font-size-2xl, 1.75rem);
+    --lyra-font-size-3xl: var(--wa-font-size-3xl, 2rem);
+    --lyra-font-weight-normal: var(--wa-font-weight-normal, 400);
+    --lyra-font-weight-medium: var(--wa-font-weight-medium, 500);
+    --lyra-font-weight-semibold: var(--wa-font-weight-semibold, 600);
+    --lyra-font-weight-bold: var(--wa-font-weight-bold, 700);
+    --lyra-line-height-tight: var(--wa-line-height-tight, 1.2);
+    --lyra-line-height-none: var(--wa-line-height-none, 1);
+    --lyra-line-height-compact: var(--wa-line-height-compact, 1.25);
+    --lyra-line-height-snug: var(--wa-line-height-snug, 1.3);
+    --lyra-line-height-1-4: var(--wa-line-height-1-4, 1.4);
+    --lyra-line-height-normal: var(--wa-line-height-normal, 1.5);
+    --lyra-line-height-loose: var(--wa-line-height-loose, 1.6);
+    --lyra-line-height-relaxed: var(--wa-line-height-relaxed, 1.65);
+    --lyra-border-width-thin: var(--wa-border-width-thin, 1px);
+    --lyra-border-width-medium: var(--wa-border-width-medium, 2px);
+    --lyra-border-width-thick: var(--wa-border-width-thick, 3px);
+    --lyra-radius-xs: var(--wa-border-radius-xs, 2px);
+    --lyra-radius-pill: var(--wa-border-radius-pill, 999px);
+    --lyra-color-shadow: var(--wa-color-shadow, #000);
+    --lyra-color-chart-1: var(--wa-color-chart-1, #8250df);
+    --lyra-color-chart-2: var(--wa-color-chart-2, #bf3989);
+    --lyra-color-chart-3: var(--wa-color-chart-3, #0a7d91);
+    --lyra-color-chart-4: var(--wa-color-chart-4, #57606a);
+    --lyra-color-chart-5: var(--wa-color-chart-5, #b083f5);
+    --lyra-color-chart-6: var(--wa-color-chart-6, #f470b8);
+    --lyra-color-chart-7: var(--wa-color-chart-7, #52d6e8);
+    --lyra-color-chart-8: var(--wa-color-chart-8, #c9d1d9);
+    --lyra-layer-base: var(--wa-z-index-base, 0);
+    --lyra-layer-content: var(--wa-z-index-content, 1);
+    --lyra-layer-dropdown: var(--wa-z-index-dropdown, 900);
+    --lyra-layer-popover: var(--wa-z-index-popover, 1000);
+    --lyra-layer-modal: var(--wa-z-index-modal, 1000);
+    --lyra-layer-toast: var(--wa-z-index-toast, 9999);
+    --lyra-safe-area-top: env(safe-area-inset-top, 0px);
+    --lyra-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --lyra-safe-area-inline-start: env(safe-area-inset-left, 0px);
+    --lyra-safe-area-inline-end: env(safe-area-inset-right, 0px);
+    --lyra-size-neg-0-15rem: var(--wa-size-neg-0-15rem, -0.15rem);
+    --lyra-size-neg-0-25rem: var(--wa-size-neg-0-25rem, -0.25rem);
+    --lyra-size-neg-1px: var(--wa-size-neg-1px, -1px);
+    --lyra-size-neg-4px: var(--wa-size-neg-4px, -4px);
+    --lyra-size-neg-6px: var(--wa-size-neg-6px, -6px);
+    --lyra-size-neg-8px: var(--wa-size-neg-8px, -8px);
+    --lyra-size-0-02em: var(--wa-size-0-02em, 0.02em);
+    --lyra-size-0-03em: var(--wa-size-0-03em, 0.03em);
+    --lyra-size-0-04em: var(--wa-size-0-04em, 0.04em);
+    --lyra-size-0-05rem: var(--wa-size-0-05rem, 0.05rem);
+    --lyra-size-0-0625rem: var(--wa-size-0-0625rem, 0.0625rem);
+    --lyra-size-0-09375rem: var(--wa-size-0-09375rem, 0.09375rem);
+    --lyra-size-0-125rem: var(--wa-size-0-125rem, 0.125rem);
+    --lyra-size-0-15rem: var(--wa-size-0-15rem, 0.15rem);
+    --lyra-size-0-1875rem: var(--wa-size-0-1875rem, 0.1875rem);
+    --lyra-size-0-1rem: var(--wa-size-0-1rem, 0.1rem);
+    --lyra-size-0-25rem: var(--wa-size-0-25rem, 0.25rem);
+    --lyra-size-0-3125rem: var(--wa-size-0-3125rem, 0.3125rem);
+    --lyra-size-0-35em: var(--wa-size-0-35em, 0.35em);
+    --lyra-size-0-375rem: var(--wa-size-0-375rem, 0.375rem);
+    --lyra-size-0-3em: var(--wa-size-0-3em, 0.3em);
+    --lyra-size-0-4375rem: var(--wa-size-0-4375rem, 0.4375rem);
+    --lyra-size-0-4em: var(--wa-size-0-4em, 0.4em);
+    --lyra-size-0-4rem: var(--wa-size-0-4rem, 0.4rem);
+    --lyra-size-0-5rem: var(--wa-size-0-5rem, 0.5rem);
+    --lyra-size-0-625rem: var(--wa-size-0-625rem, 0.625rem);
+    --lyra-size-0-6875rem: var(--wa-size-0-6875rem, 0.6875rem);
+    --lyra-size-0-6rem: var(--wa-size-0-6rem, 0.6rem);
+    --lyra-size-0-75em: var(--wa-size-0-75em, 0.75em);
+    --lyra-size-0-75rem: var(--wa-size-0-75rem, 0.75rem);
+    --lyra-size-0-7em: var(--wa-size-0-7em, 0.7em);
+    --lyra-size-0-8125rem: var(--wa-size-0-8125rem, 0.8125rem);
+    --lyra-size-0-875em: var(--wa-size-0-875em, 0.875em);
+    --lyra-size-0-875rem: var(--wa-size-0-875rem, 0.875rem);
+    --lyra-size-0-8rem: var(--wa-size-0-8rem, 0.8rem);
+    --lyra-size-0-9375rem: var(--wa-size-0-9375rem, 0.9375rem);
+    --lyra-size-1-0625rem: var(--wa-size-1-0625rem, 1.0625rem);
+    --lyra-size-1-125rem: var(--wa-size-1-125rem, 1.125rem);
+    --lyra-size-1-1rem: var(--wa-size-1-1rem, 1.1rem);
+    --lyra-size-1-25rem: var(--wa-size-1-25rem, 1.25rem);
+    --lyra-size-1-5em: var(--wa-size-1-5em, 1.5em);
+    --lyra-size-1-5rem: var(--wa-size-1-5rem, 1.5rem);
+    --lyra-size-1-75rem: var(--wa-size-1-75rem, 1.75rem);
+    --lyra-size-1-875rem: var(--wa-size-1-875rem, 1.875rem);
+    --lyra-size-10px: var(--wa-size-10px, 10px);
+    --lyra-size-10rem: var(--wa-size-10rem, 10rem);
+    --lyra-size-11px: var(--wa-size-11px, 11px);
+    --lyra-size-12em: var(--wa-size-12em, 12em);
+    --lyra-size-12rem: var(--wa-size-12rem, 12rem);
+    --lyra-size-14px: var(--wa-size-14px, 14px);
+    --lyra-size-14rem: var(--wa-size-14rem, 14rem);
+    --lyra-size-15rem: var(--wa-size-15rem, 15rem);
+    --lyra-size-16px: var(--wa-size-16px, 16px);
+    --lyra-size-16rem: var(--wa-size-16rem, 16rem);
+    --lyra-size-18rem: var(--wa-size-18rem, 18rem);
+    --lyra-size-1em: var(--wa-size-1em, 1em);
+    --lyra-size-1px: var(--wa-size-1px, 1px);
+    --lyra-size-1rem: var(--wa-size-1rem, 1rem);
+    --lyra-size-2-25rem: var(--wa-size-2-25rem, 2.25rem);
+    --lyra-size-2-5rem: var(--wa-size-2-5rem, 2.5rem);
+    --lyra-size-2-5ch: var(--wa-size-2-5ch, 2.5ch);
+    --lyra-size-20rem: var(--wa-size-20rem, 20rem);
+    --lyra-size-21px: var(--wa-size-21px, 21px);
+    --lyra-size-22rem: var(--wa-size-22rem, 22rem);
+    --lyra-size-24px: var(--wa-size-24px, 24px);
+    --lyra-size-24rem: var(--wa-size-24rem, 24rem);
+    --lyra-size-280px: var(--wa-size-280px, 280px);
+    --lyra-size-28px: var(--wa-size-28px, 28px);
+    --lyra-size-28rem: var(--wa-size-28rem, 28rem);
+    --lyra-size-2px: var(--wa-size-2px, 2px);
+    --lyra-size-2rem: var(--wa-size-2rem, 2rem);
+    --lyra-size-3-5rem: var(--wa-size-3-5rem, 3.5rem);
+    --lyra-size-30rem: var(--wa-size-30rem, 30rem);
+    --lyra-size-32rem: var(--wa-size-32rem, 32rem);
+    --lyra-size-36rem: var(--wa-size-36rem, 36rem);
+    --lyra-size-38rem: var(--wa-size-38rem, 38rem);
+    --lyra-size-3px: var(--wa-size-3px, 3px);
+    --lyra-size-3rem: var(--wa-size-3rem, 3rem);
+    --lyra-size-3ch: var(--wa-size-3ch, 3ch);
+    --lyra-size-48rem: var(--wa-size-48rem, 48rem);
+    --lyra-size-4px: var(--wa-size-4px, 4px);
+    --lyra-size-4rem: var(--wa-size-4rem, 4rem);
+    --lyra-size-4ch: var(--wa-size-4ch, 4ch);
+    --lyra-size-639-98px: var(--wa-size-639-98px, 639.98px);
+    --lyra-size-6em: var(--wa-size-6em, 6em);
+    --lyra-size-6px: var(--wa-size-6px, 6px);
+    --lyra-size-6rem: var(--wa-size-6rem, 6rem);
+    --lyra-size-6ch: var(--wa-size-6ch, 6ch);
+    --lyra-size-899-98px: var(--wa-size-899-98px, 899.98px);
+    --lyra-size-8em: var(--wa-size-8em, 8em);
+    --lyra-size-8rem: var(--wa-size-8rem, 8rem);
+    --lyra-size-999px: var(--wa-size-999px, 999px);
     --lyra-radius: var(--wa-border-radius-m, 0.375rem);
     --lyra-shadow: var(--wa-shadow-m, 0 2px 8px rgb(0 0 0 / 0.15));
     --lyra-font: var(--wa-font-family-body, system-ui, sans-serif);
@@ -80,6 +225,67 @@ export const tokens = css`
       --lyra-color-on-success: var(--wa-color-success-on-loud, #111827);
       --lyra-color-on-warning: var(--wa-color-warning-on-loud, #111827);
       --lyra-color-on-danger: var(--wa-color-danger-on-loud, #111827);
+      --lyra-color-chart-1: var(--wa-color-chart-1, #b58cff);
+      --lyra-color-chart-2: var(--wa-color-chart-2, #ff7ab2);
+      --lyra-color-chart-3: var(--wa-color-chart-3, #4fd1c5);
+      --lyra-color-chart-4: var(--wa-color-chart-4, #aab4c4);
+      --lyra-color-chart-5: var(--wa-color-chart-5, #d4a7ff);
+      --lyra-color-chart-6: var(--wa-color-chart-6, #ff91c8);
+      --lyra-color-chart-7: var(--wa-color-chart-7, #79e2ef);
+      --lyra-color-chart-8: var(--wa-color-chart-8, #e4e7eb);
+    }
+  }
+
+  /* Reduced motion is centralized so components using either the shared
+     transition tokens or a component animation get the same behavior. The
+     tiny non-zero duration keeps animationend/transitionend contracts from
+     becoming engine-dependent while making the visual movement imperceptible. */
+  @media (prefers-reduced-motion: reduce) {
+    :host {
+      --lyra-transition-fast: 0.001ms linear;
+      --lyra-transition-base: 0.001ms linear;
+    }
+    :host *,
+    :host *::before,
+    :host *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* System colors keep custom controls, SVG marks, and canvas-adjacent chrome
+     legible when the user agent replaces the normal palette. Component CSS
+     and drawing code consume these semantic tokens, so the same mode applies
+     to DOM and non-DOM visuals. */
+  @media (forced-colors: active) {
+    :host {
+      --lyra-color-surface: Canvas;
+      --lyra-color-text: CanvasText;
+      --lyra-color-text-quiet: CanvasText;
+      --lyra-color-border: ButtonText;
+      --lyra-color-brand: LinkText;
+      --lyra-color-brand-quiet: Canvas;
+      --lyra-color-success: LinkText;
+      --lyra-color-success-quiet: Canvas;
+      --lyra-color-warning: CanvasText;
+      --lyra-color-warning-quiet: Canvas;
+      --lyra-color-danger: LinkText;
+      --lyra-color-danger-quiet: Canvas;
+      --lyra-color-on-brand: Canvas;
+      --lyra-color-on-success: Canvas;
+      --lyra-color-on-warning: Canvas;
+      --lyra-color-on-danger: Canvas;
+      --lyra-color-chart-1: Highlight;
+      --lyra-color-chart-2: LinkText;
+      --lyra-color-chart-3: CanvasText;
+      --lyra-color-chart-4: Highlight;
+      --lyra-color-chart-5: LinkText;
+      --lyra-color-chart-6: CanvasText;
+      --lyra-color-chart-7: Highlight;
+      --lyra-color-chart-8: LinkText;
+      --lyra-focus-ring-color: Highlight;
     }
   }
   :host([hidden]) {

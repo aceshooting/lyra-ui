@@ -11,7 +11,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-split style="height: 8rem; border: 1px solid #ddd">
+    <lyra-split style="height: 8rem; border: 1px solid var(--lyra-color-border)">
       <div style="padding: 0.5rem">Panel A</div>
       <div style="padding: 0.5rem">Panel B</div>
       <div style="padding: 0.5rem">Panel C</div>
@@ -21,7 +21,7 @@ export const Default: Story = {
 
 export const Vertical: Story = {
   render: () => html`
-    <lyra-split orientation="vertical" style="height: 16rem; border: 1px solid #ddd">
+    <lyra-split orientation="vertical" style="height: 16rem; border: 1px solid var(--lyra-color-border)">
       <div style="padding: 0.5rem">Panel A</div>
       <div style="padding: 0.5rem">Panel B</div>
       <div style="padding: 0.5rem">Panel C</div>
@@ -32,7 +32,7 @@ export const Vertical: Story = {
 export const FixedPixelRangePanel: Story = {
   render: () => html`
     <lyra-split
-      style="height: 8rem; border: 1px solid #ddd"
+      style="height: 8rem; border: 1px solid var(--lyra-color-border)"
       .panelConstraints=${[{ minPx: 160, maxPx: 320 }, null]}
     >
       <div style="padding: 0.5rem">Sidebar — pinned between 160px and 320px regardless of the split's own percent-based sizing or a container resize</div>
@@ -44,9 +44,9 @@ export const FixedPixelRangePanel: Story = {
 export const ResponsiveCollapse: Story = {
   render: () => html`
     <div
-      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 12rem; max-inline-size: 100%; border: 1px dashed #999; padding: 0.5rem;"
+      style="resize: horizontal; overflow: hidden; inline-size: 100%; min-inline-size: 12rem; max-inline-size: 100%; border: 1px dashed var(--lyra-color-border); padding: 0.5rem;"
     >
-      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: #666">
+      <p style="margin: 0 0 0.5rem; font: 12px sans-serif; color: var(--lyra-color-text-quiet)">
         Drag this box's bottom-right corner to shrink it. lyra-split only
         handles the width-collapse mechanics (and signals the current state
         via the <code>data-collapse-state</code> attribute + the
@@ -60,11 +60,11 @@ export const ResponsiveCollapse: Story = {
       <lyra-split
         collapse="start"
         rail-width="3.5rem"
-        style="height: 12rem; border: 1px solid #ddd"
+        style="height: 12rem; border: 1px solid var(--lyra-color-border)"
         @lyra-split-collapse-change=${(e: CustomEvent<{ state: string }>) =>
           console.log('lyra-split-collapse-change', e.detail.state)}
       >
-        <div style="padding: 0.5rem; background: #eef; overflow: hidden">
+        <div style="padding: 0.5rem; background: var(--lyra-color-brand-quiet); overflow: hidden">
           Sidebar (collapse="start")
         </div>
         <div style="padding: 0.5rem">

@@ -11,13 +11,13 @@ export const styles = css`
     justify-content: center;
     gap: var(--lyra-space-xs);
     padding: var(--lyra-space-l);
-    border: 2px dashed var(--lyra-color-border);
+    border: var(--lyra-border-width-medium) dashed var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text-quiet);
     text-align: center;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
   }
   [part='base'][data-drag-state='accept'] {
     border-color: var(--lyra-color-success);
@@ -37,8 +37,8 @@ export const styles = css`
   }
   [part='input'] {
     position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
+    inline-size: var(--lyra-size-1px);
+    block-size: var(--lyra-size-1px);
     opacity: 0;
     overflow: hidden;
   }

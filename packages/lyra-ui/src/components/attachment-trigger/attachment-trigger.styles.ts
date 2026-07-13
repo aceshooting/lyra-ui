@@ -30,16 +30,16 @@ export const styles = css`
        this sits comfortably inside a composer's leading slot alongside a
        textarea, matching lyra-combobox's clear-button / lyra-select's
        toggle sizing convention. */
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
     padding: 0;
     border: none;
     border-radius: calc(var(--lyra-radius) * 0.6);
     background: transparent;
     color: var(--lyra-color-text-quiet);
     font: inherit;
-    font-size: 1.125rem;
-    line-height: 1;
+    font-size: var(--lyra-font-size-lg);
+    line-height: var(--lyra-line-height-none);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
@@ -77,7 +77,7 @@ export const styles = css`
   [part='expand-icon'] {
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 0.75em;
+    font-size: var(--lyra-size-0-75em);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);

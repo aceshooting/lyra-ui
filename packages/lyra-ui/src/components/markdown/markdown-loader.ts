@@ -1,5 +1,4 @@
-import type * as MarkedModule from 'marked';
-import type DOMPurifyApi from 'dompurify';
+import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 
 /**
  * The two optional peers `<lyra-markdown>` needs, loaded independently (see
@@ -8,8 +7,8 @@ import type DOMPurifyApi from 'dompurify';
  * sanitization via `sanitize="false"`) is a valid, supported combination.
  */
 export interface MarkdownDeps {
-  marked: typeof MarkedModule | undefined;
-  DOMPurify: typeof DOMPurifyApi | undefined;
+  marked: OptionalPeerApi | undefined;
+  DOMPurify: OptionalPeerApi | undefined;
 }
 
 let deps: Promise<MarkdownDeps> | undefined;
@@ -32,10 +31,11 @@ let resolvedDeps: MarkdownDeps | undefined;
  * needing to actually uninstall either package.
  */
 export async function loadMarkdownAndSanitizer(
-  importMarked: () => Promise<typeof MarkedModule> = () => import('marked'),
-  importDompurify: () => Promise<{ default: typeof DOMPurifyApi }> = () => import('dompurify'),
+  importMarked: () => Promise<OptionalPeerApi> = () => import('marked') as Promise<OptionalPeerApi>,
+  importDompurify: () => Promise<{ default: OptionalPeerApi }> = () =>
+    import('dompurify') as Promise<{ default: OptionalPeerApi }>,
 ): Promise<MarkdownDeps> {
-  let marked: typeof MarkedModule | undefined;
+  let marked: OptionalPeerApi | undefined;
   try {
     marked = await importMarked();
   } catch (err) {
@@ -45,7 +45,7 @@ export async function loadMarkdownAndSanitizer(
     );
   }
 
-  let DOMPurify: typeof DOMPurifyApi | undefined;
+  let DOMPurify: OptionalPeerApi | undefined;
   try {
     DOMPurify = (await importDompurify()).default;
   } catch (err) {

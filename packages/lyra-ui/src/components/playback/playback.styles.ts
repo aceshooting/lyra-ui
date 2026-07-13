@@ -20,7 +20,7 @@ export const styles = css`
     inline-size: var(--lyra-icon-button-size);
     block-size: var(--lyra-icon-button-size);
     border-radius: 50%;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     cursor: pointer;

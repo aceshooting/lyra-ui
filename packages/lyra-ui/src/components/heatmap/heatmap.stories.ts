@@ -64,9 +64,9 @@ export const CustomTheme: Story = {
   render: () => html`
     <lyra-heatmap
       style="
-        --lyra-heatmap-scale-lo: #fde7e9;
-        --lyra-heatmap-scale-hi: #b3122f;
-        --lyra-heatmap-no-data-fill: rgba(0, 0, 0, 0.08);
+        --lyra-heatmap-scale-lo: var(--lyra-color-danger-quiet);
+        --lyra-heatmap-scale-hi: var(--lyra-color-danger);
+        --lyra-heatmap-no-data-fill: var(--lyra-color-no-data);
         --lyra-heatmap-label-font: 11px monospace;
       "
       cell-size="24"

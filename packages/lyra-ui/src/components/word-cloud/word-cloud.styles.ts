@@ -8,25 +8,25 @@ export const styles = css`
        Data-driven literals, same rationale as lyra-heatmap's
        --lyra-heatmap-scale-lo/-hi -- exposed as retheme-able custom
        properties instead of hardcoded in word-cloud.ts. */
-    --lyra-word-cloud-color-1: #0969da;
-    --lyra-word-cloud-color-2: #1a7f37;
-    --lyra-word-cloud-color-3: #9a6700;
-    --lyra-word-cloud-color-4: #cf222e;
-    --lyra-word-cloud-color-5: #8250df;
-    --lyra-word-cloud-color-6: #bf3989;
-    --lyra-word-cloud-color-7: #0a7d91;
-    --lyra-word-cloud-color-8: #57606a;
+    --lyra-word-cloud-color-1: var(--lyra-color-brand);
+    --lyra-word-cloud-color-2: var(--lyra-color-success);
+    --lyra-word-cloud-color-3: var(--lyra-color-warning);
+    --lyra-word-cloud-color-4: var(--lyra-color-danger);
+    --lyra-word-cloud-color-5: var(--lyra-color-chart-1);
+    --lyra-word-cloud-color-6: var(--lyra-color-chart-2);
+    --lyra-word-cloud-color-7: var(--lyra-color-chart-3);
+    --lyra-word-cloud-color-8: var(--lyra-color-chart-4);
   }
   @media (prefers-color-scheme: dark) {
     :host {
-      --lyra-word-cloud-color-1: var(--wa-color-brand-fill-loud, #4ea0f0);
-      --lyra-word-cloud-color-2: var(--wa-color-success-fill-loud, #3fb950);
-      --lyra-word-cloud-color-3: var(--wa-color-warning-fill-loud, #d29922);
-      --lyra-word-cloud-color-4: var(--wa-color-danger-fill-loud, #fa524a);
-      --lyra-word-cloud-color-5: #b083f5;
-      --lyra-word-cloud-color-6: #f470b8;
-      --lyra-word-cloud-color-7: #52d6e8;
-      --lyra-word-cloud-color-8: #c9d1d9;
+      --lyra-word-cloud-color-1: var(--wa-color-brand-fill-loud, var(--lyra-color-brand));
+      --lyra-word-cloud-color-2: var(--wa-color-success-fill-loud, var(--lyra-color-success));
+      --lyra-word-cloud-color-3: var(--wa-color-warning-fill-loud, var(--lyra-color-warning));
+      --lyra-word-cloud-color-4: var(--wa-color-danger-fill-loud, var(--lyra-color-danger));
+      --lyra-word-cloud-color-5: var(--lyra-color-chart-5);
+      --lyra-word-cloud-color-6: var(--lyra-color-chart-6);
+      --lyra-word-cloud-color-7: var(--lyra-color-chart-7);
+      --lyra-word-cloud-color-8: var(--lyra-color-chart-8);
     }
   }
   [part='base'] {
@@ -47,7 +47,7 @@ export const styles = css`
   [part='word'] {
     cursor: pointer;
     font-family: var(--lyra-font);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     text-anchor: middle;
     dominant-baseline: middle;
     transition: text-decoration-color var(--lyra-transition-fast);
@@ -64,6 +64,19 @@ export const styles = css`
   }
   [part='empty'] {
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='word'] {
+      transition: none !important;
+    }
+  }
+  @media (forced-colors: active) {
+    [part='word'] {
+      fill: CanvasText;
+    }
+    [part='focus-ring'] {
+      stroke: Highlight;
+    }
   }
 `;

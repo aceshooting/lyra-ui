@@ -1,6 +1,14 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './dialog.js';
 import type { LyraDialog } from './dialog.js';
+import { styles } from './dialog.styles.js';
+
+it('includes safe-area insets in the fixed dialog frame', () => {
+  expect(styles.cssText).to.include('var(--lyra-safe-area-top)');
+  expect(styles.cssText).to.include('var(--lyra-safe-area-bottom)');
+  expect(styles.cssText).to.include('var(--lyra-safe-area-inline-start)');
+  expect(styles.cssText).to.include('var(--lyra-safe-area-inline-end)');
+});
 
 // A stand-in for a slotted component (e.g. lyra-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host

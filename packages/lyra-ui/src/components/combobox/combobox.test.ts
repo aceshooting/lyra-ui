@@ -464,8 +464,8 @@ it('uses the shared disabled-opacity token for the disabled host and disabled op
   await el.updateComplete;
 
   const css = styles.cssText;
-  const disabledHostBlock = /:host\(\[disabled\]\)\s*\[part=['"]?combobox['"]?]\s*{([^}]*)}/.exec(css);
-  expect(disabledHostBlock, 'expected a :host([disabled]) [part="combobox"] rule').to.not.equal(null);
+  const disabledHostBlock = /:host\(:disabled\)\s*\[part=['"]?combobox['"]?]\s*{([^}]*)}/.exec(css);
+  expect(disabledHostBlock, 'expected a :host(:disabled) [part="combobox"] rule').to.not.equal(null);
   expect(disabledHostBlock![1]).to.include('var(--lyra-opacity-disabled)');
 
   const disabledOptionBlock = /\[part=['"]?option['"]?]\[aria-disabled=['"]?true['"]?]\s*{([^}]*)}/.exec(css);
@@ -969,6 +969,9 @@ it('disables the combobox when its containing fieldset is disabled', async () =>
   // mixin's own `_fieldsetDisabled`/`effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
+  const combobox = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  expect(getComputedStyle(combobox).opacity).to.equal('0.5');
+  expect(getComputedStyle(combobox).cursor).to.equal('not-allowed');
 });
 
 it('is accessible while showing the loading state (async source pending)', async () => {

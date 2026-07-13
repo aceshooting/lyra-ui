@@ -11,10 +11,10 @@ export const styles = css`
        before it scrolls internally, e.g. via ::part(body) or by overriding
        this custom property directly -- not exposed as a component prop
        since it's a pure layout knob, not something a template branches on. */
-    --lyra-thinking-panel-max-block-size: 16rem;
+    --lyra-thinking-panel-max-block-size: var(--lyra-size-16rem);
   }
   [part='base'] {
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow: hidden;
@@ -29,8 +29,8 @@ export const styles = css`
     background: none;
     color: var(--lyra-color-text);
     font: inherit;
-    font-weight: 600;
-    font-size: 0.875rem;
+    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lyra-font-size-md-sm);
     text-align: start;
     cursor: pointer;
   }
@@ -60,10 +60,10 @@ export const styles = css`
   [part='duration'] {
     display: inline-flex;
     align-items: center;
-    gap: 0.35em;
+    gap: var(--lyra-size-0-35em);
     flex: 0 0 auto;
-    font-weight: 400;
-    font-size: 0.8125rem;
+    font-weight: var(--lyra-font-weight-normal);
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   /* Actively streaming with no duration yet -- a full-opacity brand-colored
@@ -76,8 +76,8 @@ export const styles = css`
     color: var(--lyra-color-brand);
   }
   .pending-dot {
-    inline-size: 0.375rem;
-    block-size: 0.375rem;
+    inline-size: var(--lyra-size-0-375rem);
+    block-size: var(--lyra-size-0-375rem);
     border-radius: 50%;
     background: currentColor;
     animation: lyra-thinking-panel-pulse var(--lyra-transition-base) infinite;
@@ -103,10 +103,10 @@ export const styles = css`
        convention as virtual-list.styles.ts's own auto-scrolling region. */
     overscroll-behavior: contain;
     padding: var(--lyra-space-m);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
-    line-height: 1.5;
+    font-size: var(--lyra-font-size-md-sm);
+    line-height: var(--lyra-line-height-normal);
   }
   [part='body'][hidden] {
     display: none;

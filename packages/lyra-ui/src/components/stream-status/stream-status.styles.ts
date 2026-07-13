@@ -44,13 +44,13 @@ export const styles = css`
   :host([phase='stalled']) [part='base'] {
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     background: var(--lyra-color-warning-quiet);
-    border: 1px solid var(--lyra-color-warning);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-warning);
   }
 
   [part='indicator'] {
     flex: 0 0 auto;
-    inline-size: 0.5rem;
-    block-size: 0.5rem;
+    inline-size: var(--lyra-size-0-5rem);
+    block-size: var(--lyra-size-0-5rem);
     border-radius: 50%;
     background: var(--lyra-stream-status-dot-color);
     opacity: var(--lyra-stream-status-dot-opacity);
@@ -88,9 +88,9 @@ export const styles = css`
 
   [part='message'] {
     color: var(--lyra-color-warning);
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-md-sm);
+    font-weight: var(--lyra-font-weight-semibold);
+    line-height: var(--lyra-line-height-snug);
   }
 
   [part='actions'] {

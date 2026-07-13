@@ -45,6 +45,11 @@ const detailedLoadersDir = path.join(detailedDir, 'loaders');
 const compactDir = path.join(flagsDir, 'compact');
 const compactLoadersDir = path.join(compactDir, 'loaders');
 
+const readme = readFileSync(path.join(pkgDir, 'README.md'), 'utf8');
+assert.match(readme, /only fetches the\s+requested flag at runtime/i);
+assert.match(readme, /bundler may still emit the complete reachable lazy-chunk graph/i);
+assert.doesNotMatch(readme, /ships only those few compact WebPs/i);
+
 const svgCodes = readdirSync(flagsDir)
   .filter((name) => name.endsWith('.svg'))
   .map((name) => name.replace(/\.svg$/, ''))

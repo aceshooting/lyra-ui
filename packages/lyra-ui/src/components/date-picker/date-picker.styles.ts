@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    --lyra-cell-size: 2.25rem;
+    --lyra-cell-size: var(--lyra-size-2-25rem);
   }
   :host([disabled]) {
     opacity: var(--lyra-opacity-disabled);
@@ -14,7 +14,7 @@ export const styles = css`
     gap: var(--lyra-space-l);
     padding: var(--lyra-space-s);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
   }
   [part='header'] {
@@ -25,8 +25,8 @@ export const styles = css`
     margin-block-end: var(--lyra-space-xs);
   }
   [part='title'] {
-    font-weight: 600;
-    font-size: 0.9375rem;
+    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lyra-size-0-9375rem);
   }
   [part='previous'],
   [part='next'] {
@@ -34,8 +34,8 @@ export const styles = css`
     background: none;
     cursor: pointer;
     color: var(--lyra-color-text);
-    font-size: 1.1rem;
-    line-height: 1;
+    font-size: var(--lyra-size-1-1rem);
+    line-height: var(--lyra-line-height-none);
     padding: var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
   }
@@ -52,7 +52,7 @@ export const styles = css`
   }
   [part='weekday'] {
     text-align: center;
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
     padding-block: var(--lyra-space-xs);
   }
@@ -88,8 +88,8 @@ export const styles = css`
     block-size: var(--lyra-cell-size);
   }
   [part~='day-today'] {
-    outline: 1px solid var(--lyra-color-brand);
-    outline-offset: -1px;
+    outline: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
+    outline-offset: var(--lyra-size-neg-1px);
   }
   [part~='day-range-inner'] {
     background: var(--lyra-color-brand-quiet);

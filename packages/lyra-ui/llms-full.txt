@@ -1,23 +1,28 @@
 # @aceshooting/lyra-ui — LLM API Reference
 
 `@aceshooting/lyra-ui` is a library of free, clean-room [Lit](https://lit.dev) web components — a
-companion to [Web Awesome](https://webawesome.com) that reimplements several Web Awesome **Pro**
-components as open-source equivalents (same tag shape, attributes, slots, events, and CSS parts,
-under a `lyra-` prefix instead of `wa-`), plus a number of extras that have no Web Awesome
+companion to [Web Awesome](https://webawesome.com) that reimplements selected Web Awesome **Pro**
+components as open-source equivalents (documented compatible tag shape, attributes, slots, events,
+and CSS parts under a `lyra-` prefix instead of `wa-`), plus a number of extras that have no Web Awesome
 counterpart at all (dashboard atoms, temporal/graph widgets, chart wrappers, a map component, a
 file dropzone). It is **token-compatible with Web Awesome**: every component's stylesheet resolves
 through Web Awesome's `--wa-*` design tokens first, falling back to its own `--lyra-*` tokens, so
 components read as native inside a Web Awesome-themed app and are equally usable standalone with no
 theme at all. This document is the complete, component-by-component API reference intended for
-coding assistants integrating the library; for install instructions, the full tag/tier table, and
+coding assistants integrating the library; for install instructions, the full component catalog, and
 the `<wa-*>` → `<lyra-*>` migration notes, see the package [README](./README.md) — or the shorter
 curated index at [`llms.txt`](./llms.txt) if you just need the shape of the library before diving in
 here.
 
+Component entry points such as `components/empty/empty.js` register their custom-element tag.
+Every component also exposes a matching `.class.js` entry for subclassing or type-directed
+composition without registration; for example, `components/empty/empty.class.js` exports
+`LyraEmpty` without touching `customElements`.
+
 ## Contents
 
 - **Shared foundation** — `internal/` (base class, form-association mixin, positioning helper, design tokens)
-- **v1 core** — `lyra-combobox`/`lyra-option`, `lyra-select`, `lyra-date-picker`/`lyra-date-input`, `lyra-toast` family, `lyra-sparkline`, `lyra-flag`
+- **Form controls, toasts, sparkline, and flags** — `lyra-combobox`/`lyra-option`, `lyra-select`, `lyra-date-picker`/`lyra-date-input`, `lyra-toast` family, `lyra-sparkline`, `lyra-flag`
 - **Dashboard atoms** — `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
 - **Temporal & graph** — `lyra-time-range`, `lyra-playback`, `lyra-heatmap`, `lyra-graph`, `lyra-tree`/`lyra-tree-node`
 - **Chart family** — `lyra-chart` (core), typed subclasses, `lyra-histogram`, `lyra-box-plot`,
@@ -34,7 +39,7 @@ here.
   `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`, `lyra-chip`/`lyra-chip-group`,
   `lyra-model-settings-panel`, `lyra-context-meter`, `lyra-dock-panel`, `lyra-document-preview`,
   `lyra-media-card`, `lyra-attachment-trigger`, `lyra-kbd`, `lyra-result-card`/`lyra-result-field`
-- **Cross-cutting notes** — packaging and adoption caveats that apply across the whole library
+- **Cross-cutting notes** — packaging notes that apply across the whole library
 
 ---
 
@@ -45,9 +50,10 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
 - **`LyraElement`** (`internal/lyra-element.ts`) — base class every `lyra-*` component `extends`.
   `static styles = [tokens]` (the design-token layer below); subclasses prepend `LyraElement.styles`
   to their own `static styles` array to inherit it. Supplies
-  `protected emit<T>(name: string, detail?: T): CustomEvent<T>` — dispatches a
-  `{ bubbles: true, composed: true, cancelable: true }` `CustomEvent` and returns it, so callers can
-  do `const ev = this.emit('lyra-export', {...}); if (ev.defaultPrevented) return;`.
+  `protected emit<T>(name: string, detail?: T, options?: LyraEmitOptions): CustomEvent<T>` — dispatches
+  a bubbling/composed notification that is non-cancelable by default. A true veto point opts into
+  `{ cancelable: true }` and checks `defaultPrevented` before applying its operation, as
+  `lyra-export` does. Native-like `input`/`change` events use the same non-cancelable default.
 - **`FormAssociated(Base)`** mixin (`internal/form-associated.ts`) — makes a `LitElement`
   form-associated: `static formAssociated = true`, `attachInternals()` in the constructor (which also
   eagerly calls `internals.setFormValue('')`, so an untouched control is present in `FormData` as
@@ -102,9 +108,9 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   set: `--lyra-color-surface / -text / -text-quiet / -border / -brand / -brand-quiet / -success /
   -success-quiet / -warning / -warning-quiet / -danger / -danger-quiet`,
   `--lyra-color-on-brand / -on-success / -on-warning / -on-danger` (paired
-  text/icon colors for content painted on the corresponding solid semantic fill; the standalone
-  fallbacks switch from light content in light mode to dark content on the brighter dark-mode
-  fills), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
+  text/icon colors for content painted on the corresponding solid semantic fill; standalone light
+  and dark fallbacks choose a contrasting foreground for each fill, while a Web Awesome theme can
+  provide its own `*-on-loud` values), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
   `--lyra-font`, `--lyra-transition-fast` / `-base` (motion timing every animating component should
   share), `--lyra-opacity-disabled` (one shared disabled-state opacity), `--lyra-focus-ring-width` /
   `-color` / `-offset` (every `:focus-visible` rule should reference these), `--lyra-icon-button-size`
@@ -156,7 +162,7 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
 
 ---
 
-# v1 core: forms, toasts, sparkline, flag
+# Form controls, toasts, sparkline, and flags
 
 ## `lyra-combobox` / `lyra-option`
 
@@ -356,7 +362,7 @@ secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 
 **Themeable custom properties:** `--lyra-select-trigger-padding`, `--lyra-select-trigger-min-height`,
 `--lyra-select-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
-`lyra-toast-item`'s `--padding`/`--font-size` use.
+`lyra-toast-item`'s `--lyra-toast-padding`/`--lyra-toast-font-size` use.
 
 **Optional peer deps:** none.
 
@@ -572,9 +578,8 @@ One per page recommended — the region.
 
 **CSS parts:** `stack`
 
-**Themeable custom properties:** `--gap` (default `var(--lyra-space-s)`), `--width` (default
-`28rem`) — set directly on the `<lyra-toast>` element (not `--lyra-`-prefixed, but overridable
-per-instance).
+**Themeable custom properties:** `--lyra-toast-gap` (default `var(--lyra-space-s)`),
+`--lyra-toast-width` (default `28rem`) — set directly on the `<lyra-toast>` element.
 
 **Optional peer deps:** none.
 
@@ -584,7 +589,7 @@ A single notification.
 
 **Properties:**
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--padding` and the toast's own
+- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lyra-toast-padding` and the toast's own
   font-size via `:host([size=...])`, from a compact `xs` up to a roomier `xl`)
 - `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
 - `withIcon: boolean = false` (attribute `with-icon`)
@@ -598,11 +603,12 @@ DOM.
 
 **CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`
 
-**Themeable custom properties:** `--accent-width` (4px), `--show-duration`/`--hide-duration`
+**Themeable custom properties:** `--lyra-toast-accent-width` (4px),
+`--lyra-toast-show-duration`/`--lyra-toast-hide-duration`
 (`var(--lyra-transition-base, 180ms ease-out)` — 180ms by default, matching the JS-side show/hide
-animation timer, which is not itself reading this token), `--padding` (`var(--lyra-space-m)`),
-`--font-size` (`1rem`) — both `--padding` and `--font-size` are auto-swapped per `size`, from a
-compact `xs` up to a roomier `xl` — `--accent-color` (defaults to `--lyra-color-border`,
+animation timer, which is not itself reading this token), `--lyra-toast-padding`
+(`var(--lyra-space-m)`), `--lyra-toast-font-size` (`1rem`) — both are auto-swapped per `size`, from a
+compact `xs` up to a roomier `xl` — `--lyra-toast-accent-color` (defaults to `--lyra-color-border`,
 auto-swapped per `variant` to `--lyra-color-brand/-success/-warning/-danger`).
 
 **Optional peer deps:** none.
@@ -747,7 +753,9 @@ overridden directly — non-`round` corner radius); also consumes `--lyra-color-
 ring around the flag image).
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
-image; without it, renders an empty template (see gotchas).
+image when `country` or `language` is used. Import `components/flag/flag-peer.js` once to opt into
+that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
+installed, renders an empty template (see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -765,9 +773,15 @@ need different defaults).
 pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> renders nothing
 ```
 
+```js
+import '@aceshooting/lyra-ui/components/flag/flag-peer.js';
+```
+
 **Known gotchas:**
-- Requires the optional peer `@aceshooting/lyra-flags` to actually render an image; without it the
-  component still shows a `<lyra-skeleton variant="rect">` placeholder (with `aria-busy="true"` on
+- `country`/`language` resolution is opt-in through `components/flag/flag-peer.js`; the root barrel
+  registers the component without importing the optional flag asset graph. Requires the optional
+  peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
+  `<lyra-skeleton variant="rect">` placeholder (with `aria-busy="true"` on
   the host) while resolving, then settles into an **empty template** plus a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
   page even with many `<lyra-flag>` instances).
@@ -790,11 +804,11 @@ pnpm add @aceshooting/lyra-flags   # required peer — without it, <lyra-flag> r
   newer one: each resolver call is tagged with a token captured at the time it was kicked off, and a
   `.then()` that fires after a later change (or after the field was cleared) is discarded instead of
   clobbering the rendered image/`loading`.
-- `country`/`language` resolve through `@aceshooting/lyra-flags`'s `flagUrl(code)`, which is itself
-  genuinely code-split per flag: using `<lyra-flag country="fr">` anywhere in an app fetches only
-  the flags actually requested at runtime (verified with a real Vite build — referencing 2 codes
-  shipped ~28 KB total, not all 249). If you already have a flag's URL at build time, `src` skips
-  the peer-package round trip (and its loading-skeleton flash) entirely.
+- `country`/`language` resolve through `@aceshooting/lyra-flags`'s `flagUrl(code)`, which lazily
+  fetches one requested flag at runtime. A bundler may still emit the complete reachable lazy-chunk
+  graph because every supported code has a literal loader import; use a literal asset subpath
+  import when the deployment artifact must be pruned. If you already have a flag's URL at build
+  time, `src` skips the peer-package round trip (and its loading-skeleton flash) entirely.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the `variant`
   property (`flagUrl(code, { variant })` under the hood): `"compact"` — a tiny WebP raster for
@@ -2752,10 +2766,11 @@ the control still has an accessible name.
 background), `thumb` (the circular knob that slides across the track), `label` (wrapper around the
 default slot)
 
-**Themeable custom properties:** `--track-inline-size` (default `2.25rem`), `--track-block-size`
-(default `1.25rem`), `--thumb-offset` (default `2px`) — component-local geometry knobs, set on
-`:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lyra-radius`
-default — plus shared tokens `--lyra-space-s`, `--lyra-color-border/-brand/-surface/-text`,
+**Themeable custom properties:** `--lyra-switch-track-inline-size` (default `2.25rem`),
+`--lyra-switch-track-block-size` (default `1.25rem`), `--lyra-switch-thumb-offset` (default
+`2px`) — component-local geometry knobs, set on `:host`, since a fully-rounded pill/thumb needs
+a radius well past the shared `--lyra-radius` default — plus shared tokens
+`--lyra-space-s`, `--lyra-color-border/-brand/-surface/-text`,
 `--lyra-transition-fast`, `--lyra-focus-ring-width/-color/-offset`, `--lyra-opacity-disabled`.
 
 **Optional peer deps:** none.
@@ -2988,9 +3003,8 @@ produced HTML in a single pass (no second DOM walk after insertion).
   the page already finished loading); falls back to the normal async path (with its brief
   plain-text-fallback first paint) when the cache isn't warm yet. `false` (the default) is
   byte-identical to always taking the async path
-- `streaming: boolean = false` (reflected) — forward-compatible hint for a future streaming renderer
-  expected to build on this component (coalescing partial tokens as they arrive); setting it has no
-  rendering effect yet, it only lets a consumer already target `lyra-markdown[streaming]` in CSS
+- `streaming: boolean = false` (reflected) — reserved hint for a host-provided streaming renderer;
+  setting it has no rendering effect, but lets a consumer target `lyra-markdown[streaming]` in CSS
 
 **Events:** `lyra-link-click` (`detail: { href: string, internal: true }`, fired — with the click
 prevented — when a rendered link's `href` starts with `internal-link-prefix`; ordinary external
@@ -3326,10 +3340,9 @@ shell around it.
   `<lyra-json-viewer>` fallback)
 - `args: unknown` (property only, no attribute) — the tool call's original arguments, if available,
   handed to the matched renderer's `render()` alongside `result`
-- `fallback: string = 'json'` (reflected) — forward-compatible fallback-kind selector; only `"json"`
-  (an unconditional `<lyra-json-viewer>`) is implemented today, but the property/attribute is still
-  accepted so markup that already sets `fallback="…"` for a future value doesn't need to change again
-  once more fallback kinds land
+- `fallback: string = 'json'` (reflected) — fallback-kind selector; only `"json"` (an unconditional
+  `<lyra-json-viewer>`) is currently implemented, but other values are accepted and use the same
+  JSON fallback
 
 **Events:** `lyra-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lyra-json-viewer>`, whether because no renderer matched, a candidate
@@ -3877,9 +3890,8 @@ invention (no Web Awesome equivalent).
   which is only a safe identity while `items` never reorders/inserts/removes — provide this whenever
   possible, or scroll position and per-row DOM state (e.g. an `<audio>` element's playback position)
   can attach to the wrong row across a mutation.
-- `groups?: VirtualListGroup[]` (attribute: false) — reserved for a future sticky-header sectioning
-  feature; accepted but **not currently read or rendered** — every row still renders flat, in `items`
-  order.
+- `groups?: VirtualListGroup[]` (attribute: false) — accepted for compatibility but **not currently
+  read or rendered** — every row still renders flat, in `items` order.
 - `rowHeight: string = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real height via
   `ResizeObserver`; a numeric string (e.g. `"56"`) fixes every row to that many pixels. Anything else
   (non-numeric, zero, negative, non-finite) silently falls back to `'auto'` rather than throwing.
@@ -3895,10 +3907,11 @@ invention (no Web Awesome equivalent).
   fires `lyra-load-more` (gated by `loading`).
 
 **Exported types:** `VirtualListRange { start: number; end: number }` (the `lyra-visible-range-changed`
-detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — a
-placeholder shape for the not-yet-implemented grouping feature above. No exported helper functions ship
-in this pass (a paired `groupByRecency()` helper referenced in the source's own class doc doesn't exist
-yet).
+detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — an
+accepted grouping shape that the list does not currently render.
+The package root also exports `groupByRecency(items, options?)`, a DOM-free helper that returns
+non-empty Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket,
+and accepts a timestamp extractor, reference date, and label overrides.
 
 **Events:** `lyra-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
@@ -4002,7 +4015,7 @@ component — not fired when the trimmed draft is empty or unchanged from the or
 as an implicit cancel)
 
 **Slots:** `actions` — overflow/icon-button controls rendered at the trailing edge of the row (e.g. a
-future pin/delete button); only visually shown once it actually has assigned elements.
+pin/delete control); only visually shown once it actually has assigned elements.
 
 **CSS parts:** `base`, `option`, `content`, `title`, `title-input`, `rename-button`, `excerpt`,
 `timestamp`, `actions`
@@ -4666,6 +4679,22 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
   shared overlay registration and re-acquires the scroll lock if the overlay was still active
   across the move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in
   between, so `willUpdate()` alone wouldn't otherwise notice.
+
+### `lyra-app-rail-item`
+
+An explicit navigation item for `<lyra-app-rail>`. It renders an accessible link when `href` is
+set and enabled, otherwise a button; the rail can add its `icon-only` presentation state without
+removing the label from the accessibility tree.
+
+**Properties:** `href: string = ''`, `target: string = ''`, and `disabled: boolean = false`
+(reflected). A disabled item remains visible but cannot be activated.
+
+**Slots:** default (the visible label), `icon` (the leading icon, hidden from assistive technology
+when the item has an explicit `aria-label`).
+
+**CSS parts:** `base`, `icon`, `label`.
+
+**Optional peer deps:** none.
 
 ---
 

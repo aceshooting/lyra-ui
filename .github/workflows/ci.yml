@@ -19,8 +19,13 @@ jobs:
       - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
       - run: pnpm lint
       - run: pnpm test
+      - run: pnpm --filter @aceshooting/lyra-ui test:coverage
       - run: pnpm build
       - run: pnpm manifest
+      - run: pnpm manifest:check
+      - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
+      - run: pnpm docs:build
+      - run: pnpm storybook:check
       - name: Verify published tarball contents
         run: |
           set -euo pipefail
@@ -37,3 +42,27 @@ jobs:
             echo "::error::one or more expected files missing from the published tarball -- check files/exports/sideEffects in packages/lyra-ui/package.json"
             exit 1
           fi
+      - run: pnpm check:packed-consumer
+
+  platform-contracts:
+    name: ${{ matrix.browser }} / Node ${{ matrix.node-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+        node-version: [20, 22]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps ${{ matrix.browser }}
+      - name: Run platform contract suite
+        env:
+          WTR_BROWSER: ${{ matrix.browser }}
+          WTR_STRICT_CONSOLE: '1'
+        run: pnpm --filter @aceshooting/lyra-ui test:platform

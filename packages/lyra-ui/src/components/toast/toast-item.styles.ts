@@ -3,11 +3,11 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-toast-accent-width: 4px;
+    --lyra-toast-accent-width: var(--lyra-size-4px);
     --lyra-toast-show-duration: var(--lyra-transition-base, 180ms ease-out);
     --lyra-toast-hide-duration: var(--lyra-transition-base, 180ms ease-out);
     --lyra-toast-padding: var(--lyra-space-m);
-    --lyra-toast-font-size: 1rem;
+    --lyra-toast-font-size: var(--lyra-font-size-md);
     --lyra-toast-accent-color: var(--lyra-color-border);
   }
   :host([variant='brand']) {
@@ -24,23 +24,23 @@ export const styles = css`
   }
   :host([size='xs']) {
     --lyra-toast-padding: var(--lyra-space-xs);
-    --lyra-toast-font-size: 0.75rem;
+    --lyra-toast-font-size: var(--lyra-font-size-xs);
   }
   :host([size='s']) {
     --lyra-toast-padding: var(--lyra-space-s);
-    --lyra-toast-font-size: 0.875rem;
+    --lyra-toast-font-size: var(--lyra-font-size-md-sm);
   }
   :host([size='m']) {
     --lyra-toast-padding: var(--lyra-space-m);
-    --lyra-toast-font-size: 1rem;
+    --lyra-toast-font-size: var(--lyra-font-size-md);
   }
   :host([size='l']) {
     --lyra-toast-padding: var(--lyra-space-l);
-    --lyra-toast-font-size: 1.125rem;
+    --lyra-toast-font-size: var(--lyra-font-size-lg);
   }
   :host([size='xl']) {
     --lyra-toast-padding: calc(var(--lyra-space-l) * 1.5);
-    --lyra-toast-font-size: 1.25rem;
+    --lyra-toast-font-size: var(--lyra-font-size-xl);
   }
 
   [part='toast-item'] {
@@ -54,11 +54,11 @@ export const styles = css`
     font-size: var(--lyra-toast-font-size);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(var(--lyra-size-neg-8px));
     transition:
       opacity var(--lyra-toast-show-duration),
       transform var(--lyra-toast-show-duration);
@@ -110,7 +110,7 @@ export const styles = css`
     border: none;
     background: none;
     font: inherit;
-    font-weight: bold;
+    font-weight: var(--lyra-font-weight-bold);
     color: var(--lyra-toast-accent-color);
     text-decoration: underline;
     cursor: pointer;
@@ -129,8 +129,8 @@ export const styles = css`
     border: none;
     cursor: pointer;
     color: var(--lyra-color-text-quiet);
-    font-size: 1em;
-    line-height: 1;
+    font-size: var(--lyra-size-1em);
+    line-height: var(--lyra-line-height-none);
     padding: var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
   }

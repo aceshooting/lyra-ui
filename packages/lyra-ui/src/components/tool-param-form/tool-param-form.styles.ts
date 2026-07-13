@@ -17,8 +17,8 @@ export const styles = css`
   }
   [part='label'] {
     display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-md-sm);
+    font-weight: var(--lyra-font-weight-semibold);
   }
   /* Applies to a boolean field's slotted <span part="label"> (inside
      <lyra-checkbox>) too -- see tool-param-form.ts's class doc for why that
@@ -36,14 +36,14 @@ export const styles = css`
 
   input.control {
     box-sizing: border-box;
-    min-block-size: 2.5rem;
+    min-block-size: var(--lyra-size-2-5rem);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: inherit;
     font: inherit;
-    font-size: 1rem;
+    font-size: var(--lyra-font-size-md);
   }
   input.control:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
@@ -59,17 +59,17 @@ export const styles = css`
 
   [part='description'] {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   [part='error'] {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-danger);
   }
   .unsupported {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     font-style: italic;
     color: var(--lyra-color-text-quiet);
   }

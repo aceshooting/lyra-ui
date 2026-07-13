@@ -8,7 +8,7 @@ export const styles = css`
   [part='base'] {
     overflow: auto;
     max-block-size: var(--lyra-table-max-height, none);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     /* Makes [part='base'] a query container so the @container rules below can
        react to the table's own available width instead of the viewport's. */
@@ -37,16 +37,16 @@ export const styles = css`
   [part='table'] {
     inline-size: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
   }
   [part='header-cell'] {
     position: sticky;
     inset-block-start: 0;
     background: var(--lyra-color-surface);
     text-align: start;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     padding: var(--lyra-space-s);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     cursor: default;
     white-space: nowrap;
   }
@@ -103,7 +103,7 @@ export const styles = css`
   }
   [part='cell'] {
     padding: var(--lyra-space-s);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='cell'][data-align='end'] {
     text-align: end;
@@ -122,9 +122,9 @@ export const styles = css`
        overlapping. Falls back to 0 for the first sticky column (or before
        the first measurement pass has run). */
     inset-inline-start: var(--lyra-table-sticky-offset, 0);
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
     background: var(--lyra-color-surface);
-    box-shadow: 1px 0 0 0 var(--lyra-color-border);
+    box-shadow: var(--lyra-size-1px) 0 0 0 var(--lyra-color-border);
   }
   [part='more-button'],
   [part='reveal-columns-button'] {
@@ -136,7 +136,7 @@ export const styles = css`
     color: var(--lyra-color-brand);
     font: inherit;
     cursor: pointer;
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='more-button']:hover,
   [part='reveal-columns-button']:hover {

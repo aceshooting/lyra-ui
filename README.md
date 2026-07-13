@@ -17,16 +17,17 @@ maintainers; every component here was implemented from scratch, referencing only
 public docs for the surface to mirror. For the components Web Awesome sells only in its **Pro**
 tier — the v1 form controls (combobox, select, date picker/input, toast, sparkline) and the core
 charting family (line/bar/pie/doughnut/radar/polar-area/scatter/bubble chart) — lyra-ui gives you
-free, open-source components wherever Web Awesome Pro normally charges, matching its attributes,
-slots, events, parts, and `--wa-*` design tokens exactly (under a `lyra-` prefix instead of `wa-`).
+free, open-source components wherever Web Awesome Pro normally charges, with the documented
+compatible attributes, slots, events, parts, and `--wa-*` token names under a `lyra-` prefix
+instead of `wa-`; component-specific notes call out any intentional differences.
 
-That free-Pro-equivalent tier is 17 of lyra-ui's 83 tags. The other 66 have no Web Awesome
+That free-Pro-equivalent group is 17 of lyra-ui's 84 tags. The other 67 have no Web Awesome
 equivalent at all, free or paid — Web Awesome doesn't sell them in any tier: dashboard atoms (stat
 tiles, tables, gauges, empty/skeleton states, split panes, widgets), temporal & graph widgets (time
 range, playback scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't
 offer (histogram, box plot, and a dependency-free `lyra-lite-chart`), MapLibre GL maps with
 choropleth layers, a drag-drop file dropzone, and — the largest single family by far — a
-45-component conversation/agent UI kit (chat composer, tool-call/result/approval dialogs, streaming
+46-component conversation/agent UI kit (chat composer, tool-call/result/approval dialogs, streaming
 text, citations, model selection, and more) for building LLM chat and agent interfaces from
 scratch. As far as we've been able to tell, no established project combines those three things —
 Web Awesome-compatible foundations, dashboard/visualization components, and agent-chat UI — in one
@@ -51,19 +52,19 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-83 tags across six component families. Every tag has a live, interactive example on the
+84 tags across six component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
 | Family | Tags | Highlights |
 |---|---:|---|
-| Form controls, toasts, sparkline (v1) | 9 | combobox, select, date picker/input, toast, sparkline — plus `<lyra-flag>` for i18n pickers |
+| Form controls, toasts, sparkline | 9 | combobox, select, date picker/input, toast, sparkline — plus `<lyra-flag>` for i18n pickers |
 | Dashboard atoms | 9 | stat card, sortable table, gauge, CSV/JSON export button, resizable split, widget shell, word cloud |
 | Temporal & graph | 6 | two-handle time-range brush, playback scrubber, canvas heatmap, force-directed graph, tree |
 | Charts | 12 | line/bar/pie/doughnut/radar/polar-area/scatter/bubble via Chart.js, plus histogram, box plot, and a dependency-free `lyra-lite-chart` |
 | Map & file input | 2 | MapLibre GL map with legend/choropleth layers, drag-drop file dropzone |
-| Conversation & Agent UI | 45 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, and more — the library's largest family |
+| Conversation & Agent UI | 46 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, and more — the library's largest family |
 
 ## Documentation
 
@@ -76,7 +77,7 @@ mirror, props, events, slots, parts) see
 
 ## Status
 
-`@aceshooting/lyra-ui` is published at `2.0.0`; `@aceshooting/lyra-flags` at `1.3.0` — see each
+`@aceshooting/lyra-ui` is published at `2.1.0`; `@aceshooting/lyra-flags` at `1.3.0` — see each
 package's own `CHANGELOG.md` for release history. The two are versioned independently (not always
 lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver: a major
 bump signals a breaking change, everything else is additive or a fix. Every release passes the same

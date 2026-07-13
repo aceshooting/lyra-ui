@@ -1,21 +1,5 @@
-import { LyraChart, lockChartType } from './chart.js';
+export * from './bar-chart.class.js';
+import { LyraBarChart } from './bar-chart.class.js';
 import { defineElement } from '../../internal/prefix.js';
-
-/**
- * `<lyra-bar-chart>` — `<lyra-chart>` with `type` locked to `"bar"`.
- *
- * @customElement lyra-bar-chart
- */
-export class LyraBarChart extends LyraChart {
-  declare type: 'bar';
-}
-
-lockChartType(LyraBarChart, 'bar');
-
+import "./chart.js";
 defineElement('bar-chart', LyraBarChart);
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'lyra-bar-chart': LyraBarChart;
-  }
-}

@@ -34,7 +34,8 @@
  * own file that `index.js` never statically `import`s — only reachable via `flagUrls()`'s dynamic
  * `import()` below — means a `flagUrl()`-only consumer's build never loads/transforms
  * `flags/eager.js` at all, so none of its 249 assets are touched (confirmed with a real Vite
- * build: referencing only 2 codes via `flagUrl()` now ships only those 2 flags).
+ * build: referencing only 2 codes via `flagUrl()` still leaves the complete lazy graph reachable,
+ * even though the browser fetches only the requested assets at runtime).
  *
  * `flags/eager.js`'s own 249 `new URL()` calls have the exact same "keep all 249 once loaded"
  * property `FLAG_LOADERS` used to have — that's fine and expected, since `flagUrls()` is only
@@ -43,9 +44,8 @@
  * `FLAG_LOADERS[code]()`/`flagUrl()`: each loader is a genuine dynamic `import()` of its own tiny
  * per-code module with a literal (non-templated) specifier, which is exactly the pattern bundlers
  * use to create a real, separate, lazily-fetched chunk per file — calling `FLAG_LOADERS['fr']()`
- * at runtime only ever triggers a network fetch for `fr`'s chunk, never the other 248 (confirmed
- * with a real Vite build: only the 2 referenced codes' loader chunks were non-trivial; the rest
- * were present as unfetched, never-imported build outputs).
+ * at runtime only ever triggers a network fetch for `fr`'s chunk; the other 248 are not fetched
+ * until requested. Literal asset subpath imports are the build-time-pruning option.
  *
  * Every loader module — and every `import()` specifier that reaches it — uses
  * `new URL(literal, import.meta.url)` / a literal `.js` specifier, never a bundler-specific
@@ -172,8 +172,9 @@ function renderGeneratedJs(codes) {
     '/**\n' +
     ' * Lazy map of ISO 3166-1 alpha-2 (or territory) code -> flag SVG URL loader. Each entry is a\n' +
     " * `() => import('./loaders/xx.js')` with a literal (non-templated) specifier, so bundlers\n" +
-    ' * code-split every flag into its own chunk and never fetch/inline a given flag until its\n' +
-    ' * specific loader is actually called. This is what `flagUrl()` uses. See index.js — and\n' +
+    ' * code-split every flag into its own lazy loader and never fetch a given flag until its\n' +
+    ' * specific loader is actually called. Bundlers may still emit the complete reachable lazy\n' +
+    ' * graph; this is what `flagUrl()` uses. See index.js — and\n' +
     ' * critically, do NOT add an eager (`new URL()`-per-code) export to *this* file; see\n' +
     ' * generate-index.mjs for why that defeats the whole point.\n' +
     ' * @type {Record<string, () => Promise<string>>}\n' +

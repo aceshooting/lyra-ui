@@ -7,18 +7,18 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow: hidden;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
   }
   [part='header'] {
     display: flex;
     align-items: center;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='header'][hidden] {
     display: none;
@@ -27,7 +27,7 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     color: var(--lyra-color-text);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -85,7 +85,7 @@ export const HoverDetailTooltip: Story = {
     <lyra-tool-call-chip name="search_web" category="research" status="success" summary="Found 8 results" duration-ms="1450">
       <div style="min-width:14rem;">
         <strong>Query</strong>
-        <div style="margin-top:0.25rem;color:var(--lyra-color-text-quiet, #6b7280);">"solar panel efficiency 2026"</div>
+        <div style="margin-top:0.25rem;color:var(--lyra-color-text-quiet);">"solar panel efficiency 2026"</div>
       </div>
     </lyra-tool-call-chip>
   `,

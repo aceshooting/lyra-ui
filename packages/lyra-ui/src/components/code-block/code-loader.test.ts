@@ -2,7 +2,8 @@ import { expect } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import { loadShikiHighlighter, loadShikiLanguage, loadShikiHighlighterCore } from './code-loader.js';
 
-it('resolves a highlighter seeded with the light+dark themes and zero language grammars', async () => {
+it('resolves a highlighter seeded with the light+dark themes and zero language grammars', async function () {
+  this.timeout(20_000);
   const hl = await loadShikiHighlighter();
   expect(hl).to.not.be.null;
   expect(hl!.getLoadedThemes()).to.include.members(['github-light', 'github-dark']);

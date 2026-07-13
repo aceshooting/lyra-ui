@@ -32,7 +32,7 @@ export const styles = css`
     outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='label'] {
-    font-size: 0.625rem;
+    font-size: var(--lyra-font-size-2xs);
     fill: var(--lyra-color-text);
     font-family: var(--lyra-font);
     pointer-events: none;

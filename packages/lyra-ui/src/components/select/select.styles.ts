@@ -4,34 +4,34 @@ export const styles = css`
   :host {
     display: block;
     --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-s);
-    --lyra-select-trigger-min-height: 2.5rem;
-    --lyra-select-font-size: 1rem;
+    --lyra-select-trigger-min-height: var(--lyra-size-2-5rem);
+    --lyra-select-font-size: var(--lyra-font-size-md);
   }
   :host([size='xs']) {
-    --lyra-select-trigger-padding: 0.125rem var(--lyra-space-xs);
-    --lyra-select-trigger-min-height: 1.5rem;
-    --lyra-select-font-size: 0.75rem;
+    --lyra-select-trigger-padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
+    --lyra-select-trigger-min-height: var(--lyra-size-1-5rem);
+    --lyra-select-font-size: var(--lyra-font-size-xs);
   }
   :host([size='s']) {
     --lyra-select-trigger-padding: var(--lyra-space-xs) var(--lyra-space-xs);
-    --lyra-select-trigger-min-height: 1.875rem;
-    --lyra-select-font-size: 0.8125rem;
+    --lyra-select-trigger-min-height: var(--lyra-size-1-875rem);
+    --lyra-select-font-size: var(--lyra-font-size-sm);
   }
   :host([size='l']) {
     --lyra-select-trigger-padding: var(--lyra-space-s) var(--lyra-space-m);
-    --lyra-select-trigger-min-height: 3rem;
-    --lyra-select-font-size: 1.125rem;
+    --lyra-select-trigger-min-height: var(--lyra-size-3rem);
+    --lyra-select-font-size: var(--lyra-font-size-lg);
   }
   :host([size='xl']) {
     --lyra-select-trigger-padding: var(--lyra-space-m) var(--lyra-space-l);
-    --lyra-select-trigger-min-height: 3.5rem;
-    --lyra-select-font-size: 1.25rem;
+    --lyra-select-trigger-min-height: var(--lyra-size-3-5rem);
+    --lyra-select-font-size: var(--lyra-font-size-xl);
   }
   [part='form-control-label'] {
     display: block;
     margin-block-end: var(--lyra-space-xs);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-md-sm);
+    font-weight: var(--lyra-font-weight-semibold);
   }
   /* :empty never matches here -- the part always contains a literal slot
      child element regardless of assigned/text content -- so real emptiness
@@ -56,7 +56,7 @@ export const styles = css`
     inline-size: 100%;
     min-block-size: var(--lyra-select-trigger-min-height);
     padding: var(--lyra-select-trigger-padding);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: inherit;
@@ -72,7 +72,7 @@ export const styles = css`
   :host([open]) [part='trigger'] {
     border-color: var(--lyra-color-brand);
   }
-  :host([disabled]) [part='trigger'] {
+  :host(:disabled) [part='trigger'] {
     /* Shared library-wide disabled-state token -- see lyra-combobox. */
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
@@ -98,9 +98,9 @@ export const styles = css`
     justify-content: center;
     color: var(--lyra-color-text-quiet);
     /* Same real-touch-target reasoning as lyra-combobox's expand-icon. */
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
-    line-height: 1;
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    line-height: var(--lyra-line-height-none);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);
@@ -108,16 +108,16 @@ export const styles = css`
 
   [part='listbox'] {
     position: fixed;
-    z-index: 900;
+    z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: 18rem;
+    max-block-size: var(--lyra-size-18rem);
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: 12rem;
-    max-inline-size: min(92vw, 28rem);
+    min-inline-size: var(--lyra-size-12rem);
+    max-inline-size: min(92vw, var(--lyra-size-28rem));
     padding: var(--lyra-space-xs);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     /* Closed state: invisible + slightly raised. visibility (not
@@ -125,7 +125,7 @@ export const styles = css`
        and a11y exposure stay off since this part is already position:fixed. */
     visibility: hidden;
     opacity: 0;
-    transform: translateY(-0.25rem);
+    transform: translateY(var(--lyra-size-neg-0-25rem));
     transition:
       opacity var(--lyra-transition-fast),
       transform var(--lyra-transition-fast),
@@ -148,7 +148,7 @@ export const styles = css`
     align-items: start;
     inline-size: 100%;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: 1px solid transparent;
+    border: var(--lyra-border-width-thin) solid transparent;
     border-radius: var(--lyra-radius);
     background: none;
     color: inherit;
@@ -163,15 +163,15 @@ export const styles = css`
   [part='option'][aria-selected='true'] {
     border-color: var(--lyra-color-brand);
     color: var(--lyra-color-brand);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='option'][aria-disabled='true'] {
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
   [part='option-dot'] {
-    inline-size: 0.5rem;
-    block-size: 0.5rem;
+    inline-size: var(--lyra-size-0-5rem);
+    block-size: var(--lyra-size-0-5rem);
     border-radius: 50%;
     flex: 0 0 auto;
   }
@@ -181,21 +181,21 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='option-sub'] {
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
   }
 
   .group-label {
     padding: var(--lyra-space-xs) var(--lyra-space-s) 0;
-    font-size: 0.6875rem;
-    font-weight: 700;
+    font-size: var(--lyra-size-0-6875rem);
+    font-weight: var(--lyra-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--lyra-size-0-04em);
     color: var(--lyra-color-text-quiet);
   }
   [part='hint'] {
     margin-block-start: var(--lyra-space-xs);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   /* :empty never matches here either -- same fix as lyra-combobox's hint/error. */
@@ -204,7 +204,7 @@ export const styles = css`
   }
   [part='error'] {
     margin-block-start: var(--lyra-space-xs);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-danger);
   }
   [part='error'][hidden] {

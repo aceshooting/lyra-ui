@@ -7,20 +7,23 @@ export const styles = css`
        --wa-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-dialog's --lyra-dialog-overlay-color and
        lyra-tool-select-dialog's --lyra-tool-select-dialog-overlay-color). */
-    --lyra-tool-approval-dialog-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-tool-approval-dialog-overlay-color: var(--lyra-color-overlay);
     /* Contained here (rather than a bare font-family literal on the
        textarea) so a host page can retheme it -- same rationale as
        lyra-json-viewer's --lyra-json-viewer-font; raw args are code, not
        prose, so the editor gets the same monospace treatment as that
        viewer's own tree rendering. */
-    --lyra-tool-approval-dialog-mono-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --lyra-tool-approval-dialog-mono-font: var(--lyra-font-mono);
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
     align-items: center;
     justify-content: center;
-    padding: var(--lyra-space-l);
+    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
+    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
+    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
+    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -34,10 +37,10 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
-    inline-size: min(32rem, 100%);
-    max-block-size: min(36rem, 100%);
+    inline-size: min(var(--lyra-size-32rem), 100%);
+    max-block-size: min(var(--lyra-size-36rem), 100%);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     overflow: hidden;
@@ -47,12 +50,12 @@ export const styles = css`
   }
   [part='header'] h2 {
     margin: 0;
-    font-size: 1.0625rem;
-    font-weight: 600;
+    font-size: var(--lyra-size-1-0625rem);
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='tool-name'] {
     font-family: var(--lyra-tool-approval-dialog-mono-font);
-    font-weight: 700;
+    font-weight: var(--lyra-font-weight-bold);
     color: var(--lyra-color-brand);
     word-break: break-word;
   }
@@ -77,17 +80,17 @@ export const styles = css`
   }
   [part='args-editor'] {
     flex: 1 1 auto;
-    min-block-size: 10rem;
+    min-block-size: var(--lyra-size-10rem);
     box-sizing: border-box;
     resize: vertical;
     padding: var(--lyra-space-s) var(--lyra-space-m);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: inherit;
     font-family: var(--lyra-tool-approval-dialog-mono-font);
-    font-size: 0.8125rem;
-    line-height: 1.5;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-normal);
   }
   [part='args-editor']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
@@ -98,7 +101,7 @@ export const styles = css`
   }
   [part='error'] {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-danger);
   }
   [part='error'][hidden] {
@@ -111,7 +114,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='footer'] ::slotted(*) {
     /* Any consumer-supplied footer content sits ahead of the built-in
@@ -125,11 +128,11 @@ export const styles = css`
   [part='edit-button'],
   [part='approve-button'] {
     font: inherit;
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
     padding: var(--lyra-space-xs) var(--lyra-space-m);
     border-radius: var(--lyra-radius);
     cursor: pointer;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='deny-button'],
   [part='edit-button'] {

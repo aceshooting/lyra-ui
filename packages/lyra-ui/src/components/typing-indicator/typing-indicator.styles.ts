@@ -18,16 +18,16 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
-    line-height: 1;
+    line-height: var(--lyra-line-height-none);
     --lyra-typing-dot-size: var(--lyra-space-s);
     --lyra-typing-gap: var(--lyra-space-xs);
-    --lyra-typing-cursor-width: 0.125rem;
-    --lyra-typing-cursor-height: 1em;
+    --lyra-typing-cursor-width: var(--lyra-size-0-125rem);
+    --lyra-typing-cursor-height: var(--lyra-size-1em);
   }
   :host([size='sm']) {
-    --lyra-typing-dot-size: 0.375rem;
-    --lyra-typing-gap: 0.1875rem;
-    --lyra-typing-cursor-width: 0.09375rem;
+    --lyra-typing-dot-size: var(--lyra-size-0-375rem);
+    --lyra-typing-gap: var(--lyra-size-0-1875rem);
+    --lyra-typing-cursor-width: var(--lyra-size-0-09375rem);
   }
 
   [part='base'] {

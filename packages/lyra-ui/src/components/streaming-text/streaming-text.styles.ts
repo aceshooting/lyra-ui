@@ -9,12 +9,12 @@ export const styles = css`
        defines its own scoped custom properties, exactly the way
        lyra-typing-indicator's --lyra-typing-cursor-width/-height do for its
        own (near-identical) blinking cursor. */
-    --lyra-streaming-text-cursor-width: 0.125rem;
-    --lyra-streaming-text-cursor-height: 1em;
+    --lyra-streaming-text-cursor-width: var(--lyra-size-0-125rem);
+    --lyra-streaming-text-cursor-height: var(--lyra-size-1em);
   }
 
   [part='base'] {
-    line-height: 1.6;
+    line-height: var(--lyra-line-height-loose);
   }
 
   /* Plain-text path only (Markdown mode never renders this element) -- see

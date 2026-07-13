@@ -21,7 +21,7 @@ export const Default: Story = {
       <span slot="actions"><button>Refresh</button></span>
       <div style="padding: 1rem;">
         <p style="margin: 0 0 0.5rem;">Panel body content — a chart, a table, anything.</p>
-        <p style="margin: 0; color: #666;">Click the chevron to collapse, or the expand icon to go fullscreen.</p>
+        <p style="margin: 0; color: var(--lyra-color-text-quiet);">Click the chevron to collapse, or the expand icon to go fullscreen.</p>
       </div>
     </lyra-widget>
   `,
@@ -50,7 +50,7 @@ export const FullscreenWithSidebarInset: Story = {
   render: () => html`
     <div style="position: relative;">
       <div
-        style="position: fixed; inset: 0 auto 0 0; inline-size: 240px; background: #1e293b; color: #fff; padding: 1rem; z-index: 1001;"
+        style="position: fixed; inset: 0 auto 0 0; inline-size: 240px; background: var(--lyra-color-text); color: var(--lyra-color-surface); padding: 1rem; z-index: 1001;"
       >
         Persistent sidebar (stays visible above the widget's fullscreen panel)
       </div>

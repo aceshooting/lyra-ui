@@ -1,21 +1,5 @@
-import { LyraChart, lockChartType } from './chart.js';
+export * from './radar-chart.class.js';
+import { LyraRadarChart } from './radar-chart.class.js';
 import { defineElement } from '../../internal/prefix.js';
-
-/**
- * `<lyra-radar-chart>` — `<lyra-chart>` with `type` locked to `"radar"`.
- *
- * @customElement lyra-radar-chart
- */
-export class LyraRadarChart extends LyraChart {
-  declare type: 'radar';
-}
-
-lockChartType(LyraRadarChart, 'radar');
-
+import "./chart.js";
 defineElement('radar-chart', LyraRadarChart);
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'lyra-radar-chart': LyraRadarChart;
-  }
-}

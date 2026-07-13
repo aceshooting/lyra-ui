@@ -12,27 +12,27 @@ export const styles = css`
        host page can retheme it, same rationale as --lyra-widget-overlay-color
        in widget.styles.ts -- no shared --wa-*/--lyra-* monospace token exists
        to resolve through. */
-    --lyra-json-viewer-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --lyra-json-viewer-font: var(--lyra-font-mono);
     font-family: var(--lyra-json-viewer-font);
-    font-size: 0.8125rem;
-    line-height: 1.6;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-loose);
   }
   [part='base'] {
     display: block;
     max-block-size: var(--lyra-json-viewer-max-height);
     overflow: auto;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
   }
   [part='toolbar'] {
     position: sticky;
     inset-block-start: 0;
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
     display: flex;
     justify-content: flex-end;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     background: var(--lyra-color-surface);
   }
   [part='tree'] {
@@ -53,13 +53,13 @@ export const styles = css`
     opacity: 1;
   }
   [part='toggle'] {
-    /* Deliberately smaller than the shared --lyra-icon-button-size (2.5rem,
-       meant for a standalone icon-only button) -- this sits inline in a
-       dense, arbitrarily-deep tree row, same reasoning as lyra-tree-node's
-       own toggle. */
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
-    margin-block-start: 0.1875rem;
+    /* Keep the glyph compact while giving the interactive box the shared
+       minimum target size, even for deeply nested rows. */
+    inline-size: var(--lyra-size-1-25rem);
+    block-size: var(--lyra-size-1-25rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    margin-block-start: var(--lyra-size-0-1875rem);
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -94,12 +94,12 @@ export const styles = css`
     outline-offset: var(--lyra-focus-ring-offset);
   }
   .toggle-space {
-    inline-size: 1.25rem;
+    inline-size: var(--lyra-size-1-25rem);
     flex: 0 0 auto;
   }
   [part='key'] {
     flex: 0 0 auto;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
   }
   .colon {
@@ -114,8 +114,8 @@ export const styles = css`
   [part='key'][data-match],
   [part='value'][data-match] {
     background: var(--lyra-color-warning-quiet);
-    border-radius: 0.1875rem;
-    box-shadow: 0 0 0 0.125rem var(--lyra-color-warning-quiet);
+    border-radius: var(--lyra-size-0-1875rem);
+    box-shadow: 0 0 0 var(--lyra-size-0-125rem) var(--lyra-color-warning-quiet);
   }
   [part='value'] {
     min-inline-size: 0;
@@ -151,9 +151,11 @@ export const styles = css`
     background: none;
     color: var(--lyra-color-text-quiet);
     font: inherit;
-    font-size: 0.75rem;
-    line-height: 1;
-    padding: 0.125rem var(--lyra-space-xs);
+    font-size: var(--lyra-font-size-xs);
+    line-height: var(--lyra-line-height-none);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
     cursor: pointer;
   }

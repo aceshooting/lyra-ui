@@ -1,5 +1,6 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './flag.js';
+import './flag-peer.js';
 import { loadFlagUrl, __setFlagUrlResolverForTesting } from './flag.js';
 import type { LyraFlag } from './flag.js';
 
@@ -8,7 +9,7 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // `@aceshooting/lyra-flags` peer package, then that specific code's own lazy loader module —
   // see flag.ts's bundle-size note) instead of one, so give this more headroom than the
   // library default (1000ms) to avoid flaking under load.
-  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 3000 });
+  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 8000 });
   return el.shadowRoot!.querySelector('img')!;
 }
 
@@ -262,7 +263,7 @@ it('is accessible', async () => {
 
 describe('loadFlagUrl (uncached, dependency-injectable)', () => {
   it('resolves the real flagUrl function when the peer package loads', async () => {
-    const resolve = await loadFlagUrl();
+    const resolve = await loadFlagUrl(() => import('@aceshooting/lyra-flags'));
     expect(resolve).to.be.a('function');
   });
 

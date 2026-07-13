@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import './flag-peer.js';
 
 const meta: Meta = {
   title: 'Flag',
@@ -43,7 +44,7 @@ export const FidelityTiers: Story = {
 export const LanguageSelector: Story = {
   name: 'Compact flags as menu icons',
   render: () => html`
-    <ul style="list-style:none; margin:0; padding:0.5rem 0; width:14rem; border:1px solid #ccc; border-radius:0.5rem; font-family:system-ui;">
+    <ul style="list-style:none; margin:0; padding:0.5rem 0; width:14rem; border:1px solid var(--lyra-color-border); border-radius:0.5rem; font-family:system-ui;">
       ${[
         ['es', 'Español'],
         ['fr', 'Français'],

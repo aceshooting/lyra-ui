@@ -1,6 +1,7 @@
-import type * as MaplibreModule from 'maplibre-gl';
+import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 
-let maplibre: Promise<typeof MaplibreModule | null> | undefined;
+type MaplibreModule = OptionalPeerApi;
+let maplibre: Promise<MaplibreModule | null> | undefined;
 
 /**
  * Lazily loads the optional peer dependency `maplibre-gl` once per page.
@@ -8,9 +9,9 @@ let maplibre: Promise<typeof MaplibreModule | null> | undefined;
  * mirrors `<lyra-flag>`'s peer-dependency pattern. Consumers must separately
  * import `maplibre-gl/dist/maplibre-gl.css` once they install the peer.
  */
-export function loadMaplibre(): Promise<typeof MaplibreModule | null> {
+export function loadMaplibre(): Promise<MaplibreModule | null> {
   if (!maplibre) {
-    maplibre = import('maplibre-gl').catch(() => {
+    maplibre = (import('maplibre-gl') as Promise<MaplibreModule>).catch(() => {
       console.warn(
         '<lyra-map> needs the optional peer dependency `maplibre-gl` — install it with ' +
           '`pnpm add maplibre-gl` and import `maplibre-gl/dist/maplibre-gl.css` once in your app.',

@@ -66,7 +66,7 @@ export const Basic: Story = {
           Announce the same text again
         </button>
       </div>
-      <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+      <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
         The region itself is screen-reader-only; this log mirrors its real (post-throttle) text so
         the "same text twice" clear-then-reset trick is visible even without a screen reader.
       </p>
@@ -104,7 +104,7 @@ export const ThrottledStream: Story = {
       >
         Simulate a streaming response (${'Here is a response streaming in one word at a time from the model'.split(' ').length} chunks, 90ms apart)
       </button>
-      <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
+      <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet);">
         Every word above calls <code>announce()</code>, but at a 400ms throttle only a handful of
         coalesced flushes actually reach the log — ending with a forced, always-delivered
         "response complete".

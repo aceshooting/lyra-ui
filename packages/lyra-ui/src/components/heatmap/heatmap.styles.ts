@@ -8,16 +8,16 @@ export const styles = css`
        getComputedStyle and interpolates between them). Component-specific
        business color — exposed so hosts can retheme
        the ramp without raw hex leaking into the public API. */
-    --lyra-heatmap-scale-lo: #cde2fb;
-    --lyra-heatmap-scale-hi: #0969da;
+    --lyra-heatmap-scale-lo: var(--lyra-color-brand-quiet);
+    --lyra-heatmap-scale-hi: var(--lyra-color-brand);
     /* No-data cell fill (the -1 sentinel / NaN case) — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above, so hosts can
        retheme it instead of it being a hardcoded literal in heatmap.ts. */
-    --lyra-heatmap-no-data-fill: rgba(128, 128, 128, 0.25);
+    --lyra-heatmap-no-data-fill: var(--lyra-color-no-data);
     /* Canvas-drawn axis/month/weekday label font — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above (canvas can't
        consume var() directly). */
-    --lyra-heatmap-label-font: 10px sans-serif;
+    --lyra-heatmap-label-font: var(--lyra-size-10px) sans-serif;
     /* [part="tooltip"] is a real DOM element (not canvas-drawn), so unlike
        the tokens above it consumes these var()s directly — no getComputedStyle
        resolution needed. Own tokens (not the bare --lyra-color-surface/-text)
@@ -57,16 +57,16 @@ export const styles = css`
   [part='tooltip'] {
     position: absolute;
     transform: translate(-50%, -100%);
-    margin-block-start: -6px;
-    padding: 2px 6px;
+    margin-block-start: var(--lyra-size-neg-6px);
+    padding: var(--lyra-size-2px) var(--lyra-size-6px);
     border-radius: var(--lyra-radius);
     background: var(--lyra-heatmap-tooltip-bg);
     color: var(--lyra-heatmap-tooltip-text);
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     white-space: nowrap;
     box-shadow: var(--lyra-shadow);
     pointer-events: none;
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
   }
   [part='tooltip'][hidden] {
     display: none;
@@ -75,13 +75,13 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lyra-space-xs);
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
   }
   [part='legend'] .bar {
-    inline-size: 6rem;
-    block-size: 0.5rem;
-    border-radius: 2px;
+    inline-size: var(--lyra-size-6rem);
+    block-size: var(--lyra-size-0-5rem);
+    border-radius: var(--lyra-size-2px);
     background: linear-gradient(
       to right,
       var(--lyra-heatmap-scale-lo),
@@ -91,12 +91,12 @@ export const styles = css`
   [part='legend-annotation'] {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: var(--lyra-size-3px);
   }
   [part='legend-annotation'] .ring-swatch {
-    inline-size: 0.6rem;
-    block-size: 0.6rem;
+    inline-size: var(--lyra-size-0-6rem);
+    block-size: var(--lyra-size-0-6rem);
     border-radius: 50%;
-    border: 2px solid var(--lyra-heatmap-annotation-color);
+    border: var(--lyra-border-width-medium) solid var(--lyra-heatmap-annotation-color);
   }
 `;

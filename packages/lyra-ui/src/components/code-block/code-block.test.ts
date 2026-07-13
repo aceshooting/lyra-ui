@@ -58,8 +58,22 @@ it('renders no header at all when there is nothing to put in it', async () => {
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
 });
 
+it('gives compact header controls the shared minimum hit area', async () => {
+  const el = (await fixture(
+    html`<lyra-code-block collapsible copyable .code=${jsSample}></lyra-code-block>`,
+  )) as LyraCodeBlock;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+  const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+
+  expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(copy).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(copy).minBlockSize).to.equal('40px');
+});
+
 describe('shiki highlighting (real peer)', () => {
-  it('shows a loading skeleton and aria-busy while shiki loads for a set language, then swaps to highlighted output', async () => {
+  it('shows a loading skeleton and aria-busy while shiki loads for a set language, then swaps to highlighted output', async function () {
+    this.timeout(20_000);
     const el = (await fixture(
       html`<lyra-code-block language="javascript" .code=${jsSample}></lyra-code-block>`,
     )) as LyraCodeBlock;

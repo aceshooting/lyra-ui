@@ -750,6 +750,26 @@ it('defaults collapse to "none", leaving dividers/panels byte-for-byte unaffecte
   expect(divider.getAttribute('tabindex')).to.equal('0');
 });
 
+it('does not schedule a Lit update from the initial collapse observer setup', async () => {
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  globalWarnings?.forEach((warning) => {
+    if (warning.includes('scheduled an update')) globalWarnings.delete(warning);
+  });
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(calls.flat().map(String).some((message) => message.includes('scheduled an update'))).to.be.false;
+});
+
 it('clamps the collapse="start" panel (index 0) to rail-width and marks it via dataset + host attribute once the container narrows into the rail range', async () => {
   const spy = installResizeObserverSpy();
   try {

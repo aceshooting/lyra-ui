@@ -8,7 +8,7 @@ export const styles = css`
     /* Component-specific -- not a shared design token, so a consumer can
        retheme it without a raw literal leaking into the public API (same
        rationale as lyra-app-rail's --lyra-app-rail-overlay-color). */
-    --lyra-split-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-split-overlay-color: var(--lyra-color-overlay);
   }
   [part='base'] {
     display: flex;
@@ -24,7 +24,7 @@ export const styles = css`
   [part='divider'] {
     position: relative;
     flex: 0 0 auto;
-    inline-size: 3px;
+    inline-size: var(--lyra-size-3px);
     block-size: auto;
     background: var(--lyra-color-border);
     cursor: col-resize;
@@ -38,15 +38,15 @@ export const styles = css`
     content: '';
     position: absolute;
     inset-block: 0;
-    inset-inline: -6px;
+    inset-inline: var(--lyra-size-neg-6px);
   }
   :host([orientation='vertical']) [part='divider'] {
     inline-size: auto;
-    block-size: 3px;
+    block-size: var(--lyra-size-3px);
     cursor: row-resize;
   }
   :host([orientation='vertical']) [part='divider']::before {
-    inset-block: -6px;
+    inset-block: var(--lyra-size-neg-6px);
     inset-inline: 0;
   }
   [part='divider']:hover {
@@ -72,7 +72,7 @@ export const styles = css`
      visual/stacking treatment lives here. z-index is above [part="backdrop"]
      (below), so the drawer renders on top of its own scrim. */
   ::slotted([data-collapse-state='floating']) {
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
     background: var(--lyra-color-surface);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
@@ -86,7 +86,7 @@ export const styles = css`
   [part='backdrop'] {
     position: absolute;
     inset: 0;
-    z-index: 0;
+    z-index: var(--lyra-layer-base);
     background: var(--lyra-split-overlay-color);
   }
   /* Rail-clamped content can easily overflow the fixed rail-width — clip it

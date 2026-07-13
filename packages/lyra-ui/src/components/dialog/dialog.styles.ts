@@ -6,14 +6,17 @@ export const styles = css`
        without a raw literal leaking into the public API (no shared
        --wa-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-dialog-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-dialog-overlay-color: var(--lyra-color-overlay);
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
     align-items: center;
     justify-content: center;
-    padding: var(--lyra-space-l);
+    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
+    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
+    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
+    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -30,10 +33,10 @@ export const styles = css`
     /* --lyra-dialog-max-width lets a consumer widen/narrow the panel per
        instance (e.g. inline on the host) without overriding the whole rule --
        same convention as lyra-media-card's --lyra-media-card-max-height. */
-    max-inline-size: min(var(--lyra-dialog-max-width, 32rem), 100%);
+    max-inline-size: min(var(--lyra-dialog-max-width, var(--lyra-size-32rem)), 100%);
     max-block-size: 100%;
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     overflow: auto;
@@ -43,13 +46,13 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='heading'] {
     flex: 1 1 auto;
     min-inline-size: 0;
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -89,7 +92,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='footer'][hidden] {
     display: none;

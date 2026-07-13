@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { Series } from './chart.js';
+import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Charts/Line',
@@ -14,7 +15,7 @@ export const Default: Story = {
   render: () => {
     const series: Series[] = [
       { label: 'Sessions', data: [4, 7, 6, 9, 12], fill: true },
-      { label: 'Errors', data: [1, 2, 1, 0, 3], color: '#e5484d' },
+      { label: 'Errors', data: [1, 2, 1, 0, 3], color: storyColor('danger') },
     ];
     return html`
       <lyra-line-chart

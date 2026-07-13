@@ -7,8 +7,8 @@ export const styles = css`
        host page can retheme it -- same rationale as lyra-json-viewer's
        identical --lyra-json-viewer-font, no shared --wa-*/--lyra-*
        monospace token exists to resolve through. */
-    --lyra-markdown-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    line-height: 1.6;
+    --lyra-markdown-font-mono: var(--lyra-font-mono);
+    line-height: var(--lyra-line-height-loose);
   }
   [part='content'] {
     overflow-wrap: break-word;
@@ -26,7 +26,7 @@ export const styles = css`
     margin-block-end: 0;
   }
   [part='heading'] {
-    line-height: 1.25;
+    line-height: var(--lyra-line-height-compact);
     margin-block: var(--lyra-space-l) var(--lyra-space-s);
   }
   [part='content'] p,
@@ -36,10 +36,10 @@ export const styles = css`
   }
   [part='content'] code {
     font-family: var(--lyra-markdown-font-mono);
-    font-size: 0.875em;
+    font-size: var(--lyra-size-0-875em);
     background: var(--lyra-color-brand-quiet);
     border-radius: calc(var(--lyra-radius) * 0.5);
-    padding: 0.125rem 0.3125rem;
+    padding: var(--lyra-size-0-125rem) var(--lyra-size-0-3125rem);
   }
   [part='code-block'] {
     margin-block: 0 var(--lyra-space-s);
@@ -51,12 +51,12 @@ export const styles = css`
   [part='code-block'] code {
     padding: 0;
     background: none;
-    font-size: 0.8125rem;
-    line-height: 1.5;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-normal);
   }
   [part='link'] {
     color: var(--lyra-color-brand);
-    text-underline-offset: 0.125rem;
+    text-underline-offset: var(--lyra-size-0-125rem);
   }
   /* Keeps an oversized source image from overflowing the content wrapper --
      matches the overflow-wrap: break-word guard on [part='content'] above,
@@ -68,7 +68,7 @@ export const styles = css`
     margin-block: 0 var(--lyra-space-s);
     margin-inline: 0;
     padding-inline-start: var(--lyra-space-m);
-    border-inline-start: 3px solid var(--lyra-color-border);
+    border-inline-start: var(--lyra-border-width-thick) solid var(--lyra-color-border);
     color: var(--lyra-color-text-quiet);
   }
   [part='table'] {
@@ -78,12 +78,12 @@ export const styles = css`
   }
   [part='table'] th,
   [part='table'] td {
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     text-align: start;
   }
   [part='table'] th {
     background: var(--lyra-color-brand-quiet);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
 `;

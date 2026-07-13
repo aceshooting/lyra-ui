@@ -22,10 +22,12 @@ import { flagUrl } from '@aceshooting/lyra-flags';
 await flagUrl('fr'); // -> resolved URL of flags/fr.svg
 ```
 
-`flagUrl()` is genuinely code-split per flag — each code is its own dynamically-`import()`ed
-chunk, so calling `flagUrl('fr')` only ever fetches `fr`'s asset, never the other 248. That's why
-it's `async`: this is a real, separate lazy-load per code, not a lookup into one eagerly-bundled
-map (verified with a real Vite build: referencing 2 codes shipped ~28 KB total, not all 249).
+`flagUrl()` selects one dynamically imported loader per flag, so a browser only fetches the
+requested flag at runtime. Because the package exports a loader entry for every code, a production
+bundler may still emit the complete reachable lazy-chunk graph even when the initial entry only
+imports `flagUrl`; lazy network fetching and build-time pruning are separate concerns. Use a
+literal `@aceshooting/lyra-flags/flags/<code>.svg` asset import, or copy only the required assets,
+when the deployment artifact itself must contain a small allowlist.
 
 For the opposite case — a consumer that genuinely wants every flag up front (e.g. a flag-picker
 listing every country) — use `flagUrls()` instead:
@@ -62,9 +64,9 @@ await flagUrl('es', { variant: 'compact' });  // -> WebP raster       (~2 KB)
 await flagUrl('es', { variant: 'detailed' }); // -> pristine original (~415 KB)
 ```
 
-Every tier is code-split per flag **and** per tier: a bundled app that only ever requests
-`variant: 'compact'` for a handful of codes ships only those few compact WebPs — never their
-standard or detailed variants, and never the other flags.
+Every tier has a separate loader per flag **and** per tier. At runtime a compact request fetches
+only its compact asset; a bundler can nevertheless emit all statically reachable tier chunks. Use
+literal subpath asset imports when the deployment artifact must be pruned to a small allowlist.
 
 Maintainers, after adding/replacing source art: `pnpm run optimize` (re-derives the standard tier
 from the pristine `flags/detailed/` originals) → `pnpm run build-compact` (renders the compact WebP

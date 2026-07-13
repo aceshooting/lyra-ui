@@ -1,8 +1,10 @@
-import type * as ChartJsModule from 'chart.js';
-import type ZoomPlugin from 'chartjs-plugin-zoom';
+import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 
-let chartJs: Promise<typeof ChartJsModule | null> | undefined;
-let zoomLoad: Promise<typeof ChartJsModule | null> | undefined;
+type ChartJsModule = OptionalPeerApi;
+type ZoomPlugin = OptionalPeerApi;
+
+let chartJs: Promise<ChartJsModule | null> | undefined;
+let zoomLoad: Promise<ChartJsModule | null> | undefined;
 let registered = false;
 
 /**
@@ -19,11 +21,12 @@ let registered = false;
  * uninstall either package.
  */
 export async function loadChartAndZoom(
-  importChart: () => Promise<typeof ChartJsModule> = () => import('chart.js'),
-  importZoom: () => Promise<{ default: typeof ZoomPlugin }> = () => import('chartjs-plugin-zoom'),
+  importChart: () => Promise<ChartJsModule> = () => import('chart.js') as Promise<ChartJsModule>,
+  importZoom: () => Promise<{ default: ZoomPlugin }> = () =>
+    import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>,
   needsZoom = false,
-): Promise<{ mod: typeof ChartJsModule; zoomPlugin: typeof ZoomPlugin | undefined } | null> {
-  let mod: typeof ChartJsModule;
+): Promise<{ mod: ChartJsModule; zoomPlugin: ZoomPlugin | undefined } | null> {
+  let mod: ChartJsModule;
   try {
     mod = await importChart();
   } catch (err) {
@@ -36,7 +39,7 @@ export async function loadChartAndZoom(
 
   if (!needsZoom) return { mod, zoomPlugin: undefined };
 
-  let zoomPlugin: typeof ZoomPlugin | undefined;
+  let zoomPlugin: ZoomPlugin | undefined;
   try {
     zoomPlugin = (await importZoom()).default;
   } catch (err) {
@@ -50,7 +53,7 @@ export async function loadChartAndZoom(
   return { mod, zoomPlugin };
 }
 
-function registerCore(mod: typeof ChartJsModule): void {
+function registerCore(mod: ChartJsModule): void {
   if (registered) return;
   mod.Chart.register(
     mod.LineController,
@@ -82,7 +85,7 @@ function registerCore(mod: typeof ChartJsModule): void {
  * below, which any chart that actually sets `zoom` should call instead.
  * Resolves to `null` if chart.js isn't installed.
  */
-export function loadChartJs(): Promise<typeof ChartJsModule | null> {
+export function loadChartJs(): Promise<ChartJsModule | null> {
   if (!chartJs) {
     chartJs = loadChartAndZoom().then((result) => {
       if (!result) return null;
@@ -118,8 +121,9 @@ export function loadChartJs(): Promise<typeof ChartJsModule | null> {
  * actually uninstall the package.
  */
 export function loadChartJsWithZoom(
-  importZoom: () => Promise<{ default: typeof ZoomPlugin }> = () => import('chartjs-plugin-zoom'),
-): Promise<typeof ChartJsModule | null> {
+  importZoom: () => Promise<{ default: ZoomPlugin }> = () =>
+    import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>,
+): Promise<ChartJsModule | null> {
   if (!zoomLoad) {
     zoomLoad = loadChartJs().then(async (mod) => {
       if (!mod) return null;

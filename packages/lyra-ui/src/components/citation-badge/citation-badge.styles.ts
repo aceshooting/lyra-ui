@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: inline-flex;
     vertical-align: baseline;
-    line-height: 1;
+    line-height: var(--lyra-line-height-none);
     /* Per-status accent -- one pair of custom properties swapped by the
        :host([status]) rules below rather than repeating background/color
        per part per status. 'default' (and any unrecognized status) stays
@@ -41,16 +41,16 @@ export const styles = css`
     display: inline-flex;
     align-items: baseline;
     box-sizing: border-box;
-    padding: 0 0.3em;
-    border: 1px solid var(--lyra-citation-badge-border);
+    padding: 0 var(--lyra-size-0-3em);
+    border: var(--lyra-border-width-thin) solid var(--lyra-citation-badge-border);
     border-radius: calc(var(--lyra-radius) * 0.6);
     background: var(--lyra-citation-badge-bg);
     color: var(--lyra-citation-badge-accent);
     font: inherit;
-    font-size: 0.75em;
-    font-weight: 600;
+    font-size: var(--lyra-size-0-75em);
+    font-weight: var(--lyra-font-weight-semibold);
     font-variant-numeric: tabular-nums;
-    line-height: 1.5;
+    line-height: var(--lyra-line-height-normal);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:
@@ -76,16 +76,16 @@ export const styles = css`
      chase a fade. */
   [part='popover'] {
     position: fixed;
-    z-index: 900;
+    z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    max-inline-size: min(90vw, 22rem);
+    max-inline-size: min(90vw, var(--lyra-size-22rem));
     padding: var(--lyra-space-s) var(--lyra-space-m);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
-    font-size: 0.8125rem;
-    line-height: 1.4;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-1-4);
     color: var(--lyra-color-text);
   }
 

@@ -69,6 +69,24 @@ it('reflects the placement property on <lyra-toast>', async () => {
   expect(region.getAttribute('placement')).to.equal('bottom-center');
 });
 
+it('exposes namespaced stack sizing custom properties', () => {
+  const cssText = Array.isArray(styles)
+    ? styles.map((style) => style.cssText).join('\n')
+    : (styles as { cssText: string }).cssText;
+  expect(cssText).to.include('--lyra-toast-gap');
+  expect(cssText).to.include('--lyra-toast-width');
+  expect(cssText).to.not.include('--gap');
+  expect(cssText).to.not.include('--width');
+});
+
+it('keeps fixed toast placements clear of display cutouts', () => {
+  const cssText = Array.isArray(styles)
+    ? styles.map((style) => style.cssText).join('\n')
+    : (styles as { cssText: string }).cssText;
+  expect(cssText).to.include('var(--lyra-safe-area-top)');
+  expect(cssText).to.include('var(--lyra-safe-area-bottom)');
+});
+
 it('does not retroactively move an already-open toast when a later call uses a different placement', async () => {
   const first = toast({ message: 'stay put', placement: 'top-start', duration: 0 });
   await first.item;

@@ -13,7 +13,7 @@ export const styles = css`
     display: flex;
     align-items: stretch;
     gap: var(--lyra-space-m);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     overflow-x: auto;
   }
   [part='tab'] {
@@ -22,11 +22,11 @@ export const styles = css`
     border: none;
     /* Sits directly over the tablist's own border-block-end so the accent
        underline below replaces it, pixel for pixel, when selected. */
-    border-block-end: 2px solid transparent;
-    margin-block-end: -1px;
+    border-block-end: var(--lyra-border-width-medium) solid transparent;
+    margin-block-end: var(--lyra-size-neg-1px);
     padding: var(--lyra-space-s) var(--lyra-space-xs);
     font: inherit;
-    font-weight: 500;
+    font-weight: var(--lyra-font-weight-medium);
     color: var(--lyra-color-text-quiet);
     cursor: pointer;
     white-space: nowrap;
@@ -71,5 +71,10 @@ export const styles = css`
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
     border-radius: var(--lyra-radius);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='tab'] {
+      transition: none !important;
+    }
   }
 `;

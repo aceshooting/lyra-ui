@@ -4,3 +4,20 @@
  * AGENTS.md. This is not imported by any component.
  */
 @import 'tailwindcss';
+
+html,
+body {
+  min-block-size: 100%;
+  background: var(--wa-color-surface-default, #ffffff);
+  color: var(--wa-color-text-normal, #1f2328);
+  color-scheme: inherit;
+}
+
+body {
+  margin: 0;
+  font-family: var(--wa-font-family-body, system-ui, sans-serif);
+}
+
+#storybook-root {
+  min-block-size: 100%;
+}

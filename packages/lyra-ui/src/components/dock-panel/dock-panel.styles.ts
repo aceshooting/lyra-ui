@@ -47,7 +47,7 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     overflow: hidden;
   }
 
@@ -82,31 +82,31 @@ export const styles = css`
   [part='handle']::before {
     content: '';
     position: absolute;
-    inset: -6px;
+    inset: var(--lyra-size-neg-6px);
   }
 
   :host([edge='start']) [part='handle'] {
     inset-block: 0;
     inset-inline-end: 0;
-    inline-size: 3px;
+    inline-size: var(--lyra-size-3px);
     cursor: col-resize;
   }
   :host([edge='end']) [part='handle'] {
     inset-block: 0;
     inset-inline-start: 0;
-    inline-size: 3px;
+    inline-size: var(--lyra-size-3px);
     cursor: col-resize;
   }
   :host([edge='top']) [part='handle'] {
     inset-inline: 0;
     inset-block-end: 0;
-    block-size: 3px;
+    block-size: var(--lyra-size-3px);
     cursor: row-resize;
   }
   :host([edge='bottom']) [part='handle'] {
     inset-inline: 0;
     inset-block-start: 0;
-    block-size: 3px;
+    block-size: var(--lyra-size-3px);
     cursor: row-resize;
   }
 
@@ -115,18 +115,18 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: 1.5rem;
-    block-size: 1.5rem;
+    inline-size: var(--lyra-size-1-5rem);
+    block-size: var(--lyra-size-1-5rem);
     padding: 0;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     cursor: pointer;
-    font-size: 0.75rem;
-    line-height: 1;
+    font-size: var(--lyra-font-size-xs);
+    line-height: var(--lyra-line-height-none);
     transition: background var(--lyra-transition-fast), color var(--lyra-transition-fast);
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
   }
   [part='collapse-toggle']:hover {
     background: var(--lyra-color-brand-quiet);
@@ -156,5 +156,11 @@ export const styles = css`
     inset-block-start: var(--lyra-space-xs);
     inset-inline-start: 50%;
     transform: translateX(-50%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='collapse-toggle'],
+    [part='handle'] {
+      transition: none !important;
+    }
   }
 `;

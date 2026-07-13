@@ -24,7 +24,7 @@ export const styles = css`
     cursor: pointer;
     font: inherit;
     color: inherit;
-    line-height: 1.3;
+    line-height: var(--lyra-line-height-snug);
   }
   [part='base']:hover {
     background: var(--lyra-color-brand-quiet);
@@ -48,7 +48,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    line-height: 1;
+    line-height: var(--lyra-line-height-none);
   }
   /* [part='icon'][hidden] rather than a bare :empty selector -- the part
      always contains a literal <slot> child element regardless of assigned

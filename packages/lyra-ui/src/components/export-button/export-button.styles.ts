@@ -10,7 +10,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-xs);
     padding: var(--lyra-space-xs) var(--lyra-space-m);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
@@ -43,15 +43,15 @@ export const styles = css`
        synchronous style pass as the open attribute write. */
     visibility: hidden;
     position: fixed;
-    z-index: 900;
-    min-inline-size: 8rem;
+    z-index: var(--lyra-layer-dropdown);
+    min-inline-size: var(--lyra-size-8rem);
     padding: var(--lyra-space-xs);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(var(--lyra-size-neg-4px));
     transition:
       opacity var(--lyra-transition-fast),
       transform var(--lyra-transition-fast);

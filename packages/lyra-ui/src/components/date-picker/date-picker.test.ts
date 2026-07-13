@@ -130,6 +130,19 @@ it('navigates months with the next/previous buttons', async () => {
   expect(title().toLowerCase()).to.contain('august');
 });
 
+it('moves the roving focus into the newly visible month after navigation', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  (el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(focusable.length).to.equal(1);
+  expect((focusable[0] as HTMLButtonElement).dataset.date).to.equal('2026-08-01');
+  expect((focusable[0] as HTMLButtonElement).disabled).to.be.false;
+});
+
 it('renders two months when requested', async () => {
   const el = (await fixture(
     html`<lyra-date-picker value="2026-07-15" months="2"></lyra-date-picker>`,
@@ -629,6 +642,22 @@ it('does not let the empty-grid fallback focus land on a disabled day 1', async 
   expect(focusable.length, 'expected exactly one focusable day cell').to.equal(1);
   const focused = focusable[0] as HTMLButtonElement;
   expect(focused.disabled, 'the fallback focus must never land on a disabled day').to.be.false;
+});
+
+it('renormalizes the roving date when a dynamic minimum disables the selected day', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker value="2026-07-15" min="2026-07-01"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  el.min = '2026-07-20';
+  await el.updateComplete;
+
+  const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(focusable.length, 'expected one roving focus target after the constraint update').to.equal(1);
+  const focused = focusable[0] as HTMLButtonElement;
+  expect(focused.dataset.date, 'expected focus to move to the nearest enabled day').to.equal('2026-07-20');
+  expect(focused.disabled, 'the roving focus target must be enabled').to.be.false;
 });
 
 it('never lands keyboard focus on a disabled day', async () => {

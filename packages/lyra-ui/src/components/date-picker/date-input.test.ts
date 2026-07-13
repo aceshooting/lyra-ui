@@ -323,6 +323,35 @@ describe('complete programmatic validity', () => {
     expect(el.checkValidity()).to.be.true;
   });
 
+  it('refreshes temporal validity when checkValidity crosses local midnight', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-14" disable-past></lyra-date-input>`,
+    )) as LyraDateInput;
+    const clock = el as unknown as { now: () => Date };
+
+    clock.now = () => new Date(2026, 6, 14, 23, 59);
+    expect(el.checkValidity()).to.be.true;
+
+    clock.now = () => new Date(2026, 6, 15, 0, 1);
+    expect(el.checkValidity()).to.be.false;
+    expect(el.internals.validity.rangeUnderflow).to.be.true;
+  });
+
+  it('refreshes temporal validity when the document becomes visible again', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input value="2026-07-14" disable-past></lyra-date-input>`,
+    )) as LyraDateInput;
+    const clock = el as unknown as { now: () => Date };
+
+    clock.now = () => new Date(2026, 6, 14, 23, 59);
+    expect(el.checkValidity()).to.be.true;
+    clock.now = () => new Date(2026, 6, 15, 0, 1);
+
+    el.ownerDocument.dispatchEvent(new Event('visibilitychange'));
+    await el.updateComplete;
+    expect(el.internals.validity.rangeUnderflow).to.be.true;
+  });
+
   it('checks every range endpoint and can report underflow and overflow together', async () => {
     const el = (await fixture(html`
       <lyra-date-input
@@ -627,7 +656,7 @@ it('does not render an orphaned asterisk when required but no label is provided'
 });
 
 it('clamps the popup to the viewport width like the combobox listbox', () => {
-  expect(styles.cssText).to.include('max-inline-size: min(92vw, 28rem)');
+  expect(styles.cssText).to.include('max-inline-size: min(92vw, var(--lyra-size-28rem))');
 });
 
 it('propagates disabled/readonly to the nested lyra-date-picker so its days actually stop being interactive', async () => {

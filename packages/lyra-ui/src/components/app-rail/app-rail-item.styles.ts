@@ -34,6 +34,11 @@ export const styles = css`
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
+  [part='base'][aria-current='page'] {
+    background: var(--lyra-color-brand-quiet);
+    color: var(--lyra-color-brand);
+    font-weight: var(--lyra-font-weight-semibold);
+  }
   [part='icon'] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -50,10 +55,10 @@ export const styles = css`
   }
   :host([icon-only]) [part='label'] {
     position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
+    inline-size: var(--lyra-size-1px);
+    block-size: var(--lyra-size-1px);
     padding: 0;
-    margin: -1px;
+    margin: var(--lyra-size-neg-1px);
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;

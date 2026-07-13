@@ -188,7 +188,7 @@ export const ComposerTray: Story = {
     },
   },
   render: () => html`
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem; padding:0.5rem; border:1px dashed var(--lyra-color-border, #8a8a90); border-radius:0.5rem;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem; padding:0.5rem; border:1px dashed var(--lyra-color-border); border-radius:0.5rem;">
       <lyra-attachment-chip name="roof-photo.jpg" size="2415919" mime-type="image/jpeg" status="done"></lyra-attachment-chip>
       <lyra-attachment-chip name="dataset.csv" size="9830400" mime-type="text/csv" status="uploading" progress="58"></lyra-attachment-chip>
       <lyra-attachment-chip name="invoice.pdf" size="102400" mime-type="application/pdf" status="error"></lyra-attachment-chip>

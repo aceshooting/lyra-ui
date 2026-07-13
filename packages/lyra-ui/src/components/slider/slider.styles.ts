@@ -10,34 +10,34 @@ export const styles = css`
   [part='base'] {
     position: relative;
     flex: 1 1 auto;
-    block-size: 1.5rem;
+    block-size: var(--lyra-size-1-5rem);
   }
   [part='track'] {
     position: absolute;
     inset-inline: 0;
     inset-block-start: 50%;
-    block-size: 4px;
+    block-size: var(--lyra-size-4px);
     transform: translateY(-50%);
-    border-radius: 2px;
+    border-radius: var(--lyra-size-2px);
     background: var(--lyra-color-border);
   }
   [part='fill'] {
     position: absolute;
     inset-inline-start: 0;
     inset-block-start: 50%;
-    block-size: 4px;
+    block-size: var(--lyra-size-4px);
     transform: translateY(-50%);
-    border-radius: 2px;
+    border-radius: var(--lyra-size-2px);
     background: var(--lyra-color-brand);
   }
   [part='thumb'] {
     position: absolute;
     inset-block-start: 50%;
-    inline-size: 16px;
-    block-size: 16px;
+    inline-size: var(--lyra-size-16px);
+    block-size: var(--lyra-size-16px);
     border-radius: 50%;
     background: var(--lyra-color-brand);
-    border: 2px solid var(--lyra-color-surface);
+    border: var(--lyra-border-width-medium) solid var(--lyra-color-surface);
     box-shadow: var(--lyra-shadow);
     transform: translate(-50%, -50%);
     cursor: grab;
@@ -56,8 +56,8 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: 28px;
-    block-size: 28px;
+    inline-size: var(--lyra-size-28px);
+    block-size: var(--lyra-size-28px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }
@@ -70,19 +70,19 @@ export const styles = css`
   }
   [part='value'] {
     flex: 0 0 auto;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
     /* Numeric readout ticks as the thumb moves; tabular-nums keeps its own
        inline-size stable instead of jittering the layout next to it. */
     font-variant-numeric: tabular-nums;
-    min-inline-size: 2.5ch;
+    min-inline-size: var(--lyra-size-2-5ch);
     text-align: end;
   }
-  :host([disabled]) {
+  :host(:disabled) {
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
-  :host([disabled]) [part='thumb'] {
+  :host(:disabled) [part='thumb'] {
     cursor: not-allowed;
   }
 `;

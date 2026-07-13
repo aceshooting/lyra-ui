@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { ChoroplethLayer, LegendEntry, MapMarker } from './map.js';
+import { storyColor } from '../../../../../.storybook/story-theme.js';
 
-const legend: LegendEntry[] = [
-  { color: '#5b8def', label: 'Low' },
-  { color: '#e5484d', label: 'High' },
+const legend = (): LegendEntry[] => [
+  { color: storyColor('brand'), label: 'Low' },
+  { color: storyColor('danger'), label: 'High' },
 ];
 
 const RASTER_STYLE = {
@@ -42,7 +43,7 @@ export const Default: Story = {
       style="height: 20rem"
       center="[2.3522, 48.8566]"
       zoom="4"
-      .legend=${legend}
+      .legend=${legend()}
       .mapStyle=${RASTER_STYLE}
     ></lyra-map>
   `,
@@ -58,9 +59,9 @@ export const Choropleth: Story = {
       sourceId: 'regions',
       field: 'value',
       stops: [
-        [0, '#5b8def'],
-        [50, '#f2c94c'],
-        [100, '#e5484d'],
+        [0, storyColor('brand')],
+        [50, storyColor('warning')],
+        [100, storyColor('danger')],
       ],
       geojson: {
         type: 'FeatureCollection',
@@ -106,9 +107,9 @@ export const Choropleth: Story = {
         center="[2.3522, 48.8566]"
         zoom="10"
         .legend=${[
-          { color: '#5b8def', label: 'Low' },
-          { color: '#f2c94c', label: 'Medium' },
-          { color: '#e5484d', label: 'High' },
+          { color: storyColor('brand'), label: 'Low' },
+          { color: storyColor('warning'), label: 'Medium' },
+          { color: storyColor('danger'), label: 'High' },
         ]}
         .choropleth=${choropleth}
         .mapStyle=${RASTER_STYLE}
@@ -129,7 +130,7 @@ export const Markers: Story = {
       {
         id: 'louvre',
         lngLat: [2.3364, 48.8606],
-        color: '#e5484d',
+        color: storyColor('danger'),
         unsafeHtml: '<strong>Louvre</strong><br>Museum',
       },
     ];

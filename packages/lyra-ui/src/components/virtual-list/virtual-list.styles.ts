@@ -7,7 +7,7 @@ export const styles = css`
        a virtualized list is meaningless without a bounded scroll extent, so
        this ships a sane default rather than collapsing to 0 when a caller
        forgets to size the host. */
-    --lyra-virtual-list-height: 24rem;
+    --lyra-virtual-list-height: var(--lyra-size-24rem);
   }
   [part='base'] {
     position: relative;
@@ -43,12 +43,12 @@ export const styles = css`
     position: absolute;
     inset-inline: 0;
     inset-block-start: 0;
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875em;
-    font-weight: 600;
+    font-size: var(--lyra-size-0-875em);
+    font-weight: var(--lyra-font-weight-semibold);
     pointer-events: none;
   }
   :host([loading]) [part='base'] {

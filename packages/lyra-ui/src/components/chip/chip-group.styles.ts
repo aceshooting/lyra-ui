@@ -19,15 +19,15 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
-    padding: 0.25rem var(--lyra-space-s);
-    border: 1px dashed var(--lyra-color-border);
-    border-radius: 999px;
+    padding: var(--lyra-size-0-25rem) var(--lyra-space-s);
+    border: var(--lyra-border-width-thin) dashed var(--lyra-color-border);
+    border-radius: var(--lyra-radius-pill);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text-quiet);
     font: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-sm);
+    font-weight: var(--lyra-font-weight-semibold);
+    line-height: var(--lyra-line-height-snug);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition:

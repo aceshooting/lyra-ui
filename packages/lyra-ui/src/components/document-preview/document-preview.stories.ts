@@ -87,7 +87,7 @@ export const UnsupportedSlotEscapeHatch: Story = {
     >
       <div
         slot="unsupported"
-        style="padding: 2rem; text-align: center; color: var(--lyra-color-text-quiet, #6b7280); border: 1px dashed var(--lyra-color-border, #8a8a90); border-radius: 0.375rem; margin: 0.75rem;"
+        style="padding: 2rem; text-align: center; color: var(--lyra-color-text-quiet); border: 1px dashed var(--lyra-color-border); border-radius: 0.375rem; margin: 0.75rem;"
       >
         (stand-in for a real PDF.js/office-doc renderer)
       </div>

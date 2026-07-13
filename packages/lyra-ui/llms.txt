@@ -17,14 +17,14 @@ Awesome-themed app and works standalone with no theme at all.
   events, slots, CSS parts, themeable custom properties, optional peer deps, usage snippets, and
   known gotchas) for every tag in the library — the primary resource for a coding assistant
   integrating `@aceshooting/lyra-ui`.
-- [README.md](./README.md): Install instructions, the full tag/tier table, `<wa-*>` →
+- [README.md](./README.md): Install instructions, the full component catalog, `<wa-*>` →
   `<lyra-*>` migration notes, theming, and package-level development commands.
 
-## Component tiers
+## Component categories
 
-The library shipped in six incremental batches; `llms-full.txt` is ordered the same way:
+The catalog is grouped by capability; `llms-full.txt` follows the same consumer-facing order:
 
-- **v1 core** — form controls, toasts, sparkline, and flags: `lyra-combobox`/`lyra-option`,
+- **Form controls, toasts, sparkline, and flags** — `lyra-combobox`/`lyra-option`,
   `lyra-select` (a closed-list, button-trigger single-select sharing `lyra-option` with
   `lyra-combobox`), `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`,
   `lyra-sparkline`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
@@ -54,7 +54,7 @@ The library shipped in six incremental batches; `llms-full.txt` is ordered the s
   (form-associated), `lyra-attachment-chip`, `lyra-stream-status`, `lyra-virtual-list`,
   `lyra-conversation-item`, `lyra-model-select`, `lyra-slider` (form-associated),
   `lyra-tool-select-dialog`, `lyra-citation-badge`, `lyra-source-list`/`lyra-source-card`,
-  `lyra-app-rail`, `lyra-responsive-panel`, `lyra-mention-popover`, `lyra-streaming-text`,
+  `lyra-app-rail`/`lyra-app-rail-item`, `lyra-responsive-panel`, `lyra-mention-popover`, `lyra-streaming-text`,
   `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block` (needs the optional peer
   `shiki`), `lyra-tool-approval-dialog`, `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`,
   `lyra-chip`/`lyra-chip-group`, `lyra-model-settings-panel`, `lyra-context-meter`,

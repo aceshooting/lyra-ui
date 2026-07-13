@@ -54,10 +54,42 @@ export { __lyraMaplibreMap as Map, __lyraMaplibreMarker as Marker, __lyraMaplibr
   },
 };
 
+const browserProduct = process.env.WTR_BROWSER ?? 'chromium';
+if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
+  throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
+}
+
+const strictConsole = process.env.WTR_STRICT_CONSOLE === '1';
+const collectCoverage = process.env.WTR_COVERAGE === '1';
+const strictConsoleTestRunnerHtml = strictConsole
+  ? (testRunnerImport) => `
+<!doctype html>
+<html>
+  <head></head>
+  <body>
+    <script>
+      const allowedWarnings = [/Lit is in dev mode/, /source\\(\\) rejected/];
+      const originalWarn = console.warn;
+      const originalError = console.error;
+      console.warn = (...args) => {
+        if (!allowedWarnings.some((pattern) => pattern.test(args.map(String).join(' ')))) {
+          throw new Error('Unexpected browser console.warn: ' + args.map(String).join(' '));
+        }
+        originalWarn(...args);
+      };
+      console.error = (...args) => {
+        throw new Error('Unexpected browser console.error: ' + args.map(String).join(' '));
+      };
+    </script>
+    <script type="module" src=${JSON.stringify(testRunnerImport)}></script>
+  </body>
+</html>`
+  : undefined;
+
 export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
-  browsers: [playwrightLauncher({ product: 'chromium' })],
+  browsers: [playwrightLauncher({ product: browserProduct })],
   plugins: [
     esbuildPlugin({ ts: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
@@ -72,5 +104,28 @@ export default {
     config: {
       timeout: '6000',
     },
+  },
+  testRunnerHtml: strictConsoleTestRunnerHtml,
+  coverage: collectCoverage,
+  coverageConfig: {
+    include: [
+      'src/internal/form-associated.ts',
+      'src/internal/anchored-validity.ts',
+      'src/internal/lyra-element.ts',
+      'src/internal/overlay-manager.ts',
+      'src/components/combobox/combobox.class.ts',
+      'src/components/dialog/dialog.class.ts',
+      'src/components/table/table.class.ts',
+      'src/components/virtual-list/virtual-list.class.ts',
+    ],
+    threshold: {
+      statements: 75,
+      branches: 65,
+      functions: 65,
+      lines: 75,
+    },
+    report: true,
+    reportDir: 'coverage',
+    reporters: ['text', 'lcovonly', 'html'],
   },
 };

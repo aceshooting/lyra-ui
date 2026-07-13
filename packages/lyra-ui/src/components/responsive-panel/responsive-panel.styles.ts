@@ -7,7 +7,7 @@ export const styles = css`
        --wa-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-dialog's own --lyra-dialog-overlay-color and
        lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-responsive-panel-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-responsive-panel-overlay-color: var(--lyra-color-overlay);
     display: block;
   }
 
@@ -25,7 +25,7 @@ export const styles = css`
     display: flex;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
   }
   /* Bottom-sheet anchors its panel to the block-end edge instead of
      stretching it full-height like fullscreen does. */
@@ -50,7 +50,7 @@ export const styles = css`
   /* Inline (docked) presentation: a normal panel in the page's layout flow,
      bordered like a card so it reads as a distinct region. */
   [part='base']:not(.overlay) [part='panel'] {
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     overflow: auto;
   }
@@ -72,13 +72,15 @@ export const styles = css`
   :host([variant='bottom-sheet']) [part='base'].overlay [part='panel'] {
     block-size: auto;
     max-block-size: 85vh;
+    max-block-size: 85dvh;
+    padding-block-end: var(--lyra-safe-area-bottom);
     border-start-start-radius: var(--lyra-radius);
     border-start-end-radius: var(--lyra-radius);
   }
 
   [part='header'] {
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='header'][hidden] {
     display: none;
@@ -96,7 +98,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='footer'][hidden] {
     display: none;

@@ -473,7 +473,7 @@ it('does not intercept Tab when not fullscreen', async () => {
 
 it('exposes the fullscreen scrim color as a retheme-able custom property', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('--lyra-widget-overlay-color: rgb(0 0 0 / 0.5)');
+  expect(css).to.include('--lyra-widget-overlay-color: var(--lyra-color-overlay)');
   expect(css).to.include('background: var(--lyra-widget-overlay-color)');
 });
 

@@ -7,8 +7,8 @@ export const styles = css`
        width" token exists to resolve through, same rationale as
        --lyra-json-viewer-max-height in json-viewer.styles.ts. */
     --lyra-chat-message-max-width: 80%;
-    font-size: 0.875rem;
-    line-height: 1.5;
+    font-size: var(--lyra-font-size-md-sm);
+    line-height: var(--lyra-line-height-normal);
   }
   [part='bubble'] {
     display: flex;
@@ -16,7 +16,7 @@ export const styles = css`
     gap: var(--lyra-space-xs);
     max-inline-size: var(--lyra-chat-message-max-width);
     padding: var(--lyra-space-m);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow-wrap: anywhere;
@@ -117,7 +117,7 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lyra-space-xs);
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
   }
   [part='actions'] {
@@ -141,8 +141,8 @@ export const styles = css`
 
   [part='status-indicator'] {
     flex: 0 0 auto;
-    inline-size: 0.5rem;
-    block-size: 0.5rem;
+    inline-size: var(--lyra-size-0-5rem);
+    block-size: var(--lyra-size-0-5rem);
     border-radius: 50%;
     background: var(--lyra-color-text-quiet);
   }
@@ -158,7 +158,7 @@ export const styles = css`
   }
   :host([status='failed']) [part='status-text'] {
     color: var(--lyra-color-danger);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   @keyframes lyra-chat-message-pulse {
     0%,
@@ -175,21 +175,21 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lyra-space-xs);
-    padding: 0.125rem var(--lyra-space-xs);
-    border: 1px solid var(--lyra-color-danger);
+    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-danger);
     border-radius: var(--lyra-radius);
     background: transparent;
     color: var(--lyra-color-danger);
     font: inherit;
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     cursor: pointer;
   }
   [part='retry-button']:hover {
     background: var(--lyra-color-danger-quiet);
   }
   [part='retry-button'] svg {
-    inline-size: 0.875em;
-    block-size: 0.875em;
+    inline-size: var(--lyra-size-0-875em);
+    block-size: var(--lyra-size-0-875em);
   }
 
   @media (prefers-reduced-motion: reduce) {

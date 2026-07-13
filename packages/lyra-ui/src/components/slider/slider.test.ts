@@ -563,6 +563,9 @@ it('formDisabledCallback disables the control via a fieldset', async () => {
   // `_fieldsetDisabled`/`effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
+  expect(getComputedStyle(el).opacity).to.equal('0.5');
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(getComputedStyle(thumb).cursor).to.equal('not-allowed');
 });
 
 it('widens the thumb hit/drag area past the visible 16px dot via a transparent ::before', async () => {

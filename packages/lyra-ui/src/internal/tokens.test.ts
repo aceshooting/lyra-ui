@@ -87,6 +87,26 @@ it('defines an icon-button-size token', async () => {
   expect(await probeVar('--lyra-icon-button-size')).to.equal('2.5rem');
 });
 
+it('defines the shared typography, chart, layer, and overlay token surface', async () => {
+  expect(await probeVar('--lyra-font-size-sm')).to.equal('0.8125rem');
+  expect(await probeVar('--lyra-font-weight-semibold')).to.equal('600');
+  expect(await probeVar('--lyra-line-height-normal')).to.equal('1.5');
+  expect(await probeVar('--lyra-border-width-thin')).to.equal('1px');
+  expect(await probeVar('--lyra-radius-pill')).to.equal('999px');
+  expect(await probeVar('--lyra-layer-modal')).to.equal('1000');
+  expect(await probeVar('--lyra-color-overlay')).to.equal('rgb(0 0 0 / 0.5)');
+});
+
+it('provides central reduced-motion and forced-colors fallbacks', () => {
+  const cssText = tokens.cssText;
+  expect(cssText).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  expect(cssText).to.match(/animation-duration:\s*0\.001ms/);
+  expect(cssText).to.match(/@media\s*\(forced-colors:\s*active\)/);
+  expect(cssText).to.include('--lyra-color-surface: Canvas');
+  expect(cssText).to.include('--lyra-color-text: CanvasText');
+  expect(cssText).to.include('--lyra-focus-ring-color: Highlight');
+});
+
 it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast against white', async () => {
   expect(await probeVar('--lyra-color-border')).to.equal('#8a8a90');
 });
@@ -101,6 +121,19 @@ it('provides a dark-aware fallback under prefers-color-scheme: dark when no --wa
   expect(darkBlockMatch, 'expected a dark-mode block').to.not.equal(null);
   expect(darkBlockMatch![1]).to.include('--wa-color-surface-default');
   expect(darkBlockMatch![1]).to.include('--wa-color-text-normal');
+});
+
+it('provides light, dark, and forced-colors categorical chart palette values', () => {
+  const cssText = tokens.cssText;
+  for (let index = 1; index <= 8; index++) {
+    expect(cssText).to.include(`--lyra-color-chart-${index}:`);
+  }
+  const darkBlockMatch = /@media\s*\(prefers-color-scheme:\s*dark\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
+  expect(darkBlockMatch, 'expected a dark-mode block').to.not.equal(null);
+  expect(darkBlockMatch![1]).to.include('--lyra-color-chart-1:');
+  const forcedBlockMatch = /@media\s*\(forced-colors:\s*active\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
+  expect(forcedBlockMatch, 'expected a forced-colors block').to.not.equal(null);
+  expect(forcedBlockMatch![1]).to.include('--lyra-color-chart-1: Highlight');
 });
 
 it('keeps every standalone light fallback semantic pair at WCAG AA contrast', () => {

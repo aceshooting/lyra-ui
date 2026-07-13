@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: inline-block;
     inline-size: var(--lyra-skeleton-w, 100%);
-    block-size: var(--lyra-skeleton-h, 1em);
+    block-size: var(--lyra-skeleton-h, var(--lyra-size-1em));
   }
   [part='base'] {
     inline-size: 100%;

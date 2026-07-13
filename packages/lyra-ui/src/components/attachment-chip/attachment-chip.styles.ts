@@ -41,12 +41,12 @@ export const styles = css`
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: 1px solid var(--lyra-attachment-chip-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-attachment-chip-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-attachment-chip-bg);
     color: var(--lyra-color-text);
-    font-size: 0.8125rem;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-snug);
     transition:
       background-color var(--lyra-transition-fast),
       border-color var(--lyra-transition-fast);
@@ -81,13 +81,13 @@ export const styles = css`
     flex-direction: column;
     flex: 1 1 auto;
     min-inline-size: 0;
-    gap: 0.125rem;
+    gap: var(--lyra-size-0-125rem);
   }
   [part='name'] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
   }
   [part='size'] {
@@ -102,14 +102,14 @@ export const styles = css`
   }
   [part='status-text'] {
     color: var(--lyra-attachment-chip-accent);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
 
   [part='progress'] {
     flex: 0 0 auto;
-    inline-size: 3.5rem;
+    inline-size: var(--lyra-size-3-5rem);
     block-size: var(--lyra-space-xs);
-    border-radius: 999px;
+    border-radius: var(--lyra-radius-pill);
     background: var(--lyra-color-border);
     overflow: hidden;
   }
@@ -123,10 +123,10 @@ export const styles = css`
   [part='spinner'] {
     flex: 0 0 auto;
     display: inline-block;
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: var(--lyra-size-1rem);
+    block-size: var(--lyra-size-1rem);
     border-radius: 50%;
-    border: 2px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-medium) solid var(--lyra-color-border);
     border-block-start-color: var(--lyra-attachment-chip-accent);
     animation: lyra-attachment-chip-spin 0.8s linear infinite;
   }
@@ -137,8 +137,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
     padding: 0;
     border: none;
     border-radius: calc(var(--lyra-radius) * 0.6);

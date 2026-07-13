@@ -14,8 +14,8 @@ export const styles = css`
     align-items: baseline;
     flex-wrap: wrap;
     column-gap: var(--lyra-space-xs);
-    font-size: 0.8125rem;
-    line-height: 1.4;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-1-4);
   }
   [part='label'] {
     flex: 0 0 auto;

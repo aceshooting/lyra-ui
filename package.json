@@ -12,15 +12,21 @@
     "test": "pnpm -r --if-present run test",
     "lint": "pnpm -r --if-present run lint",
     "manifest": "pnpm --filter @aceshooting/lyra-ui run manifest",
+    "manifest:check": "pnpm --filter @aceshooting/lyra-ui run manifest:check",
     "dev": "storybook dev -p 6006",
     "docs": "storybook dev -p 6006",
-    "docs:build": "storybook build -o storybook-static",
+    "docs:build": "pnpm manifest:check && storybook build -o storybook-static",
+    "storybook:check-theme": "node scripts/check-storybook-theme.mjs",
+    "storybook:check": "node scripts/check-storybook.mjs",
+    "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
+    "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "devDependencies": {
     "@aceshooting/lyra-flags": "workspace:*",
     "@aceshooting/lyra-ui": "workspace:*",
+    "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^2.31.0",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "@storybook/addon-a11y": "^10.5.0",
@@ -28,6 +34,7 @@
     "@storybook/web-components": "^10.5.0",
     "@storybook/web-components-vite": "^10.5.0",
     "@tailwindcss/vite": "^4.3.2",
+    "axe-core": "^4.12.1",
     "chart.js": "^4.5.1",
     "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
@@ -37,9 +44,11 @@
     "lit": "^3.3.3",
     "maplibre-gl": "^5.24.0",
     "playwright": "^1.61.1",
+    "publint": "^0.3.21",
     "storybook": "^10.5.0",
     "tailwindcss": "^4.3.2",
     "vite": "^8.1.4"
   },
-  "packageManager": "pnpm@11.10.0"
+  "packageManager": "pnpm@11.10.0",
+  "customElements": "custom-elements.json"
 }

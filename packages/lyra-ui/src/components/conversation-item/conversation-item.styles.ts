@@ -3,8 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    font-size: 0.875rem;
-    line-height: 1.4;
+    font-size: var(--lyra-font-size-md-sm);
+    line-height: var(--lyra-line-height-1-4);
   }
 
   /* [part='base'] is a plain layout wrapper (no ARIA role of its own) --
@@ -62,7 +62,7 @@ export const styles = css`
     min-inline-size: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: var(--lyra-size-0-125rem);
   }
 
   [part='title'] {
@@ -70,7 +70,7 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
   }
 
@@ -78,13 +78,13 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     box-sizing: border-box;
-    padding: 0.125rem var(--lyra-space-xs);
-    border: 1px solid var(--lyra-color-brand);
+    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
     border-radius: calc(var(--lyra-radius) * 0.6);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     font: inherit;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='title-input']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
@@ -97,7 +97,7 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--lyra-color-text-quiet);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
   }
 
   [part='timestamp'] {
@@ -105,7 +105,7 @@ export const styles = css`
     align-self: flex-start;
     white-space: nowrap;
     color: var(--lyra-color-text-quiet);
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     font-variant-numeric: tabular-nums;
   }
 
@@ -114,8 +114,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
     padding: 0;
     border: none;
     border-radius: calc(var(--lyra-radius) * 0.6);

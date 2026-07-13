@@ -12,11 +12,11 @@ export const styles = css`
        host page can retheme it -- same rationale as --lyra-markdown-font-mono
        and --lyra-json-viewer-font, no shared --wa-*/--lyra-* monospace token
        exists to resolve through. */
-    --lyra-code-block-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.8125rem;
+    --lyra-code-block-font: var(--lyra-font-mono);
+    font-size: var(--lyra-font-size-sm);
   }
   [part='base'] {
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow: hidden;
@@ -26,7 +26,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-xs);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     /* --lyra-color-surface (not -brand-quiet) -- pairing
        --lyra-color-text-quiet (the toggle/copy-button color below) against
        --lyra-color-brand-quiet fails WCAG AA contrast in this token
@@ -37,11 +37,12 @@ export const styles = css`
     font-family: var(--lyra-font);
   }
   [part='toggle'] {
-    /* Deliberately smaller than the shared --lyra-icon-button-size (2.5rem,
-       meant for a standalone icon-only button) -- this sits inline in a
-       dense header row, same reasoning as lyra-json-viewer's own toggle. */
-    inline-size: 1.25rem;
-    block-size: 1.25rem;
+    /* Keep the glyph compact while giving the interactive box the shared
+       minimum target size. */
+    inline-size: var(--lyra-size-1-25rem);
+    block-size: var(--lyra-size-1-25rem);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -74,14 +75,14 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
     font-family: var(--lyra-code-block-font);
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-xs);
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
   }
   [part='language'] {
     flex: 0 0 auto;
-    padding: 0.0625rem 0.4375rem;
-    border-radius: 999px;
+    padding: var(--lyra-size-0-0625rem) var(--lyra-size-0-4375rem);
+    border-radius: var(--lyra-radius-pill);
     /* --lyra-color-brand + -brand-quiet (not -text-quiet + -surface) --
        this pill needs to read as distinct from the [part="header"]
        background it sits on (also -surface as of the comment above), and
@@ -90,10 +91,10 @@ export const styles = css`
        -text-quiet on -brand-quiet. */
     background: var(--lyra-color-brand-quiet);
     color: var(--lyra-color-brand);
-    font-size: 0.6875rem;
-    line-height: 1.4;
+    font-size: var(--lyra-size-0-6875rem);
+    line-height: var(--lyra-line-height-1-4);
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: var(--lyra-size-0-02em);
   }
   /* Pushed to the end of the header whether or not filename/language
      precede it -- margin-inline-start:auto works whether this is the first
@@ -105,9 +106,11 @@ export const styles = css`
     background: none;
     color: var(--lyra-color-text-quiet);
     font: inherit;
-    font-size: 0.75rem;
-    line-height: 1;
-    padding: 0.1875rem var(--lyra-space-xs);
+    font-size: var(--lyra-font-size-xs);
+    line-height: var(--lyra-line-height-none);
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    padding: var(--lyra-size-0-1875rem) var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
     cursor: pointer;
   }
@@ -138,7 +141,7 @@ export const styles = css`
     display: block;
     padding: var(--lyra-space-s) var(--lyra-space-m);
     --lyra-skeleton-w: 100%;
-    --lyra-skeleton-h: 8rem;
+    --lyra-skeleton-h: var(--lyra-size-8rem);
   }
   [part='pre'] {
     margin: 0;
@@ -152,7 +155,7 @@ export const styles = css`
     background: var(--lyra-color-surface);
     font-family: var(--lyra-code-block-font);
     font-size: inherit;
-    line-height: 1.5;
+    line-height: var(--lyra-line-height-normal);
     white-space: pre;
   }
   [part='code'] {

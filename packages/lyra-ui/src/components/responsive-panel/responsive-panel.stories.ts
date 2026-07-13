@@ -122,7 +122,7 @@ export const SettingsSidebarPattern: Story = {
   },
   render: () => html`
     <div style="display: flex; gap: 1rem; align-items: flex-start;">
-      <div style="flex: 1; min-inline-size: 12rem; padding: 1rem; border: 1px dashed #999; border-radius: 0.375rem;">
+      <div style="flex: 1; min-inline-size: 12rem; padding: 1rem; border: 1px dashed var(--lyra-color-border); border-radius: 0.375rem;">
         Main content area
       </div>
       <button @click=${openPanel}>Open settings (below 900px)</button>

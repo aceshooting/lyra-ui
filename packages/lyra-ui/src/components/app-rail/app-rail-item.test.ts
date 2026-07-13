@@ -25,3 +25,23 @@ it('is accessible', async () => {
   const el = (await fixture(html`<lyra-app-rail-item href="/home" aria-label="Home">Home</lyra-app-rail-item>`)) as LyraAppRailItem;
   await expect(el).to.be.accessible();
 });
+
+it('marks the base part aria-current="page" when active', async () => {
+  const el = (await fixture(html`<lyra-app-rail-item href="/home" active>Home</lyra-app-rail-item>`)) as LyraAppRailItem;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-current')).to.equal('page');
+});
+
+it('omits aria-current when not active', async () => {
+  const el = (await fixture(html`<lyra-app-rail-item href="/home">Home</lyra-app-rail-item>`)) as LyraAppRailItem;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.hasAttribute('aria-current')).to.be.false;
+});
+
+it('reflects active as a host attribute', async () => {
+  const el = (await fixture(html`<lyra-app-rail-item href="/home" active>Home</lyra-app-rail-item>`)) as LyraAppRailItem;
+  expect(el.hasAttribute('active')).to.be.true;
+  el.active = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('active')).to.be.false;
+});

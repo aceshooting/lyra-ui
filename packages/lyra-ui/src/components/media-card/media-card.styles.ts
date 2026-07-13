@@ -8,7 +8,7 @@ export const styles = css`
        chat bubble -- same naming/contract as lyra-document-preview's
        identical --lyra-document-preview-max-height. Width already caps at
        100% of whatever the host message body allows. */
-    --lyra-media-card-max-height: 20rem;
+    --lyra-media-card-max-height: var(--lyra-size-20rem);
   }
 
   /* -- base: shared chrome for every kind's root element (button/div/a/span) */
@@ -16,7 +16,7 @@ export const styles = css`
     display: block;
     box-sizing: border-box;
     max-inline-size: 100%;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow: hidden;
@@ -72,8 +72,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), 2rem);
-    min-block-size: min(var(--lyra-icon-button-size), 2rem);
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-2rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-2rem));
     padding: 0;
     border: none;
     border-radius: var(--lyra-radius);
@@ -108,7 +108,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: var(--lyra-font-size-xl);
     color: var(--lyra-color-text-quiet);
   }
   [part='file-icon'] svg {
@@ -118,8 +118,8 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 600;
-    font-size: 0.8125rem;
+    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text);
   }
 

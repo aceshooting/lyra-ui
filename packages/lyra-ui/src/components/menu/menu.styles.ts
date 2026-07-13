@@ -16,13 +16,13 @@ export const styles = css`
   }
   [part='popup'] {
     position: fixed;
-    z-index: 900;
+    z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    min-inline-size: 10rem;
-    max-inline-size: min(92vw, 20rem, var(--lyra-positioner-available-inline-size, 100vw));
-    max-block-size: min(20rem, var(--lyra-positioner-available-block-size, 20rem));
+    min-inline-size: var(--lyra-size-10rem);
+    max-inline-size: min(92vw, var(--lyra-size-20rem), var(--lyra-positioner-available-inline-size, 100vw));
+    max-block-size: min(var(--lyra-size-20rem), var(--lyra-positioner-available-block-size, var(--lyra-size-20rem)));
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     /* Closed state: invisible + slightly raised -- visibility (not
@@ -33,7 +33,7 @@ export const styles = css`
        needed. Mirrors lyra-select's identical [part='listbox'] treatment. */
     visibility: hidden;
     opacity: 0;
-    transform: translateY(-0.25rem);
+    transform: translateY(var(--lyra-size-neg-0-25rem));
     transition:
       opacity var(--lyra-transition-fast),
       transform var(--lyra-transition-fast),
@@ -52,7 +52,7 @@ export const styles = css`
   [part='list'] {
     display: flex;
     flex-direction: column;
-    max-block-size: min(20rem, var(--lyra-positioner-available-block-size, 20rem));
+    max-block-size: min(var(--lyra-size-20rem), var(--lyra-positioner-available-block-size, var(--lyra-size-20rem)));
     overflow-y: auto;
     padding: var(--lyra-space-xs);
     outline: none;
@@ -62,7 +62,7 @@ export const styles = css`
      between groups of menuitem children, so no role attribute needs adding. */
   ::slotted(hr) {
     border: none;
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     margin: var(--lyra-space-xs) var(--lyra-space-xs);
   }
 `;

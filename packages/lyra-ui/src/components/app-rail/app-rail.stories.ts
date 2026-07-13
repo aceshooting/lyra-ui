@@ -19,13 +19,13 @@ export default meta;
 type Story = StoryObj;
 
 const navItems = html`
-  <lyra-app-rail-item href="#inbox" aria-label="Inbox"><span slot="icon">📥</span>Inbox</lyra-app-rail-item>
+  <lyra-app-rail-item href="#inbox" aria-label="Inbox" active><span slot="icon">📥</span>Inbox</lyra-app-rail-item>
   <lyra-app-rail-item href="#chats" aria-label="Chats"><span slot="icon">💬</span>Chats</lyra-app-rail-item>
   <lyra-app-rail-item href="#settings" aria-label="Settings"><span slot="icon">⚙️</span>Settings</lyra-app-rail-item>
 `;
 
 const page = (rail: ReturnType<typeof html>) => html`
-  <div style="display:flex; block-size: 24rem; border: 1px solid #d0d7de; border-radius: 0.5rem; overflow: hidden;">
+  <div style="display:flex; block-size: 24rem; border: 1px solid var(--lyra-color-border); border-radius: 0.5rem; overflow: hidden;">
     ${rail}
     <div style="flex:1; padding: 1.5rem; overflow: auto;">
       <h2 style="margin-top:0;">Page content</h2>

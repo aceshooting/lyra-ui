@@ -44,15 +44,15 @@ export const styles = css`
     gap: var(--lyra-space-xs);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: 0.25rem var(--lyra-space-s);
-    border: 1px solid var(--lyra-chip-border);
-    border-radius: 999px;
+    padding: var(--lyra-size-0-25rem) var(--lyra-space-s);
+    border: var(--lyra-border-width-thin) solid var(--lyra-chip-border);
+    border-radius: var(--lyra-radius-pill);
     background: var(--lyra-chip-bg);
     color: var(--lyra-chip-accent);
     font: inherit;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-sm);
+    font-weight: var(--lyra-font-weight-medium);
+    line-height: var(--lyra-line-height-snug);
   }
 
   [part='icon'] {
@@ -84,15 +84,15 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: min(var(--lyra-icon-button-size), 1.25rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.25rem);
-    margin-inline-end: -0.15rem;
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-25rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-25rem));
+    margin-inline-end: var(--lyra-size-neg-0-15rem);
     padding: 0;
     border: none;
-    border-radius: 999px;
+    border-radius: var(--lyra-radius-pill);
     background: transparent;
     color: inherit;
-    font-size: 0.75em;
+    font-size: var(--lyra-size-0-75em);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lyra-transition-fast);

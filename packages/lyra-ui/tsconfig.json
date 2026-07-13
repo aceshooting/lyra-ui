@@ -8,6 +8,8 @@
     "useDefineForClassFields": false,
     "experimentalDecorators": true,
     "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
     // Strips `@internal`-tagged exports (e.g. flag.ts's test-only
     // __setFlagUrlResolverForTesting seam) from the emitted .d.ts, so a
     // consumer never sees them via autocomplete/type-checking even though

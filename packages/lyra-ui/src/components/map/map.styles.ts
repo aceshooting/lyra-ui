@@ -5,7 +5,7 @@ export const styles = css`
     display: block;
     position: relative;
     inline-size: 100%;
-    block-size: 24rem;
+    block-size: var(--lyra-size-24rem);
   }
   [part='base'] {
     position: relative;
@@ -24,16 +24,16 @@ export const styles = css`
     position: absolute;
     inset-block-end: var(--lyra-space-s);
     inset-inline-start: var(--lyra-space-s);
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
     display: flex;
     flex-direction: column;
     gap: var(--lyra-space-xs);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
   }
   .legend-row {
     display: flex;
@@ -41,9 +41,9 @@ export const styles = css`
     gap: var(--lyra-space-xs);
   }
   [part='legend-swatch'] {
-    inline-size: 0.75rem;
-    block-size: 0.75rem;
-    border-radius: 2px;
+    inline-size: var(--lyra-size-0-75rem);
+    block-size: var(--lyra-size-0-75rem);
+    border-radius: var(--lyra-size-2px);
     flex: 0 0 auto;
   }
 `;

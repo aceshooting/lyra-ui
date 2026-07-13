@@ -126,11 +126,11 @@ export const LiveDerivedThroughput: Story = {
         <lyra-generation-status active></lyra-generation-status>
         <button
           data-restart
-          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid #ccc; border-radius:0.375rem; background:#fff; cursor:pointer;"
+          style="font:inherit; font-size:0.8125rem; padding:0.3rem 0.7rem; border:1px solid var(--lyra-color-border); border-radius:0.375rem; background:var(--lyra-color-surface); cursor:pointer;"
         >
           Restart
         </button>
-        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280); max-width:28rem;">
+        <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet); max-width:28rem;">
           Clicking the built-in Stop button here just pauses the readout (sets <code>active = false</code>) — a
           real host would also cancel its in-flight request. Clicking "Restart" begins a fresh run.
         </p>

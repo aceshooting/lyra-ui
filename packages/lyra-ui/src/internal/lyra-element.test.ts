@@ -24,3 +24,18 @@ it('emit() dispatches a composed, bubbling lyra event', async () => {
   expect(caught!.composed).to.be.true;
   expect((caught!.detail as { ok: boolean }).ok).to.be.true;
 });
+
+it('makes notifications non-cancelable unless a caller opts into veto semantics', async () => {
+  const el = await fixture<Demo>(`<lyra-demo-base></lyra-demo-base>`);
+  const events: CustomEvent[] = [];
+  el.addEventListener('lyra-notification', (e) => events.push(e as CustomEvent));
+  (el as unknown as { emit: (n: string, d?: unknown, o?: { cancelable?: boolean }) => void }).emit(
+    'lyra-notification',
+  );
+  (el as unknown as { emit: (n: string, d?: unknown, o?: { cancelable?: boolean }) => void }).emit(
+    'lyra-notification',
+    undefined,
+    { cancelable: true },
+  );
+  expect(events.map((event) => event.cancelable)).to.deep.equal([false, true]);
+});

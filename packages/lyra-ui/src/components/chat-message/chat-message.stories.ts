@@ -65,23 +65,23 @@ export const WithAvatarBadgesAndActions: Story = {
     <lyra-chat-message data-role="assistant" .timestamp=${new Date()} style="max-width: 32rem; display: block;">
       <span
         slot="avatar"
-        style="display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:50%;background:#0969da;color:#fff;font-size:0.75rem;"
+        style="display:inline-flex;align-items:center;justify-content:center;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--lyra-color-brand);color:var(--lyra-color-on-brand);font-size:0.75rem;"
         >AI</span
       >
       <span
         slot="badges"
-        style="font-size:0.6875rem;padding:0.0625rem 0.375rem;border-radius:999px;background:#ddf4ff;color:#0969da;"
+        style="font-size:0.6875rem;padding:0.0625rem 0.375rem;border-radius:999px;background:var(--lyra-color-brand-quiet);color:var(--lyra-color-brand);"
         >gpt-5.4</span
       >
       <span
         slot="badges"
-        style="font-size:0.6875rem;padding:0.0625rem 0.375rem;border-radius:999px;background:#eee;color:#555;"
+        style="font-size:0.6875rem;padding:0.0625rem 0.375rem;border-radius:999px;background:var(--lyra-color-surface);color:var(--lyra-color-text-quiet);"
         >812 tokens · 1.4s</span
       >
       Migrating the table component to the new pagination API touches four files; want me to open a PR?
       <span slot="attachments">
         <span
-          style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid #ccc;border-radius:0.375rem;"
+          style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:0.375rem;"
           >📎 table.diff</span
         >
       </span>

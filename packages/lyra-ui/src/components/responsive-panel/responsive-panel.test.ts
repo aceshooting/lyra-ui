@@ -2,6 +2,13 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './responsive-panel.js';
 import type { LyraResponsivePanel, ResponsivePanelModeChangeDetail } from './responsive-panel.js';
 import { resolveEffectiveMode } from './responsive-panel.js';
+import { styles } from './responsive-panel.styles.js';
+
+it('uses a dynamic viewport fallback and safe-area padding for bottom sheets', () => {
+  expect(styles.cssText).to.include('max-block-size: 85vh');
+  expect(styles.cssText).to.include('max-block-size: 85dvh');
+  expect(styles.cssText).to.include('var(--lyra-safe-area-bottom)');
+});
 
 // A stand-in for a slotted component (e.g. lyra-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host

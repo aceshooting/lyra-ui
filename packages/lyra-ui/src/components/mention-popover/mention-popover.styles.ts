@@ -11,21 +11,21 @@ export const styles = css`
      same as those two. */
   [part='listbox'] {
     position: fixed;
-    z-index: 900;
+    z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: 16rem;
+    max-block-size: var(--lyra-size-16rem);
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: 14rem;
-    max-inline-size: min(92vw, 24rem);
+    min-inline-size: var(--lyra-size-14rem);
+    max-inline-size: min(92vw, var(--lyra-size-24rem));
     padding: var(--lyra-space-xs);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     visibility: hidden;
     opacity: 0;
-    transform: translateY(-0.25rem);
+    transform: translateY(var(--lyra-size-neg-0-25rem));
     transition:
       opacity var(--lyra-transition-fast),
       transform var(--lyra-transition-fast),
@@ -60,14 +60,14 @@ export const styles = css`
 
   [part='option-icon'] {
     flex: 0 0 auto;
-    line-height: 1.4;
+    line-height: var(--lyra-line-height-1-4);
   }
 
   [part='option-label'] {
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
-    line-height: 1.4;
+    line-height: var(--lyra-line-height-1-4);
   }
   [part='option-label'] span:first-child {
     overflow: hidden;
@@ -76,7 +76,7 @@ export const styles = css`
   }
 
   [part='option-description'] {
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -97,6 +97,6 @@ export const styles = css`
   [part='empty'] {
     padding: var(--lyra-space-s) var(--lyra-space-m);
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
   }
 `;

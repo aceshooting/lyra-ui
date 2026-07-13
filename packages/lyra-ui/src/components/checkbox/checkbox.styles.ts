@@ -31,9 +31,9 @@ export const styles = css`
        (--lyra-icon-button-size capped at 1.75rem) — a real touch target
        without ballooning to the full 2.5rem meant for standalone
        icon-only buttons. */
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
-    border: 1px solid var(--lyra-color-border);
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: calc(var(--lyra-radius) * 0.6);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-on-brand);
@@ -66,7 +66,7 @@ export const styles = css`
      "[hidden] { display: none }" rule needs no author-side override to
      take effect when hasLabelSlot is false. */
   [part='label'] {
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
     color: var(--lyra-color-text);
   }
 

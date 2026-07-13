@@ -7,7 +7,6 @@ import './components/combobox/option.js';
 import './components/select/select.js';
 import './components/date-picker/date-picker.js';
 import './components/date-picker/date-input.js';
-import './components/flag/flag.js';
 import './components/empty/empty.js';
 import './components/skeleton/skeleton.js';
 import './components/stat/stat.js';
@@ -83,16 +82,18 @@ export { LyraCombobox } from './components/combobox/combobox.js';
 export type { OptionFilter } from './components/combobox/combobox.js';
 export { LyraOption } from './components/combobox/option.js';
 export { LyraSelect } from './components/select/select.js';
+export type { LyraSelectSize } from './components/select/select.js';
 export { LyraDatePicker } from './components/date-picker/date-picker.js';
 export type { DateRange } from './components/date-picker/date-picker.js';
 export { LyraDateInput } from './components/date-picker/date-input.js';
 export { LyraFlag } from './components/flag/flag.js';
+export type { FlagUrlResolver, FlagVariant } from './components/flag/flag.js';
 export { LANGUAGE_TO_COUNTRY, languageToCountry } from './components/flag/language-map.js';
 export { LyraEmpty } from './components/empty/empty.js';
 export { LyraSkeleton } from './components/skeleton/skeleton.js';
 export type { SkeletonVariant, SkeletonEffect } from './components/skeleton/skeleton.js';
 export { LyraStat } from './components/stat/stat.js';
-export type { StatVariant, StatGoodDirection } from './components/stat/stat.js';
+export type { StatVariant, StatGoodDirection, StatRow } from './components/stat/stat.js';
 export { LyraTable } from './components/table/table.js';
 export type { TableColumn } from './components/table/table.js';
 export { LyraGauge } from './components/gauge/gauge.js';
@@ -110,19 +111,32 @@ export type {
   SplitCollapseState,
   SplitCollapseStateInput,
   SplitCollapseChangeDetail,
+  SplitResizeDetail,
 } from './components/split/split.js';
 export { LyraTimeRange } from './components/time-range/time-range.js';
+export type { TimeRangePreset } from './components/time-range/time-range.js';
 export { LyraPlayback } from './components/playback/playback.js';
 export { LyraHeatmap } from './components/heatmap/heatmap.js';
+export type {
+  MatrixCellPos,
+  CalendarCellPos,
+  HeatmapAnnotation,
+  LyraHeatmapCellClickDetail,
+} from './components/heatmap/heatmap.js';
 export { linearAlpha, sqrtStep } from './components/heatmap/heatmap-scale.js';
 export { LyraTree } from './components/tree/tree.js';
 export type { TreeItem } from './components/tree/tree.js';
 export { LyraTreeNode } from './components/tree/tree-node.js';
 export { LyraLiteChart } from './components/chart/lite-chart.js';
-export type { LiteSeries, LyraLiteChartType } from './components/chart/lite-chart.js';
+export type {
+  LiteSeries,
+  LyraLiteChartType,
+  LyraLiteChartLayout,
+} from './components/chart/lite-chart.js';
 export { binValues } from './components/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/chart/histogram-bin.js';
 export { LyraFileInput } from './components/file-input/file-input.js';
+export type { RejectedFile } from './components/file-input/file-input.js';
 export { LyraWidget } from './components/widget/widget.js';
 export { LyraWordCloud } from './components/word-cloud/word-cloud.js';
 export type { WordCloudWord } from './components/word-cloud/word-cloud.js';
@@ -140,6 +154,19 @@ export { LyraLiveRegion } from './components/live-region/live-region.js';
 export type { LiveRegionMode } from './components/live-region/live-region.js';
 export { Announcer } from './internal/announcer.js';
 export type { AnnounceOptions, AnnouncerOptions } from './internal/announcer.js';
+export type { LyraEmitOptions } from './internal/lyra-element.js';
+export type { LyraEventMap } from './internal/lyra-element.js';
+export {
+  getLyraLocale,
+  registerLyraLocale,
+  setLyraLocale,
+  resolveLyraDirection,
+  resolveLyraLocale,
+  resolveLyraString,
+  LYRA_DEFAULT_STRINGS,
+} from './internal/localization.js';
+export type { LyraLocaleStrings, LyraMessageKey } from './internal/localization.js';
+export type { FormAssociatedInterface } from './internal/form-associated.js';
 export { LyraMarkdown } from './components/markdown/markdown.js';
 export { LyraChatMessage } from './components/chat-message/chat-message.js';
 export type { ChatMessageRole, ChatMessageStatus } from './components/chat-message/chat-message.js';
@@ -291,6 +318,43 @@ export type {
   GroupByRecencyOptions,
   RecencyBucket,
 } from './internal/group-by-recency.js';
+
+export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
+export type { LyraChartEventMap } from './components/chart/chart.js';
+export type { LyraChatComposerEventMap } from './components/chat-composer/chat-composer.js';
+export type { LyraChatMessageEventMap } from './components/chat-message/chat-message.js';
+export type { LyraCheckboxEventMap } from './components/checkbox/checkbox.js';
+export type { LyraCodeBlockEventMap } from './components/code-block/code-block.js';
+export type { LyraComboboxEventMap } from './components/combobox/combobox.js';
+export type { LyraOptionEventMap } from './components/combobox/option.js';
+export type { LyraConversationItemEventMap } from './components/conversation-item/conversation-item.js';
+export type { LyraDateInputEventMap } from './components/date-picker/date-input.js';
+export type { LyraDatePickerEventMap } from './components/date-picker/date-picker.js';
+export type { LyraDocumentPreviewEventMap } from './components/document-preview/document-preview.js';
+export type { LyraExportButtonEventMap } from './components/export-button/export-button.js';
+export type { LyraGenerationStatusEventMap } from './components/generation-status/generation-status.js';
+export type { LyraGraphEventMap } from './components/graph/graph.js';
+export type { LyraJsonViewerEventMap } from './components/json-viewer/json-viewer.js';
+export type { LyraMapEventMap } from './components/map/map.js';
+export type { LyraMarkdownEventMap } from './components/markdown/markdown.js';
+export type { LyraMentionPopoverEventMap } from './components/mention-popover/mention-popover.js';
+export type { LyraMenuItemEventMap } from './components/menu/menu-item.js';
+export type { LyraMenuEventMap } from './components/menu/menu.js';
+export type { LyraModelSelectEventMap } from './components/model-select/model-select.js';
+export type { LyraPlaybackEventMap } from './components/playback/playback.js';
+export type { LyraSliderEventMap } from './components/slider/slider.js';
+export type { LyraStreamStatusEventMap } from './components/stream-status/stream-status.js';
+export type { LyraSwitchEventMap } from './components/switch/switch.js';
+export type { LyraTableEventMap } from './components/table/table.js';
+export type { LyraTabsEventMap } from './components/tabs/tabs.js';
+export type { LyraToastItemEventMap } from './components/toast/toast-item.js';
+export type { LyraToolApprovalDialogEventMap } from './components/tool-approval-dialog/tool-approval-dialog.js';
+export type { LyraToolParamFormEventMap } from './components/tool-param-form/tool-param-form.js';
+export type { LyraToolResultViewEventMap } from './components/tool-result-view/tool-result-view.js';
+export type { LyraTreeNodeEventMap } from './components/tree/tree-node.js';
+export type { LyraVirtualListEventMap } from './components/virtual-list/virtual-list.js';
+export type { LyraWidgetEventMap } from './components/widget/widget.js';
+export type { LyraWordCloudEventMap } from './components/word-cloud/word-cloud.js';
 
 export { LyraElement } from './internal/lyra-element.js';
 export { FormAssociated } from './internal/form-associated.js';

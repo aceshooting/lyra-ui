@@ -44,14 +44,14 @@ export const styles = css`
     gap: var(--lyra-space-xs);
     max-inline-size: 100%;
     box-sizing: border-box;
-    padding: 0.25rem var(--lyra-space-s);
-    border: 1px solid var(--lyra-tool-call-chip-border);
-    border-radius: 999px;
+    padding: var(--lyra-size-0-25rem) var(--lyra-space-s);
+    border: var(--lyra-border-width-thin) solid var(--lyra-tool-call-chip-border);
+    border-radius: var(--lyra-radius-pill);
     background: var(--lyra-tool-call-chip-bg);
     color: var(--lyra-color-text);
     font: inherit;
-    font-size: 0.8125rem;
-    line-height: 1.3;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-snug);
     text-align: start;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -93,7 +93,7 @@ export const styles = css`
   [part='label'] {
     display: inline-flex;
     align-items: baseline;
-    gap: 0.3em;
+    gap: var(--lyra-size-0-3em);
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow: hidden;
@@ -106,14 +106,14 @@ export const styles = css`
        tints even though it comfortably passes against the plain surface
        background used by the resting/denied states. */
     color: var(--lyra-color-text);
-    font-size: 0.6875rem;
-    font-weight: 600;
+    font-size: var(--lyra-size-0-6875rem);
+    font-weight: var(--lyra-font-weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--lyra-size-0-04em);
   }
   [part='category']::after {
     content: '·';
-    margin-inline-start: 0.3em;
+    margin-inline-start: var(--lyra-size-0-3em);
   }
   [part='name'] {
     flex: 0 1 auto;
@@ -121,11 +121,11 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='summary'] {
     flex: 1 1 auto;
-    min-inline-size: 3ch;
+    min-inline-size: var(--lyra-size-3ch);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -140,15 +140,15 @@ export const styles = css`
     display: inline-flex;
     flex: 0 0 auto;
     align-items: baseline;
-    gap: 0.4em;
+    gap: var(--lyra-size-0-4em);
     margin-inline-start: auto;
-    font-size: 0.6875rem;
+    font-size: var(--lyra-size-0-6875rem);
   }
   [part='status-text'] {
     color: var(--lyra-tool-call-chip-accent);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--lyra-size-0-03em);
     white-space: nowrap;
   }
   [part='duration'] {
@@ -165,16 +165,16 @@ export const styles = css`
      chasing a fade. */
   [part='tooltip'] {
     position: fixed;
-    z-index: 900;
+    z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    max-inline-size: min(90vw, 24rem);
+    max-inline-size: min(90vw, var(--lyra-size-24rem));
     padding: var(--lyra-space-s) var(--lyra-space-m);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
-    font-size: 0.8125rem;
-    line-height: 1.4;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-1-4);
     color: var(--lyra-color-text);
   }
 

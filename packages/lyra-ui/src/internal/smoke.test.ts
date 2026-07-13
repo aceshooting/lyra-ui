@@ -16,3 +16,22 @@ it('defineElement is idempotent when called twice for the same tag', () => {
   expect(() => defineElement(name, DemoIdempotentEl)).to.not.throw();
   expect(customElements.get(tag(name))).to.equal(DemoIdempotentEl);
 });
+
+it('warns when an existing tag belongs to a different constructor', () => {
+  class ExistingEl extends HTMLElement {}
+  class ReplacementEl extends HTMLElement {}
+  const name = 'smoke-conflicting-demo';
+  customElements.define(tag(name), ExistingEl);
+  const originalWarn = console.warn;
+  let warning = '';
+  console.warn = (...args: unknown[]) => {
+    warning = args.join(' ');
+  };
+  try {
+    expect(() => defineElement(name, ReplacementEl)).to.not.throw();
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(customElements.get(tag(name))).to.equal(ExistingEl);
+  expect(warning).to.contain('different constructor');
+});

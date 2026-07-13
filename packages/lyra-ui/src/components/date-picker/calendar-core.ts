@@ -139,8 +139,8 @@ const FDOW: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, f
 
 /**
  * `Intl.Locale`'s week-info surface, still shifting between runtimes: some
- * expose it as a `weekInfo` accessor, others as a `getWeekInfo()` method (the
- * later stage of the same proposal); `firstDay` is ISO-numbered (1=Monday …
+ * expose it as a `weekInfo` accessor, others as a `getWeekInfo()` method;
+ * `firstDay` is ISO-numbered (1=Monday …
  * 7=Sunday), unlike this module's own 0=Sunday … 6=Saturday convention.
  *
  * Intentionally NOT `extends Intl.Locale`: some TypeScript/lib.dom versions

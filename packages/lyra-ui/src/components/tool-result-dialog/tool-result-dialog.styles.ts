@@ -7,18 +7,25 @@ export const styles = css`
        --wa-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-dialog's --lyra-dialog-overlay-color and
        lyra-widget's --lyra-widget-overlay-color). */
-    --lyra-tool-result-dialog-overlay-color: rgb(0 0 0 / 0.5);
+    --lyra-tool-result-dialog-overlay-color: var(--lyra-color-overlay);
     /* Inset applied to the panel while [maximized] -- overridable the same
        way lyra-widget's --lyra-widget-fullscreen-inset is, e.g. to leave a
        persistent app rail visible. */
-    --lyra-tool-result-dialog-maximized-inset: var(--lyra-space-l);
+    --lyra-tool-result-dialog-maximized-inset:
+      max(var(--lyra-space-l), var(--lyra-safe-area-top))
+      max(var(--lyra-space-l), var(--lyra-safe-area-inline-end))
+      max(var(--lyra-space-l), var(--lyra-safe-area-bottom))
+      max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
     display: none;
     position: fixed;
     inset: 0;
-    z-index: var(--lyra-overlay-stack-index, 1000);
+    z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
     align-items: center;
     justify-content: center;
-    padding: var(--lyra-space-l);
+    padding-block-start: max(var(--lyra-space-l), var(--lyra-safe-area-top));
+    padding-block-end: max(var(--lyra-space-l), var(--lyra-safe-area-bottom));
+    padding-inline-start: max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
+    padding-inline-end: max(var(--lyra-space-l), var(--lyra-safe-area-inline-end));
   }
   :host([open]) {
     display: flex;
@@ -32,10 +39,10 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
-    inline-size: min(48rem, 100%);
+    inline-size: min(var(--lyra-size-48rem), 100%);
     max-block-size: 100%;
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     overflow: hidden;
@@ -55,7 +62,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='title'] {
     display: flex;
@@ -66,7 +73,7 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='tool-name'] {
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -74,17 +81,17 @@ export const styles = css`
   [part='status'] {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.125rem var(--lyra-space-xs);
+    gap: var(--lyra-size-0-25rem);
+    padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
     border-radius: var(--lyra-radius);
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-xs);
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text-quiet);
     background: transparent;
   }
   [part='status'] svg {
-    inline-size: 1em;
-    block-size: 1em;
+    inline-size: var(--lyra-size-1em);
+    block-size: var(--lyra-size-1em);
   }
   /* pending stays the neutral/quiet treatment above -- it's the resting
      state before a tool call has done anything worth calling out. */
@@ -111,7 +118,7 @@ export const styles = css`
     animation: lyra-tool-result-dialog-spin 1s linear infinite;
   }
   [part='duration'] {
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
     white-space: nowrap;
   }
@@ -156,7 +163,7 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-m) var(--lyra-space-l);
-    border-block-start: 1px solid var(--lyra-color-border);
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
   }
   [part='footer'][hidden] {
     display: none;

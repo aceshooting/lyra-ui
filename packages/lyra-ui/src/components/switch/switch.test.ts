@@ -1,6 +1,16 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './switch.js';
 import type { LyraSwitch } from './switch.js';
+import { styles } from './switch.styles.js';
+
+it('exposes namespaced geometry custom properties', () => {
+  expect(styles.cssText).to.include('--lyra-switch-track-inline-size');
+  expect(styles.cssText).to.include('--lyra-switch-track-block-size');
+  expect(styles.cssText).to.include('--lyra-switch-thumb-offset');
+  expect(styles.cssText).to.not.include('--track-inline-size');
+  expect(styles.cssText).to.not.include('--track-block-size');
+  expect(styles.cssText).to.not.include('--thumb-offset');
+});
 
 it('defaults to unchecked with role="switch" and aria-checked="false"', async () => {
   const el = (await fixture(html`<lyra-switch>Label</lyra-switch>`)) as LyraSwitch;

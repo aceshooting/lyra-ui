@@ -20,7 +20,7 @@ const mainContent = html`
 
 export const DockedEnd: Story = {
   render: () => html`
-    <div style="position: relative; height: 20rem; border: 1px solid #ddd; display: flex;">
+    <div style="position: relative; height: 20rem; border: 1px solid var(--lyra-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
       <lyra-dock-panel edge="end" size="280px" min-size="180px" max-size="480px">
         <div style="padding: 1rem;">
@@ -34,7 +34,7 @@ export const DockedEnd: Story = {
 
 export const DockedStart: Story = {
   render: () => html`
-    <div style="position: relative; height: 20rem; border: 1px solid #ddd; display: flex;">
+    <div style="position: relative; height: 20rem; border: 1px solid var(--lyra-color-border); display: flex;">
       <lyra-dock-panel edge="start" size="240px" min-size="160px" max-size="400px">
         <div style="padding: 1rem;">
           <strong>Docked to the start edge</strong>
@@ -48,7 +48,7 @@ export const DockedStart: Story = {
 
 export const CollapsibleSidebar: Story = {
   render: () => html`
-    <div style="position: relative; height: 20rem; border: 1px solid #ddd; display: flex;">
+    <div style="position: relative; height: 20rem; border: 1px solid var(--lyra-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
       <lyra-dock-panel edge="end" size="280px" collapsible>
         <div style="padding: 1rem;">
@@ -63,7 +63,7 @@ export const CollapsibleSidebar: Story = {
 
 export const DockedBottom: Story = {
   render: () => html`
-    <div style="position: relative; height: 20rem; border: 1px solid #ddd; display: flex; flex-direction: column;">
+    <div style="position: relative; height: 20rem; border: 1px solid var(--lyra-color-border); display: flex; flex-direction: column;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
       <lyra-dock-panel edge="bottom" size="140px" min-size="80px" max-size="320px" collapsible>
         <div style="padding: 1rem;">
@@ -77,7 +77,7 @@ export const DockedBottom: Story = {
 
 export const RtlDockedEnd: Story = {
   render: () => html`
-    <div dir="rtl" style="position: relative; height: 20rem; border: 1px solid #ddd; display: flex;">
+    <div dir="rtl" style="position: relative; height: 20rem; border: 1px solid var(--lyra-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
       <lyra-dock-panel edge="end" size="280px" min-size="180px" max-size="480px">
         <div style="padding: 1rem;">
@@ -92,7 +92,7 @@ export const RtlDockedEnd: Story = {
 
 export const NotResizable: Story = {
   render: () => html`
-    <div style="position: relative; height: 12rem; border: 1px solid #ddd; display: flex;">
+    <div style="position: relative; height: 12rem; border: 1px solid var(--lyra-color-border); display: flex;">
       <div style="flex: 1; overflow: auto;">${mainContent}</div>
       <lyra-dock-panel edge="end" size="220px" .resizable=${false} collapsible>
         <div style="padding: 1rem;">Fixed-size panel — no drag handle renders at all.</div>

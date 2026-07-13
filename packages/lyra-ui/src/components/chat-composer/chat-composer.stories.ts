@@ -93,13 +93,13 @@ export const WithLeadingAndChips: Story = {
       </button>
       <span
         slot="chips"
-        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid #ccc;border-radius:999px;"
+        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:999px;"
       >
         report.pdf
       </span>
       <span
         slot="chips"
-        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid #ccc;border-radius:999px;"
+        style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;padding:0.25rem 0.5rem;border:1px solid var(--lyra-color-border);border-radius:999px;"
       >
         screenshot.png
       </span>
@@ -113,7 +113,7 @@ export const CustomTrailingSlot: Story = {
       <button
         slot="trailing"
         type="button"
-        style="font:inherit;font-size:0.8125rem;background:#0969da;color:#fff;border:none;border-radius:0.375rem;padding:0.5rem 0.75rem;cursor:pointer;"
+        style="font:inherit;font-size:0.8125rem;background:var(--lyra-color-brand);color:var(--lyra-color-on-brand);border:none;border-radius:0.375rem;padding:0.5rem 0.75rem;cursor:pointer;"
         @click=${(e: Event) => {
           const composer = (e.currentTarget as HTMLElement).closest('lyra-chat-composer') as LyraChatComposer;
           alert(`custom trailing control — current value: ${JSON.stringify(composer.value)}`);

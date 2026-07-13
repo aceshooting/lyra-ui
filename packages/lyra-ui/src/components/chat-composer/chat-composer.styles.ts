@@ -9,7 +9,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lyra-space-xs);
     box-sizing: border-box;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     padding: var(--lyra-space-s);
@@ -82,7 +82,7 @@ export const styles = css`
        (chat-composer.ts's resizeTextarea()) can read a real pixel value
        back out of getComputedStyle() -- the UA default of "normal" has no
        single resolved px figure to measure rows against. */
-    line-height: 1.5;
+    line-height: var(--lyra-line-height-normal);
     padding-block: var(--lyra-space-xs);
     overflow-y: hidden;
   }
@@ -112,8 +112,8 @@ export const styles = css`
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-brand);
     color: var(--lyra-color-on-brand);
-    font-size: 1.125rem;
-    line-height: 1;
+    font-size: var(--lyra-font-size-lg);
+    line-height: var(--lyra-line-height-none);
     cursor: pointer;
     transition: background-color var(--lyra-transition-fast);
   }

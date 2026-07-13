@@ -7,8 +7,8 @@ export const styles = css`
   [part='form-control-label'] {
     display: block;
     margin-block-end: var(--lyra-space-xs);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--lyra-font-size-md-sm);
+    font-weight: var(--lyra-font-weight-semibold);
   }
   /* :empty never matches here -- the part always contains a literal slot
      child element regardless of assigned/text content -- so real emptiness
@@ -30,18 +30,18 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-xs);
     inline-size: 100%;
-    min-block-size: 2.5rem;
+    min-block-size: var(--lyra-size-2-5rem);
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     cursor: text;
   }
   [part='combobox']:focus-within {
     border-color: var(--lyra-color-brand);
-    outline: 2px solid transparent;
+    outline: var(--lyra-border-width-medium) solid transparent;
   }
-  :host([disabled]) [part='combobox'] {
+  :host(:disabled) [part='combobox'] {
     /* was a literal 0.5; now the shared library-wide disabled-state token
        (still 0.5 by default fallback, so no visual change here). */
     opacity: var(--lyra-opacity-disabled);
@@ -52,8 +52,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lyra-space-xs);
-    padding: 0.1rem 0.4rem;
-    font-size: 0.8125rem;
+    padding: var(--lyra-size-0-1rem) var(--lyra-size-0-4rem);
+    font-size: var(--lyra-font-size-sm);
     background: var(--lyra-color-brand-quiet);
     color: var(--lyra-color-text);
     border-radius: var(--lyra-radius);
@@ -64,13 +64,13 @@ export const styles = css`
     cursor: pointer;
     color: inherit;
     padding: 0;
-    line-height: 1;
-    font-size: 1rem;
+    line-height: var(--lyra-line-height-none);
+    font-size: var(--lyra-font-size-md);
   }
 
   [part='combobox-input'] {
-    flex: 1 1 6ch;
-    min-inline-size: 4ch;
+    flex: 1 1 var(--lyra-size-6ch);
+    min-inline-size: var(--lyra-size-4ch);
     border: none;
     outline: none;
     background: transparent;
@@ -95,9 +95,9 @@ export const styles = css`
        the ceiling, but never grow past what the [part=combobox] row's own
        2.5rem min-block-size has room for once its own block padding is
        subtracted. */
-    min-inline-size: min(var(--lyra-icon-button-size), 1.75rem);
-    min-block-size: min(var(--lyra-icon-button-size), 1.75rem);
-    line-height: 1;
+    min-inline-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    min-block-size: min(var(--lyra-icon-button-size), var(--lyra-size-1-75rem));
+    line-height: var(--lyra-line-height-none);
   }
   [part='expand-icon'] svg {
     transform: rotate(90deg);
@@ -110,16 +110,16 @@ export const styles = css`
 
   [part='listbox'] {
     position: fixed;
-    z-index: 900;
+    z-index: var(--lyra-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: min(18rem, var(--lyra-positioner-available-block-size, 18rem));
+    max-block-size: min(var(--lyra-size-18rem), var(--lyra-positioner-available-block-size, var(--lyra-size-18rem)));
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: min(12rem, var(--lyra-positioner-available-inline-size, 12rem));
-    max-inline-size: min(92vw, 28rem, var(--lyra-positioner-available-inline-size, 100vw));
+    min-inline-size: min(var(--lyra-size-12rem), var(--lyra-positioner-available-inline-size, var(--lyra-size-12rem)));
+    max-inline-size: min(92vw, var(--lyra-size-28rem), var(--lyra-positioner-available-inline-size, 100vw));
     padding: var(--lyra-space-xs);
     background: var(--lyra-color-surface);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     /* Closed state: invisible + slightly raised. visibility (not
@@ -127,7 +127,7 @@ export const styles = css`
        and a11y exposure stay off since this part is already position:fixed. */
     visibility: hidden;
     opacity: 0;
-    transform: translateY(-0.25rem);
+    transform: translateY(var(--lyra-size-neg-0-25rem));
     transition:
       opacity var(--lyra-transition-fast),
       transform var(--lyra-transition-fast),
@@ -150,7 +150,7 @@ export const styles = css`
     align-items: start;
     inline-size: 100%;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: 1px solid transparent;
+    border: var(--lyra-border-width-thin) solid transparent;
     border-radius: var(--lyra-radius);
     background: none;
     color: inherit;
@@ -165,7 +165,7 @@ export const styles = css`
   [part='option'][aria-selected='true'] {
     border-color: var(--lyra-color-brand);
     color: var(--lyra-color-brand);
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='option'][aria-disabled='true'] {
     /* was a literal 0.4; unified with the rest of the library's single
@@ -174,8 +174,8 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part='option-dot'] {
-    inline-size: 0.5rem;
-    block-size: 0.5rem;
+    inline-size: var(--lyra-size-0-5rem);
+    block-size: var(--lyra-size-0-5rem);
     border-radius: 50%;
     flex: 0 0 auto;
   }
@@ -185,32 +185,32 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='option-sub'] {
-    font-size: 0.75rem;
+    font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
   }
   [part='option-overflow'],
   .loading {
     padding: var(--lyra-space-s) var(--lyra-space-m);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
 
   .group-label {
     padding: var(--lyra-space-xs) var(--lyra-space-s) 0;
-    font-size: 0.6875rem;
-    font-weight: 700;
+    font-size: var(--lyra-size-0-6875rem);
+    font-weight: var(--lyra-font-weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--lyra-size-0-04em);
     color: var(--lyra-color-text-quiet);
   }
   .empty {
     padding: var(--lyra-space-m);
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
   }
   [part='hint'] {
     margin-block-start: var(--lyra-space-xs);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
   /* :empty never matches here -- the part always contains a literal
@@ -222,7 +222,7 @@ export const styles = css`
   }
   [part='error'] {
     margin-block-start: var(--lyra-space-xs);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-danger);
   }
   [part='error'][hidden] {

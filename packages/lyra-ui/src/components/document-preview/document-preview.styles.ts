@@ -11,14 +11,14 @@ export const styles = css`
     /* No shared --wa-*/--lyra-* monospace token exists to resolve through
        (same gap lyra-json-viewer's own --lyra-json-viewer-font documents) --
        contained here so a host page can retheme it. */
-    --lyra-document-preview-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --lyra-document-preview-font: var(--lyra-font-mono);
   }
 
   [part='base'] {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     overflow: hidden;
@@ -29,7 +29,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-s) var(--lyra-space-m);
-    border-block-end: 1px solid var(--lyra-color-border);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     background: var(--lyra-color-surface);
   }
   [part='header'][hidden] {
@@ -39,8 +39,8 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 600;
-    font-size: 0.875rem;
+    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lyra-font-size-md-sm);
     color: var(--lyra-color-text);
   }
 
@@ -49,7 +49,7 @@ export const styles = css`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-block-size: 10rem;
+    min-block-size: var(--lyra-size-10rem);
     max-block-size: var(--lyra-document-preview-max-height);
     box-sizing: border-box;
     overflow: auto;
@@ -65,8 +65,8 @@ export const styles = css`
     margin: 0;
     padding: var(--lyra-space-m);
     font-family: var(--lyra-document-preview-font);
-    font-size: 0.8125rem;
-    line-height: 1.6;
+    font-size: var(--lyra-font-size-sm);
+    line-height: var(--lyra-line-height-loose);
     white-space: pre;
     overflow: auto;
     color: var(--lyra-color-text);
@@ -84,7 +84,7 @@ export const styles = css`
     margin: 0;
     padding: var(--lyra-space-m);
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
   }
 
   /* -- generic download fallback ------------------------------------- */
@@ -98,7 +98,7 @@ export const styles = css`
   }
   .fallback-icon {
     display: inline-flex;
-    font-size: 2rem;
+    font-size: var(--lyra-font-size-3xl);
     color: var(--lyra-color-text-quiet);
   }
   .fallback-icon svg {
@@ -107,7 +107,7 @@ export const styles = css`
   .fallback-text {
     margin: 0;
     color: var(--lyra-color-text-quiet);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
   }
   [part='download-link'] {
     display: inline-flex;
@@ -118,14 +118,14 @@ export const styles = css`
     background: var(--lyra-color-brand);
     color: var(--lyra-color-on-brand);
     font: inherit;
-    font-weight: 600;
-    font-size: 0.8125rem;
+    font-weight: var(--lyra-font-weight-semibold);
+    font-size: var(--lyra-font-size-sm);
     text-decoration: none;
     cursor: pointer;
     transition: background-color var(--lyra-transition-fast);
   }
   [part='download-link']:hover {
-    background: color-mix(in srgb, var(--lyra-color-brand) 85%, black);
+    background: color-mix(in srgb, var(--lyra-color-brand) 85%, var(--lyra-color-shadow));
   }
   [part='download-link']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
@@ -145,10 +145,10 @@ export const styles = css`
   }
   .ring {
     display: inline-block;
-    inline-size: 2rem;
-    block-size: 2rem;
+    inline-size: var(--lyra-size-2rem);
+    block-size: var(--lyra-size-2rem);
     border-radius: 50%;
-    border: 3px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thick) solid var(--lyra-color-border);
     border-block-start-color: var(--lyra-color-brand);
     animation: lyra-document-preview-spin 0.8s linear infinite;
   }
@@ -162,12 +162,12 @@ export const styles = css`
       var(--lyra-color-brand) calc(var(--lyra-document-preview-progress, 0) * 1%),
       var(--lyra-color-border) 0
     );
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--lyra-size-3px)), var(--lyra-color-shadow) calc(100% - var(--lyra-size-3px)));
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--lyra-size-3px)), var(--lyra-color-shadow) calc(100% - var(--lyra-size-3px)));
   }
   .spinner-text {
     color: var(--lyra-color-text-quiet);
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     font-variant-numeric: tabular-nums;
   }
   @keyframes lyra-document-preview-spin {
@@ -186,7 +186,7 @@ export const styles = css`
     margin: 0;
     padding: var(--lyra-space-l);
     color: var(--lyra-color-danger);
-    font-size: 0.875rem;
+    font-size: var(--lyra-font-size-md-sm);
     text-align: center;
   }
 `;

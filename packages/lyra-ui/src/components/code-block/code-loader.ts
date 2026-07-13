@@ -1,8 +1,8 @@
-import type { Highlighter, BundledLanguage, BundledTheme, HighlighterCore, LanguageInput } from 'shiki';
+import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 
 /** Re-exported under a component-scoped name so importers don't need their
  *  own `import type { Highlighter } from 'shiki'`. */
-export type ShikiHighlighter = Highlighter;
+export type ShikiHighlighter = OptionalPeerApi;
 
 /** Re-exported under a component-scoped name — see `loadShikiHighlighterCore()`
  *  below. Structurally similar to `ShikiHighlighter` (both are
@@ -10,13 +10,13 @@ export type ShikiHighlighter = Highlighter;
  *  typed with no bundled-language/theme keys of its own (`never`, since
  *  `createHighlighterCore()` has no built-in bundle to know about), which is
  *  why it's a distinct exported type rather than reusing `ShikiHighlighter`. */
-export type ShikiHighlighterCore = HighlighterCore;
+export type ShikiHighlighterCore = OptionalPeerApi;
 
 /** Re-exported under a component-scoped name — the shape of one pre-imported
  *  shiki grammar module's default export (e.g. `import bash from
  *  'shiki/langs/bash.mjs'`), and what `<lyra-code-block>`'s `languages`
  *  property maps language ids to. See `loadShikiHighlighterCore()` below. */
-export type ShikiLanguageInput = LanguageInput;
+export type ShikiLanguageInput = OptionalPeerApi;
 
 /**
  * The two bundled themes every highlighter instance is seeded with, so a
@@ -28,11 +28,11 @@ export type ShikiLanguageInput = LanguageInput;
  * `prefers-color-scheme` block in `code-block.styles.ts` for how the dark
  * variant actually activates.
  */
-export const SHIKI_LIGHT_THEME: BundledTheme = 'github-light';
-export const SHIKI_DARK_THEME: BundledTheme = 'github-dark';
+export const SHIKI_LIGHT_THEME: string = 'github-light';
+export const SHIKI_DARK_THEME: string = 'github-dark';
 
 /** Passed directly as `codeToHtml()`'s `themes` option — see `tokenize()` in `code-block.ts`. */
-export const SHIKI_THEMES: Record<'light' | 'dark', BundledTheme> = {
+export const SHIKI_THEMES: Record<'light' | 'dark', string> = {
   light: SHIKI_LIGHT_THEME,
   dark: SHIKI_DARK_THEME,
 };
@@ -91,7 +91,7 @@ export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Pro
   if (hl.getLoadedLanguages().includes(lang)) return true;
   if (unsupportedLanguages.has(lang)) return false;
   try {
-    await hl.loadLanguage(lang as BundledLanguage);
+    await hl.loadLanguage(lang as OptionalPeerApi);
     return true;
   } catch {
     // Not a shiki-recognized grammar id/alias, or the grammar failed to

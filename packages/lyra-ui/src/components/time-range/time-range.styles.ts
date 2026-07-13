@@ -20,12 +20,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
-    border: 1px solid var(--lyra-color-border);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--lyra-font-size-sm);
     cursor: pointer;
     transition: var(--lyra-transition-fast);
   }
@@ -51,37 +51,37 @@ export const styles = css`
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: 1.5rem;
+    block-size: var(--lyra-size-1-5rem);
     display: flex;
     align-items: center;
   }
   [part='track'] {
     position: absolute;
     inset-inline: 0;
-    block-size: 4px;
-    border-radius: 2px;
+    block-size: var(--lyra-size-4px);
+    border-radius: var(--lyra-size-2px);
     background: var(--lyra-color-border);
   }
   [part='range'] {
     position: absolute;
-    block-size: 4px;
-    border-radius: 2px;
+    block-size: var(--lyra-size-4px);
+    border-radius: var(--lyra-size-2px);
     background: var(--lyra-color-brand);
   }
   [part^='handle'] {
     position: absolute;
-    inline-size: 14px;
-    block-size: 14px;
+    inline-size: var(--lyra-size-14px);
+    block-size: var(--lyra-size-14px);
     border-radius: 50%;
     background: var(--lyra-color-brand);
-    border: 2px solid var(--lyra-color-surface);
+    border: var(--lyra-border-width-medium) solid var(--lyra-color-surface);
     box-shadow: var(--lyra-shadow);
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;
   }
   /*
-   * The visible dot stays 14px by design, but that's well under the ~24px
+   * The visible dot stays var(--lyra-size-14px) by design, but that's well under the ~var(--lyra-size-24px)
    * minimum touch target size despite \`touch-action: none\` signalling this
    * is meant to be touch-dragged. Widen the actual hit/drag area with a
    * transparent ::before instead of growing the handle box itself:
@@ -97,8 +97,8 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: 28px;
-    block-size: 28px;
+    inline-size: var(--lyra-size-28px);
+    block-size: var(--lyra-size-28px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
   }
@@ -117,5 +117,12 @@ export const styles = css`
        cursor actually changes over the handles themselves, not just the
        track/base. */
     cursor: not-allowed;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='preset'],
+    [part^='handle'],
+    [part='range'] {
+      transition: none !important;
+    }
   }
 `;

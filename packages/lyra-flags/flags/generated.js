@@ -5,8 +5,9 @@
 /**
  * Lazy map of ISO 3166-1 alpha-2 (or territory) code -> flag SVG URL loader. Each entry is a
  * `() => import('./loaders/xx.js')` with a literal (non-templated) specifier, so bundlers
- * code-split every flag into its own chunk and never fetch/inline a given flag until its
- * specific loader is actually called. This is what `flagUrl()` uses. See index.js — and
+ * code-split every flag into its own lazy loader and never fetch a given flag until its
+ * specific loader is actually called. Bundlers may still emit the complete reachable lazy
+ * graph; this is what `flagUrl()` uses. See index.js — and
  * critically, do NOT add an eager (`new URL()`-per-code) export to *this* file; see
  * generate-index.mjs for why that defeats the whole point.
  * @type {Record<string, () => Promise<string>>}

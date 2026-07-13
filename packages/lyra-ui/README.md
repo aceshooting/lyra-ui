@@ -3,8 +3,8 @@
 [![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
 
 **Web Awesome, plus.** Free, clean-room [Lit](https://lit.dev) web components — a companion to
-[Web Awesome](https://webawesome.com) that provides open-source, 1:1-mirrored equivalents of
-several Web Awesome **Pro** components (form controls, date pickers, toasts, charts, …), *plus*
+[Web Awesome](https://webawesome.com) that provides open-source equivalents of selected,
+documented Web Awesome **Pro** surfaces (form controls, date pickers, toasts, charts, …), *plus*
 dozens of original components Web Awesome has no equivalent for at all — dashboard atoms, a chart
 family, temporal/graph/map visualizations, and (newest) a full **Conversation & Agent UI** family
 for building chat/agent products: message bubbles, streaming text, tool-call chips and approval
@@ -15,8 +15,8 @@ mirrored components look native inside a WA app, and everything is fully usable 
 > Web Awesome trademark/branding is used here. For components that *do* have a Web Awesome
 > counterpart, this package gives you a free, open-source component wherever Web Awesome Pro
 > normally charges — the public API (attributes, slots, events, CSS parts) mirrors Web Awesome's
-> own 1:1 under the `lyra-` prefix, so adopting it alongside (or in place of) that piece of a WA
-> Pro app is a drop-in swap, not a rewrite — but every implementation in this package is original
+> own documented surface under the `lyra-` prefix. Read the migration notes and component entry
+> before treating a migration as a drop-in swap — but every implementation in this package is original
 > (clean-room; no Web Awesome Pro source was ever available to or copied by this project). Most of
 > the library, and all of the Conversation & Agent UI family, has no Web Awesome counterpart to
 > mirror in the first place — see the "Mirrors" column in the tables below.
@@ -25,7 +25,7 @@ mirrored components look native inside a WA app, and everything is fully usable 
 
 ```bash
 npm install @aceshooting/lyra-ui
-# peer: Lit is bundled; Floating UI ships with the positioned components
+# runtime dependencies: Lit and Floating UI are installed transitively with this package
 # optional peer: @aceshooting/lyra-flags, only needed for <lyra-flag>
 # optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lyra-graph>
 # optional peer: chart.js, chartjs-plugin-zoom, only needed for the <lyra-*-chart>/<lyra-histogram> family
@@ -48,6 +48,11 @@ Import just what you use (tree-shakeable, granular entry points):
 import '@aceshooting/lyra-ui/components/combobox/combobox.js';
 import '@aceshooting/lyra-ui/components/combobox/option.js';
 ```
+
+These component entry points register their tags. For a class-only import (for subclassing or
+type-directed composition), use the matching `.class.js` entry, such as
+`@aceshooting/lyra-ui/components/empty/empty.class.js`; class-only entries do not touch the
+custom-element registry.
 
 ```html
 <lyra-combobox label="Fruit" with-clear>
@@ -73,6 +78,15 @@ import '@aceshooting/lyra-ui/components/map/map.js';
 import '@aceshooting/lyra-ui/components/graph/graph.js';
 ```
 
+The root import registers `<lyra-flag>` without pulling in the optional flag asset graph. If a
+flag uses `country` or `language`, also import the peer registration entry once:
+
+```js
+import '@aceshooting/lyra-ui/components/flag/flag-peer.js';
+```
+
+Passing a pre-resolved `src` does not require that entry.
+
 Imperative toast (a drop-in for `react-hot-toast`):
 
 ```js
@@ -90,10 +104,10 @@ toast({ message: 'Saved', variant: 'success' });
 
 ## Migrating from Web Awesome Pro
 
-For every component that *does* have a Web Awesome counterpart — marked `wa-*` in the "Mirrors"
-column of the tables below — the public surface (attributes, slots, events, CSS parts, custom
-properties) is mirrored 1:1 under the `lyra-` prefix, so migrating that piece of a Web Awesome
-Pro app is a mechanical rename, nothing more:
+For every component marked with a `wa-*` counterpart in the "Mirrors" column, the documented
+compatible surface (attributes, slots, events, CSS parts, and custom properties) uses the same
+public names under the `lyra-` prefix. Read the component notes before migrating: for example,
+Lyra's combobox uses `with-clear`, while Web Awesome's equivalent uses `clearable`.
 
 ```
 <wa-combobox value="x" multiple with-clear>  →  <lyra-combobox value="x" multiple with-clear>
@@ -115,11 +129,11 @@ WA app they inherit your theme automatically; standalone, they use sensible defa
 
 ## Components
 
-All 83 tags below have shipped across six incremental releases (v1, then Tier 1, Tier 2, Tier 3,
-a map/file-input batch, then the Conversation & Agent UI family). Grouped by the release that
-introduced each.
+The catalog below lists all 84 tags in the current Custom Elements Manifest, grouped by
+capability. The manifest and live docs are the authoritative sources for the complete generated
+API details.
 
-**v1 — form controls, toasts, sparkline**
+**Form controls, toasts, sparkline, and flags**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
@@ -131,7 +145,7 @@ introduced each.
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 
-**Tier 1 — dashboard atoms**
+**Dashboard atoms**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
@@ -145,7 +159,7 @@ introduced each.
 | `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 | `<lyra-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |
 
-**Tier 2 — temporal & graph**
+**Temporal & graph**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
@@ -155,7 +169,7 @@ introduced each.
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy for graph/document navigation |
 
-**Tier 3 — charts**
+**Charts**
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
@@ -205,7 +219,7 @@ each one-liner below.
 | `<lyra-source-list>` + `<lyra-source-card>` | — (extra) | Collapsible "Sources" panel for one chat message, grouping per-source cards with an excerpt + "Show more" full-text toggle |
 | `<lyra-conversation-item>` | — (extra) | Selectable chat-history row with inline rename; usable standalone or as `<lyra-virtual-list>`'s `renderItem()` payload |
 | `<lyra-virtual-list>` | — (extra) | Generic windowed/virtualized list host — renders only the viewport's rows as real DOM, for a multi-thousand-row history sidebar |
-| `<lyra-app-rail>` | — (extra) | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints |
+| `<lyra-app-rail>` + `<lyra-app-rail-item>` | — (extra) | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints; the item provides an accessible icon/label link or button |
 | `<lyra-responsive-panel>` | — (extra) | The same slotted content docked inline in normal layout flow (desktop) or as a fullscreen/bottom-sheet overlay (mobile) |
 | `<lyra-dock-panel>` | — (extra) | Single panel docked to one edge of its container, drag/keyboard-resizable and collapsible — the single-edge counterpart to `<lyra-split>`'s multi-sibling-panel case |
 | `<lyra-model-select>` | — (extra) | Provider/model picker: closed dropdown over a fixed `catalog`, or a filterable free-text combobox when there isn't one (or `allow-custom` is set) |

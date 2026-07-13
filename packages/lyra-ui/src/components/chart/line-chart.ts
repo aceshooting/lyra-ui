@@ -1,21 +1,5 @@
-import { LyraChart, lockChartType } from './chart.js';
+export * from './line-chart.class.js';
+import { LyraLineChart } from './line-chart.class.js';
 import { defineElement } from '../../internal/prefix.js';
-
-/**
- * `<lyra-line-chart>` — `<lyra-chart>` with `type` locked to `"line"`.
- *
- * @customElement lyra-line-chart
- */
-export class LyraLineChart extends LyraChart {
-  declare type: 'line';
-}
-
-lockChartType(LyraLineChart, 'line');
-
+import "./chart.js";
 defineElement('line-chart', LyraLineChart);
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'lyra-line-chart': LyraLineChart;
-  }
-}

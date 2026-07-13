@@ -3,12 +3,12 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    inline-size: 8em;
-    block-size: 8em;
+    inline-size: var(--lyra-size-8em);
+    block-size: var(--lyra-size-8em);
   }
   :host([type='linear']) {
-    inline-size: 12em;
-    block-size: 1.5em;
+    inline-size: var(--lyra-size-12em);
+    block-size: var(--lyra-size-1-5em);
   }
   svg {
     display: block;
@@ -27,14 +27,14 @@ export const styles = css`
     transition: stroke-dashoffset var(--lyra-transition-base);
   }
   [part='value'] {
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: var(--lyra-font-size-md);
+    font-weight: var(--lyra-font-weight-bold);
     text-anchor: middle;
     fill: var(--lyra-color-text);
     font-family: var(--lyra-font);
   }
   [part='label'] {
-    font-size: 0.625rem;
+    font-size: var(--lyra-font-size-2xs);
     text-anchor: middle;
     fill: var(--lyra-color-text-quiet);
     font-family: var(--lyra-font);
@@ -45,7 +45,7 @@ export const styles = css`
   }
   :host([type='linear']) [part='value'],
   :host([type='linear']) [part='label'] {
-    font-size: 0.5rem;
+    font-size: var(--lyra-size-0-5rem);
   }
   :host([type='linear']) [part='value'] {
     text-anchor: end;

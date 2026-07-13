@@ -395,6 +395,9 @@ it('disables the select when its containing fieldset is disabled', async () => {
   // `effectiveDisabled` pattern).
   expect((el as unknown as { effectiveDisabled: boolean }).effectiveDisabled).to.be.true;
   expect(el.disabled).to.be.false;
+  const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(getComputedStyle(triggerEl).opacity).to.equal('0.5');
+  expect(getComputedStyle(triggerEl).cursor).to.equal('not-allowed');
 });
 
 it('restores its own explicit `disabled` after an ancestor fieldset re-enables', async () => {

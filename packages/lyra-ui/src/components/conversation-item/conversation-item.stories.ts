@@ -145,7 +145,7 @@ export const HistoryList: Story = {
       <div
         role="listbox"
         aria-label="Conversations"
-        style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;border:1px solid var(--lyra-color-border, #8a8a90);border-radius:0.5rem;padding:0.25rem;"
+        style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;border:1px solid var(--lyra-color-border);border-radius:0.5rem;padding:0.25rem;"
       >
         <lyra-conversation-item
           title="Migrating the table component"

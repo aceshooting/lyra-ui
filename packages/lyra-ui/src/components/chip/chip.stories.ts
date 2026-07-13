@@ -77,7 +77,7 @@ export const ActiveFilterScope: Story = {
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-      <span style="font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">Filters:</span>
+      <span style="font-size:0.8125rem; color:var(--lyra-color-text-quiet);">Filters:</span>
       <lyra-chip tone="brand" removable value="status:open">status: open</lyra-chip>
       <lyra-chip tone="brand" removable value="assignee:me">assignee: me</lyra-chip>
       <lyra-chip tone="brand" removable value="priority:high">priority: high</lyra-chip>
