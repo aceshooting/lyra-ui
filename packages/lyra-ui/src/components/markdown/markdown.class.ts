@@ -104,6 +104,15 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
    *  `dompurify` peer isn't installed. */
   @property({ type: Boolean }) sanitize = true;
 
+  /** When `true`, overrides marked's `html` renderer hook to emit the HTML-escaped source text
+   *  instead of passing raw/sanitized markup through -- for a consumer rendering arbitrary
+   *  already-written content (e.g. a historical chat/agent transcript full of code/XML/HTML
+   *  snippets) where a stray angle bracket should render as visible text, not a real DOM element.
+   *  Still lets GFM tables/lists/etc. render normally -- only raw embedded HTML is affected.
+   *  `false` (the default) reproduces today's exact `marked`-default (sanitized-when-`sanitize`)
+   *  passthrough behavior. */
+  @property({ type: Boolean, attribute: 'escape-html' }) escapeHtml = false;
+
   /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
   @property({ type: Boolean }) gfm = true;
 
@@ -204,7 +213,8 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
       changed.has('sanitize') ||
       changed.has('gfm') ||
       changed.has('linkTarget') ||
-      changed.has('headingOffset')
+      changed.has('headingOffset') ||
+      changed.has('escapeHtml')
     ) {
       this.renderMarkdown();
     }
@@ -275,6 +285,12 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     // exact output when the property is left unset.
     const linkTarget = this.linkTarget;
     const headingOffset = this.headingOffset;
+    // Captured as a local distinct from the free function `escapeHtml` above
+    // (imported/defined at the top of this file) to avoid shadowing/
+    // ambiguity inside the renderer closure below, matching how
+    // `linkTarget`/`headingOffset` are already captured as locals for the
+    // same reason.
+    const escapeHtmlOption = this.escapeHtml;
     const instance = new marked.Marked();
     // A fresh renderer per parse (rather than a shared/cached one) so it
     // always closes over the *current* `linkTarget`/`headingOffset` — these
@@ -361,6 +377,9 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
           if (href === null) return escapeHtml(altText);
           const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
           return `<img part="img" src="${escapeHtml(href)}" alt="${escapeHtml(altText)}"${titleAttr}>`;
+        },
+        html(this: OptionalPeerApi, token: OptionalPeerApi) {
+          return escapeHtmlOption ? escapeHtml(token.text) : token.text;
         },
       },
     });
