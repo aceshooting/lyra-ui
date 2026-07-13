@@ -417,3 +417,43 @@ describe('accessibility', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('localization', () => {
+  it('localizes the collapse-toggle and copy-button aria-labels via this.localize()', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block
+        collapsible
+        .code=${jsSample}
+        .strings=${{
+          expandCode: 'Développer le code',
+          collapseCode: 'Réduire le code',
+          copyCode: 'Copier le code',
+          copiedToClipboard: 'Copié dans le presse-papiers',
+        }}
+      ></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+    const copyButton = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).to.equal('Réduire le code');
+    expect(copyButton.getAttribute('aria-label')).to.equal('Copier le code');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Développer le code');
+  });
+
+  it('localizes the code-region aria-label, with and without a language', async () => {
+    const withLang = (await fixture(
+      html`<lyra-code-block language="typescript" .code=${jsSample} .strings=${{ codeRegionWithLanguage: '{language} — code' }}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    expect((withLang.shadowRoot!.querySelector('[part="body"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'typescript — code',
+    );
+
+    const withoutLang = (await fixture(
+      html`<lyra-code-block .code=${jsSample} .strings=${{ codeRegion: 'Extrait de code' }}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    expect((withoutLang.shadowRoot!.querySelector('[part="body"]') as HTMLElement).getAttribute('aria-label')).to.equal(
+      'Extrait de code',
+    );
+  });
+});

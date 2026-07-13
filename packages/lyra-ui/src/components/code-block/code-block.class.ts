@@ -339,7 +339,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-controls=${this.bodyId}
-                aria-label=${`${this.localize(this.collapsed ? 'expand' : 'collapse')} code`}
+                aria-label=${this.collapsed
+                  ? this.localize('expandCode')
+                  : this.localize('collapseCode')}
                 @click=${this.toggleCollapsed}
               >
                 <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
@@ -353,7 +355,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
               <button
                 part="copy-button"
                 type="button"
-                aria-label=${this.justCopied ? `${this.localize('copied')} to clipboard` : `${this.localize('copy')} code`}
+                aria-label=${this.justCopied
+                  ? this.localize('copiedToClipboard')
+                  : this.localize('copyCode')}
                 @click=${this.copy}
               >
                 ${this.justCopied ? this.localize('copied') : this.localize('copy')}
@@ -378,7 +382,11 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     // See updated()'s identical condition for why languagesOnly is excluded here too.
     const showSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
-    const bodyLabel = this.filename || (this.language ? `${this.language} code` : 'Code');
+    const bodyLabel =
+      this.filename ||
+      (this.language
+        ? this.localize('codeRegionWithLanguage', undefined, { language: this.language })
+        : this.localize('codeRegion'));
 
     return html`
       <div part="base">

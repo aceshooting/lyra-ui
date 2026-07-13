@@ -61,7 +61,13 @@ export type LyraMessageKey =
   | 'chatFailedToSend'
   | 'chatFailedAnnounce'
   | 'chatCompleteAnnounce'
-  | 'showMoreCollapsed';
+  | 'showMoreCollapsed'
+  | 'expandCode'
+  | 'collapseCode'
+  | 'copyCode'
+  | 'copiedToClipboard'
+  | 'codeRegion'
+  | 'codeRegionWithLanguage';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -124,6 +130,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   chatFailedAnnounce: 'Message failed to send.',
   chatCompleteAnnounce: 'Message complete.',
   showMoreCollapsed: '+{count}',
+  expandCode: 'Expand code',
+  collapseCode: 'Collapse code',
+  copyCode: 'Copy code',
+  copiedToClipboard: 'Copied! to clipboard',
+  codeRegion: 'Code',
+  codeRegionWithLanguage: '{language} code',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
