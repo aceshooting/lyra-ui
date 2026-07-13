@@ -68,4 +68,15 @@ export const styles = css`
     justify-content: center;
     padding-inline: 0;
   }
+  [part='tooltip'] {
+    position: fixed;
+    z-index: var(--lyra-layer-dropdown);
+    padding: var(--lyra-size-0-25rem) var(--lyra-space-s);
+    border-radius: var(--lyra-radius);
+    background: var(--lyra-color-text);
+    color: var(--lyra-color-surface);
+    font-size: var(--lyra-font-size-sm);
+    white-space: nowrap;
+    pointer-events: none;
+  }
 `;

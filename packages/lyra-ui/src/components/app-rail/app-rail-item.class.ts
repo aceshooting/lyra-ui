@@ -1,6 +1,7 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { place } from '../../internal/positioner.js';
 import { styles } from './app-rail-item.styles.js';
 
 /**
@@ -15,6 +16,8 @@ import { styles } from './app-rail-item.styles.js';
  * @csspart base - The link or button receiving focus and activation.
  * @csspart icon - The icon wrapper.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
+ * @csspart tooltip - The hover/focus label flyout, only rendered while `tooltip` is set, the item
+ *   is `icon-only`, and it is hovered or focused.
  */
 export class LyraAppRailItem extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -34,11 +37,51 @@ export class LyraAppRailItem extends LyraElement {
    *  this per item (e.g. by comparing `href` against the current location). */
   @property({ type: Boolean, reflect: true }) active = false;
 
+  /** Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by
+   *  the parent `<lyra-app-rail>` as the viewport narrows) hides it from view -- an explicit,
+   *  documented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`
+   *  composition. No effect outside icon-only mode, since the label is already visible there.
+   *  `false` (the default) reproduces today's exact output. */
+  @property({ type: Boolean, reflect: true }) tooltip = false;
+
+  @state() private showTooltip = false;
+  private stopPositioning?: () => void;
+
+  private get tooltipText(): string {
+    return this.getAttribute('aria-label') || this.textContent?.trim() || '';
+  }
+
+  private onFocusShow = (): void => {
+    if (this.tooltip && this.hasAttribute('icon-only')) this.showTooltip = true;
+  };
+
+  private onBlurHide = (): void => {
+    this.showTooltip = false;
+  };
+
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('showTooltip')) {
+      this.stopPositioning?.();
+      this.stopPositioning = undefined;
+      if (this.showTooltip) {
+        const anchor = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
+        const popup = this.renderRoot.querySelector('[part="tooltip"]') as HTMLElement | null;
+        if (anchor && popup) this.stopPositioning = place(anchor, popup, { placement: 'right' });
+      }
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.stopPositioning?.();
+  }
+
   render(): TemplateResult {
     const label = this.getAttribute('aria-label');
     const content = html`
       <span part="icon" aria-hidden=${label ? 'true' : nothing}><slot name="icon"></slot></span>
       <span part="label"><slot></slot></span>
+      ${this.showTooltip ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>` : nothing}
     `;
     if (this.href && !this.disabled) {
       return html`<a
@@ -47,6 +90,10 @@ export class LyraAppRailItem extends LyraElement {
         target=${this.target || nothing}
         aria-label=${label || nothing}
         aria-current=${this.active ? 'page' : nothing}
+        @mouseenter=${this.onFocusShow}
+        @mouseleave=${this.onBlurHide}
+        @focus=${this.onFocusShow}
+        @blur=${this.onBlurHide}
       >${content}</a>`;
     }
     return html`<button
@@ -56,6 +103,10 @@ export class LyraAppRailItem extends LyraElement {
       aria-disabled=${this.disabled ? 'true' : nothing}
       aria-label=${label || nothing}
       aria-current=${this.active ? 'page' : nothing}
+      @mouseenter=${this.onFocusShow}
+      @mouseleave=${this.onBlurHide}
+      @focus=${this.onFocusShow}
+      @blur=${this.onBlurHide}
     >${content}</button>`;
   }
 }
