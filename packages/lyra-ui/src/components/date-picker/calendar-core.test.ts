@@ -5,6 +5,7 @@ import {
   parseISO,
   isSameDay,
   addMonths,
+  addMonthsClampingDay,
   clampDate,
   weekdayLabels,
   resolveFirstDayOfWeek,
@@ -49,6 +50,31 @@ it('compares days and adds months', () => {
   expect(isSameDay(new Date(2026, 6, 7), new Date(2026, 6, 7, 23))).to.be.true;
   expect(isSameDay(new Date(2026, 6, 7), new Date(2026, 6, 8))).to.be.false;
   expect(formatISO(addMonths(new Date(2026, 11, 15), 1))).to.equal('2027-01-01');
+});
+
+it('clamps the day-of-month instead of overflowing into the following month', () => {
+  // Jan 31 + 1 month must land in February, clamped to Feb's last day (28 in
+  // 2026, a non-leap year) -- plain Date-constructor month arithmetic would
+  // instead roll this into March.
+  const clamped = addMonthsClampingDay(new Date(2026, 0, 31), 1);
+  expect(clamped.getFullYear()).to.equal(2026);
+  expect(clamped.getMonth()).to.equal(1); // February
+  expect(clamped.getDate()).to.equal(28);
+
+  // A genuine leap-day February keeps day 29 reachable.
+  const leap = addMonthsClampingDay(new Date(2024, 0, 31), 1);
+  expect(leap.getMonth()).to.equal(1);
+  expect(leap.getDate()).to.equal(29);
+
+  // Going backwards clamps the same way (e.g. Mar 31 - 1 month -> Feb 28).
+  const back = addMonthsClampingDay(new Date(2026, 2, 31), -1);
+  expect(back.getMonth()).to.equal(1);
+  expect(back.getDate()).to.equal(28);
+
+  // A day that exists in the target month is left untouched.
+  const untouched = addMonthsClampingDay(new Date(2026, 6, 15), 1);
+  expect(untouched.getMonth()).to.equal(7);
+  expect(untouched.getDate()).to.equal(15);
 });
 
 it('clamps to min/max', () => {

@@ -7,6 +7,7 @@ import { defineElement } from '../../internal/prefix.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon, calendarIcon } from '../../internal/icons.js';
+import { composedContains, deepActiveElement } from '../../internal/overlay-manager.js';
 import { parseISO, formatISO, type WeekdayFormat } from './calendar-core.js';
 import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.js';
@@ -77,8 +78,16 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format' }) weekdayFormat: WeekdayFormat = 'short';
   @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
+  /** Accessible label for the clear button. Override for a non-English `locale`. */
+  @property({ attribute: 'clear-label' }) clearLabel = 'Clear';
+  /** Accessible label for the calendar-toggle button. Override for a non-English `locale`. */
+  @property({ attribute: 'open-label' }) openLabel = 'Open calendar';
+  /** Accessible name for the calendar popover dialog. Override for a non-English `locale`. */
+  @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
 
   private cleanupFn?: () => void;
+  private popupTrigger?: HTMLElement;
+  private restorePopupFocusOnClose = false;
   private inputId = nextId('date-input');
   private popupId = nextId('date-popup');
   // Set on the date input's first `blur`; gates the `data-invalid`
@@ -272,11 +281,29 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     return this.mode === 'range' && to ? `${fmt(from)} – ${fmt(to)}` : fmt(from);
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+    }
+    if (changed.has('open')) {
+      if (this.open) {
+        if (!this.popupTrigger) {
+          const active = deepActiveElement(this.ownerDocument);
+          this.popupTrigger = active && typeof (active as HTMLElement).focus === 'function' ? (active as HTMLElement) : undefined;
+        }
+        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
+      } else {
+        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+        const active = deepActiveElement(this.ownerDocument);
+        const popup = this.renderRoot.querySelector('[part="popup"]');
+        const restoreFocus = this.restorePopupFocusOnClose || (popup !== null && composedContains(popup, active));
+        const trigger = this.popupTrigger;
+        this.popupTrigger = undefined;
+        this.restorePopupFocusOnClose = false;
+        if (restoreFocus && trigger?.isConnected) trigger.focus();
+      }
     }
   }
 
@@ -285,14 +312,13 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     if (this.open || this.effectiveDisabled || this.readonly) return;
     this.open = true;
     this.emit('lyra-show');
-    document.addEventListener('pointerdown', this.onDocPointer);
   }
   /** Close the calendar popover. */
-  hide(): void {
+  hide(restoreFocus = false): void {
     if (!this.open) return;
+    this.restorePopupFocusOnClose ||= restoreFocus;
     this.open = false;
     this.emit('lyra-hide');
-    document.removeEventListener('pointerdown', this.onDocPointer);
   }
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) this.hide();
@@ -300,6 +326,11 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
 
   /** Clear the value. */
   clear(): void {
+    // Matches how `onInputBlur` already flips this on the first blur -- an
+    // explicit user-initiated clear() is itself an interaction, so a
+    // required-and-now-empty field must surface its invalid state right
+    // away instead of silently looking valid until some later blur.
+    this.touched = true;
     this.value = '';
     this.emit('input');
     this.emit('change');
@@ -310,7 +341,9 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     super.disconnectedCallback();
     this.cleanupFn?.();
     this.cleanupFn = undefined;
-    document.removeEventListener('pointerdown', this.onDocPointer);
+    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
+    this.popupTrigger = undefined;
+    this.restorePopupFocusOnClose = false;
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // stuck `true` across the disconnect, `updated()` never sees it
@@ -456,8 +489,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
   private onFormControlKey = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && this.open) {
       e.preventDefault();
-      this.hide();
-      (this.renderRoot.querySelector('[part="expand-button"]') as HTMLElement | null)?.focus();
+      this.hide(true);
     }
   };
 
@@ -508,7 +540,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
     // The picker only fires `change` once a selection is finalized (a single
     // pick, or the second click of a range), so this is always the right
     // moment to close, in either mode.
-    this.hide();
+    this.hide(true);
   };
 
   render(): TemplateResult {
@@ -548,7 +580,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
                 part="clear-button"
                 type="button"
                 ?disabled=${this.effectiveDisabled || this.readonly}
-                aria-label="Clear"
+                aria-label=${this.clearLabel}
                 @click=${() => this.clear()}
               >
                 ${closeIcon()}
@@ -557,7 +589,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
           <button
             part="expand-button"
             type="button"
-            aria-label="Open calendar"
+            aria-label=${this.openLabel}
             aria-haspopup="dialog"
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.popupId}
@@ -567,7 +599,7 @@ export class LyraDateInput extends FormAssociated(LyraElement) {
             <span part="expand-icon" aria-hidden="true">${calendarIcon()}</span>
           </button>
         </div>
-        <div id=${this.popupId} part="popup" role="dialog" aria-label="Choose date">
+        <div id=${this.popupId} part="popup" role="dialog" aria-label=${this.dialogLabel}>
           <lyra-date-picker
             part="date-picker"
             .value=${this.value}

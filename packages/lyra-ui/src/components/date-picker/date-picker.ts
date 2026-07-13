@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { nextId } from '../../internal/a11y.js';
 import { styles } from './date-picker.styles.js';
 import {
   monthMatrix,
@@ -12,6 +13,7 @@ import {
   parseISO,
   isSameDay,
   addMonths,
+  addMonthsClampingDay,
   clampDate,
   resolveFirstDayOfWeek,
   type WeekdayFormat,
@@ -51,10 +53,18 @@ export class LyraDatePicker extends LyraElement {
   @property({ type: Boolean, attribute: 'disable-past' }) disablePast = false;
   @property({ type: Boolean, attribute: 'disable-future' }) disableFuture = false;
   @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
+  /** Accessible label for the previous-month button. Override for a non-English `locale`. */
+  @property({ attribute: 'previous-label' }) previousLabel = 'Previous month';
+  /** Accessible label for the next-month button. Override for a non-English `locale`. */
+  @property({ attribute: 'next-label' }) nextLabel = 'Next month';
 
   @state() private viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   @state() private focusedDate: Date | null = null;
   private focusPending = false;
+  // Stable per-instance ids for each visible month's title, referenced by
+  // that month's grid via aria-labelledby -- `months` only ever renders 1 or
+  // 2 months, so two ids always suffice regardless of which is in use.
+  private readonly titleIds = [nextId('date-picker-title'), nextId('date-picker-title')];
   // Set right before `commit()` assigns `value`, so `willUpdate` can tell its
   // own write apart from an external assignment. Internal commits already
   // know the right date is on-screen (it's the cell the user just clicked, or
@@ -218,10 +228,10 @@ export class LyraDatePicker extends LyraElement {
         next = firstEnabledFrom(step(current, 7), 1);
         break;
       case 'PageUp':
-        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() - 1, current.getDate()), 1);
+        next = firstEnabledFrom(addMonthsClampingDay(current, -1), 1);
         break;
       case 'PageDown':
-        next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth() + 1, current.getDate()), 1);
+        next = firstEnabledFrom(addMonthsClampingDay(current, 1), 1);
         break;
       case 'Home':
         next = firstEnabledFrom(new Date(current.getFullYear(), current.getMonth(), 1), 1);
@@ -277,6 +287,7 @@ export class LyraDatePicker extends LyraElement {
     today: Date,
     rowHasVisibleDay: boolean,
     fallbackFocusDate: Date | null,
+    dayLabelFmt: Intl.DateTimeFormat,
   ): TemplateResult {
     const outside = date.getMonth() !== shownMonth;
     // Outside-month days are empty placeholders by default (matches WA), keeping the
@@ -328,12 +339,7 @@ export class LyraDatePicker extends LyraElement {
       role="gridcell"
       data-date=${formatISO(date)}
       aria-selected=${selected ? 'true' : 'false'}
-      aria-label=${date.toLocaleDateString(this.locale || undefined, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })}
+      aria-label=${dayLabelFmt.format(date)}
       tabindex=${focused ? '0' : '-1'}
       ?disabled=${disabled}
       @click=${() => this.selectDate(date)}
@@ -351,6 +357,7 @@ export class LyraDatePicker extends LyraElement {
     fdow: number,
     labels: string[],
     fallbackFocusDate: Date | null,
+    dayLabelFmt: Intl.DateTimeFormat,
   ): TemplateResult {
     const base = addMonths(this.viewDate, offset);
     const year = base.getFullYear();
@@ -358,6 +365,7 @@ export class LyraDatePicker extends LyraElement {
     const matrix = monthMatrix(year, month, fdow);
     const isFirst = offset === 0;
     const isLast = offset === this.months - 1;
+    const titleId = this.titleIds[offset];
 
     return html`<div part="month">
       <div part="header">
@@ -365,19 +373,19 @@ export class LyraDatePicker extends LyraElement {
           ? html`<button
               part="previous"
               type="button"
-              aria-label="Previous month"
+              aria-label=${this.previousLabel}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.nav(-1)}
             >
               ${chevronIcon()}
             </button>`
           : html`<span></span>`}
-        <div part="title">${monthTitle(year, month, this.locale)}</div>
+        <div part="title" id=${titleId}>${monthTitle(year, month, this.locale)}</div>
         ${isLast
           ? html`<button
               part="next"
               type="button"
-              aria-label="Next month"
+              aria-label=${this.nextLabel}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.nav(1)}
             >
@@ -386,11 +394,11 @@ export class LyraDatePicker extends LyraElement {
           : html`<span></span>`}
       </div>
       <div part="weekdays">${labels.map((l) => html`<span part="weekday">${l}</span>`)}</div>
-      <div part="grid" role="grid" @keydown=${this.onGridKey}>
+      <div part="grid" role="grid" aria-labelledby=${titleId} @keydown=${this.onGridKey}>
         ${matrix.map((week) => {
           const rowHasVisibleDay = week.some((d) => d.getMonth() === month);
           return html`<div part="week" role="row">${week.map((d) =>
-            this.renderDay(d, month, selection, min, max, today, rowHasVisibleDay, fallbackFocusDate),
+            this.renderDay(d, month, selection, min, max, today, rowHasVisibleDay, fallbackFocusDate, dayLabelFmt),
           )}</div>`;
         })}
       </div>
@@ -405,6 +413,16 @@ export class LyraDatePicker extends LyraElement {
     today.setHours(0, 0, 0, 0);
     const fdow = this.fdow;
     const labels = weekdayLabels(fdow, this.weekdayFormat, this.locale);
+    // Hoisted once per render and reused across every day cell, rather than
+    // each cell constructing its own Intl.DateTimeFormat via
+    // toLocaleDateString() -- mirrors how the weekday-header and month-title
+    // labels already share a single formatter instead of one per cell.
+    const dayLabelFmt = new Intl.DateTimeFormat(this.locale || undefined, {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
     // Only bother scanning for a fallback focus day when it's actually
     // needed: there's no point walking the visible days if a focusedDate or
     // an existing selection already determines the sole tabbable cell.
@@ -412,7 +430,9 @@ export class LyraDatePicker extends LyraElement {
       this.focusedDate || selection.from ? null : this.firstEnabledDate(min, max, today);
     const monthEls: TemplateResult[] = [];
     for (let i = 0; i < this.months; i++) {
-      monthEls.push(this.renderMonth(i, selection, min, max, today, fdow, labels, fallbackFocusDate));
+      monthEls.push(
+        this.renderMonth(i, selection, min, max, today, fdow, labels, fallbackFocusDate, dayLabelFmt),
+      );
     }
     return html`<div part="base">${monthEls}</div>`;
   }

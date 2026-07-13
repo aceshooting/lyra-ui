@@ -36,6 +36,21 @@ export function addMonths(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 
+/**
+ * `d` shifted by `n` months, keeping the same day-of-month unless the target
+ * month is shorter, in which case the day is clamped to that month's last
+ * day. Plain `new Date(year, month + n, d.getDate())` construction instead
+ * overflows a too-large day-of-month into the *following* month (e.g. Jan 31
+ * + 1 month rolls into March, skipping February entirely) because the Date
+ * constructor normalizes out-of-range day components rather than clamping
+ * them.
+ */
+export function addMonthsClampingDay(d: Date, n: number): Date {
+  const targetMonth = d.getMonth() + n;
+  const lastDayOfTargetMonth = new Date(d.getFullYear(), targetMonth + 1, 0).getDate();
+  return new Date(d.getFullYear(), targetMonth, Math.min(d.getDate(), lastDayOfTargetMonth));
+}
+
 export function clampDate(d: Date, min: Date | null, max: Date | null): Date {
   if (min && d < min) return min;
   if (max && d > max) return max;

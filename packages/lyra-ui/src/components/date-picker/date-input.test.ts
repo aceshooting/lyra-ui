@@ -178,6 +178,22 @@ it('clears via the clear button', async () => {
   expect(el.value).to.equal('');
 });
 
+it('touches a required field on clear() so the resulting invalid state is surfaced immediately', async () => {
+  // Regression test: clear() used to reset `value` without setting `touched`,
+  // so a required-and-now-empty field kept looking valid (no data-invalid)
+  // until some later, unrelated blur -- even though the field was just
+  // emptied by an explicit, user-initiated action.
+  const el = (await fixture(
+    html`<lyra-date-input with-clear required value="2026-07-15"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+  expect(el.hasAttribute('data-invalid')).to.be.false;
+
+  el.clear();
+  await el.updateComplete;
+  expect(el.hasAttribute('data-invalid')).to.be.true;
+});
+
 it('participates in a form', async () => {
   const form = (await fixture(html`
     <form><lyra-date-input name="d" value="2026-07-15"></lyra-date-input></form>
@@ -898,4 +914,28 @@ it('still parses a non-zero-padded, year-first ISO-ish date -- a 4-digit first g
   input.value = '2026-7-15';
   input.dispatchEvent(new Event('change'));
   expect(el.value).to.equal('2026-07-15');
+});
+
+it('defaults the clear/expand/dialog labels to English but lets them be overridden for other locales', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input with-clear value="2026-07-15"></lyra-date-input>`,
+  )) as LyraDateInput;
+  await el.updateComplete;
+
+  const clearBtn = () => el.shadowRoot!.querySelector('[part="clear-button"]')!;
+  const expandBtn = () => el.shadowRoot!.querySelector('[part="expand-button"]')!;
+  const popup = () => el.shadowRoot!.querySelector('[part="popup"]')!;
+
+  expect(clearBtn().getAttribute('aria-label')).to.equal('Clear');
+  expect(expandBtn().getAttribute('aria-label')).to.equal('Open calendar');
+  expect(popup().getAttribute('aria-label')).to.equal('Choose date');
+
+  el.clearLabel = 'Effacer';
+  el.openLabel = 'Ouvrir le calendrier';
+  el.dialogLabel = 'Choisir une date';
+  await el.updateComplete;
+
+  expect(clearBtn().getAttribute('aria-label')).to.equal('Effacer');
+  expect(expandBtn().getAttribute('aria-label')).to.equal('Ouvrir le calendrier');
+  expect(popup().getAttribute('aria-label')).to.equal('Choisir une date');
 });

@@ -55,3 +55,19 @@ export const WithOutsideDays: Story = {
     ></lyra-date-input>
   `,
 };
+
+export const Localized: Story = {
+  render: () => html`
+    <lyra-date-input
+      label="Date de rendez-vous"
+      locale="fr-FR"
+      first-day-of-week="mon"
+      with-clear
+      clear-label="Effacer"
+      open-label="Ouvrir le calendrier"
+      dialog-label="Choisir une date"
+      value="2026-07-15"
+      style="max-width: 16rem"
+    ></lyra-date-input>
+  `,
+};

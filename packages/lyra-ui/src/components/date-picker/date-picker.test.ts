@@ -279,6 +279,26 @@ it('jumps a month with PageUp/PageDown, re-rendering the grid for the new month'
   expect(el.shadowRoot!.querySelector('[data-date="2026-07-15"]')).to.exist;
 });
 
+it('clamps the day-of-month on PageDown instead of rolling over into the wrong month', async () => {
+  // Regression test: PageUp/PageDown used to build the target date via plain
+  // `new Date(year, month+1, current.getDate())` construction, which the
+  // Date constructor silently overflows into the *following* month when the
+  // current day-of-month doesn't exist there. From Jan 31, adding one month
+  // that way lands on Mar 3 (Feb only has 28 days in 2026), skipping
+  // February's grid entirely instead of landing inside it.
+  const el = (await fixture(html`<lyra-date-picker value="2026-01-31"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const title = () => el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim().toLowerCase();
+
+  dispatchGridKey(el, 'PageDown');
+  await el.updateComplete;
+  expect(title()).to.contain('february');
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-02-28"]') as HTMLButtonElement;
+  expect(focused, 'expected Jan 31 + 1 month to clamp to Feb 28').to.exist;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
+});
+
 it('moves focus to the first/last day of the month with Home/End', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
@@ -371,6 +391,62 @@ it('renders chevron icons for month navigation instead of text glyphs', async ()
   expect(next.querySelector('svg')).to.exist;
   expect(previous.textContent).to.not.contain('‹');
   expect(next.textContent).to.not.contain('›');
+});
+
+it('defaults the nav-button labels to English but lets them be overridden for other locales', async () => {
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal(
+    'Previous month',
+  );
+  expect(el.shadowRoot!.querySelector('[part="next"]')!.getAttribute('aria-label')).to.equal('Next month');
+
+  el.previousLabel = 'Mois précédent';
+  el.nextLabel = 'Mois suivant';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="previous"]')!.getAttribute('aria-label')).to.equal(
+    'Mois précédent',
+  );
+  expect(el.shadowRoot!.querySelector('[part="next"]')!.getAttribute('aria-label')).to.equal('Mois suivant');
+});
+
+it('gives each visible month grid its own accessible name via aria-labelledby, distinguishing them with months=2', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker value="2026-07-15" months="2"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  const grids = Array.from(el.shadowRoot!.querySelectorAll('[part="grid"]'));
+  const titles = Array.from(el.shadowRoot!.querySelectorAll('[part="title"]'));
+  expect(grids.length).to.equal(2);
+  expect(titles.length).to.equal(2);
+
+  const labelledBy0 = grids[0].getAttribute('aria-labelledby');
+  const labelledBy1 = grids[1].getAttribute('aria-labelledby');
+  expect(labelledBy0, 'expected the first grid to reference a title id').to.be.a('string').with.length.greaterThan(0);
+  expect(labelledBy1, 'expected the second grid to reference a title id').to.be.a('string').with.length.greaterThan(0);
+  expect(labelledBy0).to.not.equal(labelledBy1);
+
+  expect(titles[0].getAttribute('id')).to.equal(labelledBy0);
+  expect(titles[1].getAttribute('id')).to.equal(labelledBy1);
+  expect(titles[0].textContent!.trim().toLowerCase()).to.contain('july');
+  expect(titles[1].textContent!.trim().toLowerCase()).to.contain('august');
+});
+
+it('formats each day cell aria-label with the full localized weekday/month/day/year', async () => {
+  const el = (await fixture(
+    html`<lyra-date-picker value="2026-07-15" locale="fr-FR"></lyra-date-picker>`,
+  )) as LyraDatePicker;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
+  const expected = new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(2026, 6, 15));
+  expect(cell.getAttribute('aria-label')).to.equal(expected);
 });
 
 it('gives an outside-month day inside a selected range normal text contrast, not the quiet outside color', async () => {

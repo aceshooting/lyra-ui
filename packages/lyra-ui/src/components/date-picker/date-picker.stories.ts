@@ -32,3 +32,15 @@ export const DisableFuture: Story = {
 export const WithOutsideDays: Story = {
   render: () => html`<lyra-date-picker with-outside-days value="2026-07-15"></lyra-date-picker>`,
 };
+
+export const Localized: Story = {
+  render: () => html`
+    <lyra-date-picker
+      locale="fr-FR"
+      first-day-of-week="mon"
+      value="2026-07-15"
+      previous-label="Mois précédent"
+      next-label="Mois suivant"
+    ></lyra-date-picker>
+  `,
+};
