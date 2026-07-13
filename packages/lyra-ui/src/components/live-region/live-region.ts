@@ -57,7 +57,14 @@ export class LyraLiveRegion extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
 
   /** `polite` (role="status") waits for the user to be idle; `assertive`
-   *  (role="alert") interrupts. Mirrors native `aria-live` semantics. */
+   *  (role="alert") interrupts. Mirrors native `aria-live` semantics.
+   *
+   *  `write()` also applies `role`/`aria-live` imperatively at announce time
+   *  (not only through this property's template binding) so a caller that
+   *  sets `mode` and immediately force-announces in the same synchronous
+   *  turn -- e.g. a stream-status transition -- gets the new urgency and the
+   *  new text landing together, rather than the text beating Lit's
+   *  re-render to the DOM. */
   @property({ reflect: true }) mode: LiveRegionMode = 'polite';
 
   /** Throttle window in ms — see `Announcer` in `internal/announcer.ts`. */
@@ -132,6 +139,16 @@ export class LyraLiveRegion extends LyraElement {
       this.pendingWrite = text;
       return;
     }
+    // A same-text reannounce frame still in flight is now stale the moment
+    // any new write() call comes in -- if it fired later it would clobber
+    // whatever text this call is about to land with the older, already-
+    // superseded string. Cancel it up front so at most one reannounce is
+    // ever pending and it can never overwrite a newer announcement.
+    if (this.reannounceHandle !== undefined) {
+      cancelAnimationFrame(this.reannounceHandle);
+      this.reannounceHandle = undefined;
+    }
+    const assertive = this.mode === 'assertive';
     if (text === this.lastWritten) {
       // Screen readers announce a live region on text-content *change* --
       // re-writing the identical string is otherwise a silent no-op to
@@ -139,12 +156,22 @@ export class LyraLiveRegion extends LyraElement {
       // (rather than in the same task) gives the DOM an actual empty ->
       // populated transition to observe instead of a same-tick clear+set
       // that can coalesce into nothing ever appearing to change.
+      //
+      // role/aria-live are set imperatively here (not left to Lit's
+      // template binding) so a caller that sets `mode` and immediately
+      // force-announces -- e.g. stream-status's announceTransition() --
+      // gets the new urgency in the same synchronous operation as the text,
+      // rather than racing Lit's async re-render.
+      region.setAttribute('role', assertive ? 'alert' : 'status');
+      region.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
       region.textContent = '';
       this.reannounceHandle = requestAnimationFrame(() => {
         this.reannounceHandle = undefined;
         region.textContent = text;
       });
     } else {
+      region.setAttribute('role', assertive ? 'alert' : 'status');
+      region.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
       region.textContent = text;
     }
     this.lastWritten = text;

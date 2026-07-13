@@ -136,6 +136,47 @@ it('buffers a flush that lands before the first render and applies it once ready
   el.remove();
 });
 
+it('a mode change followed immediately by a force-announce lands with the new urgency', async () => {
+  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const region = regionEl(el);
+
+  // Mirrors stream-status's announceTransition(): set `mode` then force an
+  // announcement in the same synchronous turn, before Lit's template
+  // re-render for the `mode` change has had a chance to flush.
+  el.mode = 'assertive';
+  el.announce('urgent update', { force: true });
+
+  expect(region.getAttribute('role'), 'role must reflect the new mode synchronously').to.equal(
+    'alert',
+  );
+  expect(
+    region.getAttribute('aria-live'),
+    'aria-live must reflect the new mode synchronously',
+  ).to.equal('assertive');
+  expect(region.textContent).to.equal('urgent update');
+});
+
+it('a distinct force-announcement is not clobbered by a stale pending reannounce frame', async () => {
+  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const region = regionEl(el);
+
+  // Same text announced twice schedules a clear-then-reannounce frame for
+  // 'same'.
+  el.announce('same', { force: true });
+  el.announce('same', { force: true });
+  expect(region.textContent).to.equal('');
+
+  // A distinct announcement lands before that frame fires.
+  el.announce('different', { force: true });
+  expect(region.textContent).to.equal('different');
+
+  // Once the stale frame would have fired, the newer text must still stand.
+  await nextFrame();
+  expect(region.textContent, 'stale reannounce frame must not overwrite newer text').to.equal(
+    'different',
+  );
+});
+
 it('cancels a pending announcement on disconnect so it never lands after removal', async () => {
   const el = (await fixture(
     html`<lyra-live-region throttle-ms="30"></lyra-live-region>`,
