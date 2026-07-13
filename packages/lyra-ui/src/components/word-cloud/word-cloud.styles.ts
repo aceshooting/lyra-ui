@@ -47,7 +47,7 @@ export const styles = css`
   [part='focus-ring'] {
     fill: none;
     stroke: var(--lyra-focus-ring-color);
-    stroke-width: 2px;
+    stroke-width: var(--lyra-focus-ring-width);
     pointer-events: none;
   }
   [part='empty'] {

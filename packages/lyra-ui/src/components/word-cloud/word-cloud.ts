@@ -93,6 +93,20 @@ export class LyraWordCloud extends LyraElement {
   /** Text of the visually-hidden `aria-live="polite"` status announcement. */
   @state() private liveText = '';
 
+  /**
+   * Whether `role`/`aria-label` were present on the host *before* this
+   * element's own code ever wrote to them -- snapshotted once, in the very
+   * first `willUpdate()` (guarded by `hasUpdated`, which Lit only flips to
+   * `true` after that first update commits). Re-checking `hasAttribute()` on
+   * every update instead would self-poison: once this element writes its own
+   * default `aria-label` on the first render, `hasAttribute('aria-label')` is
+   * permanently `true` afterwards, which would wrongly look like an
+   * author-supplied value and freeze the label instead of refreshing it as
+   * `words` changes on later updates.
+   */
+  private authorSuppliedRole = false;
+  private authorSuppliedAriaLabel = false;
+
   private measureText = (text: string, fontSize: number): number => {
     const ctx = getScratchCtx();
     if (!ctx) return text.length * fontSize * 0.6;
@@ -130,11 +144,21 @@ export class LyraWordCloud extends LyraElement {
     ) {
       this.relayout();
     }
-    this.setAttribute('role', 'group');
-    this.setAttribute(
-      'aria-label',
-      `Word cloud of ${this.cachedLayout.placed.length} word${this.cachedLayout.placed.length === 1 ? '' : 's'}`,
-    );
+    if (!this.hasUpdated) {
+      this.authorSuppliedRole = this.hasAttribute('role');
+      this.authorSuppliedAriaLabel = this.hasAttribute('aria-label');
+    }
+    // Only default role/aria-label when the author hasn't already supplied
+    // one -- unconditionally overwriting them on every update (including
+    // ones triggered purely by a `words` re-layout) would silently clobber a
+    // host's own accessible name/role on the very next data refresh.
+    if (!this.authorSuppliedRole) this.setAttribute('role', 'group');
+    if (!this.authorSuppliedAriaLabel) {
+      this.setAttribute(
+        'aria-label',
+        `Word cloud of ${this.cachedLayout.placed.length} word${this.cachedLayout.placed.length === 1 ? '' : 's'}`,
+      );
+    }
   }
 
   private relayout(): void {

@@ -57,6 +57,20 @@ it('reflects word count via role=group and aria-label on the host', async () => 
   expect(el.getAttribute('aria-label')).to.equal('Word cloud of 3 words');
 });
 
+it('does not overwrite an author-supplied role/aria-label, including on a later words update', async () => {
+  const el = (await fixture(
+    html`<lyra-word-cloud role="img" aria-label="Custom" .words=${WORDS}></lyra-word-cloud>`,
+  )) as LyraWordCloud;
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('aria-label')).to.equal('Custom');
+
+  el.words = [{ text: 'fresh', weight: 1 }];
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('aria-label')).to.equal('Custom');
+});
+
 it('singularizes the aria-label for exactly one word', async () => {
   const el = (await fixture(html`<lyra-word-cloud .words=${[{ text: 'solo', weight: 1 }]}></lyra-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
@@ -186,6 +200,21 @@ it('never sets a rotate transform with the default horizontal orientation', asyn
   const rendered = el.shadowRoot!.querySelectorAll('[part="word"]');
   for (const node of rendered) {
     expect(node.getAttribute('transform')).to.be.null;
+  }
+});
+
+it('renders a rotate transform on [part="word"] when orientations is "mixed" and the word was placed rotated', async () => {
+  const originalRandom = Math.random;
+  try {
+    Math.random = () => 0; // clears ROTATE_PROBABILITY's threshold every time -- forces rotated=true
+    const el = (await fixture(
+      html`<lyra-word-cloud orientations="mixed" .words=${[{ text: 'spin', weight: 1 }]}></lyra-word-cloud>`,
+    )) as LyraWordCloud;
+    await el.updateComplete;
+    const node = el.shadowRoot!.querySelector('[part="word"]')!;
+    expect(node.getAttribute('transform')).to.match(/^rotate\(-90, [\d.]+, [\d.]+\)$/);
+  } finally {
+    Math.random = originalRandom;
   }
 });
 
