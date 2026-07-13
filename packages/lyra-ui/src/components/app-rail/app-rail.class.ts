@@ -125,7 +125,7 @@ export function computeAppRailMode(
  * @csspart nav - The wrapper around the default (nav items) slot.
  * @csspart footer - The wrapper around the `footer` slot.
  * @csspart toggle - The mobile hamburger/close toggle button. Hidden via
- *   CSS outside `'mobile'` mode.
+ *   CSS outside `'mobile'` mode, or entirely via `hideToggle`.
  * @csspart backdrop - The mobile overlay's scrim. Only rendered while open.
  * @csspart panel - The mobile overlay's floating panel — see the class doc
  *   for why it's the same element as `base`, never both at once.
@@ -186,6 +186,13 @@ export class LyraAppRail extends LyraElement {
    *  reproduces today's exact breakpoint-only behavior. */
   @property({ attribute: 'preferred-mode' }) preferredMode?: 'full' | 'icon-only' | null;
 
+  /** Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a
+   *  consumer that already owns an external mobile-menu toggle wired to this rail's own `open`
+   *  property. `false` (the default) reproduces today's exact output; note `open` still has no
+   *  built-in external trigger of its own once this is set, since `lyra-toggle` only fires from the
+   *  toggle button being removed. */
+  @property({ type: Boolean, reflect: true, attribute: 'hide-toggle' }) hideToggle = false;
+
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
    *  `[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the
@@ -203,6 +210,13 @@ export class LyraAppRail extends LyraElement {
 
   /** Maximum `railWidthPx` a drag/keyboard resize can reach. */
   @property({ type: Number, attribute: 'max-rail-width-px' }) maxRailWidthPx = 440;
+
+  /** `true` for the duration of an active pointer-driven resize drag (not a keyboard step) --
+   *  reflected so a consumer (or this component's own styles) can suppress `[part='base']`'s
+   *  `transition: inline-size` during the drag, which otherwise visibly "chases" the pointer
+   *  instead of tracking it 1:1. Read-only in practice (this component owns the transitions), but
+   *  a plain reactive property like every other reflected boolean here. */
+  @property({ type: Boolean, reflect: true }) dragging = false;
 
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
@@ -350,6 +364,8 @@ export class LyraAppRail extends LyraElement {
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
+    this.dragging = false;
+    this.resizePointerId = undefined;
     window.removeEventListener('pointermove', this.onResizerPointerMove);
     window.removeEventListener('pointerup', this.onResizerPointerUp);
     window.removeEventListener('pointercancel', this.onResizerPointerUp);
@@ -467,6 +483,7 @@ export class LyraAppRail extends LyraElement {
     window.addEventListener('pointerup', this.onResizerPointerUp);
     window.addEventListener('pointercancel', this.onResizerPointerUp);
     window.addEventListener('lostpointercapture', this.onResizerPointerUp);
+    this.dragging = true;
   };
 
   private onResizerPointerMove = (e: PointerEvent): void => {
@@ -481,6 +498,7 @@ export class LyraAppRail extends LyraElement {
   private onResizerPointerUp = (e: PointerEvent): void => {
     if (e.pointerId !== this.resizePointerId) return;
     this.resizePointerId = undefined;
+    this.dragging = false;
     window.removeEventListener('pointermove', this.onResizerPointerMove);
     window.removeEventListener('pointerup', this.onResizerPointerUp);
     window.removeEventListener('pointercancel', this.onResizerPointerUp);

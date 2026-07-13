@@ -675,4 +675,54 @@ describe('resizable', () => {
     await el.updateComplete;
     expect(base.style.getPropertyValue('inline-size')).to.equal('');
   });
+
+  it('reflects dragging=true only for the duration of a pointer-driven resize, and suppresses the base transition while true', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(el.dragging).to.be.false;
+    expect(getComputedStyle(base).transitionProperty).to.not.equal('none');
+
+    resizer.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, bubbles: true }));
+    await el.updateComplete;
+    expect(el.dragging).to.be.true;
+    expect(getComputedStyle(base).transitionProperty).to.equal('none');
+
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }));
+    await el.updateComplete;
+    expect(el.dragging).to.be.false;
+    expect(getComputedStyle(base).transitionProperty).to.not.equal('none');
+  });
+
+  it('does not toggle dragging for keyboard-driven resize steps', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail resizable rail-width-px="240" min-rail-width-px="190" max-rail-width-px="440"></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(el.dragging).to.be.false;
+  });
+});
+
+describe('hideToggle', () => {
+  it('hides [part=toggle] when set, in mobile mode', async () => {
+    const el = (await fixture(html`<lyra-app-rail hide-toggle mode="mobile"></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    expect(getComputedStyle(toggle).display).to.equal('none');
+  });
+
+  it('defaults to false, unchanged output', async () => {
+    const el = (await fixture(html`<lyra-app-rail mode="mobile"></lyra-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    expect(el.hideToggle).to.be.false;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    expect(getComputedStyle(toggle).display).to.not.equal('none');
+  });
 });
