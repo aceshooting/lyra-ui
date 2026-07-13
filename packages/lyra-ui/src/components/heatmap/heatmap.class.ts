@@ -246,6 +246,7 @@ export interface LyraHeatmapEventMap {
  * `detail: { date, value }` in calendar mode. `cellText` overrides the
  * built-in English "Row X, Col Y: value" / "Mon DD: value" template used for
  * both the hover tooltip and the keyboard live-region announcement.
+ * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
  * @csspart tooltip - The hover tooltip.
@@ -339,6 +340,16 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  non-interactive, without ~300+ meaningless keyboard tab stops on a dense grid. Unset (the
    *  default) keeps every cell interactive, unchanged from before this property existed. */
   @property({ attribute: false }) cellInteractive?: (pos: MatrixCellPos | CalendarCellPos, value: number) => boolean;
+  /** Overrides a cell's computed ramp/no-data color entirely for an exact value -- receives the
+   *  cell position (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its
+   *  value, return a CSS color string to force that cell to it, or `undefined` to fall back to the
+   *  normal `colorSteps`/ramp math unchanged. Lets a consumer designate a value as categorically
+   *  outside the ramp (e.g. a real zero-count day rendered as a neutral hairline, distinct from
+   *  both "no data" and the ramp's own lightest step) without a prepended synthetic ramp color,
+   *  which can't safely reserve an exact value on a skewed dataset (the bucket selectors round by
+   *  continuous ratio, with no equality-based reservation). Unset (the default) reproduces today's
+   *  exact ramp/no-data behavior for every cell. */
+  @property({ attribute: false }) cellColor?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string | undefined;
   /** A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly
    *  interpolating between the two `--lyra-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
    *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
@@ -609,6 +620,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'firstDayOfWeek',
         'focusedCell',
         'colorSteps',
+        'cellColor',
       ].some((name) => changed.has(name))
     ) {
       this.draw();
@@ -861,7 +873,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const value = this.cachedCalendarCellsByPos.get(`${week}:${weekday}`)?.value ?? -1;
         const x = this.columnXFor(week);
         const y = this.rowYFor(weekday);
-        if (value < 0 || !Number.isFinite(value)) {
+        const override = this.cellColor?.({ week, weekday }, value);
+        if (override != null) {
+          ctx.fillStyle = override;
+        } else if (value < 0 || !Number.isFinite(value)) {
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
           const step = sqrtStep(value, hi, ramp.length);
@@ -962,7 +977,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const v = this.values[r]?.[c] ?? -1;
         const x = PAD_LEFT + c * cellSize;
         const y = PAD_TOP + r * cellSize;
-        if (v < 0 || !Number.isFinite(v)) {
+        const override = this.cellColor?.({ row: r, col: c }, v);
+        if (override != null) {
+          ctx.fillStyle = override;
+        } else if (v < 0 || !Number.isFinite(v)) {
           // `v < 0` alone is false for NaN, which would otherwise fall through to
           // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
           // fillStyle, and silently paint with whatever color the previous cell

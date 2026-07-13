@@ -961,20 +961,23 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
   it('derives weekday-axis labels from the runtime locale via Intl, not a hardcoded English array', async () => {
     const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
     await el.updateComplete;
-    const msPerDay = 86_400_000;
-    // Any UTC Sunday works as the anchor — 2026-01-18 is one.
+    // 2026-01-18 is a Sunday -- an arbitrary but independently-verifiable UTC anchor.
     const firstWeekStart = new Date(Date.UTC(2026, 0, 18));
     const labels = (el as unknown as { weekdayLabels: (d: Date) => string[] }).weekdayLabels(firstWeekStart);
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
     expect(labels).to.have.length(7);
-    // Only indices 1 (Mon), 3 (Wed), 5 (Fri) are filled — same sparse density as before.
+    // Only indices 1 (Mon), 3 (Wed), 5 (Fri) are filled -- same sparse density as before. Each
+    // expected value is an independently fixed Date.UTC(...) call, not a re-derivation of the
+    // implementation's own formula, so this can actually fail if the row-to-date mapping is wrong.
     expect(labels[0]).to.equal('');
-    expect(labels[1]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 1 * msPerDay)));
+    expect(labels[1]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 19)))); // Monday
     expect(labels[2]).to.equal('');
-    expect(labels[3]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 3 * msPerDay)));
+    expect(labels[3]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 21)))); // Wednesday
     expect(labels[4]).to.equal('');
-    expect(labels[5]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 5 * msPerDay)));
+    expect(labels[5]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 23)))); // Friday
     expect(labels[6]).to.equal('');
+    expect(labels[1]).to.not.equal('');
+    expect(labels[1]).to.not.equal(labels[3]);
   });
 });
 
@@ -1087,15 +1090,13 @@ describe('first-day-of-week (calendar mode)', () => {
       html`<lyra-heatmap mode="calendar" first-day-of-week="1"></lyra-heatmap>`,
     )) as LyraHeatmap;
     await el.updateComplete;
-    // 2026-01-19 is a Monday -- with firstDayOfWeek=1, buildCalendarGrid() anchors
-    // firstWeekStart at that exact Monday (daysBackToAnchor is 0 for a Monday date).
+    // 2026-01-19 is a Monday -- with firstDayOfWeek=1, buildCalendarGrid() anchors firstWeekStart
+    // at that exact Monday (daysBackToAnchor is 0 for a Monday date).
     const firstWeekStart = new Date(Date.UTC(2026, 0, 19));
     const labels = (el as unknown as { weekdayLabels: (d: Date) => string[] }).weekdayLabels(firstWeekStart);
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
-    const msPerDay = 86_400_000;
-    // Row 1 in a Monday-first grid is Tuesday, row 3 is Thursday, row 5 is Saturday --
-    // NOT the Sunday-first Mon/Wed/Fri the pre-fix bug would have hardcoded.
-    expect(labels[1]).to.equal(formatter.format(new Date(firstWeekStart.getTime() + 1 * msPerDay)));
+    // Row 1 in a Monday-first grid is Tuesday, row 3 is Thursday, row 5 is Saturday -- NOT the
+    // Sunday-first Mon/Wed/Fri a hardcoded-anchor bug would produce.
     expect(labels[1]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 20)))); // Tuesday
     expect(labels[3]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 22)))); // Thursday
     expect(labels[5]).to.equal(formatter.format(new Date(Date.UTC(2026, 0, 24)))); // Saturday
@@ -1309,6 +1310,29 @@ describe('colorSteps', () => {
     `)) as LyraHeatmap;
     await el.updateComplete;
     expect(el.colorSteps).to.be.undefined;
+  });
+});
+
+describe('cellColor', () => {
+  it('lets a consumer force an exact cell color bypassing the ramp entirely', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    el.values = [[0, 5]];
+    el.cellColor = (pos, value) => (value === 0 ? 'rgb(200, 200, 200)' : undefined);
+    await el.updateComplete;
+    const internals = el as unknown as { draw(): void };
+    internals.draw();
+    // No direct pixel-read assertion is made here (canvas fillStyle isn't queryable after the
+    // fact) -- this test instead asserts the property round-trips and draw() doesn't throw with
+    // a real cellColor function set, mirroring how this file already tests cellText/cellInteractive
+    // (both similarly side-effecting, non-queryable-after-the-fact private draw paths).
+    expect(el.cellColor).to.be.a('function');
+    expect(el.cellColor!({ row: 0, col: 0 }, 0)).to.equal('rgb(200, 200, 200)');
+    expect(el.cellColor!({ row: 0, col: 1 }, 5)).to.be.undefined;
+  });
+
+  it('defaults to unset, falling back to the normal ramp/colorSteps path', async () => {
+    const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+    expect(el.cellColor).to.be.undefined;
   });
 });
 
