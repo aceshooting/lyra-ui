@@ -189,3 +189,60 @@ it('cancels a pending announcement on disconnect so it never lands after removal
   await new Promise((resolve) => setTimeout(resolve, 90));
   expect(region.textContent, 'a disconnected region must not still flush').to.equal('');
 });
+
+it('drops a force-flushed write buffered before firstUpdated when disconnected', async () => {
+  const el = document.createElement('lyra-live-region') as LyraLiveRegion;
+  document.body.appendChild(el);
+
+  el.announce('stale buffered text', { force: true });
+  el.remove();
+
+  await el.updateComplete;
+  expect(
+    regionEl(el).textContent,
+    'a buffered write must not land after the element disconnects',
+  ).to.equal('');
+
+  document.body.appendChild(el);
+  await el.updateComplete;
+  expect(regionEl(el).textContent, 'the dropped write must not reappear on reconnect').to.equal('');
+  el.remove();
+});
+
+it('schedules and cancels same-text reannounce frames in the region owner document', async () => {
+  const el = (await fixture(html`<lyra-live-region></lyra-live-region>`)) as LyraLiveRegion;
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalRequestAnimationFrame = ownerWindow.requestAnimationFrame;
+  const originalCancelAnimationFrame = ownerWindow.cancelAnimationFrame;
+  const frameHandle = 937;
+  let scheduledFrames = 0;
+  const canceledFrames: number[] = [];
+
+  ownerWindow.requestAnimationFrame = ((_callback: FrameRequestCallback): number => {
+    scheduledFrames += 1;
+    return frameHandle;
+  }) as typeof ownerWindow.requestAnimationFrame;
+  ownerWindow.cancelAnimationFrame = ((handle: number): void => {
+    canceledFrames.push(handle);
+  }) as typeof ownerWindow.cancelAnimationFrame;
+
+  try {
+    ownerDocument.body.appendChild(el);
+    el.announce('same', { force: true });
+    el.announce('same', { force: true });
+
+    expect(scheduledFrames, 'the adopted region must schedule through its owner window').to.equal(1);
+
+    el.announce('newer', { force: true });
+    expect(canceledFrames, 'the frame must be canceled through the same owner window').to.deep.equal([
+      frameHandle,
+    ]);
+  } finally {
+    ownerWindow.requestAnimationFrame = originalRequestAnimationFrame;
+    ownerWindow.cancelAnimationFrame = originalCancelAnimationFrame;
+    el.remove();
+    iframe.remove();
+  }
+});

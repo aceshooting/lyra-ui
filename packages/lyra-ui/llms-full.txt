@@ -2829,14 +2829,16 @@ A parent Lit component would instead hold the reference via `@query('lyra-live-r
 - Re-announcing text identical to what was last written is special-cased: screen readers announce a
   live region only on text-content *change*, so the component clears `textContent` first and
   re-sets it on the next animation frame (not the same tick, which can coalesce into nothing ever
-  appearing to change) to give assistive tech a real empty-to-populated transition to observe.
+  appearing to change) to give assistive tech a real empty-to-populated transition to observe. The
+  frame is scheduled and canceled through the region's own document window, including after the
+  element is adopted into an iframe.
 - The region's DOM is tracked outside Lit's own template bindings (`write()` mutates
   `regionEl.textContent` directly) — an `announce()`/flush landing before `firstUpdated()` has run
   (e.g. a consumer creates, appends, and calls `announce()` synchronously) is buffered and applied
   on the next `firstUpdated()` rather than dropped.
-- `disconnectedCallback()` cancels any pending (unflushed) announcement and any in-flight re-announce
-  animation-frame callback — an element removed mid-throttle-window silently drops whatever was
-  queued.
+- `disconnectedCallback()` cancels any pending (unflushed) announcement, any before-first-render
+  buffered write, and any in-flight re-announce animation-frame callback — an element removed before
+  a deferred write lands silently drops it, including across a later reconnect.
 - Changing `throttle-ms` updates the live `Announcer`'s window immediately, but a flush already
   scheduled under the old window keeps the deadline it was scheduled with.
 

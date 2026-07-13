@@ -79,6 +79,7 @@ export class LyraLiveRegion extends LyraElement {
   private lastWritten = '';
   private regionEl?: HTMLElement;
   private reannounceHandle?: ReturnType<typeof requestAnimationFrame>;
+  private reannounceView?: Window;
   // A flush can land before `firstUpdated()` has ever run -- e.g. a
   // consumer that creates+appends the element and calls `announce()`
   // synchronously right after, mirroring how `toaster.ts` mounts a region
@@ -116,10 +117,8 @@ export class LyraLiveRegion extends LyraElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.announcer.cancel();
-    if (this.reannounceHandle !== undefined) {
-      cancelAnimationFrame(this.reannounceHandle);
-      this.reannounceHandle = undefined;
-    }
+    this.pendingWrite = undefined;
+    this.cancelReannounce();
   }
 
   /**
@@ -144,10 +143,7 @@ export class LyraLiveRegion extends LyraElement {
     // whatever text this call is about to land with the older, already-
     // superseded string. Cancel it up front so at most one reannounce is
     // ever pending and it can never overwrite a newer announcement.
-    if (this.reannounceHandle !== undefined) {
-      cancelAnimationFrame(this.reannounceHandle);
-      this.reannounceHandle = undefined;
-    }
+    this.cancelReannounce();
     const assertive = this.mode === 'assertive';
     if (text === this.lastWritten) {
       // Screen readers announce a live region on text-content *change* --
@@ -165,8 +161,15 @@ export class LyraLiveRegion extends LyraElement {
       region.setAttribute('role', assertive ? 'alert' : 'status');
       region.setAttribute('aria-live', assertive ? 'assertive' : 'polite');
       region.textContent = '';
-      this.reannounceHandle = requestAnimationFrame(() => {
+      const view = region.ownerDocument.defaultView;
+      if (!view) {
+        region.textContent = text;
+        return;
+      }
+      this.reannounceView = view;
+      this.reannounceHandle = view.requestAnimationFrame(() => {
         this.reannounceHandle = undefined;
+        this.reannounceView = undefined;
         region.textContent = text;
       });
     } else {
@@ -175,6 +178,13 @@ export class LyraLiveRegion extends LyraElement {
       region.textContent = text;
     }
     this.lastWritten = text;
+  }
+
+  private cancelReannounce(): void {
+    if (this.reannounceHandle === undefined) return;
+    this.reannounceView?.cancelAnimationFrame(this.reannounceHandle);
+    this.reannounceHandle = undefined;
+    this.reannounceView = undefined;
   }
 
   render(): TemplateResult {
