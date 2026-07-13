@@ -46,7 +46,8 @@ export class LyraSkeleton extends LyraElement {
   }
 
   render(): TemplateResult {
-    return html`<span part="base"><span class="sr-only">${this.label}</span></span>`;
+    const label = this.localize('loading', this.label === 'Loading…' ? undefined : this.label);
+    return html`<span part="base"><span class="sr-only">${label}</span></span>`;
   }
 }
 

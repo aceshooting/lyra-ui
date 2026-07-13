@@ -93,6 +93,13 @@ it('defaults the accessible name to "Loading…" and reflects a custom label', a
   expect(labeled.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading chart');
 });
 
+it('localizes the default accessible name via this.localize() when .strings overrides the shared loading key', async () => {
+  const el = (await fixture(
+    html`<lyra-skeleton .strings=${{ loading: 'Chargement…' }}></lyra-skeleton>`,
+  )) as LyraSkeleton;
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Chargement…');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-skeleton></lyra-skeleton>`)) as LyraSkeleton;
   await expect(el).to.be.accessible();
