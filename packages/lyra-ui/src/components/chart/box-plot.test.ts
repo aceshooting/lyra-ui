@@ -113,6 +113,76 @@ it('does not construct a Chart.js instance if disconnected before the lazy peer 
   expect((el as unknown as { chart?: unknown }).chart).to.be.undefined;
 });
 
+it('resolves grid/tick/legend colors from custom --lyra-chart-* values set on the host', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.legend = true;
+  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  el.style.setProperty('--lyra-chart-grid-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lyra-chart-tick-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lyra-chart-legend-color', 'rgb(7, 8, 9)');
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y.grid.color).to.equal('rgb(1, 2, 3)');
+  expect(config.options.scales.y.ticks.color).to.equal('rgb(4, 5, 6)');
+  expect(config.options.plugins.legend.labels.color).to.equal('rgb(7, 8, 9)');
+});
+
+it('skips redrawing when scrolled off-screen', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A', 'B'];
+  el.boxes = [
+    {
+      label: 'x',
+      data: [
+        { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+        { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+      ],
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+  (el as any).visible = false;
+  el.labels = ['A', 'B', 'C'];
+  await el.updateComplete;
+  expect((el as any).chart.data.labels).to.deep.equal(['A', 'B']);
+});
+
+it('redraws once when it becomes visible again after being off-screen', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A', 'B'];
+  el.boxes = [
+    {
+      label: 'x',
+      data: [
+        { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+        { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+      ],
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+  (el as any).visible = false;
+  el.labels = ['A', 'B', 'C'];
+  await el.updateComplete;
+  (el as any).visible = true;
+  (el as any).draw();
+  await el.updateComplete;
+  expect((el as any).chart.data.labels).to.deep.equal(['A', 'B', 'C']);
+});
+
+it('skips redrawing when the content signature is unchanged', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+  const dataRef = (el as any).chart.data;
+  el.requestUpdate();
+  await el.updateComplete;
+  expect((el as any).chart.data).to.equal(dataRef);
+});
+
 it('connectedCallback() routes the resolved boxplot-plugin module into the loaded handler instead of ignoring it', async () => {
   // Guards the wiring itself (as opposed to the handler-in-isolation test
   // above): a regression back to the old bug — `connectedCallback()`

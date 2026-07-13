@@ -19,6 +19,32 @@ export interface BoxPlotSeries {
   color?: string;
 }
 
+// Defensive JS-side fallbacks for themeColors() below, mirroring the
+// light-mode default of each `--lyra-chart-*` token's own fallback chain
+// (see box-plot.styles.ts) — only reached if getComputedStyle somehow can't
+// resolve the custom property at all (e.g. host detached from the document).
+// Same values as chart.ts's own fallbacks, since both default to the same
+// semantic tokens.
+const FALLBACK_GRID_COLOR = '#8a8a90';
+const FALLBACK_TICK_COLOR = '#6b7280';
+const FALLBACK_LEGEND_COLOR = '#1a1a1a';
+const FALLBACK_TOOLTIP_BG = '#fff';
+const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
+
+// Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lyra-chart-*` tokens)
+// even though `buildConfig()` below only threads `grid`/`tick`/`legend` into
+// Chart.js options today — `LyraBoxPlot` has no tooltip customization to
+// theme yet, but keeping the resolved shape identical means a future
+// tooltip option can be wired in without touching this method or
+// box-plot.styles.ts again.
+interface ThemeColors {
+  grid: string;
+  tick: string;
+  legend: string;
+  tooltipBg: string;
+  tooltipText: string;
+}
+
 let boxPlotPlugin: Promise<typeof import('@sgratzl/chartjs-chart-boxplot') | null> | undefined;
 
 /**
@@ -70,6 +96,10 @@ export class LyraBoxPlot extends LyraElement {
    */
   @state() private loading = true;
 
+  @state() private visible = true;
+  private intersectionObserver?: IntersectionObserver;
+  private lastSignature = '';
+
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: import('chart.js').Chart;
   private chartJsModule?: typeof import('chart.js');
@@ -77,6 +107,14 @@ export class LyraBoxPlot extends LyraElement {
   connectedCallback(): void {
     super.connectedCallback();
     void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod));
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver((entries) => {
+        const wasVisible = this.visible;
+        this.visible = entries[0]?.isIntersecting ?? true;
+        if (this.visible && !wasVisible) this.draw();
+      });
+      this.intersectionObserver.observe(this);
+    }
   }
 
   // Split out from `connectedCallback()` so the partial-peer-dependency-
@@ -107,6 +145,7 @@ export class LyraBoxPlot extends LyraElement {
     super.disconnectedCallback();
     this.chart?.destroy();
     this.chart = undefined;
+    this.intersectionObserver?.disconnect();
   }
 
   protected updated(changed: PropertyValues): void {
@@ -121,10 +160,73 @@ export class LyraBoxPlot extends LyraElement {
     if (changed.has('height')) {
       this.style.setProperty('--lyra-chart-height', this.height);
     }
+    // While the boxplot peer deps are still loading, `draw()` would no-op
+    // anyway (no `chartJsModule`/`canvasEl` yet) — bail before touching
+    // `lastSignature` so that phantom "no-op" update doesn't get cached as
+    // the baseline and silently swallow the real first draw once loading
+    // finishes with no other property having changed in the meantime.
+    // Mirrors `LyraChart.updated()`.
+    if (this.loading) return;
+    if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
+    const signature = this.computeSignature();
+    if (signature === this.lastSignature) return;
+    this.lastSignature = signature;
     this.draw();
   }
 
+  /**
+   * Resolves the `--lyra-chart-*` theme tokens (declared in
+   * `box-plot.styles.ts`, each layered over an existing semantic token) via
+   * `getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't
+   * consume CSS `var()` directly — same constraint `chart.ts`'s
+   * `themeColors()` documents — so this is called fresh from `buildConfig()`
+   * on every draw rather than cached.
+   */
+  private themeColors(): ThemeColors {
+    const cs = getComputedStyle(this);
+    return {
+      grid: cs.getPropertyValue('--lyra-chart-grid-color').trim() || FALLBACK_GRID_COLOR,
+      tick: cs.getPropertyValue('--lyra-chart-tick-color').trim() || FALLBACK_TICK_COLOR,
+      legend: cs.getPropertyValue('--lyra-chart-legend-color').trim() || FALLBACK_LEGEND_COLOR,
+      tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
+      tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
+    };
+  }
+
+  /**
+   * A content-affecting-properties fingerprint used by `updated()` to skip a
+   * redundant `draw()` when neither visibility nor any of these properties
+   * actually changed since the last draw (e.g. an unrelated property/state
+   * update, or `requestUpdate()` with nothing changed). Mirrors
+   * `chart.ts`'s `computeSignature()`.
+   *
+   * Deliberately re-shapes `this.boxes` down to only the `BoxPlotPoint`
+   * fields this component itself reads (`min`/`q1`/`median`/`q3`/`max`),
+   * rather than `JSON.stringify(this.boxes)` directly:
+   * `@sgratzl/chartjs-chart-boxplot`'s controller mutates each data point
+   * object in place during Chart.js's own parse step (adding computed
+   * `whiskerMin`/`whiskerMax`/`mean` fields onto the *same* object
+   * references this component was handed) — so a raw stringify of the
+   * whole object would drift to a new value across calls purely from that
+   * side effect, with no actual consumer-driven change, defeating the
+   * dedup this method exists to provide.
+   */
+  private computeSignature(): string {
+    return JSON.stringify([
+      this.labels,
+      this.boxes.map((s) => ({
+        label: s.label,
+        color: s.color,
+        data: s.data.map((d) => [d.min, d.q1, d.median, d.q3, d.max]),
+      })),
+      this.legend,
+      this.yLabel,
+      this.beginAtZero,
+    ]);
+  }
+
   private buildConfig(): import('chart.js').ChartConfiguration {
+    const theme = this.themeColors();
     return {
       // boxplot isn't in chart.js's static ChartType union — same cast the seed uses.
       type: 'boxplot' as never,
@@ -140,8 +242,15 @@ export class LyraBoxPlot extends LyraElement {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: this.legend } },
-        scales: { y: { beginAtZero: this.beginAtZero, title: { display: !!this.yLabel, text: this.yLabel } } },
+        plugins: { legend: { display: this.legend, labels: { color: theme.legend } } },
+        scales: {
+          y: {
+            beginAtZero: this.beginAtZero,
+            title: { display: !!this.yLabel, text: this.yLabel },
+            ticks: { color: theme.tick },
+            grid: { color: theme.grid },
+          },
+        },
       } as never,
     };
   }

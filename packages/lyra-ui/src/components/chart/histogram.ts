@@ -1,5 +1,5 @@
 import { property } from 'lit/decorators.js';
-import { LyraChart, type Series } from './chart.js';
+import { LyraChart, lockChartType, type Series } from './chart.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { binValues, type HistogramBucket } from './histogram-bin.js';
@@ -80,16 +80,7 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
 // just a default value, not an enforced lock, so without this a `type="line"`
 // attribute (or `el.type = 'line'`) would silently turn a histogram into a
 // line chart of its own bucket counts.
-Object.defineProperty(LyraHistogram.prototype, 'type', {
-  configurable: true,
-  enumerable: true,
-  get(): 'bar' {
-    return 'bar';
-  },
-  set(_v: 'bar') {
-    /* locked to 'bar'; direct writes are ignored */
-  },
-});
+lockChartType(LyraHistogram, 'bar');
 
 defineElement('histogram', LyraHistogram);
 

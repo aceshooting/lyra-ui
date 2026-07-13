@@ -190,6 +190,27 @@ export class LyraChart extends LyraElement {
     this.intersectionObserver?.disconnect();
   }
 
+  /**
+   * Resets a stale `zoomed` flag before the render pass that's about to call
+   * `draw()`: a `type` (or `config.type` override) change that lands on a
+   * *different* effective Chart.js type makes `draw()` destroy the old
+   * `Chart` instance and construct a brand-new one, which was never zoomed —
+   * without this, `render()`'s reset-zoom-button stays visible for an
+   * instance that has no zoom/pan state left to reset. Computed here (before
+   * render), not in `updated()`/`draw()`, because setting `zoomed` — a
+   * reactive `@state` property — from `updated()` would schedule a second,
+   * redundant update pass; `willUpdate()` runs before this cycle's render is
+   * considered complete, so the same set just folds into the render already
+   * in progress. Same rationale as `toast-item.ts`'s `willUpdate()`-vs-
+   * `updated()` split.
+   */
+  protected willUpdate(): void {
+    if (!this.zoomed) return;
+    if (this.effectiveType() !== this.builtType) {
+      this.zoomed = false;
+    }
+  }
+
   protected updated(changed: PropertyValues): void {
     // Disconnected between the property change that scheduled this update
     // and Lit's (microtask-deferred) processing of it — e.g. a property
@@ -414,6 +435,20 @@ export class LyraChart extends LyraElement {
     this.emit('lyra-point-click', { datasetIndex, index, label, value });
   }
 
+  /**
+   * `config.type` (if set) overrides the attribute `type` post-merge — this
+   * is the one place that resolution logic lives, shared by `buildConfig()`
+   * (which needs it to build scales/interaction for the right type) and
+   * `willUpdate()` (which needs it to detect a type change against the last
+   * *actually built* type, `this.builtType`, before the render pass that
+   * would rebuild the `Chart` instance).
+   */
+  private effectiveType(): import('chart.js').ChartType {
+    return (
+      (this.config?.type as import('chart.js').ChartType | undefined) ?? (this.type as import('chart.js').ChartType)
+    );
+  }
+
   private buildConfig(): import('chart.js').ChartConfiguration {
     const theme = this.themeColors();
     // Resolve the effective type up front: `config.type` (if set) overrides
@@ -421,9 +456,7 @@ export class LyraChart extends LyraElement {
     // for *that* type, not `this.type` — otherwise a config.type override
     // (e.g. line -> radar) ships with the wrong axis shape (categorical x/y
     // instead of a radial r scale).
-    const effectiveType =
-      (this.config?.type as import('chart.js').ChartType | undefined) ??
-      (this.type as import('chart.js').ChartType);
+    const effectiveType = this.effectiveType();
     const generated: import('chart.js').ChartConfiguration = {
       type: effectiveType,
       data: {
@@ -556,4 +589,30 @@ declare global {
   interface HTMLElementTagNameMap {
     'lyra-chart': LyraChart;
   }
+}
+
+/**
+ * Installs a read-only `type` accessor pair on a `LyraChart` subclass's
+ * prototype, locking it to `value` — assigning `.type` afterwards (attribute
+ * or property) is silently ignored. `LyraChart` declares `type` as a plain
+ * (decorator-managed) class field, and TypeScript forbids a subclass from
+ * re-declaring a base field as a getter/setter pair via ordinary class
+ * syntax (TS2611), so the accessor pair is installed directly on the
+ * prototype instead, which is runtime-equivalent (same shadowing semantics
+ * as a class-syntax override) without tripping that check. Shared by every
+ * `lyra-*-chart` subclass (bar/line/pie/doughnut/scatter/bubble/radar/
+ * polarArea) plus `lyra-histogram`, replacing what used to be an identical
+ * ~16-line `Object.defineProperty` block copy-pasted into each file.
+ */
+export function lockChartType(ctor: Function, value: string): void {
+  Object.defineProperty(ctor.prototype, 'type', {
+    configurable: true,
+    enumerable: true,
+    get(): string {
+      return value;
+    },
+    set(_v: string) {
+      /* locked to `value`; direct writes are ignored */
+    },
+  });
 }

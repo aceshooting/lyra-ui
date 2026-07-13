@@ -318,6 +318,27 @@ it('renders the reset-zoom-button part and emits `lyra-zoom` once `onZoomComplet
   expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
 });
 
+it('resets the zoomed flag (and hides the reset-zoom-button) when a type change rebuilds the Chart.js instance while zoomed', async () => {
+  const el = (await fixture(html`<lyra-chart zoom></lyra-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const instance = (el as any).chart;
+
+  const onZoomComplete = (el as any).buildConfig().options.plugins.zoom.zoom.onZoomComplete;
+  onZoomComplete();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.exist;
+
+  el.type = 'bar';
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart !== instance);
+  expect((el as any).zoomed).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="reset-zoom-button"]')).to.not.exist;
+});
+
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'line';
