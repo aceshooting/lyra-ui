@@ -98,7 +98,7 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @slot trailing - Overrides the built-in send/stop button entirely when it has assigned content.
  * @event lyra-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
  * @event lyra-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"`. `detail: { value }`.
- * @event lyra-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"`. No detail.
+ * @event lyra-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
  * @csspart base - The bordered root container.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
  * @csspart row - The row holding the leading slot, textarea, and trailing slot/button.
@@ -115,6 +115,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
   @property({ reflect: true }) status: ChatComposerStatus = 'idle';
   @property({ type: Boolean, reflect: true, attribute: 'submit-on-enter' }) submitOnEnter = true;
+  /** When `false`, the built-in button never renders as a Stop/cancel control
+   *  while busy -- instead it stays a (disabled) Send button, since there is
+   *  no cancellation operation to offer. Defaults to `true`, reproducing
+   *  today's Stop-button behavior for every `status` other than `'idle'`. */
+  @property({ type: Boolean, reflect: true }) stoppable = true;
 
   @state() private hasLeadingSlot = false;
   @state() private hasChipsSlot = false;
@@ -280,9 +285,12 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (this.effectiveDisabled) return;
     if (this.status === 'idle') {
       this.submit();
-    } else {
+    } else if (this.stoppable) {
       this.emit('lyra-stop');
     }
+    // Busy and non-stoppable: the button already renders `disabled` above, so
+    // this is unreachable via a real click; guarded here too in case a
+    // consumer dispatches a synthetic click directly at the handler.
   };
 
   private submit(): void {
@@ -307,15 +315,16 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   private renderActionButton(): TemplateResult {
     const busy = this.status !== 'idle';
+    const showStop = busy && this.stoppable;
     return html`
       <button
         part="action-button"
         type="button"
-        aria-label=${busy ? 'Stop generating' : 'Send message'}
-        ?disabled=${this.effectiveDisabled}
+        aria-label=${showStop ? this.localize('stopGenerating') : this.localize('sendMessage')}
+        ?disabled=${this.effectiveDisabled || (busy && !this.stoppable)}
         @click=${this.onActionClick}
       >
-        ${busy ? stopIcon() : sendIcon()}
+        ${showStop ? stopIcon() : sendIcon()}
       </button>
     `;
   }

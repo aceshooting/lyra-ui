@@ -205,6 +205,48 @@ it('clicking the built-in button while sending/streaming fires lyra-stop instead
   expect(submitted).to.be.false;
 });
 
+it('localizes the action button labels via this.localize(), not hardcoded English', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-composer
+      .strings=${{ sendMessage: 'Envoyer', stopGenerating: 'Arrêter' }}
+    ></lyra-chat-composer>`,
+  )) as LyraChatComposer;
+  expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Envoyer');
+  el.status = 'streaming';
+  await el.updateComplete;
+  expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Arrêter');
+});
+
+it('defaults to English "Send message"/"Stop generating" when no strings override is set', async () => {
+  const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+  expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Send message');
+  el.status = 'streaming';
+  await el.updateComplete;
+  expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Stop generating');
+});
+
+it('stoppable defaults to true, preserving the existing Stop-button behavior', async () => {
+  const el = (await fixture(html`<lyra-chat-composer status="streaming"></lyra-chat-composer>`)) as LyraChatComposer;
+  expect(el.stoppable).to.be.true;
+  expect(actionButtonOf(el)!.disabled).to.be.false;
+  expect(actionButtonOf(el)!.getAttribute('aria-label')).to.equal('Stop generating');
+});
+
+it('stoppable=false renders a disabled Send button instead of Stop while busy, and does not fire lyra-stop', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-composer status="streaming" .stoppable=${false}></lyra-chat-composer>`,
+  )) as LyraChatComposer;
+  const button = actionButtonOf(el)!;
+  expect(button.getAttribute('aria-label')).to.equal('Send message');
+  expect(button.disabled).to.be.true;
+
+  let stopped = false;
+  el.addEventListener('lyra-stop', () => (stopped = true));
+  button.click();
+  await el.updateComplete;
+  expect(stopped).to.be.false;
+});
+
 it('hides the chips wrapper when the chips slot is empty, shows it once populated', async () => {
   const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
   const chips = el.shadowRoot!.querySelector('[part="chips"]') as HTMLElement;
