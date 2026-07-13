@@ -431,3 +431,23 @@ it('is accessible with an empty/default (undefined) value', async () => {
   const el = (await fixture(html`<lyra-json-viewer></lyra-json-viewer>`)) as LyraJsonViewer;
   await expect(el).to.be.accessible();
 });
+
+it('localizes the root toggle\'s "array"/"object" fallback label via this.localize()', async () => {
+  const arrayEl = await withData([1, 2]);
+  arrayEl.strings = { jsonArray: 'tableau' };
+  await arrayEl.updateComplete;
+  const arrayToggle = arrayEl.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  expect(arrayToggle.getAttribute('aria-label')).to.contain('tableau');
+
+  const objectEl = await withData({ a: 1 });
+  objectEl.strings = { jsonObject: 'objet' };
+  await objectEl.updateComplete;
+  const objectToggle = objectEl.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  expect(objectToggle.getAttribute('aria-label')).to.contain('objet');
+});
+
+it('defaults to English "array"/"object" when no strings override is set', async () => {
+  const arrayEl = await withData([1, 2]);
+  const arrayToggle = arrayEl.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  expect(arrayToggle.getAttribute('aria-label')).to.contain('array');
+});

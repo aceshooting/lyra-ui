@@ -219,7 +219,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       <button
         part="copy-button"
         type="button"
-        aria-label=${`${this.localize('copy')} ${label ?? 'value'}`}
+        aria-label=${`${this.localize('copy')} ${label ?? this.localize('jsonValue')}`}
         @click=${(e: Event) => {
           e.stopPropagation();
           this.copy(value);
@@ -250,7 +250,13 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const hasEntries = entries.length > 0;
     const expanded = hasEntries && this.isExpanded(pathKey, depth, search.forceExpand);
     const indentStyle = `padding-inline-start:calc(${depth} * var(--lyra-space-l))`;
-    const toggleLabel = keyLabel ?? (type === 'array' ? 'array' : type === 'object' ? 'object' : 'value');
+    const toggleLabel =
+      keyLabel ??
+      (type === 'array'
+        ? this.localize('jsonArray')
+        : type === 'object'
+          ? this.localize('jsonObject')
+          : this.localize('jsonValue'));
     const openBracket = type === 'array' ? '[' : '{';
     const closeBracket = type === 'array' ? ']' : '}';
 
