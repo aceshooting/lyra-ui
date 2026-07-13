@@ -391,7 +391,10 @@ it('renders a header row containing just the close button when closable is set b
 });
 
 it('defaults --lyra-dialog-max-width\'s effect to 32rem, overridable via the CSS custom property on the host', async () => {
-  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  // `open` so the panel is actually part of the render tree: WebKit doesn't
+  // recompute custom-property-dependent values inside a `display: none`
+  // subtree after the property changes, even after forcing layout.
+  const el = (await fixture(html`<lyra-dialog label="Untitled" open>body</lyra-dialog>`)) as LyraDialog;
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   // getComputedStyle resolves rem to px, so compare against the root font
