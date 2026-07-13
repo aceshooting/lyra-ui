@@ -2013,8 +2013,26 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-attachment-trigger>` — a compact attach affordance designed for a\nchat composer's leading slot (see `<lyra-chat-composer>`'s own `leading`\nslot, which this drops straight into, though this component has no code\ndependency on it). Its shape adapts to how many attachment `capabilities`\nare configured:\n - Exactly one capability: a single plain icon button ([part='trigger']).\n   Activating it performs that capability's action directly.\n - More than one: a small anchored menu ([part='menu'], composed from\n   `<lyra-menu>`/`<lyra-menu-item>`) listing each capability as a row.\n\nTwo of the three capabilities (`files`, `image`) are file-picker-backed:\nactivating them opens a hidden native `<input type=\"file\">` via a\nsynthetic `.click()`, and the resulting selection is re-emitted as\n`lyra-pick`. `accept` is shared across both — `image` defaults it to\n`'image/*'` unless the `accept` prop overrides it, `files` always uses\n`accept` as-is (empty means \"any file type\", matching a bare native\n`<input type=\"file\">` with no `accept` attribute).\n\n**`camera` is scope-limited by design.** This component does not\nimplement any camera capture UI itself — no `getUserMedia`, no\n`<input capture>` — because that's entirely a host/browser concern with\nno single right answer (a desktop web app, a mobile PWA, and a native\nwrapper all want different things here). Activating the `camera`\ncapability only fires `lyra-camera-request`; the host owns everything\nfrom that point on (opening its own capture UI, then presumably handing\nthe resulting `File` back to something like `<lyra-attachment-chip>`).",
           "name": "LyraAttachmentTrigger",
+          "cssParts": [
+            {
+              "description": "The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`. `triggerLabel` lets a host override the single-capability trigger button's `aria-label` (i18n) — see that property's own doc for exactly what it does and doesn't affect.",
+              "name": "expand-icon"
+            },
+            {
+              "description": "The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.",
+              "name": "menu"
+            },
+            {
+              "description": "The multi-capability button slotted into `<lyra-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.",
+              "name": "menu-trigger"
+            },
+            {
+              "description": "The single-capability icon button. Only rendered when `capabilities.length === 1`.",
+              "name": "trigger"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -2398,6 +2416,16 @@
                   }
                 }
               ]
+            }
+          ],
+          "events": [
+            {
+              "description": "The `camera` capability was activated. No detail payload — see the class doc's scope note; the host implements the actual capture flow.",
+              "name": "lyra-camera-request"
+            },
+            {
+              "description": "A file-backed capability's hidden file input produced a real selection. `detail: { capability: 'files' | 'image', files }` — a real `FileList` (not a plain array), matching the native input's own `.files` shape, but an independent snapshot rather than that same live object — see `onInputChange`'s own doc for why a live reference would be unsafe to hand out here.",
+              "name": "lyra-pick"
             }
           ],
           "attributes": [
@@ -3281,6 +3309,58 @@
           },
           "tagName": "lyra-bar-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -3463,6 +3543,24 @@
               },
               "default": "false",
               "fieldName": "zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
@@ -4854,6 +4952,58 @@
           },
           "tagName": "lyra-bubble-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -5041,6 +5191,24 @@
                 "module": "src/components/chart/chart.class.ts"
               }
             }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
           ]
         }
       ],
@@ -5175,8 +5343,36 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag\nsubclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.\n\n**API mirror note:** the real `wa-chart` docs page\n(https://webawesome.com/docs/components/chart/) documents a `config:\nChartJS['config']` property alongside its simplified attributes — \"a\nflexible wrapper around Chart.js\" supporting *both* simplified attributes\nand full Chart.js configuration passthrough, not a `data`/`options` prop\npair. `lyra-chart` mirrors that dual surface: the `Series`-based\n`datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes\nbelow are the simplified surface (compatible with WA's `type`, `xLabel`,\n`yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional\n`config` property is the raw-passthrough escape hatch — a\n`Partial<ChartConfiguration>` deep-merged over the generated config in\n`buildConfig()`, mirroring WA's `config` property without discarding the\n`Series` shape the rest of this component family (subclasses, box-plot,\nhistogram) is built on.",
           "name": "LyraChart",
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas"
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table"
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description"
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button"
+            }
+          ],
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -5787,6 +5983,16 @@
                 }
               },
               "description": "Resolves the `--lyra-chart-*` theme tokens (declared in\n`chart.styles.ts`, each layered over an existing semantic token) via\n`getComputedStyle`. Chart.js renders to canvas, not the DOM, so it can't\nconsume CSS `var()` directly — same constraint documented on\n`heatmap.ts`'s `labelColor()`/`noDataFill()`/`scaleEndpoints()` — so this\nis called fresh from `buildConfig()` on every draw rather than cached."
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click"
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom"
             }
           ],
           "attributes": [
@@ -6777,6 +6983,58 @@
           },
           "tagName": "lyra-doughnut-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -6959,6 +7217,24 @@
               },
               "default": "false",
               "fieldName": "zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
@@ -8094,7 +8370,77 @@
             "module": "/src/components/chart/chart.class.js"
           },
           "tagName": "lyra-histogram",
-          "customElement": true
+          "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ]
         },
         {
           "kind": "function",
@@ -8938,6 +9284,58 @@
           },
           "tagName": "lyra-line-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -9125,6 +9523,24 @@
                 "module": "src/components/chart/chart.class.ts"
               }
             }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
           ]
         }
       ],
@@ -9168,8 +9584,58 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM\nrendering with zero peer dependencies (unlike `lyra-chart`, which wraps\n`chart.js`). For a project whose architecture forbids a charting\ndependency outright, this covers the common bar/line case: grouped or\nstacked bars, multi-series lines, per-point click, and hover tooltips\n(native SVG `<title>`, no positioning JS needed) — not a full `lyra-chart`\nreplacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no\nhorizontal/dual-y-axis, no raw-config passthrough).\n\nBecause this renders real DOM (not canvas), it reuses `lyra-chart`'s\n`--lyra-chart-*` theme tokens directly via CSS `var()` — no\n`getComputedStyle()`-based re-theming step is needed the way `chart.ts`\nneeds one for its canvas.\n\nBy default (`layout=\"fit\"`) the plot always squeezes to the measured host\nwidth. Three independent, opt-in escape hatches for dense/aligned data:\n`layout=\"scroll\"` (+ `barWidth`) gives every bar a fixed pixel width and\nlets the plot overflow the host horizontally (scrollable) instead of\nsqueezing; `maxLabels` decimates which x-axis text labels render (bars\nalways still render) once there are more categories than that; and\n`barX` lets a consumer hand in its own per-category x-coordinate function\n— e.g. to pixel-align this chart's bars with a sibling `lyra-heatmap`'s\ncalendar columns — overriding the internal slot math for both bars and\ntheir labels. All three are additive and no-ops when left unset.\n\nSeven further additive, opt-in properties: `pointText` overrides the\nper-bar/per-point `<title>`/`aria-label` tooltip text (mirrors\n`lyra-heatmap`'s `cellText` hook), falling back to the built-in raw-value\ntemplate when unset; `roundedBars` draws bars as a rounded-top path\ninstead of a square-cornered rect; `skipZero` omits a bar entirely (not\njust zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`\noverride the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`\n(`type=\"bar\"` only) switches the bar-height mapping from the default\nlinear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`\ncompression (mirroring `lyra-heatmap`'s matrix-mode `sqrt` scale) so a\nskewed dataset's smaller bars don't get washed out by one dominant value\n— gridlines/tick labels stay on the linear domain regardless, only the bar\nmarks' own height changes, and `type=\"line\"` ignores `scale` entirely; and\n`hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether\n(x-axis category labels, rendered separately, are unaffected).",
           "name": "LyraLiteChart",
+          "cssParts": [
+            {
+              "description": "Each axis tick label.",
+              "name": "axis-label"
+            },
+            {
+              "description": "The x/y axis title text, when set.",
+              "name": "axis-title"
+            },
+            {
+              "description": "Each bar rect (type=\"bar\").",
+              "name": "bar"
+            },
+            {
+              "description": "The host's flex layout wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "A visually hidden list of all plotted data points.",
+              "name": "data-list"
+            },
+            {
+              "description": "Each horizontal gridline.",
+              "name": "grid-line"
+            },
+            {
+              "description": "The legend row, when `legend` is set.",
+              "name": "legend"
+            },
+            {
+              "description": "Each legend entry.",
+              "name": "legend-item"
+            },
+            {
+              "description": "Each legend entry's color swatch.",
+              "name": "legend-swatch"
+            },
+            {
+              "description": "Each series' stroked line path (type=\"line\").",
+              "name": "line"
+            },
+            {
+              "description": "The current mark announcement for keyboard users.",
+              "name": "live-region"
+            },
+            {
+              "description": "Each series' per-point hit target (type=\"line\").",
+              "name": "point"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -10120,6 +10586,12 @@
                 }
               ],
               "description": "A rounded-top-corners `<path>` `d` string for a bar occupying\n`[x, y, x+w, y+h]` — an SVG `<rect>` can only express a uniform radius\non all four corners, so `roundedBars` switches the mark to a path\ninstead of adding `rx`/`ry` to keep the bottom edge square against the\nbaseline. `r` is clamped so it never exceeds half the bar's width or its\nfull height (a thin/short bar degrades to a plain rectangle path rather\nthan self-intersecting)."
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a bar/point is activated (click, or Enter/Space while focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number | null }` — same shape as `lyra-chart`'s `lyra-point-click`.",
+              "name": "lyra-point-click"
             }
           ],
           "attributes": [
@@ -11112,6 +11584,58 @@
           },
           "tagName": "lyra-pie-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -11294,6 +11818,24 @@
               },
               "default": "false",
               "fieldName": "zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
@@ -12118,6 +12660,58 @@
           },
           "tagName": "lyra-polar-area-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -12300,6 +12894,24 @@
               },
               "default": "false",
               "fieldName": "zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
@@ -13124,6 +13736,58 @@
           },
           "tagName": "lyra-radar-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -13306,6 +13970,24 @@
               },
               "default": "false",
               "fieldName": "zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
@@ -14130,6 +14812,58 @@
           },
           "tagName": "lyra-scatter-chart",
           "customElement": true,
+          "slots": [
+            {
+              "description": "An optional consumer-provided accessible table alternative.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The chart wrapper.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The Chart.js canvas.",
+              "name": "canvas",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The optional generated or slotted data table.",
+              "name": "data-table",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The accessible chart summary.",
+              "name": "description",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "The reset-zoom control when zoom is active.",
+              "name": "reset-zoom-button",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
+          ],
           "attributes": [
             {
               "name": "accessible-description",
@@ -14317,6 +15051,24 @@
                 "module": "src/components/chart/chart.class.ts"
               }
             }
+          ],
+          "events": [
+            {
+              "description": "Fired when a click lands on (or nearest, intersect-only — see `handlePointClick()`) a data point/segment. `detail: { datasetIndex: number, index: number, label: string | undefined, value: unknown }`.",
+              "name": "lyra-point-click",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "`detail: { zoomed }`.",
+              "name": "lyra-zoom",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            }
           ]
         }
       ],
@@ -14360,8 +15112,52 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-chat-composer>` — the message input for a chat/agent conversation\nsurface: an auto-resizing textarea plus a send/stop button. Form-\nassociated via the `FormAssociated` mixin (see `<lyra-date-input>` for the\nsame shape), so it participates in native `<form>` submission/validation/\nreset like any other text control — `name`/`value`/`disabled`/`required`/\n`checkValidity()`/`reportValidity()` all come from that mixin.\n\nAuto-resize reads the textarea's own *computed* line-height/padding/\nborder at runtime (`resizeTextarea()`) rather than assuming a fixed\npx-per-row constant, so it stays correct under a consumer's own font-size/\nline-height overrides. It grows between `min-rows` and `max-rows`, then\nswitches to internal scrolling. A `ResizeObserver` on the textarea itself\nre-runs the same fit whenever its *width* changes (a responsive\nbreakpoint, a sidebar toggling, a window resize, an orientation change)\neven though `value`/`min-rows`/`max-rows` never did -- a narrower box\nwraps the same text across more lines, so the previously-fitted height\nwould otherwise go stale and clip content with no scrollbar to reveal it.\n\nEnter-to-send (only active while `submit-on-enter` is true, the default):\nplain Enter submits and is prevented from inserting a newline; Shift+Enter\nalways inserts a newline no matter what; an IME composition step (checked\nvia `isComposing`, with `keyCode === 229` as a defense-in-depth fallback\nfor browsers that report `isComposing` inconsistently on the\ncompositionend-adjacent keydown) is never treated as a submit trigger;\nand while `status` isn't `\"idle\"` Enter is left alone to insert a newline\ntoo, rather than trying to submit again -- there is nothing meaningful to\nsubmit while a previous message is still sending/streaming, and the\ntextarea deliberately stays interactive (see `disabled` below) so a user\ncan keep composing their next message in the meantime.\n\n`lyra-submit`'s `detail.value` is always the exact, untrimmed current\nvalue (`detail.value === value` at the moment it fires) -- trimming is\nleft to the consumer so it never silently diverges from what `value`\nitself reports. Submitting does not clear `value`; the consumer clears it\nonce the submission has actually been accepted (so e.g. a failed send can\nleave the text in place for retry).",
           "name": "LyraChatComposer",
+          "cssParts": [
+            {
+              "description": "The built-in send/stop button. Absent from the accessibility tree's meaningful content whenever `trailing` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`.",
+              "name": "action-button"
+            },
+            {
+              "description": "The bordered root container.",
+              "name": "base"
+            },
+            {
+              "description": "The wrapper around the `chips` slot. Hidden entirely when the slot is empty.",
+              "name": "chips"
+            },
+            {
+              "description": "The wrapper around the `leading` slot. Hidden entirely when the slot is empty.",
+              "name": "leading"
+            },
+            {
+              "description": "The row holding the leading slot, textarea, and trailing slot/button.",
+              "name": "row"
+            },
+            {
+              "description": "The auto-resizing `<textarea>` itself.",
+              "name": "textarea"
+            },
+            {
+              "description": "The wrapper around the `trailing` slot and the built-in `action-button`.",
+              "name": "trailing"
+            }
+          ],
+          "slots": [
+            {
+              "description": "An attachment tray rendered above the input row (e.g. files queued for this message).",
+              "name": "chips"
+            },
+            {
+              "description": "Content rendered before the textarea (e.g. an attach-file trigger button).",
+              "name": "leading"
+            },
+            {
+              "description": "Overrides the built-in send/stop button entirely when it has assigned content.",
+              "name": "trailing"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -14785,6 +15581,20 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.",
+              "name": "lyra-input"
+            },
+            {
+              "description": "Fired by the built-in button while `status` is `\"sending\"` or `\"streaming\"`. No detail.",
+              "name": "lyra-stop"
+            },
+            {
+              "description": "Fired by Enter (per `submit-on-enter`) or the built-in button while `status=\"idle\"`. `detail: { value }`.",
+              "name": "lyra-submit"
+            }
+          ],
           "attributes": [
             {
               "name": "locale",
@@ -14894,8 +15704,84 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-chat-message>` — a role-based message bubble *shell* for a chat/\nagent conversation surface. It renders none of the message content itself:\nthe default slot carries whatever a consumer wants to display (plain\ntext, a `<lyra-markdown>`, a custom template, anything at all) and this\ncomponent only supplies the surrounding chrome — alignment/coloring by\n`role`, an avatar/badges header row, an optional collapse toggle, an\nattachments strip, and a status-aware footer (a live-updating status dot +\ntext, the formatted `timestamp`, a built-in retry affordance for\n`status=\"failed\"`, and an `actions` slot for everything else).\n\nNo built-in copy button is rendered. Deciding what \"the copyable text\" of\nan arbitrary slotted message even means (plain text? the rendered\nmarkdown source? something else?) is exactly the kind of content\ninterpretation this shell deliberately stays out of — slot a copy control\ninto `actions` instead. Firing `lyra-copy` (`detail: { text }`) from that\ncontrol keeps the event name consistent with `<lyra-json-viewer>`'s own\ncopy affordance, for anything listening at the conversation-surface level.\n\nAccessibility of `status`: the current status is always available as\nplain visible text (`[part=\"status-text\"]`), never color alone. A\ntransition *to* `\"failed\"`, or *from* `\"streaming\"` to `\"sent\"` (a stream\nfinishing), is additionally announced through an internal\n`<lyra-live-region>` (see that component's header for the throttled-\nannouncement wiring this composes) so a screen-reader user who isn't\ncurrently focused on this message still learns about it. This differs\nfrom `<lyra-typing-indicator>`'s deliberately simpler `role=\"status\"`\napproach — that component only ever has one thing to announce (its own\nmount); this one has a `status` that can flip between several values\nacross a single element's lifetime, which is exactly the coalescing job\n`<lyra-live-region>` exists for.\n\n`role` is a message-author role (`user`/`assistant`/`system`, matching\nthe vocabulary of every chat/completion API), *not* a WAI-ARIA role, so\nit reflects to a `data-role` attribute rather than the bare `role`\nattribute — `role=\"user\"` would collide with `Element`'s own ARIA `role`\naccessor and is not a valid ARIA role token to begin with.",
           "name": "LyraChatMessage",
+          "cssParts": [
+            {
+              "description": "The wrapper around the `actions` slot.",
+              "name": "actions"
+            },
+            {
+              "description": "The wrapper around the `attachments` slot.",
+              "name": "attachments"
+            },
+            {
+              "description": "The wrapper around the `avatar` slot.",
+              "name": "avatar"
+            },
+            {
+              "description": "The wrapper around the `badges` slot.",
+              "name": "badges"
+            },
+            {
+              "description": "The wrapper around the default slot (the message content). Hidden while `collapsed`.",
+              "name": "body"
+            },
+            {
+              "description": "The message bubble root. Programmatically focusable (`tabindex=\"-1\"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lyra-retry` listener flipping `status` away from `\"failed\"`).",
+              "name": "bubble"
+            },
+            {
+              "description": "The built-in collapse/expand toggle (only rendered when `collapsible`).",
+              "name": "collapse-button"
+            },
+            {
+              "description": "The row below the message body — status, timestamp, retry, and actions. Hidden entirely when none of those have anything to show.",
+              "name": "footer"
+            },
+            {
+              "description": "The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.",
+              "name": "header"
+            },
+            {
+              "description": "The built-in retry button (only rendered when `status=\"failed\"`).",
+              "name": "retry-button"
+            },
+            {
+              "description": "A small decorative (`aria-hidden`) dot reflecting `status`; absent while `status=\"sent\"`.",
+              "name": "status-indicator"
+            },
+            {
+              "description": "The visible text twin of `status-indicator` — carries the state in text, not just color.",
+              "name": "status-text"
+            },
+            {
+              "description": "The formatted `timestamp`, rendered in a `<time>` element.",
+              "name": "timestamp"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The message body.",
+              "name": ""
+            },
+            {
+              "description": "Action controls (e.g. copy, retry), rendered at the end of the footer.",
+              "name": "actions"
+            },
+            {
+              "description": "File/image attachment chips, rendered below the message body.",
+              "name": "attachments"
+            },
+            {
+              "description": "An avatar/icon for the message author.",
+              "name": "avatar"
+            },
+            {
+              "description": "Small status/metric chips (e.g. token count, latency, model name) — entirely app-supplied; this component computes none of that itself.",
+              "name": "badges"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -15339,6 +16225,16 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "`detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.",
+              "name": "lyra-collapse-toggle"
+            },
+            {
+              "description": "Fired by the built-in retry button, only rendered when `status=\"failed\"`.",
+              "name": "lyra-retry"
+            }
+          ],
           "attributes": [
             {
               "name": "collapsed",
@@ -15437,8 +16333,32 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-checkbox>` — a boolean form control. Structurally the same idea as\n`<lyra-switch>` (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with checkbox semantics: `role=\"checkbox\"` +\nan `aria-checked` that can also be `\"mixed\"`, and a visual box/checkmark\ninstead of a track/thumb.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin — see `<lyra-combobox>` for the same\ndirect-`ElementInternals` shape with a non-string value.",
           "name": "LyraCheckbox",
+          "cssParts": [
+            {
+              "description": "The whole interactive control (`role=\"checkbox\"`); wraps the box and label.",
+              "name": "base"
+            },
+            {
+              "description": "The small square that shows the checkmark/indeterminate dash.",
+              "name": "box"
+            },
+            {
+              "description": "The checkmark (or indeterminate dash) glyph inside the box.",
+              "name": "checkmark"
+            },
+            {
+              "description": "The wrapper around the default slot.",
+              "name": "label"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Label text, rendered next to the box. Clicking it toggles the checkbox, the same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the control still has an accessible name.",
+              "name": ""
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -16029,6 +16949,12 @@
                   "text": "void"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "The user toggled the checkbox (click or Space/Enter). `detail: { checked }`. Not fired for a programmatic `.checked` assignment.",
+              "name": "lyra-change"
             }
           ],
           "attributes": [
@@ -17476,8 +18402,46 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-code-block>` — fenced code display with optional lazy syntax\nhighlighting and a copy button. No highlighting grammar ships in this\ncomponent itself: it lazy-loads the optional peer dependency `shiki` (see\n`code-loader.ts`) for the actual tokenizing, and degrades to a plain\n`<pre><code>` when that peer isn't installed or `language` is unset/\nunrecognized — the exact same optional-peer shape `<lyra-markdown>` and\n`<lyra-chart>` already establish. That fallback is the *default* rendering\npath, not a degraded one: unhighlighted code is perfectly usable, and it's\nwhat every instance renders at zero extra bytes until shiki resolves.\n\nA `<lyra-skeleton>` placeholder stands in only while shiki itself is\nloading for the very first time on the page (cached — see\n`loadShikiHighlighter()`) and `language` is set. It's deliberately *not*\nshown again for a subsequent per-language grammar load (e.g. a second\n`<lyra-code-block>` requesting a language no earlier instance has used\nyet) — that grammar fetch is typically fast, and the plain-text fallback\nis already a perfectly readable placeholder for it, so a second\nloading-chrome state would add complexity for little practical benefit.\n\n`languages` is an additive, opt-in escape hatch from that default path for\na consumer whose language set is fixed and known ahead of time: a map of\nlanguage id to an already-imported shiki grammar module (e.g. `import bash\nfrom 'shiki/langs/bash.mjs'`). When `language` matches a key in `languages`,\nthis component seeds a fine-grained `createHighlighterCore()` highlighter\nwith *only* the pre-supplied grammars (see `code-loader.ts`'s\n`loadShikiHighlighterCore()`) instead of waiting on `loadShikiHighlighter()`\nand its dynamic per-language `loadLanguage()` import. The payoff isn't\nruntime cost — the default dynamic-import path is already well-optimized\nfor that — it's *build output*: shiki's main entry point bundles a dynamic\n`import()` per bundled language (~200 of them) because a bundler can't\nstatically narrow which of those a `loadLanguage(lang: string)` call might\nrequest at runtime, so it conservatively emits a build-output chunk for\nevery one of them. `shiki/core`'s fine-grained API has no such table — a\nbundler only ever sees the exact grammar modules `languages` itself\n`import`s, so a consumer who pins its full language set this way trades a\nhand-maintained list for a build output scoped to just those languages\ninstead of shiki's entire bundled set. A language requested but absent\nfrom `languages` still falls back to the ordinary dynamic-import path\nunchanged, so this is a partial opt-in, not a replacement for it.",
           "name": "LyraCodeBlock",
+          "cssParts": [
+            {
+              "description": "The outer container.",
+              "name": "base"
+            },
+            {
+              "description": "The scrollable region wrapping the code (or the loading skeleton); respects `max-height`, `hidden` while `collapsible` and `collapsed`.",
+              "name": "body"
+            },
+            {
+              "description": "The rendered `<code>`, same split as `pre` above.",
+              "name": "code"
+            },
+            {
+              "description": "The copy-to-clipboard button, when `copyable`.",
+              "name": "copy-button"
+            },
+            {
+              "description": "The `filename` text, when set.",
+              "name": "filename"
+            },
+            {
+              "description": "The row above the code (filename/language/copy/toggle), present whenever there's anything to put in it.",
+              "name": "header"
+            },
+            {
+              "description": "The `language` badge, when set, so the language is exposed to assistive tech as visible text rather than only a `language` attribute a screen reader would never announce.",
+              "name": "language"
+            },
+            {
+              "description": "The rendered `<pre>` — shiki's own in the highlighted path, this component's own plain one in the fallback path.",
+              "name": "pre"
+            },
+            {
+              "description": "The collapse/expand chevron button, when `collapsible`.",
+              "name": "toggle"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -17921,6 +18885,16 @@
               ]
             }
           ],
+          "events": [
+            {
+              "description": "The copy button was activated. `detail: { text }` is always the raw `code` value (never the highlighted HTML), and always fires regardless of whether the actual OS clipboard write succeeded — same convention as `<lyra-json-viewer>`'s own copy button.",
+              "name": "lyra-copy"
+            },
+            {
+              "description": "The collapse/expand header button was activated. `detail: { collapsed }` — same event name and shape convention as `<lyra-thinking-panel>`'s own `lyra-toggle`.",
+              "name": "lyra-toggle"
+            }
+          ],
           "attributes": [
             {
               "name": "code",
@@ -18190,8 +19164,96 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-combobox>` — a filterable single/multi select that combines a text\ninput with a listbox. Mirrors the core `<wa-combobox>` API under `lyra-`.\n\nOptions are `<lyra-option value>` children. Emits native-style `change`/`input`\n(like Web Awesome) plus `lyra-show`/`lyra-hide`/`lyra-clear`.",
           "name": "LyraCombobox",
+          "cssParts": [
+            {
+              "description": "The clear button.",
+              "name": "clear-button"
+            },
+            {
+              "description": "The input container (positioning anchor).",
+              "name": "combobox"
+            },
+            {
+              "description": "The text input.",
+              "name": "combobox-input"
+            },
+            {
+              "description": "The error message.",
+              "name": "error"
+            },
+            {
+              "description": "The dropdown indicator.",
+              "name": "expand-icon"
+            },
+            {
+              "description": "The outer wrapper around label, combobox, listbox, error and hint.",
+              "name": "form-control"
+            },
+            {
+              "description": "The `<label>` element.",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
+            },
+            {
+              "description": "The options popover.",
+              "name": "listbox"
+            },
+            {
+              "description": "An option row.",
+              "name": "option"
+            },
+            {
+              "description": "An option row's leading status dot (when `dot-color` is set).",
+              "name": "option-dot"
+            },
+            {
+              "description": "An option row's label/sub wrapper.",
+              "name": "option-label"
+            },
+            {
+              "description": "The \"+N more\" indicator shown when rows are capped by `maxRender`.",
+              "name": "option-overflow"
+            },
+            {
+              "description": "An option row's secondary line (when `sub` is set).",
+              "name": "option-sub"
+            },
+            {
+              "description": "An individual selected tag.",
+              "name": "tag"
+            },
+            {
+              "description": "A tag's remove button.",
+              "name": "tag__remove-button"
+            },
+            {
+              "description": "The multi-select tag container.",
+              "name": "tags"
+            }
+          ],
+          "slots": [
+            {
+              "description": "`<lyra-option>` elements.",
+              "name": ""
+            },
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
+            },
+            {
+              "description": "Custom label content.",
+              "name": "label"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -19212,14 +20274,28 @@
             {
               "name": "change",
               "type": {
-                "text": "EventConstructor"
-              }
+                "text": "Event"
+              },
+              "description": "The selection changed through user interaction. A bubbling, composed, non-cancelable Event."
             },
             {
               "name": "input",
               "type": {
-                "text": "EventConstructor"
-              }
+                "text": "InputEvent | Event"
+              },
+              "description": "The user typed in the filter or changed the selection. Text edits expose the original InputEvent; selection changes emit a bubbling, composed, non-cancelable Event."
+            },
+            {
+              "description": "The value was cleared.",
+              "name": "lyra-clear"
+            },
+            {
+              "description": "The listbox closed.",
+              "name": "lyra-hide"
+            },
+            {
+              "description": "The listbox opened.",
+              "name": "lyra-show"
             }
           ],
           "attributes": [
@@ -20249,8 +21325,52 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-conversation-item>` — a selectable row representing one chat\nsession in a history sidebar list. Usable standalone or as the\n`renderItem()` payload of a sibling virtualized-list component; this\nmodule has no dependency on that (or any) other component.\n\nTakes `title`/`excerpt`/`timestamp` as individual primitive props rather\nthan one opaque bound object, deliberately consistent with how\n`<lyra-chat-message>` takes individual props instead of a single\n`.message` blob -- every other component in this family follows that\nshape, so this one does too even though a single bound `.session` object\nwould also have been a reasonable design.\n\nIdentifying *which* session a `lyra-select` click/keypress was about: this\nreuses the platform's own `id` attribute (every element already has one)\nrather than inventing a second, differently-named id-carrying prop --\nconsumers already have the event's `target`/`currentTarget` (and thus\n`.id`), the same reasoning `<lyra-attachment-chip>` documents for its own\nidentically-shaped choice. `lyra-select` therefore carries no detail\npayload at all.\n\n`role=\"button\"` on `[part=\"option\"]` so the item has valid semantics both\nstandalone and when placed in a larger history-list layout. A conversation\nrow activates one current session; it is not itself a listbox option and\ntherefore does not require a particular owner role.\n\n`role=\"button\"` forbids focusable\ndescendants -- verified against axe-core's `nested-interactive` rule,\nwhich flags it. That's why the rename button and the `actions` slot are\nrendered as DOM *siblings* of `[part=\"option\"]` (both inside\n`[part=\"base\"]`) rather than nested inside it: `[part=\"option\"]` only ever\ncontains plain text/`<time>` content. The in-place rename `<input>` is the\nsame problem one level deeper -- it replaces the title *inside*\n`[part=\"option\"]` while renaming -- so `[part=\"option\"]` sheds its\n`role`/`tabindex`/`aria-current`/`aria-label` entirely for the duration\nof an edit. A row mid-edit is a text field, so suspending the button\nsemantics is also the more accurate\ndescription of what's on screen.\n\nInline rename is a dedicated pencil/edit icon button (not a double-click\non the title) -- double-click has no keyboard/screen-reader equivalent\nand would silently swallow the row's own single-click `lyra-select`,\nwhereas a button is independently focusable, has its own accessible name,\nand composes cleanly with click-to-select.",
           "name": "LyraConversationItem",
+          "cssParts": [
+            {
+              "description": "The wrapper around the `actions` slot.",
+              "name": "actions"
+            },
+            {
+              "description": "The outer row wrapper (plain, no ARIA role) laying out `[part=\"option\"]`, the rename button, and `actions`.",
+              "name": "base"
+            },
+            {
+              "description": "Wrapper around the title and excerpt.",
+              "name": "content"
+            },
+            {
+              "description": "The last-message preview snippet. Only rendered when `excerpt` is non-empty.",
+              "name": "excerpt"
+            },
+            {
+              "description": "The selectable region (`role=\"button\"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.",
+              "name": "option"
+            },
+            {
+              "description": "The pencil/edit affordance that starts a rename (only rendered while `editable` and not already renaming).",
+              "name": "rename-button"
+            },
+            {
+              "description": "The formatted `timestamp`, rendered in a `<time>` element. Only rendered when `timestamp` is set and valid.",
+              "name": "timestamp"
+            },
+            {
+              "description": "The title text, shown while not renaming.",
+              "name": "title"
+            },
+            {
+              "description": "The in-place rename `<input>`, shown only while renaming.",
+              "name": "title-input"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Overflow/icon-button controls (for example a pin/delete button or a `lyra-menu` trigger) rendered at the trailing edge of the row.",
+              "name": "actions"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -20640,6 +21760,16 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "An in-place rename was committed (Enter, or blur while editing). `detail: { title }`. Does not mutate `title` itself -- this is a controlled component, the same convention `<lyra-chat-message>` follows by not clearing its own state on retry; the consumer applies the new title once it's actually persisted. Not fired when the trimmed draft is empty or unchanged from the original `title` (that's treated as an implicit cancel).",
+              "name": "lyra-rename"
+            },
+            {
+              "description": "The row was activated: a click on `[part=\"option\"]` (i.e. outside the rename button and the `actions` slot), or Enter/Space while it's focused -- in both cases only while not currently renaming. No detail payload -- see the class doc's \"Identifying which session\" note.",
+              "name": "lyra-select"
+            }
+          ],
           "attributes": [
             {
               "name": "active",
@@ -20739,8 +21869,14 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-copy-button>` — a standalone icon-only copy-to-clipboard affordance for a plain\nsingle/multi-line text value in a layout the consumer controls (e.g. absolutely positioned in\nthe corner of a `wa-textarea` or a read-only output field). Unlike `lyra-code-block`'s or\n`lyra-json-viewer`'s own built-in copy buttons, this takes no positioning opinion of its own and\nhas no code/JSON content model to adopt just to reuse the copy affordance.",
           "name": "LyraCopyButton",
+          "cssParts": [
+            {
+              "description": "The button itself.",
+              "name": "base"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -21001,6 +22137,12 @@
                   }
                 }
               ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired on activation. `detail: { text }` is always `value`, and always fires regardless of whether the actual OS clipboard write succeeded — same convention as `lyra-code-block`'s/`lyra-json-viewer`'s own copy buttons.",
+              "name": "lyra-copy"
             }
           ],
           "attributes": [
@@ -21523,8 +22665,68 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-date-input>` — a date field with an attached calendar popover.\nMirrors the core `<wa-date-input>` API under `lyra-`. Value is ISO 8601\n(`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` in range mode). Form-associated.\n\nThis component uses a single text field; typing accepts ISO or a\nlocale-parseable date.",
           "name": "LyraDateInput",
+          "cssParts": [
+            {
+              "description": "The clear control.",
+              "name": "clear-button"
+            },
+            {
+              "description": "The nested date picker.",
+              "name": "date-picker"
+            },
+            {
+              "description": "The validation message.",
+              "name": "error"
+            },
+            {
+              "description": "The calendar popup toggle.",
+              "name": "expand-button"
+            },
+            {
+              "description": "The calendar icon.",
+              "name": "expand-icon"
+            },
+            {
+              "description": "The outer form-control wrapper.",
+              "name": "form-control"
+            },
+            {
+              "description": "The label wrapper.",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
+            },
+            {
+              "description": "The text input.",
+              "name": "input"
+            },
+            {
+              "description": "The input and button wrapper.",
+              "name": "input-wrapper"
+            },
+            {
+              "description": "The positioned calendar popup.",
+              "name": "popup"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
+            },
+            {
+              "description": "Custom label content.",
+              "name": "label"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -22368,6 +23570,24 @@
               ]
             }
           ],
+          "events": [
+            {
+              "description": "Fired on committed date transitions.",
+              "name": "change"
+            },
+            {
+              "description": "Fired on edits.",
+              "name": "input"
+            },
+            {
+              "description": "The clear button was used.",
+              "name": "lyra-clear"
+            },
+            {
+              "description": "/ lyra-hide - Calendar popover lifecycle.",
+              "name": "lyra-show"
+            }
+          ],
           "attributes": [
             {
               "name": "aria-label",
@@ -22594,8 +23814,82 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-date-picker>` — an inline month-grid calendar for picking a single date\nor a date range. Mirrors the core `<wa-date-picker>` API under `lyra-`.\n\nValue is ISO 8601: `YYYY-MM-DD` (single) or `YYYY-MM-DD/YYYY-MM-DD` (range).",
           "name": "LyraDatePicker",
+          "cssParts": [
+            {
+              "description": "The date-picker wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "A calendar day button.",
+              "name": "day"
+            },
+            {
+              "description": "A day outside the active month.",
+              "name": "day-outside"
+            },
+            {
+              "description": "A non-day grid placeholder.",
+              "name": "day-placeholder"
+            },
+            {
+              "description": "The end of a selected range.",
+              "name": "day-range-end"
+            },
+            {
+              "description": "An interior day in a selected range.",
+              "name": "day-range-inner"
+            },
+            {
+              "description": "The start of a selected range.",
+              "name": "day-range-start"
+            },
+            {
+              "description": "A selected day.",
+              "name": "day-selected"
+            },
+            {
+              "description": "A day representing today.",
+              "name": "day-today"
+            },
+            {
+              "description": "A month date grid.",
+              "name": "grid"
+            },
+            {
+              "description": "The month header.",
+              "name": "header"
+            },
+            {
+              "description": "A visible month wrapper.",
+              "name": "month"
+            },
+            {
+              "description": "The next-month button.",
+              "name": "next"
+            },
+            {
+              "description": "The previous-month button.",
+              "name": "previous"
+            },
+            {
+              "description": "The month title.",
+              "name": "title"
+            },
+            {
+              "description": "A calendar week row.",
+              "name": "week"
+            },
+            {
+              "description": "A weekday label.",
+              "name": "weekday"
+            },
+            {
+              "description": "The weekday header row.",
+              "name": "weekdays"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -23446,6 +24740,16 @@
                 }
               ],
               "description": "The anchor month for a newly-focused date, sliding the view by the\nminimum amount needed to bring it into view. With `months` > 1, a date\nthat's already visible in a later grid must not discard an earlier grid\nthat's already on-screen."
+            }
+          ],
+          "events": [
+            {
+              "description": "The user committed a value.",
+              "name": "change"
+            },
+            {
+              "description": "The value changed during interaction (range: after the first click).",
+              "name": "input"
             }
           ],
           "attributes": [
@@ -24845,8 +26149,44 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-document-preview>` — a format-dispatching viewer for one document/\nattachment, plus the visual state machine for an async server-side\nconversion a host app runs in front of it.\n\nFormat dispatch is intentionally minimal (see this family's scope\nguidance): only `text/*`/`application/json` (plain, scrollable `<pre>` —\nno syntax highlighting; compose `<lyra-code-block>` yourself via the\n`unsupported` slot for that) and `image/*` (a contained `<img>`) render\ninline. Everything else — PDF, office documents, video, audio, or any\nunrecognized MIME type — falls back to a generic \"can't preview this\"\nstate: a file glyph, a short message, and (when `src` is set) a native\n`<a download>` link. This is a deliberate ceiling, not a gap: this\ncomponent ships a dispatch *shell*, not a format registry. The\n`unsupported` slot is the escape hatch for every format left out of the\nbuilt-in three — plug in a PDF.js viewer, an office-doc renderer, a\n`<lyra-code-block>`, or anything else keyed off `mime-type` yourself.\n\n`status=\"converting\"` is a second, independent axis from format dispatch.\nThis component does not know your backend's conversion API shape and\ntherefore owns none of the actual polling/fetch — a host that's converting\na non-natively-previewable format server-side (e.g. .docx → .pdf) polls\nits own backend and updates `status`/`progress`/`src` here as that\nproceeds. This component only *visualizes* that state: an indeterminate\nspinner, or a determinate one once `progress` is supplied. Once the host\nflips `status` to `\"ready\"` (typically alongside a new `src`/`mime-type`\npointing at the converted artifact), normal format dispatch resumes.\n\nThe one piece of async work this component *does* own is fetching a\n`text/*`/`application/json` `src` itself (there's no other way to get a\n`<pre>`'s text content from a URL) — gated behind the same generation-\ncounter guard `<lyra-tool-result-view>`'s `resolve()` uses, so a `src`\nreassigned mid-fetch can't have a stale response clobber a newer one. A\nfailure here (network error, non-2xx response) renders inline via\n`[part=\"error\"]` and fires `lyra-render-error`, independently of the\nhost-owned `status` prop — mirrors `<lyra-markdown>`'s identical stance\nthat a *rendering* failure and a host's own state machine are different\nconcerns.\n\nEvery `src` is validated for the DOM/API sink that consumes it. Text\nfetches and image sources allow relative URLs plus `http:`, `https:`,\n`blob:`, and `data:`. Download links deliberately exclude `data:` because\nfollowing a `data:text/html` URL can create an active document. Unsafe or\nmalformed URLs never reach `fetch()`, an image `src`, or an anchor `href`;\nthey render a non-interactive fallback/error instead.\n\nAccessibility: the `\"converting\"` state (no numeric `progress`) is a\n`role=\"status\"` region wrapping a visually-hidden \"Converting document…\"\nstring. This is a *plain* static region, not routed through\n`<lyra-live-region>`/`Announcer` — like `<lyra-typing-indicator>`'s\nidentical judgement call (see that component's class doc), this only ever\nhas one thing to announce (entering the state), not a rapidly-repeating\nstream of updates, so the coalescing machinery a high-frequency component\nneeds would be pure overhead here. Once real `progress` is available, the\nregion becomes a standard `role=\"progressbar\"` instead, which is\nself-describing via `aria-valuenow` with no extra live-region wiring\nneeded. `status=\"error\"` renders `[part=\"error\"]` as `role=\"alert\"` — an\nassertive, one-shot failure notice, the same native-role shortcut\n`<lyra-live-region>`'s own `mode=\"assertive\"` maps to, without requiring\nthe announcer machinery here either.",
           "name": "LyraDocumentPreview",
+          "cssParts": [
+            {
+              "description": "The root container.",
+              "name": "base"
+            },
+            {
+              "description": "The wrapper around whichever content is currently showing (text/image preview, the generic fallback, the spinner, or the error message).",
+              "name": "body"
+            },
+            {
+              "description": "The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.",
+              "name": "download-link"
+            },
+            {
+              "description": "The error message region (`role=\"alert\"`) — used both for `status=\"error\"` and for a failed text fetch.",
+              "name": "error"
+            },
+            {
+              "description": "The filename text.",
+              "name": "filename"
+            },
+            {
+              "description": "The row above the body, holding `filename`. Hidden entirely when `filename` is unset.",
+              "name": "header"
+            },
+            {
+              "description": "The converting/loading indicator — indeterminate (`role=\"status\"`) or, once numeric progress is known, a determinate `role=\"progressbar\"`. Used both for `status=\"converting\"` and for this component's own in-flight text fetch.",
+              "name": "spinner"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Escape hatch: when populated, its content renders *instead of* the generic download fallback for any `mime-type` this component doesn't natively support (i.e. whenever format dispatch would otherwise fall through to \"generic\"). Ignored while `mime-type` resolves to `text`/`image` dispatch, or while `status` is `\"converting\"`/`\"error\"`.",
+              "name": "unsupported"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -25277,6 +26617,16 @@
                   "text": "TemplateResult"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { src, filename }` — fired when the safe generic-download fallback link is activated. The browser download itself needs no JS (a plain `<a download>` handles it); this is purely for a host that wants to observe/log the download.",
+              "name": "lyra-download"
+            },
+            {
+              "description": "`detail: { error }` — fired when this component's own `text/*`/`application/json` `fetch(src)` fails. Distinct from `status=\"error\"`, which is entirely host-driven (see the class doc).",
+              "name": "lyra-render-error"
             }
           ],
           "attributes": [
@@ -25927,8 +27277,22 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-export-button>` — a CSV/JSON download button, single-format or a\nformat-choice menu. First-party invention; consolidates the ad-hoc\n\"export CSV\" button pattern common across dashboard UIs.",
           "name": "LyraExportButton",
+          "cssParts": [
+            {
+              "description": "The format-choice menu, shown when more than one format is configured.",
+              "name": "menu"
+            },
+            {
+              "description": "A single format option inside the menu.",
+              "name": "menu-item"
+            },
+            {
+              "description": "The button that triggers the export (or opens the format menu).",
+              "name": "trigger"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -26373,6 +27737,16 @@
               "description": "Applies the same `columns` allow-list CSV exports use, so JSON can't leak fields CSV hides."
             }
           ],
+          "events": [
+            {
+              "description": "`detail: { format }`, cancelable — call `preventDefault()` to substitute the built-in client-side download with a server-generated one.",
+              "name": "lyra-export"
+            },
+            {
+              "description": "Fired after a non-cancelled download completes.",
+              "name": "lyra-export-complete"
+            }
+          ],
           "attributes": [
             {
               "name": "disabled",
@@ -26513,8 +27887,28 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-file-input>` — a drag-drop + click-to-browse file dropzone. Emits\nraw `File[]`; parsing (CSV/XLSX/etc.) is left to the host, since that's\nwhere files ultimately get uploaded and processed anyway.",
           "name": "LyraFileInput",
+          "cssParts": [
+            {
+              "description": "The dropzone's root, clickable/focusable container.",
+              "name": "base"
+            },
+            {
+              "description": "The visually-hidden native `<input type=\"file\">`.",
+              "name": "input"
+            },
+            {
+              "description": "The visually-hidden live region announcing drag accept/reject state.",
+              "name": "status"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Custom drop-zone content, overrides the `label` attribute. The accessible name always comes from `label`, so icon-only slot content remains announced correctly.",
+              "name": ""
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -26973,6 +28367,12 @@
                   "text": "string"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { files, rejected }`, fired on drop and manual selection.",
+              "name": "lyra-files"
             }
           ],
           "attributes": [
@@ -28135,8 +29535,30 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-generation-status>` — a compact, ticking status readout shown\nalongside an in-progress AI response: elapsed time, token count, and\ntoken-throughput, plus a built-in Stop button. Renders as e.g.\n`12.3s · 340 tokens · 27 tok/s [Stop]`.\n\nThis is deliberately a *different* concern than the already-landed\n`<lyra-stream-status>`: that component is about transport/connection\nhealth (idle/connecting/streaming/stalled, heartbeat-aware stall\ndetection), while this one is a user-facing metrics readout for a\ngeneration that both components' hosts typically already know is\nhealthily in progress. Neither imports or depends on the other, and a\nconsumer building a full generation UI is expected to compose both side by\nside rather than pick one.\n\n`active` drives an internal ~1s `setInterval` ticker that recomputes the\nelapsed-time display (a plain interval is sufficient here -- unlike\n`<lyra-stream-status>`'s stall timer, this never needs to be armed with a\nprecise deadline, only to refresh a display roughly once a second). The\nelapsed clock's start instant is `started-at` when set (an epoch-ms\ntimestamp -- lets a host that already knows exactly when generation began,\ne.g. from its own request-dispatch timestamp, feed that in directly and\nsurvive this component being created slightly later than that instant);\nwhen `started-at` is unset, this component falls back to capturing\n`Date.now()` itself at the moment `active` flips from `false`/unset to\n`true`, so the ticker still starts from a sensible instant with zero\nrequired host bookkeeping. The ticker is cleared whenever `active` becomes\n`false` and on disconnect; the display is left at whatever it last showed\n(frozen, not reset to zero) -- a static \"Generated in 12.3s\" reads better\nas a completed-state summary than the readout blanking out the instant\ngeneration ends.\n\n`tokens-per-second`, when the host supplies it directly (e.g. from its own\nsmoothed/windowed rate calculation), is always used as-is. When omitted,\nthis component derives a live figure itself from `token-count` divided by\nelapsed seconds -- but only once at least one full second of elapsed time\nhas accumulated, since dividing by a sub-second elapsed window can produce\nwildly-swinging, misleading early readings (e.g. 3 tokens in 40ms reading\nas \"75 tok/s\"). A host that wants a stable figure from the very first tick\nshould supply `tokens-per-second` itself. The tokens segment and the\nthroughput segment are independently optional: either, both, or neither\nmay render depending on what's available, per each property's own doc.\n\nAccessibility: this readout ticks roughly once per second while active,\nwhich is exactly the kind of high-frequency update\n`<lyra-live-region>`/`Announcer` (`../../internal/announcer.js`) exists to\n*prevent* from being read aloud verbatim -- routing a per-second numeric\ntick through even a throttled announcer would still narrate a new number\nto a screen-reader user roughly once every throttle window for as long as\ngeneration runs, which is noise, not information. This component\ntherefore carries no `role=\"status\"`/`aria-live` of its own and never\nannounces anything; a host that wants generation-start/-end announced\nshould pair this with something that announces state *transitions* (e.g.\n`<lyra-typing-indicator>`'s mount-time announcement), not this ticking\nreadout. The one genuinely actionable, infrequent control here -- the Stop\nbutton -- gets a normal, always-present `aria-label`, no different from\nany other icon-only button in this library.",
           "name": "LyraGenerationStatus",
+          "cssParts": [
+            {
+              "description": "The root inline layout container.",
+              "name": "base"
+            },
+            {
+              "description": "The elapsed-time segment, e.g. `\"12.3s\"`. Always rendered (reads `\"0.0s\"` before the component has ever been active).",
+              "name": "elapsed"
+            },
+            {
+              "description": "The built-in Stop button. Only rendered while `show-stop` is true.",
+              "name": "stop-button"
+            },
+            {
+              "description": "The throughput segment, e.g. `\"27 tok/s\"`. Only rendered when a value is available (host-supplied or derived; see the class doc).",
+              "name": "throughput"
+            },
+            {
+              "description": "The token-count segment, e.g. `\"340 tokens\"`. Only rendered when `token-count` is set.",
+              "name": "tokens"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -28476,6 +29898,12 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "The built-in Stop button was clicked. No detail payload.",
+              "name": "lyra-stop"
+            }
+          ],
           "attributes": [
             {
               "name": "active",
@@ -28655,8 +30083,38 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.\nRequires the optional peer deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`\n(lazy-loaded; a consumer who never uses this component pays zero d3 cost).\n\nSet `seed` for a deterministic layout: node initial positions become\nreproducible (keyed by node id) and the settle happens synchronously\ninstead of animating, like `prefers-reduced-motion`. `seed` only takes\neffect on the update that first populates `nodes`/`links` (or a later\nupdate that adds genuinely new node ids) — willUpdate() only reads it from\ninside rebuildSimulation(), which itself only ever assigns x/y to nodes\nthat don't already have a settled position, so changing `seed` on an\nalready-rendered graph is a no-op; nothing re-derives already-positioned\nnodes' x/y from the new value.",
           "name": "LyraGraph",
+          "cssParts": [
+            {
+              "description": "The graph wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "A visually hidden list alternative for graph data.",
+              "name": "data-list"
+            },
+            {
+              "description": "A node label.",
+              "name": "label"
+            },
+            {
+              "description": "A graph link.",
+              "name": "link"
+            },
+            {
+              "description": "The current graph item announcement.",
+              "name": "live-region"
+            },
+            {
+              "description": "A graph node.",
+              "name": "node"
+            },
+            {
+              "description": "The graph SVG.",
+              "name": "svg"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -29295,6 +30753,16 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "`detail: { source, target }`.",
+              "name": "lyra-link-click"
+            },
+            {
+              "description": "`detail: { id }`.",
+              "name": "lyra-node-click"
+            }
+          ],
           "attributes": [
             {
               "name": "charge-strength",
@@ -29670,8 +31138,42 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw\nloop, in one of two `mode`s:\n\n- `\"matrix\"` (default): a `rowLabels` x `colLabels` grid of `values`. `-1`\n  (or any non-finite value) is treated as \"no data\". `scale=\"sqrt\"`\n  compresses the ramp via `sqrtStep()` so one heavy cell doesn't wash out\n  the rest; the default `\"linear\"` scale maps linearly instead.\n- `\"calendar\"`: a GitHub-style Sunday-Saturday (or `firstDayOfWeek`-anchored\n  — see below) x week grid built from `days`. `scale` governs its\n  bucketing too: the default `\"linear\"` buckets by `quartileBucket()`\n  (today's original behavior, unchanged); `\"sqrt\"` instead compresses via\n  the same `sqrtStep()` magnitude compression matrix mode uses, so one\n  heavy day doesn't wash out the rest. As in matrix mode, a cell whose\n  `value` is negative or non-finite is treated as \"no data\" rather than\n  being bucketed — as is a grid position with no matching entry in `days`\n  at all (a gap in a sparse calendar).\n\nThe sequential color ramp's endpoints are read from the\n`--lyra-heatmap-scale-lo`/`-hi` custom properties (declared in\n`heatmap.styles.ts`) so hosts can retheme it — canvas can't consume\n`var()` directly, so they're resolved once per draw via\n`getComputedStyle`, then normalized to RGB by `resolveRgb()` (any valid\nCSS color syntax, not just hex — see its doc comment).\n\nEvery cell is independently addressable: a `pointermove` hit test over the\ncanvas shows `[part=\"tooltip\"]` with that cell's label + value (hidden on\n`pointerleave`); the canvas is `tabindex=\"0\"` with arrow-key roving focus\n(a stroked ring redrawn over the focused cell on every draw, plus a\nvisually-hidden `aria-live=\"polite\"` status announcement — avoids a\nDOM-node-per-cell overlay, which would be hundreds of nodes for a year\ncalendar); and a click, or Enter/Space on the focused cell, fires\n`lyra-cell-click`. `annotations` additionally strokes a ring around\nspecific cells (e.g. to call out an anomaly), each one optionally\nsurfaced in the legend too via `[part=\"legend-annotation\"]`.\n\n`columnX` (calendar mode only) overrides the x-origin computed for each\nweek column — drawing, hit-testing, the focus ring, and month-label\npositioning all consult it consistently, so a consumer can pixel-align a\ncalendar's week columns with a sibling chart's coordinate system. Unset\n(the default) keeps the original evenly-spaced formula. `rowY` is its\ncalendar-mode vertical analogue — overrides the y-origin computed for each\nweekday row, consulted consistently by drawing, hit-testing, and the focus\nring via the private `rowYFor()` helper (mirroring `columnXFor()` exactly).\n\n`firstDayOfWeek` (calendar mode only, default `0`/Sunday, no-op in matrix\nmode) anchors the calendar grid at a different weekday — `0`-`6`, same\nnumbering as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday) —\nthreaded into `buildCalendarGrid()`.\n\n`cellSize`/`fitToWidth` (previously matrix-mode only) also drive calendar\nmode's per-cell size: unset, calendar mode keeps today's original 11px\ncell size unchanged; explicitly set, the same fixed size (or, with\n`fitToWidth`, the same host-width-derived size matrix mode already\nsupports) governs calendar mode's grid too.",
           "name": "LyraHeatmap",
+          "cssParts": [
+            {
+              "description": "The heatmap wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The heatmap canvas.",
+              "name": "canvas"
+            },
+            {
+              "description": "The color legend.",
+              "name": "legend"
+            },
+            {
+              "description": "An annotation label.",
+              "name": "legend-annotation"
+            },
+            {
+              "description": "The high legend endpoint.",
+              "name": "legend-hi"
+            },
+            {
+              "description": "The low legend endpoint.",
+              "name": "legend-lo"
+            },
+            {
+              "description": "The visually hidden keyboard announcement region.",
+              "name": "live-region"
+            },
+            {
+              "description": "The hover tooltip.",
+              "name": "tooltip"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -30995,6 +32497,12 @@
               "description": "Locale-derived weekday-axis labels for the 7 rows drawn down the left of\nthe calendar grid. Only indices 1, 3, and 5 (relative to `firstWeekStart`)\nare filled in — matching today's sparse every-other-day label density —\nthe rest stay blank. `firstWeekStart` is always the UTC\n`firstDayOfWeek`-weekday by construction (see `buildCalendarGrid()`), so\nweekday index 0..6 is a fixed positional mapping relative to it (with the\ndefault `firstDayOfWeek` of 0, that's the original Sun..Sat mapping,\nunchanged); only the label *text* for indices 1/3/5 is derived here, via\n`Intl.DateTimeFormat` on a real UTC date that actually falls on that\nweekday, so it follows the runtime locale instead of a hardcoded English\narray (see `calendarCellText()`'s tooltip text for the same pattern)."
             }
           ],
+          "events": [
+            {
+              "description": "Fired on click, or Enter/Space on the focused/hovered cell. `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode. `cellText` overrides the built-in English \"Row X, Col Y: value\" / \"Mon DD: value\" template used for both the hover tooltip and the keyboard live-region announcement.",
+              "name": "lyra-cell-click"
+            }
+          ],
           "attributes": [
             {
               "name": "bucket-count",
@@ -31263,8 +32771,42 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-json-viewer>` — a collapsible, copyable tree view for an arbitrary\nJSON-serializable value (object/array/string/number/boolean/null/\nundefined). Serves as the fallback renderer wherever a raw payload (tool\ncall arguments, a tool result, an API response) needs inspecting without a\nbespoke view.\n\nExpand/collapse state is keyed by structural path (not by object identity),\nso it survives a `data` reassignment that keeps the same shape -- e.g. a\nstreaming tool result being patched in place.",
           "name": "LyraJsonViewer",
+          "cssParts": [
+            {
+              "description": "The root scroll container; respects `max-height`.",
+              "name": "base"
+            },
+            {
+              "description": "A `{`, `}`, `[`, or `]` delimiter.",
+              "name": "bracket"
+            },
+            {
+              "description": "A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled \"Copy JSON to clipboard\") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. \"Copy age\", so assistive tech can tell rows apart).",
+              "name": "copy-button"
+            },
+            {
+              "description": "An object property key or array index label.",
+              "name": "key"
+            },
+            {
+              "description": "A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).",
+              "name": "toggle"
+            },
+            {
+              "description": "The wrapper around the top-level copy button (only rendered when `copyable`).",
+              "name": "toolbar"
+            },
+            {
+              "description": "The wrapper around the rendered node tree.",
+              "name": "tree"
+            },
+            {
+              "description": "A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, and `data-match` while it matches `search`.",
+              "name": "value"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -31737,6 +33279,12 @@
                   }
                 }
               ]
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` silently failed or is unavailable (insecure context, older browser, stubbed-out test environment), so a consumer can still observe copy *intent*.",
+              "name": "lyra-copy"
             }
           ],
           "attributes": [
@@ -32679,8 +34227,26 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-map>` — a maplibre-gl wrapper with a declarative legend and\nchoropleth GeoJSON layer, plus a raw `map` escape hatch. Requires the\noptional peer dep `maplibre-gl` (consumers also import its CSS once).\n\nThe underlying `maplibregl.Map` — and the WebGL context it opens — isn't\nconstructed until this element is first visible in the viewport (tracked\nvia `IntersectionObserver`), even once the `maplibre-gl` peer dependency\nhas finished loading. Browsers hard-cap concurrent WebGL contexts per\npage, so a grid/dashboard of many `<lyra-map>` instances only constructs\nthe ones actually on-screen instead of racing to exhaust that budget the\ninstant each one mounts. `map` stays `undefined` (and `lyra-map-load`\ndoesn't fire) until construction actually happens.",
           "name": "LyraMap",
+          "cssParts": [
+            {
+              "description": "The map wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The maplibre container.",
+              "name": "container"
+            },
+            {
+              "description": "The map legend.",
+              "name": "legend"
+            },
+            {
+              "description": "A legend color swatch. ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile server, which is not suitable for production traffic — see the `DEFAULT_STYLE` doc comment in `map.ts`. Always pass an explicit `mapStyle` in production.",
+              "name": "legend-swatch"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -33086,6 +34652,16 @@
               "description": "Constructs the underlying `maplibregl.Map` — called once both the\nlazy-loaded `maplibre-gl` module has resolved and this element has been\nobserved intersecting the viewport, whichever settles last. Idempotent\n(a no-op once `_map` already exists), so it's safe to call from both the\n`connectedCallback()` load path and the visibility path in `updated()`\nbelow without risking a double construction."
             }
           ],
+          "events": [
+            {
+              "description": "`detail: { lngLat, feature? }`.",
+              "name": "lyra-map-click"
+            },
+            {
+              "description": "Fired once the underlying maplibregl.Map loads.",
+              "name": "lyra-map-load"
+            }
+          ],
           "attributes": [
             {
               "name": "center",
@@ -33243,8 +34819,38 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-markdown>` — sanitized Markdown-to-HTML rendering (GFM tables,\nfenced code blocks, links, blockquotes) built on the optional peer\ndependencies `marked` (parsing) and `dompurify` (sanitizing), both\nlazy-loaded via `markdown-loader.ts` on first connect.\n\nRendering never ships unsanitized or broken markup silently:\n- If `marked` fails to load, or throws while parsing malformed input, the\n  component falls back to plain text (`white-space: pre-wrap`, no HTML\n  parsing at all) and fires `lyra-render-error`.\n- If `sanitize` is `true` (the default) and `dompurify` fails to load, the\n  component *also* falls back to plain text + `lyra-render-error` — it\n  never renders marked's raw HTML output when sanitization was requested\n  (or defaulted to) but is unavailable, even though `marked` itself loaded\n  fine.\n- If `sanitize` is explicitly `false`, marked's raw output renders as-is\n  regardless of whether `dompurify` is installed — the consumer opted out\n  of sanitization, so `dompurify`'s absence is irrelevant to that path.\n\nThat same plain-text fallback rendering (`data-fallback` on the `content`\npart) is also, unconditionally and by default, a brief *transient* state on\nevery connect, not just a failure path: `connectedCallback()`'s dynamic\n`import()` of `marked`/`dompurify` (see `markdown-loader.ts`) is\nasynchronous, so the very first paint of any `<lyra-markdown>` on a page\nshows plain text for at least one microtask — even when both peers are\nalready installed and load without error — until that import resolves and\na second render replaces it with the real Markdown output. Set\n`eager-load` to skip that window once the shared dependency cache is\nalready warm; see that property's doc for exactly what \"warm\" requires.\n\n`heading`/`code`/`blockquote`/`table`/`link`/`image` tokens are rendered\nthrough a `marked` renderer override that injects `part=\"...\"` attributes\ndirectly into the produced HTML — a single pass, not a second DOM walk\nafter insertion.",
           "name": "LyraMarkdown",
+          "cssParts": [
+            {
+              "description": "Every rendered `<blockquote>`.",
+              "name": "blockquote"
+            },
+            {
+              "description": "Every rendered fenced/indented `<pre>`.",
+              "name": "code-block"
+            },
+            {
+              "description": "The wrapper around the rendered (or plain-text fallback) output.",
+              "name": "content"
+            },
+            {
+              "description": "Every rendered `<h1>`–`<h6>` (shifted by `heading-offset`).",
+              "name": "heading"
+            },
+            {
+              "description": "Every rendered `<img>`.",
+              "name": "img"
+            },
+            {
+              "description": "Every rendered `<a>`.",
+              "name": "link"
+            },
+            {
+              "description": "Every rendered `<table>`.",
+              "name": "table"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -33604,6 +35210,16 @@
                   "text": "void"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired (and the click prevented) when a rendered link's `href` starts with `internal-link-prefix`. `detail: { href: string, internal: true }`. Ordinary external links navigate normally (in `link-target`) and never fire this event.",
+              "name": "lyra-link-click"
+            },
+            {
+              "description": "Fired whenever rendering falls back to plain text. `detail: { error: unknown }`.",
+              "name": "lyra-render-error"
             }
           ],
           "attributes": [
@@ -34334,8 +35950,34 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-mention-popover>` — a caret-anchored, keyboard-navigable popover for\n`@`-mention and `/`-slash-command autocomplete inside a plain-text\n`<textarea>`/`<input>` the host owns (e.g. `<lyra-chat-composer>`'s own\ntextarea, though this component has no dependency on that or any other\nspecific input). It never takes DOM focus itself — the same \"focus stays\nput, `aria-activedescendant` conveys the active row\" pattern\n`<lyra-select>`/`<lyra-combobox>` use for their own listbox — so a host\nmust apply `aria-activedescendant` to its *own* input element, pointing at\nwhatever `activeDescendantId` currently returns.\n\nIntegration contract (entirely the host's responsibility — this component\nnever inspects the text control's value or listens to it directly):\n1. Detect a mention/command trigger (e.g. `@`/`/` at the start of a word)\n   in the host's own `input` handling.\n2. Set `anchor` (the `<textarea>`/`<input>` itself, or any element for\n   plain whole-element anchoring — see \"Positioning\" below), `items`, and\n   `query` (the text typed since the trigger character), then flip\n   `open = true`.\n3. Forward every `keydown` the input receives, while `open`, through\n   `handleKeyDown()` — it returns `true` when it consumed the key (so the\n   host's own handler should stop, e.g. skip submitting the message on an\n   Enter that actually picked a mention) and `false` otherwise.\n4. Set `open = false` whenever the query stops looking like an active\n   mention context (a space typed, the trigger character deleted, the\n   input blurred, …) — `lyra-mention-close` fires automatically from that\n   (see below), there is no separate \"tell it to close\" call needed.\n5. Keep the host's own input's `aria-activedescendant` (and, optionally,\n   `aria-controls`, via `listboxId`) in sync with `activeDescendantId` —\n   this component has no DOM of the host's to attach that to itself.\n\nPositioning: when `anchor` is a plain `<textarea>` or single-line text\n`<input>`, this component measures exactly where the caret currently\npaints (`caretClientRect()`, the standard hidden-mirror-element technique\n— see that function's own doc) and positions against that single point\nwith `internal/positioner.js`'s `place()`, so the popup tracks the caret\nrather than sitting under the whole textarea. Any other `anchor` element\n(or a text control this component fails to measure, e.g. one with\n`display: none`) falls back to `place(anchor, popup)` against the whole\nelement — the same whole-element anchoring `<lyra-combobox>`/\n`<lyra-select>` use for their own popups. Re-measures on every `anchor`/\n`query` change while open (a keystroke moves the caret, so a fresh `query`\nis the proxy for \"the caret may have moved\"); a caret that moves for a\nreason other than typing (e.g. a mouse click elsewhere in the text while\nthe popover happens to still be open) is not separately tracked — the\nhost can force a re-measure by toggling `open` or reassigning `anchor`.\n\nFiltering happens internally against `items` (mirroring `<lyra-combobox>`'s\nfilter-predicate convention via `filter`, rather than requiring the host to\npre-filter): the default predicate is a case-insensitive substring match\nagainst `label`/`description`, overridable via `filter`.\n\nThere is no persisted \"selection\" the way a real listbox has one — a\nmention is either committed (closing the popover) or the popover is\ndismissed with nothing chosen — so `aria-selected=\"true\"` marks whichever\nrow is currently *active* (what Enter/Tab would commit right now), per the\nWAI-ARIA combobox-with-list-autocomplete pattern, rather than tracking a\nseparate persisted value the way `<lyra-combobox>`'s own `aria-selected`\ndoes.",
           "name": "LyraMentionPopover",
+          "cssParts": [
+            {
+              "description": "The \"no matches\" message, shown when `items`/`query` produce zero rows.",
+              "name": "empty"
+            },
+            {
+              "description": "The popover's root element (`role=\"listbox\"`).",
+              "name": "listbox"
+            },
+            {
+              "description": "A candidate row (`role=\"option\"`).",
+              "name": "option"
+            },
+            {
+              "description": "A row's optional secondary line, when `description` is set.",
+              "name": "option-description"
+            },
+            {
+              "description": "A row's leading icon glyph, when `icon` is set.",
+              "name": "option-icon"
+            },
+            {
+              "description": "Wrapper around a row's label/description.",
+              "name": "option-label"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -34825,6 +36467,16 @@
               ]
             }
           ],
+          "events": [
+            {
+              "description": "The popover was dismissed with no selection — Escape, or `open` transitioning to `false` by any other means (a direct host assignment included). Never fires for a close that followed a `lyra-mention-select` commit.",
+              "name": "lyra-mention-close"
+            },
+            {
+              "description": "An item was committed (Enter/Tab/click). `detail: { id, label }`.",
+              "name": "lyra-mention-select"
+            }
+          ],
           "attributes": [
             {
               "name": "empty-text",
@@ -34924,8 +36576,36 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-menu-item>` — a single action row inside `<lyra-menu>`'s default\nslot. Not meaningful on its own (there is no standalone \"click a menu item\"\nuse case) — it exists purely as `<lyra-menu>`'s light-DOM child, the same\nrelationship `<lyra-option>` has to `<lyra-combobox>`/`<lyra-select>`.\n\n`role=\"menuitem\"` and the roving `tabindex` both live on *this host\nelement*, not an internal shadow-DOM button — mirroring `<lyra-tree-node>`'s\nidentical choice (see that class's doc). `<lyra-menu>` is the sole owner of\nthis element's `tabIndex`: it flips exactly one navigable item's `tabIndex`\nto `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and\ncalls `.focus()` directly on this host to move real DOM focus there.\n`[part=\"base\"]` is purely a visual box with no interactive semantics of its\nown — see the class doc on `<lyra-menu>` for why real DOM focus (rather\nthan `aria-activedescendant`) was chosen for this pair.\n\nEnter/Space activation is handled by `<lyra-menu>`'s own delegated\n`keydown` listener calling `select()` on whichever item is currently\nroving-focused (mirrors `<lyra-tree>` calling `current.select()` from its\nown keydown handler) — this element only wires a plain `click` listener\nitself, so `select()` fires identically whether the item was reached by\nmouse or keyboard.\n\n`type=\"checkbox\"` (mirroring `wa-dropdown-item`'s identical `type` option)\nrenders `role=\"menuitemcheckbox\"` in place of `role=\"menuitem\"`, with\n`aria-checked` reflecting `checked` and a checkmark glyph shown once\n`checked` is `true`. Activating a `checkbox`-type item (click, or the\nparent's Enter/Space handling via `select()`) toggles `checked` and fires\n`lyra-menu-item-change` *in addition to* the usual `lyra-menu-item-select`\n— the latter is never suppressed, so a parent `<lyra-menu>` still closes\nand re-fires its consolidated `lyra-menu-select` exactly as it does for a\n`type=\"normal\"` item. `type=\"normal\"` (the default) renders and behaves\nexactly as before this option existed — no role, rendering, or event\ndifferences.",
           "name": "LyraMenuItem",
+          "cssParts": [
+            {
+              "description": "The row (`role` lives on the host — see the class doc).",
+              "name": "base"
+            },
+            {
+              "description": "The checkmark glyph shown when a `type=\"checkbox\"` item is `checked`. Not rendered at all for `type=\"normal\"`.",
+              "name": "checkmark"
+            },
+            {
+              "description": "Wrapper around the `icon` slot. Not rendered at all when the slot is empty.",
+              "name": "icon"
+            },
+            {
+              "description": "Wrapper around the default slot.",
+              "name": "label"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The item's label content.",
+              "name": ""
+            },
+            {
+              "description": "Optional leading icon.",
+              "name": "icon"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -35215,6 +36895,16 @@
               "description": "Fires `lyra-menu-item-select` (no-op while `disabled`). Called by this element's own\nclick handler, and by `<lyra-menu>`'s Enter/Space keydown handling of the active item.\nFor `type=\"checkbox\"`, also toggles `checked` and fires `lyra-menu-item-change` first --\nsee the class doc."
             }
           ],
+          "events": [
+            {
+              "description": "A `type=\"checkbox\"` item was activated and its `checked` state toggled. `detail: { value, checked }` — the item's own `value` and its new `checked` value. Fired in addition to (never instead of) `lyra-menu-item-select` above. Never fired for `type=\"normal\"`.",
+              "name": "lyra-menu-item-change"
+            },
+            {
+              "description": "This item was activated (click, or the parent `<lyra-menu>`'s own Enter/Space handling of the roving-focused item). No detail payload — a listener already has `event.target` (this element) to read `value` off of, and `<lyra-menu>` itself consumes this event to close and re-fire it as its own consolidated `lyra-menu-select` (`detail: { value }`) rather than requiring a consumer to listen on every individual item — listen there instead unless you specifically need a per-item handler.",
+              "name": "lyra-menu-item-select"
+            }
+          ],
           "attributes": [
             {
               "name": "checked",
@@ -35323,8 +37013,32 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-menu>` — an anchored dropdown of `<lyra-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lyra-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lyra-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lyra-tree>`/`<lyra-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lyra-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. Tab\n  closes the menu without trapping focus (the browser's own default Tab\n  behavior proceeds untouched). A printable keypress runs type-ahead:\n  roving focus jumps to the next non-disabled item whose text starts with\n  the accumulated buffer, cycling from just after the active item (mirrors\n  `<lyra-select>`'s identical listbox type-ahead).\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lyra-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\nThe trigger element itself is read from the `trigger` slot's assigned\nelement (first one, if several are assigned) and enhanced imperatively\nwith `aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same\n\"reach into a consumer-owned light-DOM element to complete its a11y\nwiring\" approach `<lyra-dialog>` documents for its own heading detection,\nnecessary here because those attributes belong on the actual interactive\ntrigger, which lives outside this component's own shadow root.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lyra-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lyra-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.",
           "name": "LyraMenu",
+          "cssParts": [
+            {
+              "description": "The `role=\"menu\"` container wrapping the default slot.",
+              "name": "list"
+            },
+            {
+              "description": "The positioned floating panel.",
+              "name": "popup"
+            },
+            {
+              "description": "The wrapper around the `trigger` slot (the positioning anchor).",
+              "name": "trigger"
+            }
+          ],
+          "slots": [
+            {
+              "description": "`<lyra-menu-item>` elements, plus optionally plain `<hr>` dividers between groups (native `<hr>` already carries an implicit `separator` role, matching what `role=\"menu\"` expects between item groups).",
+              "name": ""
+            },
+            {
+              "description": "The consumer's own trigger element (typically an icon button). Clicking it toggles the menu; it's positioned against via `internal/positioner.js`'s `place()`.",
+              "name": "trigger"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -35840,6 +37554,20 @@
               "description": "Standard WAI-ARIA APG menu-button type-ahead: moves the roving focus to\nthe next non-disabled item whose text content starts with the\naccumulated buffer, cycling from just after the currently active item\n-- mirrors `<lyra-select>`'s identical listbox type-ahead."
             }
           ],
+          "events": [
+            {
+              "description": "The menu closed. Same first-render guard as `lyra-show`.",
+              "name": "lyra-hide"
+            },
+            {
+              "description": "A `<lyra-menu-item>` was activated. `detail: { value }` — the consolidated re-fire of that item's own `lyra-menu-item-select` (see `<lyra-menu-item>`'s doc for why listening here, rather than on every item, is the recommended approach). Always followed by the menu closing and focus returning to the trigger.",
+              "name": "lyra-menu-select"
+            },
+            {
+              "description": "The menu opened. Not fired for markup that renders `open` true from the start (mirrors `<lyra-select>`'s identical guard).",
+              "name": "lyra-show"
+            }
+          ],
           "attributes": [
             {
               "name": "label",
@@ -35929,8 +37657,50 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-model-select>` — a provider/model picker that renders as a closed\ndropdown when a fixed `catalog` is available, or as a filterable free-text\ncombobox when it isn't (or when `allow-custom` explicitly permits typing\nsomething outside the catalog). Built directly on the shared\ntrigger-button/aria-activedescendant listbox technique `<lyra-select>` uses\nand the filter-as-you-type suggestion-popup technique `<lyra-combobox>`\nuses — not by composing either element, since the mode switch and the\nstale-value handling below are specific to this control.\n\nA `value` that isn't present in `catalog` (e.g. a model id saved from a\nprovider whose live catalog has since changed) is never silently dropped:\n`effectiveEntries` appends it to the rendered option list as a synthetic,\nvisually-distinct row (dashed border, italic label, \"not in catalog\"\nbadge — see `model-select.styles.ts`) computed fresh from `catalog` +\n`value` on every render, without ever mutating the `catalog` property\nitself.",
           "name": "LyraModelSelect",
+          "cssParts": [
+            {
+              "description": "The text-input container (free-text mode's positioning anchor).",
+              "name": "combobox"
+            },
+            {
+              "description": "The free-text mode's text input.",
+              "name": "combobox-input"
+            },
+            {
+              "description": "The dropdown indicator.",
+              "name": "expand-icon"
+            },
+            {
+              "description": "The `<label>` element (only rendered — and only contributes to the accessible name — once `label` is non-empty).",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The options popover (shared by both modes).",
+              "name": "listbox"
+            },
+            {
+              "description": "An option row.",
+              "name": "option"
+            },
+            {
+              "description": "The \"not in catalog\" badge on a synthetic stale-value row.",
+              "name": "option-badge"
+            },
+            {
+              "description": "An option row's label.",
+              "name": "option-label"
+            },
+            {
+              "description": "The optional leading `provider` label.",
+              "name": "provider-badge"
+            },
+            {
+              "description": "The trigger button (closed-dropdown mode's positioning anchor).",
+              "name": "trigger"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -36759,6 +38529,12 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.",
+              "name": "lyra-change"
+            }
+          ],
           "attributes": [
             {
               "name": "allow-custom",
@@ -37418,8 +39194,22 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-playback>` — steps an index through `[0, length)` on a fixed\ninterval (play/pause), the common building block behind ad-hoc\nplay-timers in time-series dashboards.",
           "name": "LyraPlayback",
+          "cssParts": [
+            {
+              "description": "The playback controls wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The play/pause button.",
+              "name": "play-button"
+            },
+            {
+              "description": "The playback position slider.",
+              "name": "slider"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -37821,6 +39611,20 @@
                 }
               },
               "description": "Toggle between playing and paused."
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when playback stops (including auto-pause).",
+              "name": "lyra-pause"
+            },
+            {
+              "description": "Fired when playback starts.",
+              "name": "lyra-play"
+            },
+            {
+              "description": "`detail: { index }`, fired on every tick and manual step.",
+              "name": "lyra-step"
             }
           ],
           "attributes": [
@@ -39291,8 +41095,72 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-select>` — a plain closed-list dropdown: a direct `<lyra-*>`\ncounterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text\ninput) -- click/Enter/Space/ArrowDown opens it, there's no typing-to-filter.\nA printable keypress instead jumps (or, while closed, directly selects) the\nnext option whose label starts with what's been typed, like a native\n`<select>`'s type-ahead.\n\nOptions are `<lyra-option value>` children, the same element `<lyra-combobox>`\nuses. Unlike `lyra-combobox` this is single-select only, with no filter/\nsource/with-clear/max-options-visible/empty-text/max-render/multiple surface\n-- see `<lyra-combobox>` for the filterable/multi-select case.\n\nReuses `lyra-combobox`'s popup positioning (`internal/positioner.js`) and\nclick-outside/Escape/Home/End/Arrow-key listbox navigation patterns,\nadapted to a trigger button that keeps DOM focus throughout (the listbox's\n\"active\" row is conveyed via `aria-activedescendant`, never actual focus),\nmatching the WAI-ARIA \"select-only combobox\" pattern.\n\nWhen `autoCommitSingleOption` is set and exactly one option is enabled\n(regardless of how many disabled ones exist alongside it), the popup never\nopens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger\ncommits that sole option directly, and the trigger renders as a plain\n`role=\"button\"` with no chevron/`aria-haspopup`/`aria-expanded` rather than\na combobox with a permanently inert popup state — opening a one-row list to\npick the only available choice is pure friction with no real decision\nbehind it. This never changes `value`/validity defaults on its own — an\nunselected single-option select stays unselected (and a `required` one\nstays invalid) exactly like the multi-option case, until the trigger is\nactually activated. `autoCommitSingleOption` defaults to `false`: by\ndefault a select always renders the normal combobox/listbox/chevron\ntrigger no matter how many options are enabled, matching pre-1.3.0\nbehavior — opt in explicitly if a narrowing-to-one option list should\nauto-commit.",
           "name": "LyraSelect",
+          "cssParts": [
+            {
+              "description": "The error message.",
+              "name": "error"
+            },
+            {
+              "description": "The dropdown indicator.",
+              "name": "expand-icon"
+            },
+            {
+              "description": "The outer wrapper around label, trigger, listbox, error and hint.",
+              "name": "form-control"
+            },
+            {
+              "description": "The `<label>` element.",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
+            },
+            {
+              "description": "The options popover.",
+              "name": "listbox"
+            },
+            {
+              "description": "An option row.",
+              "name": "option"
+            },
+            {
+              "description": "An option row's leading status dot (when `dot-color` is set).",
+              "name": "option-dot"
+            },
+            {
+              "description": "An option row's label/sub wrapper.",
+              "name": "option-label"
+            },
+            {
+              "description": "An option row's secondary line (when `sub` is set).",
+              "name": "option-sub"
+            },
+            {
+              "description": "The trigger button (positioning anchor).",
+              "name": "trigger"
+            }
+          ],
+          "slots": [
+            {
+              "description": "`<lyra-option>` elements.",
+              "name": ""
+            },
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
+            },
+            {
+              "description": "Custom label content.",
+              "name": "label"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -40102,6 +41970,24 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "The selection changed.",
+              "name": "change"
+            },
+            {
+              "description": "Fired alongside `change` on every selection change (native `<select>` doesn't meaningfully distinguish the two either).",
+              "name": "input"
+            },
+            {
+              "description": "The listbox closed.",
+              "name": "lyra-hide"
+            },
+            {
+              "description": "The listbox opened.",
+              "name": "lyra-show"
+            }
+          ],
           "attributes": [
             {
               "name": "auto-commit-single-option",
@@ -40620,8 +42506,30 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-slider>` — a numeric range control (e.g. an LLM \"temperature\"\nsetting), form-associated. Mirrors native `<input type=\"range\">`\nsemantics: `value` is the string form-submitted via `FormAssociated`,\n`valueAsNumber` is the ergonomic numeric accessor (mirroring the native\n`<input type=range>` IDL attribute of the same name) kept in sync with it\nin both directions — reads parse `value`, writes stringify back to it.\n\nUnlike the mixin's other consumers, an unset `value` is eagerly defaulted\n— on connect, and again after `form.reset()` — to the midpoint of\n`[min, max]` snapped to `step`, the same \"range sanitization algorithm\"\ndefault a native range input applies. A slider always represents *some*\nnumber, so `required` (inherited from `FormAssociated`) only has a window\nto block submission before that default lands, matching how `required`\nisn't a meaningful constraint on a native range input either.\n\nClicking anywhere on the track (not just the 16px thumb) jumps the thumb\nto that point and continues the same gesture as a drag, matching native\n`<input type=range>` click-to-seek.",
           "name": "LyraSlider",
+          "cssParts": [
+            {
+              "description": "The row wrapping the track and the optional value readout.",
+              "name": "base"
+            },
+            {
+              "description": "The filled portion of the track from `min` up to the current value.",
+              "name": "fill"
+            },
+            {
+              "description": "The draggable handle (`role=\"slider\"`).",
+              "name": "thumb"
+            },
+            {
+              "description": "The full-width background line.",
+              "name": "track"
+            },
+            {
+              "description": "The visible numeric readout, rendered when `show-value` is true.",
+              "name": "value"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -41161,6 +43069,16 @@
                   }
                 }
               ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired once an interaction commits: on pointerup for a drag, or on keyup for a keyboard step — so a single Arrow/Home/End/ PageUp/PageDown press fires both `lyra-input` and `lyra-change`, mirroring how native `<input type=range>` fires `change` on every committed step too. `detail: { value: number }`.",
+              "name": "lyra-change"
+            },
+            {
+              "description": "Fired continuously during an active drag or a keyboard step (including OS key-repeat while a key is held), mirroring native `<input type=range>`'s own `input` event. `detail: { value: number }`.",
+              "name": "lyra-input"
             }
           ],
           "attributes": [
@@ -42505,8 +44423,28 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-split>` — resizable panels for dashboard layouts. Direct light-DOM\nchildren are the panels; a divider is auto-inserted between each pair.\n\nOptionally, one pane can opt in to responsive collapse via `collapse`\n(`\"start\"`/`\"end\"`, default `\"none\"` — no behavior change when unset): as\nthe split's own container narrows past `railBreakpoint` that pane clamps\nto a fixed `railWidth`, and past the narrower `floatBreakpoint` it instead\nbecomes an absolutely-positioned overlay \"floating card\" above the other\npane. This component only handles the width-collapse mechanics and\nsignals the current state — via the `collapseState`-derived\n`data-collapse-state` attribute (set on both the host and the collapsing\npanel itself) and the `lyra-split-collapse-change` event — it renders no\nicon-only/collapsed UI of its own; slotted content is expected to adapt to\nits own clamped width (e.g. via its own container query).\n\n`collapseState` is a public accessor with force/auto semantics mirroring\n`<lyra-app-rail>`'s `mode`: it's normally derived automatically from the\nmeasured container width (via a `ResizeObserver` on `[part=\"base\"]`)\nwhenever it crosses `railBreakpoint`/`floatBreakpoint`, but assigning it a\nconcrete `'wide'`/`'rail'`/`'floating'` value pins it there and stops that\nautomatic tracking — useful for a consumer-driven toggle (e.g. a button\nthat forces `'floating'` regardless of width). Assigning the write-only\n`'auto'` sentinel releases the pin and immediately re-derives the state\nfrom the current measured width, resuming automatic tracking. `'auto'` is\nnever a value this getter returns.\n\nThe `'floating'` state is a hidden-by-default drawer, gated by `open`\n(mirrors `<lyra-app-rail>`'s mobile overlay): while `collapseState` is\n`'floating'` and `open` is `false` (the default), the collapsing panel\nrenders nothing — `hidden`, out of the accessibility tree, not just\nvisually hidden — instead of the always-visible overlay card this state\nrendered before `open` existed. Setting `open = true` reveals it as a\nfocus-trapped floating panel with a `[part=\"backdrop\"]` scrim; Escape or a\nbackdrop click set `open` back to `false`. `open` is preserved (not reset)\nwhile `collapseState` isn't `'floating'`, but no drawer chrome renders\nuntil it is again — except that leaving `'floating'` while `open` is\n`true` (a breakpoint crossing back to `'wide'`/`'rail'`, or a forced\nreassignment) also closes it, the same way `<lyra-app-rail>` closes its\nmobile overlay when leaving `'mobile'` while open.",
           "name": "LyraSplit",
+          "cssParts": [
+            {
+              "description": "The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.",
+              "name": "backdrop"
+            },
+            {
+              "description": "The flex layout wrapper (`position: relative`, so the `'floating'` collapse state can anchor to it).",
+              "name": "base"
+            },
+            {
+              "description": "Each divider between two panels; carries `aria-disabled=\"true\"` and is drag/keyboard-inert while its adjacent panel is collapsed (`'rail'`/`'floating'`).",
+              "name": "divider"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Panels to arrange side by side (or stacked, when `orientation=\"vertical\"`); each direct child becomes one resizable panel.",
+              "name": ""
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -43279,6 +45217,20 @@
                 }
               ],
               "description": "Classifies a measured container width into the collapsing pane's\nresponsive state and, only on an actual transition, applies it (via the\nsame `applyCollapseStateChange()` the accessor's forced-value path\nuses). Gated behind `_forced` so a pinned `collapseState` is never\nsilently overwritten by a subsequent resize — this is also what the\naccessor's `'auto'` release calls (with the current measured width) to\nre-derive the state without duplicating the width-vs-breakpoint logic."
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { sizes }`, fired on every drag step/release and every keyboard step.",
+              "name": "lyra-resize"
+            },
+            {
+              "description": "`detail: { state }` (`SplitCollapseChangeDetail`), fired whenever the responsive `collapseState` actually transitions between `'wide'`/`'rail'`/`'floating'` — whether from a breakpoint crossing or an explicit `collapseState` assignment. Only relevant when `collapse` isn't `\"none\"`; never fires otherwise. Not fired for a redundant reassignment to the state already in effect.",
+              "name": "lyra-split-collapse-change"
+            },
+            {
+              "description": "`detail: SplitConstraintIssueDetail`, fired once when the configured panel minimums/maximums cannot describe a layout that fits the track. The splitter rejects that infeasible set for interaction and falls back to a normalized percent minimum.",
+              "name": "lyra-split-constraints-invalid"
             }
           ],
           "attributes": [
@@ -44074,8 +46026,36 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-stream-status>` — a compact status indicator for a single streaming\nconnection (SSE, WebSocket, long-poll, …), with built-in heartbeat-aware\nstall detection.\n\nThe host drives `phase` directly for `idle`/`connecting`/`streaming`, and\ncalls `recordActivity()` on every *semantic* frame received while\nstreaming — a real content chunk, never a transport-level keep-alive ping.\nThis component has no payload-inspection logic of its own: \"ignore\nheartbeats\" is entirely a call-site discipline — the host simply never\ncalls `recordActivity()` for a ping, so pings never reset the stall timer\nand a connection that's only sending keep-alives (no real content) for\nlonger than `stall-threshold-ms` correctly reads as stalled.\n\nInternally, an inactivity timer runs only while `phase === 'streaming'`.\nIt's (re)armed whenever the phase transitions to `'streaming'` (directly,\nor via `recordActivity()` recovering from `'stalled'`), on every\nsubsequent `recordActivity()` call while already streaming, whenever\n`stall-threshold-ms` itself changes while already streaming (the new\nvalue takes effect immediately, the same way `<lyra-toast-item>`'s\n`duration` re-applies mid-flight, rather than waiting for the next\n`recordActivity()`/phase change), and whenever this element (re)connects\nto the DOM while `phase` is still `'streaming'` (a disconnect always\ndisarms it, so moving the element elsewhere in the page — disconnect then\nreconnect with `phase` unchanged — must resume detection rather than\nsilently disabling it for the rest of the streaming session). It's\ndisarmed the instant `phase` becomes anything else, including a\nhost-driven reassignment away from `'streaming'` — so a stale timer can\nnever fire a stall transition after the host has already moved on. If it\never fires, `phase` becomes `'stalled'` and `lyra-stall` is dispatched.\n\n`phase` remains a fully public, directly settable property at all times —\na host can assign `'stalled'` (or any other phase) itself as a manual\noverride, and this component never fights that assignment. `lyra-stall`/\n`lyra-recover` fire on *any* transition into/out of `'stalled'`\nrespectively, whether timer-driven or host-driven, and never for a\nreassignment to the same value (Lit's default `hasChanged` already skips a\nno-op set, same as every other reflected `@property` in this library).\nLike `<lyra-chat-message>`'s `status`, whatever phase this element happens\nto *mount* with is never itself treated as an eventful transition — only a\nlater change fires an event or an announcement.\n\nAccessibility: phase transitions into/out of `'stalled'` are announced\nthrough an internal `<lyra-live-region>` (see that component for the\nthrottled/coalesced-announcement machinery this composes) rather than a\nhand-rolled `aria-live` region. `recordActivity()` itself never announces\nanything, no matter how often the host calls it — only the *transition*\nannounces, exactly once per transition, which is the entire point of\nrouting through the throttled announcer instead of writing to a live\nregion on every call. Entering `'stalled'` announces with `mode=\"assertive\"`\n(a stall can need the user's attention, e.g. before they give up and\nnavigate away); leaving `'stalled'` always announces with `mode=\"polite\"`\n(good news doesn't need to interrupt), but the *wording* depends on where\nit lands: `\"Connection restored.\"` only when the destination is\n`'streaming'` (a genuine recovery), or a neutral `\"No longer stalled.\"`\nwhen the destination is `'idle'`/`'connecting'` instead — that's the host\ngiving up on the stream, not the stream recovering, and a screen-reader\nuser must never be told the opposite of what a sighted user sees on\nscreen. The decorative indicator dot is `aria-hidden` — it's a\ncolor/motion cue only, never the sole carrier of state.\n\nVisual: `'stalled'` is styled as a warning, not a danger — a stall is\nusually recoverable (the stream may resume on its own, or the host's own\nretry logic may kick in), so treating it as an actionable warning rather\nthan a hard failure keeps the tone proportionate. A host that wants to\nescalate to danger styling after N stalls can scope its own CSS off\n`[phase=\"stalled\"]`, or simply stop rendering this component and show its\nown danger-styled error state instead.",
           "name": "LyraStreamStatus",
+          "cssParts": [
+            {
+              "description": "Wrapper around the `actions` slot.",
+              "name": "actions"
+            },
+            {
+              "description": "The root layout container.",
+              "name": "base"
+            },
+            {
+              "description": "The decorative (`aria-hidden`) status dot.",
+              "name": "indicator"
+            },
+            {
+              "description": "Wrapper around the default slot; only rendered while `phase=\"stalled\"`.",
+              "name": "message"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Custom copy shown only while `phase=\"stalled\"` (e.g. \"Taking longer than usual…\"). A sensible built-in default is used when nothing is slotted.",
+              "name": ""
+            },
+            {
+              "description": "A stop/retry button row. Always present in the template regardless of `phase` — visibility is driven purely by whether anything is slotted, not by `phase`; what to put here, and when, is entirely the host's call.",
+              "name": "actions"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -44441,6 +46421,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired whenever `phase` transitions out of `'stalled'` to anything else (via `recordActivity()`, or a direct host assignment) — fired unconditionally regardless of destination phase, even though the accompanying announcement's wording varies (see the class doc's \"Accessibility\" section).",
+              "name": "lyra-recover"
+            },
+            {
+              "description": "Fired whenever `phase` transitions into `'stalled'` from anything else (timer-driven, or a direct host assignment).",
+              "name": "lyra-stall"
             }
           ],
           "attributes": [
@@ -44955,8 +46945,32 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-switch>` — a boolean toggle-switch form control. Structurally the\nsame idea as a checkbox (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with switch semantics: `role=\"switch\"` +\n`aria-checked` read to assistive tech as an on/off state rather than a\nchecked/unchecked one, and there is no indeterminate state.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin (that mixin's `value` accessor assumes a string —\nsee `<lyra-combobox>` for the same direct-`ElementInternals` shape with a\nnon-string value).",
           "name": "LyraSwitch",
+          "cssParts": [
+            {
+              "description": "The whole interactive control (`role=\"switch\"`); wraps the track and label.",
+              "name": "base"
+            },
+            {
+              "description": "The wrapper around the default slot.",
+              "name": "label"
+            },
+            {
+              "description": "The circular knob that slides across the track.",
+              "name": "thumb"
+            },
+            {
+              "description": "The pill-shaped background.",
+              "name": "track"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Label text, rendered next to the track. Clicking it toggles the switch, the same as clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the control still has an accessible name.",
+              "name": ""
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -45488,6 +47502,12 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "The user toggled the switch (click or Space/Enter). `detail: { checked }`.",
+              "name": "lyra-change"
+            }
+          ],
           "attributes": [
             {
               "name": "checked",
@@ -45587,8 +47607,46 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `columns[].sticky` pins a column's header/cells to the\ninline-start edge while the table scrolls horizontally.",
           "name": "LyraTable",
+          "cssParts": [
+            {
+              "description": "The root wrapper around the `<table>` and its footer controls.",
+              "name": "base"
+            },
+            {
+              "description": "Each body `<td>`.",
+              "name": "cell"
+            },
+            {
+              "description": "The `<thead>` element.",
+              "name": "head"
+            },
+            {
+              "description": "Each `<th>` header cell.",
+              "name": "header-cell"
+            },
+            {
+              "description": "The \"load more\" control, shown when `hasMore` is true.",
+              "name": "more-button"
+            },
+            {
+              "description": "The button that toggles `priority`-hidden columns back into view.",
+              "name": "reveal-columns-button"
+            },
+            {
+              "description": "Each body `<tr>`.",
+              "name": "row"
+            },
+            {
+              "description": "The chevron shown in the active sortable column's header cell.",
+              "name": "sort-icon"
+            },
+            {
+              "description": "The `<table role=\"grid\">` element.",
+              "name": "table"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -46264,6 +48322,24 @@
               "description": "Header cells currently in the tab sequence — excludes columns hidden by\na `priority`-driven `@container` rule (table.styles.ts), so Left/Right/\nHome/End never strand the roving tab stop on a `display: none` cell\nthat `.focus()` would silently no-op on. Scoped to `th` — body `<td>`s\nnow carry the same `data-col-key` attribute (for the sticky-offset\nmeasurement pass) but must never be treated as header cells here."
             }
           ],
+          "events": [
+            {
+              "description": "`columnsHidden` actually changed value (a `priority` column just became hidden/un-hidden by the `@container` rules, or `showAllColumns` force-visible mode was toggled while a `priority` column was hidden). `detail: { hidden: boolean }`.",
+              "name": "lyra-columns-hidden-change"
+            },
+            {
+              "description": "The \"load more\" control was activated.",
+              "name": "lyra-load-more"
+            },
+            {
+              "description": "A row was activated. `detail: { row }`.",
+              "name": "lyra-row-click"
+            },
+            {
+              "description": "A sortable header was activated. `detail: { key }`.",
+              "name": "lyra-sort"
+            }
+          ],
           "attributes": [
             {
               "name": "columns-hidden",
@@ -46416,8 +48492,40 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-tabs>` — a tab strip whose panels are direct light-DOM children,\neach carrying `slot=\"<id>\"` (the panel's stable id) and `label=\"<text>\"`\n(the tab button's text). One named `<slot>` is rendered per distinct\n`slot` name found among the current children — a child with no `label`,\nor a name with no matching child, simply never produces a tab.\n\nA tab button's *visible* content can carry a leading icon without ever\nchanging its *accessible name* (which always stays exactly `label`'s\ntext, nothing else): give a tab an extra direct-child sibling of\n`<lyra-tabs>` carrying `slot=\"<id>-icon\"` (that sibling's own content --\nan inline SVG, an emoji span, a custom icon element, anything -- is\nentirely up to the consumer). It's rendered ahead of the label inside\nthat tab's button, wrapped in an `aria-hidden=\"true\"` part so it's\nexcluded from accessible-name computation no matter what it contains. A\ntab with no matching `<id>-icon` sibling renders no icon wrapper at all,\nso existing text-only tabs are completely unaffected. (A named slot,\nrather than a second attribute holding an icon-name lookup, was chosen\nbecause this library's `internal/icons.ts` is a small closed set of\nchrome glyphs for this library's *own* components, not a public\nname-keyed registry -- a slot lets a consumer supply an arbitrary,\ndomain-specific icon instead of being limited to that internal set.)\n\nImplements the WAI-ARIA APG tabs pattern with automatic activation:\nLeft/Right (swapped under RTL) move focus *and* selection together,\nHome/End jump to the first/last enabled tab, and a roving `tabindex`\nfollows whichever tab is currently selected.",
           "name": "LyraTabs",
+          "cssParts": [
+            {
+              "description": "The root wrapper around the tablist and panels.",
+              "name": "base"
+            },
+            {
+              "description": "A single `role=\"tabpanel\"` wrapper (one per tab, hidden unless active).",
+              "name": "panel"
+            },
+            {
+              "description": "A single tab button.",
+              "name": "tab"
+            },
+            {
+              "description": "The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.",
+              "name": "tab-icon"
+            },
+            {
+              "description": "The `role=\"tablist\"` row of tab buttons.",
+              "name": "tablist"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Direct children with `slot=\"<id>\" label=\"<text>\"` (and optionally `disabled`); one becomes each tab's panel.",
+              "name": ""
+            },
+            {
+              "description": "Optional sibling direct child supplying a tab's leading icon content; excluded from the tab button's accessible name.",
+              "name": "<id>-icon"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -46835,6 +48943,12 @@
                   }
                 }
               ]
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { tabId }`, fired when the active tab changes via click or keyboard.",
+              "name": "lyra-tabs-change"
             }
           ],
           "attributes": [
@@ -47365,8 +49479,38 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated (via a directly-attached `ElementInternals`, mirroring\n`<lyra-combobox>`'s minimal pattern rather than the single-string-value\n`FormAssociated` mixin, which doesn't fit a two-handle range): an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.",
           "name": "LyraTimeRange",
+          "cssParts": [
+            {
+              "description": "The time-range wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The end handle.",
+              "name": "handle-end"
+            },
+            {
+              "description": "The start handle.",
+              "name": "handle-start"
+            },
+            {
+              "description": "A preset button.",
+              "name": "preset-button"
+            },
+            {
+              "description": "The preset controls wrapper.",
+              "name": "presets"
+            },
+            {
+              "description": "The selected range.",
+              "name": "range"
+            },
+            {
+              "description": "The complete range track.",
+              "name": "track"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -47901,6 +50045,16 @@
               ]
             }
           ],
+          "events": [
+            {
+              "description": "Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.",
+              "name": "lyra-change"
+            },
+            {
+              "description": "Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.",
+              "name": "lyra-input"
+            }
+          ],
           "attributes": [
             {
               "name": "disabled",
@@ -48029,8 +50183,40 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-toast-item>` — a single toast notification.\nMirrors the Web Awesome `<wa-toast-item>` API under the `lyra-` prefix.",
           "name": "LyraToastItem",
+          "cssParts": [
+            {
+              "description": "The colored accent bar.",
+              "name": "accent"
+            },
+            {
+              "description": "The dismiss button.",
+              "name": "close-button"
+            },
+            {
+              "description": "The message wrapper.",
+              "name": "content"
+            },
+            {
+              "description": "The icon wrapper.",
+              "name": "icon"
+            },
+            {
+              "description": "The outer container.",
+              "name": "toast-item"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The message content.",
+              "name": ""
+            },
+            {
+              "description": "Optional icon shown at the start.",
+              "name": "icon"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -48457,6 +50643,24 @@
                 }
               ],
               "description": "Wait for the actual CSS transition/animation on the toast surface. The\ncomputed duration is intentionally read at runtime so a consumer's\n`--lyra-toast-show-duration`/`--lyra-toast-hide-duration` override keeps\nlifecycle events and removal in sync with the pixels on screen. A small\ntimeout remains as a safety net for zero-duration transitions, disabled\nanimation, and browsers that do not dispatch an end event."
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired after the hide animation completes (item then removes itself).",
+              "name": "lyra-after-hide"
+            },
+            {
+              "description": "Fired after the show animation completes.",
+              "name": "lyra-after-show"
+            },
+            {
+              "description": "Fired when the item begins hiding.",
+              "name": "lyra-hide"
+            },
+            {
+              "description": "Fired when the item begins showing.",
+              "name": "lyra-show"
             }
           ],
           "attributes": [
@@ -48926,8 +51130,64 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lyra-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lyra-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.",
           "name": "LyraToolApprovalDialog",
+          "cssParts": [
+            {
+              "description": "The built-in Approve button — `disabled` while an in-progress edit is invalid JSON.",
+              "name": "approve-button"
+            },
+            {
+              "description": "The raw-JSON `<textarea>` shown while editing.",
+              "name": "args-editor"
+            },
+            {
+              "description": "The read-only `<lyra-json-viewer>` shown while not editing.",
+              "name": "args-view"
+            },
+            {
+              "description": "The full-viewport scrim behind the panel.",
+              "name": "backdrop"
+            },
+            {
+              "description": "The wrapper around the args view/editor.",
+              "name": "body"
+            },
+            {
+              "description": "The built-in Deny button.",
+              "name": "deny-button"
+            },
+            {
+              "description": "The built-in Edit/Cancel toggle button (only rendered while `editable`).",
+              "name": "edit-button"
+            },
+            {
+              "description": "The inline \"invalid JSON\" message, shown only while editing with unparseable content.",
+              "name": "error"
+            },
+            {
+              "description": "The action row wrapping the `footer` slot and the built-in buttons.",
+              "name": "footer"
+            },
+            {
+              "description": "The wrapper around the heading.",
+              "name": "header"
+            },
+            {
+              "description": "The dialog panel itself (`role=\"dialog\"` while open).",
+              "name": "panel"
+            },
+            {
+              "description": "The `toolName` text within the heading.",
+              "name": "tool-name"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Optional supplementary content (e.g. a \"remember this choice\" checkbox), rendered before the built-in Deny/Edit/Approve buttons.",
+              "name": "footer"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -49300,6 +51560,20 @@
                   "text": "string"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "The call was approved. `detail: { args }` — the current, already-parsed arguments object: the original `args` prop, or (if an edit was in progress) the user's edited-and-validated version. Always followed by `lyra-close` with reason `'approve'`.",
+              "name": "lyra-approve"
+            },
+            {
+              "description": "`detail: ToolApprovalDialogCloseReason`. Fired exactly once per dismissal — via Escape, a backdrop click, the Approve/Deny buttons, or a `close()` call — so there is one consistent \"this dialog is now closed\" signal regardless of which path triggered it.",
+              "name": "lyra-close"
+            },
+            {
+              "description": "The call was denied (no detail). Always followed by `lyra-close` with reason `'deny'`.",
+              "name": "lyra-deny"
             }
           ],
           "attributes": [
@@ -49982,8 +52256,30 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-tool-param-form>` — renders one form control per top-level property\nof a JSON Schema object, for ad hoc tool invocation or approval-editing UIs\n(e.g. \"the agent wants to call `create_event(title, attendees, allDay)` —\nlet the user tweak the arguments before running it\").\n\n**Scope limitation (intentional, not accidental):** this renderer only\nunderstands a *flat* object schema — every `properties` entry must be\n`'string'`, `'number'`, `'integer'`, `'boolean'`, or a string `enum`;\nprimitive `const` is also enforced. Nested objects, arrays,\n`oneOf`/`anyOf`/`allOf`, `$ref`, constraints such as `minLength`/`minimum`,\nand schema-valued `additionalProperties` are not read. A full\nJSON-Schema-to-form renderer is\nout of scope for this component; a property whose `type` isn't one of the\nfour above renders a visible \"Unsupported field type\" note and marks the\nform invalid instead of silently dropping it or throwing.\n\nFields render in `Object.keys(schema.properties)` order (insertion order,\nwhich is reliable for a plain object's string keys). A field's label is\n`title ?? ` the property key; `description` renders as helper text below\nthe control; a key listed in `required` gets a visible `*`. The outer\ncomponent owns validation because JSON Schema `required` means property\npresence, unlike HTML controls' nonempty/must-check semantics.\n\nThis component owns no Submit/Cancel/Approve chrome — a consumer composes\nit inside their own dialog (e.g. a tool-approval dialog) and reads\n`.value`/`.errors`/`checkValidity()` (or calls `reportValidity()` right\nbefore acting, which also reveals any inline errors that user interaction\nhasn't surfaced yet).\n\n`value` is exactly what the consumer last set it to — a field with no\nentry in `value` but a schema `default` displays (and is *emitted*, via\n`lyra-input`) as that default, but the `value` *property* itself is left\nalone until the user actually edits that field. This mirrors an\nuncontrolled `<input placeholder>` not writing to `.value`, and means the\nvery first `lyra-input` a consumer receives already carries every default\nresolved, so round-tripping `e.detail.value` back into `.value` converges\nafter one edit. JSON Schema defines `default` as an annotation; this form\nrenderer deliberately materializes it before validation and submission,\nso a valid default can satisfy `required` here.\n\nOptional native `<form>` participation is implemented via `ElementInternals`\nattached directly (this component's value is a whole object, not a plain\nstring, so the `FormAssociated` string-value mixin doesn't fit — same\nshape as `<lyra-combobox>`'s array-valued case). This is a nice-to-have\nlayered on top of the primary integration contract (`value` +\n`lyra-input`/`lyra-validity-change`), not a requirement: a consumer that\nnever puts this inside a `<form>` loses nothing.",
           "name": "LyraToolParamForm",
+          "cssParts": [
+            {
+              "description": "The outer wrapper around all fields.",
+              "name": "base"
+            },
+            {
+              "description": "A field's helper text, from `schema.description`.",
+              "name": "description"
+            },
+            {
+              "description": "A field-level or form-level validation message.",
+              "name": "error"
+            },
+            {
+              "description": "One property's wrapper (label + control + description + error).",
+              "name": "field"
+            },
+            {
+              "description": "A field's label.",
+              "name": "label"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -50856,6 +53152,16 @@
               "description": "Pushes the already-computed snapshot into `ElementInternals`."
             }
           ],
+          "events": [
+            {
+              "description": "A field's value changed. `detail: { value }` — the full current value object (every property, defaults resolved), not just the field that changed.",
+              "name": "lyra-input"
+            },
+            {
+              "description": "Overall validity or field errors changed. `detail: { valid: boolean; errors: Record<string, string> }`.",
+              "name": "lyra-validity-change"
+            }
+          ],
           "attributes": [
             {
               "name": "disabled",
@@ -51590,8 +53896,14 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-tool-result-view>` — renders a tool call's result via whichever\ncustom renderer a host app has registered for it (see `registerToolRenderer()`\nin `registry.ts`), falling back to `<lyra-json-viewer>` whenever no\nrenderer matches, a candidate renderer's `matches()` predicate throws during\ndispatch, a renderer's optional `load()` rejects, or its `render()` throws.\nThis component owns none of the actual visual weight of a\npopulated tool result — that's entirely whatever the registered renderer\nreturns; this is just the dispatch + fallback + loading-state shell.\n\nDispatch runs against `registry` when set, otherwise against the\nmodule-level default registry `registerToolRenderer()` writes to — see\n`findToolRenderer()`'s two-step (exact name, then shape-based `matches()`)\nlookup order for the full rule.\n\n`fallback` only implements `\"json\"` today (an unconditional\n`<lyra-json-viewer>`) but is still accepted/reflected as an attribute so a\nconsumer's markup that already sets `fallback=\"…\"` for some future value\ndoesn't need to change again once more fallback kinds land.",
           "name": "LyraToolResultView",
+          "cssParts": [
+            {
+              "description": "The root wrapper around the resolved renderer's output (or the loading/fallback view).",
+              "name": "base"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -51919,6 +54231,12 @@
                   "text": "Promise<void>"
                 }
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { toolName, error }` — fired immediately before falling back to `<lyra-json-viewer>`, whether because no renderer matched, a candidate renderer's `matches()` predicate threw during dispatch, a renderer's `load()` rejected, or its `render()` threw.",
+              "name": "lyra-render-error"
             }
           ],
           "attributes": [
@@ -52686,8 +55004,26 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-tree-node>` — internal recursive renderer for `<lyra-tree>`.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lyra-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root as further\n`role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).",
           "name": "LyraTreeNode",
+          "cssParts": [
+            {
+              "description": "The optional node badge.",
+              "name": "badge"
+            },
+            {
+              "description": "The node label.",
+              "name": "label"
+            },
+            {
+              "description": "The tree row.",
+              "name": "row"
+            },
+            {
+              "description": "The expand/collapse button.",
+              "name": "toggle"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -53004,6 +55340,16 @@
                 }
               },
               "description": "Fire this item's primary \"select\" action (Enter/Space, or clicking\nanywhere in the row). Emits *before* calling `.focus()`: `<lyra-tree>`'s\n`onNodeActivate` listener for `lyra-node-select` runs synchronously\n(native `dispatchEvent` is sync) and updates `activeId`, which pushes\n`tabIndex = 0` down onto this node via its own render -- calling\n`.focus()` after that emit, rather than before, means real DOM focus\nlands correctly the very first time a previously-inactive node is\nclicked, not one render late."
+            }
+          ],
+          "events": [
+            {
+              "description": "`detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).",
+              "name": "lyra-node-select"
+            },
+            {
+              "description": "`detail: { id, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).",
+              "name": "lyra-node-toggle"
             }
           ],
           "attributes": [
@@ -53970,8 +56316,26 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-virtual-list>` — a generic windowed/virtualized list host. Renders\nonly the items within the current viewport (plus `overscan` padding rows\non each side) as real DOM, regardless of how large `items` is, so a\nmulti-thousand-row chat history sidebar or long message thread stays cheap\nto scroll.\n\nContent is entirely caller-supplied: `renderItem(item, index)` returns\nwhatever `lit-html` value should represent that row (typically a\n`TemplateResult`), and `keyFunction(item, index)` gives it a stable\nidentity for `repeat()`'s DOM-reconciliation key, so scroll position and\nany per-row state (e.g. an `<audio>` element's playback position) survive\nan `items` mutation instead of every row remounting from scratch.\n\n**Windowing math.** Every row — in both `row-height` modes — is positioned\nby a `transform: translateY(offset)` computed from a single cumulative\n`offsets` array (`offsets[i]` = the pixel top of row `i`), rather than by\npage flow. This is what lets only a small DOM window exist while the\nscrollbar still reflects the *true* total content height:\n- **`row-height=\"auto\"` (default).** Each currently-rendered row is\n  watched by a `ResizeObserver`; its real height lands in a per-key\n  `Map`, and any row not yet measured contributes `DEFAULT_ROW_ESTIMATE_PX`\n  to the offsets array until it has been. `offsets` is *not* the same\n  thing as a page-count-based `padding-top`/`padding-bottom` spacer pair —\n  that approach reflows every unmeasured row's position on every new\n  measurement, which is exactly what per-row transform offsets avoid: only\n  the rows *after* a newly-measured one shift, and even that shift is a\n  cheap style recompute, not a layout-affecting padding change.\n- **Fixed numeric `row-height`.** No measurement needed — `offsets[i]` is\n  just `i * rowHeightPx`, computed by the exact same cumulative-array code\n  path (a dedicated \"single spacer + start-index\" special case was\n  considered and would work too, but reusing one code path for both modes\n  avoids maintaining two parallel rendering strategies for a difference\n  that's otherwise just \"how is row *i*'s height looked up\").\n\nThe `offsets` array is rebuilt only when `items`, `row-height`, or\n`keyFunction` change, or a row's measured height changes -- not on every\nupdate, so a pure scroll-position tick (potentially every rAF while\nscrolling) only re-runs the cheap range/visibility math in\n`computeRange()`, never the `O(n)` offsets rebuild (which, in\n`row-height=\"auto\"` mode, also means a `keyFunction` call per item). For\nthe list sizes this component is meant for (a scrollable history sidebar,\nrealistically hundreds to a few thousand rows) that rebuild is a trivial\n`O(n)` arithmetic loop even when it does run; it is *not* the right\napproach for a hundred-thousand-row list without further work (e.g. a\nFenwick/segment tree for `O(log n)` offset queries+updates), which is out\nof scope here.\n\n**Accessibility.** The scroll container is `role=\"list\"` and each rendered\nrow is `role=\"listitem\"`, deliberately *not* `listbox`/`option` — this\ncomponent only provides windowing, not the roving-tabindex/\n`aria-activedescendant` keyboard-interaction contract ARIA requires\nalongside a real `listbox`. A consumer that wants full single-select\nlistbox semantics on top of this should compose that behavior itself (see\n`<lyra-select>`'s pattern), the same way this component's `active-id`\nonly *scrolls* the matching row into view and marks it `aria-current` —\nit never claims to be a selection widget. `aria-setsize`/`aria-posinset`\nare computed from the row's real index in the full `items` array (not its\nposition among the currently-rendered DOM window), so a screen reader\nstill announces e.g. \"item 12 of 340\" correctly. `[part=\"base\"]` itself\ncarries `tabindex=\"0\"` — `renderItem`'s content is caller-supplied and not\nguaranteed to contain a focusable element, and a scrollable region with no\nfocusable content of its own is otherwise unreachable by keyboard (native\narrow/Page Up/Page Down scrolling included).\n\n**Grouping.** When supplied, `groups` renders a labeled group marker at the\ncorresponding `startIndex`. Group markers are positioned independently of\nthe row window, so they remain available when the first row in a group is\noutside the current overscanned range.",
           "name": "LyraVirtualList",
+          "cssParts": [
+            {
+              "description": "The scrollable container (`role=\"list\"`).",
+              "name": "base"
+            },
+            {
+              "description": "A positioned group label.",
+              "name": "group"
+            },
+            {
+              "description": "One rendered row's absolutely-positioned wrapper (`role=\"listitem\"`); `renderItem`'s return value renders inside it.",
+              "name": "row"
+            },
+            {
+              "description": "The full-content-height inner element that gives the container its true scrollable extent.",
+              "name": "spacer"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -54662,6 +57026,16 @@
               "description": "Keeps the row `ResizeObserver` watching exactly the currently-rendered\nrows in `row-height=\"auto\"` mode -- rows that scroll out of the\nrendered window are unobserved so the observer doesn't accumulate\nreferences to detached elements it can never usefully report on again."
             }
           ],
+          "events": [
+            {
+              "description": "Fired once per approach to the bottom of the list while `has-more` is true and `loading` is false. Deliberately does not refire on every scroll tick while still near the bottom (`loading` gates the in-flight case; scrolling back away from the bottom and returning, or `items` growing enough to move the window away from the end, re-arms it) — a consumer wanting an automatic retry after a failed fetch should surface its own retry affordance rather than relying on this firing again unprompted.",
+              "name": "lyra-load-more"
+            },
+            {
+              "description": "`detail: { start, end }` (see `VirtualListRange`) — the current visible (non-overscanned) item index range, fired only when it actually changes.",
+              "name": "lyra-visible-range-changed"
+            }
+          ],
           "attributes": [
             {
               "name": "active-id",
@@ -54783,8 +57157,60 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-widget>` — a titled panel shell with an optional collapse toggle and\nan optional fullscreen-expand toggle. Fullscreen promotes the same host\nelement in place (a CSS state, not a clone/portal), so slotted content\n(a chart, a running simulation, scroll position) survives the transition.",
           "name": "LyraWidget",
+          "cssParts": [
+            {
+              "description": "The wrapper around the `actions` slot.",
+              "name": "actions"
+            },
+            {
+              "description": "The fullscreen scrim behind the panel. `fullscreen-inset` overrides the default `var(--lyra-space-l)` inset applied to `[part=\"base\"]` and `[part=\"backdrop\"]` while fullscreen (e.g. `\"0 0 0 240px\"` to leave a persistent sidebar visible). `compact` tightens header/body padding — same convention as `lyra-empty`'s `compact`.",
+              "name": "backdrop"
+            },
+            {
+              "description": "The panel root (dialog role + backdrop when fullscreen).",
+              "name": "base"
+            },
+            {
+              "description": "The wrapper around the default slot (the panel body).",
+              "name": "body"
+            },
+            {
+              "description": "The collapse/expand toggle button.",
+              "name": "collapse-button"
+            },
+            {
+              "description": "The fullscreen toggle button.",
+              "name": "fullscreen-button"
+            },
+            {
+              "description": "The header row containing the title, actions, and toggle buttons.",
+              "name": "header"
+            },
+            {
+              "description": "The panel title text.",
+              "name": "label"
+            },
+            {
+              "description": "The panel subtitle text.",
+              "name": "sublabel"
+            },
+            {
+              "description": "The wrapper around the label/sublabel.",
+              "name": "title"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The panel body.",
+              "name": ""
+            },
+            {
+              "description": "Header action controls, rendered before the collapse/expand buttons.",
+              "name": "actions"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -55160,6 +57586,16 @@
               }
             }
           ],
+          "events": [
+            {
+              "description": "`detail: boolean` (the new `collapsed` state).",
+              "name": "lyra-collapse-change"
+            },
+            {
+              "description": "`detail: boolean` (the new `fullscreen` state).",
+              "name": "lyra-fullscreen-change"
+            }
+          ],
           "attributes": [
             {
               "name": "collapsed",
@@ -55397,8 +57833,34 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "",
+          "description": "`<lyra-word-cloud>` — a zero-dependency SVG word/tag cloud. First-party\ninvention (no Web Awesome equivalent). Each word's rendered size is scaled\nfrom its `weight` and placed via an outward Archimedean-spiral search (the\nstandard word-cloud heuristic: heaviest words placed first, each one\nspiraling out from the center until it clears every word already placed).\n\nUnlike sibling `lyra-sparkline`/`lyra-heatmap` (one `role=\"img\"` glyph\nstanding in for an aggregate value), the individual words here are the\nmeaningful interactive content — but with up to `MAX_WORDS` of them, making\nevery single one its own tab stop would be a poor keyboard experience.\nInstead, like `lyra-heatmap`'s cells, the whole `[part=\"svg\"]` is one tab\nstop with roving arrow-key focus (Home/End jump to the first/last word,\nEnter/Space activates the focused one), a drawn `[part=\"focus-ring\"]`, and\na visually-hidden `aria-live=\"polite\"` status announcement. The SVG focus\ntarget carries the group role and accessible name so the semantics follow\nthe element a keyboard user actually focuses.",
           "name": "LyraWordCloud",
+          "cssParts": [
+            {
+              "description": "The word-cloud wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The empty-state message.",
+              "name": "empty"
+            },
+            {
+              "description": "The keyboard focus ring.",
+              "name": "focus-ring"
+            },
+            {
+              "description": "The visually hidden announcement region.",
+              "name": "live-region"
+            },
+            {
+              "description": "The word-cloud SVG.",
+              "name": "svg"
+            },
+            {
+              "description": "A rendered word.",
+              "name": "word"
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -55843,6 +58305,12 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired on click, or Enter/Space on the focused word. `detail: { text, weight, group }`.",
+              "name": "lyra-word-click"
             }
           ],
           "attributes": [

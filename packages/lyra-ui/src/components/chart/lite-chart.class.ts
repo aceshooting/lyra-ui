@@ -88,6 +88,14 @@ interface InteractiveMark {
   value: number;
 }
 
+export interface LyraLiteChartEventMap {
+  'lyra-point-click': CustomEvent<{
+    datasetIndex: number;
+    index: number;
+    label: string | undefined;
+    value: number | null;
+  }>;
+}
 /**
  * `<lyra-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM
  * rendering with zero peer dependencies (unlike `lyra-chart`, which wraps
@@ -148,14 +156,6 @@ interface InteractiveMark {
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden list of all plotted data points.
  */
-export interface LyraLiteChartEventMap {
-  'lyra-point-click': CustomEvent<{
-    datasetIndex: number;
-    index: number;
-    label: string | undefined;
-    value: number | null;
-  }>;
-}
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

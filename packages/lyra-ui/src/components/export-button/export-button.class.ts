@@ -8,6 +8,10 @@ import { styles } from './export-button.styles.js';
 
 export type ExportFormat = 'csv' | 'json';
 
+export interface LyraExportButtonEventMap {
+  'lyra-export': CustomEvent<{ format: ExportFormat }>;
+  'lyra-export-complete': CustomEvent<{ format: ExportFormat }>;
+}
 /**
  * `<lyra-export-button>` — a CSV/JSON download button, single-format or a
  * format-choice menu. First-party invention; consolidates the ad-hoc
@@ -21,10 +25,6 @@ export type ExportFormat = 'csv' | 'json';
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
  */
-export interface LyraExportButtonEventMap {
-  'lyra-export': CustomEvent<{ format: ExportFormat }>;
-  'lyra-export-complete': CustomEvent<{ format: ExportFormat }>;
-}
 export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   static styles = [LyraElement.styles, styles];
 

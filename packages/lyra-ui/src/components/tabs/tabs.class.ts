@@ -18,6 +18,9 @@ interface TabDef {
   hasIcon: boolean;
 }
 
+export interface LyraTabsEventMap {
+  'lyra-tabs-change': CustomEvent<{ tabId: string }>;
+}
 /**
  * `<lyra-tabs>` — a tab strip whose panels are direct light-DOM children,
  * each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"`
@@ -56,9 +59,6 @@ interface TabDef {
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
  */
-export interface LyraTabsEventMap {
-  'lyra-tabs-change': CustomEvent<{ tabId: string }>;
-}
 export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   static styles = [LyraElement.styles, styles];
 

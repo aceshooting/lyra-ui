@@ -4,6 +4,9 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './switch.styles.js';
 
+export interface LyraSwitchEventMap {
+  'lyra-change': CustomEvent<{ checked: boolean }>;
+}
 /**
  * `<lyra-switch>` — a boolean toggle-switch form control. Structurally the
  * same idea as a checkbox (form-associated via `ElementInternals`, click and
@@ -28,9 +31,6 @@ import { styles } from './switch.styles.js';
  * @csspart thumb - The circular knob that slides across the track.
  * @csspart label - The wrapper around the default slot.
  */
-export interface LyraSwitchEventMap {
-  'lyra-change': CustomEvent<{ checked: boolean }>;
-}
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   static styles = [LyraElement.styles, styles];
   static formAssociated = true;

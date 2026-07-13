@@ -28,6 +28,11 @@ function warnInvalidInterval(value: number): void {
   );
 }
 
+export interface LyraPlaybackEventMap {
+  'lyra-play': CustomEvent<undefined>;
+  'lyra-pause': CustomEvent<undefined>;
+  'lyra-step': CustomEvent<{ index: number }>;
+}
 /**
  * `<lyra-playback>` — steps an index through `[0, length)` on a fixed
  * interval (play/pause), the common building block behind ad-hoc
@@ -41,11 +46,6 @@ function warnInvalidInterval(value: number): void {
  * @csspart play-button - The play/pause button.
  * @csspart slider - The playback position slider.
  */
-export interface LyraPlaybackEventMap {
-  'lyra-play': CustomEvent<undefined>;
-  'lyra-pause': CustomEvent<undefined>;
-  'lyra-step': CustomEvent<{ index: number }>;
-}
 export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   static styles = [LyraElement.styles, styles];
 

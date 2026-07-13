@@ -49,6 +49,10 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   toAttribute: normalizeWeekdayFormat,
 };
 
+export interface LyraDatePickerEventMap {
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
+}
 /**
  * `<lyra-date-picker>` — an inline month-grid calendar for picking a single date
  * or a date range. Mirrors the core `<wa-date-picker>` API under `lyra-`.
@@ -77,10 +81,6 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
  * @csspart day-range-inner - An interior day in a selected range.
  * @csspart day-placeholder - A non-day grid placeholder.
  */
-export interface LyraDatePickerEventMap {
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
-}
 export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   static styles = [LyraElement.styles, styles];
 

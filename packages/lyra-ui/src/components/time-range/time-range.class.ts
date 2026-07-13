@@ -49,6 +49,10 @@ export interface TimeRangePreset {
   end: number;
 }
 
+export interface LyraTimeRangeEventMap {
+  'lyra-input': CustomEvent<{ start: number; end: number }>;
+  'lyra-change': CustomEvent<{ start: number; end: number }>;
+}
 /**
  * `<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.
  * Callers map their own time axis to `[min, max]`; no date logic lives here
@@ -77,10 +81,6 @@ export interface TimeRangePreset {
  * @csspart presets - The preset controls wrapper.
  * @csspart preset-button - A preset button.
  */
-export interface LyraTimeRangeEventMap {
-  'lyra-input': CustomEvent<{ start: number; end: number }>;
-  'lyra-change': CustomEvent<{ start: number; end: number }>;
-}
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];

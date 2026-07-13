@@ -88,6 +88,10 @@ function sanitizeNodeColor(color: string | undefined): string | undefined {
   return color != null && !/[;{}]/.test(color) ? color : undefined;
 }
 
+export interface LyraGraphEventMap {
+  'lyra-node-click': CustomEvent<{ id: string }>;
+  'lyra-link-click': CustomEvent<{ source: string; target: string }>;
+}
 /**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
  * Requires the optional peer deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`
@@ -114,10 +118,6 @@ function sanitizeNodeColor(color: string | undefined): string | undefined {
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  */
-export interface LyraGraphEventMap {
-  'lyra-node-click': CustomEvent<{ id: string }>;
-  'lyra-link-click': CustomEvent<{ source: string; target: string }>;
-}
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

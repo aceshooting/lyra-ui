@@ -47,6 +47,9 @@ function checkIcon(): SVGTemplateResult {
   `;
 }
 
+export interface LyraCopyButtonEventMap {
+  'lyra-copy': CustomEvent<{ text: string }>;
+}
 /**
  * `<lyra-copy-button>` — a standalone icon-only copy-to-clipboard affordance for a plain
  * single/multi-line text value in a layout the consumer controls (e.g. absolutely positioned in
@@ -60,9 +63,6 @@ function checkIcon(): SVGTemplateResult {
  *   `lyra-code-block`'s/`lyra-json-viewer`'s own copy buttons.
  * @csspart base - The button itself.
  */
-export interface LyraCopyButtonEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
-}
 export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   static styles = [LyraElement.styles, styles];
 

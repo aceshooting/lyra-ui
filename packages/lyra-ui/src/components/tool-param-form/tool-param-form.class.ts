@@ -48,6 +48,10 @@ export interface ToolParamFormSchema {
 
 const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
 
+export interface LyraToolParamFormEventMap {
+  'lyra-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
+  'lyra-input': CustomEvent<{ value: Record<string, unknown> }>;
+}
 /**
  * `<lyra-tool-param-form>` — renders one form control per top-level property
  * of a JSON Schema object, for ad hoc tool invocation or approval-editing UIs
@@ -109,10 +113,6 @@ const EMPTY_SCHEMA: ToolParamFormSchema = { type: 'object', properties: {} };
  * @csspart description - A field's helper text, from `schema.description`.
  * @csspart error - A field-level or form-level validation message.
  */
-export interface LyraToolParamFormEventMap {
-  'lyra-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
-  'lyra-input': CustomEvent<{ value: Record<string, unknown> }>;
-}
 export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];

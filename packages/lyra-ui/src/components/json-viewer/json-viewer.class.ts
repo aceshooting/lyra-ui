@@ -70,6 +70,9 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
   }
 }
 
+export interface LyraJsonViewerEventMap {
+  'lyra-copy': CustomEvent<{ text: string }>;
+}
 /**
  * `<lyra-json-viewer>` — a collapsible, copyable tree view for an arbitrary
  * JSON-serializable value (object/array/string/number/boolean/null/
@@ -92,9 +95,6 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
  */
-export interface LyraJsonViewerEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
-}
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   static styles = [LyraElement.styles, styles];
 

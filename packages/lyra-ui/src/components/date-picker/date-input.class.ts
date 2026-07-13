@@ -58,6 +58,15 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   toAttribute: normalizeWeekdayFormat,
 };
 
+export interface LyraDateInputEventMap {
+  'lyra-show': CustomEvent<undefined>;
+  'lyra-hide': CustomEvent<undefined>;
+  'lyra-clear': CustomEvent<undefined>;
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
+}
+class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
+
 /**
  * `<lyra-date-input>` — a date field with an attached calendar popover.
  * Mirrors the core `<wa-date-input>` API under `lyra-`. Value is ISO 8601
@@ -86,15 +95,6 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
  * @slot error - Custom error content.
  * @slot hint - Custom hint content.
  */
-export interface LyraDateInputEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-clear': CustomEvent<undefined>;
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
-}
-class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
-
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   static styles = [LyraElement.styles, styles];
 

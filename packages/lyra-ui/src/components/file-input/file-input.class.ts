@@ -12,6 +12,9 @@ export interface RejectedFile {
   reason: 'type' | 'count' | 'size';
 }
 
+export interface LyraFileInputEventMap {
+  'lyra-files': CustomEvent<{ files: File[]; rejected: RejectedFile[] }>;
+}
 /**
  * `<lyra-file-input>` — a drag-drop + click-to-browse file dropzone. Emits
  * raw `File[]`; parsing (CSV/XLSX/etc.) is left to the host, since that's
@@ -26,9 +29,6 @@ export interface RejectedFile {
  * @csspart input - The visually-hidden native `<input type="file">`.
  * @csspart status - The visually-hidden live region announcing drag accept/reject state.
  */
-export interface LyraFileInputEventMap {
-  'lyra-files': CustomEvent<{ files: File[]; rejected: RejectedFile[] }>;
-}
 export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

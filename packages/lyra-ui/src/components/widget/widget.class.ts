@@ -12,6 +12,10 @@ import { nextId } from '../../internal/a11y.js';
 import { chevronIcon, closeIcon, expandIcon } from '../../internal/icons.js';
 import { styles } from './widget.styles.js';
 
+export interface LyraWidgetEventMap {
+  'lyra-collapse-change': CustomEvent<boolean>;
+  'lyra-fullscreen-change': CustomEvent<boolean>;
+}
 /**
  * `<lyra-widget>` — a titled panel shell with an optional collapse toggle and
  * an optional fullscreen-expand toggle. Fullscreen promotes the same host
@@ -38,10 +42,6 @@ import { styles } from './widget.styles.js';
  * and `[part="backdrop"]` while fullscreen (e.g. `"0 0 0 240px"` to leave a persistent sidebar
  * visible). `compact` tightens header/body padding — same convention as `lyra-empty`'s `compact`.
  */
-export interface LyraWidgetEventMap {
-  'lyra-collapse-change': CustomEvent<boolean>;
-  'lyra-fullscreen-change': CustomEvent<boolean>;
-}
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   static styles = [LyraElement.styles, styles];
 

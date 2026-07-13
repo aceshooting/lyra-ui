@@ -101,6 +101,9 @@ const showStopConverter: ComplexAttributeConverter<boolean> = {
   },
 };
 
+export interface LyraGenerationStatusEventMap {
+  'lyra-stop': CustomEvent<undefined>;
+}
 /**
  * `<lyra-generation-status>` — a compact, ticking status readout shown
  * alongside an in-progress AI response: elapsed time, token count, and
@@ -167,9 +170,6 @@ const showStopConverter: ComplexAttributeConverter<boolean> = {
  * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
  * @csspart stop-button - The built-in Stop button. Only rendered while `show-stop` is true.
  */
-export interface LyraGenerationStatusEventMap {
-  'lyra-stop': CustomEvent<undefined>;
-}
 export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventMap> {
   static styles = [LyraElement.styles, styles];
 

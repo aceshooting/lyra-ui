@@ -97,6 +97,13 @@ function sanitizeSwatchColor(color: string): string | undefined {
   return SAFE_SWATCH_COLOR.test(color.trim()) ? color : undefined;
 }
 
+export interface LyraMapEventMap {
+  'lyra-map-load': CustomEvent<undefined>;
+  'lyra-map-click': CustomEvent<{
+    lngLat: [number, number];
+    feature: Feature | undefined;
+  }>;
+}
 /**
  * `<lyra-map>` — a maplibre-gl wrapper with a declarative legend and
  * choropleth GeoJSON layer, plus a raw `map` escape hatch. Requires the
@@ -124,13 +131,6 @@ function sanitizeSwatchColor(color: string): string | undefined {
  * `DEFAULT_STYLE` doc comment in `map.ts`. Always pass an explicit
  * `mapStyle` in production.
  */
-export interface LyraMapEventMap {
-  'lyra-map-load': CustomEvent<undefined>;
-  'lyra-map-click': CustomEvent<{
-    lngLat: [number, number];
-    feature: Feature | undefined;
-  }>;
-}
 export class LyraMap extends LyraElement<LyraMapEventMap> {
   static styles = [LyraElement.styles, styles];
 

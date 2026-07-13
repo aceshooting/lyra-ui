@@ -24,6 +24,9 @@ export type ToolApprovalDialogCloseReason =
   | 'api'
   | (string & Record<never, never>);
 
+export interface LyraToolApprovalDialogEventMap {
+  'lyra-deny': CustomEvent<undefined>;
+}
 /**
  * `<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one
  * proposed tool/function call (`toolName` + `args`) and blocks an agent from
@@ -95,9 +98,6 @@ export type ToolApprovalDialogCloseReason =
  * @csspart edit-button - The built-in Edit/Cancel toggle button (only rendered while `editable`).
  * @csspart approve-button - The built-in Approve button — `disabled` while an in-progress edit is invalid JSON.
  */
-export interface LyraToolApprovalDialogEventMap {
-  'lyra-deny': CustomEvent<undefined>;
-}
 export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEventMap> {
   static styles = [LyraElement.styles, styles];
 

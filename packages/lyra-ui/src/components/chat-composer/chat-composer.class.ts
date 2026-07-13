@@ -47,6 +47,13 @@ function stopIcon(): SVGTemplateResult {
   `;
 }
 
+export interface LyraChatComposerEventMap {
+  'lyra-input': CustomEvent<{ value: string }>;
+  'lyra-stop': CustomEvent<undefined>;
+  'lyra-submit': CustomEvent<{ value: string }>;
+}
+class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
+
 /**
  * `<lyra-chat-composer>` — the message input for a chat/agent conversation
  * surface: an auto-resizing textarea plus a send/stop button. Form-
@@ -100,13 +107,6 @@ function stopIcon(): SVGTemplateResult {
  * @csspart trailing - The wrapper around the `trailing` slot and the built-in `action-button`.
  * @csspart action-button - The built-in send/stop button. Absent from the accessibility tree's meaningful content whenever `trailing` has assigned content. Style its busy treatment via `:host([status='sending'])`/`:host([status='streaming'])`.
  */
-export interface LyraChatComposerEventMap {
-  'lyra-input': CustomEvent<{ value: string }>;
-  'lyra-stop': CustomEvent<undefined>;
-  'lyra-submit': CustomEvent<{ value: string }>;
-}
-class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
-
 export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   static styles = [LyraElement.styles, styles];
 

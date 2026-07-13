@@ -54,6 +54,9 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
   ).format(date);
 }
 
+export interface LyraConversationItemEventMap {
+  'lyra-select': CustomEvent<undefined>;
+}
 /**
  * `<lyra-conversation-item>` — a selectable row representing one chat
  * session in a history sidebar list. Usable standalone or as the
@@ -123,9 +126,6 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element. Only rendered when `timestamp` is set and valid.
  * @csspart actions - The wrapper around the `actions` slot.
  */
-export interface LyraConversationItemEventMap {
-  'lyra-select': CustomEvent<undefined>;
-}
 export class LyraConversationItem extends LyraElement<LyraConversationItemEventMap> {
   static styles = [LyraElement.styles, styles];
 

@@ -22,6 +22,11 @@ export interface ComboboxSourceRow {
 
 export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
 
+export interface LyraComboboxEventMap {
+  'lyra-show': CustomEvent<undefined>;
+  'lyra-hide': CustomEvent<undefined>;
+  'lyra-clear': CustomEvent<undefined>;
+}
 /**
  * `<lyra-combobox>` — a filterable single/multi select that combines a text
  * input with a listbox. Mirrors the core `<wa-combobox>` API under `lyra-`.
@@ -60,11 +65,6 @@ export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  */
-export interface LyraComboboxEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-clear': CustomEvent<undefined>;
-}
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];

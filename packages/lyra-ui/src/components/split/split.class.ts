@@ -73,6 +73,9 @@ export interface SplitResizeDetail {
   sizes: number[];
 }
 
+export interface LyraSplitEventMap {
+  'lyra-resize': CustomEvent<SplitResizeDetail>;
+}
 /**
  * `<lyra-split>` — resizable panels for dashboard layouts. Direct light-DOM
  * children are the panels; a divider is auto-inserted between each pair.
@@ -132,9 +135,6 @@ export interface SplitResizeDetail {
  * @csspart divider - Each divider between two panels; carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed (`'rail'`/`'floating'`).
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  */
-export interface LyraSplitEventMap {
-  'lyra-resize': CustomEvent<SplitResizeDetail>;
-}
 export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   static styles = [LyraElement.styles, styles];
 

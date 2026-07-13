@@ -89,6 +89,10 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
   `;
 }
 
+export interface LyraDocumentPreviewEventMap {
+  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lyra-download': CustomEvent<{ src: string; filename: string }>;
+}
 /**
  * `<lyra-document-preview>` — a format-dispatching viewer for one document/
  * attachment, plus the visual state machine for an async server-side
@@ -172,10 +176,6 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
  * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
  * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
  */
-export interface LyraDocumentPreviewEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-download': CustomEvent<{ src: string; filename: string }>;
-}
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

@@ -32,6 +32,10 @@ function isRealMessageNode(n: Node): boolean {
     : (n.textContent ?? '').trim().length > 0;
 }
 
+export interface LyraStreamStatusEventMap {
+  'lyra-stall': CustomEvent<undefined>;
+  'lyra-recover': CustomEvent<undefined>;
+}
 /**
  * `<lyra-stream-status>` — a compact status indicator for a single streaming
  * connection (SSE, WebSocket, long-poll, …), with built-in heartbeat-aware
@@ -111,10 +115,6 @@ function isRealMessageNode(n: Node): boolean {
  * @csspart message - Wrapper around the default slot; only rendered while `phase="stalled"`.
  * @csspart actions - Wrapper around the `actions` slot.
  */
-export interface LyraStreamStatusEventMap {
-  'lyra-stall': CustomEvent<undefined>;
-  'lyra-recover': CustomEvent<undefined>;
-}
 export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   static styles = [LyraElement.styles, styles];
 

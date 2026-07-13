@@ -20,6 +20,9 @@ type RenderState =
 
 const FALLBACK_STATE: RenderState = { kind: 'fallback' };
 
+export interface LyraToolResultViewEventMap {
+  'lyra-render-error': CustomEvent<{ toolName: string; error: unknown }>;
+}
 /**
  * `<lyra-tool-result-view>` — renders a tool call's result via whichever
  * custom renderer a host app has registered for it (see `registerToolRenderer()`
@@ -47,9 +50,6 @@ const FALLBACK_STATE: RenderState = { kind: 'fallback' };
  * a renderer's `load()` rejected, or its `render()` threw.
  * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback view).
  */
-export interface LyraToolResultViewEventMap {
-  'lyra-render-error': CustomEvent<{ toolName: string; error: unknown }>;
-}
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
   static styles = [LyraElement.styles, styles];
 

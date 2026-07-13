@@ -125,6 +125,9 @@ function caretClientRect(el: TextControl): DOMRect | null {
   );
 }
 
+export interface LyraMentionPopoverEventMap {
+  'lyra-mention-close': CustomEvent<undefined>;
+}
 /**
  * `<lyra-mention-popover>` — a caret-anchored, keyboard-navigable popover for
  * `@`-mention and `/`-slash-command autocomplete inside a plain-text
@@ -238,9 +241,6 @@ function caretClientRect(el: TextControl): DOMRect | null {
  * @csspart option-description - A row's optional secondary line, when `description` is set.
  * @csspart empty - The "no matches" message, shown when `items`/`query` produce zero rows.
  */
-export interface LyraMentionPopoverEventMap {
-  'lyra-mention-close': CustomEvent<undefined>;
-}
 export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> {
   static styles = [LyraElement.styles, styles];
 

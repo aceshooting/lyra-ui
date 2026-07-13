@@ -177,6 +177,13 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
   return mixRgb(resolveRgb(fromColor, FALLBACK_SCALE_LO), resolveRgb(toColor, FALLBACK_SCALE_HI), t);
 }
 
+export type LyraHeatmapCellClickDetail =
+  | { date: string; value: number }
+  | { row: number; col: number; value: number };
+
+export interface LyraHeatmapEventMap {
+  'lyra-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
+}
 /**
  * `<lyra-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
  * loop, in one of two `mode`s:
@@ -248,13 +255,6 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * @csspart legend-hi - The high legend endpoint.
  * @csspart legend-annotation - An annotation label.
  */
-export type LyraHeatmapCellClickDetail =
-  | { date: string; value: number }
-  | { row: number; col: number; value: number };
-
-export interface LyraHeatmapEventMap {
-  'lyra-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
-}
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

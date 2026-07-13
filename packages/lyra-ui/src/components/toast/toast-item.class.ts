@@ -22,6 +22,12 @@ function maxCssTime(value: string): number {
   return Math.max(0, ...value.split(',').map(parseTime).filter(Number.isFinite));
 }
 
+export interface LyraToastItemEventMap {
+  'lyra-show': CustomEvent<undefined>;
+  'lyra-after-show': CustomEvent<undefined>;
+  'lyra-hide': CustomEvent<undefined>;
+  'lyra-after-hide': CustomEvent<undefined>;
+}
 /**
  * `<lyra-toast-item>` — a single toast notification.
  * Mirrors the Web Awesome `<wa-toast-item>` API under the `lyra-` prefix.
@@ -39,12 +45,6 @@ function maxCssTime(value: string): number {
  * @csspart content - The message wrapper.
  * @csspart close-button - The dismiss button.
  */
-export interface LyraToastItemEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-after-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-after-hide': CustomEvent<undefined>;
-}
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   static styles = [LyraElement.styles, styles];
 

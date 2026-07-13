@@ -32,6 +32,12 @@ function decimalPlaces(n: number): number {
   return Math.max(0, mantissaPlaces - Number(exponentText));
 }
 
+export interface LyraSliderEventMap {
+  'lyra-input': CustomEvent<{ value: number }>;
+  'lyra-change': CustomEvent<{ value: number }>;
+}
+class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
+
 /**
  * `<lyra-slider>` — a numeric range control (e.g. an LLM "temperature"
  * setting), form-associated. Mirrors native `<input type="range">`
@@ -67,12 +73,6 @@ function decimalPlaces(n: number): number {
  * @csspart thumb - The draggable handle (`role="slider"`).
  * @csspart value - The visible numeric readout, rendered when `show-value` is true.
  */
-export interface LyraSliderEventMap {
-  'lyra-input': CustomEvent<{ value: number }>;
-  'lyra-change': CustomEvent<{ value: number }>;
-}
-class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
-
 export class LyraSlider extends FormAssociated(LyraSliderBase) {
   static styles = [LyraElement.styles, styles];
 

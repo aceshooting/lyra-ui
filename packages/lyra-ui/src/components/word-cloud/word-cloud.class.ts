@@ -41,6 +41,9 @@ function warnSkippedWords(count: number): void {
   );
 }
 
+export interface LyraWordCloudEventMap {
+  'lyra-word-click': CustomEvent<{ text: string; weight: number; group?: string }>;
+}
 /**
  * `<lyra-word-cloud>` — a zero-dependency SVG word/tag cloud. First-party
  * invention (no Web Awesome equivalent). Each word's rendered size is scaled
@@ -69,9 +72,6 @@ function warnSkippedWords(count: number): void {
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message.
  */
-export interface LyraWordCloudEventMap {
-  'lyra-word-click': CustomEvent<{ text: string; weight: number; group?: string }>;
-}
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

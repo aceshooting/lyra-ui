@@ -73,6 +73,10 @@ const styles = css`
   }
 `;
 
+export interface LyraTreeNodeEventMap {
+  'lyra-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lyra-node-select': CustomEvent<{ id: string }>;
+}
 /**
  * `<lyra-tree-node>` — internal recursive renderer for `<lyra-tree>`.
  *
@@ -92,10 +96,6 @@ const styles = css`
  * @csspart label - The node label.
  * @csspart badge - The optional node badge.
  */
-export interface LyraTreeNodeEventMap {
-  'lyra-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
-  'lyra-node-select': CustomEvent<{ id: string }>;
-}
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   static styles = [LyraElement.styles, styles];
 

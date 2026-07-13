@@ -58,6 +58,12 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
   return null;
 }
 
+export interface LyraTableEventMap<T = unknown> {
+  'lyra-columns-hidden-change': CustomEvent<{ hidden: boolean }>;
+  'lyra-sort': CustomEvent<{ key: string }>;
+  'lyra-row-click': CustomEvent<{ row: T }>;
+  'lyra-load-more': CustomEvent<undefined>;
+}
 /**
  * `<lyra-table>` — a presentational, sort/select-aware data table.
  *
@@ -110,12 +116,6 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
  */
-export interface LyraTableEventMap<T = unknown> {
-  'lyra-columns-hidden-change': CustomEvent<{ hidden: boolean }>;
-  'lyra-sort': CustomEvent<{ key: string }>;
-  'lyra-row-click': CustomEvent<{ row: T }>;
-  'lyra-load-more': CustomEvent<undefined>;
-}
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static styles = [LyraElement.styles, styles];
 

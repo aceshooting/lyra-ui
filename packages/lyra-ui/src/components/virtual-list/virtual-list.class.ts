@@ -57,6 +57,10 @@ function domKeyToken(key: VirtualListKey): string {
   return `${typeof key}:${String(key)}`;
 }
 
+export interface LyraVirtualListEventMap {
+  'lyra-visible-range-changed': CustomEvent<VirtualListRange>;
+  'lyra-load-more': CustomEvent<undefined>;
+}
 /**
  * `<lyra-virtual-list>` — a generic windowed/virtualized list host. Renders
  * only the items within the current viewport (plus `overscan` padding rows
@@ -146,10 +150,6 @@ function domKeyToken(key: VirtualListKey): string {
  * @csspart row - One rendered row's absolutely-positioned wrapper
  *   (`role="listitem"`); `renderItem`'s return value renders inside it.
  */
-export interface LyraVirtualListEventMap {
-  'lyra-visible-range-changed': CustomEvent<VirtualListRange>;
-  'lyra-load-more': CustomEvent<undefined>;
-}
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   static styles = [LyraElement.styles, styles];
 

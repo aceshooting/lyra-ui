@@ -11,6 +11,12 @@ import '../combobox/option.class.js';
 
 export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
+export interface LyraSelectEventMap {
+  'lyra-show': CustomEvent<undefined>;
+  'lyra-hide': CustomEvent<undefined>;
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
+}
 /**
  * `<lyra-select>` — a plain closed-list dropdown: a direct `<lyra-*>`
  * counterpart to `<wa-select>`/`<wa-option>`. Trigger is a button (not a text
@@ -68,12 +74,6 @@ export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
  * @csspart error - The error message.
  * @csspart hint - The hint message.
  */
-export interface LyraSelectEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
-}
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];

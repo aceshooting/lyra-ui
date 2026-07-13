@@ -48,6 +48,9 @@ function indeterminateGlyph(): SVGTemplateResult {
   `;
 }
 
+export interface LyraCheckboxEventMap {
+  'lyra-change': CustomEvent<{ checked: boolean }>;
+}
 /**
  * `<lyra-checkbox>` — a boolean form control. Structurally the same idea as
  * `<lyra-switch>` (form-associated via `ElementInternals`, click and
@@ -72,9 +75,6 @@ function indeterminateGlyph(): SVGTemplateResult {
  * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
  * @csspart label - The wrapper around the default slot.
  */
-export interface LyraCheckboxEventMap {
-  'lyra-change': CustomEvent<{ checked: boolean }>;
-}
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   static styles = [LyraElement.styles, styles];
   static formAssociated = true;

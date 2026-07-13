@@ -38,6 +38,10 @@ function checkmarkGlyph(): SVGTemplateResult {
   `;
 }
 
+export interface LyraMenuItemEventMap {
+  'lyra-menu-item-state-change': CustomEvent<{ disabled: boolean; hidden: boolean }>;
+  'lyra-menu-item-select': CustomEvent<undefined>;
+}
 /**
  * `<lyra-menu-item>` — a single action row inside `<lyra-menu>`'s default
  * slot. Not meaningful on its own (there is no standalone "click a menu item"
@@ -93,10 +97,6 @@ function checkmarkGlyph(): SVGTemplateResult {
  * @csspart label - Wrapper around the default slot.
  * @csspart checkmark - The checkmark glyph shown when a `type="checkbox"` item is `checked`. Not rendered at all for `type="normal"`.
  */
-export interface LyraMenuItemEventMap {
-  'lyra-menu-item-state-change': CustomEvent<{ disabled: boolean; hidden: boolean }>;
-  'lyra-menu-item-select': CustomEvent<undefined>;
-}
 export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   static styles = [LyraElement.styles, styles];
 

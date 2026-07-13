@@ -106,6 +106,15 @@ function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unk
   return result as T;
 }
 
+export interface LyraChartEventMap {
+  'lyra-point-click': CustomEvent<{
+    datasetIndex: number;
+    index: number;
+    label: string | undefined;
+    value: unknown;
+  }>;
+  'lyra-zoom': CustomEvent<{ zoomed: boolean }>;
+}
 /**
  * `<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag
  * subclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.
@@ -138,15 +147,6 @@ function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unk
  * @csspart data-table - The optional generated or slotted data table.
  * @slot data-table - An optional consumer-provided accessible table alternative.
  */
-export interface LyraChartEventMap {
-  'lyra-point-click': CustomEvent<{
-    datasetIndex: number;
-    index: number;
-    label: string | undefined;
-    value: unknown;
-  }>;
-  'lyra-zoom': CustomEvent<{ zoomed: boolean }>;
-}
 export class LyraChart extends LyraElement<LyraChartEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

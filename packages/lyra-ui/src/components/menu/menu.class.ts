@@ -13,6 +13,11 @@ export interface MenuSelectDetail {
   value: string;
 }
 
+export interface LyraMenuEventMap {
+  'lyra-show': CustomEvent<undefined>;
+  'lyra-hide': CustomEvent<undefined>;
+  'lyra-menu-select': CustomEvent<MenuSelectDetail>;
+}
 /**
  * `<lyra-menu>` — an anchored dropdown of `<lyra-menu-item>` actions, opened
  * from a consumer-supplied trigger (typically an icon button). A close, drop-
@@ -95,11 +100,6 @@ export interface MenuSelectDetail {
  * @csspart popup - The positioned floating panel.
  * @csspart list - The `role="menu"` container wrapping the default slot.
  */
-export interface LyraMenuEventMap {
-  'lyra-show': CustomEvent<undefined>;
-  'lyra-hide': CustomEvent<undefined>;
-  'lyra-menu-select': CustomEvent<MenuSelectDetail>;
-}
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   static styles = [LyraElement.styles, styles];
 

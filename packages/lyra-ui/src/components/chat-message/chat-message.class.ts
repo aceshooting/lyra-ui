@@ -51,6 +51,9 @@ const STATUS_TEXT: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
   failed: 'Failed to send',
 };
 
+export interface LyraChatMessageEventMap {
+  'lyra-retry': CustomEvent<undefined>;
+}
 /**
  * `<lyra-chat-message>` — a role-based message bubble *shell* for a chat/
  * agent conversation surface. It renders none of the message content itself:
@@ -111,9 +114,6 @@ const STATUS_TEXT: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
  * @csspart actions - The wrapper around the `actions` slot.
  */
-export interface LyraChatMessageEventMap {
-  'lyra-retry': CustomEvent<undefined>;
-}
 export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   static styles = [LyraElement.styles, styles];
 

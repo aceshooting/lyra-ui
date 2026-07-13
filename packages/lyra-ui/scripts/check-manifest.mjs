@@ -26,12 +26,26 @@ function namesFromTemplates(source) {
       if (name) names.add(name);
     }
   }
+  // A part built up dynamically (e.g. `const parts = ['day']; if (x) parts.push('day-today'); ...
+  // part=${parts.join(' ')}`) never appears as a static part="..." literal above -- pick up both
+  // its initial array-literal names and its pushed string-literal names, so this check doesn't
+  // false-positive on that pattern (see <lyra-date-picker>'s calendar-day parts).
+  for (const match of source.matchAll(/\bparts\s*=\s*\[([^\]]*)\]/g)) {
+    for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
+  }
+  for (const match of source.matchAll(/\bparts\.push\(\s*["']([^"']+)["']\s*\)/g)) {
+    names.add(match[1]);
+  }
   return names;
 }
 
 const sourceByModule = new Map();
 for (const file of walk(sourceDir).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.stories.ts'))) {
-  const modulePath = `src/${path.relative(sourceDir, file).replaceAll(path.sep, '/')}`;
+  // Relative to packageDir (not sourceDir) so this matches the manifest's own module.path
+  // convention exactly (e.g. "src/components/chart/chart.class.ts") -- a prior sourceDir-relative
+  // computation silently produced "src/chart/chart.class.ts" here, which never matched any real
+  // module.path, making every lookup below a permanent miss.
+  const modulePath = path.relative(packageDir, file).replaceAll(path.sep, '/');
   sourceByModule.set(modulePath, fs.readFileSync(file, 'utf8'));
 }
 

@@ -86,6 +86,9 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
   camera: { icon: cameraIcon, triggerLabel: 'Use camera', menuLabel: 'Take a photo' },
 };
 
+export interface LyraAttachmentTriggerEventMap {
+  'lyra-camera-request': CustomEvent<undefined>;
+}
 /**
  * `<lyra-attachment-trigger>` — a compact attach affordance designed for a
  * chat composer's leading slot (see `<lyra-chat-composer>`'s own `leading`
@@ -133,9 +136,6 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
  * `aria-label` (i18n) — see that property's own doc for exactly what it
  * does and doesn't affect.
  */
-export interface LyraAttachmentTriggerEventMap {
-  'lyra-camera-request': CustomEvent<undefined>;
-}
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
   static styles = [LyraElement.styles, styles];
 

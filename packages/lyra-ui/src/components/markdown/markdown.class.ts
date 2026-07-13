@@ -37,6 +37,10 @@ function cleanHref(href: string): string | null {
   }
 }
 
+export interface LyraMarkdownEventMap {
+  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lyra-link-click': CustomEvent<{ href: string; internal: boolean }>;
+}
 /**
  * `<lyra-markdown>` — sanitized Markdown-to-HTML rendering (GFM tables,
  * fenced code blocks, links, blockquotes) built on the optional peer
@@ -89,10 +93,6 @@ function cleanHref(href: string): string | null {
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  */
-export interface LyraMarkdownEventMap {
-  'lyra-render-error': CustomEvent<{ error: unknown }>;
-  'lyra-link-click': CustomEvent<{ href: string; internal: boolean }>;
-}
 export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
   static styles = [LyraElement.styles, styles];
 

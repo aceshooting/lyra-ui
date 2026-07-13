@@ -43,6 +43,9 @@ const partTransformer = {
   },
 };
 
+export interface LyraCodeBlockEventMap {
+  'lyra-copy': CustomEvent<{ text: string }>;
+}
 /**
  * `<lyra-code-block>` — fenced code display with optional lazy syntax
  * highlighting and a copy button. No highlighting grammar ships in this
@@ -108,9 +111,6 @@ const partTransformer = {
  *   this component's own plain one in the fallback path.
  * @csspart code - The rendered `<code>`, same split as `pre` above.
  */
-export interface LyraCodeBlockEventMap {
-  'lyra-copy': CustomEvent<{ text: string }>;
-}
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   static styles = [LyraElement.styles, styles];
 

@@ -24,6 +24,9 @@ interface DisplayEntry extends LyraModelCatalogEntry {
   synthetic: boolean;
 }
 
+export interface LyraModelSelectEventMap {
+  'lyra-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+}
 /**
  * `<lyra-model-select>` — a provider/model picker that renders as a closed
  * dropdown when a fixed `catalog` is available, or as a filterable free-text
@@ -56,9 +59,6 @@ interface DisplayEntry extends LyraModelCatalogEntry {
  * @csspart option-badge - The "not in catalog" badge on a synthetic stale-value row.
  * @csspart expand-icon - The dropdown indicator.
  */
-export interface LyraModelSelectEventMap {
-  'lyra-change': CustomEvent<{ value: string; inCatalog: boolean }>;
-}
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static formAssociated = true;
   static styles = [LyraElement.styles, styles];
