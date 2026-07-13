@@ -45,3 +45,25 @@ it('reflects active as a host attribute', async () => {
   await el.updateComplete;
   expect(el.hasAttribute('active')).to.be.false;
 });
+
+describe('active', () => {
+  it('reflects aria-current="page" onto [part=base] when true', async () => {
+    const el = (await fixture(html`<lyra-app-rail-item href="/inbox" active>Inbox</lyra-app-rail-item>`)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-current')).to.equal('page');
+  });
+
+  it('defaults to false and omits aria-current entirely', async () => {
+    const el = (await fixture(html`<lyra-app-rail-item href="/inbox">Inbox</lyra-app-rail-item>`)) as LyraAppRailItem;
+    expect(el.active).to.be.false;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-current')).to.be.false;
+  });
+
+  it('reflects on the button-rendering path too (no href)', async () => {
+    const el = (await fixture(html`<lyra-app-rail-item active>Settings</lyra-app-rail-item>`)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.tagName).to.equal('BUTTON');
+    expect(base.getAttribute('aria-current')).to.equal('page');
+  });
+});
