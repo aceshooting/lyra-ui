@@ -488,6 +488,46 @@ describe('compact', () => {
     const el = (await fixture(html`<lyra-attachment-chip compact name="a.png"></lyra-attachment-chip>`)) as LyraAttachmentChip;
     expect(el.hasAttribute('compact')).to.be.true;
   });
+
+  it('also shrinks font-size and gap in compact mode via themeable custom properties', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip compact name="a.png"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const nonCompact = (await fixture(html`<lyra-attachment-chip name="a.png"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    const nonCompactBase = nonCompact.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const compactSize = parseFloat(getComputedStyle(base).fontSize);
+    const nonCompactSize = parseFloat(getComputedStyle(nonCompactBase).fontSize);
+    expect(compactSize).to.be.lessThan(nonCompactSize);
+    const compactGap = getComputedStyle(base).gap;
+    const nonCompactGap = getComputedStyle(nonCompactBase).gap;
+    expect(compactGap).to.not.equal(nonCompactGap);
+  });
+});
+
+describe('thumbnailOnly', () => {
+  it('hides [part=meta] for an image chip when both compact and thumbnailOnly are set', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip compact thumbnail-only name="a.png" mime-type="image/png"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(getComputedStyle(meta).display).to.equal('none');
+  });
+
+  it('leaves [part=meta] visible for a non-image chip even when thumbnailOnly is set', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip compact thumbnail-only name="a.pdf" mime-type="application/pdf"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(getComputedStyle(meta).display).to.not.equal('none');
+  });
+
+  it('defaults to false, unchanged visual chrome even in compact mode', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip compact name="a.png" mime-type="image/png"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.thumbnailOnly).to.be.false;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(getComputedStyle(meta).display).to.not.equal('none');
+  });
 });
 
 it('is accessible in the default (empty) state', async () => {

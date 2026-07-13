@@ -19,16 +19,23 @@ export const styles = css`
        fallback chain), so a consumer can retheme just the compact thumbnail
        independent of every other icon-button-sized control. */
     --lyra-attachment-chip-compact-thumbnail-size: var(--lyra-size-1-75rem);
+    --lyra-attachment-chip-compact-font-size: var(--lyra-font-size-xs);
+    --lyra-attachment-chip-compact-gap: var(--lyra-size-0-25rem);
   }
 
   :host([compact]) [part='base'] {
     border: none;
     border-radius: var(--lyra-radius-pill);
     padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
+    font-size: var(--lyra-attachment-chip-compact-font-size);
+    gap: var(--lyra-attachment-chip-compact-gap);
   }
   :host([compact]) [part='thumbnail'] {
     inline-size: var(--lyra-attachment-chip-compact-thumbnail-size);
     block-size: var(--lyra-attachment-chip-compact-thumbnail-size);
+  }
+  :host([compact][thumbnail-only][mime-type^='image/']) [part='meta'] {
+    display: none;
   }
 
   :host([status='uploading']) {
