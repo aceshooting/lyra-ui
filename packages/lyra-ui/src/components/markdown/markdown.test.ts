@@ -92,6 +92,25 @@ it('renders unsanitized raw HTML when sanitize is explicitly false', async () =>
   expect(img.getAttribute('onerror')).to.equal('window.__lyraMarkdownXssOptOut = true');
 });
 
+it('renders embedded raw HTML as visible escaped text when escapeHtml is set, instead of real elements', async () => {
+  const el = (await fixture(html`<lyra-markdown escape-html></lyra-markdown>`)) as LyraMarkdown;
+  el.content = 'hi <img src="x" onerror="window.__lyraMarkdownEscapeTest = true">';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+  expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.include('<img src="x" onerror="window.__lyraMarkdownEscapeTest = true">');
+  expect((window as unknown as { __lyraMarkdownEscapeTest?: boolean }).__lyraMarkdownEscapeTest).to.be.undefined;
+});
+
+it('defaults to false, preserving today\'s exact raw-HTML passthrough (sanitized) behavior', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  expect(el.escapeHtml).to.be.false;
+  el.content = 'hi <em>there</em>';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('em') !== null);
+  expect(el.shadowRoot!.querySelector('em')!.textContent).to.equal('there');
+});
+
 it('applies link-target and forces rel="noopener noreferrer" on every rendered link, surviving sanitization', async () => {
   const el = (await fixture(html`<lyra-markdown link-target="_self"></lyra-markdown>`)) as LyraMarkdown;
   el.content = '[docs](https://example.com/docs)';
