@@ -1,5 +1,64 @@
 # Changelog
 
+## 2.4.0
+
+### Minor Changes
+
+- 171bdbd: `lyra-attachment-chip`'s file-size unit abbreviations ("B"/"KB"/"MB"/"GB"/"TB") now route through
+  `this.localize()` when rendered, overridable via `.strings`/`registerLyraLocale()`. The exported
+  `formatFileSize()` pure function gains an optional `unitLabel` resolver parameter, defaulting to the
+  plain English abbreviation — every existing single-argument call is unaffected.
+- 5f043ba: `lyra-chart`'s data-table "Category" column header, per-row "Point N" fallback label, and "Reset
+  zoom" button text now route through `this.localize()`, overridable via `.strings`/
+  `registerLyraLocale()`. Default English text is unchanged.
+- 5e90140: `lyra-chat-composer`'s action button labels ("Send message"/"Stop generating") now route through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Also adds `stoppable: boolean =
+true` — when set to `false`, the button never renders as a Stop/cancel control while busy; it stays a
+  disabled Send button instead, for backends with no cancellation endpoint. Default behavior is
+  unchanged.
+- 558e76c: `lyra-chat-message`'s visible status text ("Sending…"/"Responding…"/"Failed to send") and its two
+  live-region status-change announcements ("Message failed to send."/"Message complete.") now route
+  through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English text is
+  unchanged.
+- 238c8d7: `lyra-chip-group`'s collapsed overflow-indicator's visible "+N" text now routes through
+  `this.localize('showMoreCollapsed', ...)`, matching the aria-label it sits beside, which was already
+  localized. Default English output ("+N") is unchanged.
+- 0d9018f: `lyra-code-block`'s collapse-toggle, copy-button, and code-region aria-labels now route entirely
+  through `this.localize()` instead of concatenating a localized verb with a hardcoded English suffix
+  ("code"/"to clipboard"/"Code"). Default English output is unchanged.
+- a249bd6: `lyra-diff-view`'s copy-button aria-label now routes entirely through `this.localize('copyDiff', ...)`
+  instead of concatenating the localized "copy" verb with a hardcoded " diff" suffix. Default English
+  output ("Copy diff") is unchanged.
+- 58c6e59: `lyra-file-input`'s drag-preview live-region announcements ("Release to add the file." / "This file
+  type is not accepted.") now route through `this.localize()`, overridable via `.strings`/
+  `registerLyraLocale()`. Default English text is unchanged. The post-drop `acceptedMessage`/
+  `rejectedMessage` properties and the visible `label` property are unaffected (already
+  consumer-overridable).
+- b3e3bb6: `lyra-json-viewer`'s root-node toggle/copy fallback words ("array"/"object"/"value", used only when a
+  node has no key label) now route through `this.localize()`, overridable via `.strings`/
+  `registerLyraLocale()`. Default English text is unchanged.
+- b322e75: `lyra-model-select`'s synthetic stale-value row badge ("not in catalog") now routes through
+  `this.localize('notInCatalog')`, so it can be overridden via `.strings`/`registerLyraLocale()` like
+  the component's other built-in message (`noMatches`). Default English text is unchanged.
+- e54eeee: `lyra-source-card`'s "Untitled source" fallback and its " — p. N" page-suffix format now route
+  through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English output
+  is unchanged.
+- 0576643: `lyra-split` now redistributes the track space freed when a `panelConstraints` pixel bound clamps a
+  panel's percentage basis down (e.g. a `maxPx` cap on a wide viewport) to sibling panels that have no
+  pixel constraint of their own, instead of leaving that space unused. No behavior change for splits
+  without `panelConstraints`, or where no panel is actually clamped this render.
+- 97756af: `lyra-table`'s `columns[].sticky` option now accepts `'start' | 'end'` in addition to the legacy
+  `boolean` (`true` continues to mean `'start'`, unchanged). An `'end'`-sticky column pins to the
+  inline-end edge instead — useful for a trailing actions column that would otherwise be pushed off
+  a narrow viewport — via the same `inset-inline-*` logical-property approach, so RTL is unaffected.
+- ffee803: `lyra-tool-result-dialog`'s tool-name fallback ("Tool call"), visible status label
+  ("Pending"/"Running"/"Success"/"Error"/"Denied"), and maximize/restore button aria-label now route
+  through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English output
+  is unchanged.
+- f9f57f9: `lyra-word-cloud`'s default aria-label's pluralized "word"/"words" noun now routes through
+  `this.localize()` too, so a registered translation of the `wordCloud` template's `{word}` slot is no
+  longer stuck in English. Default output is unchanged.
+
 ## 2.3.0
 
 ### Minor Changes
