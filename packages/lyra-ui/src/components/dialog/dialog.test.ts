@@ -313,6 +313,89 @@ it('re-detects a heading added after the initial render via slotchange', async (
   expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
 });
 
+it('renders a visible header with the heading text and uses it for aria-labelledby when no heading is slotted', async () => {
+  const el = (await fixture(html`<lyra-dialog heading="Title">body</lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const headingEl = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+
+  expect(headingEl).to.exist;
+  expect(headingEl.textContent).to.equal('Title');
+  const labelledby = panel.getAttribute('aria-labelledby');
+  expect(labelledby).to.exist;
+  expect(el.shadowRoot!.getElementById(labelledby!)).to.equal(headingEl);
+  expect(panel.hasAttribute('aria-label')).to.be.false;
+  // Only one element should ever claim aria-labelledby -- the sr-only label
+  // element must not also render once `heading` wins.
+  expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+});
+
+it('a slotted heading still wins over `heading` when both are present', async () => {
+  const el = (await fixture(
+    html`<lyra-dialog heading="ignored"><h2>Real heading</h2></lyra-dialog>`,
+  )) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+  expect(panel.getAttribute('aria-label')).to.equal('Real heading');
+  expect(panel.hasAttribute('aria-labelledby')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="heading"]')).to.not.exist;
+});
+
+it('a consumer-slotted heading keeps working completely unchanged when `heading` is left unset', async () => {
+  const el = (await fixture(html`<lyra-dialog><h2>Real heading</h2></lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+  expect(panel.getAttribute('aria-label')).to.equal('Real heading');
+  expect(panel.hasAttribute('aria-labelledby')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+});
+
+it('renders no header row at all when both `heading` and `closable` are unset (default)', async () => {
+  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
+});
+
+it('renders a close button when closable is set, which closes the dialog via the same close() path as Escape/backdrop', async () => {
+  const el = (await fixture(html`<lyra-dialog label="Untitled" open closable>body</lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  let detail: unknown;
+  el.addEventListener('lyra-dialog-close', (e) => (detail = (e as CustomEvent).detail));
+
+  const closeButton = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+  expect(closeButton).to.exist;
+  closeButton.click();
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(detail).to.equal('close-button');
+});
+
+it('renders a header row containing just the close button when closable is set but heading is unset', async () => {
+  const el = (await fixture(html`<lyra-dialog label="Untitled" closable>body</lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  const header = el.shadowRoot!.querySelector('[part="header"]');
+  expect(header).to.exist;
+  expect(header!.querySelector('[part="heading"]')).to.not.exist;
+  expect(header!.querySelector('[part="close-button"]')).to.exist;
+});
+
+it('defaults --lyra-dialog-max-width\'s effect to 32rem, overridable via the CSS custom property on the host', async () => {
+  const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  // getComputedStyle resolves rem to px, so compare against the root font
+  // size rather than a literal "32rem" string.
+  const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  expect(getComputedStyle(panel).maxInlineSize).to.equal(`min(${32 * remPx}px, 100%)`);
+
+  el.style.setProperty('--lyra-dialog-max-width', '60rem');
+  await el.updateComplete;
+  expect(getComputedStyle(panel).maxInlineSize).to.equal(`min(${60 * remPx}px, 100%)`);
+});
+
 it('hides the footer wrapper when nothing is slotted into it, shows it once slotted', async () => {
   const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
   const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;

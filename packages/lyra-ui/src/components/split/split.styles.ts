@@ -5,6 +5,10 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     block-size: 100%;
+    /* Component-specific -- not a shared design token, so a consumer can
+       retheme it without a raw literal leaking into the public API (same
+       rationale as lyra-app-rail's --lyra-app-rail-overlay-color). */
+    --lyra-split-overlay-color: rgb(0 0 0 / 0.5);
   }
   [part='base'] {
     display: flex;
@@ -65,12 +69,25 @@ export const styles = css`
   /* The 'floating' collapse state's overlay "card" look -- geometry
      (position/inset-*/inline-size) is set inline by split.ts's updated(),
      matching how the ordinary flex/order styling is applied; only the
-     visual/stacking treatment lives here. */
+     visual/stacking treatment lives here. z-index is above [part="backdrop"]
+     (below), so the drawer renders on top of its own scrim. */
   ::slotted([data-collapse-state='floating']) {
     z-index: 1;
     background: var(--lyra-color-surface);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
+  }
+  /* The 'floating' drawer's scrim -- only rendered while collapseState is
+     'floating' and open (see split.ts's render()). Scoped to [part="base"]
+     (position: absolute against its position: relative ancestor) rather than
+     a viewport-fixed overlay like lyra-app-rail's mobile backdrop: the
+     floating panel itself is only ever positioned relative to this
+     component's own box, never the full page. */
+  [part='backdrop'] {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--lyra-split-overlay-color);
   }
   /* Rail-clamped content can easily overflow the fixed rail-width — clip it
      rather than letting it blow out the layout; the panel's own content is

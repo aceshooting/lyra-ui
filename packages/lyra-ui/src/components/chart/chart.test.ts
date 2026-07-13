@@ -78,6 +78,27 @@ it('exposes role=img with a dataset-label-derived aria-label', async () => {
   expect(canvas.getAttribute('aria-label')).to.contain('Revenue');
 });
 
+it('exposes a customizable accessible description and a data-table alternative', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.accessibleLabel = 'Revenue history';
+  el.accessibleDescription = 'Revenue rises from January through March.';
+  el.showDataTable = true;
+  el.labels = ['Jan', 'Feb', 'Mar'];
+  el.datasets = [{ label: 'Revenue', data: [1, 2, 3] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
+  const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
+  expect(canvas.getAttribute('aria-label')).to.equal('Revenue history');
+  expect(canvas.getAttribute('aria-describedby')).to.equal(description.id);
+  expect(description.textContent).to.equal('Revenue rises from January through March.');
+  expect(table.querySelectorAll('tbody tr')).to.have.length(3);
+  expect(table.querySelector('tbody tr td')!.textContent).to.equal('1');
+  expect(table.classList.contains('sr-only')).to.be.false;
+});
+
 it('exposes part="canvas" on the canvas element, matching the documented @csspart surface', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
@@ -109,6 +130,39 @@ it('deep-merges the raw `config` passthrough over the generated options, keeping
   // ...while generated option keys `config.options` doesn't touch survive.
   expect(config.options.responsive).to.equal(true);
   expect(config.options.maintainAspectRatio).to.equal(false);
+});
+
+it('redraws when a config callback is replaced even though its surrounding data is unchanged', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'x', data: [1] }];
+  const first = () => 'first';
+  const second = () => 'second';
+  el.config = { options: { plugins: { tooltip: { callbacks: { label: first } } } } } as never;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const instance = (el as any).chart;
+  expect((el as any).buildConfig().options.plugins.tooltip.callbacks.label).to.equal(first);
+
+  el.config = { options: { plugins: { tooltip: { callbacks: { label: second } } } } } as never;
+  await el.updateComplete;
+  expect((el as any).chart).to.equal(instance);
+  expect((el as any).buildConfig().options.plugins.tooltip.callbacks.label).to.equal(second);
+});
+
+it('does not serialize circular or BigInt config values while building the Chart.js config', () => {
+  const el = document.createElement('lyra-chart') as LyraChart;
+  const circular: Record<string, unknown> = { options: {} };
+  circular.self = circular;
+  circular.count = 1n;
+  el.config = circular as never;
+
+  let config: any;
+  expect(() => {
+    config = (el as any).buildConfig();
+  }).to.not.throw();
+  expect(config.self).to.equal(config);
+  expect(config.count).to.equal(1n);
 });
 
 it('rebuilds when `config.type` overrides the effective type even though the `type` prop is unchanged', async () => {

@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { srOnly } from '../../internal/a11y.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
 import '../skeleton/skeleton.js';
@@ -105,10 +106,16 @@ function sanitizeNodeColor(color: string | undefined): string | undefined {
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
  * @event lyra-link-click - `detail: { source, target }`.
- * @csspart base, svg, node, link, label
+ * @csspart base - The graph wrapper.
+ * @csspart svg - The graph SVG.
+ * @csspart node - A graph node.
+ * @csspart link - A graph link.
+ * @csspart label - A node label.
+ * @csspart live-region - The current graph item announcement.
+ * @csspart data-list - A visually hidden list alternative for graph data.
  */
 export class LyraGraph extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) nodes: GraphNode[] = [];
   @property({ attribute: false }) links: GraphLink[] = [];
@@ -133,6 +140,9 @@ export class LyraGraph extends LyraElement {
 
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
+  /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
+  @state() private activeGraphItem = 0;
+  @state() private graphLiveText = '';
 
   private simulation?: import('d3-force').Simulation<SimNode, SimLink>;
   /** The live charge/link force objects, kept so chargeStrength/linkDistance
@@ -448,6 +458,66 @@ export class LyraGraph extends LyraElement {
     this.emit('lyra-link-click', { source, target });
   }
 
+  private graphItemCount(): number {
+    return this.simNodes.length + this.simLinks.length;
+  }
+
+  private normalizedGraphItem(index = this.activeGraphItem): number {
+    const count = this.graphItemCount();
+    return count ? Math.min(Math.max(index, 0), count - 1) : -1;
+  }
+
+  private graphItemText(index: number): string {
+    if (index < this.simNodes.length) {
+      const node = this.simNodes[index];
+      return node ? `Node ${node.label ?? node.id}` : '';
+    }
+    const link = this.simLinks[index - this.simNodes.length];
+    if (!link) return '';
+    const source = typeof link.source === 'object' ? (link.source as SimNode).label ?? (link.source as SimNode).id : String(link.source);
+    const target = typeof link.target === 'object' ? (link.target as SimNode).label ?? (link.target as SimNode).id : String(link.target);
+    return `Link from ${source} to ${target}`;
+  }
+
+  private onGraphItemFocus(index: number): void {
+    if (this.normalizedGraphItem(index) < 0) return;
+    this.activeGraphItem = index;
+    this.graphLiveText = `${this.graphItemText(index)} (${index + 1} of ${this.graphItemCount()})`;
+  }
+
+  private focusGraphItem(index: number): void {
+    const normalized = this.normalizedGraphItem(index);
+    if (normalized < 0) return;
+    this.activeGraphItem = normalized;
+    this.graphLiveText = `${this.graphItemText(normalized)} (${normalized + 1} of ${this.graphItemCount()})`;
+    void this.updateComplete.then(() => {
+      const items = [
+        ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
+        ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
+      ] as HTMLElement[];
+      items[normalized]?.focus();
+    });
+  }
+
+  private onGraphKeyDown(e: KeyboardEvent, index: number, activate: () => void): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.onGraphItemFocus(index);
+      activate();
+      return;
+    }
+    const count = this.graphItemCount();
+    if (!count) return;
+    let next = index;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = Math.min(count - 1, index + 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = Math.max(0, index - 1);
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = count - 1;
+    else return;
+    e.preventDefault();
+    this.focusGraphItem(next);
+  }
+
   render(): TemplateResult {
     if (this.loading) {
       return html`
@@ -466,15 +536,17 @@ export class LyraGraph extends LyraElement {
           role="group"
           aria-label="Node-link diagram with ${this.simNodes.length} nodes and ${this.simLinks.length} links"
           viewBox="0 0 ${this.width} ${this.height}"
+          tabindex=${this.graphItemCount() ? '-1' : '0'}
         >
           <g transform="">
-            ${this.simLinks.map((l) => {
+            ${this.simLinks.map((l, linkIndex) => {
               const source = l.source as SimNode;
               const target = l.target as SimNode;
+              const itemIndex = this.simNodes.length + linkIndex;
               return svg`<line
                 part="link"
                 role="button"
-                tabindex="0"
+                tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
                 aria-label="Link from ${source.label ?? source.id} to ${target.label ?? target.id}"
                 stroke-width=${l.width ?? 1.5}
                 x1=${source.x ?? 0}
@@ -482,33 +554,26 @@ export class LyraGraph extends LyraElement {
                 x2=${target.x ?? 0}
                 y2=${target.y ?? 0}
                 @click=${() => this.onLinkClick(l)}
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.onLinkClick(l);
-                  }
-                }}
+                @focus=${() => this.onGraphItemFocus(itemIndex)}
+                @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
               ></line>`;
             })}
-            ${this.simNodes.map((n) => {
+            ${this.simNodes.map((n, nodeIndex) => {
               const fill = sanitizeNodeColor(n.color);
+              const itemIndex = nodeIndex;
               return svg`<g>
                 <circle
                   part="node"
                   role="button"
-                  tabindex="0"
+                  tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
                   aria-label=${n.label ?? n.id}
                   r=${this.nodeRadius(n)}
                   cx=${n.x ?? 0}
                   cy=${n.y ?? 0}
                   style=${styleMap(fill ? { '--lyra-node-fill': fill } : {})}
                   @click=${() => this.onNodeClick(n)}
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      this.onNodeClick(n);
-                    }
-                  }}
+                  @focus=${() => this.onGraphItemFocus(itemIndex)}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
                 ></circle>
                 ${n.label
                   ? svg`<text part="label" aria-hidden="true" x=${(n.x ?? 0) + this.nodeRadius(n) + 2} y=${n.y ?? 0}>${n.label}</text>`
@@ -517,6 +582,17 @@ export class LyraGraph extends LyraElement {
             })}
           </g>
         </svg>
+        <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          ${this.graphLiveText || (this.normalizedGraphItem() >= 0 ? `${this.graphItemText(this.normalizedGraphItem())} (1 of ${this.graphItemCount()})` : '')}
+        </div>
+        <ul part="data-list" class="sr-only" aria-label="Graph data">
+          ${this.simNodes.map((node) => html`<li>Node ${node.label ?? node.id}</li>`)}
+          ${this.simLinks.map((link) => {
+            const source = link.source as SimNode;
+            const target = link.target as SimNode;
+            return html`<li>Link from ${source.label ?? source.id} to ${target.label ?? target.id}</li>`;
+          })}
+        </ul>
       </div>
     `;
   }

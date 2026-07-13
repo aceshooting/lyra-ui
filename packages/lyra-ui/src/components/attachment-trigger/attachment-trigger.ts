@@ -129,6 +129,10 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
  * @csspart menu - The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lyra-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
  * @csspart expand-icon - The disclosure chevron inside the multi-capability trigger button. Only rendered when `capabilities.length > 1`.
+ *
+ * `triggerLabel` lets a host override the single-capability trigger button's
+ * `aria-label` (i18n) — see that property's own doc for exactly what it
+ * does and doesn't affect.
  */
 export class LyraAttachmentTrigger extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -141,6 +145,14 @@ export class LyraAttachmentTrigger extends LyraElement {
    *  `'.pdf,.docx'`), forwarded to the hidden file input for the
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
+
+  /** Overrides the single-capability trigger button's `aria-label`, which
+   *  otherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.
+   *  `'Attach files'`). Set this to localize the accessible name; leave it
+   *  unset to keep the built-in English default. Only affects the
+   *  single-capability button ([part='trigger']) — the multi-capability
+   *  menu's own trigger keeps its fixed `'Add attachment'` label regardless. */
+  @property({ attribute: 'trigger-label' }) triggerLabel?: string;
 
   /** Forwarded to the hidden file input's own `multiple` attribute. */
   @property({ type: Boolean, reflect: true }) multiple = true;
@@ -232,7 +244,7 @@ export class LyraAttachmentTrigger extends LyraElement {
         part="trigger"
         class="trigger-button"
         type="button"
-        aria-label=${meta.triggerLabel}
+        aria-label=${this.triggerLabel ?? meta.triggerLabel}
         ?disabled=${this.disabled}
         @click=${this.onTriggerClick}
       >

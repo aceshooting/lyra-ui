@@ -106,6 +106,9 @@ it("create() with no options leaves every field at <lyra-toast-item>'s own decla
 
 it('is accessible as a bare region with no toasts open', async () => {
   const region = (await fixture(html`<lyra-toast></lyra-toast>`)) as LyraToast;
+  const stack = region.shadowRoot!.querySelector('[part="stack"]')!;
+  expect(stack.hasAttribute('role')).to.be.false;
+  expect(stack.hasAttribute('aria-live')).to.be.false;
   await expect(region).to.be.accessible();
 });
 
@@ -125,4 +128,11 @@ it('does not contain the dead `[part="stack"]::slotted(*)` selector', () => {
     : (styles as { cssText: string }).cssText;
   expect(cssText).to.not.match(/\[part=['"]?stack['"]?\]\s*::slotted/);
   expect(cssText).to.match(/(^|\n)\s*::slotted\(\*\)\s*{/);
+});
+
+it('keeps an actionable toast persistent when duration is omitted', async () => {
+  const handle = toast({ message: 'Undoable', action: { label: 'Undo', onClick: () => {} } });
+  const item = await handle.item;
+  expect(item.duration).to.equal(0);
+  await item.hide();
 });

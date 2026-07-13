@@ -3,44 +3,44 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --accent-width: 4px;
-    --show-duration: var(--lyra-transition-base, 180ms ease-out);
-    --hide-duration: var(--lyra-transition-base, 180ms ease-out);
-    --padding: var(--lyra-space-m);
-    --font-size: 1rem;
-    --accent-color: var(--lyra-color-border);
+    --lyra-toast-accent-width: 4px;
+    --lyra-toast-show-duration: var(--lyra-transition-base, 180ms ease-out);
+    --lyra-toast-hide-duration: var(--lyra-transition-base, 180ms ease-out);
+    --lyra-toast-padding: var(--lyra-space-m);
+    --lyra-toast-font-size: 1rem;
+    --lyra-toast-accent-color: var(--lyra-color-border);
   }
   :host([variant='brand']) {
-    --accent-color: var(--lyra-color-brand);
+    --lyra-toast-accent-color: var(--lyra-color-brand);
   }
   :host([variant='success']) {
-    --accent-color: var(--lyra-color-success);
+    --lyra-toast-accent-color: var(--lyra-color-success);
   }
   :host([variant='warning']) {
-    --accent-color: var(--lyra-color-warning);
+    --lyra-toast-accent-color: var(--lyra-color-warning);
   }
   :host([variant='danger']) {
-    --accent-color: var(--lyra-color-danger);
+    --lyra-toast-accent-color: var(--lyra-color-danger);
   }
   :host([size='xs']) {
-    --padding: var(--lyra-space-xs);
-    --font-size: 0.75rem;
+    --lyra-toast-padding: var(--lyra-space-xs);
+    --lyra-toast-font-size: 0.75rem;
   }
   :host([size='s']) {
-    --padding: var(--lyra-space-s);
-    --font-size: 0.875rem;
+    --lyra-toast-padding: var(--lyra-space-s);
+    --lyra-toast-font-size: 0.875rem;
   }
   :host([size='m']) {
-    --padding: var(--lyra-space-m);
-    --font-size: 1rem;
+    --lyra-toast-padding: var(--lyra-space-m);
+    --lyra-toast-font-size: 1rem;
   }
   :host([size='l']) {
-    --padding: var(--lyra-space-l);
-    --font-size: 1.125rem;
+    --lyra-toast-padding: var(--lyra-space-l);
+    --lyra-toast-font-size: 1.125rem;
   }
   :host([size='xl']) {
-    --padding: calc(var(--lyra-space-l) * 1.5);
-    --font-size: 1.25rem;
+    --lyra-toast-padding: calc(var(--lyra-space-l) * 1.5);
+    --lyra-toast-font-size: 1.25rem;
   }
 
   [part='toast-item'] {
@@ -49,9 +49,9 @@ export const styles = css`
     align-items: start;
     gap: var(--lyra-space-s);
     inline-size: 100%;
-    padding: var(--padding);
-    padding-inline-start: calc(var(--padding) + var(--accent-width));
-    font-size: var(--font-size);
+    padding: var(--lyra-toast-padding);
+    padding-inline-start: calc(var(--lyra-toast-padding) + var(--lyra-toast-accent-width));
+    font-size: var(--lyra-toast-font-size);
     background: var(--lyra-color-surface);
     color: var(--lyra-color-text);
     border: 1px solid var(--lyra-color-border);
@@ -60,8 +60,13 @@ export const styles = css`
     opacity: 0;
     transform: translateY(-8px);
     transition:
-      opacity var(--show-duration),
-      transform var(--show-duration);
+      opacity var(--lyra-toast-show-duration),
+      transform var(--lyra-toast-show-duration);
+  }
+  :host([data-hiding]) [part='toast-item'] {
+    transition:
+      opacity var(--lyra-toast-hide-duration),
+      transform var(--lyra-toast-hide-duration);
   }
   :host([data-visible]) [part='toast-item'] {
     opacity: 1;
@@ -77,15 +82,15 @@ export const styles = css`
     position: absolute;
     inset-block: 0;
     inset-inline-start: 0;
-    inline-size: var(--accent-width);
-    background: var(--accent-color);
+    inline-size: var(--lyra-toast-accent-width);
+    background: var(--lyra-toast-accent-color);
     border-start-start-radius: var(--lyra-radius);
     border-end-start-radius: var(--lyra-radius);
   }
   [part='icon'] {
     display: inline-flex;
     flex: 0 0 auto;
-    color: var(--accent-color);
+    color: var(--lyra-toast-accent-color);
   }
   [part='content'] {
     flex: 1 1 auto;
@@ -106,7 +111,7 @@ export const styles = css`
     background: none;
     font: inherit;
     font-weight: bold;
-    color: var(--accent-color);
+    color: var(--lyra-toast-accent-color);
     text-decoration: underline;
     cursor: pointer;
   }

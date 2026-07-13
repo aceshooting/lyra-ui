@@ -2,6 +2,7 @@ import { html, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './gauge.styles.js';
 
 export type GaugeType = 'radial' | 'linear';
@@ -68,10 +69,9 @@ export class LyraGauge extends LyraElement {
   // both bounds are finite -- shared by `ratio` (fill geometry) and
   // `willUpdate` (aria-value* trio) so the two can never silently diverge.
   private get domain(): { lo: number; hi: number } {
-    const bothFinite = Number.isFinite(this.min) && Number.isFinite(this.max);
-    return bothFinite
-      ? { lo: Math.min(this.min, this.max), hi: Math.max(this.min, this.max) }
-      : { lo: this.min, hi: this.max };
+    const min = finiteNumber(this.min, 0);
+    const max = finiteNumber(this.max, 100);
+    return { lo: Math.min(min, max), hi: Math.max(min, max) };
   }
 
   private get ratio(): number {

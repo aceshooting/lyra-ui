@@ -46,8 +46,17 @@ export interface ToastHandle {
  */
 export function toast(input: ToastOptions | string): ToastHandle {
   const opts: ToastOptions = typeof input === 'string' ? { message: input } : input;
+  // An action must remain available until the user can reach it. Callers can
+  // still opt into a finite duration explicitly; the convenience API makes
+  // only the omitted-duration/action combination persistent.
+  const createOptions: ToastCreateOptions = {
+    variant: opts.variant,
+    duration: opts.duration ?? (opts.action ? 0 : undefined),
+    size: opts.size,
+    withIcon: opts.withIcon,
+  };
   const item = getRegion(opts.placement)
-    .create(opts.message, opts)
+    .create(opts.message, createOptions)
     .then((el) => {
       if (opts.action) {
         const btn = document.createElement('button');

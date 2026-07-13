@@ -1,9 +1,10 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { defineElement } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
+import { finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { styles } from './slider.styles.js';
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
@@ -21,15 +22,15 @@ function isSliderKey(key: string): boolean {
   return isArrowKey(key) || key === 'Home' || key === 'End' || key === 'PageUp' || key === 'PageDown';
 }
 
-/** Number of decimal digits in `n`'s shortest string representation, e.g.
- *  `0.1` -> 1, `5` -> 0. Used to round a stepped value back to the precision
- *  `step` itself implies, instead of leaving binary floating-point noise in
- *  place (e.g. `20.200000000000003`). Mirrors lyra-time-range's identical
- *  helper. */
+/** Number of decimal places implied by `n`, including exponent notation.
+ *  `0.1` -> 1, `5` -> 0, and `1e-7` -> 7. Used to round a stepped value back
+ *  to the precision `step` itself implies, instead of leaving binary
+ *  floating-point noise in place. */
 function decimalPlaces(n: number): number {
-  const str = n.toString();
-  const dot = str.indexOf('.');
-  return dot === -1 ? 0 : str.length - dot - 1;
+  if (!Number.isFinite(n) || n === 0) return 0;
+  const [mantissa, exponentText] = n.toExponential().split('e');
+  const mantissaPlaces = mantissa.includes('.') ? mantissa.length - mantissa.indexOf('.') - 1 : 0;
+  return Math.max(0, mantissaPlaces - Number(exponentText));
 }
 
 /**
@@ -70,9 +71,57 @@ function decimalPlaces(n: number): number {
 export class LyraSlider extends FormAssociated(LyraElement) {
   static styles = [LyraElement.styles, styles];
 
-  @property({ type: Number }) min = 0;
-  @property({ type: Number }) max = 100;
-  @property({ type: Number }) step = 1;
+  // These accessors sanitize the live value synchronously when a range
+  // setting changes. Keeping the properties `noAccessor` prevents Lit's
+  // default async field setter from leaving `.value`, `.valueAsNumber`, and
+  // ElementInternals' form value disagreeing until the next update flush.
+  static properties = {
+    min: { type: Number, noAccessor: true },
+    max: { type: Number, noAccessor: true },
+    step: { type: Number, noAccessor: true },
+  };
+
+  private _min = 0;
+  private _max = 100;
+  private _step = 1;
+  // HTML applies observed attributes before the element is connected. Keep a
+  // declarative value until all min/max/step attributes have been delivered;
+  // otherwise a value attribute encountered before step="..." would be
+  // snapped using the old default step and lose the author's number.
+  private pendingValue: string | undefined;
+
+  get min(): number {
+    return this._min;
+  }
+  set min(next: number) {
+    const old = this._min;
+    this._min = finiteNumber(next, 0);
+    this.requestUpdate('min', old);
+    this.sanitizeCurrentValue();
+  }
+
+  get max(): number {
+    return this._max;
+  }
+  set max(next: number) {
+    const old = this._max;
+    this._max = finiteNumber(next, 100);
+    this.requestUpdate('max', old);
+    this.sanitizeCurrentValue();
+  }
+
+  get step(): number {
+    return this._step;
+  }
+  set step(next: number) {
+    const old = this._step;
+    // A zero/negative step is retained as an explicit "unstepped" mode;
+    // invalid/non-finite input follows the same safe path without poisoning
+    // the current value with NaN.
+    this._step = finiteRange(next, 0, 0);
+    this.requestUpdate('step', old);
+    this.sanitizeCurrentValue();
+  }
   /** Accessible name for the slider, used when no visible label context
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
    *  as `aria-label` on the interactive `role="slider"` element. A plain
@@ -91,10 +140,18 @@ export class LyraSlider extends FormAssociated(LyraElement) {
   // multi-touch/robustness parity with lyra-split and lyra-time-range, even
   // though a single thumb has no per-pointer state of its own to track.
   private activePointers = new Set<number>();
+  private changedPointers = new Set<number>();
+  private keyboardChanged = false;
 
   connectedCallback(): void {
     super.connectedCallback();
-    this.ensureValue();
+    if (this.pendingValue !== undefined) {
+      const pending = this.pendingValue;
+      this.pendingValue = undefined;
+      this.value = pending;
+    } else {
+      this.ensureValue();
+    }
   }
 
   disconnectedCallback(): void {
@@ -103,6 +160,8 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // mid-drag (or a pointercancel/alt-tab means pointerup never reaches
     // `window`), these window-level listeners would otherwise leak.
     this.activePointers.clear();
+    this.changedPointers.clear();
+    this.keyboardChanged = false;
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
@@ -116,13 +175,34 @@ export class LyraSlider extends FormAssociated(LyraElement) {
    *  to the midpoint of `[min, max]`. Writing stringifies the clamped result
    *  back into `value`. */
   get valueAsNumber(): number {
-    if (this.value === '') return this.defaultNumericValue();
-    const n = Number(this.value);
+    if (super.value === '') return this.defaultNumericValue();
+    const n = Number(super.value);
     return Number.isFinite(n) ? this.clampValue(n) : this.defaultNumericValue();
   }
 
   set valueAsNumber(next: number) {
-    this.value = String(this.clampValue(next));
+    this.value = String(Number.isFinite(next) ? this.clampValue(next) : this.defaultNumericValue());
+  }
+
+  /**
+   * `FormAssociated` provides the form plumbing; this override adds the
+   * slider's native-range sanitization at the IDL boundary so invalid direct
+   * assignments cannot briefly submit a literal `NaN`/`Infinity`.
+   */
+  get value(): string {
+    return super.value;
+  }
+
+  set value(next: string) {
+    const raw = next ?? '';
+    if (!this.isConnected) {
+      this.pendingValue = raw;
+      super.value = raw;
+      return;
+    }
+    const numeric = Number(raw);
+    const sanitized = raw === '' || !Number.isFinite(numeric) ? this.defaultNumericValue() : this.clampValue(numeric);
+    super.value = String(sanitized);
   }
 
   formResetCallback(): void {
@@ -137,6 +217,15 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     if (this.value === '') this.value = String(this.defaultNumericValue());
   }
 
+  /** Re-sanitize an already assigned value immediately after range settings change. */
+  private sanitizeCurrentValue(): void {
+    if (!this.isConnected) return;
+    const current = super.value;
+    if (current === '') return;
+    const sanitized = String(this.clampValue(Number(current)));
+    if (sanitized !== current) this.value = sanitized;
+  }
+
   private domain(): { lo: number; hi: number } {
     // A caller-supplied min/max that fails Number attribute conversion
     // arrives here as NaN, and a literal `min="Infinity"`/`max="Infinity"`
@@ -144,8 +233,8 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // test finiteness instead -- otherwise Infinity propagates into every
     // clampValue()/percentOf() caller (e.g. the midpoint default computing
     // `0 + Infinity / 2`).
-    const min = Number.isFinite(this.min) ? this.min : 0;
-    const max = Number.isFinite(this.max) ? this.max : 100;
+    const min = finiteNumber(this.min, 0);
+    const max = finiteNumber(this.max, 100);
     return { lo: Math.min(min, max), hi: Math.max(min, max) };
   }
 
@@ -155,10 +244,10 @@ export class LyraSlider extends FormAssociated(LyraElement) {
   }
 
   private percentOf(value: number): number {
-    if (isNaN(value)) return 0;
     const { lo, hi } = this.domain();
+    const safeValue = finiteRange(value, lo, lo, hi);
     const span = hi - lo || 1;
-    return ((value - lo) / span) * 100;
+    return ((safeValue - lo) / span) * 100;
   }
 
   private clampValue(raw: number): number {
@@ -168,19 +257,20 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // through the Math.round/Math.max/Math.min calls below and poison the
     // submitted FormAssociated value with the literal "NaN"/"Infinity" —
     // resolve it to a real, finite, in-domain number instead.
-    if (!Number.isFinite(raw)) raw = lo;
+    raw = finiteNumber(raw, lo);
     // A non-positive or non-finite step would otherwise divide by zero/NaN
     // below; treat it as "unstepped" instead of propagating NaN.
-    const hasStep = Number.isFinite(this.step) && this.step > 0;
+    const step = finiteRange(this.step, 0, 0);
+    const hasStep = step > 0;
     let stepped = raw;
     if (hasStep) {
       // Anchor the step grid at the domain's own `lo` (matching native
       // `<input type=range>`) instead of absolute 0, and round back to
       // `step`'s own decimal precision so repeated steps land on exact
       // values like 0.7 instead of 0.7000000000000001.
-      const stepsFromLo = Math.round((raw - lo) / this.step);
-      const factor = 10 ** decimalPlaces(this.step);
-      stepped = Math.round((lo + stepsFromLo * this.step) * factor) / factor;
+      const stepsFromLo = Math.round((raw - lo) / step);
+      const factor = 10 ** decimalPlaces(step);
+      stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
     }
     return Math.min(hi, Math.max(lo, stepped));
   }
@@ -189,11 +279,14 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     return String(v);
   }
 
-  private setValue(raw: number, commit: boolean): void {
+  private setValue(raw: number, commit: boolean): boolean {
+    const previous = this.valueAsNumber;
     const clamped = this.clampValue(raw);
+    if (clamped === previous) return false;
     this.value = String(clamped);
     this.emit('lyra-input', { value: clamped });
     if (commit) this.emit('lyra-change', { value: clamped });
+    return true;
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -209,22 +302,24 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     if (e.key === forwardKey || e.key === 'ArrowUp') {
       e.preventDefault();
-      this.setValue(current + this.step, false);
+      this.keyboardChanged = this.setValue(current + this.step, false) || this.keyboardChanged;
     } else if (e.key === backwardKey || e.key === 'ArrowDown') {
       e.preventDefault();
-      this.setValue(current - this.step, false);
+      this.keyboardChanged = this.setValue(current - this.step, false) || this.keyboardChanged;
     } else if (e.key === 'PageUp') {
       e.preventDefault();
-      this.setValue(current + this.step * PAGE_STEP_MULTIPLIER, false);
+      this.keyboardChanged =
+        this.setValue(current + this.step * PAGE_STEP_MULTIPLIER, false) || this.keyboardChanged;
     } else if (e.key === 'PageDown') {
       e.preventDefault();
-      this.setValue(current - this.step * PAGE_STEP_MULTIPLIER, false);
+      this.keyboardChanged =
+        this.setValue(current - this.step * PAGE_STEP_MULTIPLIER, false) || this.keyboardChanged;
     } else if (e.key === 'Home') {
       e.preventDefault();
-      this.setValue(this.domain().lo, false);
+      this.keyboardChanged = this.setValue(this.domain().lo, false) || this.keyboardChanged;
     } else if (e.key === 'End') {
       e.preventDefault();
-      this.setValue(this.domain().hi, false);
+      this.keyboardChanged = this.setValue(this.domain().hi, false) || this.keyboardChanged;
     }
   };
 
@@ -238,7 +333,10 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // keyup — the same drag-like "continuous input, single final change"
     // shape a pointer drag has.
     if (this.effectiveDisabled || !isSliderKey(e.key)) return;
-    this.emit('lyra-change', { value: this.valueAsNumber });
+    if (this.keyboardChanged) {
+      this.emit('lyra-change', { value: this.valueAsNumber });
+      this.keyboardChanged = false;
+    }
   };
 
   /** Start tracking `pointerId` as an active drag, transferring pointer
@@ -248,6 +346,7 @@ export class LyraSlider extends FormAssociated(LyraElement) {
    *  both gestures continue identically from here on. */
   private beginDrag(pointerId: number, captureTarget: HTMLElement): void {
     this.activePointers.add(pointerId);
+    this.changedPointers.delete(pointerId);
     captureTarget.setPointerCapture(pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -283,7 +382,7 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // Mirrors onPointerMove's own RTL handling below.
     const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
     const { lo, hi } = this.domain();
-    this.setValue(lo + ratio * (hi - lo), false);
+    if (this.setValue(lo + ratio * (hi - lo), false)) this.changedPointers.add(e.pointerId);
     this.beginDrag(e.pointerId, thumb);
     // Keyboard interaction (arrow keys, Home/End, ...) can continue
     // seamlessly right after the click, exactly as if the user had tabbed to
@@ -311,7 +410,7 @@ export class LyraSlider extends FormAssociated(LyraElement) {
     // rightward drag would move the thumb the wrong way.
     const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
     const { lo, hi } = this.domain();
-    this.setValue(lo + ratio * (hi - lo), false);
+    if (this.setValue(lo + ratio * (hi - lo), false)) this.changedPointers.add(e.pointerId);
   };
 
   private onPointerUp = (e: PointerEvent): void => {
@@ -322,7 +421,8 @@ export class LyraSlider extends FormAssociated(LyraElement) {
   private endDrag(pointerId: number, commit: boolean): void {
     if (!this.activePointers.has(pointerId)) return;
     this.activePointers.delete(pointerId);
-    if (commit) this.emit('lyra-change', { value: this.valueAsNumber });
+    const changed = this.changedPointers.delete(pointerId);
+    if (commit && changed) this.emit('lyra-change', { value: this.valueAsNumber });
     // Only the last concurrent drag to end tears down the shared window
     // listeners — an overlapping second pointer may still be down.
     if (this.activePointers.size === 0) {
@@ -330,33 +430,6 @@ export class LyraSlider extends FormAssociated(LyraElement) {
       window.removeEventListener('pointerup', this.onPointerUp);
       window.removeEventListener('pointercancel', this.onPointerUp);
       window.removeEventListener('lostpointercapture', this.onPointerUp);
-    }
-  }
-
-  protected willUpdate(changed: PropertyValues): void {
-    // Keep direct empty-string assignments from becoming a persistent
-    // slider state. form.reset() is handled synchronously above.
-    if (changed.has('value') && this.value === '') {
-      this.ensureValue();
-      return;
-    }
-    if (changed.has('value') && !Number.isFinite(Number(this.value))) {
-      // A caller-assigned `value` that fails Number conversion (a
-      // non-numeric string, or the literal "NaN"/"Infinity") must not
-      // persist forever as the FormAssociated submitted value -- resync it
-      // to the sanitized, finite numeric string `valueAsNumber` already
-      // computes (falling back to the domain midpoint) instead.
-      this.value = String(this.valueAsNumber);
-      return;
-    }
-    if ((changed.has('min') || changed.has('max') || changed.has('step')) && this.value !== '') {
-      // A narrowed/shifted domain (or a changed step grid) after mount must
-      // not leave `value` — and the rendered thumb position it drives —
-      // outside the current bounds or off the step grid. `min`/`max`/`step`
-      // already hold their new values by this point, so the getter itself
-      // (which clamps against the live domain) computes the corrected value.
-      const next = String(this.valueAsNumber);
-      if (next !== this.value) this.value = next;
     }
   }
 

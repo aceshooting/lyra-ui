@@ -48,6 +48,7 @@ import './components/citation-badge/citation-badge.js';
 import './components/source-list/source-list.js';
 import './components/source-card/source-card.js';
 import './components/app-rail/app-rail.js';
+import './components/app-rail/app-rail-item.js';
 import './components/responsive-panel/responsive-panel.js';
 import './components/mention-popover/mention-popover.js';
 import './components/streaming-text/streaming-text.js';
@@ -101,6 +102,15 @@ export type { ExportFormat } from './components/export-button/export-button.js';
 export { escapeCsvField, buildCsv, downloadBlob } from './components/export-button/csv.js';
 export type { CsvColumn } from './components/export-button/csv.js';
 export { LyraSplit } from './components/split/split.js';
+export type {
+  PanelConstraint,
+  SplitConstraintIssueReason,
+  SplitConstraintIssueDetail,
+  SplitCollapseMode,
+  SplitCollapseState,
+  SplitCollapseStateInput,
+  SplitCollapseChangeDetail,
+} from './components/split/split.js';
 export { LyraTimeRange } from './components/time-range/time-range.js';
 export { LyraPlayback } from './components/playback/playback.js';
 export { LyraHeatmap } from './components/heatmap/heatmap.js';
@@ -196,6 +206,7 @@ export type {
   SourceCardOpenDetail,
 } from './components/source-card/source-card.js';
 export { LyraAppRail, computeAppRailMode } from './components/app-rail/app-rail.js';
+export { LyraAppRailItem } from './components/app-rail/app-rail-item.js';
 export type {
   AppRailMode,
   AppRailModeInput,

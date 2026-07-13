@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { styles } from './model-settings-panel.styles.js';
 import type { LyraModelCatalog } from '../model-select/model-select.js';
 import '../model-select/model-select.js';
@@ -107,13 +108,13 @@ export class LyraModelSettingsPanel extends LyraElement {
   private clampTemperature(raw: number): number {
     const rawMin = this.temperatureMin;
     const rawMax = this.temperatureMax;
-    const min = isNaN(rawMin) ? DEFAULT_TEMPERATURE_MIN : rawMin;
-    const max = isNaN(rawMax) ? DEFAULT_TEMPERATURE_MAX : rawMax;
+    const min = finiteNumber(rawMin, DEFAULT_TEMPERATURE_MIN);
+    const max = finiteNumber(rawMax, DEFAULT_TEMPERATURE_MAX);
     const lo = Math.min(min, max);
     const hi = Math.max(min, max);
-    const step = this.temperatureStep;
-    const hasStep = Number.isFinite(step) && step > 0;
-    let stepped = raw;
+    const step = finiteRange(this.temperatureStep, 0, 0);
+    const hasStep = step > 0;
+    let stepped = finiteNumber(raw, lo);
     if (hasStep) {
       const stepsFromLo = Math.round((raw - lo) / step);
       const factor = 10 ** decimalPlaces(step);

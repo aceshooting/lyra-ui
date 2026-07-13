@@ -114,7 +114,10 @@ function sanitizeSwatchColor(color: string): string | undefined {
  * @customElement lyra-map
  * @event lyra-map-load - Fired once the underlying maplibregl.Map loads.
  * @event lyra-map-click - `detail: { lngLat, feature? }`.
- * @csspart base, container, legend, legend-swatch
+ * @csspart base - The map wrapper.
+ * @csspart container - The maplibre container.
+ * @csspart legend - The map legend.
+ * @csspart legend-swatch - A legend color swatch.
  *
  * ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile
  * server, which is not suitable for production traffic — see the

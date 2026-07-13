@@ -17,8 +17,14 @@ const FALLBACK_SCALE_HI = '#0969da';
 const FALLBACK_LABEL_FONT = '10px sans-serif';
 const CAL_PAD_LEFT = 28;
 const CAL_LABEL_H = 16;
+/** Calendar mode's original fixed cell size — now also the effective fallback
+ *  the `cellSize` accessor uses in calendar mode when left unset (see its
+ *  doc comment), so a consumer who never touches `cellSize` sees no change. */
 const CAL_CELL = 11;
 const CAL_GAP = 2;
+/** Matrix mode's original fixed cell size — the effective fallback the
+ *  `cellSize` accessor uses in matrix mode when left unset. */
+const DEFAULT_MATRIX_CELL_SIZE = 22;
 const DEFAULT_BUCKET_COUNT = 5;
 /**
  * A linear RGB ramp cannot contain more than 256 visually distinct integer
@@ -179,13 +185,16 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * - `"matrix"` (default): a `rowLabels` x `colLabels` grid of `values`. `-1`
  *   (or any non-finite value) is treated as "no data". `scale="sqrt"`
  *   compresses the ramp via `sqrtStep()` so one heavy cell doesn't wash out
- *   the rest; the default `"linear"` scale maps linearly instead. `scale`
- *   only affects matrix mode — calendar mode always buckets by quartile.
- * - `"calendar"`: a GitHub-style Sunday-Saturday x week grid built from
- *   `days`, colored by `quartileBucket()` into `bucketCount` buckets. As in
- *   matrix mode, a cell whose `value` is negative or non-finite is treated
- *   as "no data" rather than being bucketed — as is a grid position with no
- *   matching entry in `days` at all (a gap in a sparse calendar).
+ *   the rest; the default `"linear"` scale maps linearly instead.
+ * - `"calendar"`: a GitHub-style Sunday-Saturday (or `firstDayOfWeek`-anchored
+ *   — see below) x week grid built from `days`. `scale` governs its
+ *   bucketing too: the default `"linear"` buckets by `quartileBucket()`
+ *   (today's original behavior, unchanged); `"sqrt"` instead compresses via
+ *   the same `sqrtStep()` magnitude compression matrix mode uses, so one
+ *   heavy day doesn't wash out the rest. As in matrix mode, a cell whose
+ *   `value` is negative or non-finite is treated as "no data" rather than
+ *   being bucketed — as is a grid position with no matching entry in `days`
+ *   at all (a gap in a sparse calendar).
  *
  * The sequential color ramp's endpoints are read from the
  * `--lyra-heatmap-scale-lo`/`-hi` custom properties (declared in
@@ -209,7 +218,21 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * week column — drawing, hit-testing, the focus ring, and month-label
  * positioning all consult it consistently, so a consumer can pixel-align a
  * calendar's week columns with a sibling chart's coordinate system. Unset
- * (the default) keeps the original evenly-spaced formula.
+ * (the default) keeps the original evenly-spaced formula. `rowY` is its
+ * calendar-mode vertical analogue — overrides the y-origin computed for each
+ * weekday row, consulted consistently by drawing, hit-testing, and the focus
+ * ring via the private `rowYFor()` helper (mirroring `columnXFor()` exactly).
+ *
+ * `firstDayOfWeek` (calendar mode only, default `0`/Sunday, no-op in matrix
+ * mode) anchors the calendar grid at a different weekday — `0`-`6`, same
+ * numbering as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday) —
+ * threaded into `buildCalendarGrid()`.
+ *
+ * `cellSize`/`fitToWidth` (previously matrix-mode only) also drive calendar
+ * mode's per-cell size: unset, calendar mode keeps today's original 11px
+ * cell size unchanged; explicitly set, the same fixed size (or, with
+ * `fitToWidth`, the same host-width-derived size matrix mode already
+ * supports) governs calendar mode's grid too.
  *
  * @customElement lyra-heatmap
  * @event lyra-cell-click - Fired on click, or Enter/Space on the
@@ -217,7 +240,14 @@ export function mixColor(fromColor: string, toColor: string, t: number): string 
  * `detail: { date, value }` in calendar mode. `cellText` overrides the
  * built-in English "Row X, Col Y: value" / "Mon DD: value" template used for
  * both the hover tooltip and the keyboard live-region announcement.
- * @csspart base, canvas, tooltip, live-region, legend, legend-lo, legend-hi, legend-annotation
+ * @csspart base - The heatmap wrapper.
+ * @csspart canvas - The heatmap canvas.
+ * @csspart tooltip - The hover tooltip.
+ * @csspart live-region - The visually hidden keyboard announcement region.
+ * @csspart legend - The color legend.
+ * @csspart legend-lo - The low legend endpoint.
+ * @csspart legend-hi - The high legend endpoint.
+ * @csspart legend-annotation - An annotation label.
  */
 export class LyraHeatmap extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -225,20 +255,59 @@ export class LyraHeatmap extends LyraElement {
   @property({ attribute: false }) rowLabels: string[] = [];
   @property({ attribute: false }) colLabels: string[] = [];
   @property({ attribute: false }) values: number[][] = [];
-  @property({ type: Number, attribute: 'cell-size' }) cellSize = 22;
+  private _cellSize?: number;
+
+  /**
+   * Effective per-cell size (CSS px). Originally matrix-mode only; now also
+   * governs calendar mode's cell size (replacing the previously hardcoded
+   * 11px constant there) once explicitly set. Left unset, each mode keeps
+   * its own original default — `DEFAULT_MATRIX_CELL_SIZE` (22) in matrix
+   * mode, `CAL_CELL` (11) in calendar mode — so an existing consumer who
+   * never touches `cellSize` sees no change in either mode. Set explicitly
+   * (attribute or property), the same value governs both modes alike.
+   */
+  @property({ type: Number, attribute: 'cell-size' })
+  get cellSize(): number {
+    return this._cellSize ?? (this.mode === 'calendar' ? CAL_CELL : DEFAULT_MATRIX_CELL_SIZE);
+  }
+
+  set cellSize(value: number) {
+    const oldValue = this._cellSize;
+    this._cellSize = value;
+    this.requestUpdate('cellSize', oldValue);
+  }
   @property({ attribute: 'value-label' }) valueLabel = 'value';
+  /**
+   * `"linear"` (default) maps values linearly to the color ramp in matrix
+   * mode, and buckets calendar-mode values via `quartileBucket()` — both
+   * unchanged from before this property governed calendar mode too.
+   * `"sqrt"` compresses via `sqrtStep()`'s square-root magnitude compression
+   * instead, in *both* modes, so one heavy cell/day doesn't wash out the
+   * rest of a skewed dataset.
+   */
   @property() scale: 'linear' | 'sqrt' = 'linear';
   /**
    * When set, `cellSize` is derived from the host's measured `clientWidth`
    * on every draw (including ResizeObserver-triggered redraws) instead of
    * the fixed `cell-size` attribute, so the grid actually fills the
    * available width. Without this, canvas dimensions are computed purely
-   * from `PAD_LEFT + cols * cellSize`, so a resize-triggered redraw is a
-   * geometric no-op.
+   * from `PAD_LEFT + cols * cellSize` (matrix mode) or
+   * `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), so a
+   * resize-triggered redraw is a geometric no-op. Originally matrix-mode
+   * only; now applies to calendar mode too.
    */
   @property({ type: Boolean, attribute: 'fit-to-width' }) fitToWidth = false;
   @property() mode: 'matrix' | 'calendar' = 'matrix';
   @property({ attribute: false }) days: CalendarDay[] = [];
+  /**
+   * Calendar mode only (no-op in matrix mode): anchors the calendar grid at
+   * a different weekday instead of always Sunday — `0`-`6`, same numbering
+   * as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday, matching
+   * `CalendarCell.weekday`'s existing convention). Threaded into
+   * `buildCalendarGrid()`. Defaults to `0` (Sunday), unchanged from before
+   * this property existed.
+   */
+  @property({ type: Number, attribute: 'first-day-of-week' }) firstDayOfWeek = 0;
   private _bucketCount = DEFAULT_BUCKET_COUNT;
 
   @property({ attribute: 'bucket-count', converter: bucketCountConverter })
@@ -270,10 +339,30 @@ export class LyraHeatmap extends LyraElement {
    * formula unchanged. Ignored in matrix mode.
    */
   @property({ attribute: false }) columnX?: (index: number) => number;
+  /**
+   * Calendar mode only: overrides the y-origin (canvas-local CSS px) of
+   * weekday row `weekday` (0-based, same indexing as
+   * `CalendarCellPos.weekday`). The vertical analogue of `columnX` — consulted
+   * consistently by every calendar-mode geometry call site that computes a
+   * cell's y-coordinate from its weekday — drawing, hit-testing, and the
+   * keyboard focus ring — via the private `rowYFor()` helper (mirroring
+   * `columnXFor()`'s exact dispatch-with-computed-fallback shape). Also
+   * consulted at `weekday = 7` (one past the last row) to size the canvas's
+   * height, mirroring how `columnX` is consulted at `week = weekCount` to
+   * size its width — so a function that spaces rows out further than the
+   * default formula still gets a canvas tall enough to paint every row.
+   * Unset (the default) keeps today's evenly-spaced `CAL_LABEL_H + weekday *
+   * (cellSize + CAL_GAP)` formula unchanged. Ignored in matrix mode.
+   */
+  @property({ attribute: false }) rowY?: (weekday: number) => number;
 
   @query('canvas') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
+  private drawRafId?: number;
   private dprQuery?: MediaQueryList;
+  private colorSchemeQuery?: MediaQueryList;
+  private themeObserver?: MutationObserver;
+  private themeRefreshQueued = false;
   /** The current value range, refreshed once per update cycle by `willUpdate()`. See `computeValueRange()`. */
   private cachedValueRange: [number, number] | null = null;
   /**
@@ -286,6 +375,14 @@ export class LyraHeatmap extends LyraElement {
    * single hover/click/keydown.
    */
   private cachedCalendarGrid = buildCalendarGrid(this.days);
+  private cachedCalendarSortedValues: number[] = [];
+  private cachedCalendarCellsByPos = new Map<string, CalendarCell>();
+  private cachedRamp: {
+    key: string;
+    colors: string[];
+    loRgb: [number, number, number];
+    hiRgb: [number, number, number];
+  } | null = null;
 
   /** The cell currently under the pointer (`null` when not hovering one) — drives `[part="tooltip"]`. */
   @state() private hoverCell: CellPos | null = null;
@@ -310,15 +407,23 @@ export class LyraHeatmap extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver = new ResizeObserver(() => this.draw());
+    this.resizeObserver = new ResizeObserver(this.scheduleDraw);
     this.resizeObserver.observe(this);
     this.watchDpr();
+    this.watchTheme();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.dprQuery?.removeEventListener('change', this.onDprChange);
+    this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
+    this.themeObserver?.disconnect();
+    this.themeObserver = undefined;
+    if (this.drawRafId !== undefined) {
+      cancelAnimationFrame(this.drawRafId);
+      this.drawRafId = undefined;
+    }
   }
 
   private watchDpr(): void {
@@ -336,24 +441,74 @@ export class LyraHeatmap extends LyraElement {
     this.draw();
   };
 
+  private onColorSchemeChange = (): void => {
+    this.refreshTheme();
+  };
+
+  private queueThemeRefresh = (): void => {
+    if (this.themeRefreshQueued) return;
+    this.themeRefreshQueued = true;
+    queueMicrotask(() => {
+      this.themeRefreshQueued = false;
+      if (this.isConnected) this.refreshTheme();
+    });
+  };
+
+  private watchTheme(): void {
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    this.colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
+    this.colorSchemeQuery?.addEventListener('change', this.onColorSchemeChange);
+
+    if (typeof MutationObserver === 'undefined') return;
+    const targets: Element[] = [this];
+    let parent = this.parentElement;
+    while (parent) {
+      targets.push(parent);
+      parent = parent.parentElement;
+    }
+    this.themeObserver = new MutationObserver(this.queueThemeRefresh);
+    for (const target of targets) {
+      this.themeObserver.observe(target, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'],
+      });
+    }
+  }
+
   protected willUpdate(changed: PropertyValues): void {
-    if (changed.has('mode') || changed.has('rowLabels') || changed.has('colLabels') || changed.has('days')) {
+    if (
+      changed.has('mode') ||
+      changed.has('rowLabels') ||
+      changed.has('colLabels') ||
+      changed.has('days') ||
+      changed.has('firstDayOfWeek')
+    ) {
       // The previous focus/hover cursor may no longer address a real cell
       // once the grid's shape (or mode) changes out from under it —
       // stroking a focus ring at a stale (row, col)/(week, weekday), or
       // leaving the live region announcing a stale value, would be actively
       // misleading, so drop both instead. Reactive-property writes belong in
       // willUpdate() (not updated()), which folds them into this same
-      // render rather than scheduling a whole extra update pass.
+      // render rather than scheduling a whole extra update pass. A
+      // `firstDayOfWeek` change reshuffles every cell's week/weekday the same
+      // way a `days` change does, so it resets the cursor too.
       this.focusedCell = null;
       this.hoverCell = null;
       this.liveText = '';
     }
-    // Calendar-mode grid layout depends only on `days` (not `mode`) — rebuilt
-    // here, once per cycle, instead of independently by every call site (see
-    // `cachedCalendarGrid`'s doc comment).
-    if (changed.has('days') || !this.hasUpdated) {
-      this.cachedCalendarGrid = buildCalendarGrid(this.days);
+    // Calendar-mode grid layout depends only on `days`/`firstDayOfWeek` (not
+    // `mode`) — rebuilt here, once per cycle, instead of independently by
+    // every call site (see `cachedCalendarGrid`'s doc comment).
+    if (changed.has('days') || changed.has('firstDayOfWeek') || !this.hasUpdated) {
+      this.cachedCalendarGrid = buildCalendarGrid(this.days, this.firstDayOfWeek);
+      this.cachedCalendarSortedValues = this.cachedCalendarGrid.cells
+        .map((cell) => cell.value)
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .sort((a, b) => a - b);
+      this.cachedCalendarCellsByPos = new Map(
+        this.cachedCalendarGrid.cells.map((cell) => [`${cell.week}:${cell.weekday}`, cell]),
+      );
     }
     if (!this.hasUpdated) {
       this.authorSuppliedRole = this.hasAttribute('role');
@@ -407,7 +562,32 @@ export class LyraHeatmap extends LyraElement {
     return minMax(source.filter((v) => Number.isFinite(v) && v >= 0));
   }
 
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
+    if (
+      [
+        'values',
+        'rowLabels',
+        'colLabels',
+        'cellSize',
+        'valueLabel',
+        'scale',
+        'fitToWidth',
+        'mode',
+        'days',
+        'bucketCount',
+        'annotations',
+        'columnX',
+        'rowY',
+        'firstDayOfWeek',
+        'focusedCell',
+      ].some((name) => changed.has(name))
+    ) {
+      this.draw();
+    }
+  }
+
+  /** Redraws canvas content after an upstream token or theme change. */
+  refreshTheme(): void {
     this.draw();
   }
 
@@ -453,17 +633,79 @@ export class LyraHeatmap extends LyraElement {
     else this.drawMatrix();
   }
 
+  private scheduleDraw = (): void => {
+    if (this.drawRafId !== undefined) return;
+    this.drawRafId = requestAnimationFrame(() => {
+      this.drawRafId = undefined;
+      if (this.isConnected) this.draw();
+    });
+  };
+
+  private colorRamp(bucketCount: number): {
+    colors: string[];
+    loRgb: [number, number, number];
+    hiRgb: [number, number, number];
+  } {
+    const [scaleLo, scaleHi] = this.scaleEndpoints();
+    const normalizedBucketCount = normalizeBucketCount(bucketCount);
+    const key = `${scaleLo}\u0000${scaleHi}\u0000${normalizedBucketCount}`;
+    if (this.cachedRamp?.key === key) return this.cachedRamp;
+    const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
+    const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
+    const colors = Array.from({ length: normalizedBucketCount }, (_, i) =>
+      mixRgb(loRgb, hiRgb, i / (normalizedBucketCount - 1)),
+    );
+    this.cachedRamp = { key, colors, loRgb, hiRgb };
+    return this.cachedRamp;
+  }
+
+  /**
+   * Effective per-cell size in calendar mode — mirrors `matrixCellSize()`
+   * exactly: `fitToWidth` derives it from the host's measured width,
+   * otherwise it's the (possibly explicitly-set) `cellSize` property, which
+   * itself falls back to today's original 11px calendar default when left
+   * unset (see `cellSize`'s accessor doc comment). Shared by `columnXFor()`,
+   * `rowYFor()`, `drawCalendar()`, and the hit-testing below (`weekAtX()`,
+   * `weekdayAtY()`, `cellRect()`) so they always agree on exactly the same
+   * geometry as what's actually painted.
+   */
+  private calendarCellSize(): number {
+    const { weekCount } = this.cachedCalendarGrid;
+    if (this.fitToWidth && weekCount > 0) {
+      // Unlike matrix mode's contiguous cells, calendar columns are spaced
+      // `cellSize + CAL_GAP` apart (see `columnXFor()`), so the gap has to be
+      // subtracted back out here — otherwise the painted width would overshoot
+      // `hostWidth` by `weekCount * CAL_GAP` (every column's gap, once each).
+      const hostWidth = this.clientWidth || CAL_PAD_LEFT + weekCount * (this.cellSize + CAL_GAP);
+      return Math.max(4, (hostWidth - CAL_PAD_LEFT) / weekCount - CAL_GAP);
+    }
+    return this.cellSize;
+  }
+
   /**
    * Calendar-mode week-column x-origin (canvas-local CSS px) — `columnX(week)`
-   * when set, otherwise the original evenly-spaced formula. Shared by every
-   * calendar-mode drawing and hit-testing call site (`drawCalendar()`,
+   * when set, otherwise the original evenly-spaced formula (now derived from
+   * `calendarCellSize()` rather than the fixed `CAL_CELL` constant). Shared
+   * by every calendar-mode drawing and hit-testing call site (`drawCalendar()`,
    * `hitTestCalendar()`/`weekAtX()`, `cellRect()`) so painted geometry and
    * interactive hit-testing never disagree — mirrors the existing
    * `matrixCellSize()` invariant for matrix mode's
    * `drawMatrix()`/`hitTestMatrix()`/`cellRect()`.
    */
   private columnXFor(week: number): number {
-    return this.columnX ? this.columnX(week) : CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP);
+    return this.columnX ? this.columnX(week) : CAL_PAD_LEFT + week * (this.calendarCellSize() + CAL_GAP);
+  }
+
+  /**
+   * Calendar-mode weekday-row y-origin (canvas-local CSS px) — `rowY(weekday)`
+   * when set, otherwise the original evenly-spaced formula (now derived from
+   * `calendarCellSize()` rather than the fixed `CAL_CELL` constant). The
+   * vertical analogue of `columnXFor()`, mirroring its exact
+   * dispatch-with-computed-fallback shape and shared by the same
+   * drawing/hit-testing/focus-ring call sites.
+   */
+  private rowYFor(weekday: number): number {
+    return this.rowY ? this.rowY(weekday) : CAL_LABEL_H + weekday * (this.calendarCellSize() + CAL_GAP);
   }
 
   /**
@@ -478,28 +720,51 @@ export class LyraHeatmap extends LyraElement {
    */
   private weekAtX(x: number, weekCount: number): number | null {
     if (!this.columnX) {
-      const week = Math.floor((x - CAL_PAD_LEFT) / (CAL_CELL + CAL_GAP));
+      const cellSize = this.calendarCellSize();
+      const week = Math.floor((x - CAL_PAD_LEFT) / (cellSize + CAL_GAP));
       return week >= 0 && week < weekCount ? week : null;
     }
     for (let week = 0; week < weekCount; week++) {
       const start = this.columnXFor(week);
-      const end = week + 1 < weekCount ? this.columnXFor(week + 1) : start + (CAL_CELL + CAL_GAP);
+      const end = week + 1 < weekCount ? this.columnXFor(week + 1) : start + (this.calendarCellSize() + CAL_GAP);
       if (x >= start && x < end) return week;
     }
     return null;
   }
 
   /**
-   * Locale-derived weekday-axis labels for the Sunday..Saturday rows drawn
-   * down the left of the calendar grid. Only indices 1 (Mon), 3 (Wed), and 5
-   * (Fri) are filled in — matching today's sparse every-other-day label
-   * density — the rest stay blank. `firstWeekStart` is always a UTC Sunday
-   * by construction (see `buildCalendarGrid()`), so weekday index 0..6 is a
-   * fixed Sun..Sat positional mapping; only the label *text* for indices
-   * 1/3/5 is derived here, via `Intl.DateTimeFormat` on a real UTC date that
-   * actually falls on that weekday, so it follows the runtime locale instead
-   * of a hardcoded English array (see `calendarCellText()`'s tooltip text
-   * for the same pattern).
+   * Inverse of `rowYFor()`: resolves a y position (canvas-local CSS px) to
+   * the weekday row it falls in (0-6), or `null` if it's outside every row.
+   * Mirrors `weekAtX()`'s closed-form-vs-scan split for the same reason: the
+   * default spacing has a closed-form inverse; an arbitrary `rowY` override
+   * doesn't.
+   */
+  private weekdayAtY(y: number): number | null {
+    if (!this.rowY) {
+      const cellSize = this.calendarCellSize();
+      const weekday = Math.floor((y - CAL_LABEL_H) / (cellSize + CAL_GAP));
+      return weekday >= 0 && weekday < 7 ? weekday : null;
+    }
+    for (let weekday = 0; weekday < 7; weekday++) {
+      const start = this.rowYFor(weekday);
+      const end = weekday + 1 < 7 ? this.rowYFor(weekday + 1) : start + (this.calendarCellSize() + CAL_GAP);
+      if (y >= start && y < end) return weekday;
+    }
+    return null;
+  }
+
+  /**
+   * Locale-derived weekday-axis labels for the 7 rows drawn down the left of
+   * the calendar grid. Only indices 1, 3, and 5 (relative to `firstWeekStart`)
+   * are filled in — matching today's sparse every-other-day label density —
+   * the rest stay blank. `firstWeekStart` is always the UTC
+   * `firstDayOfWeek`-weekday by construction (see `buildCalendarGrid()`), so
+   * weekday index 0..6 is a fixed positional mapping relative to it (with the
+   * default `firstDayOfWeek` of 0, that's the original Sun..Sat mapping,
+   * unchanged); only the label *text* for indices 1/3/5 is derived here, via
+   * `Intl.DateTimeFormat` on a real UTC date that actually falls on that
+   * weekday, so it follows the runtime locale instead of a hardcoded English
+   * array (see `calendarCellText()`'s tooltip text for the same pattern).
    */
   private weekdayLabels(firstWeekStart: Date): string[] {
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
@@ -513,8 +778,13 @@ export class LyraHeatmap extends LyraElement {
   private drawCalendar(): void {
     if (!this.canvas) return;
     const { cells, weekCount, firstWeekStart, monthLabels } = this.cachedCalendarGrid;
+    const cellSize = this.calendarCellSize();
     const w = this.columnXFor(Math.max(1, weekCount));
-    const h = CAL_LABEL_H + 7 * (CAL_CELL + CAL_GAP);
+    // Derived from `rowYFor(7)` (one past the last of the 7 weekday rows), the
+    // vertical mirror of `w`'s `columnXFor(weekCount)` — so a custom `rowY`
+    // that spaces rows out further than the default formula still gets a
+    // canvas tall enough to paint every row, instead of clipping them.
+    const h = this.rowYFor(7);
     const dpr = window.devicePixelRatio || 1;
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
@@ -526,18 +796,16 @@ export class LyraHeatmap extends LyraElement {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const sortedValues = cells
-      .map((c) => c.value)
-      .filter((v) => Number.isFinite(v) && v >= 0)
-      .sort((a, b) => a - b);
-    const [scaleLo, scaleHi] = this.scaleEndpoints();
-    const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
-    const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
     // Normalize at the allocation boundary as a final guard even though the
     // public accessor and attribute converter already normalize their inputs.
     const buckets = normalizeBucketCount(this.bucketCount);
-    const ramp = Array.from({ length: buckets }, (_, i) => mixRgb(loRgb, hiRgb, i / (buckets - 1)));
+    const ramp = this.colorRamp(buckets).colors;
     const noDataFill = this.noDataFill();
+    // Only consulted when `scale === 'sqrt'` — mirrors `drawMatrix()`'s own
+    // `hi` bound, reusing the already-cached value range instead of
+    // rescanning `sortedValues` for its max.
+    const bounds = this.cachedValueRange;
+    const hi = bounds ? bounds[1] : 1;
 
     // Indexed once per draw so every (week, weekday) grid position can be
     // painted below, not just positions with a matching entry in `cells` — a
@@ -545,17 +813,20 @@ export class LyraHeatmap extends LyraElement {
     // gets a real grid cell (see `calendarCellAt()`'s doc comment for the
     // same `-1` no-data sentinel used here) instead of being left
     // transparent.
-    const cellsByPos = new Map<string, CalendarCell>();
-    for (const cell of cells) cellsByPos.set(`${cell.week}:${cell.weekday}`, cell);
-
     for (let week = 0; week < weekCount; week++) {
       for (let weekday = 0; weekday < 7; weekday++) {
-        const value = cellsByPos.get(`${week}:${weekday}`)?.value ?? -1;
+        const value = this.cachedCalendarCellsByPos.get(`${week}:${weekday}`)?.value ?? -1;
         const x = this.columnXFor(week);
-        const y = CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP);
-        ctx.fillStyle =
-          value < 0 || !Number.isFinite(value) ? noDataFill : ramp[quartileBucket(value, sortedValues, buckets)]!;
-        ctx.fillRect(x, y, CAL_CELL, CAL_CELL);
+        const y = this.rowYFor(weekday);
+        if (value < 0 || !Number.isFinite(value)) {
+          ctx.fillStyle = noDataFill;
+        } else if (this.scale === 'sqrt') {
+          const step = sqrtStep(value, hi, buckets);
+          ctx.fillStyle = step < 0 ? noDataFill : ramp[step]!;
+        } else {
+          ctx.fillStyle = ramp[quartileBucket(value, this.cachedCalendarSortedValues, buckets)]!;
+        }
+        ctx.fillRect(x, y, cellSize, cellSize);
       }
     }
 
@@ -570,8 +841,8 @@ export class LyraHeatmap extends LyraElement {
         const match = cells.find((c) => c.date === ann.date);
         if (!match) continue;
         const x = this.columnXFor(match.week);
-        const y = CAL_LABEL_H + match.weekday * (CAL_CELL + CAL_GAP);
-        ctx.strokeRect(x + 0.5, y + 0.5, CAL_CELL - 1, CAL_CELL - 1);
+        const y = this.rowYFor(match.weekday);
+        ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
       }
     }
 
@@ -583,8 +854,8 @@ export class LyraHeatmap extends LyraElement {
         ctx.lineWidth = RING_LINE_WIDTH;
         ctx.strokeStyle = this.focusRingColor();
         const x = this.columnXFor(week);
-        const y = CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP);
-        ctx.strokeRect(x + 0.5, y + 0.5, CAL_CELL - 1, CAL_CELL - 1);
+        const y = this.rowYFor(weekday);
+        ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
       }
     }
 
@@ -595,7 +866,7 @@ export class LyraHeatmap extends LyraElement {
     }
     const WEEKDAY_LABELS = this.weekdayLabels(firstWeekStart);
     WEEKDAY_LABELS.forEach((label, weekday) => {
-      if (label) ctx.fillText(label, 2, CAL_LABEL_H + weekday * (CAL_CELL + CAL_GAP) + CAL_CELL - 1);
+      if (label) ctx.fillText(label, 2, this.rowYFor(weekday) + cellSize - 1);
     });
   }
 
@@ -635,10 +906,9 @@ export class LyraHeatmap extends LyraElement {
     const bounds = this.cachedValueRange;
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
-    const [scaleLo, scaleHi] = this.scaleEndpoints();
-    const loRgb = resolveRgb(scaleLo, FALLBACK_SCALE_LO);
-    const hiRgb = resolveRgb(scaleHi, FALLBACK_SCALE_HI);
-    const ramp = Array.from({ length: RAMP_STEPS }, (_, i) => mixRgb(loRgb, hiRgb, i / (RAMP_STEPS - 1)));
+    const rampData = this.colorRamp(RAMP_STEPS);
+    const ramp = rampData.colors;
+    const { loRgb, hiRgb } = rampData;
     const noDataFill = this.noDataFill();
 
     for (let r = 0; r < rows; r++) {
@@ -734,8 +1004,8 @@ export class LyraHeatmap extends LyraElement {
     const { weekCount } = this.cachedCalendarGrid;
     if (weekCount === 0) return null;
     const week = this.weekAtX(x, weekCount);
-    const weekday = Math.floor((y - CAL_LABEL_H) / (CAL_CELL + CAL_GAP));
-    if (week === null || weekday < 0 || weekday > 6) return null;
+    const weekday = this.weekdayAtY(y);
+    if (week === null || weekday === null) return null;
     return { week, weekday };
   }
 
@@ -762,11 +1032,12 @@ export class LyraHeatmap extends LyraElement {
    */
   private cellRect(pos: CellPos): { x: number; y: number; w: number; h: number } {
     if ('week' in pos) {
+      const cellSize = this.calendarCellSize();
       return {
         x: this.columnXFor(pos.week),
-        y: CAL_LABEL_H + pos.weekday * (CAL_CELL + CAL_GAP),
-        w: CAL_CELL,
-        h: CAL_CELL,
+        y: this.rowYFor(pos.weekday),
+        w: cellSize,
+        h: cellSize,
       };
     }
     const cellSize = this.matrixCellSize(this.colLabels.length);

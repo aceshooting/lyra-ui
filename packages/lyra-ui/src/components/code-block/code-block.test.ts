@@ -1,4 +1,5 @@
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
+import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block.js';
 import type { LyraCodeBlock } from './code-block.js';
 import type { ShikiHighlighter } from './code-loader.js';
@@ -140,6 +141,52 @@ describe('shiki highlighting (real peer)', () => {
     // already-rendered javascript output.
     expect(internals.highlightedHtml).to.equal(correctHtml);
     expect(el.language).to.equal('javascript');
+  });
+});
+
+describe('languages (fine-grained shiki opt-in)', () => {
+  it('highlights a language using a pre-supplied grammar from `languages`', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block
+        language="json"
+        .languages=${{ json: jsonGrammar }}
+        .code=${'{"a":1}'}
+      ></lyra-code-block>`,
+    )) as LyraCodeBlock;
+
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="pre"] span') !== null, undefined, {
+      timeout: 8000,
+    });
+    expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal('{"a":1}');
+  });
+
+  it('never shows the loading skeleton for a language covered by `languages`, even before shiki\'s shared singleton has resolved', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block
+        language="json"
+        .languages=${{ json: jsonGrammar }}
+        .code=${'{"a":1}'}
+      ></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    // Assert synchronously, right after the first render -- the whole point
+    // is that this doesn't depend on `loadShikiHighlighter()`'s singleton
+    // ever resolving at all.
+    expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
+    expect(el.hasAttribute('aria-busy')).to.be.false;
+  });
+
+  it('still falls back to the ordinary dynamic loadLanguage() path for a language absent from `languages`', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block
+        language="python"
+        .languages=${{ json: jsonGrammar }}
+        .code=${'def f():\n    return 1\n'}
+      ></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="pre"] span') !== null, undefined, {
+      timeout: 8000,
+    });
+    expect(internalsOf(el).highlighter!.getLoadedLanguages()).to.include('python');
   });
 });
 

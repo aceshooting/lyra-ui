@@ -93,6 +93,37 @@ describe('buildCalendarGrid', () => {
     expect(monthLabels.length).to.equal(2);
   });
 
+  it('defaults firstDayOfWeek to 0 (Sunday), anchoring the grid the same way as before', () => {
+    // 2026-03-05 is a Thursday.
+    const { cells } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }]);
+    expect(cells[0].weekday).to.equal(4); // Sun=0 .. Thu=4
+  });
+
+  it('anchors the grid at the given firstDayOfWeek instead of Sunday, shifting week/weekday assignment across a week boundary', () => {
+    // 2026-03-01 is a Sunday, 2026-03-02 is a Monday: both fall in the same
+    // Sunday-anchored week (week 0), but a Monday-anchored (firstDayOfWeek=1)
+    // grid must treat 2026-03-01 (Sunday) as the *last* day of the previous
+    // week, not the first day of the new one.
+    const days = [
+      { date: '2026-03-01', value: 1 }, // Sunday
+      { date: '2026-03-02', value: 2 }, // Monday
+    ];
+
+    const sundayAnchored = buildCalendarGrid(days, 0);
+    expect(sundayAnchored.cells[0].week).to.equal(0);
+    expect(sundayAnchored.cells[0].weekday).to.equal(0); // Sunday is weekday 0
+    expect(sundayAnchored.cells[1].week).to.equal(0);
+    expect(sundayAnchored.cells[1].weekday).to.equal(1); // Monday is weekday 1
+
+    const mondayAnchored = buildCalendarGrid(days, 1);
+    // Monday (2026-03-02) is the anchor weekday, so it starts a fresh week
+    // (week 1), while Sunday (2026-03-01) is weekday 6 of the *previous* week.
+    expect(mondayAnchored.cells[0].week).to.equal(0);
+    expect(mondayAnchored.cells[0].weekday).to.equal(6); // Sunday is 6 days after the Monday anchor
+    expect(mondayAnchored.cells[1].week).to.equal(1);
+    expect(mondayAnchored.cells[1].weekday).to.equal(0); // Monday is the anchor weekday
+  });
+
   it('formats month labels using the runtime locale, not a hardcoded "en"', () => {
     const { monthLabels } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }]);
     const expected = new Date(Date.UTC(2026, 2, 5)).toLocaleString(undefined, {

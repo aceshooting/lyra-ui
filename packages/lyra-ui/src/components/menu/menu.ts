@@ -125,6 +125,7 @@ export class LyraMenu extends LyraElement {
 
   private triggerEl?: HTMLElement;
   private cleanup?: () => void;
+  private itemStateObserver?: MutationObserver;
   private _isFirstUpdate = true;
   private pendingFocus: 'first' | 'last' = 'first';
   private readonly listId = nextId('menu-list');
@@ -184,6 +185,8 @@ export class LyraMenu extends LyraElement {
     this.cleanup?.();
     this.cleanup = undefined;
     clearTimeout(this.typeAheadTimer);
+    this.itemStateObserver?.disconnect();
+    this.itemStateObserver = undefined;
     document.removeEventListener('pointerdown', this.onDocPointer);
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
@@ -269,9 +272,19 @@ export class LyraMenu extends LyraElement {
   }
 
   private onItemsSlotChange = (e: Event): void => {
+    this.itemStateObserver?.disconnect();
     this.items = (e.target as HTMLSlotElement)
       .assignedElements({ flatten: true })
       .filter((el): el is LyraMenuItem => el instanceof LyraMenuItem);
+    if (typeof MutationObserver !== 'undefined') {
+      this.itemStateObserver = new MutationObserver(() => this.onItemStateChange());
+      for (const item of this.items) {
+        this.itemStateObserver.observe(item, {
+          attributes: true,
+          attributeFilter: ['disabled', 'hidden', 'aria-hidden'],
+        });
+      }
+    }
     if (this.activeIndex >= this.items.length) this.activeIndex = -1;
     this.applyRovingTabIndex();
     // Covers the same "open from the start" race as onTriggerSlotChange's
@@ -280,6 +293,29 @@ export class LyraMenu extends LyraElement {
     // so this only ever fires for that initial catch-up, not on every later
     // items mutation while open.
     if (this.open && this.activeIndex === -1) this.focusRoving(this.pendingFocus);
+  };
+
+  private isNavigable(item: LyraMenuItem): boolean {
+    return !item.disabled && !item.hidden && item.getAttribute('aria-hidden') !== 'true';
+  }
+
+  /** Rehomes roving focus immediately when an active item becomes disabled or hidden. */
+  private onItemStateChange = (): void => {
+    const navigable = this.items.filter((item) => this.isNavigable(item));
+    if (this.activeIndex >= 0 && !this.isNavigable(this.items[this.activeIndex]!)) {
+      const current = this.activeIndex;
+      const next =
+        navigable.find((item) => this.items.indexOf(item) > current) ??
+        navigable.find((item) => this.items.indexOf(item) < current);
+      if (next) {
+        this.setActiveItem(next);
+      } else {
+        this.activeIndex = -1;
+        this.applyRovingTabIndex();
+      }
+      return;
+    }
+    this.applyRovingTabIndex();
   };
 
   private onItemSelect = (e: Event): void => {
@@ -302,7 +338,7 @@ export class LyraMenu extends LyraElement {
    *  non-disabled item. A no-op when there are none -- focus then simply
    *  stays on the trigger (see onTriggerKeyDown's Escape safety net). */
   private focusRoving(which: 'first' | 'last'): void {
-    const navigable = this.items.filter((i) => !i.disabled);
+    const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
     const item = which === 'first' ? navigable[0] : navigable[navigable.length - 1];
     this.setActiveItem(item);
@@ -333,7 +369,7 @@ export class LyraMenu extends LyraElement {
   };
 
   private onListKeyDown = (e: KeyboardEvent): void => {
-    const navigable = this.items.filter((i) => !i.disabled);
+    const navigable = this.items.filter((i) => this.isNavigable(i));
     const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentNavIndex = current ? navigable.indexOf(current) : -1;
 
@@ -422,6 +458,7 @@ export class LyraMenu extends LyraElement {
           @keydown=${this.onListKeyDown}
           @focusin=${this.onListFocusIn}
           @lyra-menu-item-select=${this.onItemSelect}
+          @lyra-menu-item-state-change=${this.onItemStateChange}
         >
           <slot @slotchange=${this.onItemsSlotChange}></slot>
         </div>

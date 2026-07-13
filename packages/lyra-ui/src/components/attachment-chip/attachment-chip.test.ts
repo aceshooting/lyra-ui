@@ -369,6 +369,75 @@ describe('id resolution', () => {
   });
 });
 
+describe('label overrides (i18n)', () => {
+  it('overrides the remove button aria-label while keeping displayName interpolation', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip name="invoice.pdf" remove-label="Supprimer"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Supprimer invoice.pdf');
+  });
+
+  it('defaults removeLabel to "Remove", matching today\'s hardcoded text exactly', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip name="invoice.pdf"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    expect(el.removeLabel).to.equal('Remove');
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Remove invoice.pdf');
+  });
+
+  it('overrides the retry button aria-label while keeping displayName interpolation', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip name="invoice.pdf" status="error" retry-label="Réessayer"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    const btn = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Réessayer invoice.pdf');
+  });
+
+  it('defaults retryLabel to "Retry", matching today\'s hardcoded text exactly', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip name="invoice.pdf" status="error"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.retryLabel).to.equal('Retry');
+    const btn = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Retry invoice.pdf');
+  });
+
+  it('overrides the uploading status text verb while keeping the live percentage', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip status="uploading" progress="30" uploading-label="Téléversement"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Téléversement 30%');
+  });
+
+  it('overrides the indeterminate uploading status text verb (no numeric progress)', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip name="a.zip" status="uploading" uploading-label="Téléversement"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Téléversement…');
+  });
+
+  it('defaults uploadingLabel to "Uploading", matching today\'s hardcoded text exactly', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip status="uploading" progress="30"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.uploadingLabel).to.equal('Uploading');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Uploading 30%');
+  });
+
+  it('overrides the upload-failed status text', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-chip status="error" upload-failed-label="Échec de l'envoi"></lyra-attachment-chip>`,
+    )) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal("Échec de l'envoi");
+  });
+
+  it('defaults uploadFailedLabel to "Upload failed", matching today\'s hardcoded text exactly', async () => {
+    const el = (await fixture(html`<lyra-attachment-chip status="error"></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    expect(el.uploadFailedLabel).to.equal('Upload failed');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Upload failed');
+  });
+});
+
 it('is accessible in the default (empty) state', async () => {
   const el = (await fixture(html`<lyra-attachment-chip></lyra-attachment-chip>`)) as LyraAttachmentChip;
   await expect(el).to.be.accessible();

@@ -1,7 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { defineElement } from '../../internal/prefix.js';
+import { lockScroll } from '../../internal/scroll-lock.js';
 import { isRtl } from '../../internal/rtl.js';
 import { styles } from './split.styles.js';
 
@@ -32,6 +34,25 @@ export interface PanelConstraint {
   maxPx?: number;
 }
 
+export type SplitConstraintIssueReason =
+  | 'minimum-total'
+  | 'maximum-total'
+  | 'minimum-exceeds-maximum';
+
+export interface SplitConstraintIssueDetail {
+  reason: SplitConstraintIssueReason;
+  panelCount: number;
+  minimumTotal: number;
+  maximumTotal: number | null;
+  containerSize: number;
+}
+
+interface ConstraintResolution {
+  bounds: Array<{ min: number; max: number }>;
+  usePanelConstraints: boolean;
+  issue?: SplitConstraintIssueDetail;
+}
+
 /** Which pane (if any) participates in responsive collapse (see `collapse`). */
 export type SplitCollapseMode = 'start' | 'end' | 'none';
 
@@ -40,6 +61,10 @@ export type SplitCollapseMode = 'start' | 'end' | 'none';
  *  clamps it to `railWidth`; `'floating'` lifts it out of the flex flow as an
  *  overlay above the other pane. */
 export type SplitCollapseState = 'wide' | 'rail' | 'floating';
+
+/** What can be *assigned* to `collapseState` -- `'auto'` is a write-only
+ *  sentinel; see the `collapseState` accessor doc. */
+export type SplitCollapseStateInput = SplitCollapseState | 'auto';
 
 export interface SplitCollapseChangeDetail {
   state: SplitCollapseState;
@@ -61,19 +86,65 @@ export interface SplitCollapseChangeDetail {
  * icon-only/collapsed UI of its own; slotted content is expected to adapt to
  * its own clamped width (e.g. via its own container query).
  *
+ * `collapseState` is a public accessor with force/auto semantics mirroring
+ * `<lyra-app-rail>`'s `mode`: it's normally derived automatically from the
+ * measured container width (via a `ResizeObserver` on `[part="base"]`)
+ * whenever it crosses `railBreakpoint`/`floatBreakpoint`, but assigning it a
+ * concrete `'wide'`/`'rail'`/`'floating'` value pins it there and stops that
+ * automatic tracking — useful for a consumer-driven toggle (e.g. a button
+ * that forces `'floating'` regardless of width). Assigning the write-only
+ * `'auto'` sentinel releases the pin and immediately re-derives the state
+ * from the current measured width, resuming automatic tracking. `'auto'` is
+ * never a value this getter returns.
+ *
+ * The `'floating'` state is a hidden-by-default drawer, gated by `open`
+ * (mirrors `<lyra-app-rail>`'s mobile overlay): while `collapseState` is
+ * `'floating'` and `open` is `false` (the default), the collapsing panel
+ * renders nothing — `hidden`, out of the accessibility tree, not just
+ * visually hidden — instead of the always-visible overlay card this state
+ * rendered before `open` existed. Setting `open = true` reveals it as a
+ * focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a
+ * backdrop click set `open` back to `false`. `open` is preserved (not reset)
+ * while `collapseState` isn't `'floating'`, but no drawer chrome renders
+ * until it is again — except that leaving `'floating'` while `open` is
+ * `true` (a breakpoint crossing back to `'wide'`/`'rail'`, or a forced
+ * reassignment) also closes it, the same way `<lyra-app-rail>` closes its
+ * mobile overlay when leaving `'mobile'` while open.
+ *
  * @customElement lyra-split
  * @event lyra-resize - `detail: { sizes }`, fired on every drag step/release
  *   and every keyboard step.
  * @event lyra-split-collapse-change - `detail: { state }` (`SplitCollapseChangeDetail`),
  *   fired whenever the responsive `collapseState` actually transitions between
- *   `'wide'`/`'rail'`/`'floating'`. Only relevant when `collapse` isn't `"none"`;
- *   never fires otherwise.
+ *   `'wide'`/`'rail'`/`'floating'` — whether from a breakpoint crossing or an
+ *   explicit `collapseState` assignment. Only relevant when `collapse` isn't
+ *   `"none"`; never fires otherwise. Not fired for a redundant reassignment
+ *   to the state already in effect.
+ * @event lyra-split-constraints-invalid - `detail: SplitConstraintIssueDetail`,
+ *   fired once when the configured panel minimums/maximums cannot describe a
+ *   layout that fits the track. The splitter rejects that infeasible set for
+ *   interaction and falls back to a normalized percent minimum.
  * @slot - Panels to arrange side by side (or stacked, when `orientation="vertical"`); each direct child becomes one resizable panel.
  * @csspart base - The flex layout wrapper (`position: relative`, so the `'floating'` collapse state can anchor to it).
  * @csspart divider - Each divider between two panels; carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed (`'rail'`/`'floating'`).
+ * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  */
 export class LyraSplit extends LyraElement {
   static styles = [LyraElement.styles, styles];
+
+  // `collapseState` needs a custom accessor (force/auto semantics -- see the
+  // class doc) rather than the usual @property()-generated one -- registered
+  // here, alongside the decorator-declared properties below, the same way
+  // lyra-app-rail's `mode` is. `reflect: true` still applies: LitElement's
+  // update loop reflects any `reflect`-flagged property to its attribute
+  // generically by reading `this[name]` after render, regardless of whether
+  // that property has a custom or auto-generated accessor. `attribute` is
+  // spelled out (unlike `mode`, a single word whose Lit-default lowercase
+  // form already reads fine) so the reflected attribute stays kebab-case,
+  // matching this file's other attribute-reflected properties.
+  static properties = {
+    collapseState: { reflect: true, attribute: 'collapse-state', noAccessor: true },
+  };
 
   @property({ attribute: false }) sizes: number[] = [];
   @property({ type: Number }) min = 10;
@@ -103,11 +174,29 @@ export class LyraSplit extends LyraElement {
   /** Container width (px) below which the collapsing pane instead becomes an
    *  absolutely-positioned overlay above the other pane (`'floating'` state). */
   @property({ type: Number, attribute: 'float-breakpoint' }) floatBreakpoint = 400;
+  /** Whether the `'floating'` collapse state's drawer is shown. Only
+   *  meaningful while `collapseState` is `'floating'` — the value is
+   *  preserved (not reset) while another state is active, but no drawer
+   *  chrome renders until `collapseState` is `'floating'` again. Defaults to
+   *  `false`: the collapsing pane renders nothing while floating until a
+   *  consumer opts in by setting this (or it's forced open programmatically)
+   *  — see the class doc. */
+  @property({ type: Boolean, reflect: true }) open = false;
 
   @state() private panelCount = 0;
-  /** The collapsing pane's current responsive state; always `'wide'` (a
-   *  no-op) while `collapse === 'none'`. */
-  @state() private collapseState: SplitCollapseState = 'wide';
+  private _collapseState: SplitCollapseState = 'wide';
+  // Whether ResizeObserver-driven measurement is currently ignored because a
+  // consumer forced a specific collapseState -- see the accessor doc.
+  private _forced = false;
+  // Derived from collapseState === 'floating' && open -- tracked as its own
+  // field (rather than recomputed inline everywhere) so willUpdate can detect
+  // the specific false->true/true->false transition regardless of which of
+  // the two source properties changed (mirrors lyra-app-rail's
+  // `overlayActive`).
+  private overlayActive = false;
+  private justOpened = false;
+  private releaseScrollLock?: () => void;
+  private overlayHandle?: OverlayHandle;
   // Keyed by pointerId so an interrupted or concurrent (multi-touch) drag on
   // one divider never reads or clobbers another pointer's drag state.
   private drags = new Map<number, DragState>();
@@ -117,6 +206,7 @@ export class LyraSplit extends LyraElement {
   // lyra-split-authored styles cleared instead of carrying them around stale
   // forever.
   private stylizedPanels = new Set<HTMLElement>();
+  private constraintIssueKey = '';
   @query('[part="base"]') private baseEl?: HTMLElement;
   private collapseResizeObserver?: ResizeObserver;
 
@@ -131,6 +221,21 @@ export class LyraSplit extends LyraElement {
     // lite-chart.ts's identical connectedCallback/firstUpdated split for its
     // own ResizeObserver.
     if (this.collapse !== 'none') this.armCollapseObserver();
+    // A reconnect (e.g. a drag-and-drop reparent keeping this same element
+    // instance) fires disconnectedCallback then connectedCallback
+    // synchronously with no update in between, so willUpdate never reruns to
+    // notice the floating drawer is still active -- restore its shared
+    // registration and scroll lock. Mirrors lyra-app-rail's identical
+    // reconnect handling for its mobile overlay.
+    if (this.hasUpdated && this.overlayActive) {
+      if (this.overlayHandle?.isActive()) {
+        this.overlayHandle.resume();
+      } else {
+        this.activateFloatingOverlay();
+      }
+      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      queueMicrotask(() => this.overlayHandle?.focusInitial());
+    }
   }
 
   disconnectedCallback(): void {
@@ -142,6 +247,9 @@ export class LyraSplit extends LyraElement {
     window.removeEventListener('pointercancel', this.onPointerUp);
     window.removeEventListener('lostpointercapture', this.onPointerUp);
     this.collapseResizeObserver?.disconnect();
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlayHandle?.suspend();
   }
 
   protected firstUpdated(): void {
@@ -166,8 +274,78 @@ export class LyraSplit extends LyraElement {
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('sizes') || this.sizes.length === 0) this.ensureSizes();
     if (changed.has('collapse') && this.collapse === 'none') {
-      this.collapseState = 'wide';
+      this.resetCollapseState();
     }
+    if (changed.has('open') || changed.has('collapseState')) {
+      const next = this._collapseState === 'floating' && this.open;
+      if (next !== this.overlayActive) {
+        this.overlayActive = next;
+        if (next) {
+          this.justOpened = true;
+          this.activateFloatingOverlay();
+        } else {
+          this.deactivateFloatingOverlay();
+        }
+      }
+    }
+  }
+
+  /**
+   * The collapsing pane's current responsive state. Always one of the three
+   * real states — never `'auto'` — reflecting either the live measured
+   * width or, once forced, whatever was last assigned. See the class doc for
+   * the full force/auto contract (mirrors `<lyra-app-rail>`'s `mode`).
+   */
+  get collapseState(): SplitCollapseState {
+    return this._collapseState;
+  }
+  set collapseState(next: SplitCollapseStateInput) {
+    if (next === 'auto') {
+      this._forced = false;
+      this.updateCollapseState(this.currentMeasuredWidth());
+      return;
+    }
+    this._forced = true;
+    this.applyCollapseStateChange(next);
+  }
+
+  /** The container width (px) `[part="base"]` is measured at right now --
+   *  used to re-derive `collapseState` immediately when a forced value is
+   *  released back to `'auto'`, outside of the `ResizeObserver`'s own
+   *  (async, entry-driven) callback. Mirrors the synchronous initial read
+   *  `armCollapseObserver()` already does when it (re-)arms. */
+  private currentMeasuredWidth(): number {
+    return this.baseEl?.clientWidth ?? 0;
+  }
+
+  /** Resets `collapseState` back to its `'wide'` default and releases any
+   *  force, bypassing the public accessor's pin/event-emit side effects --
+   *  used only for the `collapse -> 'none'` housekeeping reset in
+   *  `willUpdate()`, which is purely internal bookkeeping (the feature is
+   *  off entirely), not a state transition a consumer forced or observed. */
+  private resetCollapseState(): void {
+    this._forced = false;
+    if (this._collapseState === 'wide') return;
+    const old = this._collapseState;
+    this._collapseState = 'wide';
+    this.requestUpdate('collapseState', old);
+  }
+
+  /** Applies an actual `collapseState` transition (no-op if `next` matches
+   *  the current value): updates the field, triggers Lit's reflect/re-render
+   *  via `requestUpdate`, and fires `lyra-split-collapse-change`. Shared by
+   *  both the `ResizeObserver`-driven measurement path (`updateCollapseState`)
+   *  and the accessor's forced-value assignment, so the two never duplicate
+   *  this logic. Leaving `'floating'` while `open` is still `true` also
+   *  closes the drawer -- mirrors `<lyra-app-rail>` closing its mobile
+   *  overlay when `mode` leaves `'mobile'` while open. */
+  private applyCollapseStateChange(next: SplitCollapseState): void {
+    if (next === this._collapseState) return;
+    const old = this._collapseState;
+    this._collapseState = next;
+    this.requestUpdate('collapseState', old);
+    this.emit<SplitCollapseChangeDetail>('lyra-split-collapse-change', { state: next });
+    if (next !== 'floating' && this.open) this.open = false;
   }
 
   private get storageFullKey(): string | undefined {
@@ -288,15 +466,18 @@ export class LyraSplit extends LyraElement {
   }
 
   /** Classifies a measured container width into the collapsing pane's
-   *  responsive state and, only on an actual transition, updates
-   *  `collapseState` and fires `lyra-split-collapse-change`. */
+   *  responsive state and, only on an actual transition, applies it (via the
+   *  same `applyCollapseStateChange()` the accessor's forced-value path
+   *  uses). Gated behind `_forced` so a pinned `collapseState` is never
+   *  silently overwritten by a subsequent resize — this is also what the
+   *  accessor's `'auto'` release calls (with the current measured width) to
+   *  re-derive the state without duplicating the width-vs-breakpoint logic. */
   private updateCollapseState(width: number): void {
     if (this.collapse === 'none') return;
+    if (this._forced) return;
     const next: SplitCollapseState =
       width < this.floatBreakpoint ? 'floating' : width < this.railBreakpoint ? 'rail' : 'wide';
-    if (next === this.collapseState) return;
-    this.collapseState = next;
-    this.emit<SplitCollapseChangeDetail>('lyra-split-collapse-change', { state: next });
+    this.applyCollapseStateChange(next);
   }
 
   /** Creates (idempotently) and (re-)observes `[part="base"]` with the
@@ -334,19 +515,78 @@ export class LyraSplit extends LyraElement {
     this.armCollapseObserver();
   }
 
-  /** Resolves panel `index`'s effective percent min/max for this clamp pass:
-   *  a `panelConstraints` entry's px bound converted against the live
-   *  `containerSize`, or the component's plain percent `min` (no upper
-   *  bound) when the panel carries no constraint for that side. */
-  private percentBounds(index: number, containerSize: number): { min: number; max: number } {
-    const constraint = this.panelConstraints[index];
-    let min = this.min;
-    let max = Infinity;
-    if (constraint && containerSize > 0) {
-      if (constraint.minPx != null) min = (constraint.minPx / containerSize) * 100;
-      if (constraint.maxPx != null) max = (constraint.maxPx / containerSize) * 100;
+  /** The safe fallback for a shared percent minimum. A value above the
+   *  available share is still useful as a consumer intent, but it cannot be
+   *  honored for every panel at once, so reduce it proportionally. */
+  private normalizedDefaultMin(): number {
+    if (this.panelCount <= 0) return 0;
+    const requested = Number.isFinite(this.min) ? Math.max(0, this.min) : 0;
+    // Leave one keyboard step of aggregate slack after rejecting an
+    // infeasible configuration, so an equal starting layout remains
+    // resizable instead of merely becoming a different frozen layout.
+    const available = Math.max(0, 100 - KEYBOARD_STEP);
+    return Math.min(requested, available / this.panelCount);
+  }
+
+  /** Resolves all panel bounds together so aggregate feasibility is checked
+   *  before an individual divider is asked to clamp a pair. An invalid set is
+   *  rejected as a whole: interaction uses the safe shared minimum instead of
+   *  exposing a divider whose minimum is greater than its maximum. */
+  private resolveConstraintBounds(containerSize: number): ConstraintResolution {
+    const fallbackMin = this.normalizedDefaultMin();
+    const fallback = Array.from({ length: this.panelCount }, () => ({ min: fallbackMin, max: Infinity }));
+    if (this.panelCount <= 0) return { bounds: [], usePanelConstraints: true };
+
+    const bounds: Array<{ min: number; max: number }> = [];
+    let minimumTotal = 0;
+    let maximumTotal = 0;
+    let hasUnboundedMaximum = false;
+    let issueReason: SplitConstraintIssueReason | undefined;
+
+    for (let index = 0; index < this.panelCount; index++) {
+      const constraint = this.panelConstraints[index];
+      let min = Number.isFinite(this.min) ? Math.max(0, this.min) : 0;
+      let max = Infinity;
+      if (constraint) {
+        if (constraint.minPx != null && Number.isFinite(constraint.minPx) && constraint.minPx >= 0 && containerSize > 0) {
+          min = (constraint.minPx / containerSize) * 100;
+        }
+        if (constraint.maxPx != null && Number.isFinite(constraint.maxPx) && constraint.maxPx >= 0 && containerSize > 0) {
+          max = (constraint.maxPx / containerSize) * 100;
+        }
+        if (
+          (constraint.minPx != null && (!Number.isFinite(constraint.minPx) || constraint.minPx < 0)) ||
+          (constraint.maxPx != null && (!Number.isFinite(constraint.maxPx) || constraint.maxPx < 0))
+        ) {
+          issueReason ??= 'minimum-exceeds-maximum';
+        }
+      }
+      if (min > max) issueReason ??= 'minimum-exceeds-maximum';
+      bounds.push({ min, max });
+      minimumTotal += min;
+      if (Number.isFinite(max)) maximumTotal += max;
+      else hasUnboundedMaximum = true;
     }
-    return { min, max };
+
+    if (issueReason == null && minimumTotal > 100 + 1e-9) issueReason = 'minimum-total';
+    if (issueReason == null && !hasUnboundedMaximum && maximumTotal < 100 - 1e-9) issueReason = 'maximum-total';
+    if (issueReason == null) return { bounds, usePanelConstraints: true };
+
+    return {
+      bounds: fallback,
+      usePanelConstraints: false,
+      issue: {
+        reason: issueReason,
+        panelCount: this.panelCount,
+        minimumTotal,
+        maximumTotal: hasUnboundedMaximum ? null : maximumTotal,
+        containerSize,
+      },
+    };
+  }
+
+  private percentBounds(index: number, containerSize: number): { min: number; max: number } {
+    return this.resolveConstraintBounds(containerSize).bounds[index] ?? { min: 0, max: Infinity };
   }
 
   private clampPair(sizes: number[], i: number, delta: number, containerSize = 0): number[] {
@@ -376,6 +616,37 @@ export class LyraSplit extends LyraElement {
     this.emit('lyra-resize', { sizes: [...this.sizes] });
     if (commit) this.persist();
   }
+
+  /** The collapsing pane's light-DOM element itself — the `'floating'`
+   *  drawer's focus-trap/backdrop target. There's no separate shadow-DOM
+   *  panel to trap focus within (unlike `<lyra-app-rail>`'s `[part="panel"]`):
+   *  the slotted panel *is* the floating drawer, just repositioned via
+   *  inline styles in `updated()`. */
+  private get floatingPanelEl(): HTMLElement | null {
+    const index = this.collapsingIndex;
+    return index === -1 ? null : ((this.children[index] as HTMLElement | undefined) ?? null);
+  }
+
+  private activateFloatingOverlay(): void {
+    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.floatingPanelEl,
+      onEscape: () => (this.open = false),
+      onBackdrop: () => (this.open = false),
+    });
+  }
+
+  private deactivateFloatingOverlay(): void {
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlayHandle?.deactivate();
+    this.overlayHandle = undefined;
+  }
+
+  private onBackdropClick = (): void => {
+    this.overlayHandle?.dismissBackdrop();
+  };
 
   private onPointerDown = (e: PointerEvent, index: number): void => {
     // The divider adjacent to a currently rail/floating-collapsed pane isn't
@@ -480,6 +751,15 @@ export class LyraSplit extends LyraElement {
 
   protected updated(changed: PropertyValues): void {
     if (changed.has('collapse')) this.syncCollapseObserver();
+    const constraintResolution = this.resolveConstraintBounds(this.getContainerSize());
+    const issue = constraintResolution.issue;
+    const issueKey = issue
+      ? `${issue.reason}:${issue.panelCount}:${issue.minimumTotal}:${issue.maximumTotal ?? 'unbounded'}`
+      : '';
+    if (issueKey !== this.constraintIssueKey) {
+      this.constraintIssueKey = issueKey;
+      if (issue) this.emit<SplitConstraintIssueDetail>('lyra-split-constraints-invalid', issue);
+    }
     const panels = [...this.children] as HTMLElement[];
     const current = new Set(panels);
     // A panel that dropped out of the slot (removed from the light DOM)
@@ -496,6 +776,7 @@ export class LyraSplit extends LyraElement {
         stale.style.removeProperty('inset-inline-start');
         stale.style.removeProperty('inset-inline-end');
         stale.style.removeProperty('inline-size');
+        stale.hidden = false;
         delete stale.dataset.collapseState;
       }
     }
@@ -507,7 +788,7 @@ export class LyraSplit extends LyraElement {
     const collapsingIndex = this.collapseActive ? this.collapsingIndex : -1;
     panels.forEach((panel, i) => {
       const percent = this.sizes[i] ?? 0;
-      const constraint = this.panelConstraints[i];
+      const constraint = constraintResolution.usePanelConstraints ? this.panelConstraints[i] : undefined;
       // Collapse-only inline styles are always cleared first, then
       // re-applied below only for the panel(s) that need them this pass —
       // simpler than diffing which of the 5 properties changed.
@@ -516,17 +797,29 @@ export class LyraSplit extends LyraElement {
       panel.style.removeProperty('inset-inline-start');
       panel.style.removeProperty('inset-inline-end');
       panel.style.removeProperty('inline-size');
+      panel.hidden = false;
 
       if (collapsingIndex === i && this.collapseState === 'rail') {
         // Fixed rail width instead of the normal clamp()/percent flex-basis.
         panel.style.flex = `0 0 ${this.railWidth}`;
+      } else if (collapsingIndex === i && this.collapseState === 'floating' && !this.open) {
+        // Hidden-by-default drawer (see the class doc): rendering nothing
+        // (not just visually collapsed, so it's out of the accessibility
+        // tree too) until a consumer sets `open`. The pane still vacates the
+        // flex flow the same way the open/floating branch below does, via
+        // `hidden`'s UA `display: none` rather than `position: absolute`, so
+        // the other pane below still grows to fill the space regardless of
+        // which of the two branches applied.
+        panel.style.flex = 'none';
+        panel.hidden = true;
       } else if (collapsingIndex === i && this.collapseState === 'floating') {
-        // Lifted out of the flex flow entirely as an overlay card, anchored
-        // to its own logical start/end edge, spanning the full cross-axis
-        // extent — [part="base"] carries `position: relative` for this to
-        // anchor against (see split.styles.ts). Sized at its own normal
-        // percent width (i.e. what it would render at in the `'wide'`
-        // state), so there's no visual size jump the moment it un-floats.
+        // `this.open` is true here. Lifted out of the flex flow entirely as
+        // an overlay card, anchored to its own logical start/end edge,
+        // spanning the full cross-axis extent — [part="base"] carries
+        // `position: relative` for this to anchor against (see
+        // split.styles.ts). Sized at its own normal percent width (i.e. what
+        // it would render at in the `'wide'` state), so there's no visual
+        // size jump the moment it un-floats.
         panel.style.flex = 'none';
         panel.style.position = 'absolute';
         panel.style.setProperty('inset-block', '0');
@@ -568,15 +861,30 @@ export class LyraSplit extends LyraElement {
     } else {
       this.removeAttribute('data-collapse-state');
     }
+
+    // Runs after this render (not willUpdate) so the floating panel's
+    // repositioned geometry above has already landed before the focus call
+    // below can rely on it -- mirrors lyra-app-rail's/lyra-dialog's identical
+    // ordering rationale for their own overlay's initial focus.
+    if (this.justOpened) {
+      this.justOpened = false;
+      this.overlayHandle?.focusInitial();
+    }
   }
 
   render(): TemplateResult {
     const dividers: TemplateResult[] = [];
+    const bounds = this.resolveConstraintBounds(this.getContainerSize()).bounds;
     for (let i = 0; i < this.panelCount - 1; i++) {
-      // The achievable max for this divider is bounded by its two adjacent
-      // panels, not the whole track — pushing past it would starve a panel
-      // further down the line even though this pair still has room.
-      const valueMax = (this.sizes[i] ?? 0) + (this.sizes[i + 1] ?? 0) - this.min;
+      // The achievable range is bounded by both adjacent panels, not the
+      // whole track — pushing past it would starve the partner even though
+      // this pair still has room. Keep max >= min for imperfect persisted or
+      // consumer-supplied starting sizes.
+      const pairTotal = (this.sizes[i] ?? 0) + (this.sizes[i + 1] ?? 0);
+      const a = bounds[i] ?? { min: 0, max: Infinity };
+      const b = bounds[i + 1] ?? { min: 0, max: Infinity };
+      const valueMin = Math.max(a.min, pairTotal - b.max);
+      const valueMax = Math.max(valueMin, Math.min(a.max, pairTotal - b.min));
       const disabled = this.isDividerDisabled(i);
       dividers.push(html`<div
         part="divider"
@@ -584,7 +892,7 @@ export class LyraSplit extends LyraElement {
         aria-label="Resize divider between panel ${i + 1} and panel ${i + 2}"
         aria-orientation=${this.orientation === 'vertical' ? 'horizontal' : 'vertical'}
         aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
-        aria-valuemin=${this.min}
+        aria-valuemin=${Math.round(valueMin)}
         aria-valuemax=${Math.round(valueMax)}
         aria-disabled=${disabled ? 'true' : nothing}
         tabindex=${disabled ? '-1' : '0'}
@@ -593,7 +901,12 @@ export class LyraSplit extends LyraElement {
         @keydown=${(e: KeyboardEvent) => this.onDividerKeyDown(e, i)}
       ></div>`);
     }
-    return html`<div part="base"><slot @slotchange=${this.onSlotChange}></slot>${dividers}</div>`;
+    const showBackdrop = this.collapseState === 'floating' && this.open;
+    return html`<div part="base">
+      <slot @slotchange=${this.onSlotChange}></slot>
+      ${dividers}
+      ${showBackdrop ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}
+    </div>`;
   }
 }
 

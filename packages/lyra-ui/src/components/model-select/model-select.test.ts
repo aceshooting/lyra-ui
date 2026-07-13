@@ -491,6 +491,65 @@ it('does not open when disabled', async () => {
   expect(el.open).to.be.false;
 });
 
+// -- Label -----------------------------------------------------------------
+
+it('renders a visible form-control-label element once label is set', async () => {
+  const el = (await fixture(html`<lyra-model-select .catalog=${CATALOG}></lyra-model-select>`)) as LyraModelSelect;
+  const labelEl = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLLabelElement;
+  expect(labelEl.hidden, 'hidden by default when label is unset').to.be.true;
+
+  el.label = 'Model';
+  await el.updateComplete;
+  expect(labelEl.hidden).to.be.false;
+  expect(labelEl.textContent).to.equal('Model');
+  expect(labelEl.htmlFor, 'label should be paired with the trigger via for/id').to.equal(trigger(el).id);
+});
+
+it('renders the visible label in free-text mode too, paired with the combobox input', async () => {
+  const el = (await fixture(html`<lyra-model-select label="Model"></lyra-model-select>`)) as LyraModelSelect;
+  const labelEl = el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLLabelElement;
+  expect(labelEl.hidden).to.be.false;
+  expect(labelEl.textContent).to.equal('Model');
+  expect(labelEl.htmlFor).to.equal(input(el).id);
+});
+
+it('derives the accessible name from label when set, omitting the redundant aria-label', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select label="Model" .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  expect(trigger(el).hasAttribute('aria-label'), 'aria-label is unnecessary once a visible label exists').to.be
+    .false;
+});
+
+it('prefers an explicit host aria-label over label, same precedence as lyra-select', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select aria-label="Sort order" label="Model" .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Sort order');
+});
+
+it('preserves the exact aria-label/placeholder/"Model" fallback chain when label is unset', async () => {
+  const withAriaLabel = (await fixture(
+    html`<lyra-model-select aria-label="Sort order" placeholder="Choose…" .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  expect(trigger(withAriaLabel).getAttribute('aria-label')).to.equal('Sort order');
+
+  const withPlaceholder = (await fixture(
+    html`<lyra-model-select placeholder="Choose…" .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  expect(trigger(withPlaceholder).getAttribute('aria-label')).to.equal('Choose…');
+
+  const bare = (await fixture(html`<lyra-model-select .catalog=${CATALOG}></lyra-model-select>`)) as LyraModelSelect;
+  expect(trigger(bare).getAttribute('aria-label')).to.equal('Model');
+});
+
+it('is accessible with a visible label set', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select label="Model" .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  await expect(el).to.be.accessible();
+});
+
 // -- Accessibility -------------------------------------------------------
 
 it('is accessible (closed dropdown, default and open)', async () => {

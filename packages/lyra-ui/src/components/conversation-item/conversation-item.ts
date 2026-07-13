@@ -76,16 +76,12 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
  * identically-shaped choice. `lyra-select` therefore carries no detail
  * payload at all.
  *
- * `role="option"` (not `"button"`) on `[part="option"]`, since this is meant
- * to live inside a `role="listbox"` history list (that future list
- * component supplies the listbox/group ancestor `role="option"` requires)
- * rather than stand in for a single push-button action. Used truly
- * standalone -- with no listbox/group ancestor -- it's still fully
- * operable, just technically missing that ARIA parent context; wrap it in a
- * `role="listbox"` (or `role="group"`) container to satisfy that when
- * accessibility-auditing a standalone usage.
+ * `role="button"` on `[part="option"]` so the item has valid semantics both
+ * standalone and when placed in a larger history-list layout. A conversation
+ * row activates one current session; it is not itself a listbox option and
+ * therefore does not require a particular owner role.
  *
- * `role="option"` (like native `<option>`/`role="button"`) forbids focusable
+ * `role="button"` forbids focusable
  * descendants -- verified against axe-core's `nested-interactive` rule,
  * which flags it. That's why the rename button and the `actions` slot are
  * rendered as DOM *siblings* of `[part="option"]` (both inside
@@ -93,10 +89,9 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
  * contains plain text/`<time>` content. The in-place rename `<input>` is the
  * same problem one level deeper -- it replaces the title *inside*
  * `[part="option"]` while renaming -- so `[part="option"]` sheds its
- * `role`/`tabindex`/`aria-selected`/`aria-label` entirely for the duration
- * of an edit. This isn't just an ARIA-compliance workaround: a row mid-edit
- * genuinely isn't a selectable listbox choice at that moment, it's a text
- * field, so suspending the option semantics is also the more accurate
+ * `role`/`tabindex`/`aria-current`/`aria-label` entirely for the duration
+ * of an edit. A row mid-edit is a text field, so suspending the button
+ * semantics is also the more accurate
  * description of what's on screen.
  *
  * Inline rename is a dedicated pencil/edit icon button (not a double-click
@@ -122,7 +117,7 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
  * when the trimmed draft is empty or unchanged from the original `title`
  * (that's treated as an implicit cancel).
  * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="option"]`, the rename button, and `actions`.
- * @csspart option - The selectable region (`role="option"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
+ * @csspart option - The selectable region (`role="button"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
  * @csspart content - Wrapper around the title and excerpt.
  * @csspart title - The title text, shown while not renaming.
  * @csspart title-input - The in-place rename `<input>`, shown only while renaming.
@@ -293,9 +288,9 @@ export class LyraConversationItem extends LyraElement {
       <div part="base">
         <div
           part="option"
-          role=${this.renaming ? nothing : 'option'}
+          role=${this.renaming ? nothing : 'button'}
           tabindex=${this.renaming ? nothing : '0'}
-          aria-selected=${this.renaming ? nothing : this.active ? 'true' : 'false'}
+          aria-current=${this.renaming || !this.active ? nothing : 'true'}
           aria-label=${this.renaming ? nothing : this.getAttribute('aria-label') || displayTitle}
           @click=${this.onOptionClick}
           @keydown=${this.onOptionKeyDown}

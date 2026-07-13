@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -7,11 +7,16 @@ import { isRtl } from '../../internal/rtl.js';
 import { nextId } from '../../internal/a11y.js';
 import { styles } from './tabs.styles.js';
 
-/** One tab, derived from a direct light-DOM child's `slot`/`label`/`disabled` attributes. */
+/**
+ * One tab, derived from a direct light-DOM child's `slot`/`label`/`disabled`
+ * attributes, plus whether a sibling `slot="<id>-icon"` child is also present
+ * (see the class doc for the icon mechanism).
+ */
 interface TabDef {
   slotName: string;
   label: string;
   disabled: boolean;
+  hasIcon: boolean;
 }
 
 /**
@@ -21,6 +26,22 @@ interface TabDef {
  * `slot` name found among the current children — a child with no `label`,
  * or a name with no matching child, simply never produces a tab.
  *
+ * A tab button's *visible* content can carry a leading icon without ever
+ * changing its *accessible name* (which always stays exactly `label`'s
+ * text, nothing else): give a tab an extra direct-child sibling of
+ * `<lyra-tabs>` carrying `slot="<id>-icon"` (that sibling's own content --
+ * an inline SVG, an emoji span, a custom icon element, anything -- is
+ * entirely up to the consumer). It's rendered ahead of the label inside
+ * that tab's button, wrapped in an `aria-hidden="true"` part so it's
+ * excluded from accessible-name computation no matter what it contains. A
+ * tab with no matching `<id>-icon` sibling renders no icon wrapper at all,
+ * so existing text-only tabs are completely unaffected. (A named slot,
+ * rather than a second attribute holding an icon-name lookup, was chosen
+ * because this library's `internal/icons.ts` is a small closed set of
+ * chrome glyphs for this library's *own* components, not a public
+ * name-keyed registry -- a slot lets a consumer supply an arbitrary,
+ * domain-specific icon instead of being limited to that internal set.)
+ *
  * Implements the WAI-ARIA APG tabs pattern with automatic activation:
  * Left/Right (swapped under RTL) move focus *and* selection together,
  * Home/End jump to the first/last enabled tab, and a roving `tabindex`
@@ -28,10 +49,12 @@ interface TabDef {
  *
  * @customElement lyra-tabs
  * @slot - Direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
+ * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content; excluded from the tab button's accessible name.
  * @event lyra-tabs-change - `detail: { tabId }`, fired when the active tab changes via click or keyboard.
  * @csspart base - The root wrapper around the tablist and panels.
  * @csspart tablist - The `role="tablist"` row of tab buttons.
  * @csspart tab - A single tab button.
+ * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
  */
 export class LyraTabs extends LyraElement {
@@ -43,6 +66,8 @@ export class LyraTabs extends LyraElement {
   @state() private tabs: TabDef[] = [];
 
   private baseId = nextId('tabs');
+  private nextOpaqueId = 0;
+  private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
   private mutationObserver?: MutationObserver;
 
   connectedCallback(): void {
@@ -86,12 +111,19 @@ export class LyraTabs extends LyraElement {
   private syncTabs = (): void => {
     const seen = new Set<string>();
     const next: TabDef[] = [];
-    for (const child of Array.from(this.children)) {
+    const children = Array.from(this.children);
+    for (const child of children) {
       const slotName = child.getAttribute('slot');
       const label = child.getAttribute('label');
       if (!slotName || !label || seen.has(slotName)) continue;
       seen.add(slotName);
-      next.push({ slotName, label, disabled: child.hasAttribute('disabled') });
+      const iconSlot = this.iconSlotName(slotName);
+      const hasIcon = children.some((c) => c.getAttribute('slot') === iconSlot);
+      next.push({ slotName, label, disabled: child.hasAttribute('disabled'), hasIcon });
+    }
+    const liveSlots = new Set(next.map((tab) => tab.slotName));
+    for (const slotName of this.idsBySlot.keys()) {
+      if (!liveSlots.has(slotName)) this.idsBySlot.delete(slotName);
     }
     this.tabs = next;
   };
@@ -156,10 +188,22 @@ export class LyraTabs extends LyraElement {
   };
 
   private tabId(slotName: string): string {
-    return `${this.baseId}-tab-${slotName}`;
+    return this.idsFor(slotName).tab;
   }
   private panelId(slotName: string): string {
-    return `${this.baseId}-panel-${slotName}`;
+    return this.idsFor(slotName).panel;
+  }
+  private idsFor(slotName: string): { tab: string; panel: string } {
+    const existing = this.idsBySlot.get(slotName);
+    if (existing) return existing;
+    const token = `${this.baseId}-${this.nextOpaqueId++}`;
+    const ids = { tab: `${token}-tab`, panel: `${token}-panel` };
+    this.idsBySlot.set(slotName, ids);
+    return ids;
+  }
+  /** Derives a tab's optional icon-sibling `slot` name from its own `slotName` -- see the class doc. */
+  private iconSlotName(slotName: string): string {
+    return `${slotName}-icon`;
   }
 
   private renderTab(tab: TabDef): TemplateResult {
@@ -175,9 +219,9 @@ export class LyraTabs extends LyraElement {
       aria-controls=${this.panelId(tab.slotName)}
       tabindex=${selected ? '0' : '-1'}
       @click=${() => this.selectTab(tab)}
-    >
-      ${tab.label}
-    </button>`;
+    >${tab.hasIcon
+      ? html`<span part="tab-icon" aria-hidden="true"><slot name=${this.iconSlotName(tab.slotName)}></slot></span>`
+      : nothing}${tab.label}</button>`;
   }
 
   private renderPanel(tab: TabDef): TemplateResult {

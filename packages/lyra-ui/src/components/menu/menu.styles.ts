@@ -19,7 +19,8 @@ export const styles = css`
     z-index: 900;
     box-sizing: border-box;
     min-inline-size: 10rem;
-    max-inline-size: min(92vw, 20rem);
+    max-inline-size: min(92vw, 20rem, var(--lyra-positioner-available-inline-size, 100vw));
+    max-block-size: min(20rem, var(--lyra-positioner-available-block-size, 20rem));
     background: var(--lyra-color-surface);
     border: 1px solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
@@ -51,7 +52,7 @@ export const styles = css`
   [part='list'] {
     display: flex;
     flex-direction: column;
-    max-block-size: 20rem;
+    max-block-size: min(20rem, var(--lyra-positioner-available-block-size, 20rem));
     overflow-y: auto;
     padding: var(--lyra-space-xs);
     outline: none;

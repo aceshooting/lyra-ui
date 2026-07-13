@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { playIcon, pauseIcon } from '../../internal/icons.js';
+import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../internal/numbers.js';
 import { styles } from './playback.styles.js';
 
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
@@ -15,10 +16,14 @@ const warnedInvalidIntervals = new Set<number>();
 function warnInvalidInterval(value: number): void {
   if (warnedInvalidIntervals.has(value)) return;
   warnedInvalidIntervals.add(value);
-  // The clamp fires for *any* value below the floor, not only non-finite
-  // ones (e.g. an ordinary `interval-ms="10"`) -- report the reason that
-  // actually applies instead of always claiming "non-finite or non-positive".
-  const reason = Number.isFinite(value) ? `below the ${MIN_INTERVAL_MS}ms floor` : 'non-finite';
+  // The clamp fires for any value outside the timer-safe range, so report the
+  // reason that actually applies instead of collapsing every bad value into
+  // one misleading "non-finite or non-positive" message.
+  const reason = !Number.isFinite(value)
+    ? 'non-finite'
+    : value < MIN_INTERVAL_MS
+      ? `below the ${MIN_INTERVAL_MS}ms floor`
+      : `above the ${MAX_TIMEOUT_MS}ms ceiling`;
   console.warn(
     `<lyra-playback> interval-ms (${value}) is ${reason}; clamping to ${MIN_INTERVAL_MS}ms.`,
   );
@@ -33,7 +38,9 @@ function warnInvalidInterval(value: number): void {
  * @event lyra-play - Fired when playback starts.
  * @event lyra-pause - Fired when playback stops (including auto-pause).
  * @event lyra-step - `detail: { index }`, fired on every tick and manual step.
- * @csspart base, play-button, slider
+ * @csspart base - The playback controls wrapper.
+ * @csspart play-button - The play/pause button.
+ * @csspart slider - The playback position slider.
  */
 export class LyraPlayback extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -72,7 +79,7 @@ export class LyraPlayback extends LyraElement {
     if (next === old) return;
     this._playing = next;
     if (next) {
-      if (this.length <= 1) {
+      if (finiteCount(this.length) <= 1) {
         this._playing = false;
         return;
       }
@@ -90,7 +97,7 @@ export class LyraPlayback extends LyraElement {
    * never NaN — a non-finite `length` falls back to 0 rather than leaking a
    * literal "NaN" into the rendered slider's `max` attribute). */
   private get maxIndex(): number {
-    return Number.isFinite(this.length) ? Math.max(0, this.length - 1) : 0;
+    return Math.max(0, finiteCount(this.length) - 1);
   }
 
   disconnectedCallback(): void {
@@ -107,8 +114,10 @@ export class LyraPlayback extends LyraElement {
     // false). Checked unconditionally — not just under the `length` branch
     // below — so a corrupted `index` alone still self-heals on the very next
     // update, without requiring `length` to also change.
-    if (!Number.isFinite(this.length)) this.length = 0;
-    if (!Number.isFinite(this.index)) this.index = 0;
+    const length = finiteCount(this.length);
+    const index = finiteCount(this.index);
+    if (length !== this.length) this.length = length;
+    if (index !== this.index) this.index = index;
     if (changed.has('length')) {
       // If length is externally reduced to <= 1 while playing, the timer
       // would otherwise keep firing forever — and the play button (the only
@@ -123,7 +132,7 @@ export class LyraPlayback extends LyraElement {
 
   /** Start playback; no-op if there's nothing to advance through. */
   play(): void {
-    if (this.playing || this.length <= 1) return;
+    if (this.playing || finiteCount(this.length) <= 1) return;
     this.playing = true;
   }
 
@@ -144,11 +153,9 @@ export class LyraPlayback extends LyraElement {
   // `interval-ms` live takes effect on the very next step instead of only
   // after a pause/play cycle.
   private scheduleTick(): void {
-    let delay = this.intervalMs;
-    if (!Number.isFinite(delay) || delay < MIN_INTERVAL_MS) {
-      warnInvalidInterval(delay);
-      delay = MIN_INTERVAL_MS;
-    }
+    const rawDelay = this.intervalMs;
+    const delay = finiteDuration(rawDelay, MIN_INTERVAL_MS, MIN_INTERVAL_MS);
+    if (delay !== rawDelay) warnInvalidInterval(rawDelay);
     // Self-identifying: a synchronous pause()+play() (or a synchronous
     // play() from a 'lyra-pause'/'lyra-step' listener) invoked while this
     // callback is running schedules its own new timer and overwrites
@@ -164,11 +171,12 @@ export class LyraPlayback extends LyraElement {
   }
 
   private tick(): void {
-    const next = this.index + 1;
-    if (next >= this.length) {
+    const length = finiteCount(this.length);
+    const next = finiteCount(this.index) + 1;
+    if (next >= length) {
       if (this.loop) this.setIndex(0);
       else {
-        this.setIndex(this.length - 1);
+        this.setIndex(length - 1);
         this.pause();
       }
     } else {
@@ -177,34 +185,39 @@ export class LyraPlayback extends LyraElement {
   }
 
   private setIndex(i: number): void {
-    this.index = i;
+    this.index = finiteCount(i, 0, this.maxIndex);
     this.emit('lyra-step', { index: this.index });
   }
 
   /** Advance one step without starting playback. */
   next(): void {
-    if (this.index + 1 < this.length) this.setIndex(this.index + 1);
+    const index = finiteCount(this.index);
+    if (index + 1 < finiteCount(this.length)) this.setIndex(index + 1);
   }
 
   /** Go back one step without starting playback. */
   previous(): void {
-    if (this.index > 0) this.setIndex(this.index - 1);
+    const index = finiteCount(this.index);
+    if (index > 0) this.setIndex(index - 1);
   }
 
   /** Jump to an explicit index, pausing playback. */
   goTo(index: number): void {
     this.pause();
-    this.setIndex(Math.min(this.maxIndex, Math.max(0, index)));
+    this.setIndex(finiteCount(index, 0, this.maxIndex));
   }
 
   render(): TemplateResult {
+    const maxIndex = this.maxIndex;
+    const index = finiteCount(this.index, 0, maxIndex);
+    const disabled = finiteCount(this.length) <= 1;
     return html`
       <div part="base">
         <button
           part="play-button"
           type="button"
           aria-label=${this.playing ? 'Pause' : 'Play'}
-          ?disabled=${this.length <= 1}
+          ?disabled=${disabled}
           @click=${() => this.toggle()}
         >
           ${this.playing ? pauseIcon() : playIcon()}
@@ -213,10 +226,10 @@ export class LyraPlayback extends LyraElement {
           part="slider"
           type="range"
           min="0"
-          max=${this.maxIndex}
-          .value=${String(this.index)}
+          max=${maxIndex}
+          .value=${String(index)}
           aria-label="Playback position"
-          ?disabled=${this.length <= 1}
+          ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value))}
         />
       </div>

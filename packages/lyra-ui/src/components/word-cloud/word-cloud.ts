@@ -56,12 +56,19 @@ function warnSkippedWords(count: number): void {
  * Instead, like `lyra-heatmap`'s cells, the whole `[part="svg"]` is one tab
  * stop with roving arrow-key focus (Home/End jump to the first/last word,
  * Enter/Space activates the focused one), a drawn `[part="focus-ring"]`, and
- * a visually-hidden `aria-live="polite"` status announcement.
+ * a visually-hidden `aria-live="polite"` status announcement. The SVG focus
+ * target carries the group role and accessible name so the semantics follow
+ * the element a keyboard user actually focuses.
  *
  * @customElement lyra-word-cloud
  * @event lyra-word-click - Fired on click, or Enter/Space on the focused word.
  * `detail: { text, weight, group }`.
- * @csspart base, svg, word, focus-ring, live-region, empty
+ * @csspart base - The word-cloud wrapper.
+ * @csspart svg - The word-cloud SVG.
+ * @csspart word - A rendered word.
+ * @csspart focus-ring - The keyboard focus ring.
+ * @csspart live-region - The visually hidden announcement region.
+ * @csspart empty - The empty-state message.
  */
 export class LyraWordCloud extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -263,7 +270,15 @@ export class LyraWordCloud extends LyraElement {
 
     return html`
       <div part="base">
-        <svg part="svg" tabindex="0" viewBox="0 0 ${layout.width} ${layout.height}" @keydown=${this.onKeyDown}>
+        <svg
+          part="svg"
+          role="group"
+          aria-label=${this.getAttribute('aria-label') ?? nothing}
+          aria-describedby="live-region"
+          tabindex="0"
+          viewBox="0 0 ${layout.width} ${layout.height}"
+          @keydown=${this.onKeyDown}
+        >
           ${layout.placed.map(
             (w) => svg`<text
               part="word"
@@ -279,7 +294,7 @@ export class LyraWordCloud extends LyraElement {
             ? svg`<rect part="focus-ring" x=${ring.x} y=${ring.y} width=${ring.width} height=${ring.height}></rect>`
             : ''}
         </svg>
-        <div part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
+        <div id="live-region" part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
       </div>
     `;
   }

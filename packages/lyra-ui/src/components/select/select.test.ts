@@ -637,9 +637,44 @@ it('falls back to placeholder when no host aria-label or label is set', async ()
   expect(trigger.getAttribute('aria-label')).to.equal('Choose…');
 });
 
-describe('single-option auto-commit', () => {
+describe('single-option combobox default (autoCommitSingleOption unset)', () => {
   const single = () => html`
     <lyra-select>
+      <lyra-option value="a">Apple</lyra-option>
+    </lyra-select>
+  `;
+
+  it('keeps the normal combobox/listbox/chevron trigger when only one option is enabled', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    expect(el.autoCommitSingleOption).to.be.false;
+    const btn = trigger(el);
+    expect(btn.getAttribute('role')).to.equal('combobox');
+    expect(btn.getAttribute('aria-haspopup')).to.equal('listbox');
+    expect(btn.hasAttribute('aria-expanded')).to.be.true;
+    expect(btn.hasAttribute('aria-controls')).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.exist;
+  });
+
+  it('opens the listbox on click instead of committing the sole option directly', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    trigger(el).click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(el.value).to.equal('');
+  });
+
+  it('opens the listbox on ArrowDown instead of committing the sole option directly', async () => {
+    const el = (await fixture(single())) as LyraSelect;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(el.value).to.equal('');
+  });
+});
+
+describe('single-option auto-commit (autoCommitSingleOption)', () => {
+  const single = () => html`
+    <lyra-select auto-commit-single-option>
       <lyra-option value="a">Apple</lyra-option>
     </lyra-select>
   `;
@@ -709,7 +744,7 @@ describe('single-option auto-commit', () => {
 
   it('treats a single ENABLED option among several disabled ones as single-option too', async () => {
     const el = (await fixture(html`
-      <lyra-select>
+      <lyra-select auto-commit-single-option>
         <lyra-option value="a" disabled>Apple</lyra-option>
         <lyra-option value="b">Banana</lyra-option>
         <lyra-option value="c" disabled>Cherry</lyra-option>
@@ -739,7 +774,7 @@ describe('single-option auto-commit', () => {
 
   it('does not intercept click/keyboard when disabled, even with a single option', async () => {
     const el = (await fixture(html`
-      <lyra-select disabled>
+      <lyra-select disabled auto-commit-single-option>
         <lyra-option value="a">Apple</lyra-option>
       </lyra-select>
     `)) as LyraSelect;

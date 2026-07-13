@@ -133,6 +133,33 @@ it('clamps panel sizes to the configured minimum', async () => {
   expect(el.sizes[0]).to.equal(20);
 });
 
+it('rejects infeasible aggregate minimums, reports the issue, and keeps resizing usable', async () => {
+  const el = (await fixture(
+    html`<lyra-split><div>A</div><div>B</div><div>C</div></lyra-split>`,
+  )) as LyraSplit;
+  const invalid = oneEvent(el, 'lyra-split-constraints-invalid');
+  el.min = 40;
+  const event = (await invalid) as CustomEvent<{
+    reason: string;
+    panelCount: number;
+    minimumTotal: number;
+    maximumTotal: number | null;
+  }>;
+  await elementUpdated(el);
+
+  expect(event.detail.reason).to.equal('minimum-total');
+  expect(event.detail.panelCount).to.equal(3);
+  expect(event.detail.minimumTotal).to.equal(120);
+  expect(event.detail.maximumTotal).to.equal(null);
+
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  expect(divider.getAttribute('aria-valuemin')).to.equal('33');
+  const before = el.sizes[0];
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes[0]).to.be.greaterThan(before);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lyra-split><div>A</div><div>B</div></lyra-split>`,
@@ -803,8 +830,11 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
 it('transitions collapseState across both breakpoints (wide -> rail -> floating) as the container width crosses them', async () => {
   const spy = installResizeObserverSpy();
   try {
+    // Fixed size: opening the floating drawer below must not perturb the
+    // host's own measured box, which would otherwise let a REAL (unmocked)
+    // ResizeObserver notification race the synthetic ones driving this test.
     const el = (await fixture(
-      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
 
@@ -822,6 +852,12 @@ it('transitions collapseState across both breakpoints (wide -> rail -> floating)
     await elementUpdated(el);
     expect(el.collapseState).to.equal('floating');
     expect(el.getAttribute('data-collapse-state')).to.equal('floating');
+
+    // The 'floating' state is a hidden-by-default drawer (see split.ts's
+    // class doc) -- `open` must be set to reveal the geometry asserted below,
+    // mirroring how a consumer would actually see this overlay card.
+    el.open = true;
+    await elementUpdated(el);
 
     const [panelA, panelB] = [...el.children] as HTMLElement[];
     expect(panelA.style.position).to.equal('absolute');
@@ -1012,11 +1048,15 @@ it('reconciles a directly-assigned sizes array of the wrong length from willUpda
 it('anchors the floating overlay to inset-inline-end for collapse="end" (vs. inset-inline-start for collapse="start")', async () => {
   const spy = installResizeObserverSpy();
   try {
+    // See the fixed-size comment on the "wide -> rail -> floating" test above.
     const el = (await fixture(
-      html`<lyra-split collapse="end"><div>A</div><div>B</div></lyra-split>`,
+      html`<lyra-split collapse="end" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
     )) as LyraSplit;
     await elementUpdated(el);
     fireCollapseResize(spy.callbacks[0], 300); // floating
+    // Reveal the hidden-by-default drawer (see split.ts's class doc) so its
+    // geometry below is actually applied.
+    el.open = true;
     await elementUpdated(el);
 
     const [panelA, panelB] = [...el.children] as HTMLElement[];
@@ -1062,6 +1102,253 @@ it('honors custom rail-breakpoint/float-breakpoint attributes', async () => {
     fireCollapseResize(spy.callbacks[0], 700); // between 600 and 900 -> rail
     await elementUpdated(el);
     expect(el.getAttribute('data-collapse-state')).to.equal('rail');
+  } finally {
+    spy.restore();
+  }
+});
+
+// -- collapseState: forceable accessor (mirrors lyra-app-rail's `mode`) ----
+
+it('pins a forced collapseState across a subsequent resize, ignoring measurement until released', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 500); // rail baseline
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('rail');
+
+    el.collapseState = 'wide'; // force, even though the container is still narrow
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('wide');
+
+    fireCollapseResize(spy.callbacks[0], 300); // would normally -> floating
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('wide'); // still pinned
+  } finally {
+    spy.restore();
+  }
+});
+
+it('releases a forced collapseState back to measurement-derived state via the "auto" sentinel', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 800); // wide baseline
+    await elementUpdated(el);
+
+    el.collapseState = 'floating'; // force
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('floating');
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    mockWidth(base, 800); // measures back to 'wide'
+    el.collapseState = 'auto';
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('wide');
+
+    // Automatic tracking resumed: a subsequent resize takes effect again.
+    fireCollapseResize(spy.callbacks[0], 300);
+    await elementUpdated(el);
+    expect(el.collapseState).to.equal('floating');
+  } finally {
+    spy.restore();
+  }
+});
+
+it('fires lyra-split-collapse-change on a forced assignment and on release-to-auto, only when the effective state actually changes', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 800); // wide baseline
+    await elementUpdated(el);
+
+    const events: string[] = [];
+    el.addEventListener('lyra-split-collapse-change', (e) =>
+      events.push((e as CustomEvent<{ state: string }>).detail.state),
+    );
+
+    el.collapseState = 'floating'; // forced assignment: transition, fires
+    await elementUpdated(el);
+    el.collapseState = 'floating'; // redundant reassignment: no transition, no event
+    await elementUpdated(el);
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    mockWidth(base, 800); // measures to 'wide'
+    el.collapseState = 'auto'; // release: transitions back to 'wide', fires
+    await elementUpdated(el);
+    el.collapseState = 'auto'; // already unforced and still measures to 'wide': no event
+    await elementUpdated(el);
+
+    expect(events).to.deep.equal(['floating', 'wide']);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('reflects collapseState to a collapse-state attribute', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 500); // rail
+    await elementUpdated(el);
+    expect(el.getAttribute('collapse-state')).to.equal('rail');
+
+    el.collapseState = 'floating';
+    await elementUpdated(el);
+    expect(el.getAttribute('collapse-state')).to.equal('floating');
+  } finally {
+    spy.restore();
+  }
+});
+
+// -- 'floating' hidden-by-default drawer (open) ----------------------------
+
+it('defaults open to false: the floating pane renders nothing (hidden, out of the accessibility tree) until opened', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    expect(el.open).to.be.false;
+
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+
+    const [panelA] = [...el.children] as HTMLElement[];
+    expect(panelA.hidden).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.equal(null);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('reveals the floating pane and renders a backdrop once open is set to true', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    // Fixed size: unhiding the floating pane/inserting the backdrop must not
+    // perturb the host's own measured box, which would otherwise let a REAL
+    // (unmocked) ResizeObserver notification race the synthetic one below.
+    const el = (await fixture(
+      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+
+    el.open = true;
+    await elementUpdated(el);
+
+    const [panelA] = [...el.children] as HTMLElement[];
+    expect(panelA.hidden).to.be.false;
+    expect(panelA.style.position).to.equal('absolute');
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(null);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('moves focus into the floating pane when opened', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    // See the fixed-size comment on the previous test.
+    const el = (await fixture(
+      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div><button>first</button><button>second</button></div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    await elementUpdated(el);
+    const first = el.querySelector('button') as HTMLButtonElement;
+
+    el.open = true;
+    await elementUpdated(el);
+
+    expect(document.activeElement).to.equal(first);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('traps Tab focus within the floating pane while open, wrapping last->first and first->last', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    // See the fixed-size comment above.
+    const el = (await fixture(
+      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div><button>first</button><button>last</button></div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    const [first, last] = [...el.querySelectorAll('button')] as HTMLButtonElement[];
+    last.focus();
+    const tabForward = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(tabForward);
+    expect(tabForward.defaultPrevented).to.be.true;
+    expect(document.activeElement).to.equal(first);
+
+    const tabBackward = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(tabBackward);
+    expect(tabBackward.defaultPrevented).to.be.true;
+    expect(document.activeElement).to.equal(last);
+  } finally {
+    spy.restore();
+  }
+});
+
+it('closes the floating drawer on Escape', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    // See the fixed-size comment above.
+    const el = (await fixture(
+      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await elementUpdated(el);
+    expect(el.open).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('closes the floating drawer on backdrop click', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    // See the fixed-size comment above.
+    const el = (await fixture(
+      html`<lyra-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+    await elementUpdated(el);
+    expect(el.open).to.be.false;
   } finally {
     spy.restore();
   }

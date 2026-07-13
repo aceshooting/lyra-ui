@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './context-meter.styles.js';
 
 export type ContextMeterTone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -33,7 +34,7 @@ const STROKE = 12;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 function formatCount(n: number): string {
-  return Number.isFinite(n) ? Math.round(n).toLocaleString() : '0';
+  return Math.round(finiteNumber(n, 0)).toLocaleString();
 }
 
 /**
@@ -69,19 +70,19 @@ export class LyraContextMeter extends LyraElement {
 
   /** Sum of segment values, clamped so a negative/NaN entry can't produce a negative total. */
   private get usedTotal(): number {
-    return this.segments.reduce((sum, s) => sum + (Number.isFinite(s.value) ? Math.max(0, s.value) : 0), 0);
+    return this.segments.reduce((sum, s) => sum + Math.max(0, finiteNumber(s.value, 0)), 0);
   }
 
   /** Per-segment ratio of `value` to `total`, clamped to [0,1] and capped so the
    *  running sum across all segments never overflows past 1 — a `segments` array
    *  that sums to more than `total` still renders a fully (not over-) filled meter. */
   private ratios(): RatioSegment[] {
-    const total = Number.isFinite(this.total) ? this.total : 0;
+    const total = Math.max(0, finiteNumber(this.total, 0));
     if (total <= 0) return [];
     const out: RatioSegment[] = [];
     let cumulative = 0;
     for (const segment of this.segments) {
-      const raw = Number.isFinite(segment.value) ? Math.max(0, segment.value) : 0;
+      const raw = Math.max(0, finiteNumber(segment.value, 0));
       const available = Math.max(0, 1 - cumulative);
       const ratio = Math.min(raw / total, available);
       cumulative += ratio;
@@ -94,9 +95,10 @@ export class LyraContextMeter extends LyraElement {
     // Clamp the announced figure the same way ratios() clamps the visual fill --
     // a segments array that sums past total must not report an impossible
     // "160 of 100 used" to assistive tech while the bar/ring visibly caps at 100%.
-    const usedForSummary = this.total > 0 ? Math.min(this.usedTotal, this.total) : this.usedTotal;
+    const totalValue = Math.max(0, finiteNumber(this.total, 0));
+    const usedForSummary = totalValue > 0 ? Math.min(this.usedTotal, totalValue) : this.usedTotal;
     const used = formatCount(usedForSummary);
-    const total = Number.isFinite(this.total) && this.total > 0 ? formatCount(this.total) : null;
+    const total = totalValue > 0 ? formatCount(totalValue) : null;
     const phrase = total ? `${used} of ${total} used` : `${used} used`;
     return this.label ? `${this.label} — ${phrase}` : phrase;
   }

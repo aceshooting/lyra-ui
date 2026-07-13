@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
 import { MAX_FONT_SIZE_PX, MAX_WORDS } from './word-cloud-layout.js';
+import { styles } from './word-cloud.styles.js';
 
 const WORDS = [
   { text: 'alpha', weight: 10 },
@@ -30,6 +31,9 @@ it('renders one labeled [part="word"] per word, as a single tab stop on [part="s
     expect(node.getAttribute('tabindex')).to.be.null;
   }
   expect(svgEl(el).getAttribute('tabindex')).to.equal('0');
+  expect(svgEl(el).getAttribute('role')).to.equal('group');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 3 words');
+  expect(svgEl(el).getAttribute('aria-describedby')).to.equal('live-region');
 });
 
 it('sizes the heaviest word larger than the lightest', async () => {
@@ -322,4 +326,10 @@ it('announces the count of words actually rendered, not the raw input count', as
   )) as LyraWordCloud;
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.include('1 word');
+});
+
+it('defines a dark-mode palette with readable fallback colors', () => {
+  expect(styles.cssText).to.match(/prefers-color-scheme:\s*dark/);
+  expect(styles.cssText).to.match(/--lyra-word-cloud-color-1:[^;]*#4ea0f0/);
+  expect(styles.cssText).to.match(/--lyra-word-cloud-color-8:\s*#c9d1d9/);
 });

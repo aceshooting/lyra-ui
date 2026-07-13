@@ -116,6 +116,9 @@ export const styles = css`
   :host([mode='icon-only']) [part='nav'] {
     align-items: center;
   }
+  :host([mode='icon-only']) ::slotted(lyra-app-rail-item) {
+    max-inline-size: var(--lyra-app-rail-icon-width);
+  }
 
   @media (prefers-reduced-motion: reduce) {
     [part='base'],

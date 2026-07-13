@@ -59,8 +59,24 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
  * @customElement lyra-date-picker
  * @event change - The user committed a value.
  * @event input - The value changed during interaction (range: after the first click).
- * @csspart base, month, header, title, previous, next, weekdays, weekday, grid, week
- * @csspart day, day-today, day-outside, day-selected, day-range-start, day-range-end, day-range-inner, day-placeholder
+ * @csspart base - The date-picker wrapper.
+ * @csspart month - A visible month wrapper.
+ * @csspart header - The month header.
+ * @csspart title - The month title.
+ * @csspart previous - The previous-month button.
+ * @csspart next - The next-month button.
+ * @csspart weekdays - The weekday header row.
+ * @csspart weekday - A weekday label.
+ * @csspart grid - A month date grid.
+ * @csspart week - A calendar week row.
+ * @csspart day - A calendar day button.
+ * @csspart day-today - A day representing today.
+ * @csspart day-outside - A day outside the active month.
+ * @csspart day-selected - A selected day.
+ * @csspart day-range-start - The start of a selected range.
+ * @csspart day-range-end - The end of a selected range.
+ * @csspart day-range-inner - An interior day in a selected range.
+ * @csspart day-placeholder - A non-day grid placeholder.
  */
 export class LyraDatePicker extends LyraElement {
   static styles = [LyraElement.styles, styles];

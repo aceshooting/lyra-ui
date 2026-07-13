@@ -2,8 +2,8 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './conversation-item.js';
 import type { LyraConversationItem } from './conversation-item.js';
 
-// The selectable region -- `role="option"`, click/keydown handlers, and
-// (while not renaming) aria-selected/aria-label -- lives on `[part="option"]`,
+// The selectable region -- `role="button"`, click/keydown handlers, and
+// (while not renaming) aria-current/aria-label -- lives on `[part="option"]`,
 // not `[part="base"]` (a plain layout wrapper). See the class doc's
 // nested-interactive note for why the rename button and `actions` slot are
 // siblings of this element rather than descendants of it.
@@ -11,13 +11,8 @@ function optionEl(el: LyraConversationItem): HTMLElement {
   return el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
 }
 
-// `role="option"` requires a `listbox`/`group` ancestor (axe's
-// aria-required-parent) -- exactly the context a real consuming list (this
-// component's future `lyra-virtual-list` sibling, or a plain wrapper as
-// here) supplies. See the class doc's "role='option' (not 'button')" note.
 async function fixtureInListbox(item: import('lit').TemplateResult): Promise<LyraConversationItem> {
-  const wrapper = (await fixture(html`<div role="listbox" aria-label="Conversations">${item}</div>`)) as HTMLElement;
-  return wrapper.querySelector('lyra-conversation-item') as LyraConversationItem;
+  return (await fixture(item)) as LyraConversationItem;
 }
 
 it('defaults to title="", excerpt="", active=false, editable=true', async () => {
@@ -30,10 +25,10 @@ it('defaults to title="", excerpt="", active=false, editable=true', async () => 
   expect(el.hasAttribute('editable')).to.be.true;
 });
 
-it('renders role="option" and a tabindex of 0', async () => {
+it('renders a standalone role="button" and a tabindex of 0', async () => {
   const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
   const b = optionEl(el);
-  expect(b.getAttribute('role')).to.equal('option');
+  expect(b.getAttribute('role')).to.equal('button');
   expect(b.getAttribute('tabindex')).to.equal('0');
 });
 
@@ -52,7 +47,7 @@ it('renders the given title, with a title tooltip attribute for the full text', 
   expect(titlePart.getAttribute('title')).to.equal('Migrating the table component');
 });
 
-it('forwards a host aria-label onto the inner role="option" element instead of the derived title', async () => {
+it('forwards a host aria-label onto the inner role="button" element instead of the derived title', async () => {
   const el = (await fixture(
     html`<lyra-conversation-item title="Internal name" aria-label="Custom label"></lyra-conversation-item>`,
   )) as LyraConversationItem;
@@ -116,14 +111,14 @@ describe('timestamp', () => {
 });
 
 describe('active', () => {
-  it('reflects to the active attribute and to aria-selected', async () => {
+  it('reflects to the active attribute and to aria-current', async () => {
     const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
-    expect(optionEl(el).getAttribute('aria-selected')).to.equal('false');
+    expect(optionEl(el).hasAttribute('aria-current')).to.be.false;
 
     el.active = true;
     await el.updateComplete;
     expect(el.hasAttribute('active')).to.be.true;
-    expect(optionEl(el).getAttribute('aria-selected')).to.equal('true');
+    expect(optionEl(el).getAttribute('aria-current')).to.equal('true');
   });
 });
 

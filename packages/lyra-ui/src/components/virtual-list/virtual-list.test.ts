@@ -185,7 +185,7 @@ it("falls back to the item's index as the row key when keyFunction is omitted", 
   await el.updateComplete;
   await nextFrame();
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
-  expect(rows.map((r) => r.dataset.rowKey)).to.deep.equal(['0', '1', '2']);
+  expect(rows.map((r) => r.dataset.rowKey)).to.deep.equal(['number:0', 'number:1', 'number:2']);
 });
 
 it("measures each row's real height via ResizeObserver in row-height='auto' mode instead of only using the fallback estimate", async () => {
@@ -225,10 +225,10 @@ it('marks the row matching active-id with aria-current="true", not aria-selected
   await el.updateComplete;
   await nextFrame();
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
-  const active = rows.find((r) => r.dataset.rowKey === 'b')!;
+  const active = rows.find((r) => r.dataset.rowKey === 'string:b')!;
   expect(active.getAttribute('aria-current')).to.equal('true');
   expect(active.hasAttribute('aria-selected')).to.be.false;
-  const others = rows.filter((r) => r.dataset.rowKey !== 'b');
+  const others = rows.filter((r) => r.dataset.rowKey !== 'string:b');
   others.forEach((r) => expect(r.hasAttribute('aria-current')).to.be.false);
 });
 
@@ -238,7 +238,7 @@ it('does not scroll on initial mount even when active-id targets a row far outsi
     html`<lyra-virtual-list
       style="--lyra-virtual-list-height:200px"
       row-height="40"
-      active-id="40"
+      .activeId=${40}
       .items=${items}
       .renderItem=${renderText}
       .keyFunction=${numberKey}
@@ -277,7 +277,7 @@ it('scrolls the matching row into view once active-id changes after mount', asyn
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.scrollTop).to.equal(0);
 
-    el.activeId = '40'; // row 40's top edge is 40*40=1600px, well past the 200px viewport
+    el.activeId = 40; // row 40's top edge is 40*40=1600px, well past the 200px viewport
     await el.updateComplete;
     await nextFrame();
 
@@ -563,7 +563,7 @@ it('prunes stale measuredHeights entries once items changes to a wholly differen
   await nextFrame();
   await el.updateComplete;
 
-  const measuredHeights = (el as unknown as { measuredHeights: Map<string, number> }).measuredHeights;
+  const measuredHeights = (el as unknown as { measuredHeights: Map<string | number, number> }).measuredHeights;
   expect(measuredHeights.has('a')).to.be.true;
   expect(measuredHeights.has('b')).to.be.true;
   expect(measuredHeights.has('c')).to.be.true;
@@ -577,4 +577,46 @@ it('prunes stale measuredHeights entries once items changes to a wholly differen
   expect(measuredHeights.has('a'), 'stale key "a" should have been pruned').to.be.false;
   expect(measuredHeights.has('b'), 'stale key "b" should have been pruned').to.be.false;
   expect(measuredHeights.has('c'), 'stale key "c" should have been pruned').to.be.false;
+});
+
+it('keeps numeric and string keys distinct in internal measurements and DOM identity', async () => {
+  const items = [1, '1'];
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="auto"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${(item: unknown) => item as string | number}
+      .activeId=${1}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')];
+  expect(rows.map((row) => row.dataset.rowKey)).to.deep.equal(['number:1', 'string:1']);
+  expect(rows[0].getAttribute('aria-current')).to.equal('true');
+  expect(rows[1].hasAttribute('aria-current')).to.be.false;
+});
+
+it('renders valid group labels at their indexed row offsets', async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      .items=${['a', 'b', 'c']}
+      .groups=${[
+        { key: 'first', label: 'First', startIndex: 0 },
+        { key: 'second', label: 'Second', startIndex: 2 },
+        { key: 'invalid', startIndex: 99 },
+      ]}
+      .renderItem=${renderText}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const groups = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')];
+  expect(groups.map((group) => group.textContent?.trim())).to.deep.equal(['First', 'Second']);
+  expect(groups[1].style.transform).to.equal('translateY(80px)');
 });

@@ -72,7 +72,17 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
  * @event change - Fired on committed date transitions.
  * @event lyra-show / lyra-hide - Calendar popover lifecycle.
  * @event lyra-clear - The clear button was used.
- * @csspart form-control, form-control-label, input-wrapper, input, clear-button, expand-button, expand-icon, popup, date-picker, hint, error
+ * @csspart form-control - The outer form-control wrapper.
+ * @csspart form-control-label - The label wrapper.
+ * @csspart input-wrapper - The input and button wrapper.
+ * @csspart input - The text input.
+ * @csspart clear-button - The clear control.
+ * @csspart expand-button - The calendar popup toggle.
+ * @csspart expand-icon - The calendar icon.
+ * @csspart popup - The positioned calendar popup.
+ * @csspart date-picker - The nested date picker.
+ * @csspart hint - The hint message.
+ * @csspart error - The validation message.
  * @slot label - Custom label content.
  * @slot error - Custom error content.
  * @slot hint - Custom hint content.

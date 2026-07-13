@@ -8,25 +8,19 @@ import { styles } from './toast-item.styles.js';
 export type ToastVariant = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
 export type ToastSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
-// Must stay in sync with --lyra-transition-base's 180ms fallback
-// (internal/tokens.styles.ts) — toast-item.styles.ts derives
-// --show-duration/--hide-duration from that same token. Kept as a literal
-// here rather than read via getComputedStyle() because the token's value is
-// a full transition shorthand ("180ms ease-out"), not a bare duration, and
-// parsing that back out in JS for a single setTimeout would be more fragile
-// than this documented literal.
-const ANIM_MS = 180;
-
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-// toast-item.styles.ts already collapses the CSS transition itself to ~0 under
-// reduced motion; this keeps the lyra-after-show/lyra-after-hide events (and
-// the DOM removal in hide()) from still waiting out the full duration of an
-// animation nothing is visibly playing.
-function animMs(): number {
-  return prefersReducedMotion() ? 0 : ANIM_MS;
+function parseTime(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed);
+  if (trimmed.endsWith('s')) return Number.parseFloat(trimmed) * 1000;
+  return 0;
+}
+
+function maxCssTime(value: string): number {
+  return Math.max(0, ...value.split(',').map(parseTime).filter(Number.isFinite));
 }
 
 /**
@@ -66,9 +60,8 @@ export class LyraToastItem extends LyraElement {
   private startedAt = 0;
   private timerStarted = false;
   private showRafId?: number;
-  private showAnimTimer?: number;
-  private hideAnimTimer?: number;
-  private resolvePendingHide?: () => void;
+  private cancelShowAnimation?: () => void;
+  private cancelHideAnimation?: () => void;
   private hovering = false;
   private focused = false;
   @state() private hiding = false;
@@ -115,10 +108,9 @@ export class LyraToastItem extends LyraElement {
       if (this.hiding) return;
       this.setAttribute('data-visible', '');
       this.emit('lyra-show');
-      this.showAnimTimer = window.setTimeout(() => {
-        this.showAnimTimer = undefined;
-        this.emit('lyra-after-show');
-      }, animMs());
+      void this.waitForVisualCompletion('show').then(() => {
+        if (this.isConnected && !this.hiding) this.emit('lyra-after-show');
+      });
       this.startTimer();
     });
   }
@@ -129,20 +121,10 @@ export class LyraToastItem extends LyraElement {
       cancelAnimationFrame(this.showRafId);
       this.showRafId = undefined;
     }
-    if (this.showAnimTimer !== undefined) {
-      clearTimeout(this.showAnimTimer);
-      this.showAnimTimer = undefined;
-    }
-    if (this.hideAnimTimer !== undefined) {
-      clearTimeout(this.hideAnimTimer);
-      this.hideAnimTimer = undefined;
-      // hide()'s own promise is awaiting this timer firing to resolve() --
-      // a disconnect (e.g. the toast's ancestor is removed from the DOM,
-      // bypassing this.remove()) must still let that promise settle instead
-      // of leaving it pending forever.
-      this.resolvePendingHide?.();
-      this.resolvePendingHide = undefined;
-    }
+    this.cancelShowAnimation?.();
+    this.cancelShowAnimation = undefined;
+    this.cancelHideAnimation?.();
+    this.cancelHideAnimation = undefined;
     this.clearTimer();
   }
 
@@ -186,6 +168,50 @@ export class LyraToastItem extends LyraElement {
   private clearTimer(): void {
     if (this.timer !== undefined) clearTimeout(this.timer);
     this.timer = undefined;
+  }
+
+  /**
+   * Wait for the actual CSS transition/animation on the toast surface. The
+   * computed duration is intentionally read at runtime so a consumer's
+   * `--lyra-toast-show-duration`/`--lyra-toast-hide-duration` override keeps
+   * lifecycle events and removal in sync with the pixels on screen. A small
+   * timeout remains as a safety net for zero-duration transitions, disabled
+   * animation, and browsers that do not dispatch an end event.
+   */
+  private waitForVisualCompletion(kind: 'show' | 'hide'): Promise<void> {
+    const previous = kind === 'show' ? this.cancelShowAnimation : this.cancelHideAnimation;
+    previous?.();
+    const surface = this.shadowRoot?.querySelector<HTMLElement>('[part="toast-item"]');
+    if (!surface || prefersReducedMotion()) return Promise.resolve();
+
+    const computed = getComputedStyle(surface);
+    const transitionMs = maxCssTime(computed.transitionDuration) + maxCssTime(computed.transitionDelay);
+    const animationMs = maxCssTime(computed.animationDuration) + maxCssTime(computed.animationDelay);
+    const fallbackMs = Math.max(transitionMs, animationMs);
+    if (fallbackMs <= 0) return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      let timeout: number | undefined;
+      const cancelKey = kind === 'show' ? 'cancelShowAnimation' : 'cancelHideAnimation';
+      const finish = (): void => {
+        if (settled) return;
+        settled = true;
+        if (timeout !== undefined) window.clearTimeout(timeout);
+        surface.removeEventListener('transitionend', onEnd);
+        surface.removeEventListener('animationend', onEnd);
+        if (this[cancelKey] === cancel) this[cancelKey] = undefined;
+        resolve();
+      };
+      const onEnd = (event: Event): void => {
+        if (event.target === surface) finish();
+      };
+      const cancel = (): void => finish();
+      surface.addEventListener('transitionend', onEnd);
+      surface.addEventListener('animationend', onEnd);
+      timeout = window.setTimeout(finish, fallbackMs + 50);
+      this[cancelKey] = cancel;
+    });
   }
 
   // Hover and focus are tracked as independent pause reasons so that
@@ -240,22 +266,16 @@ export class LyraToastItem extends LyraElement {
   async hide(): Promise<void> {
     if (this.hiding) return;
     this.hiding = true;
+    this.cancelShowAnimation?.();
+    this.cancelShowAnimation = undefined;
     this.clearTimer();
     this.emit('lyra-hide');
     this.removeAttribute('data-visible');
-    await new Promise<void>((resolve) => {
-      this.resolvePendingHide = resolve;
-      this.hideAnimTimer = window.setTimeout(() => {
-        this.hideAnimTimer = undefined;
-        this.resolvePendingHide = undefined;
-        resolve();
-      }, animMs());
-    });
-    // An out-of-band disconnect (see disconnectedCallback) resolves this same
-    // promise so callers awaiting hide() never hang, but it does so *without*
-    // this having reached its normal completion -- guard against then still
-    // emitting a "finished hiding" event (and redundantly calling remove())
-    // for a node that's already been torn down some other way.
+    this.setAttribute('data-hiding', '');
+    await this.waitForVisualCompletion('hide');
+    // A disconnect cancels the visual wait, but it does so without this
+    // reaching its normal completion -- guard against emitting a finished
+    // event or redundantly removing a node already torn down elsewhere.
     if (!this.isConnected) return;
     this.emit('lyra-after-hide');
     this.remove();

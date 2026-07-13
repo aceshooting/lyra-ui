@@ -31,16 +31,21 @@ export type LyraSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
  * "active" row is conveyed via `aria-activedescendant`, never actual focus),
  * matching the WAI-ARIA "select-only combobox" pattern.
  *
- * When exactly one option is enabled (regardless of how many disabled ones
- * exist alongside it), the popup never opens at all: a click, Enter, Space,
- * ArrowDown, or ArrowUp on the trigger commits that sole option directly,
- * and the trigger renders as a plain `role="button"` with no chevron/
- * `aria-haspopup`/`aria-expanded` rather than a combobox with a permanently
- * inert popup state — opening a one-row list to pick the only available
- * choice is pure friction with no real decision behind it. This never
- * changes `value`/validity defaults on its own — an unselected single-option
- * select stays unselected (and a `required` one stays invalid) exactly like
- * the multi-option case, until the trigger is actually activated.
+ * When `autoCommitSingleOption` is set and exactly one option is enabled
+ * (regardless of how many disabled ones exist alongside it), the popup never
+ * opens at all: a click, Enter, Space, ArrowDown, or ArrowUp on the trigger
+ * commits that sole option directly, and the trigger renders as a plain
+ * `role="button"` with no chevron/`aria-haspopup`/`aria-expanded` rather than
+ * a combobox with a permanently inert popup state — opening a one-row list to
+ * pick the only available choice is pure friction with no real decision
+ * behind it. This never changes `value`/validity defaults on its own — an
+ * unselected single-option select stays unselected (and a `required` one
+ * stays invalid) exactly like the multi-option case, until the trigger is
+ * actually activated. `autoCommitSingleOption` defaults to `false`: by
+ * default a select always renders the normal combobox/listbox/chevron
+ * trigger no matter how many options are enabled, matching pre-1.3.0
+ * behavior — opt in explicitly if a narrowing-to-one option list should
+ * auto-commit.
  *
  * @customElement lyra-select
  * @slot - `<lyra-option>` elements.
@@ -82,6 +87,16 @@ export class LyraSelect extends LyraElement {
   @property({ type: Boolean, reflect: true }) open = false;
   /** Visual size — same `xs`–`xl` scale as `lyra-toast-item`'s `size`. */
   @property({ reflect: true }) size: LyraSelectSize = 'm';
+  /**
+   * Opt-in: when `true` and exactly one `<lyra-option>` is enabled, the
+   * trigger commits that option directly (click/Enter/Space/ArrowDown/
+   * ArrowUp) instead of opening the listbox, and renders as a plain
+   * `role="button"` with no chevron. Defaults to `false`, which always
+   * renders the normal combobox/listbox/chevron trigger regardless of how
+   * many options are enabled — the pre-1.3.0 behavior. See the class doc
+   * above and `onlyOption` below for the full rationale.
+   */
+  @property({ type: Boolean, attribute: 'auto-commit-single-option' }) autoCommitSingleOption = false;
 
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
@@ -335,17 +350,20 @@ export class LyraSelect extends LyraElement {
   }
 
   /**
-   * The sole navigable (non-disabled) option, when there's exactly one. Opening a one-row
-   * popup to pick the only available choice is pure friction with no real decision behind
-   * it, so a single-option select skips the popup entirely -- see `onTriggerClick`/`onKeyDown`,
-   * which commit this option directly on activation instead of opening the listbox, and
-   * `render()`, which drops the popup-trigger ARIA semantics (`role="combobox"`,
-   * `aria-haspopup`, `aria-expanded`, the chevron) in favor of a plain button's, since no
-   * popup can ever appear while this getter returns a value. Does not affect `value`/
-   * validity defaults in any way -- an unselected single-option select stays unselected
+   * The sole navigable (non-disabled) option, when `autoCommitSingleOption` is set and
+   * there's exactly one. Opening a one-row popup to pick the only available choice is pure
+   * friction with no real decision behind it, so an opted-in single-option select skips the
+   * popup entirely -- see `onTriggerClick`/`onKeyDown`, which commit this option directly on
+   * activation instead of opening the listbox, and `render()`, which drops the popup-trigger
+   * ARIA semantics (`role="combobox"`, `aria-haspopup`, `aria-expanded`, the chevron) in favor
+   * of a plain button's, since no popup can ever appear while this getter returns a value.
+   * Returns `undefined` whenever `autoCommitSingleOption` is `false` (the default), regardless
+   * of option count, so the normal combobox trigger renders unconditionally. Does not affect
+   * `value`/validity defaults in any way -- an unselected single-option select stays unselected
    * until the trigger is actually activated, exactly like the multi-option case.
    */
   private get onlyOption(): LyraOption | undefined {
+    if (!this.autoCommitSingleOption) return undefined;
     const navigable = this.options.filter((o) => !o.disabled);
     return navigable.length === 1 ? navigable[0] : undefined;
   }
@@ -595,12 +613,14 @@ export class LyraSelect extends LyraElement {
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const describedBy = [hasError ? 'select-error' : '', hasHint ? 'select-hint' : ''].filter(Boolean).join(' ');
-    // A single navigable option has no popup to expand into -- the trigger commits it
-    // directly on activation (see onTriggerClick/onKeyDown) instead of opening the listbox,
-    // so it's exposed as a plain button rather than a combobox with a permanently-closed
-    // popup: no aria-haspopup/aria-expanded/aria-controls/aria-activedescendant (all
-    // meaningless without a popup that can ever appear) and no chevron.
-    const isSingleOption = navigable.length === 1;
+    // A single navigable option has no popup to expand into -- when opted in via
+    // autoCommitSingleOption, the trigger commits it directly on activation (see
+    // onTriggerClick/onKeyDown) instead of opening the listbox, so it's exposed as a plain
+    // button rather than a combobox with a permanently-closed popup: no aria-haspopup/
+    // aria-expanded/aria-controls/aria-activedescendant (all meaningless without a popup that
+    // can ever appear) and no chevron. Without the opt-in (the default), this is always
+    // `false` and the normal combobox/listbox/chevron trigger renders regardless of option count.
+    const isSingleOption = this.autoCommitSingleOption && navigable.length === 1;
 
     return html`
       <div part="form-control">

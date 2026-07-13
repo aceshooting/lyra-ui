@@ -178,6 +178,25 @@ it('self-heals a non-finite index back to a valid value on the next update, with
   expect(el.index).to.be.greaterThan(0);
 });
 
+it('normalizes non-finite, negative, fractional, and oversized navigation values', async () => {
+  const el = (await fixture(html`<lyra-playback length="3.9" index="2.9"></lyra-playback>`)) as LyraPlayback;
+  expect(el.length).to.equal(3.9);
+  el.goTo(Number.NaN);
+  expect(el.index).to.equal(0);
+
+  el.length = Number.POSITIVE_INFINITY;
+  el.index = Number.NEGATIVE_INFINITY;
+  el.goTo(Number.POSITIVE_INFINITY);
+  expect(el.index).to.equal(0);
+  await el.updateComplete;
+  expect(el.length).to.equal(0);
+  expect(el.index).to.equal(0);
+
+  el.length = Number.MAX_VALUE;
+  await el.updateComplete;
+  expect(Number.isSafeInteger(el.length)).to.be.true;
+});
+
 it('re-reads interval-ms fresh instead of baking the original value into the timer for the whole play session', async () => {
   const el = (await fixture(
     html`<lyra-playback length="100" interval-ms="30"></lyra-playback>`,
@@ -345,11 +364,18 @@ it('warns with a reason that matches the actual cause: "below the Xms floor" for
     invalid.play();
     invalid.pause();
 
-    expect(calls.length).to.equal(2);
+    const huge = (await fixture(
+      html`<lyra-playback length="5" interval-ms="${Number.MAX_VALUE}"></lyra-playback>`,
+    )) as LyraPlayback;
+    huge.play();
+    huge.pause();
+
+    expect(calls.length).to.equal(3);
     expect(calls[0][0]).to.contain('(12)');
     expect(calls[0][0]).to.contain('below the 16ms floor');
     expect(calls[1][0]).to.contain('(NaN)');
     expect(calls[1][0]).to.contain('non-finite');
+    expect(calls[2][0]).to.contain('above the 2147483647ms ceiling');
   } finally {
     console.warn = originalWarn;
   }

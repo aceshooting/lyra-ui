@@ -1,6 +1,7 @@
-import { fixture, expect, html, waitUntil, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, fixtureSync, expect, html, waitUntil, oneEvent, aTimeout } from '@open-wc/testing';
 import './markdown.js';
 import type { LyraMarkdown } from './markdown.js';
+import { loadMarkdownDeps } from './markdown-loader.js';
 
 const richSample = `# Heading
 
@@ -191,6 +192,112 @@ it('adds scope="col" to every rendered table header cell', async () => {
   const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
   expect(ths.length).to.be.greaterThan(0);
   ths.forEach((th) => expect(th.getAttribute('scope')).to.equal('col'));
+});
+
+it('renders an <img> from source markdown with part="img"', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '![alt text](https://example.com/pic.png)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('img') !== null);
+
+  const img = el.shadowRoot!.querySelector('img')!;
+  expect(img.getAttribute('part')).to.equal('img');
+  expect(img.getAttribute('src')).to.equal('https://example.com/pic.png');
+  expect(img.getAttribute('alt')).to.equal('alt text');
+});
+
+it('defaults heading-offset to 0, preserving today\'s exact <h${depth}> output', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  expect(el.headingOffset).to.equal(0);
+  el.content = '# one\n\n## two\n';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+  const headings = el.shadowRoot!.querySelectorAll('[part="heading"]');
+  expect(headings[0].tagName).to.equal('H1');
+  expect(headings[1].tagName).to.equal('H2');
+});
+
+it('shifts every rendered heading by heading-offset, clamped at h6', async () => {
+  const el = (await fixture(html`<lyra-markdown heading-offset="2"></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '# one\n\n## two\n\n###### deep\n';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+  const headings = el.shadowRoot!.querySelectorAll('[part="heading"]');
+  expect(headings[0].tagName).to.equal('H3');
+  expect(headings[1].tagName).to.equal('H4');
+  expect(headings[2].tagName, 'a source h6 clamps at h6 rather than overflowing').to.equal('H6');
+});
+
+it('omits target/rel on rendered links when link-target is explicitly disabled', async () => {
+  const el = (await fixture(html`<lyra-markdown link-target=""></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '[docs](https://example.com/docs)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+
+  const a = el.shadowRoot!.querySelector('a')!;
+  expect(a.getAttribute('target')).to.equal(null);
+  expect(a.getAttribute('rel')).to.equal(null);
+  expect(a.getAttribute('part')).to.equal('link');
+  expect(a.getAttribute('href')).to.equal('https://example.com/docs');
+});
+
+it('omits target/rel on rendered links when link-target is set to null via the property', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.linkTarget = null;
+  el.content = '[docs](https://example.com/docs)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+
+  const a = el.shadowRoot!.querySelector('a')!;
+  expect(a.getAttribute('target')).to.equal(null);
+  expect(a.getAttribute('rel')).to.equal(null);
+});
+
+it('renders target="_blank" rel="noopener noreferrer" by default, unchanged from today', async () => {
+  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+  el.content = '[docs](https://example.com/docs)';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+
+  const a = el.shadowRoot!.querySelector('a')!;
+  expect(a.getAttribute('target')).to.equal('_blank');
+  expect(a.getAttribute('rel')).to.equal('noopener noreferrer');
+});
+
+it('eager-load synchronously adopts the already-warm marked/dompurify cache, skipping the async import() hop', async () => {
+  // Prime the module-level cache `markdown-loader.ts` shares across every
+  // <lyra-markdown> instance -- by the time this resolves,
+  // getMarkdownDepsIfLoaded() (what eager-load relies on) returns synchronously.
+  await loadMarkdownDeps();
+
+  // fixtureSync() (unlike fixture()) does not await updateComplete -- it only
+  // connects the element and returns, so this checks state immediately after
+  // connectedCallback() with zero microtasks having had a chance to run yet,
+  // proving eager-load skipped the async hop rather than merely "winning a race"
+  // against it.
+  const el = fixtureSync(html`<lyra-markdown eager-load content="# hi"></lyra-markdown>`) as LyraMarkdown;
+  type Internals = { deps?: unknown; renderedHtml: string | null };
+  const internals = el as unknown as Internals;
+  expect(internals.deps, 'deps must already be set synchronously, before any microtask has run').to.exist;
+  expect(internals.renderedHtml, 'renderMarkdown() must already have run synchronously').to.not.equal(null);
+
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.hasAttribute('data-fallback')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('hi');
+});
+
+it('without eager-load, deps stay unset synchronously even with an already-warm cache -- the async hop still applies by default', async () => {
+  await loadMarkdownDeps();
+
+  const el = fixtureSync(html`<lyra-markdown content="# hi"></lyra-markdown>`) as LyraMarkdown;
+  type Internals = { deps?: unknown };
+  expect(
+    (el as unknown as Internals).deps,
+    'the default (non-eager) path always defers to the async .then(), even with a warm cache',
+  ).to.equal(undefined);
+
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('hi');
 });
 
 it('does not set deps or render when the element disconnects before loadMarkdownDeps() resolves', async () => {

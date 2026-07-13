@@ -190,6 +190,33 @@ it('skips a disabled item during ArrowDown navigation', async () => {
   expect(document.activeElement).to.equal(c);
 });
 
+it('moves roving focus when the active item becomes disabled or hidden', async () => {
+  const el = (await fixture(html`
+    <lyra-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="a">A</lyra-menu-item>
+      <lyra-menu-item value="b">B</lyra-menu-item>
+      <lyra-menu-item value="c">C</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a, b, c] = items(el);
+  expect(document.activeElement).to.equal(a);
+
+  a.disabled = true;
+  await a.updateComplete;
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(b);
+  expect(b.tabIndex).to.equal(0);
+
+  b.hidden = true;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(c);
+  expect(c.tabIndex).to.equal(0);
+});
+
 it('closes on Escape and returns focus to the trigger', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   const btn = trigger(el);

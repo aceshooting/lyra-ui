@@ -62,6 +62,7 @@
     "test": "wtr",
     "test:watch": "wtr --watch",
     "manifest": "cem analyze --litelement --outdir .",
+    "manifest:check": "node scripts/check-manifest.mjs",
     "lint": "tsc --noEmit -p tsconfig.json",
     "prepack": "pnpm run build && pnpm run manifest"
   },

@@ -112,11 +112,11 @@ export const styles = css`
     position: fixed;
     z-index: 900;
     box-sizing: border-box;
-    max-block-size: 18rem;
+    max-block-size: min(18rem, var(--lyra-positioner-available-block-size, 18rem));
     overflow-y: auto;
     inline-size: max-content;
-    min-inline-size: 12rem;
-    max-inline-size: min(92vw, 28rem);
+    min-inline-size: min(12rem, var(--lyra-positioner-available-inline-size, 12rem));
+    max-inline-size: min(92vw, 28rem, var(--lyra-positioner-available-inline-size, 100vw));
     padding: var(--lyra-space-xs);
     background: var(--lyra-color-surface);
     border: 1px solid var(--lyra-color-border);

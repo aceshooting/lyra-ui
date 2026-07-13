@@ -39,6 +39,18 @@ export const styles = css`
        re-render -- hinting the compositor avoids a full repaint per frame. */
     will-change: transform;
   }
+  [part='group'] {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 0;
+    z-index: 1;
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    background: var(--lyra-color-surface);
+    color: var(--lyra-color-text-quiet);
+    font-size: 0.875em;
+    font-weight: 600;
+    pointer-events: none;
+  }
   :host([loading]) [part='base'] {
     cursor: progress;
   }

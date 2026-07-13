@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
+import { finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { styles } from './time-range.styles.js';
 
 type Handle = 'start' | 'end';
@@ -30,14 +31,16 @@ function isSliderKey(key: string): boolean {
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
 
-/** Number of decimal digits in `n`'s shortest string representation, e.g.
- *  `0.1` -> 1, `5` -> 0. Used to round a stepped value back to the precision
- *  the caller's `step` itself implies, instead of leaving it at whatever
- *  binary floating-point noise `value / step` happened to produce. */
+/** Number of decimal places implied by `n`, including exponent notation.
+ *  `0.1` -> 1, `5` -> 0, and `1e-7` -> 7. Used to round a stepped value back
+ *  to the precision the caller's `step` itself implies, instead of leaving
+ *  it at whatever binary floating-point noise `value / step` happened to
+ *  produce. */
 function decimalPlaces(n: number): number {
-  const str = n.toString();
-  const dot = str.indexOf('.');
-  return dot === -1 ? 0 : str.length - dot - 1;
+  if (!Number.isFinite(n) || n === 0) return 0;
+  const [mantissa, exponentText] = n.toExponential().split('e');
+  const mantissaPlaces = mantissa.includes('.') ? mantissa.length - mantissa.indexOf('.') - 1 : 0;
+  return Math.max(0, mantissaPlaces - Number(exponentText));
 }
 
 /** A single discrete-preset option for the `presets` property. */
@@ -67,7 +70,13 @@ export interface TimeRangePreset {
  * @customElement lyra-time-range
  * @event lyra-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
  * @event lyra-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.
- * @csspart base, track, range, handle-start, handle-end, presets, preset-button
+ * @csspart base - The time-range wrapper.
+ * @csspart track - The complete range track.
+ * @csspart range - The selected range.
+ * @csspart handle-start - The start handle.
+ * @csspart handle-end - The end handle.
+ * @csspart presets - The preset controls wrapper.
+ * @csspart preset-button - A preset button.
  */
 export class LyraTimeRange extends LyraElement {
   static formAssociated = true;
@@ -185,8 +194,8 @@ export class LyraTimeRange extends LyraElement {
     // percentOf()/clamp() caller. Mirror lyra-gauge's `ratio` getter, which
     // short-circuits on isNaN(...) instead, by falling back to this
     // property's own default.
-    const min = isNaN(this.min) ? 0 : this.min;
-    const max = isNaN(this.max) ? 100 : this.max;
+    const min = finiteNumber(this.min, 0);
+    const max = finiteNumber(this.max, 100);
     return { lo: Math.min(min, max), hi: Math.max(min, max) };
   }
 
@@ -195,10 +204,10 @@ export class LyraTimeRange extends LyraElement {
     // the rendered `inset-inline-start:NaN%` — that's an invalid CSS value
     // the browser silently drops, leaving the handle stuck with no visible
     // recovery. 0% is at least a stable, well-defined position.
-    if (isNaN(value)) return 0;
     const { lo, hi } = this.domain();
+    const safeValue = finiteRange(value, lo, lo, hi);
     const span = hi - lo || 1;
-    return ((value - lo) / span) * 100;
+    return ((safeValue - lo) / span) * 100;
   }
 
   /** Each handle's actual reachable sub-range, bounded by its sibling
@@ -211,8 +220,8 @@ export class LyraTimeRange extends LyraElement {
     // A NaN sibling value (e.g. an invalid `end` attribute) must not leak
     // into the *other* handle's aria-valuemin/aria-valuemax as a literal
     // "NaN" — fall back to the domain bound it would otherwise report.
-    const start = isNaN(this.start) ? lo : this.start;
-    const end = isNaN(this.end) ? hi : this.end;
+    const start = finiteRange(this.start, lo, lo, hi);
+    const end = finiteRange(this.end, hi, lo, hi);
     return handle === 'start' ? { min: lo, max: end } : { min: start, max: hi };
   }
 
@@ -223,7 +232,6 @@ export class LyraTimeRange extends LyraElement {
     // zero/NaN below and permanently poison start/end with NaN, since the
     // other handle's clamp cross-references this one's (already-NaN) value.
     // Treat it as "unstepped" instead of propagating NaN.
-    const hasStep = Number.isFinite(this.step) && this.step > 0;
     // Anchor the step grid at the domain's own `lo` (matching native
     // `<input type=range>`) instead of absolute 0 — otherwise a `min` that
     // isn't itself a multiple of `step` makes the very first nudge off `min`
@@ -232,15 +240,16 @@ export class LyraTimeRange extends LyraElement {
     // (rather than leaving raw `value / step` binary-float noise in place)
     // so repeated steps land on exact values like 20.1 instead of
     // 20.200000000000003.
-    let stepped = value;
-    if (hasStep) {
-      const stepsFromLo = Math.round((value - lo) / this.step);
-      const factor = 10 ** decimalPlaces(this.step);
-      stepped = Math.round((lo + stepsFromLo * this.step) * factor) / factor;
+    let stepped = finiteNumber(value, lo);
+    const step = finiteRange(this.step, 0, 0);
+    if (Number.isFinite(step) && step > 0) {
+      const stepsFromLo = Math.round((stepped - lo) / step);
+      const factor = 10 ** decimalPlaces(step);
+      stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
     }
     const bounded = Math.min(hi, Math.max(lo, stepped));
-    if (handle === 'start') return Math.min(bounded, this.end);
-    return Math.max(bounded, this.start);
+    if (handle === 'start') return Math.min(bounded, finiteRange(this.end, hi, lo, hi));
+    return Math.max(bounded, finiteRange(this.start, lo, lo, hi));
   }
 
   private setValue(handle: Handle, value: number, commit: boolean): void {
@@ -269,8 +278,8 @@ export class LyraTimeRange extends LyraElement {
   private applyPreset(preset: TimeRangePreset): void {
     if (this.effectiveDisabled) return;
     const { lo, hi } = this.domain();
-    const start = Math.min(Math.max(lo, preset.start), hi);
-    const end = Math.min(Math.max(lo, preset.end), hi);
+    const start = finiteRange(preset.start, lo, lo, hi);
+    const end = finiteRange(preset.end, hi, lo, hi);
     this.start = Math.min(start, end);
     this.end = Math.max(start, end);
     this.emit('lyra-input', { start: this.start, end: this.end });
@@ -284,7 +293,10 @@ export class LyraTimeRange extends LyraElement {
     // onPointerDown, and disabled handles carry `tabindex="-1"`, but a
     // pre-existing focus can bypass both of those).
     if (this.effectiveDisabled) return;
-    const current = handle === 'start' ? this.start : this.end;
+    const current =
+      handle === 'start'
+        ? finiteRange(this.start, this.domain().lo)
+        : finiteRange(this.end, this.domain().hi);
     // Mirror the same left/right swap as onPointerMove: under RTL, physical
     // ArrowRight moves toward inset-inline-start, i.e. a lower value.
     const rtl = isRtl(this);
@@ -357,7 +369,8 @@ export class LyraTimeRange extends LyraElement {
     // right edge under RTL), so the pointer ratio has to mirror that or a
     // rightward drag would move the handle the wrong way.
     const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
-    const value = this.min + ratio * (this.max - this.min);
+    const { lo, hi } = this.domain();
+    const value = lo + ratio * (hi - lo);
     this.setValue(drag.handle, value, false);
   };
 
@@ -394,20 +407,27 @@ export class LyraTimeRange extends LyraElement {
       // the track, since percentOf() would otherwise produce <0%/>100%.
       // Guard against a caller passing min > max so the bounds themselves
       // stay well-formed.
-      const lo = Math.min(this.min, this.max);
-      const hi = Math.max(this.min, this.max);
-      this.start = Math.min(hi, Math.max(lo, this.start));
-      this.end = Math.min(hi, Math.max(lo, this.end));
+      const { lo, hi } = this.domain();
+      if (Number.isFinite(this.start)) this.start = finiteRange(this.start, lo, lo, hi);
+      if (Number.isFinite(this.end)) this.end = finiteRange(this.end, hi, lo, hi);
     }
     // Keep start <= end regardless of which side changed (a controlled
     // caller may set only `end`, e.g. two-way-binding an external store).
     // The handle that just moved wins; the other side is pulled to meet it,
     // mirroring the direction `clamp()` already uses during interactive
     // dragging.
-    if (changed.has('start') || changed.has('min') || changed.has('max')) {
+    if (
+      (changed.has('start') || changed.has('min') || changed.has('max')) &&
+      Number.isFinite(this.start) &&
+      Number.isFinite(this.end)
+    ) {
       this.start = Math.min(this.start, this.end);
     }
-    if (changed.has('end') || changed.has('min') || changed.has('max')) {
+    if (
+      (changed.has('end') || changed.has('min') || changed.has('max')) &&
+      Number.isFinite(this.start) &&
+      Number.isFinite(this.end)
+    ) {
       this.end = Math.max(this.end, this.start);
     }
   }
@@ -449,7 +469,9 @@ export class LyraTimeRange extends LyraElement {
           aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
-          aria-valuenow=${isNaN(this.start) ? nothing : this.start}
+          aria-valuenow=${Number.isFinite(this.start)
+            ? finiteRange(this.start, startBounds.min, startBounds.min, startBounds.max)
+            : nothing}
           style=${`inset-inline-start:${startPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('start', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('start', e)}
@@ -463,7 +485,9 @@ export class LyraTimeRange extends LyraElement {
           aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}
-          aria-valuenow=${isNaN(this.end) ? nothing : this.end}
+          aria-valuenow=${Number.isFinite(this.end)
+            ? finiteRange(this.end, endBounds.min, endBounds.min, endBounds.max)
+            : nothing}
           style=${`inset-inline-start:${endPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('end', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('end', e)}

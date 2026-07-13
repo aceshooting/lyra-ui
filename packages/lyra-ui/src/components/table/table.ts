@@ -29,7 +29,7 @@ export interface TableColumn<T> {
  *  bubbling up through one — must not be re-interpreted as row/column
  *  activation by the table's own delegated listeners. */
 const INTERACTIVE_SELECTOR =
-  'button, a[href], input, select, textarea, [role="button"], [role="combobox"], [role="listbox"], [role="slider"]';
+  'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
 
 /** Encodes a row/column identity key for use as a Map key or a DOM
  *  `data-row-key` attribute value, preserving the distinction between a
@@ -49,7 +49,11 @@ function encodeKey(key: string | number): string {
 function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element | null {
   let el: Element | null = target;
   while (el && el !== boundary) {
-    if (el.matches(INTERACTIVE_SELECTOR) || el.tagName.includes('-')) return el;
+    if (
+      (el.matches(INTERACTIVE_SELECTOR) && !el.matches('[data-row-key], th[data-col-key]')) ||
+      el.tagName.includes('-')
+    )
+      return el;
     el = el.parentElement;
   }
   return null;
@@ -174,10 +178,14 @@ export class LyraTable<T = unknown> extends LyraElement {
    *  identity on the next non-empty render, so `updated()` re-observes
    *  whenever this no longer matches the live element. */
   private observedBase?: Element;
+  private readonly observedHeaders = new Set<Element>();
 
   connectedCallback(): void {
     super.connectedCallback();
-    this.resizeObserver = new ResizeObserver(() => this.recomputeColumnsHidden());
+    this.resizeObserver = new ResizeObserver(() => {
+      this.recomputeColumnsHidden();
+      this.applyStickyOffsets();
+    });
     // A reconnect re-creates the observer above but the shadow root content
     // survives across disconnect/reconnect (Lit doesn't tear down the shadow
     // root) — re-observe [part='base'] here if it already exists from before
@@ -193,6 +201,7 @@ export class LyraTable<T = unknown> extends LyraElement {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.observedBase = undefined;
+    this.observedHeaders.clear();
   }
 
   private observeBase(base: Element): void {
@@ -200,6 +209,26 @@ export class LyraTable<T = unknown> extends LyraElement {
     if (this.observedBase) this.resizeObserver?.unobserve(this.observedBase);
     this.resizeObserver?.observe(base);
     this.observedBase = base;
+  }
+
+  private observeHeaders(): void {
+    const headers = new Set<Element>(
+      this.columns.some((column) => column.sticky)
+        ? this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')
+        : [],
+    );
+    for (const header of this.observedHeaders) {
+      if (!headers.has(header)) {
+        this.resizeObserver?.unobserve(header);
+        this.observedHeaders.delete(header);
+      }
+    }
+    for (const header of headers) {
+      if (!this.observedHeaders.has(header)) {
+        this.observedHeaders.add(header);
+        this.resizeObserver?.observe(header);
+      }
+    }
   }
 
   /** Recomputes `columnsHidden` from the live DOM (mirrors `visibleHeaders()`'s
@@ -217,9 +246,18 @@ export class LyraTable<T = unknown> extends LyraElement {
         (el) => el.offsetParent === null,
       );
     const next = anyPriorityHidden || (hasPriorityColumns && this.showAllColumns);
+    this.rehomeFocusedColumn();
     if (this.columnsHidden === next) return;
     this.columnsHidden = next;
     this.emit('lyra-columns-hidden-change', { hidden: next });
+  }
+
+  private rehomeFocusedColumn(): void {
+    const visible = this.visibleHeaders();
+    if (visible.length === 0 || this.activeColKey === null) return;
+    if (!visible.some((header) => header.dataset.colKey === this.activeColKey)) {
+      this.activeColKey = visible[0].dataset.colKey ?? null;
+    }
   }
 
   private keyOf(row: T, index: number): string | number {
@@ -228,10 +266,14 @@ export class LyraTable<T = unknown> extends LyraElement {
 
   /** The header cell that currently owns `tabindex="0"`. */
   private focusedColKey(): string | null {
+    const visible = this.visibleHeaders();
+    const visibleKeys = new Set(
+      visible.map((el) => el.dataset.colKey).filter((key): key is string => key !== undefined && this.columnsByKey.has(key)),
+    );
     if (this.activeColKey !== null && this.columnsByKey.has(this.activeColKey)) {
-      return this.activeColKey;
+      if (visibleKeys.size === 0 || visibleKeys.has(this.activeColKey)) return this.activeColKey;
     }
-    return this.columns[0]?.key ?? null;
+    return visible.find((el) => el.dataset.colKey !== undefined && this.columnsByKey.has(el.dataset.colKey))?.dataset.colKey ?? this.columns[0]?.key ?? null;
   }
 
   /** The body row that currently owns `tabindex="0"`. */
@@ -255,7 +297,7 @@ export class LyraTable<T = unknown> extends LyraElement {
     }
   }
 
-  /** Each sticky column's cumulative left offset — the sum of the *rendered
+  /** Each sticky column's cumulative inline-start offset — the sum of the *rendered
    *  width* of every earlier sticky column — so multiple sticky columns
    *  stack left-to-right instead of all pinning to inset-inline-start: 0 and
    *  overlapping. Table columns are intrinsically sized (not fixed-width), so
@@ -266,11 +308,24 @@ export class LyraTable<T = unknown> extends LyraElement {
     let running = 0;
     for (const col of this.columns) {
       if (!col.sticky) continue;
+      const headerEl = [...this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')].find(
+        (el) => el.dataset.colKey === col.key,
+      );
       offsets.set(col.key, running);
-      const headerEl = this.renderRoot.querySelector<HTMLElement>(`th[data-col-key="${col.key}"]`);
       running += headerEl?.offsetWidth ?? 0;
     }
     return offsets;
+  }
+
+  private applyStickyOffsets(): void {
+    if (!this.columns.some((c) => c.sticky)) return;
+    const offsets = this.stickyOffsets();
+    this.renderRoot.querySelectorAll<HTMLElement>('[data-col-key]').forEach((el) => {
+      const key = el.dataset.colKey;
+      if (key !== undefined && offsets.has(key)) {
+        el.style.setProperty('--lyra-table-sticky-offset', `${offsets.get(key)}px`);
+      }
+    });
   }
 
   /** Applies stickyOffsets()'s measured per-column offsets as an inline
@@ -288,20 +343,15 @@ export class LyraTable<T = unknown> extends LyraElement {
    *  when `hasSticky` is true (opt-in) and simply recomputes on every
    *  update; a future optimization pass could cache column widths instead of
    *  re-querying every time — out of scope for this correctness fix. */
-  protected updated(): void {
-    if (this.columns.some((c) => c.sticky)) {
-      for (const [key, offset] of this.stickyOffsets()) {
-        this.renderRoot
-          .querySelectorAll<HTMLElement>(`[data-col-key="${key}"]`)
-          .forEach((el) => el.style.setProperty('--lyra-table-sticky-offset', `${offset}px`));
-      }
-    }
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
     // Re-observe [part='base'] whenever this update's render() produced a
     // fresh one (first mount, or a swap to/from the <lyra-empty> template
     // shape) — observeBase() itself no-ops when it's the same element as
     // already observed.
     const base = this.renderRoot.querySelector('[part="base"]');
     if (base) this.observeBase(base);
+    this.observeHeaders();
     // Deferred to a microtask rather than called synchronously here: a real
     // priority-hidden transition mutates the reactive `columnsHidden`
     // property, and doing that from inside this same updated() call stack
@@ -394,14 +444,15 @@ export class LyraTable<T = unknown> extends LyraElement {
     const headers = this.visibleHeaders();
     const index = headers.indexOf(th);
     if (index < 0) return;
+    const rtl = getComputedStyle(this).direction === 'rtl';
     switch (e.key) {
       case 'ArrowLeft':
         e.preventDefault();
-        this.focusHeader(headers[Math.max(0, index - 1)]);
+        this.focusHeader(headers[rtl ? Math.min(headers.length - 1, index + 1) : Math.max(0, index - 1)]);
         return;
       case 'ArrowRight':
         e.preventDefault();
-        this.focusHeader(headers[Math.min(headers.length - 1, index + 1)]);
+        this.focusHeader(headers[rtl ? Math.max(0, index - 1) : Math.min(headers.length - 1, index + 1)]);
         return;
       case 'Home':
         e.preventDefault();

@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { nextId, srOnly } from '../../internal/a11y.js';
 import { loadChartJs } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../skeleton/skeleton.js';
@@ -77,10 +78,14 @@ function loadBoxPlotPlugin(): Promise<typeof import('@sgratzl/chartjs-chart-boxp
  * Awesome's chart set — useful for summarizing distributions.
  *
  * @customElement lyra-box-plot
- * @csspart base, canvas
+ * @csspart base - The chart wrapper.
+ * @csspart canvas - The box-plot canvas.
+ * @csspart description - The accessible box-plot summary.
+ * @csspart data-table - The optional generated or slotted data table.
+ * @slot data-table - An optional consumer-provided accessible table alternative.
  */
 export class LyraBoxPlot extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) boxes: BoxPlotSeries[] = [];
@@ -88,6 +93,12 @@ export class LyraBoxPlot extends LyraElement {
   @property() height = '280px';
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
+  /** Accessible name applied to the canvas. Falls back to the box labels. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** Accessible description for the canvas. When unset, a five-number summary is generated. */
+  @property({ attribute: 'accessible-description' }) accessibleDescription = '';
+  /** Makes the generated data table visible; it remains screen-reader available when false. */
+  @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
 
   /**
    * True until the lazy-loaded `chart.js` + `@sgratzl/chartjs-chart-boxplot`
@@ -98,11 +109,11 @@ export class LyraBoxPlot extends LyraElement {
 
   @state() private visible = true;
   private intersectionObserver?: IntersectionObserver;
-  private lastSignature = '';
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: import('chart.js').Chart;
   private chartJsModule?: typeof import('chart.js');
+  private descriptionId = nextId('box-plot-description');
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -160,17 +171,12 @@ export class LyraBoxPlot extends LyraElement {
     if (changed.has('height')) {
       this.style.setProperty('--lyra-chart-height', this.height);
     }
-    // While the boxplot peer deps are still loading, `draw()` would no-op
-    // anyway (no `chartJsModule`/`canvasEl` yet) — bail before touching
-    // `lastSignature` so that phantom "no-op" update doesn't get cached as
-    // the baseline and silently swallow the real first draw once loading
-    // finishes with no other property having changed in the meantime.
-    // Mirrors `LyraChart.updated()`.
     if (this.loading) return;
     if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
-    const signature = this.computeSignature();
-    if (signature === this.lastSignature) return;
-    this.lastSignature = signature;
+    const contentChanged = ['labels', 'boxes', 'legend', 'height', 'yLabel', 'beginAtZero', 'loading'].some((name) =>
+      changed.has(name),
+    );
+    if (!contentChanged) return;
     this.draw();
   }
 
@@ -191,38 +197,6 @@ export class LyraBoxPlot extends LyraElement {
       tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
       tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
-  }
-
-  /**
-   * A content-affecting-properties fingerprint used by `updated()` to skip a
-   * redundant `draw()` when neither visibility nor any of these properties
-   * actually changed since the last draw (e.g. an unrelated property/state
-   * update, or `requestUpdate()` with nothing changed). Mirrors
-   * `chart.ts`'s `computeSignature()`.
-   *
-   * Deliberately re-shapes `this.boxes` down to only the `BoxPlotPoint`
-   * fields this component itself reads (`min`/`q1`/`median`/`q3`/`max`),
-   * rather than `JSON.stringify(this.boxes)` directly:
-   * `@sgratzl/chartjs-chart-boxplot`'s controller mutates each data point
-   * object in place during Chart.js's own parse step (adding computed
-   * `whiskerMin`/`whiskerMax`/`mean` fields onto the *same* object
-   * references this component was handed) — so a raw stringify of the
-   * whole object would drift to a new value across calls purely from that
-   * side effect, with no actual consumer-driven change, defeating the
-   * dedup this method exists to provide.
-   */
-  private computeSignature(): string {
-    return JSON.stringify([
-      this.labels,
-      this.boxes.map((s) => ({
-        label: s.label,
-        color: s.color,
-        data: s.data.map((d) => [d.min, d.q1, d.median, d.q3, d.max]),
-      })),
-      this.legend,
-      this.yLabel,
-      this.beginAtZero,
-    ]);
   }
 
   private buildConfig(): import('chart.js').ChartConfiguration {
@@ -275,6 +249,55 @@ export class LyraBoxPlot extends LyraElement {
     this.chart = new this.chartJsModule.Chart(this.canvasEl, config);
   }
 
+  private boxPlotDescription(): string {
+    if (this.accessibleDescription) return this.accessibleDescription;
+    const summaries = this.boxes.map((series) => {
+      if (!series.data.length) return `${series.label}: no data`;
+      const medians = series.data.map((point) => point.median);
+      const first = medians[0]!;
+      const last = medians[medians.length - 1]!;
+      const trend = last > first ? 'increasing' : last < first ? 'decreasing' : 'flat';
+      return `${series.label}: ${series.data.length} distributions, median range ${Math.min(...medians)} to ${Math.max(...medians)}, ${trend} median trend`;
+    });
+    return `Box plot${summaries.length ? `. ${summaries.join('. ')}` : ' with no data'}.`;
+  }
+
+  private renderDataTable(): TemplateResult {
+    return html`
+      <table class=${this.showDataTable ? '' : 'sr-only'}>
+        <caption>${this.accessibleLabel || 'Box plot data'}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Category</th>
+            <th scope="col">Series</th>
+            <th scope="col">Min</th>
+            <th scope="col">Q1</th>
+            <th scope="col">Median</th>
+            <th scope="col">Q3</th>
+            <th scope="col">Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${this.boxes.flatMap((series) =>
+            series.data.map(
+              (point, index) => html`
+                <tr>
+                  <th scope="row">${this.labels[index] ?? `Point ${index + 1}`}</th>
+                  <td>${series.label}</td>
+                  <td>${point.min}</td>
+                  <td>${point.q1}</td>
+                  <td>${point.median}</td>
+                  <td>${point.q3}</td>
+                  <td>${point.max}</td>
+                </tr>
+              `,
+            ),
+          )}
+        </tbody>
+      </table>
+    `;
+  }
+
   render(): TemplateResult {
     if (this.loading) {
       return html`
@@ -283,10 +306,16 @@ export class LyraBoxPlot extends LyraElement {
         </div>
       `;
     }
-    const label = this.boxes.map((b) => b.label).join(', ') || 'Box plot';
+    const label = this.accessibleLabel || this.boxes.map((b) => b.label).join(', ') || 'Box plot';
+    const description = this.boxPlotDescription();
     return html`
       <div part="base">
-        <canvas part="canvas" role="img" aria-label=${label}></canvas>
+        <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
+        <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
+        <div part="data-table">
+          <slot name="data-table"></slot>
+          ${this.renderDataTable()}
+        </div>
       </div>
     `;
   }

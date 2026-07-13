@@ -65,4 +65,12 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Only ever present in the DOM at all for a checked type="checkbox" item
+     (see menu-item.ts's render()) -- no [hidden]-toggling needed, unlike
+     [part='icon'] above, since there's no always-present <slot> child here
+     to keep visually empty in between. */
+  [part='checkmark'] {
+    flex: 0 0 auto;
+    color: var(--lyra-color-brand);
+  }
 `;

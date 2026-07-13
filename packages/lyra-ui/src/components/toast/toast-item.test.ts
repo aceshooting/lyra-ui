@@ -401,22 +401,39 @@ it('renders the shared close icon svg instead of a literal times-entity glyph', 
   expect(button.textContent?.trim()).to.equal('');
 });
 
-it('uses the shared 180ms transition-base duration for hide, not the old 250ms hardcode', async () => {
+it('uses the configured hide transition duration for lifecycle completion', async () => {
   const el = (await fixture(
     html`<lyra-toast-item duration="0">bye</lyra-toast-item>`,
   )) as LyraToastItem;
   await oneEvent(el, 'lyra-show');
+  el.style.setProperty('--lyra-toast-hide-duration', '20ms linear');
   const start = performance.now();
   void el.hide();
   await oneEvent(el, 'lyra-after-hide');
   const elapsed = performance.now() - start;
-  expect(elapsed).to.be.greaterThan(150);
-  expect(elapsed).to.be.lessThan(230);
+  expect(elapsed).to.be.lessThan(150);
 });
 
-it('derives the CSS show/hide transition duration from --lyra-transition-base instead of a hardcoded 250ms', () => {
+it('exposes distinct namespaced show and hide transition properties', () => {
   expect(styles.cssText).to.include('var(--lyra-transition-base');
-  expect(styles.cssText).to.not.include('250ms');
+  expect(styles.cssText).to.include('--lyra-toast-show-duration');
+  expect(styles.cssText).to.include('--lyra-toast-hide-duration');
+  expect(styles.cssText).to.not.include('--show-duration');
+  expect(styles.cssText).to.not.include('--hide-duration');
+});
+
+it('completes a hide on transitionend without waiting for the fallback timeout', async () => {
+  const el = (await fixture(
+    html`<lyra-toast-item duration="0">transition</lyra-toast-item>`,
+  )) as LyraToastItem;
+  await oneEvent(el, 'lyra-show');
+  el.style.setProperty('--lyra-toast-hide-duration', '2s linear');
+  const afterHide = oneEvent(el, 'lyra-after-hide');
+  const surface = el.shadowRoot!.querySelector('[part="toast-item"]')!;
+  void el.hide();
+  surface.dispatchEvent(new Event('transitionend', { bubbles: true }));
+  await afterHide;
+  expect(el.isConnected).to.be.false;
 });
 
 it('collapses the show/hide transition duration under prefers-reduced-motion', () => {
@@ -425,11 +442,8 @@ it('collapses the show/hide transition duration under prefers-reduced-motion', (
 });
 
 it('skips the JS-side show/hide delay (not just the CSS transition) under prefers-reduced-motion', async () => {
-  // Even though the CSS transition above collapses to ~0, ANIM_MS previously
-  // still gated lyra-after-show/lyra-after-hide and the DOM removal in
-  // hide() at the full duration with no matchMedia check anywhere -- so a
-  // reduced-motion user waited the same delay for an animation that no
-  // longer visibly played.
+  // A reduced-motion user should not wait for an animation that no longer
+  // visibly plays, even if the theme supplies long transition properties.
   const originalMatchMedia = window.matchMedia;
   window.matchMedia = ((query: string) => ({
     matches: query === '(prefers-reduced-motion: reduce)',

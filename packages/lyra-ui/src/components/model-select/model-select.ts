@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -45,6 +45,8 @@ interface DisplayEntry extends LyraModelCatalogEntry {
  *
  * @customElement lyra-model-select
  * @event lyra-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
+ * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to the
+ *   accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
  * @csspart combobox - The text-input container (free-text mode's positioning anchor).
  * @csspart combobox-input - The free-text mode's text input.
@@ -72,6 +74,16 @@ export class LyraModelSelect extends LyraElement {
   @property({ attribute: false }) catalog?: LyraModelCatalog;
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
+  /**
+   * Optional visible title above the control, mirroring `lyra-select`'s
+   * `label` exactly: rendered via a `part="form-control-label"` `<label>`
+   * paired with the control's id, and — once non-empty — it takes over as
+   * the accessible-name source (the `aria-label` fallback below is then only
+   * emitted when the host has an explicit `aria-label` override, same
+   * precedence as `lyra-select`). Leaving it empty (the default) keeps
+   * today's `aria-label || placeholder || 'Model'` chain untouched.
+   */
+  @property() label = '';
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) open = false;
 
@@ -506,11 +518,18 @@ export class LyraModelSelect extends LyraElement {
     `;
   }
 
+  /** `part="form-control-label"` — see `label`'s doc comment for its precedence over `aria-label`. */
+  private renderLabel(): TemplateResult {
+    return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.label}>${this.label}</label>`;
+  }
+
   private renderClosed(): TemplateResult {
     const rows = this.effectiveEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this._value.length > 0;
+    const hasLabel = this.label.length > 0;
     return html`
+      ${this.renderLabel()}
       <button
         id=${this.controlId}
         part="trigger"
@@ -520,7 +539,7 @@ export class LyraModelSelect extends LyraElement {
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.listId}
         aria-activedescendant=${activeId}
-        aria-label=${this.getAttribute('aria-label') || this.placeholder || 'Model'}
+        aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Model')}
         aria-required=${this.required ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled}
@@ -541,14 +560,16 @@ export class LyraModelSelect extends LyraElement {
   private renderFreeText(): TemplateResult {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
+    const hasLabel = this.label.length > 0;
     return html`
+      ${this.renderLabel()}
       <div part="combobox" @mousedown=${this.onComboMouseDown}>
         ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}
         <input
           id=${this.controlId}
           part="combobox-input"
           role="combobox"
-          aria-label=${this.getAttribute('aria-label') || this.placeholder || 'Model'}
+          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Model')}
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}

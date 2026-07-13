@@ -128,6 +128,38 @@ it('gives the svg an accessible name summarizing the diagram, and hides duplicat
   expect(label.getAttribute('aria-hidden')).to.equal('true');
 });
 
+it('uses one roving tab stop with arrow/Home/End navigation and a data-list alternative', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const items = () =>
+    [
+      ...el.shadowRoot!.querySelectorAll('[part="node"]'),
+      ...el.shadowRoot!.querySelectorAll('[part="link"]'),
+    ] as SVGElement[];
+  expect(items().filter((item) => item.getAttribute('tabindex') === '0')).to.have.length(1);
+  expect(items().filter((item) => item.getAttribute('tabindex') === '-1')).to.have.length(2);
+
+  items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('2 of 3');
+
+  items()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  expect(items()[2]!.getAttribute('tabindex')).to.equal('0');
+  items()[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  await el.updateComplete;
+  expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+
+  expect(el.shadowRoot!.querySelectorAll('[part="data-list"] li')).to.have.length(3);
+});
+
 it('preserves existing node positions across an incremental nodes/links update instead of restarting the whole layout', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;
@@ -582,11 +614,11 @@ it('clamps an out-of-range GraphNode.radius so the node still renders visibly-si
   });
 
   const circles = Array.from(el.shadowRoot!.querySelectorAll('[part="node"]')) as SVGCircleElement[];
-  for (const circle of circles) {
+  for (const [index, circle] of circles.entries()) {
     const r = Number(circle.getAttribute('r'));
     expect(r).to.be.at.least(6);
     expect(r).to.be.at.most(24);
-    expect(circle.getAttribute('tabindex')).to.equal('0');
+    expect(circle.getAttribute('tabindex')).to.equal(index === 0 ? '0' : '-1');
     expect(circle.getAttribute('role')).to.equal('button');
   }
 });

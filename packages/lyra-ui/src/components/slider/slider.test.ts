@@ -118,6 +118,24 @@ it('moves by one step on ArrowLeft/ArrowDown', async () => {
   expect(el.valueAsNumber).to.equal(10);
 });
 
+it('does not emit input or change when a keyboard step is clamped to the current value', async () => {
+  const el = (await fixture(
+    html`<lyra-slider min="0" max="100" value="100" step="5"></lyra-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  let inputCount = 0;
+  let changeCount = 0;
+  el.addEventListener('lyra-input', () => inputCount++);
+  el.addEventListener('lyra-change', () => changeCount++);
+
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+
+  expect(inputCount).to.equal(0);
+  expect(changeCount).to.equal(0);
+  expect(el.value).to.equal('100');
+});
+
 it('jumps to min/max with Home/End', async () => {
   const el = (await fixture(
     html`<lyra-slider min="0" max="100" value="20"></lyra-slider>`,
@@ -281,10 +299,10 @@ it('mirrors the drag ratio under dir="rtl", since the track is positioned with i
   let inputDetail: { value: number } | undefined;
   el.addEventListener('lyra-input', (e) => (inputDetail = (e as CustomEvent).detail));
   thumb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }));
-  // Pointer at physical x=160 on a 200px track under RTL: raw=0.8, mirrored to
-  // ratio 0.2 -> value 20 on a [0,100] domain.
-  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 160 }));
-  expect(inputDetail!.value).to.equal(20);
+  // Pointer at physical x=40 on a 200px track under RTL: raw=0.2, mirrored
+  // to ratio 0.8 -> value 80 on a [0,100] domain.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40 }));
+  expect(inputDetail!.value).to.equal(80);
 });
 
 it('tears down the drag on pointercancel/lostpointercapture even though no pointerup ever arrives', async () => {
@@ -417,6 +435,35 @@ it('resyncs a post-mount non-numeric value string instead of submitting it as-is
   expect(el.value).to.not.equal('not-a-number');
   expect(Number.isFinite(Number(el.value))).to.be.true;
   expect(new FormData(form).get('temperature')).to.not.equal('not-a-number');
+});
+
+it('sanitizes value and form submission synchronously when the range changes', async () => {
+  const form = (await fixture(html`
+    <form><lyra-slider name="temperature" min="0" max="100" step="10" value="83"></lyra-slider></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-slider') as LyraSlider;
+  expect(el.value).to.equal('80');
+  expect(new FormData(form).get('temperature')).to.equal('80');
+
+  el.max = 50;
+  expect(el.value).to.equal('50');
+  expect(el.valueAsNumber).to.equal(50);
+  expect(new FormData(form).get('temperature')).to.equal('50');
+
+  el.value = 'NaN';
+  expect(el.value).to.equal('30');
+  expect(Number.isFinite(el.valueAsNumber)).to.be.true;
+  expect(new FormData(form).get('temperature')).to.equal('30');
+});
+
+it('rounds exponential step values without collapsing them to zero', async () => {
+  const el = (await fixture(
+    html`<lyra-slider min="0" max="1" value="0" step="1e-7"></lyra-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(el.valueAsNumber).to.equal(0.0000001);
+  expect(el.value).to.equal('1e-7');
 });
 
 it('does not render invalid CSS or an aria-valuenow="Infinity" when max is Infinity', async () => {

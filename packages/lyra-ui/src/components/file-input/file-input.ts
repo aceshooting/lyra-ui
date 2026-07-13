@@ -37,8 +37,15 @@ export class LyraFileInput extends LyraElement {
   @property({ attribute: false }) forbiddenMimeTypes: string[] = [];
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
   @property() label = 'Drop files here or click to browse';
+  /** Message announced after an accepted selection; `{count}` is replaced by
+   * the number of accepted files. */
+  @property({ attribute: 'accepted-message' }) acceptedMessage = '{count} file(s) added.';
+  /** Message announced after rejected files; `{count}` is replaced by the
+   * number of rejected files. */
+  @property({ attribute: 'rejected-message' }) rejectedMessage = '{count} file(s) rejected.';
 
   @state() private dragState: DragState = 'default';
+  @state() private resultStatus = '';
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
 
   private dragCounter = 0;
@@ -76,11 +83,16 @@ export class LyraFileInput extends LyraElement {
 
   private emitFiles(fileList: File[]): void {
     const { files, rejected } = this.classify(fileList);
+    const messages: string[] = [];
+    if (files.length) messages.push(this.acceptedMessage.replace('{count}', String(files.length)));
+    if (rejected.length) messages.push(this.rejectedMessage.replace('{count}', String(rejected.length)));
+    this.resultStatus = messages.join(' ');
     this.emit('lyra-files', { files, rejected });
   }
 
   /** Programmatically open the native file picker. */
   openPicker(): void {
+    if (this.disabled) return;
     this.inputEl?.click();
   }
 
@@ -90,8 +102,8 @@ export class LyraFileInput extends LyraElement {
   }
 
   private onDragEnter = (e: DragEvent): void => {
-    if (this.disabled) return;
     e.preventDefault();
+    if (this.disabled) return;
     this.dragCounter++;
     const items = e.dataTransfer ? [...e.dataTransfer.items].filter((i) => i.kind === 'file') : [];
     this.dragState = items.length ? this.previewState(items as unknown as File[]) : 'default';
@@ -142,7 +154,7 @@ export class LyraFileInput extends LyraElement {
   private statusText(): string {
     if (this.dragState === 'accept') return 'Release to add the file.';
     if (this.dragState === 'reject') return 'This file type is not accepted.';
-    return '';
+    return this.resultStatus;
   }
 
   render(): TemplateResult {

@@ -81,6 +81,22 @@ it('each tab button aria-controls its own panel, and each panel is aria-labelled
   expect(inputPanel.getAttribute('aria-labelledby')).to.equal(inputTab.id);
 });
 
+it('uses opaque ARIA ids when a public slot name contains whitespace or selector syntax', async () => {
+  const slotName = 'tab with spaces"[data-hostile]';
+  const el = (await fixture(html`
+    <lyra-tabs>
+      <div slot=${slotName} label="Hostile">Content</div>
+    </lyra-tabs>
+  `)) as LyraTabs;
+  const tab = tabButtons(el)[0];
+  const panel = panels(el)[0];
+  expect(tab.id).to.match(/^lyra-tabs-\d+-\d+-tab$/);
+  expect(panel.id).to.match(/^lyra-tabs-\d+-\d+-panel$/);
+  expect(tab.id).to.not.include(slotName);
+  expect(tab.getAttribute('aria-controls')).to.equal(panel.id);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(tab.id);
+});
+
 it('clicking a tab activates it and fires lyra-tabs-change with the tab id', async () => {
   const el = (await fixture(basic())) as LyraTabs;
   const listener = oneEvent(el, 'lyra-tabs-change');
@@ -236,6 +252,33 @@ it('emits lyra-tabs-change on keyboard-driven activation too', async () => {
   press(tabButtons(el)[0], 'ArrowRight');
   const event = await listener;
   expect((event as CustomEvent<{ tabId: string }>).detail).to.deep.equal({ tabId: 'preview' });
+});
+
+it('a direct-child sibling with slot="<id>-icon" renders as that tab\'s leading icon, hidden from its accessible name', async () => {
+  const el = (await fixture(html`
+    <lyra-tabs>
+      <span slot="input-icon" aria-hidden="true">🔥</span>
+      <div slot="input" label="Input">Raw input</div>
+      <div slot="preview" label="Preview">Rendered preview</div>
+    </lyra-tabs>
+  `)) as LyraTabs;
+  const buttons = tabButtons(el);
+
+  const iconWrapper = buttons[0].querySelector('[part="tab-icon"]');
+  expect(iconWrapper).to.exist;
+  expect(iconWrapper!.getAttribute('aria-hidden')).to.equal('true');
+  const assigned = (iconWrapper!.querySelector('slot') as HTMLSlotElement).assignedElements();
+  expect(assigned).to.have.length(1);
+  expect(assigned[0].textContent).to.equal('🔥');
+
+  // The button's visible text still includes the label, but the accessible
+  // name stays exactly "Input" (verified below by the a11y check) -- the
+  // icon wrapper's aria-hidden excludes its slotted content from the name.
+  expect(buttons[0].textContent).to.include('Input');
+  // A tab with no matching `<id>-icon` sibling renders no icon wrapper at all.
+  expect(buttons[1].querySelector('[part="tab-icon"]')).to.be.null;
+
+  await expect(el).to.be.accessible();
 });
 
 it('picks up a tab added dynamically after connect', async () => {

@@ -4,7 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type * as MarkedModule from 'marked';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
-import { loadMarkdownDeps, type MarkdownDeps } from './markdown-loader.js';
+import { loadMarkdownDeps, getMarkdownDepsIfLoaded, type MarkdownDeps } from './markdown-loader.js';
 import { styles } from './markdown.styles.js';
 
 const HTML_ESCAPES: Record<string, string> = {
@@ -57,10 +57,21 @@ function cleanHref(href: string): string | null {
  *   regardless of whether `dompurify` is installed — the consumer opted out
  *   of sanitization, so `dompurify`'s absence is irrelevant to that path.
  *
- * `heading`/`code`/`blockquote`/`table`/`link` tokens are rendered through a
- * `marked` renderer override that injects `part="..."` attributes directly
- * into the produced HTML — a single pass, not a second DOM walk after
- * insertion.
+ * That same plain-text fallback rendering (`data-fallback` on the `content`
+ * part) is also, unconditionally and by default, a brief *transient* state on
+ * every connect, not just a failure path: `connectedCallback()`'s dynamic
+ * `import()` of `marked`/`dompurify` (see `markdown-loader.ts`) is
+ * asynchronous, so the very first paint of any `<lyra-markdown>` on a page
+ * shows plain text for at least one microtask — even when both peers are
+ * already installed and load without error — until that import resolves and
+ * a second render replaces it with the real Markdown output. Set
+ * `eager-load` to skip that window once the shared dependency cache is
+ * already warm; see that property's doc for exactly what "warm" requires.
+ *
+ * `heading`/`code`/`blockquote`/`table`/`link`/`image` tokens are rendered
+ * through a `marked` renderer override that injects `part="..."` attributes
+ * directly into the produced HTML — a single pass, not a second DOM walk
+ * after insertion.
  *
  * @customElement lyra-markdown
  * @event lyra-link-click - Fired (and the click prevented) when a rendered
@@ -71,11 +82,13 @@ function cleanHref(href: string): string | null {
  *   text. `detail: { error: unknown }`.
  * @csspart content - The wrapper around the rendered (or plain-text
  *   fallback) output.
- * @csspart heading - Every rendered `<h1>`–`<h6>`.
+ * @csspart heading - Every rendered `<h1>`–`<h6>` (shifted by
+ *   `heading-offset`).
  * @csspart code-block - Every rendered fenced/indented `<pre>`.
  * @csspart link - Every rendered `<a>`.
  * @csspart table - Every rendered `<table>`.
  * @csspart blockquote - Every rendered `<blockquote>`.
+ * @csspart img - Every rendered `<img>`.
  */
 export class LyraMarkdown extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -91,15 +104,42 @@ export class LyraMarkdown extends LyraElement {
   /** Enable GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
   @property({ type: Boolean }) gfm = true;
 
-  /** `target` applied to every rendered `<a>`; `rel="noopener noreferrer"` is
-   *  always added alongside it regardless of this value. */
-  @property({ attribute: 'link-target' }) linkTarget = '_blank';
+  /** `target` applied to every rendered `<a>`, with `rel="noopener
+   *  noreferrer"` always added alongside it whenever a `target` is emitted.
+   *  `'_blank'` (the default) preserves today's exact output. Set to `null`
+   *  (or the empty string, e.g. via the `link-target=""` attribute) to omit
+   *  `target`/`rel` entirely, so rendered links open in the same tab. */
+  @property({ attribute: 'link-target' }) linkTarget: string | null = '_blank';
 
   /** When set, a rendered link whose `href` starts with this prefix is
    *  treated as internal — its click is intercepted and reported via
    *  `lyra-link-click` instead of navigating. Empty (the default) means
    *  every link is treated as external. */
   @property({ attribute: 'internal-link-prefix' }) internalLinkPrefix = '';
+
+  /** Added to every rendered heading's source `token.depth` before emitting
+   *  `<h${depth}>` — e.g. `heading-offset="2"` renders a source `#` as
+   *  `<h3>` and a source `##` as `<h4>`. The result is clamped to `[1, 6]`
+   *  (a source `######` with a positive offset stays at `<h6>` rather than
+   *  overflowing past the HTML heading levels; the floor at `1` is
+   *  defensive, since this property is meant to be additive-only). `0`
+   *  (the default) preserves today's exact `<h${token.depth}>` output. */
+  @property({ type: Number, attribute: 'heading-offset' }) headingOffset = 0;
+
+  /** When `true`, `connectedCallback()` skips awaiting `loadMarkdownDeps()`'s
+   *  dynamic `import()` if the shared `marked`/`dompurify` module cache (see
+   *  `markdown-loader.ts`'s `getMarkdownDepsIfLoaded()`) has *already*
+   *  resolved — e.g. because an earlier `<lyra-markdown>` instance on the
+   *  page already finished loading, or the consumer primed the cache
+   *  directly by calling `loadMarkdownDeps()` themselves at startup — and
+   *  renders synchronously instead. When the cache isn't warm yet (most
+   *  notably: the very first `<lyra-markdown>` ever connected on a page,
+   *  since nothing has called `loadMarkdownDeps()` before it), this still
+   *  falls back to the normal async path — a dynamic `import()` can't be
+   *  made synchronous, so this is a fast path for the common "already warm"
+   *  case, not a hard guarantee. `false` (the default) is byte-identical to
+   *  today: always the async `import()`, fallback-text window included. */
+  @property({ type: Boolean, attribute: 'eager-load' }) eagerLoad = false;
 
   /** Forward-compatible hint for a dedicated streaming renderer expected to
    *  build on this component later (coalescing partial tokens as they
@@ -118,6 +158,18 @@ export class LyraMarkdown extends LyraElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    if (this.eagerLoad) {
+      // Only takes this synchronous path when the shared module cache has
+      // *already* settled (see getMarkdownDepsIfLoaded()'s doc) -- otherwise
+      // falls through to the same async path as the default below, since a
+      // dynamic import() can't be made synchronous from scratch.
+      const alreadyLoaded = getMarkdownDepsIfLoaded();
+      if (alreadyLoaded) {
+        this.deps = alreadyLoaded;
+        this.renderMarkdown();
+        return;
+      }
+    }
     void loadMarkdownDeps().then((resolved) => {
       // The (module-cached, page-lifetime) loadMarkdownDeps() promise can
       // resolve after this instance was removed from the DOM -- e.g. an
@@ -144,7 +196,13 @@ export class LyraMarkdown extends LyraElement {
       // whatever property values are current at that time.
       return;
     }
-    if (changed.has('content') || changed.has('sanitize') || changed.has('gfm') || changed.has('linkTarget')) {
+    if (
+      changed.has('content') ||
+      changed.has('sanitize') ||
+      changed.has('gfm') ||
+      changed.has('linkTarget') ||
+      changed.has('headingOffset')
+    ) {
       this.renderMarkdown();
     }
   }
@@ -208,16 +266,27 @@ export class LyraMarkdown extends LyraElement {
   }
 
   private parseMarkdown(marked: typeof MarkedModule): string {
-    const linkTarget = this.linkTarget || '_blank';
+    // Falsy (`null` or `''`) means the consumer explicitly opted out of
+    // target="..."/rel="..." on rendered links -- see the linkTarget doc.
+    // The default '_blank' is already truthy, so this preserves today's
+    // exact output when the property is left unset.
+    const linkTarget = this.linkTarget;
+    const headingOffset = this.headingOffset;
     const instance = new marked.Marked();
     // A fresh renderer per parse (rather than a shared/cached one) so it
-    // always closes over the *current* `linkTarget` — this property can
-    // change between renders, and marked's `.use()` otherwise persists
-    // whatever renderer it was given for the lifetime of the instance.
+    // always closes over the *current* `linkTarget`/`headingOffset` — these
+    // properties can change between renders, and marked's `.use()` otherwise
+    // persists whatever renderer it was given for the lifetime of the
+    // instance.
     instance.use({
       renderer: {
         heading(token) {
-          return `<h${token.depth} part="heading">${this.parser.parseInline(token.tokens)}</h${token.depth}>\n`;
+          // Clamped to [1, 6]: a positive offset can never push a heading
+          // past <h6> (there is no <h7>), and the floor at 1 is defensive
+          // since headingOffset is meant to be additive-only (0 is the only
+          // documented non-positive value).
+          const depth = Math.min(6, Math.max(1, token.depth + headingOffset));
+          return `<h${depth} part="heading">${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
         },
         code(token) {
           const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
@@ -256,10 +325,22 @@ export class LyraMarkdown extends LyraElement {
           const href = cleanHref(token.href);
           if (href === null) return text;
           const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
-          return (
-            `<a part="link" href="${escapeHtml(href)}"${titleAttr} ` +
-            `target="${escapeHtml(linkTarget)}" rel="noopener noreferrer">${text}</a>`
-          );
+          const targetAttr = linkTarget
+            ? ` target="${escapeHtml(linkTarget)}" rel="noopener noreferrer"`
+            : '';
+          return `<a part="link" href="${escapeHtml(href)}"${titleAttr}${targetAttr}>${text}</a>`;
+        },
+        image(token) {
+          // Mirrors marked's own default image() renderer (alt text
+          // re-rendered through the plain textRenderer so nested emphasis/
+          // strong/etc. inside the alt collapses to plain text, href run
+          // through the same cleanHref() the link() override above uses)
+          // with a part="img" added.
+          const altText = this.parser.parseInline(token.tokens, this.parser.textRenderer);
+          const href = cleanHref(token.href);
+          if (href === null) return escapeHtml(altText);
+          const titleAttr = token.title ? ` title="${escapeHtml(token.title)}"` : '';
+          return `<img part="img" src="${escapeHtml(href)}" alt="${escapeHtml(altText)}"${titleAttr}>`;
         },
       },
     });

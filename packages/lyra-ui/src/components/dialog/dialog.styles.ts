@@ -27,13 +27,57 @@ export const styles = css`
     position: relative;
     display: flex;
     flex-direction: column;
-    max-inline-size: min(32rem, 100%);
+    /* --lyra-dialog-max-width lets a consumer widen/narrow the panel per
+       instance (e.g. inline on the host) without overriding the whole rule --
+       same convention as lyra-media-card's --lyra-media-card-max-height. */
+    max-inline-size: min(var(--lyra-dialog-max-width, 32rem), 100%);
     max-block-size: 100%;
     background: var(--lyra-color-surface);
     border: 1px solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     box-shadow: var(--lyra-shadow);
     overflow: auto;
+  }
+  [part='header'] {
+    display: flex;
+    align-items: center;
+    gap: var(--lyra-space-s);
+    padding: var(--lyra-space-m) var(--lyra-space-l);
+    border-block-end: 1px solid var(--lyra-color-border);
+  }
+  [part='heading'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    margin: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [part='close-button'] {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
+    border: none;
+    background: transparent;
+    color: var(--lyra-color-text-quiet);
+    border-radius: var(--lyra-radius);
+    cursor: pointer;
+  }
+  [part='close-button']:hover {
+    background: var(--lyra-color-brand-quiet);
+    color: var(--lyra-color-brand);
+  }
+  [part='close-button']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='close-button'] svg {
+    display: block;
   }
   [part='body'] {
     padding: var(--lyra-space-l);

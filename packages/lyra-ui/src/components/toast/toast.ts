@@ -54,7 +54,10 @@ export class LyraToast extends LyraElement {
   }
 
   render(): TemplateResult {
-    return html`<div part="stack" role="status" aria-live="polite"><slot></slot></div>`;
+    // Each toast item owns its own status/alert role. Keeping a live region on
+    // the stack as well would nest assertive alerts inside a polite region and
+    // can cause duplicate or out-of-order announcements.
+    return html`<div part="stack"><slot></slot></div>`;
   }
 }
 

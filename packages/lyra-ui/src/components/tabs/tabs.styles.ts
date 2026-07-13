@@ -30,9 +30,20 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
     cursor: pointer;
     white-space: nowrap;
+    /* inline-flex only matters once a tab-icon part is also present (gap
+       has no effect with a single child) -- a text-only tab lays out
+       identically to the previous plain inline-block button. */
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lyra-space-xs);
     transition:
       color var(--lyra-transition-fast),
       border-color var(--lyra-transition-fast);
+  }
+  [part='tab-icon'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
   }
   [part='tab']:hover:not([aria-disabled='true']) {
     color: var(--lyra-color-text);

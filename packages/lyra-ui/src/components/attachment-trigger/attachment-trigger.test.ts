@@ -63,6 +63,31 @@ it('uses an image-specific aria-label for a single image capability', async () =
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach an image');
 });
 
+it('leaves the CAPABILITY_META-derived aria-label untouched when trigger-label is unset', async () => {
+  const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+  expect(el.triggerLabel).to.be.undefined;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
+
+  el.capabilities = ['camera'];
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Use camera');
+});
+
+it('overrides the single-capability aria-label with trigger-label regardless of capabilities', async () => {
+  const el = (await fixture(
+    html`<lyra-attachment-trigger trigger-label="Joindre des fichiers"></lyra-attachment-trigger>`,
+  )) as LyraAttachmentTrigger;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
+
+  el.capabilities = ['image'];
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
+
+  el.capabilities = ['camera'];
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
+});
+
 it('uses a camera-specific aria-label and renders no hidden file input for a single camera capability', async () => {
   const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
   el.capabilities = ['camera'];

@@ -5,6 +5,7 @@ import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
+import { closeIcon } from '../../internal/icons.js';
 import { styles } from './dialog.styles.js';
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
@@ -12,38 +13,53 @@ const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 /**
  * Reason a dialog was dismissed, forwarded as the `lyra-dialog-close` event
  * detail. `'escape'` and `'backdrop'` are emitted by the dialog's own built-in
- * dismiss triggers; `'unmount'` is emitted when the dialog is removed from
- * the DOM while still open by something other than its own `close()` (e.g. a
- * consumer's own cleanup code, or a parent re-render that drops it); any
- * other string is whatever a caller passes to `close()` (e.g. a consumer's
- * own footer close button, or confirm.ts's `'confirm'`/`'cancel'`).
+ * dismiss triggers; `'close-button'` by the built-in header close button
+ * (rendered when `closable` is set); `'unmount'` is emitted when the dialog is
+ * removed from the DOM while still open by something other than its own
+ * `close()` (e.g. a consumer's own cleanup code, or a parent re-render that
+ * drops it); any other string is whatever a caller passes to `close()` (e.g. a
+ * consumer's own footer close button, or confirm.ts's `'confirm'`/`'cancel'`).
  */
-export type DialogCloseReason = 'escape' | 'backdrop' | 'api' | 'unmount' | string;
+export type DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string;
 
 /**
  * `<lyra-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
  * focus-trapped while open, dismissible via Escape or a backdrop click, and
- * scroll-locks the document for as long as it's open. Chrome stays minimal —
- * no built-in title bar or close button; a consumer supplies a heading and
- * any close affordance itself via the default/`footer` slots.
+ * scroll-locks the document for as long as it's open. Chrome stays minimal by
+ * default — no built-in title bar or close button; a consumer supplies a
+ * heading and any close affordance itself via the default/`footer` slots.
+ * `heading`/`closable` are an opt-in convenience for the common case where
+ * hand-building that chrome isn't worth it (see below).
  *
- * Accessible name: if a heading element (`h1`–`h6` or `[role="heading"]`) is
- * a *direct child* (not inside `slot="footer"`), its text content becomes
- * `aria-label` on the panel. Otherwise, when `label` is set, an invisible
- * (`.sr-only`, exposed as the `label` part) element carrying that text is
- * rendered inside the panel and `aria-labelledby` points at it instead.
- * Either way `label` itself never renders visible chrome — a slotted heading
- * is what a sighted user sees; `::part(label)` can be restyled to make the
- * sr-only text visible too, if a consumer wants that instead of slotting a
- * heading.
+ * Accessible name / visible header, in priority order:
+ * 1. If a heading element (`h1`–`h6` or `[role="heading"]`) is a *direct
+ *    child* (not inside `slot="footer"`), its text content becomes
+ *    `aria-label` on the panel — unchanged, and takes priority over `heading`
+ *    below so an existing consumer that already slots its own heading keeps
+ *    rendering it exactly as before.
+ * 2. Otherwise, when `heading` is set, a visible header row (`part="header"`)
+ *    renders containing that text (`part="heading"`), which becomes the
+ *    `aria-labelledby` target.
+ * 3. Otherwise, when `label` is set, an invisible (`.sr-only`, exposed as the
+ *    `label` part) element carrying that text is rendered inside the panel
+ *    and `aria-labelledby` points at it instead.
+ * Only one of cases 2/3 ever renders at a time, so exactly one element ever
+ * claims `aria-labelledby`. `label` itself never renders visible chrome on
+ * its own — `::part(label)` can be restyled to make the sr-only text visible,
+ * or `heading` can be set instead, if a consumer wants visible chrome without
+ * slotting a real heading element.
  *
- * The heading case deliberately uses `aria-label` (a copied string) rather
- * than `aria-labelledby` pointing at the heading's `id`: the heading is
+ * The slotted-heading case deliberately uses `aria-label` (a copied string)
+ * rather than `aria-labelledby` pointing at the heading's `id`: the heading is
  * *light-DOM* content while `[part="panel"]` lives in this element's
  * *shadow* tree, and an ID-reference attribute can't resolve across that
  * boundary (verified against axe's `aria-dialog-name` rule) — unlike the
- * `label`-prop case above, where the sr-only element is rendered inside the
- * same shadow root it labels, so `aria-labelledby` there is safe.
+ * `heading`/`label`-prop cases above, where the target element is rendered
+ * inside the same shadow root it labels, so `aria-labelledby` there is safe.
+ *
+ * `closable` renders a close (X) button in the header row (creating one, with
+ * no heading text, if `heading` is unset) that closes the dialog via the same
+ * `close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.
  *
  * Stacking: opening one `<lyra-dialog>` while another is already open (e.g. a
  * `confirm()` launched from within an already-open dialog) is supported --
@@ -54,13 +70,21 @@ export type DialogCloseReason = 'escape' | 'backdrop' | 'api' | 'unmount' | stri
  * @slot - The dialog body.
  * @slot footer - Action buttons, rendered in a bottom row.
  * @event lyra-dialog-close - `detail: DialogCloseReason`. Fired whenever the
- *   dialog is dismissed via Escape, a backdrop click, a `close()` call, or
- *   (with reason `'unmount'`) removal from the DOM by anything else while
- *   still open.
+ *   dialog is dismissed via Escape, a backdrop click, the built-in close
+ *   button (`closable`), a `close()` call, or (with reason `'unmount'`)
+ *   removal from the DOM by anything else while still open.
  * @csspart backdrop - The full-viewport scrim behind the panel.
- * @csspart panel - The dialog panel itself (`role="dialog"` while open).
+ * @csspart panel - The dialog panel itself (`role="dialog"` while open). Its
+ *   max-inline-size is controlled by the `--lyra-dialog-max-width` custom
+ *   property (default `32rem`).
+ * @csspart header - The header row, rendered when `heading` is set (and no
+ *   heading is slotted) and/or `closable` is `true`.
+ * @csspart heading - The visible `heading`-text element inside `header`,
+ *   rendered only when `heading` is set and no heading is slotted.
+ * @csspart close-button - The built-in close button, rendered inside `header`
+ *   only when `closable` is `true`.
  * @csspart label - The invisible `label`-text element used for
- *   `aria-labelledby` when no heading is slotted.
+ *   `aria-labelledby` when no heading is slotted and `heading` is unset.
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
  */
@@ -73,12 +97,25 @@ export class LyraDialog extends LyraElement {
   /** Accessible name used when no heading is slotted — see the class doc for the full fallback order. */
   @property() label = '';
 
+  /** Visible header text, rendered when no heading element is slotted into
+   *  the default slot — see the class doc for the full fallback order. Has
+   *  no effect (renders nothing) if a light-DOM heading is slotted; that case
+   *  keeps working completely unchanged whether or not `heading` is set. */
+  @property() heading?: string;
+
+  /** Renders a built-in close (X) button in the header row (creating one,
+   *  with no heading text, if `heading` is unset), wired to the same
+   *  `close()` path Escape/backdrop-dismiss already use, with reason
+   *  `'close-button'`. */
+  @property({ type: Boolean, attribute: 'closable' }) closable = false;
+
   @state() private hasFooterSlot = false;
   @state() private headingText?: string;
 
   private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private readonly srLabelId = nextId('dialog-label');
+  private readonly headingId = nextId('dialog-heading');
 
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
@@ -170,10 +207,11 @@ export class LyraDialog extends LyraElement {
   /**
    * Close the dialog and return focus to whatever had it before the dialog
    * opened. `reason` is forwarded as the `lyra-dialog-close` detail --
-   * built-in triggers pass `'escape'`/`'backdrop'`; a consumer's own close
-   * affordance (e.g. a footer Cancel button) should call this directly with
-   * its own reason string, so every dismissal path funnels through the same
-   * event instead of the consumer having to also toggle `open` itself.
+   * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
+   * consumer's own close affordance (e.g. a footer Cancel button) should
+   * call this directly with its own reason string, so every dismissal path
+   * funnels through the same event instead of the consumer having to also
+   * toggle `open` itself.
    */
   close(reason: DialogCloseReason = 'api'): void {
     if (!this.open) return;
@@ -183,6 +221,10 @@ export class LyraDialog extends LyraElement {
 
   private onBackdropClick = (): void => {
     this.overlay?.dismissBackdrop();
+  };
+
+  private onCloseButtonClick = (): void => {
+    this.close('close-button');
   };
 
   private activateOverlay(): void {
@@ -204,7 +246,13 @@ export class LyraDialog extends LyraElement {
   }
 
   render(): TemplateResult {
-    const useSrLabel = !this.headingText && this.label.length > 0;
+    // Priority order (see class doc): a slotted heading always wins; only
+    // when there isn't one does `heading` get a turn, then `label`'s
+    // sr-only fallback -- never more than one of the two below claims
+    // aria-labelledby for the same panel.
+    const useHeadingProp = !this.headingText && !!this.heading;
+    const useSrLabel = !this.headingText && !useHeadingProp && this.label.length > 0;
+    const showHeader = useHeadingProp || this.closable;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -212,11 +260,32 @@ export class LyraDialog extends LyraElement {
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
         aria-label=${this.headingText ?? nothing}
-        aria-labelledby=${useSrLabel ? this.srLabelId : nothing}
+        aria-labelledby=${useHeadingProp ? this.headingId : useSrLabel ? this.srLabelId : nothing}
         tabindex="-1"
       >
         ${useSrLabel
           ? html`<span id=${this.srLabelId} part="label" class="sr-only">${this.label}</span>`
+          : nothing}
+        ${showHeader
+          ? html`
+              <div part="header">
+                ${useHeadingProp
+                  ? html`<span id=${this.headingId} part="heading">${this.heading}</span>`
+                  : nothing}
+                ${this.closable
+                  ? html`
+                      <button
+                        part="close-button"
+                        type="button"
+                        aria-label="Close"
+                        @click=${this.onCloseButtonClick}
+                      >
+                        ${closeIcon()}
+                      </button>
+                    `
+                  : nothing}
+              </div>
+            `
           : nothing}
         <div part="body">
           <slot @slotchange=${this.onDefaultSlotChange}></slot>

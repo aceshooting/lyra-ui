@@ -1,8 +1,43 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { styles } from './menu-item.styles.js';
+
+export type MenuItemType = 'normal' | 'checkbox';
+
+export interface MenuItemChangeDetail {
+  value: string;
+  checked: boolean;
+}
+
+// Mirrors the shared icon set's viewBox/stroke conventions
+// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
+// checkmark glyph to that module -- it's off limits here -- so this one-off
+// icon still reads as part of the same visual language as the rest of the
+// library's inline icons. Same approach lyra-checkbox's own local
+// checkmark/indeterminate glyphs (and lyra-chat-message's local retryIcon())
+// take for the identical reason.
+const GLYPH_VIEW_BOX = '0 0 24 24';
+const GLYPH_STROKE_WIDTH = '1.75';
+
+function checkmarkGlyph(): SVGTemplateResult {
+  return svg`
+    <svg
+      part="checkmark"
+      width="1em"
+      height="1em"
+      viewBox=${GLYPH_VIEW_BOX}
+      fill="none"
+      stroke="currentColor"
+      stroke-width=${GLYPH_STROKE_WIDTH}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    ><polyline points="5 12.5 10 17.5 19 6.5"></polyline></svg>
+  `;
+}
 
 /**
  * `<lyra-menu-item>` — a single action row inside `<lyra-menu>`'s default
@@ -27,6 +62,18 @@ import { styles } from './menu-item.styles.js';
  * itself, so `select()` fires identically whether the item was reached by
  * mouse or keyboard.
  *
+ * `type="checkbox"` (mirroring `wa-dropdown-item`'s identical `type` option)
+ * renders `role="menuitemcheckbox"` in place of `role="menuitem"`, with
+ * `aria-checked` reflecting `checked` and a checkmark glyph shown once
+ * `checked` is `true`. Activating a `checkbox`-type item (click, or the
+ * parent's Enter/Space handling via `select()`) toggles `checked` and fires
+ * `lyra-menu-item-change` *in addition to* the usual `lyra-menu-item-select`
+ * — the latter is never suppressed, so a parent `<lyra-menu>` still closes
+ * and re-fires its consolidated `lyra-menu-select` exactly as it does for a
+ * `type="normal"` item. `type="normal"` (the default) renders and behaves
+ * exactly as before this option existed — no role, rendering, or event
+ * differences.
+ *
  * @customElement lyra-menu-item
  * @slot - The item's label content.
  * @slot icon - Optional leading icon.
@@ -38,9 +85,14 @@ import { styles } from './menu-item.styles.js';
  * (`detail: { value }`) rather than requiring a consumer to listen on every
  * individual item — listen there instead unless you specifically need a
  * per-item handler.
+ * @event lyra-menu-item-change - A `type="checkbox"` item was activated and
+ * its `checked` state toggled. `detail: { value, checked }` — the item's own
+ * `value` and its new `checked` value. Fired in addition to (never instead
+ * of) `lyra-menu-item-select` above. Never fired for `type="normal"`.
  * @csspart base - The row (`role` lives on the host — see the class doc).
  * @csspart icon - Wrapper around the `icon` slot. Not rendered at all when the slot is empty.
  * @csspart label - Wrapper around the default slot.
+ * @csspart checkmark - The checkmark glyph shown when a `type="checkbox"` item is `checked`. Not rendered at all for `type="normal"`.
  */
 export class LyraMenuItem extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -53,6 +105,13 @@ export class LyraMenuItem extends LyraElement {
 
   /** Visual treatment for a dangerous action (e.g. "Delete") — tints the row with `--lyra-color-danger`. */
   @property({ type: Boolean, reflect: true }) destructive = false;
+
+  /** `'checkbox'` renders `role="menuitemcheckbox"` with a toggleable `checked` state and a
+   *  checkmark glyph, mirroring `wa-dropdown-item`'s identical `type` option — see the class doc. */
+  @property() type: MenuItemType = 'normal';
+
+  /** Whether a `type="checkbox"` item is checked. Meaningless (ignored) for `type="normal"`. */
+  @property({ type: Boolean, reflect: true }) checked = false;
 
   // [part='icon'] never matches a bare :empty selector -- see menu-item.styles.ts's
   // own comment on that part. Same fix as lyra-tool-call-chip's hasDetailSlot.
@@ -69,10 +128,19 @@ export class LyraMenuItem extends LyraElement {
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    // role/aria-disabled live on the host (see the class doc), so they're
-    // plain imperative attribute writes here rather than part of render()'s
-    // shadow-DOM template -- mirrors lyra-tree-node's identical willUpdate.
-    this.setAttribute('role', 'menuitem');
+    // role/aria-disabled/aria-checked live on the host (see the class doc),
+    // so they're plain imperative attribute writes here rather than part of
+    // render()'s shadow-DOM template -- mirrors lyra-tree-node's identical
+    // willUpdate.
+    const isCheckbox = this.type === 'checkbox';
+    this.setAttribute('role', isCheckbox ? 'menuitemcheckbox' : 'menuitem');
+    if (isCheckbox) {
+      this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
+    } else {
+      // Kept absent entirely for type="normal" -- see the class doc's "no
+      // role, rendering, or event differences" guarantee for that default.
+      this.removeAttribute('aria-checked');
+    }
     if (this.disabled) {
       this.setAttribute('aria-disabled', 'true');
       // Defense-in-depth mirroring connectedCallback's baseline above:
@@ -90,12 +158,21 @@ export class LyraMenuItem extends LyraElement {
     } else {
       this.removeAttribute('aria-disabled');
     }
+    if (changed.has('disabled')) {
+      this.emit('lyra-menu-item-state-change', { disabled: this.disabled, hidden: this.hidden });
+    }
   }
 
   /** Fires `lyra-menu-item-select` (no-op while `disabled`). Called by this element's own
-   *  click handler, and by `<lyra-menu>`'s Enter/Space keydown handling of the active item. */
+   *  click handler, and by `<lyra-menu>`'s Enter/Space keydown handling of the active item.
+   *  For `type="checkbox"`, also toggles `checked` and fires `lyra-menu-item-change` first --
+   *  see the class doc. */
   select(): void {
     if (this.disabled) return;
+    if (this.type === 'checkbox') {
+      this.checked = !this.checked;
+      this.emit<MenuItemChangeDetail>('lyra-menu-item-change', { value: this.value, checked: this.checked });
+    }
     this.emit('lyra-menu-item-select');
   }
 
@@ -110,6 +187,7 @@ export class LyraMenuItem extends LyraElement {
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>
         <span part="label"><slot></slot></span>
+        ${this.type === 'checkbox' && this.checked ? checkmarkGlyph() : nothing}
       </span>
     `;
   }

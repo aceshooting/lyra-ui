@@ -17,6 +17,18 @@ export const styles = css`
     --lyra-word-cloud-color-7: #0a7d91;
     --lyra-word-cloud-color-8: #57606a;
   }
+  @media (prefers-color-scheme: dark) {
+    :host {
+      --lyra-word-cloud-color-1: var(--wa-color-brand-fill-loud, #4ea0f0);
+      --lyra-word-cloud-color-2: var(--wa-color-success-fill-loud, #3fb950);
+      --lyra-word-cloud-color-3: var(--wa-color-warning-fill-loud, #d29922);
+      --lyra-word-cloud-color-4: var(--wa-color-danger-fill-loud, #fa524a);
+      --lyra-word-cloud-color-5: #b083f5;
+      --lyra-word-cloud-color-6: #f470b8;
+      --lyra-word-cloud-color-7: #52d6e8;
+      --lyra-word-cloud-color-8: #c9d1d9;
+    }
+  }
   [part='base'] {
     display: flex;
     flex-direction: column;

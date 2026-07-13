@@ -58,6 +58,12 @@ export const styles = css`
     color: var(--lyra-color-brand);
     text-underline-offset: 0.125rem;
   }
+  /* Keeps an oversized source image from overflowing the content wrapper --
+     matches the overflow-wrap: break-word guard on [part='content'] above,
+     which only covers text, not replaced elements like <img>. */
+  [part='img'] {
+    max-width: 100%;
+  }
   [part='blockquote'] {
     margin-block: 0 var(--lyra-space-s);
     margin-inline: 0;

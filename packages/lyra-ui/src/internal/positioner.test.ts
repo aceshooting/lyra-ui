@@ -32,6 +32,36 @@ it('positions the popup relative to the anchor', async () => {
   expect(p.style.position).to.equal('fixed');
   expect(p.style.left).to.not.be.empty;
   expect(p.style.top).to.not.be.empty;
+  expect(p.style.getPropertyValue('--lyra-positioner-available-inline-size')).to.match(/^\d+(?:\.\d+)?px$/);
+  expect(p.style.getPropertyValue('--lyra-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
+  stop();
+});
+
+it('refreshes available space when the visual viewport changes', async () => {
+  const wrap = await fixture(html`
+    <div>
+      <button id="a" style="position:absolute; top:100px; left:100px;">x</button>
+      <div id="p" style="width:50px; height:20px;">pop</div>
+    </div>
+  `);
+  const a = wrap.querySelector('#a') as HTMLElement;
+  const p = wrap.querySelector('#p') as HTMLElement;
+  const visualViewport = window.visualViewport;
+
+  if (!visualViewport) return;
+
+  const stop = place(a, p);
+  await waitFor(
+    () => p.style.getPropertyValue('--lyra-positioner-available-block-size'),
+    (value) => value !== '',
+  );
+  const initialTop = p.style.top;
+  visualViewport.dispatchEvent(new Event('resize'));
+  await waitFor(
+    () => p.style.top,
+    (top) => top !== '' && top === initialTop,
+  );
+  expect(p.style.getPropertyValue('--lyra-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
   stop();
 });
 

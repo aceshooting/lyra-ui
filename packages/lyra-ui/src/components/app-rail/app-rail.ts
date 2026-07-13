@@ -7,6 +7,7 @@ import { lockScroll } from '../../internal/scroll-lock.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon } from '../../internal/icons.js';
 import { styles } from './app-rail.styles.js';
+import './app-rail-item.js';
 
 /** The rail's effective presentation -- see the class doc for what each renders. */
 export type AppRailMode = 'full' | 'icon-only' | 'mobile';
@@ -89,15 +90,11 @@ export function computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: bool
  * on a generic element can be swapped for `role="dialog"` freely.
  *
  * @customElement lyra-app-rail
- * @slot - Nav items — generic slotted content (e.g. `<a>`/`<button>`
- *   elements) the consumer builds with its own icon+label structure; this
- *   component only lays them out and manages the responsive chrome around
- *   them. See the `@example` below for the accessible-name expectation this
- *   places on the slotted content in `'icon-only'` mode. While the mobile
- *   overlay is open, clicking anywhere inside this slot closes it (see
- *   `onNavItemClick`) — every slotted item is assumed to be a navigation
- *   trigger, not necessarily a real link, so this fires on any click rather
- *   than trying to detect one.
+ * @slot - Nav items. Use `<lyra-app-rail-item>` for the explicit icon/label
+ *   contract that automatically hides labels in `'icon-only'` mode. Generic
+ *   links and buttons remain supported, but their compact presentation is the
+ *   consumer's responsibility. While the mobile overlay is open, clicking
+ *   anywhere inside this slot closes it.
  * @slot header - Logo/brand content, shown above the nav items in every mode.
  * @slot footer - A trailing user/settings trigger, shown below the nav items.
  * @event lyra-mode-change - The effective mode changed, whether from a
@@ -120,13 +117,13 @@ export function computeAppRailMode(iconOnlyMatches: boolean, mobileMatches: bool
  *   for why it's the same element as `base`, never both at once.
  *
  * @example
- * In `'icon-only'` mode, slotted nav items lose their visible text label.
- * Give each one a real accessible name regardless — `aria-label`, visually
- * hidden text, or a `title` — since this component only lays out whatever is
- * slotted and has no way to inspect or fix up a consumer's own markup:
+ * Use the item contract so the visible label collapses while its accessible
+ * name remains available:
  * ```html
  * <lyra-app-rail>
- *   <a href="/inbox" aria-label="Inbox"><svg aria-hidden="true">...</svg><span>Inbox</span></a>
+ *   <lyra-app-rail-item href="/inbox" aria-label="Inbox">
+ *     <svg slot="icon" aria-hidden="true">...</svg>Inbox
+ *   </lyra-app-rail-item>
  * </lyra-app-rail>
  * ```
  */
@@ -187,6 +184,15 @@ export class LyraAppRail extends LyraElement {
   private explicitTrigger?: HTMLElement;
   private readonly navId = nextId('app-rail-nav');
 
+  private syncSlottedItems(): void {
+    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('[part="nav"] > slot');
+    for (const item of slot?.assignedElements({ flatten: true }) ?? []) {
+      if (item.localName === 'lyra-app-rail-item') {
+        item.toggleAttribute('icon-only', this._mode === 'icon-only');
+      }
+    }
+  }
+
   /**
    * The rail's current effective presentation. Always one of the three real
    * modes — never `'auto'` — reflecting either the live breakpoint match or,
@@ -243,6 +249,7 @@ export class LyraAppRail extends LyraElement {
   // rely on them -- mirrors lyra-dialog's/lyra-widget's identical ordering
   // rationale.
   protected updated(): void {
+    this.syncSlottedItems();
     if (this.justOpened) {
       this.justOpened = false;
       this.overlayHandle?.focusInitial();
@@ -374,6 +381,9 @@ export class LyraAppRail extends LyraElement {
   private onFooterSlotChange = (e: Event): void => {
     this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
+  private onNavSlotChange = (): void => {
+    this.syncSlottedItems();
+  };
 
   render(): TemplateResult {
     const mobile = this._mode === 'mobile';
@@ -402,7 +412,7 @@ export class LyraAppRail extends LyraElement {
           <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
         </div>
         <div part="nav">
-          <slot @click=${this.onNavItemClick}></slot>
+          <slot @slotchange=${this.onNavSlotChange} @click=${this.onNavItemClick}></slot>
         </div>
         <div part="footer" ?hidden=${!this.hasFooterSlot}>
           <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>

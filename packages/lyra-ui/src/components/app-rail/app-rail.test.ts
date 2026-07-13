@@ -67,6 +67,29 @@ it('uses the label prop as the nav landmark accessible name', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal('Main');
 });
 
+it('hides app-rail-item labels visually in icon-only mode while retaining their accessible names', async () => {
+  const el = (await fixture(html`
+    <lyra-app-rail mode="icon-only">
+      <lyra-app-rail-item href="/inbox" aria-label="Inbox">
+        <span slot="icon" aria-hidden="true">📥</span>Inbox with a long localized label
+      </lyra-app-rail-item>
+    </lyra-app-rail>
+  `)) as LyraAppRail;
+  const item = el.querySelector('lyra-app-rail-item')! as HTMLElement & { updateComplete: Promise<unknown> };
+  await item.updateComplete;
+
+  expect(item.hasAttribute('icon-only')).to.be.true;
+  const label = item.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect(getComputedStyle(label).position).to.equal('absolute');
+  expect(item.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Inbox');
+
+  el.mode = 'full';
+  await el.updateComplete;
+  await item.updateComplete;
+  expect(item.hasAttribute('icon-only')).to.be.false;
+  expect(getComputedStyle(label).position).to.not.equal('absolute');
+});
+
 // -- breakpoint-driven mode wiring ---------------------------------------
 
 it('switches to icon-only and emits lyra-mode-change when the icon-only query starts matching', async () => {

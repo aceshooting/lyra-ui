@@ -1,8 +1,22 @@
-import type { Highlighter, BundledLanguage, BundledTheme } from 'shiki';
+import type { Highlighter, BundledLanguage, BundledTheme, HighlighterCore, LanguageInput } from 'shiki';
 
 /** Re-exported under a component-scoped name so importers don't need their
  *  own `import type { Highlighter } from 'shiki'`. */
 export type ShikiHighlighter = Highlighter;
+
+/** Re-exported under a component-scoped name — see `loadShikiHighlighterCore()`
+ *  below. Structurally similar to `ShikiHighlighter` (both are
+ *  `HighlighterGeneric<...>` instances providing `codeToHtml()` etc.) but
+ *  typed with no bundled-language/theme keys of its own (`never`, since
+ *  `createHighlighterCore()` has no built-in bundle to know about), which is
+ *  why it's a distinct exported type rather than reusing `ShikiHighlighter`. */
+export type ShikiHighlighterCore = HighlighterCore;
+
+/** Re-exported under a component-scoped name — the shape of one pre-imported
+ *  shiki grammar module's default export (e.g. `import bash from
+ *  'shiki/langs/bash.mjs'`), and what `<lyra-code-block>`'s `languages`
+ *  property maps language ids to. See `loadShikiHighlighterCore()` below. */
+export type ShikiLanguageInput = LanguageInput;
 
 /**
  * The two bundled themes every highlighter instance is seeded with, so a
@@ -87,4 +101,76 @@ export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Pro
     unsupportedLanguages.add(lang);
     return false;
   }
+}
+
+/** One cached `ShikiHighlighterCore` promise per distinct `languages` object
+ *  a caller has passed in — keyed by object identity (not content), so a
+ *  consumer that keeps passing the *same* `languages` map reference (the
+ *  normal case: a module-level constant, not a fresh object literal on every
+ *  render) only ever builds one highlighter for it, same "the highlighter
+ *  itself is the expensive part" rationale as `loadShikiHighlighter()`'s
+ *  single cached instance above. A `WeakMap` lets an abandoned `languages`
+ *  object (and its highlighter) be garbage-collected once nothing else
+ *  references it. */
+const highlighterCores = new WeakMap<Record<string, ShikiLanguageInput>, Promise<ShikiHighlighterCore | null>>();
+
+/**
+ * Builds (and caches — see `highlighterCores` above) a fine-grained
+ * `HighlighterCore` seeded with `SHIKI_THEMES` and *only* the grammars in
+ * `languages`, via shiki's own "fine-grained bundle" recipe:
+ * `createHighlighterCore()` (`shiki/core`) plus an explicit oniguruma engine
+ * (`shiki/engine/oniguruma` + the `shiki/wasm` binary) instead of
+ * `loadShikiHighlighter()`'s `createHighlighter()` (plain `shiki`).
+ *
+ * The point isn't runtime cost — `loadShikiHighlighter()`'s per-language
+ * `loadLanguage()` dynamic import is already well-optimized for that (see its
+ * doc comment). It's *build output*: `shiki`'s main entry point (what
+ * `loadShikiHighlighter()` imports) bundles a lookup table of dynamic
+ * `import()` calls, one per shiki-supported language (~200 of them), because
+ * `loadLanguage(lang: string)` resolves that string against the table at
+ * runtime — a bundler can't statically narrow which of those ~200 entries a
+ * given app will ever actually request, so it conservatively emits a
+ * build-output chunk for every one of them. `shiki/core` has no such
+ * table — a bundler only ever sees the exact grammar modules a caller
+ * `import`s for `languages` itself, so a consumer with a known, fixed
+ * language set gets a build output scoped to just those languages instead of
+ * shiki's full bundled set.
+ *
+ * This is *only* ever consulted for languages present in `languages` — see
+ * `<lyra-code-block>`'s `syncHighlight()`. A language absent from it still
+ * falls back to the ordinary `loadShikiHighlighter()` + `loadShikiLanguage()`
+ * dynamic-import path entirely unchanged, so a caller can pin its own known
+ * set while still letting an unexpected language through. Resolves to `null`
+ * (with a one-time `console.warn`, same convention as `loadShikiHighlighter()`)
+ * if building the fine-grained highlighter fails for any reason.
+ */
+export function loadShikiHighlighterCore(
+  languages: Record<string, ShikiLanguageInput>,
+): Promise<ShikiHighlighterCore | null> {
+  let cached = highlighterCores.get(languages);
+  if (!cached) {
+    cached = Promise.all([
+      import('shiki/core'),
+      import('shiki/engine/oniguruma'),
+      import('shiki/themes/github-light.mjs'),
+      import('shiki/themes/github-dark.mjs'),
+    ])
+      .then(([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) =>
+        createHighlighterCore({
+          themes: [light.default, dark.default],
+          langs: Object.values(languages),
+          engine: createOnigurumaEngine(import('shiki/wasm')),
+        }),
+      )
+      .catch((err) => {
+        console.warn(
+          "<lyra-code-block>'s `languages` property failed to build a fine-grained shiki highlighter — " +
+            'falling back to plain unhighlighted text for the languages it covers:',
+          err,
+        );
+        return null;
+      });
+    highlighterCores.set(languages, cached);
+  }
+  return cached;
 }

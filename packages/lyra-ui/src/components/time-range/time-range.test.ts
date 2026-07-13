@@ -423,13 +423,44 @@ it('does not lock dragging to a fixed value when min > max', async () => {
   startHandle.dispatchEvent(
     new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
   );
-  // Before the fix, clamp() computed Math.min(this.max=0, Math.max(this.min=100, stepped))
-  // which is always 0 no matter where the pointer is — the widget was
-  // non-interactive. It must now track the pointer like any other domain.
+  // The pointer maps through the normalized [0, 100] domain even though the
+  // public min/max attributes are reversed.
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 100 }));
   expect(el.start).to.equal(50);
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 180 }));
-  expect(el.start).to.equal(10);
+  // The 90% pointer position is 90, but the start handle cannot cross end=80.
+  expect(el.start).to.equal(80);
+});
+
+it('maps RTL pointer positions through the normalized domain when min > max', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range dir="rtl" min="100" max="0" start="20" end="80" step="1"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  startHandle.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }),
+  );
+  // RTL mirrors raw=.2 to .8, then uses normalized [0,100] math: 80.
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40 }));
+  expect(el.start).to.equal(80);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
 });
 
 it("tracks concurrent drags by pointerId so a second pointer cannot hijack the first drag's handle", async () => {
@@ -514,6 +545,16 @@ it('rounds a non-integer step to its own decimal precision instead of accumulati
   expect(el.start).to.equal(20.2);
 });
 
+it('rounds exponent-form steps without collapsing the nudge to zero', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="0" max="1" start="0" end="1" step="1e-7"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(el.start).to.equal(0.0000001);
+});
+
 it('anchors the step grid at `min` rather than absolute 0, matching native <input type=range>', async () => {
   const el = (await fixture(
     html`<lyra-time-range min="3" max="100" start="3" step="10"></lyra-time-range>`,
@@ -538,6 +579,19 @@ it('does not render invalid CSS or an aria-valuenow="NaN" when start fails Numbe
   // aria-valuenow to the literal NaN.
   expect(startHandle.style.insetInlineStart).to.equal('0%');
   expect(startHandle.hasAttribute('aria-valuenow')).to.be.false;
+});
+
+it('keeps infinities out of domain geometry and ARIA attributes', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range min="Infinity" max="100" start="Infinity" end="-Infinity"></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const handles = [...el.shadowRoot!.querySelectorAll('[role="slider"]')] as HTMLElement[];
+  handles.forEach((handle) => {
+    expect(handle.getAttribute('aria-valuemin')).to.not.include('Infinity');
+    expect(handle.getAttribute('aria-valuemax')).to.not.include('Infinity');
+    expect(handle.getAttribute('aria-valuenow')).to.not.include('Infinity');
+    expect(handle.getAttribute('style')).to.not.match(/NaN|Infinity/);
+  });
 });
 
 it('defaults each handle\'s aria-label and lets startLabel/endLabel override them', async () => {

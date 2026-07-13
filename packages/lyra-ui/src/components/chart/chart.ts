@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
+import { nextId, srOnly } from '../../internal/a11y.js';
 import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../skeleton/skeleton.js';
@@ -88,14 +89,19 @@ interface ThemeColors {
   tooltipText: string;
 }
 
-function deepMerge<T>(base: T, override: unknown): T {
+function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unknown>()): T {
+  if (typeof override === 'object' && override !== null) {
+    const previous = seen.get(override);
+    if (previous !== undefined) return previous as T;
+  }
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return (override === undefined ? base : (override as T)) as T;
   }
   const result: Record<string, unknown> = { ...base };
+  seen.set(override, result);
   for (const key of Object.keys(override)) {
     if (UNSAFE_KEYS.has(key)) continue;
-    result[key] = deepMerge((base as Record<string, unknown>)[key], override[key]);
+    result[key] = deepMerge((base as Record<string, unknown>)[key], override[key], seen);
   }
   return result as T;
 }
@@ -125,10 +131,15 @@ function deepMerge<T>(base: T, override: unknown): T {
  *   intersect-only — see `handlePointClick()`) a data point/segment.
  *   `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`.
- * @csspart base, canvas, reset-zoom-button
+ * @csspart base - The chart wrapper.
+ * @csspart canvas - The Chart.js canvas.
+ * @csspart reset-zoom-button - The reset-zoom control when zoom is active.
+ * @csspart description - The accessible chart summary.
+ * @csspart data-table - The optional generated or slotted data table.
+ * @slot data-table - An optional consumer-provided accessible table alternative.
  */
 export class LyraChart extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'line';
@@ -142,6 +153,12 @@ export class LyraChart extends LyraElement {
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ attribute: 'y2-label' }) y2Label = '';
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
+  /** Accessible name applied to the canvas. Falls back to the dataset labels. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** Accessible description for the canvas. When unset, a concise data/trend summary is generated. */
+  @property({ attribute: 'accessible-description' }) accessibleDescription = '';
+  /** Makes the generated data table visible; it remains screen-reader available when false. */
+  @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
   /** Sets `options.indexAxis = 'y'`, Chart.js's own mechanism for horizontal bars (also applies to line/area types). */
   @property({ type: Boolean }) horizontal = false;
   /** Stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only meaningful for `bar` and `line` types. */
@@ -164,7 +181,6 @@ export class LyraChart extends LyraElement {
 
   @state() private visible = true;
   private intersectionObserver?: IntersectionObserver;
-  private lastSignature = '';
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: import('chart.js').Chart;
@@ -180,6 +196,7 @@ export class LyraChart extends LyraElement {
   // `{zoomed: false}`. Set while this component's own `resetZoom()` is
   // driving the plugin so that re-entrant callback is ignored.
   private suppressZoomComplete = false;
+  private descriptionId = nextId('chart-description');
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -276,12 +293,25 @@ export class LyraChart extends LyraElement {
         this.draw();
       });
     }
-    const onlyZoomChanged = changed.size === 1 && changed.has('zoomed');
-    if (onlyZoomChanged) return;
+    const contentChanged = [
+      'type',
+      'labels',
+      'datasets',
+      'legend',
+      'area',
+      'height',
+      'xLabel',
+      'yLabel',
+      'y2Label',
+      'beginAtZero',
+      'horizontal',
+      'stacked',
+      'config',
+      'zoom',
+      'loading',
+    ].some((name) => changed.has(name));
+    if (!contentChanged) return;
     if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
-    const signature = this.computeSignature();
-    if (signature === this.lastSignature) return;
-    this.lastSignature = signature;
     this.draw();
   }
 
@@ -332,30 +362,6 @@ export class LyraChart extends LyraElement {
       tooltipBg: cs.getPropertyValue('--lyra-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
       tooltipText: cs.getPropertyValue('--lyra-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
-  }
-
-  /**
-   * A content-affecting-properties fingerprint used by `updated()` to skip a
-   * redundant `draw()` when neither visibility nor any of these properties
-   * actually changed since the last draw (e.g. an unrelated property/state
-   * update, or `requestUpdate()` with nothing changed). Mirrors
-   * `lite-chart.ts`'s `computeSignature()`.
-   */
-  private computeSignature(): string {
-    return JSON.stringify([
-      this.type,
-      this.labels,
-      this.datasets,
-      this.legend,
-      this.area,
-      this.xLabel,
-      this.yLabel,
-      this.y2Label,
-      this.beginAtZero,
-      this.horizontal,
-      this.stacked,
-      this.config,
-    ]);
   }
 
   /**
@@ -579,6 +585,60 @@ export class LyraChart extends LyraElement {
     this.draw();
   }
 
+  private seriesValues(series: Series): number[] {
+    if (series.points) return series.points.map((point) => point.y).filter((value) => Number.isFinite(value));
+    return (series.data ?? []).filter((value): value is number => value != null && Number.isFinite(value));
+  }
+
+  private chartDescription(): string {
+    if (this.accessibleDescription) return this.accessibleDescription;
+    const summaries = this.datasets.map((series) => {
+      const values = this.seriesValues(series);
+      if (!values.length) return `${series.label}: no data`;
+      const first = values[0]!;
+      const last = values[values.length - 1]!;
+      const trend = last > first ? 'increasing' : last < first ? 'decreasing' : 'flat';
+      let min = values[0]!;
+      let max = values[0]!;
+      for (const value of values) {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+      return `${series.label}: ${values.length} values, range ${min} to ${max}, ${trend} trend`;
+    });
+    return `${this.effectiveType()} chart${summaries.length ? `. ${summaries.join('. ')}` : ' with no data'}.`;
+  }
+
+  private renderDataTable(): TemplateResult {
+    const rowCount = Math.max(
+      this.labels.length,
+      ...this.datasets.map((series) => (series.points ? series.points.length : series.data?.length ?? 0)),
+      0,
+    );
+    return html`
+      <table class=${this.showDataTable ? nothing : 'sr-only'}>
+        <caption>${this.accessibleLabel || 'Chart data'}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Category</th>
+            ${this.datasets.map((series) => html`<th scope="col">${series.label}</th>`)}
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.from({ length: rowCount }, (_, index) => html`
+            <tr>
+              <th scope="row">${this.labels[index] ?? `Point ${index + 1}`}</th>
+              ${this.datasets.map((series) => {
+                const value = series.points ? series.points[index]?.y : series.data?.[index];
+                return html`<td>${value == null || !Number.isFinite(value) ? 'No data' : value}</td>`;
+              })}
+            </tr>
+          `)}
+        </tbody>
+      </table>
+    `;
+  }
+
   render(): TemplateResult {
     if (this.loading) {
       return html`
@@ -587,10 +647,16 @@ export class LyraChart extends LyraElement {
         </div>
       `;
     }
-    const label = this.datasets.map((d) => d.label).join(', ') || 'Chart';
+    const label = this.accessibleLabel || this.datasets.map((d) => d.label).join(', ') || 'Chart';
+    const description = this.chartDescription();
     return html`
       <div part="base">
-        <canvas part="canvas" role="img" aria-label=${label}></canvas>
+        <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
+        <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
+        <div part="data-table">
+          <slot name="data-table"></slot>
+          ${this.renderDataTable()}
+        </div>
         ${this.zoom && this.zoomed
           ? html`<button part="reset-zoom-button" type="button" @click=${() => this.resetZoom()}>
               Reset zoom

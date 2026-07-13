@@ -75,6 +75,35 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('exposes a customizable accessible description and box-plot data table', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.accessibleLabel = 'Loss distributions';
+  el.accessibleDescription = 'Loss medians are stable across the two groups.';
+  el.showDataTable = true;
+  el.labels = ['K=2', 'K=3'];
+  el.boxes = [
+    {
+      label: 'Loss',
+      data: [
+        { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+        { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+      ],
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
+  const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
+  expect(canvas.getAttribute('aria-label')).to.equal('Loss distributions');
+  expect(canvas.getAttribute('aria-describedby')).to.equal(description.id);
+  expect(description.textContent).to.equal('Loss medians are stable across the two groups.');
+  expect(table.querySelectorAll('tbody tr')).to.have.length(2);
+  expect(table.querySelector('tbody tr td:nth-child(5)')!.textContent).to.equal('3');
+  expect(table.classList.contains('sr-only')).to.be.false;
+});
+
 it('does not wire up chart.js when the boxplot plugin fails to load, even though chart.js itself loaded fine', async () => {
   // Reproduces the partial-peer-dependency-failure path: chart.js resolves
   // successfully but `@sgratzl/chartjs-chart-boxplot` fails to import, so

@@ -87,7 +87,10 @@ const styles = css`
  * @customElement lyra-tree-node
  * @event lyra-node-toggle - `detail: { id, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).
  * @event lyra-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).
- * @csspart row, toggle, label, badge
+ * @csspart row - The tree row.
+ * @csspart toggle - The expand/collapse button.
+ * @csspart label - The node label.
+ * @csspart badge - The optional node badge.
  */
 export class LyraTreeNode extends LyraElement {
   static styles = [LyraElement.styles, styles];

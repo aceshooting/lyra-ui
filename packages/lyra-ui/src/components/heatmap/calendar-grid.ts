@@ -9,9 +9,14 @@ export interface CalendarDay {
 export interface CalendarCell {
   date: string;
   value: number;
-  /** 0-based week column, counting from the grid's first (earliest-containing) Sunday. */
+  /** 0-based week column, counting from the grid's first (earliest-containing) anchor week — see `buildCalendarGrid()`'s `firstDayOfWeek` parameter. */
   week: number;
-  /** 0 (Sunday) .. 6 (Saturday). */
+  /**
+   * Day-of-week position within the row, relative to `firstDayOfWeek`: 0 for
+   * the anchor weekday itself, up to 6 for the day immediately before it.
+   * With the default `firstDayOfWeek` of 0, this is the familiar 0 (Sunday)
+   * .. 6 (Saturday) numbering, unchanged from before `firstDayOfWeek` existed.
+   */
   weekday: number;
 }
 
@@ -31,9 +36,13 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
 }
 
 /**
- * Lays `days` out onto a GitHub-style Sunday-Saturday x week grid. `days`
- * need not be sorted or contiguous; the grid spans from the earliest to the
- * latest date present, anchored at the Sunday on/before the earliest date.
+ * Lays `days` out onto a GitHub-style week grid, 7 rows deep. `days` need not
+ * be sorted or contiguous; the grid spans from the earliest to the latest
+ * date present, anchored at the `firstDayOfWeek`-weekday on/before the
+ * earliest date (`firstDayOfWeek` is 0–6, Sunday-first by default — same
+ * numbering as `CalendarCell.weekday`). With the default `firstDayOfWeek` of
+ * 0, this is the Sunday on/before the earliest date, exactly as before this
+ * parameter existed.
  *
  * An entry whose `date` doesn't parse to a valid calendar date (e.g. `''` or
  * `'2026-03'`) is dropped rather than included: `parseIsoDate` on a malformed
@@ -45,7 +54,10 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
  * over into March) is dropped rather than silently renormalized — see
  * `isCalendarValid()`.
  */
-export function buildCalendarGrid(days: CalendarDay[]): {
+export function buildCalendarGrid(
+  days: CalendarDay[],
+  firstDayOfWeek = 0,
+): {
   cells: CalendarCell[];
   weekCount: number;
   firstWeekStart: Date;
@@ -61,12 +73,19 @@ export function buildCalendarGrid(days: CalendarDay[]): {
 
   const timeBounds = minMax(parsed.map((d) => d.dateObj.getTime()))!;
   const min = new Date(timeBounds[0]);
+  // Days back from `min` to the nearest `firstDayOfWeek`-weekday on/before
+  // it — with the default firstDayOfWeek of 0, this reduces to
+  // `min.getUTCDay()` exactly, i.e. today's original Sunday anchor.
+  const daysBackToAnchor = (min.getUTCDay() - firstDayOfWeek + 7) % 7;
   const firstWeekStart = new Date(
-    Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - min.getUTCDay()),
+    Date.UTC(min.getUTCFullYear(), min.getUTCMonth(), min.getUTCDate() - daysBackToAnchor),
   );
 
   const cells: CalendarCell[] = parsed.map((d) => {
-    const weekday = d.dateObj.getUTCDay();
+    // Relative to the anchor weekday (see `CalendarCell.weekday`'s doc
+    // comment) — with the default firstDayOfWeek of 0 this is just
+    // `d.dateObj.getUTCDay()`, unchanged from before.
+    const weekday = (d.dateObj.getUTCDay() - firstDayOfWeek + 7) % 7;
     const daysSinceStart = Math.round((d.dateObj.getTime() - firstWeekStart.getTime()) / MS_PER_DAY);
     const week = Math.floor(daysSinceStart / 7);
     return { date: d.date, value: d.value, week, weekday };

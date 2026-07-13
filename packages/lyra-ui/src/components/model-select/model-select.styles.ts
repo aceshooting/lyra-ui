@@ -11,6 +11,20 @@ export const styles = css`
     cursor: not-allowed;
   }
 
+  [part='form-control-label'] {
+    display: block;
+    margin-block-end: var(--lyra-space-xs);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  /* :empty never matches here -- the part always renders a literal label
+     element regardless of label content -- so real emptiness is tracked via
+     the label property length and reflected through the hidden attribute
+     instead (same fix as lyra-select's own form-control-label). */
+  [part='form-control-label'][hidden] {
+    display: none;
+  }
+
   [part='trigger'],
   [part='combobox'] {
     display: flex;

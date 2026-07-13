@@ -6,7 +6,15 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
-import { loadShikiHighlighter, loadShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from './code-loader.js';
+import {
+  loadShikiHighlighter,
+  loadShikiLanguage,
+  loadShikiHighlighterCore,
+  SHIKI_THEMES,
+  type ShikiHighlighter,
+  type ShikiHighlighterCore,
+  type ShikiLanguageInput,
+} from './code-loader.js';
 import { styles } from './code-block.styles.js';
 import '../skeleton/skeleton.js';
 
@@ -55,6 +63,27 @@ const partTransformer: ShikiTransformer = {
  * yet) — that grammar fetch is typically fast, and the plain-text fallback
  * is already a perfectly readable placeholder for it, so a second
  * loading-chrome state would add complexity for little practical benefit.
+ *
+ * `languages` is an additive, opt-in escape hatch from that default path for
+ * a consumer whose language set is fixed and known ahead of time: a map of
+ * language id to an already-imported shiki grammar module (e.g. `import bash
+ * from 'shiki/langs/bash.mjs'`). When `language` matches a key in `languages`,
+ * this component seeds a fine-grained `createHighlighterCore()` highlighter
+ * with *only* the pre-supplied grammars (see `code-loader.ts`'s
+ * `loadShikiHighlighterCore()`) instead of waiting on `loadShikiHighlighter()`
+ * and its dynamic per-language `loadLanguage()` import. The payoff isn't
+ * runtime cost — the default dynamic-import path is already well-optimized
+ * for that — it's *build output*: shiki's main entry point bundles a dynamic
+ * `import()` per bundled language (~200 of them) because a bundler can't
+ * statically narrow which of those a `loadLanguage(lang: string)` call might
+ * request at runtime, so it conservatively emits a build-output chunk for
+ * every one of them. `shiki/core`'s fine-grained API has no such table — a
+ * bundler only ever sees the exact grammar modules `languages` itself
+ * `import`s, so a consumer who pins its full language set this way trades a
+ * hand-maintained list for a build output scoped to just those languages
+ * instead of shiki's entire bundled set. A language requested but absent
+ * from `languages` still falls back to the ordinary dynamic-import path
+ * unchanged, so this is a partial opt-in, not a replacement for it.
  *
  * @customElement lyra-code-block
  * @event lyra-copy - The copy button was activated. `detail: { text }` is
@@ -109,6 +138,19 @@ export class LyraCodeBlock extends LyraElement {
    *  past this height instead of growing the page. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
+  /** A map of language id to an already-imported shiki grammar module's
+   *  default export (e.g. `{ bash: bashGrammar }` where `bashGrammar` came
+   *  from a module-scope `import bash from 'shiki/langs/bash.mjs'`). When
+   *  `language` matches a key here, highlighting for it is seeded from
+   *  exactly this pre-supplied grammar via a fine-grained
+   *  `createHighlighterCore()` highlighter, bypassing the default
+   *  `loadShikiHighlighter()` singleton and its dynamic per-language
+   *  `loadLanguage()` import entirely for that language — see the class doc
+   *  above for the build-output rationale. A `language` value absent from
+   *  this map (or left unset, or when `languages` itself is unset) falls
+   *  back to that default dynamic-import path unchanged. */
+  @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
+
   // `null` covers every reason the plain-text fallback is showing: shiki
   // isn't installed, `language` is unset, or `language` isn't shiki-
   // recognized -- `render()` doesn't need to (and can't usefully) tell these
@@ -147,19 +189,34 @@ export class LyraCodeBlock extends LyraElement {
     clearTimeout(this.copyTimeoutId);
   }
 
+  // The `languages` entry for the *current* `language`, if any -- shared by
+  // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
+  // on whether this render is taking the fine-grained `languages` path or
+  // the default `loadShikiHighlighter()` one.
+  private preSuppliedGrammar(): ShikiLanguageInput | undefined {
+    return this.languages?.[this.language];
+  }
+
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
   // synchronous case -- language already loaded, see `syncHighlight()` --
   // into this same update cycle instead of scheduling a second one, Lit's
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lyra-markdown>'s `willUpdate` takes).
   protected willUpdate(changed: PropertyValues): void {
-    if (this.shikiReady && (changed.has('code') || changed.has('language'))) {
+    if (!(changed.has('code') || changed.has('language') || changed.has('languages'))) return;
+    // The default path still waits on `shikiReady` (the shared
+    // `loadShikiHighlighter()` singleton), same as always. A `language`
+    // covered by `languages` doesn't need that singleton at all, so it can
+    // sync as soon as the relevant property actually changes, instead of
+    // waiting on an unrelated (and, for a `languages`-only consumer,
+    // possibly never-needed) full-bundle load to finish first.
+    if (this.shikiReady || this.preSuppliedGrammar()) {
       this.syncHighlight();
     }
   }
 
   protected updated(): void {
-    const showingSkeleton = !this.shikiReady && !!this.language;
+    const showingSkeleton = !this.shikiReady && !!this.language && !this.preSuppliedGrammar();
     if (showingSkeleton) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
   }
@@ -172,9 +229,26 @@ export class LyraCodeBlock extends LyraElement {
     // after a newer call has already rendered correct synchronous output,
     // and overwrite it with stale tokenization.
     const token = ++this.highlightToken;
-    const hl = this.highlighter;
     const lang = this.language;
-    if (!hl || !lang) {
+    if (!lang) {
+      this.highlightedHtml = null;
+      return;
+    }
+
+    const languages = this.languages;
+    if (languages?.[lang]) {
+      // Fine-grained opt-in path -- entirely separate from `this.highlighter`
+      // below, see `loadShikiHighlighterCore()`'s doc comment for why.
+      this.highlightedHtml = null;
+      void loadShikiHighlighterCore(languages).then((hl) => {
+        if (token !== this.highlightToken) return; // superseded by a newer code/language/languages change
+        this.highlightedHtml = hl ? this.tokenize(hl, lang) : null;
+      });
+      return;
+    }
+
+    const hl = this.highlighter;
+    if (!hl) {
       this.highlightedHtml = null;
       return;
     }
@@ -192,7 +266,7 @@ export class LyraCodeBlock extends LyraElement {
     });
   }
 
-  private tokenize(hl: ShikiHighlighter, lang: string): string | null {
+  private tokenize(hl: ShikiHighlighter | ShikiHighlighterCore, lang: string): string | null {
     try {
       return hl.codeToHtml(this.code, {
         lang,
@@ -286,7 +360,7 @@ export class LyraCodeBlock extends LyraElement {
   // small piece of a larger document.
   render(): TemplateResult {
     const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
-    const showSkeleton = !this.shikiReady && !!this.language;
+    const showSkeleton = !this.shikiReady && !!this.language && !this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
     const bodyLabel = this.filename || (this.language ? `${this.language} code` : 'Code');
 

@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html } from '@open-wc/testing';
 import './heatmap.js';
 import type { LyraHeatmap } from './heatmap.js';
 import {
@@ -116,13 +116,14 @@ it('is accessible', async () => {
 it('removes the previous MediaQueryList change listener before attaching a new one on a DPR crossing', async () => {
   const originalMatchMedia = window.matchMedia;
   const created: Array<{
+    query: string;
     addCalls: EventListenerOrEventListenerObject[];
     removeCalls: EventListenerOrEventListenerObject[];
   }> = [];
   window.matchMedia = ((query: string) => {
     const addCalls: EventListenerOrEventListenerObject[] = [];
     const removeCalls: EventListenerOrEventListenerObject[] = [];
-    created.push({ addCalls, removeCalls });
+    created.push({ query, addCalls, removeCalls });
     return {
       matches: false,
       media: query,
@@ -137,17 +138,18 @@ it('removes the previous MediaQueryList change listener before attaching a new o
 
   try {
     const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
-    expect(created.length).to.equal(1);
-    expect(created[0]!.addCalls.length).to.equal(1);
+    const dprQueries = () => created.filter(({ query }) => query.startsWith('(resolution:'));
+    expect(dprQueries().length).to.equal(1);
+    expect(dprQueries()[0]!.addCalls.length).to.equal(1);
 
     // Simulate a DPR crossing (the real trigger is a 'change' event on the
     // MediaQueryList, which this fake doesn't dispatch, so invoke the
     // private handler directly).
     (el as unknown as { onDprChange: () => void }).onDprChange();
 
-    expect(created.length).to.equal(2);
+    expect(dprQueries().length).to.equal(2);
     // The first MediaQueryList's listener must have been removed, not leaked.
-    expect(created[0]!.removeCalls).to.deep.equal(created[0]!.addCalls);
+    expect(dprQueries()[0]!.removeCalls).to.deep.equal(dprQueries()[0]!.addCalls);
   } finally {
     window.matchMedia = originalMatchMedia;
   }
@@ -544,6 +546,27 @@ it('retheming the ramp with a non-hex CSS color renders that color, not black', 
   expect(pixel[0]).to.equal(0);
   expect(pixel[1]).to.be.greaterThan(50);
   expect(pixel[2]).to.equal(0);
+});
+
+it('refreshes the canvas when a theme token changes without changing component data', async () => {
+  const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  el.rowLabels = ['a'];
+  el.colLabels = ['x', 'y'];
+  el.values = [[0, 10]];
+  await el.updateComplete;
+
+  const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const dpr = window.devicePixelRatio || 1;
+  const sample = () => ctx.getImageData(Math.round(87 * dpr), Math.round(25 * dpr), 1, 1).data;
+  const before = sample();
+
+  el.style.setProperty('--lyra-heatmap-scale-hi', 'rgb(0, 200, 0)');
+  await aTimeout(0);
+
+  const after = sample();
+  expect([after[0], after[1], after[2]]).to.deep.equal([0, 200, 0]);
+  expect([after[0], after[1], after[2]]).to.not.deep.equal([before[0], before[1], before[2]]);
 });
 
 it('retheming with an unparsable custom property value does not throw and does not go solid black', async () => {
@@ -1011,5 +1034,196 @@ describe('columnX override (calendar mode)', () => {
       new MouseEvent('click', { clientX: rect.left + 41, clientY: rect.top + 20, bubbles: true }),
     );
     expect(detail).to.be.undefined;
+  });
+});
+
+describe('first-day-of-week (calendar mode)', () => {
+  it('defaults to 0 (Sunday-anchored), unchanged from before the property existed', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    expect(el.firstDayOfWeek).to.equal(0);
+  });
+
+  it('shifts which week/row a known date lands in, calendar mode', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" first-day-of-week="1"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 }, // Sunday: with a Monday anchor, week 0, weekday 6 (last row of the prior week)
+      { date: '2026-03-02', value: 9 }, // Monday: the anchor weekday itself, week 1, weekday 0
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let detail: { date: string; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+
+    // Monday lands at week 1 (x = CAL_PAD_LEFT(28) + 1*(CAL_CELL(11)+CAL_GAP(2)) = 41), weekday 0 (y = CAL_LABEL_H(16)).
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 45, clientY: rect.top + 20, bubbles: true }),
+    );
+    expect(detail).to.deep.equal({ date: '2026-03-02', value: 9 });
+
+    // Sunday lands at week 0 (x = 28), weekday 6 (y = 16 + 6*13 = 94).
+    detail = undefined;
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 32, clientY: rect.top + 98, bubbles: true }),
+    );
+    expect(detail).to.deep.equal({ date: '2026-03-01', value: 1 });
+  });
+
+  it('is a no-op in matrix mode', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap first-day-of-week="1" cell-size="22"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.rowLabels = ['a'];
+    el.colLabels = ['x', 'y'];
+    el.values = [[3, 9]];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent).to.equal('3');
+  });
+});
+
+describe('rowY override (calendar mode)', () => {
+  it('unset: cell geometry follows the original evenly-spaced formula (regression)', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // CAL_LABEL_H(16) + 7 * (CAL_CELL(11) + CAL_GAP(2)) = 16 + 91 = 107.
+    expect(parseInt(canvas.style.height, 10)).to.equal(107);
+  });
+
+  it('drawn cell fill and pointer hit-testing both follow a custom rowY function, staying consistent with each other', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0
+      { date: '2026-03-03', value: 9 }, // Tuesday, week 0, weekday 2 (max value)
+    ];
+    el.rowY = (weekday: number) => 100 + weekday * 50;
+    await el.updateComplete;
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // weekday 2's cell y-origin is rowY(2) = 200, x-origin CAL_PAD_LEFT(28).
+    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(204 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0x09);
+    expect(pixel[1]).to.equal(0x69);
+    expect(pixel[2]).to.equal(0xda);
+
+    const rect = canvas.getBoundingClientRect();
+    let detail: { date: string; value: number } | undefined;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 32, clientY: rect.top + 204, bubbles: true }),
+    );
+    expect(detail).to.deep.equal({ date: '2026-03-03', value: 9 });
+  });
+
+  it('a click at the default-formula position misses once rowY moves that row elsewhere', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-03', value: 9 },
+    ];
+    el.rowY = (weekday: number) => 100 + weekday * 50;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let detail: unknown;
+    el.addEventListener('lyra-cell-click', (e) => (detail = (e as CustomEvent).detail));
+    // weekday 2's *default*-formula position (CAL_LABEL_H(16) + 2*(CAL_CELL(11)+CAL_GAP(2)) = 42)
+    // is above rowY(0) = 100, so it no longer lands on any row at all.
+    canvas.dispatchEvent(
+      new MouseEvent('click', { clientX: rect.left + 32, clientY: rect.top + 42, bubbles: true }),
+    );
+    expect(detail).to.be.undefined;
+  });
+});
+
+describe('calendar-mode cellSize/fitToWidth (extends the existing matrix-only properties)', () => {
+  it('defaults calendar mode\'s cell size to the original 11px when cell-size is unset (no behavior change for existing consumers)', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // CAL_PAD_LEFT(28) + max(1, weekCount=1) * (11 + CAL_GAP(2)) = 41, unchanged.
+    expect(parseInt(canvas.style.width, 10)).to.equal(41);
+  });
+
+  it('cell-size resizes calendar mode\'s grid when explicitly set', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" cell-size="20"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }]; // single Sunday -> weekCount 1
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // CAL_PAD_LEFT(28) + max(1, weekCount=1) * (20 + CAL_GAP(2)) = 50.
+    expect(parseInt(canvas.style.width, 10)).to.equal(50);
+    // CAL_LABEL_H(16) + 7 * (20 + 2) = 170.
+    expect(parseInt(canvas.style.height, 10)).to.equal(170);
+  });
+
+  it('derives calendar mode\'s cell size from the host width when fit-to-width is set', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" fit-to-width style="inline-size: 320px"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-08', value: 2 },
+      { date: '2026-03-15', value: 3 },
+      { date: '2026-03-22', value: 4 },
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(parseInt(canvas.style.width, 10)).to.equal(320);
+  });
+
+  it('ignores fit-to-width in calendar mode when it is not set (existing fixed-cellSize behavior)', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" cell-size="20" style="inline-size: 320px"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    // 28 + 1*(20+2) = 50, independent of host width.
+    expect(parseInt(canvas.style.width, 10)).to.equal(50);
+  });
+});
+
+describe('calendar-mode scale (extends the existing matrix-only property)', () => {
+  it('scale="sqrt" buckets a low value differently than the default quartile scale for the same skewed value set', async () => {
+    const el = (await fixture(
+      html`<lyra-heatmap mode="calendar" scale="sqrt"></lyra-heatmap>`,
+    )) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 }, // Sunday, week 0, weekday 0 (low value)
+      { date: '2026-03-02', value: 100 }, // Monday, week 0, weekday 1 (heavy value)
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // sqrtStep(1, 100, 5) === 0, so the low-value cell is exactly the ramp's
+    // lo endpoint (#cde2fb) — the default quartile scale instead lands it in
+    // a middle bucket (rank 1/2 of 2 sorted values), a visibly different color.
+    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(20 * dpr), 1, 1).data;
+    expect(pixel[0]).to.equal(0xcd);
+    expect(pixel[1]).to.equal(0xe2);
+    expect(pixel[2]).to.equal(0xfb);
+  });
+
+  it('defaults to the quartile scale (unchanged), not sqrt, for the same skewed value set', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar"></lyra-heatmap>`)) as LyraHeatmap;
+    el.days = [
+      { date: '2026-03-01', value: 1 },
+      { date: '2026-03-02', value: 100 },
+    ];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(20 * dpr), 1, 1).data;
+    expect([pixel[0], pixel[1], pixel[2]]).to.not.deep.equal([0xcd, 0xe2, 0xfb]);
   });
 });

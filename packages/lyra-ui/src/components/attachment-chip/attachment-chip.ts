@@ -1,5 +1,5 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
 import { nextId } from '../../internal/a11y.js';
@@ -85,11 +85,22 @@ export function formatFileSize(bytes: number): string {
  *  `'pending'`/`'done'` render nothing here, they're resting states.
  *  `clampedProgress` (not the raw `progress`) is what gets displayed, so the
  *  percentage shown here can never drift from the progressbar's own
- *  `aria-valuenow`/fill-width, which reads from the same clamped value. */
-function statusText(status: AttachmentChipStatus, progress: number, clampedProgress: number): string {
-  if (status === 'error') return 'Upload failed';
+ *  `aria-valuenow`/fill-width, which reads from the same clamped value.
+ *  `uploadingLabel`/`uploadFailedLabel` are the host's (possibly overridden)
+ *  verb/phrase -- defaulting to `'Uploading'`/`'Upload failed'` reproduces
+ *  today's exact hardcoded text byte-for-byte. */
+function statusText(
+  status: AttachmentChipStatus,
+  progress: number,
+  clampedProgress: number,
+  uploadingLabel: string,
+  uploadFailedLabel: string,
+): string {
+  if (status === 'error') return uploadFailedLabel;
   if (status === 'uploading') {
-    return Number.isFinite(progress) && progress > 0 ? `Uploading ${Math.round(clampedProgress)}%` : 'Uploading…';
+    return Number.isFinite(progress) && progress > 0
+      ? `${uploadingLabel} ${Math.round(clampedProgress)}%`
+      : `${uploadingLabel}…`;
   }
   return '';
 }
@@ -108,9 +119,9 @@ function statusText(status: AttachmentChipStatus, progress: number, clampedProgr
  *    (e.g. after a page reload, when no real `File` object exists any more).
  *
  * `file` always wins when both are present — see each accessor's own doc.
- * The image thumbnail for a real `File` is a lazily-created (only once the
- * thumbnail is actually about to render, not eagerly on assignment)
- * `URL.createObjectURL()` blob URL, revoked automatically once `file`
+ * The image thumbnail for a real `File` is a cached `URL.createObjectURL()`
+ * blob URL, created in the update lifecycle immediately before the thumbnail
+ * renders and revoked automatically once `file`
  * changes away from the object it was created for, and on disconnect — this
  * component never leaks a blob URL.
  *
@@ -125,6 +136,16 @@ function statusText(status: AttachmentChipStatus, progress: number, clampedProgr
  * across re-renders of the *same* `File` object without requiring the
  * consumer to invent one. When neither is available, a generated internal id
  * is used as a last resort so the event always has *some* id.
+ *
+ * i18n/locale: every translatable word rendered by this component is
+ * override-able via a dedicated property — `removeLabel`/`retryLabel`
+ * (the verb prefixed to the remove/retry buttons' `aria-label`, keeping the
+ * `displayName` interpolation), and `uploadingLabel`/`uploadFailedLabel` (the
+ * verb/phrase used in the visible `status-text`, keeping the live percentage
+ * interpolation for `uploadingLabel`). All four default to today's exact
+ * hardcoded English text (`'Remove'`, `'Retry'`, `'Uploading'`, `'Upload
+ * failed'`), so leaving them unset changes nothing. These are plain
+ * properties, not slots — this component still exposes no slots.
  *
  * @customElement lyra-attachment-chip
  * @event lyra-remove - The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.
@@ -175,12 +196,36 @@ export class LyraAttachmentChip extends LyraElement {
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = true;
 
+  /** Verb used in the remove button's `aria-label`, interpolated as
+   *  `` `${removeLabel} ${displayName}` `` -- override for i18n/locale.
+   *  Defaults to `'Remove'`, reproducing today's exact `"Remove ${displayName}"`
+   *  text byte-for-byte. */
+  @property({ attribute: 'remove-label' }) removeLabel = 'Remove';
+
+  /** Verb used in the retry button's `aria-label`, interpolated as
+   *  `` `${retryLabel} ${displayName}` `` -- override for i18n/locale.
+   *  Defaults to `'Retry'`, reproducing today's exact `"Retry ${displayName}"`
+   *  text byte-for-byte. */
+  @property({ attribute: 'retry-label' }) retryLabel = 'Retry';
+
+  /** Verb used in the visible uploading status text -- rendered as
+   *  `` `${uploadingLabel} ${percent}%` `` once progress is a meaningful
+   *  number, else `` `${uploadingLabel}…` ``. Override for i18n/locale.
+   *  Defaults to `'Uploading'`, reproducing today's exact `"Uploading N%"`/
+   *  `"Uploading…"` text byte-for-byte. */
+  @property({ attribute: 'uploading-label' }) uploadingLabel = 'Uploading';
+
+  /** Visible status text shown for `status="error"`. Override for
+   *  i18n/locale. Defaults to `'Upload failed'`, reproducing today's exact
+   *  text byte-for-byte. */
+  @property({ attribute: 'upload-failed-label' }) uploadFailedLabel = 'Upload failed';
+
   // The object URL created for `file`'s image thumbnail, plus the exact
   // `File` it was created for (so a later `file` re-assignment to a
   // *different* File — including `undefined` — can be detected and the old
   // URL revoked, even if the new value never triggers another
   // `ensureObjectUrl()` call because it isn't itself an image).
-  @state() private objectUrl?: string;
+  private objectUrl?: string;
   private objectUrlFile?: File;
 
   // Last-resort id, generated once per instance -- see the class doc's
@@ -214,11 +259,8 @@ export class LyraAttachmentChip extends LyraElement {
   }
 
   /** Returns (creating or reusing as needed) the object URL for `file`'s
-   *  image thumbnail. Only ever called from `render()`, i.e. only once a
-   *  thumbnail is actually about to be painted -- never eagerly from a
-   *  `file`/`willUpdate`/`updated` property-change hook -- so a `file` that's
-   *  reassigned several times before the next paint never creates URLs that
-   *  are immediately thrown away unused. */
+   * image thumbnail. Called from the update lifecycle, never from `render()`,
+   * so rendering stays a pure projection of already-prepared state. */
   private ensureObjectUrl(file: File): string {
     if (this.objectUrlFile === file && this.objectUrl) return this.objectUrl;
     this.revokeObjectUrl();
@@ -233,15 +275,13 @@ export class LyraAttachmentChip extends LyraElement {
     this.objectUrlFile = undefined;
   }
 
-  protected updated(changed: PropertyValues): void {
-    // `file` changed to a different object (including to `undefined`) since
-    // the URL currently held was created -- it no longer represents anything
-    // this chip still shows, so revoke it now rather than waiting for a
-    // render that may never again call `ensureObjectUrl()` (e.g. the new
-    // `file` isn't an image, or is unset).
-    if (changed.has('file') && this.objectUrlFile && this.objectUrlFile !== this.file) {
-      this.revokeObjectUrl();
-    }
+  protected willUpdate(): void {
+    // Prepare or revoke the non-reactive cache before render. This keeps URL
+    // allocation out of the render phase and also handles a file changing to
+    // a non-image or to undefined, where no thumbnail render would otherwise
+    // revisit the old cache entry.
+    if (this.file?.type.startsWith('image/')) this.ensureObjectUrl(this.file);
+    else if (this.objectUrlFile) this.revokeObjectUrl();
   }
 
   disconnectedCallback(): void {
@@ -260,7 +300,7 @@ export class LyraAttachmentChip extends LyraElement {
   private renderThumbnail(): TemplateResult {
     if (this.file) {
       return this.effectiveMimeType.startsWith('image/')
-        ? html`<img src=${this.ensureObjectUrl(this.file)} alt="" />`
+        ? html`<img src=${this.objectUrl ?? ''} alt="" />`
         : html`${fileGlyph()}`;
     }
     // No `file`: `thumbnail-src` is used whenever present, regardless of
@@ -277,7 +317,13 @@ export class LyraAttachmentChip extends LyraElement {
     // distinguish a genuinely empty file from a size that was simply never
     // supplied) -- hide the part entirely rather than show a literal "0 B".
     const sizeText = this.effectiveSize > 0 ? formatFileSize(this.effectiveSize) : '';
-    const text = statusText(this.status, this.progress, this.clampedProgress);
+    const text = statusText(
+      this.status,
+      this.progress,
+      this.clampedProgress,
+      this.uploadingLabel,
+      this.uploadFailedLabel,
+    );
     const uploading = this.status === 'uploading';
 
     return html`
@@ -305,12 +351,12 @@ export class LyraAttachmentChip extends LyraElement {
             : html`<span part="spinner" role="status" aria-label=${`Uploading ${displayName}`}></span>`
           : nothing}
         ${this.status === 'error'
-          ? html`<button part="retry-button" type="button" aria-label=${`Retry ${displayName}`} @click=${this.onRetryClick}>
+          ? html`<button part="retry-button" type="button" aria-label=${`${this.retryLabel} ${displayName}`} @click=${this.onRetryClick}>
               ${retryIcon()}
             </button>`
           : nothing}
         ${this.removable
-          ? html`<button part="remove-button" type="button" aria-label=${`Remove ${displayName}`} @click=${this.onRemoveClick}>
+          ? html`<button part="remove-button" type="button" aria-label=${`${this.removeLabel} ${displayName}`} @click=${this.onRemoveClick}>
               ${closeIcon()}
             </button>`
           : nothing}

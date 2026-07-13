@@ -39,19 +39,31 @@ export interface VirtualListRange {
   end: number;
 }
 
-/** Placeholder for a later phase's sticky-header sectioning feature -- see the class doc. */
+/** A visible group label anchored to the first row in its group. */
 export interface VirtualListGroup {
   key: string | number;
   label?: string;
   startIndex: number;
 }
 
+type VirtualListKey = string | number;
+
+/** A typed key is used in maps and active-row matching; this token is only for
+ * DOM attributes, where every value is necessarily a string. */
+function domKeyToken(key: VirtualListKey): string {
+  if (typeof key === 'number') {
+    if (Number.isNaN(key)) return 'number:NaN';
+    if (Object.is(key, -0)) return 'number:-0';
+  }
+  return `${typeof key}:${String(key)}`;
+}
+
 /**
  * `<lyra-virtual-list>` — a generic windowed/virtualized list host. Renders
  * only the items within the current viewport (plus `overscan` padding rows
  * on each side) as real DOM, regardless of how large `items` is, so a
- * multi-thousand-row chat history sidebar (or, in a later phase, a long
- * message thread) stays cheap to scroll.
+ * multi-thousand-row chat history sidebar or long message thread stays cheap
+ * to scroll.
  *
  * Content is entirely caller-supplied: `renderItem(item, index)` returns
  * whatever `lit-html` value should represent that row (typically a
@@ -111,10 +123,10 @@ export interface VirtualListGroup {
  * focusable content of its own is otherwise unreachable by keyboard (native
  * arrow/Page Up/Page Down scrolling included).
  *
- * **Grouping.** `groups` is accepted for forward API compatibility with a
- * later phase's sticky-header sectioning feature (paired with a
- * `groupByRecency()` helper that doesn't exist yet) but is not read or
- * rendered by this pass — every row still renders flat, in `items` order.
+ * **Grouping.** When supplied, `groups` renders a labeled group marker at the
+ * corresponding `startIndex`. Group markers are positioned independently of
+ * the row window, so they remain available when the first row in a group is
+ * outside the current overscanned range.
  *
  * @customElement lyra-virtual-list
  * @event lyra-load-more - Fired once per approach to the bottom of the list
@@ -131,6 +143,7 @@ export interface VirtualListGroup {
  * @csspart base - The scrollable container (`role="list"`).
  * @csspart spacer - The full-content-height inner element that gives the
  *   container its true scrollable extent.
+ * @csspart group - A positioned group label.
  * @csspart row - One rendered row's absolutely-positioned wrapper
  *   (`role="listitem"`); `renderItem`'s return value renders inside it.
  */
@@ -150,7 +163,8 @@ export class LyraVirtualList extends LyraElement {
    *  across a mutation (same caveat as `<lyra-table>`'s `rowKey`). */
   @property({ attribute: false }) keyFunction?: (item: unknown, index: number) => string | number;
 
-  /** Reserved for a later phase's sticky-header sectioning — accepted but not yet rendered. See the class doc. */
+  /** Group labels positioned at their first row's `startIndex`. Invalid or
+   * duplicate indexes are ignored during rendering. */
   @property({ attribute: false }) groups?: VirtualListGroup[];
 
   /** `'auto'` (default) measures each row's real height via `ResizeObserver`;
@@ -163,8 +177,10 @@ export class LyraVirtualList extends LyraElement {
    *  default. */
   @property({ converter: overscanConverter }) overscan = DEFAULT_OVERSCAN_ROWS;
 
-  /** When set and it matches a row's `keyFunction` result, that row is smoothly scrolled into view whenever this changes. */
-  @property({ attribute: 'active-id' }) activeId = '';
+  /** When set and it matches a row's typed `keyFunction` result, that row is
+   * smoothly scrolled into view whenever this changes. Attribute values are
+   * strings; assign the property for a numeric key. */
+  @property({ attribute: 'active-id' }) activeId: VirtualListKey | '' = '';
 
   @property({ type: Boolean, reflect: true }) loading = false;
 
@@ -183,11 +199,11 @@ export class LyraVirtualList extends LyraElement {
   /** Parsed `rowHeight`: a positive pixel number, or `null` for `'auto'` (measured) mode. */
   private fixedRowHeight: number | null = null;
   /** `row-height="auto"` per-row measured heights, keyed by
-   *  `String(keyFunction(item, index))`. Pruned to the current `items`'
+   *  keyFunction result. Pruned to the current `items`'
    *  live keys whenever `items` changes (see `recomputeOffsets()`), so a
    *  long-lived instance handed many wholly different `items` arrays over
    *  its life doesn't grow this map without bound. */
-  private readonly measuredHeights = new Map<string, number>();
+  private readonly measuredHeights = new Map<VirtualListKey, number>();
   /** True whenever `offsets` needs rebuilding before the next render --
    *  set initially and whenever `items`/`rowHeight`/`keyFunction` change or
    *  a row's measured height changes, but *not* on a pure scroll-position
@@ -213,7 +229,9 @@ export class LyraVirtualList extends LyraElement {
 
   private rowResizeObserver?: ResizeObserver;
   private containerResizeObserver?: ResizeObserver;
-  private readonly observedRows = new Map<string, HTMLElement>();
+  private readonly observedRows = new Map<VirtualListKey, HTMLElement>();
+  private readonly observedRowKeys = new WeakMap<HTMLElement, VirtualListKey>();
+  private readonly observedRowIndices = new WeakMap<HTMLElement, number>();
   private scrollRafId?: number;
   private pendingScrollTop: number | null = null;
 
@@ -289,8 +307,9 @@ export class LyraVirtualList extends LyraElement {
     return Number.isFinite(n) && n > 0 ? n : null;
   }
 
-  private keyOf(item: unknown, index: number): string | number {
-    return this.keyFunction ? this.keyFunction(item, index) : index;
+  private keyOf(item: unknown, index: number): VirtualListKey {
+    const key = this.keyFunction ? this.keyFunction(item, index) : index;
+    return typeof key === 'string' || typeof key === 'number' ? key : index;
   }
 
   private recomputeOffsets(): void {
@@ -303,13 +322,13 @@ export class LyraVirtualList extends LyraElement {
     // stale entries to prune, so skipping this keeps those cases as cheap as
     // before.
     const pruneStale = this.itemsChangedPendingPrune && this.fixedRowHeight == null;
-    const liveKeys = pruneStale ? new Set<string>() : null;
+    const liveKeys = pruneStale ? new Set<VirtualListKey>() : null;
     for (let i = 0; i < n; i++) {
       let h: number;
       if (this.fixedRowHeight != null) {
         h = this.fixedRowHeight;
       } else {
-        const key = String(this.keyOf(this.items[i], i));
+        const key = this.keyOf(this.items[i], i);
         liveKeys?.add(key);
         h = this.measuredHeights.get(key) ?? DEFAULT_ROW_ESTIMATE_PX;
       }
@@ -411,20 +430,36 @@ export class LyraVirtualList extends LyraElement {
 
   private onRowsResized = (entries: ResizeObserverEntry[]): void => {
     if (this.fixedRowHeight != null) return;
+    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
+    let scrollAdjustment = 0;
     let changed = false;
     for (const entry of entries) {
-      const key = (entry.target as HTMLElement).dataset.rowKey;
-      if (key === undefined) continue;
+      const row = entry.target as HTMLElement;
+      const key = this.observedRowKeys.get(row);
+      const index = this.observedRowIndices.get(row);
+      if (key === undefined || index === undefined) continue;
       const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.target.getBoundingClientRect().height;
       const prev = this.measuredHeights.get(key);
       // A sub-pixel-only difference (common with fractional layout/zoom)
       // isn't worth a full offsets rebuild + re-render.
       if (prev === undefined || Math.abs(prev - height) > 0.5) {
         this.measuredHeights.set(key, height);
+        // Keep the first visible row anchored while a row fully above it
+        // changes size. Otherwise auto-height measurement makes the viewport
+        // jump as soon as an earlier row is laid out.
+        const oldHeight = prev ?? DEFAULT_ROW_ESTIMATE_PX;
+        if (this.offsets[index + 1] <= oldScrollTop) scrollAdjustment += height - oldHeight;
         changed = true;
       }
     }
     if (changed) {
+      if (base && scrollAdjustment !== 0) {
+        const nextScrollTop = Math.max(0, oldScrollTop + scrollAdjustment);
+        base.scrollTop = nextScrollTop;
+        this.containerScrollTop = nextScrollTop;
+        this.pendingScrollTop = null;
+      }
       this.offsetsDirty = true;
       this.requestUpdate();
     }
@@ -442,10 +477,14 @@ export class LyraVirtualList extends LyraElement {
       this.observedRows.clear();
       return;
     }
-    const current = new Map<string, HTMLElement>();
+    const current = new Map<VirtualListKey, HTMLElement>();
     this.renderRoot.querySelectorAll<HTMLElement>('[part="row"]').forEach((el) => {
-      const key = el.dataset.rowKey;
-      if (key !== undefined) current.set(key, el);
+      const index = Number(el.getAttribute('aria-posinset')) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return;
+      const key = this.keyOf(this.items[index], index);
+      current.set(key, el);
+      this.observedRowKeys.set(el, key);
+      this.observedRowIndices.set(el, index);
     });
     for (const [key, el] of this.observedRows) {
       if (current.get(key) !== el) {
@@ -462,8 +501,8 @@ export class LyraVirtualList extends LyraElement {
   }
 
   private scrollActiveIntoView(): void {
-    if (!this.activeId) return;
-    const index = this.items.findIndex((item, i) => String(this.keyOf(item, i)) === this.activeId);
+    if (this.activeId === '') return;
+    const index = this.items.findIndex((item, i) => Object.is(this.keyOf(item, i), this.activeId));
     if (index < 0) return;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
     if (!base) return;
@@ -502,14 +541,14 @@ export class LyraVirtualList extends LyraElement {
   }
 
   private renderRow(item: unknown, index: number, total: number): TemplateResult {
-    const key = String(this.keyOf(item, index));
+    const key = this.keyOf(item, index);
     const top = this.offsets[index] ?? 0;
-    const isActive = this.activeId !== '' && key === this.activeId;
+    const isActive = this.activeId !== '' && Object.is(key, this.activeId);
     return html`
       <div
         part="row"
         role="listitem"
-        data-row-key=${key}
+        data-row-key=${domKeyToken(key)}
         aria-setsize=${total}
         aria-posinset=${index + 1}
         aria-current=${isActive ? 'true' : nothing}
@@ -518,6 +557,30 @@ export class LyraVirtualList extends LyraElement {
         ${this.renderItem(item, index)}
       </div>
     `;
+  }
+
+  private renderGroups(): TemplateResult[] {
+    const seen = new Set<number>();
+    return (this.groups ?? [])
+      .filter((group) => {
+        const index = group.startIndex;
+        if (!Number.isInteger(index) || index < 0 || index >= this.items.length || seen.has(index)) return false;
+        seen.add(index);
+        return true;
+      })
+      .sort((a, b) => a.startIndex - b.startIndex)
+      .map(
+        (group) => html`
+          <div
+            part="group"
+            role="heading"
+            aria-level="2"
+            style=${styleMap({ transform: `translateY(${this.offsets[group.startIndex] ?? 0}px)` })}
+          >
+            ${group.label ?? String(group.key)}
+          </div>
+        `,
+      );
   }
 
   render(): TemplateResult {
@@ -531,6 +594,7 @@ export class LyraVirtualList extends LyraElement {
     return html`
       <div part="base" role="list" tabindex="0" aria-busy=${this.loading ? 'true' : nothing}>
         <div part="spacer" style=${styleMap({ height: `${totalHeight}px` })}>
+          ${this.renderGroups()}
           ${repeat(
             windowed,
             (w) => this.keyOf(w.item, w.index),
