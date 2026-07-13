@@ -1,5 +1,0 @@
----
-"@aceshooting/lyra-ui": minor
----
-
-`<lyra-menu-item>` gained a `type` property (`'normal' | 'checkbox'`, default `'normal'`) and a `checked` boolean, mirroring `wa-dropdown-item`'s identical `type="checkbox"` pattern for building things like a "Word wrap" or "Show minimap" toggle inside a `<lyra-menu>`. A `type="checkbox"` item renders `role="menuitemcheckbox"` (instead of `role="menuitem"`) with `aria-checked` reflecting `checked` and a checkmark glyph shown once checked; activating it (click, or Enter/Space via a parent `<lyra-menu>`'s roving-focus handling) toggles `checked` and fires a new `lyra-menu-item-change` event (`detail: { value, checked }`) in addition to — not instead of — the existing `lyra-menu-item-select`, so a parent menu still closes and re-fires its consolidated `lyra-menu-select` exactly as before. `type="normal"` (the default, and every existing `<lyra-menu-item>` in the wild) is completely unaffected: same role, same rendering, same events as prior releases.
