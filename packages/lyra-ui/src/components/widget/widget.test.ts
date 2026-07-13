@@ -25,6 +25,39 @@ it('renders label and sublabel in the header', async () => {
   expect(el.shadowRoot!.querySelector('[part="sublabel"]')!.textContent).to.equal('Last 7 days');
 });
 
+it('truncates long label/sublabel text instead of wrapping and growing the header', async () => {
+  const longText =
+    'A very long widget title that is guaranteed to overflow a narrow fixed-width panel and get ellipsis-truncated';
+  const el = (await fixture(
+    html`<lyra-widget label=${longText} sublabel=${longText} style="max-inline-size: 8rem;">content</lyra-widget>`,
+  )) as LyraWidget;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const sublabel = el.shadowRoot!.querySelector('[part="sublabel"]') as HTMLElement;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+
+  expect(label.scrollWidth, 'sanity check: label text actually overflows its box').to.be.greaterThan(
+    label.clientWidth,
+  );
+  expect(sublabel.scrollWidth, 'sanity check: sublabel text actually overflows its box').to.be.greaterThan(
+    sublabel.clientWidth,
+  );
+  expect(getComputedStyle(label).textOverflow).to.equal('ellipsis');
+  expect(getComputedStyle(sublabel).textOverflow).to.equal('ellipsis');
+  expect(getComputedStyle(label).whiteSpace).to.equal('nowrap');
+  expect(getComputedStyle(sublabel).whiteSpace).to.equal('nowrap');
+
+  // A single line per part (label + sublabel stacked) instead of the header
+  // growing to wrap the long text -- each part's rendered height stays
+  // within one line-height of its own font-size.
+  expect(label.getBoundingClientRect().height).to.be.lessThanOrEqual(
+    parseFloat(getComputedStyle(label).fontSize) * 2,
+  );
+  expect(sublabel.getBoundingClientRect().height).to.be.lessThanOrEqual(
+    parseFloat(getComputedStyle(sublabel).fontSize) * 2,
+  );
+  expect(header).to.exist;
+});
+
 it('hides the actions wrapper when no actions content is slotted, shows it once slotted', async () => {
   const el = (await fixture(html`<lyra-widget label="x">content</lyra-widget>`)) as LyraWidget;
   const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
@@ -86,6 +119,24 @@ it('reflects the collapse-button aria-expanded and aria-label with the collapsed
 
   expect(btn.getAttribute('aria-expanded')).to.equal('false');
   expect(btn.getAttribute('aria-label')).to.equal('Expand panel');
+});
+
+it('rotates the wrapping [part="collapse-button"] itself, not the inner svg, per the icons.ts rotation contract', async () => {
+  // internal/icons.ts documents: "callers needing 'up'/'left'/'open' etc.
+  // rotate the wrapping part element via CSS transform: rotate(...), not the svg."
+  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
+  const svgEl = btn.querySelector('svg') as unknown as HTMLElement;
+
+  expect(getComputedStyle(btn).transform).to.not.equal('none');
+  expect(getComputedStyle(svgEl).transform).to.equal('none');
+});
+
+it('animates the collapse-button rotation via the CSS transition, not an instant snap', async () => {
+  const el = (await fixture(html`<lyra-widget label="x" collapsible>content</lyra-widget>`)) as LyraWidget;
+  const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
+
+  expect(getComputedStyle(btn).transitionProperty).to.include('transform');
 });
 
 it('toggles fullscreen on fullscreen-button click, locking scroll and adding a backdrop', async () => {
@@ -348,6 +399,34 @@ it("excludes a collapsed body's slotted focusable content from the fullscreen ta
   expect(el.shadowRoot!.activeElement).to.equal(collapseBtn);
 });
 
+it('reclaims focus inside the fullscreen panel when collapsing hides the currently focused body content', async () => {
+  const el = (await fixture(
+    html`<lyra-widget label="x" collapsible expandable><button id="inner">inner</button></lyra-widget>`,
+  )) as LyraWidget;
+  const fullscreenBtn = el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement;
+  const collapseBtn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+
+  fullscreenBtn.click();
+  await el.updateComplete;
+  expect(el.fullscreen).to.be.true;
+
+  const inner = el.querySelector('#inner') as HTMLButtonElement;
+  inner.focus();
+  expect((el.shadowRoot!.activeElement ?? document.activeElement) === inner).to.be.true;
+
+  el.collapsed = true;
+  await el.updateComplete;
+
+  // Focus must land on a still-connected focusable element inside the
+  // shadow root (the collapse-button, the first focusable in this case)
+  // rather than escaping the modal focus trap out to document.body. (Boolean
+  // comparisons rather than direct chai `.to.equal(domNode)` here -- this
+  // test environment can hang trying to build a failure diff for two DOM
+  // element references, so failures must resolve through a plain boolean.)
+  expect(document.activeElement !== document.body).to.be.true;
+  expect(el.shadowRoot!.activeElement === collapseBtn).to.be.true;
+});
+
 it('moves focus into the panel when fullscreen is entered', async () => {
   const el = (await fixture(
     html`<lyra-widget label="x" collapsible expandable>content</lyra-widget>`,
@@ -425,4 +504,44 @@ it('falls back to the default inset when fullscreen-inset is unset', async () =>
 it('reflects the compact attribute', async () => {
   const el = (await fixture(html`<lyra-widget compact><p>Body</p></lyra-widget>`)) as LyraWidget;
   expect(el.hasAttribute('compact')).to.be.true;
+});
+
+it('applies tighter header/body padding when compact', async () => {
+  const normal = (await fixture(
+    html`<lyra-widget label="x"><p>Body</p></lyra-widget>`,
+  )) as LyraWidget;
+  const compact = (await fixture(
+    html`<lyra-widget label="x" compact><p>Body</p></lyra-widget>`,
+  )) as LyraWidget;
+
+  expect(compact.hasAttribute('compact')).to.be.true;
+
+  const normalHeader = normal.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const compactHeader = compact.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const normalBody = normal.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const compactBody = compact.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+
+  const normalHeaderStyle = getComputedStyle(normalHeader);
+  const compactHeaderStyle = getComputedStyle(compactHeader);
+  const normalBodyStyle = getComputedStyle(normalBody);
+  const compactBodyStyle = getComputedStyle(compactBody);
+
+  // The compact `--lyra-space-xs`/`--lyra-space-s` padding renders strictly
+  // smaller than the default `--lyra-space-s`/`--lyra-space-m` padding.
+  expect(
+    parseFloat(compactHeaderStyle.paddingBlockStart),
+    'compact header padding should render smaller than the default',
+  ).to.be.lessThan(parseFloat(normalHeaderStyle.paddingBlockStart));
+  expect(
+    parseFloat(compactHeaderStyle.paddingInlineStart),
+    'compact header padding should render smaller than the default',
+  ).to.be.lessThan(parseFloat(normalHeaderStyle.paddingInlineStart));
+  expect(
+    parseFloat(compactBodyStyle.paddingBlockStart),
+    'compact body padding should render smaller than the default',
+  ).to.be.lessThan(parseFloat(normalBodyStyle.paddingBlockStart));
+  expect(
+    parseFloat(compactBodyStyle.paddingInlineStart),
+    'compact body padding should render smaller than the default',
+  ).to.be.lessThan(parseFloat(normalBodyStyle.paddingInlineStart));
 });

@@ -1,51 +1,17 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import {
+  activateOverlay,
+  collectFocusableElements,
+  deepActiveElement,
+  type OverlayHandle,
+} from '../../internal/overlay-manager.js';
 import { defineElement } from '../../internal/prefix.js';
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon, closeIcon, expandIcon } from '../../internal/icons.js';
 import { styles } from './widget.styles.js';
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// Shadow-piercing so a slotted custom element's real focusable target (e.g.
-// an <input> inside its own shadow root) is found even though the host tag
-// itself doesn't match FOCUSABLE_SELECTOR.
-function collectFocusable(el: Element): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  if (el.matches(FOCUSABLE_SELECTOR)) {
-    result.push(el as HTMLElement);
-  }
-  if (el instanceof HTMLSlotElement) {
-    for (const assigned of el.assignedElements({ flatten: true })) {
-      result.push(...collectFocusable(assigned));
-    }
-    return result;
-  }
-  const container: Element | ShadowRoot = el.shadowRoot ?? el;
-  for (const child of Array.from(container.children)) {
-    result.push(...collectFocusable(child));
-  }
-  return result;
-}
-
-/**
- * Whether `el` is actually laid out/paintable — used to drop e.g. a
- * `[collapsed]` body's slotted content from the fullscreen tab order.
- * `el.offsetParent !== null` is the usual shorthand for this, but it's
- * unreliable here: it resolves `null` for an element whose nearest
- * *positioned* ancestor (fullscreen's `[part="base"] { position: fixed }`)
- * lives across a slot-projection boundary from the element itself (true for
- * every element this scans, since they're all slotted content), even though
- * the element is genuinely rendered. `checkVisibility()` (falling back to
- * `getClientRects().length` on engines without it) correctly follows
- * flattened-tree/slot assignment instead.
- */
-function isRendered(el: HTMLElement): boolean {
-  return el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
-}
 
 /**
  * `<lyra-widget>` — a titled panel shell with an optional collapse toggle and
@@ -92,7 +58,8 @@ export class LyraWidget extends LyraElement {
   @state() private hasActionsSlot = false;
 
   private releaseScrollLock?: () => void;
-  private lastTrigger?: HTMLElement;
+  private overlayHandle?: OverlayHandle;
+  private explicitTrigger?: HTMLElement;
   private readonly bodyId = nextId('widget-body');
 
   protected willUpdate(changed: PropertyValues): void {
@@ -101,12 +68,9 @@ export class LyraWidget extends LyraElement {
     }
     if (changed.has('fullscreen')) {
       if (this.fullscreen) {
-        this.releaseScrollLock = lockScroll();
-        document.addEventListener('keydown', this.onDocKeyDown);
+        this.activateFullscreenOverlay();
       } else {
-        this.releaseScrollLock?.();
-        this.releaseScrollLock = undefined;
-        document.removeEventListener('keydown', this.onDocKeyDown);
+        this.deactivateFullscreenOverlay();
       }
     }
   }
@@ -118,13 +82,21 @@ export class LyraWidget extends LyraElement {
   // because a mouse click natively focuses the button that triggered it --
   // not true for a directly-set `fullscreen` property, and not guaranteed
   // for every input method/browser even in the click case.
+  //
+  // The `collapsed` branch covers the same modal-focus-trap requirement for
+  // a second case: collapsing the body while fullscreen hides (display:none)
+  // whatever was focused inside it, which the browser resolves by silently
+  // moving focus outside the panel. The shared manager then reclaims it while
+  // preserving focus that is still on one of the visible header controls.
   protected updated(changed: PropertyValues): void {
     if (changed.has('fullscreen') && this.fullscreen) {
-      const first = this.getFocusableElements()[0];
-      if (first) {
-        first.focus();
-      } else {
-        this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
+      this.overlayHandle?.focusInitial();
+    } else if (changed.has('collapsed') && this.fullscreen) {
+      const panel = this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+      const active = deepActiveElement(this.ownerDocument);
+      if (panel && !collectFocusableElements(panel).includes(active as HTMLElement)) {
+        if (active && typeof (active as HTMLElement).blur === 'function') (active as HTMLElement).blur();
+        this.overlayHandle?.focusInitial();
       }
     }
   }
@@ -134,12 +106,16 @@ export class LyraWidget extends LyraElement {
     // A reconnect (e.g. a drag-and-drop reparent that keeps this same
     // element instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns
-    // to notice `fullscreen` is still true. Restore the scroll lock/trap it
-    // dropped. `hasUpdated` excludes the initial mount, where willUpdate's
-    // first pass already establishes them from the starting property value.
-    if (this.hasUpdated && this.fullscreen && !this.releaseScrollLock) {
-      this.releaseScrollLock = lockScroll();
-      document.addEventListener('keydown', this.onDocKeyDown);
+    // to notice `fullscreen` is still true. Restore the shared overlay
+    // registration and scroll lock it dropped.
+    if (this.hasUpdated && this.fullscreen) {
+      if (this.overlayHandle?.isActive()) {
+        this.overlayHandle.resume();
+      } else {
+        this.activateFullscreenOverlay();
+      }
+      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
   }
 
@@ -147,7 +123,26 @@ export class LyraWidget extends LyraElement {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
-    document.removeEventListener('keydown', this.onDocKeyDown);
+    this.overlayHandle?.suspend();
+  }
+
+  private activateFullscreenOverlay(): void {
+    this.releaseScrollLock ??= lockScroll(this.ownerDocument);
+    this.overlayHandle = activateOverlay({
+      host: this,
+      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
+      onEscape: this.dismissFullscreen,
+      onBackdrop: this.dismissFullscreen,
+      restoreFocusTo: this.explicitTrigger,
+    });
+    this.explicitTrigger = undefined;
+  }
+
+  private deactivateFullscreenOverlay(): void {
+    this.releaseScrollLock?.();
+    this.releaseScrollLock = undefined;
+    this.overlayHandle?.deactivate();
+    this.overlayHandle = undefined;
   }
 
   private onActionsSlotChange = (e: Event): void => {
@@ -160,78 +155,19 @@ export class LyraWidget extends LyraElement {
   };
 
   private toggleFullscreen = (e: MouseEvent): void => {
-    this.lastTrigger = e.currentTarget as HTMLElement;
+    if (!this.fullscreen) this.explicitTrigger = e.currentTarget as HTMLElement;
     this.fullscreen = !this.fullscreen;
     this.emit('lyra-fullscreen-change', this.fullscreen);
-    if (!this.fullscreen) {
-      this.lastTrigger?.focus();
-    }
   };
 
-  private onDocKeyDown = (e: KeyboardEvent): void => {
-    if (!this.fullscreen) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.fullscreen = false;
-      this.emit('lyra-fullscreen-change', false);
-      this.lastTrigger?.focus();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const focusable = this.getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.getActiveElement();
-    if (e.shiftKey && active === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
-  // Bounds Tab/Shift+Tab to the panel while fullscreen (a modal presentation)
-  // so keyboard focus can't escape to page content hidden behind the
-  // backdrop. Order follows the header's actions slot, then the collapse/
-  // fullscreen buttons, then the body slot -- the same order the flattened
-  // tree already tabs through.
-  private getFocusableElements(): HTMLElement[] {
-    const root = this.shadowRoot;
-    if (!root) return [];
-    const fromSlot = (selector: string): HTMLElement[] => {
-      const slot = root.querySelector<HTMLSlotElement>(selector);
-      return slot ? slot.assignedElements({ flatten: true }).flatMap(collectFocusable) : [];
-    };
-    const shadowButtons = Array.from(
-      root.querySelectorAll<HTMLElement>('[part="collapse-button"], [part="fullscreen-button"]'),
-    );
-    return [
-      ...fromSlot('slot[name="actions"]'),
-      ...shadowButtons,
-      ...fromSlot('[part="body"] slot:not([name])'),
-    ].filter(isRendered);
-  }
-
-  private getActiveElement(): Element | null {
-    let active: Element | null = document.activeElement;
-    while (active) {
-      const inner: Element | null = active.shadowRoot?.activeElement ?? null;
-      if (!inner) break;
-      active = inner;
-    }
-    return active;
-  }
-
-  private onBackdropClick = (): void => {
+  private dismissFullscreen = (): void => {
     if (!this.fullscreen) return;
     this.fullscreen = false;
     this.emit('lyra-fullscreen-change', false);
-    this.lastTrigger?.focus();
+  };
+
+  private onBackdropClick = (): void => {
+    this.overlayHandle?.dismissBackdrop();
   };
 
   render(): TemplateResult {
@@ -268,11 +204,10 @@ export class LyraWidget extends LyraElement {
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-label=${this.collapsed ? 'Expand panel' : 'Collapse panel'}
                 aria-controls=${this.bodyId}
+                style="transform:rotate(${this.collapsed ? '0deg' : '90deg'})"
                 @click=${this.toggleCollapsed}
               >
-                <span style="display:inline-flex;transform:rotate(${this.collapsed ? '0deg' : '90deg'})"
-                  >${chevronIcon()}</span
-                >
+                ${chevronIcon()}
               </button>`
             : nothing}
           ${this.expandable

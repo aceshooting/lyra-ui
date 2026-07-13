@@ -30,6 +30,12 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
+  [part='label'],
+  [part='sublabel'] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   [part='label'] {
     font-weight: 600;
   }
@@ -81,12 +87,12 @@ export const styles = css`
     position: fixed;
     inset: var(--lyra-widget-fullscreen-inset, 0);
     background: var(--lyra-widget-overlay-color);
-    z-index: 999;
+    z-index: var(--lyra-overlay-stack-index, 1000);
   }
   :host([fullscreen]) [part='base'] {
     position: fixed;
     inset: var(--lyra-widget-fullscreen-inset);
-    z-index: 1000;
+    z-index: calc(var(--lyra-overlay-stack-index, 1000) + 1);
     box-shadow: var(--lyra-shadow);
   }
   :host([fullscreen]) [part='body'] {
