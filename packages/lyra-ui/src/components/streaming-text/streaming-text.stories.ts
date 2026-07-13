@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import './streaming-text.js';
 import '../markdown/markdown.js';
 import type { LyraStreamingText } from './streaming-text.js';
@@ -78,41 +79,40 @@ export const LiveTokenStream: Story = {
         /(?<=\s)/,
       );
 
-    function wire(root: HTMLElement): void {
-      const el = root.querySelector<LyraStreamingText>('lyra-streaming-text')!;
-      if (el.hasAttribute('data-wired')) return;
-      el.setAttribute('data-wired', '');
+    const elRef = createRef<LyraStreamingText>();
+    let timer: ReturnType<typeof setInterval> | undefined;
 
-      let timer: ReturnType<typeof setInterval> | undefined;
-      root.querySelector('[data-start]')!.addEventListener('click', () => {
-        clearInterval(timer);
-        el.content = '';
-        el.streaming = true;
-        let i = 0;
-        // Fires far faster than the default 50ms coalesce-ms window on
-        // purpose, so the coalescing behavior described in the component
-        // doc is actually visible rather than merely asserted.
-        timer = setInterval(() => {
-          i++;
-          el.content = tokens.slice(0, i).join('');
-          if (i >= tokens.length) {
-            clearInterval(timer);
-            el.streaming = false;
-          }
-        }, 20);
-      });
+    // Bound directly on the button via @click below (not wired up from a
+    // bubbled event on some ancestor) so the very first click already has a
+    // real listener attached -- Lit's template bindings attach eagerly on
+    // first render and are idempotent across re-renders, so no manual
+    // wiring guard is needed.
+    function start(): void {
+      const el = elRef.value!;
+      clearInterval(timer);
+      el.content = '';
+      el.streaming = true;
+      let i = 0;
+      // Fires far faster than the default 50ms coalesce-ms window on
+      // purpose, so the coalescing behavior described in the component
+      // doc is actually visible rather than merely asserted.
+      timer = setInterval(() => {
+        i++;
+        el.content = tokens.slice(0, i).join('');
+        if (i >= tokens.length) {
+          clearInterval(timer);
+          el.streaming = false;
+        }
+      }, 20);
     }
 
     return html`
-      <div
-        style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
-      >
+      <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
         <div style="border:1px solid var(--lyra-color-border, #ddd); border-radius:0.5rem; padding:0.75rem;">
-          <lyra-streaming-text coalesce-ms="50"></lyra-streaming-text>
+          <lyra-streaming-text coalesce-ms="50" ${ref(elRef)}></lyra-streaming-text>
         </div>
         <div>
-          <button style=${buttonStyle} data-start>Start streaming</button>
+          <button style=${buttonStyle} @click=${start}>Start streaming</button>
         </div>
         <p style="margin:0; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
           Tokens arrive every 20ms — faster than the 50ms <code>coalesce-ms</code> window — so several
@@ -138,51 +138,49 @@ export const CoalescingComparison: Story = {
       ' ',
     );
 
-    function wire(root: HTMLElement): void {
-      const fast = root.querySelector<LyraStreamingText>('[data-fast]')!;
-      const slow = root.querySelector<LyraStreamingText>('[data-slow]')!;
-      if (fast.hasAttribute('data-wired')) return;
-      fast.setAttribute('data-wired', '');
+    const fastRef = createRef<LyraStreamingText>();
+    const slowRef = createRef<LyraStreamingText>();
 
-      root.querySelector('[data-start]')!.addEventListener('click', () => {
-        fast.content = '';
-        slow.content = '';
-        fast.streaming = true;
-        slow.streaming = true;
-        let i = 0;
-        const timer = setInterval(() => {
-          i++;
-          const text = words.slice(0, i).join(' ');
-          fast.content = text;
-          slow.content = text;
-          if (i >= words.length) {
-            clearInterval(timer);
-            fast.streaming = false;
-            slow.streaming = false;
-          }
-        }, 30);
-      });
+    // Bound directly on the button via @click below so the very first click
+    // already works -- see the LiveTokenStream story above for why the
+    // previous bubbled-event wiring pattern silently no-op'd on that click.
+    function start(): void {
+      const fast = fastRef.value!;
+      const slow = slowRef.value!;
+      fast.content = '';
+      slow.content = '';
+      fast.streaming = true;
+      slow.streaming = true;
+      let i = 0;
+      const timer = setInterval(() => {
+        i++;
+        const text = words.slice(0, i).join(' ');
+        fast.content = text;
+        slow.content = text;
+        if (i >= words.length) {
+          clearInterval(timer);
+          fast.streaming = false;
+          slow.streaming = false;
+        }
+      }, 30);
     }
 
     return html`
-      <div
-        style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;"
-        @click=${(e: Event) => wire(e.currentTarget as HTMLElement)}
-      >
+      <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
         <div>
           <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
             coalesce-ms="0"
           </p>
-          <lyra-streaming-text data-fast markdown="false" coalesce-ms="0"></lyra-streaming-text>
+          <lyra-streaming-text markdown="false" coalesce-ms="0" ${ref(fastRef)}></lyra-streaming-text>
         </div>
         <div>
           <p style="margin:0 0 0.25rem; font-size:0.8125rem; color:var(--lyra-color-text-quiet, #6b7280);">
             coalesce-ms="300"
           </p>
-          <lyra-streaming-text data-slow markdown="false" coalesce-ms="300"></lyra-streaming-text>
+          <lyra-streaming-text markdown="false" coalesce-ms="300" ${ref(slowRef)}></lyra-streaming-text>
         </div>
         <div>
-          <button style=${buttonStyle} data-start>Start streaming</button>
+          <button style=${buttonStyle} @click=${start}>Start streaming</button>
         </div>
       </div>
     `;

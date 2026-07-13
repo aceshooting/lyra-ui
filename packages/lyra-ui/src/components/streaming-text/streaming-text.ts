@@ -82,8 +82,10 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * the throttle and flush immediately instead of waiting out the window: the
  * very first `content` assignment after mount (so an already-complete
  * message never shows an artificial startup delay), and any transition of
- * `streaming` from `true` to `false` (so the final chunk of a finished
- * stream can never be left stranded mid-window).
+ * `streaming` between `true` and `false` in either direction (so the final
+ * chunk of a finished stream can never be left stranded mid-window, and a
+ * stream restarting on a reused element can never keep showing the
+ * previous stream's stale final content for the length of the window).
  *
  * `markdown` is a tri-state property, not a plain boolean: left unset (the
  * default), it auto-detects via a lightweight regex heuristic (see
@@ -143,6 +145,15 @@ export class LyraStreamingText extends LyraElement {
   // `coalesceMs` (or zero, for the immediate-flush cases documented above).
   @state() private displayedContent = '';
 
+  // Cache pair for the Markdown auto-detect heuristic, keyed on the
+  // `displayedContent` value it was last run against. `effectiveMarkdown` is
+  // read on every render pass, including ones triggered only by `streaming`
+  // toggling with no actual `displayedContent` change -- re-scanning the
+  // whole string on those passes would rerun the entire regex battery for a
+  // result that can't possibly have changed since the last scan.
+  private lastScannedContent?: string;
+  private lastScannedResult = false;
+
   private readonly coalescer: Announcer;
 
   constructor() {
@@ -170,13 +181,25 @@ export class LyraStreamingText extends LyraElement {
       // coalescing window technically applies to it.
       this.coalescer.announce(this.content, { force: !this.hasUpdated });
     }
-    // A stream finishing must never leave its final chunk stranded inside an
-    // in-progress coalescing window -- force whatever `content` currently
-    // holds through immediately. `changed.get('streaming')` is only defined
-    // for a real transition (never the initial mount value, per Lit's
-    // documented first-change semantics), so this can't misfire on connect.
-    if (changed.has('streaming') && changed.get('streaming') === true && !this.streaming) {
+    // Neither a stream finishing nor a stream (re)starting on a reused
+    // element may leave stale content stranded inside an in-progress
+    // coalescing window -- force whatever `content` currently holds through
+    // immediately in both directions. Without the restart side of this, a
+    // reused element would keep showing the *previous* stream's final
+    // content for up to a full coalesce-ms window after a new stream had
+    // already begun. `changed.get('streaming')` is only defined for a real
+    // transition (never the initial mount value, per Lit's documented
+    // first-change semantics), so this can't misfire on connect.
+    if (
+      changed.has('streaming') &&
+      changed.get('streaming') !== undefined &&
+      changed.get('streaming') !== this.streaming
+    ) {
       this.coalescer.announce(this.content, { force: true });
+    }
+    if (changed.has('displayedContent') && this.displayedContent !== this.lastScannedContent) {
+      this.lastScannedContent = this.displayedContent;
+      this.lastScannedResult = looksLikeMarkdown(this.displayedContent);
     }
   }
 
@@ -186,9 +209,11 @@ export class LyraStreamingText extends LyraElement {
   }
 
   /** Whether Markdown mode is actually in effect right now, resolving the
-   *  tri-state `markdown` property against `looksLikeMarkdown`. */
+   *  tri-state `markdown` property against the memoized `looksLikeMarkdown`
+   *  result for the currently-displayed content (see `lastScannedContent`/
+   *  `lastScannedResult` above). */
   private get effectiveMarkdown(): boolean {
-    return this.markdown ?? looksLikeMarkdown(this.displayedContent);
+    return this.markdown ?? this.lastScannedResult;
   }
 
   render(): TemplateResult {

@@ -6,10 +6,11 @@ export const styles = css`
     overflow-wrap: break-word;
     /* Not derived from any --lyra-* token in tokens.styles.ts -- there's no
        shared "inline cursor bar" token to resolve through, so this component
-       defines its own scoped custom property, exactly the way
+       defines its own scoped custom properties, exactly the way
        lyra-typing-indicator's --lyra-typing-cursor-width/-height do for its
        own (near-identical) blinking cursor. */
     --lyra-streaming-text-cursor-width: 0.125rem;
+    --lyra-streaming-text-cursor-height: 1em;
   }
 
   [part='base'] {
@@ -31,7 +32,7 @@ export const styles = css`
     display: inline-block;
     vertical-align: text-bottom;
     inline-size: var(--lyra-streaming-text-cursor-width);
-    block-size: 1em;
+    block-size: var(--lyra-streaming-text-cursor-height);
     margin-inline-start: var(--lyra-space-xs);
     background: currentColor;
     border-radius: var(--lyra-streaming-text-cursor-width);

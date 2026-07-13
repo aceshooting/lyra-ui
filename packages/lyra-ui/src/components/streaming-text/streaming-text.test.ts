@@ -43,6 +43,33 @@ it('maps the coalesce-ms attribute onto the coalesceMs number property', async (
   expect(el.coalesceMs).to.equal(120);
 });
 
+it('honors coalesceMs reassigned after mount for a subsequent burst, not just the initial attribute mapping', async () => {
+  const el = (await fixture(
+    html`<lyra-streaming-text coalesce-ms="5000"></lyra-streaming-text>`,
+  )) as LyraStreamingText;
+  expect(el.coalesceMs, 'precondition: mounted with the large window').to.equal(5000);
+
+  // Shrink the window well below the original mount-time value before
+  // starting a fresh burst -- if the reassignment didn't actually reach the
+  // underlying coalescer, this burst would still be governed by the stale
+  // 5000ms window and wouldn't flush within this test's real-time budget.
+  el.coalesceMs = 50;
+  await el.updateComplete;
+
+  el.content = 'a';
+  await el.updateComplete;
+  el.content = 'ab';
+  await el.updateComplete;
+  el.content = 'abc';
+  await el.updateComplete;
+
+  await aTimeout(150);
+  expect(
+    plainText(el),
+    'the burst should flush using the newly-assigned coalesceMs, not the original 5000ms window',
+  ).to.equal('abc');
+});
+
 describe('markdown tri-state attribute parsing', () => {
   it('is undefined when the markdown attribute is entirely absent', async () => {
     const el = (await fixture(html`<lyra-streaming-text></lyra-streaming-text>`)) as LyraStreamingText;
@@ -105,6 +132,34 @@ describe('coalescing', () => {
     expect(plainText(el), 'the stream-end transition must force-flush the final content').to.equal('final chunk');
   });
 
+  it('flushes immediately, bypassing the coalesce window, when streaming restarts (false -> true) on a reused element', async () => {
+    const el = (await fixture(
+      html`<lyra-streaming-text coalesce-ms="5000"></lyra-streaming-text>`,
+    )) as LyraStreamingText;
+
+    // Finish a first stream so the element is left showing that stream's
+    // final content, exactly like a reused chat-message element would be
+    // between two separate assistant turns.
+    el.content = 'first stream final content';
+    el.streaming = true;
+    await el.updateComplete;
+    el.streaming = false;
+    await el.updateComplete;
+    expect(plainText(el), 'precondition: the first stream flushed its final content').to.equal(
+      'first stream final content',
+    );
+
+    // Restarting the stream on the same element with new content must
+    // force-flush immediately -- otherwise the previous stream's stale final
+    // content would keep showing for up to the full 5000ms coalesce window
+    // even though a new stream has already started.
+    el.content = 'second stream first chunk';
+    el.streaming = true;
+    await el.updateComplete;
+
+    expect(plainText(el), 'a stream restart must force-flush immediately').to.equal('second stream first chunk');
+  });
+
   it('does not force-flush a no-op reassignment of streaming to the same value', async () => {
     const el = (await fixture(
       html`<lyra-streaming-text streaming coalesce-ms="5000"></lyra-streaming-text>`,
@@ -131,6 +186,39 @@ describe('coalescing', () => {
       (el as unknown as Internals).displayedContent,
       'a disconnected element must not still flush a pending burst',
     ).to.equal('');
+  });
+});
+
+describe('markdown heuristic memoization', () => {
+  it('does not re-run the markdown auto-detect heuristic on a render triggered only by streaming, with no displayedContent change', async () => {
+    const el = (await fixture(
+      html`<lyra-streaming-text .content=${'just plain prose, no markdown syntax here'}></lyra-streaming-text>`,
+    )) as LyraStreamingText;
+    await el.updateComplete;
+
+    const originalTest = RegExp.prototype.test;
+    let scans = 0;
+    try {
+      RegExp.prototype.test = function (this: RegExp, str: string): boolean {
+        scans++;
+        return originalTest.call(this, str);
+      };
+
+      // Neither of these transitions touches `content`/`displayedContent` --
+      // each is still its own genuine `streaming` change (so each re-renders),
+      // but the text the heuristic would scan is identical both times.
+      el.streaming = true;
+      await el.updateComplete;
+      el.streaming = false;
+      await el.updateComplete;
+
+      expect(
+        scans,
+        'a render triggered only by `streaming` toggling must not re-scan unchanged displayedContent',
+      ).to.equal(0);
+    } finally {
+      RegExp.prototype.test = originalTest;
+    }
   });
 });
 
@@ -213,6 +301,14 @@ describe('cursor', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('animation: lyra-streaming-text-cursor-blink var(--lyra-transition-base) infinite;');
     expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
+  });
+
+  it('sizes the cursor bar from themeable --lyra-streaming-text-cursor-width/-height custom properties, not hardcoded literals', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('--lyra-streaming-text-cursor-width: 0.125rem;');
+    expect(css).to.include('--lyra-streaming-text-cursor-height: 1em;');
+    expect(css).to.include('inline-size: var(--lyra-streaming-text-cursor-width);');
+    expect(css).to.include('block-size: var(--lyra-streaming-text-cursor-height);');
   });
 });
 
