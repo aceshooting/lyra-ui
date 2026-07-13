@@ -462,6 +462,52 @@ it('renders a visible fallback note for a property type outside this phase\'s sc
   expect(el.checkValidity()).to.be.false;
 });
 
+it('gives the unsupported-type fallback an id matching its <label for>, instead of a dangling reference', async () => {
+  const weirdSchema = {
+    type: 'object',
+    properties: { nested: { type: 'object' } },
+  } as unknown as ToolParamFormSchema;
+  const el = (await fixture(html`<lyra-tool-param-form .schema=${weirdSchema}></lyra-tool-param-form>`)) as LyraToolParamForm;
+  const label = field(el, 'nested').querySelector('label') as HTMLLabelElement;
+  const unsupported = field(el, 'nested').querySelector('.unsupported') as HTMLElement;
+  expect(unsupported.id).to.not.equal('');
+  expect(label.getAttribute('for')).to.equal(unsupported.id);
+});
+
+it('flags a fractional value on an integer field as invalid, independent of required', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-param-form .schema=${basicSchema} .value=${{ city: 'Paris' }}></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+
+  setTimeout(() => {
+    daysInput.value = '3.5';
+    daysInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const ev = await oneEvent(el, 'lyra-input');
+  expect(ev.detail.value.days).to.equal(3.5);
+  expect(el.errors.days).to.equal('Must be a whole number.');
+  expect(el.checkValidity()).to.be.false;
+  expect(el.reportValidity()).to.be.false;
+});
+
+it('folds the error into the checkbox\'s aria-label once touched and invalid, leaving it unset otherwise', async () => {
+  const requiredBoolSchema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { confirm: { type: 'boolean', title: 'Confirm' } },
+    required: ['confirm'],
+  };
+  const el = (await fixture(
+    html`<lyra-tool-param-form .schema=${requiredBoolSchema}></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+  const checkbox = field(el, 'confirm').querySelector('lyra-checkbox') as HTMLElement;
+  expect(checkbox.hasAttribute('aria-label')).to.be.false;
+
+  field(el, 'confirm').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(checkbox.getAttribute('aria-label')).to.equal('Confirm. This field is required.');
+});
+
 it('participates in a form: submits the resolved value as JSON under name', async () => {
   const form = (await fixture(html`
     <form><lyra-tool-param-form name="args" .schema=${basicSchema} .value=${{ city: 'Paris' }}></lyra-tool-param-form></form>

@@ -623,9 +623,14 @@ export class LyraToolParamForm extends LyraElement {
       // that slot *is* lyra-checkbox's documented way to give it an
       // accessible name (see checkbox.ts's own @slot doc), and unlike
       // aria-describedby, this genuinely works since it's real slotted
-      // content, not an inert host attribute.
+      // content, not an inert host attribute. Once there's an error, fold it
+      // into aria-label the same way the enum/select branch above does --
+      // an explicit aria-label overrides the slotted accessible name, so the
+      // normal (no error) case is left alone to keep deriving its name from
+      // the slot per lyra-checkbox's own documented contract.
       return html`<lyra-checkbox
         id=${fieldId}
+        aria-label=${errorMessage ? `${label}. ${errorMessage}` : nothing}
         ?checked=${effective === true}
         ?disabled=${this.effectiveDisabled}
         @lyra-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
@@ -635,8 +640,10 @@ export class LyraToolParamForm extends LyraElement {
     }
     // Defensive fallback for a schema property outside this phase's scope
     // (see the class doc) — render a visible note instead of silently
-    // dropping the field or throwing.
-    return html`<p class="unsupported">Unsupported field type "${(prop as { type: string }).type}".</p>`;
+    // dropping the field or throwing. Still carries id=fieldId like every
+    // other control-slot render, since renderField's shared, non-boolean
+    // branch above always renders a <label for=fieldId> pointing at it.
+    return html`<p class="unsupported" id=${fieldId}>Unsupported field type "${(prop as { type: string }).type}".</p>`;
   }
 
   private renderField(key: string, prop: ToolParamFormProperty, index: number): TemplateResult {
