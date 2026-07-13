@@ -561,6 +561,21 @@ it('hides the error and hint parts when empty, shows them once populated', async
   expect(getComputedStyle(hintPart).display).to.not.equal('none');
 });
 
+it('associates the trigger with the hint/error text via aria-describedby, like lyra-combobox', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  await el.updateComplete;
+  const btn = trigger(el);
+  expect(btn.hasAttribute('aria-describedby')).to.be.false;
+
+  el.hint = 'Pick a fruit';
+  await el.updateComplete;
+  expect(btn.getAttribute('aria-describedby')).to.equal('select-hint');
+
+  el.errorText = 'Selection required';
+  await el.updateComplete;
+  expect(btn.getAttribute('aria-describedby')).to.equal('select-error select-hint');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.label = 'Fruit';

@@ -580,6 +580,7 @@ export class LyraSelect extends LyraElement {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const describedBy = [hasError ? 'select-error' : '', hasHint ? 'select-hint' : ''].filter(Boolean).join(' ');
     // A single navigable option has no popup to expand into -- the trigger commits it
     // directly on activation (see onTriggerClick/onKeyDown) instead of opening the listbox,
     // so it's exposed as a plain button rather than a combobox with a permanently-closed
@@ -602,6 +603,7 @@ export class LyraSelect extends LyraElement {
           aria-controls=${isSingleOption ? nothing : this.listId}
           aria-activedescendant=${isSingleOption ? nothing : activeId}
           aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Select')}
+          aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           ?disabled=${this.effectiveDisabled}
@@ -623,10 +625,10 @@ export class LyraSelect extends LyraElement {
         >
           ${this.renderRows(options, activeId)}
         </div>
-        <div part="error" ?hidden=${!hasError}>
+        <div id="select-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
         </div>
-        <div part="hint" ?hidden=${!hasHint}>
+        <div id="select-hint" part="hint" ?hidden=${!hasHint}>
           ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
         </div>
       </div>

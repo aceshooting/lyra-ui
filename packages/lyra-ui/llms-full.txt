@@ -302,6 +302,10 @@ selection change — a native `<select>` doesn't meaningfully distinguish the tw
 **Slots:** default (`<lyra-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided)
 
+When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
+IDs for both messages (error first, then hint), so the visible supporting text is part of the
+control's accessible description.
+
 **CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `option`, `option-dot`
 (the leading status dot, when a row's `dotColor` is set), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
