@@ -56,6 +56,13 @@ export interface WordCloudLayoutResult {
 
 /** DOM-node/compute-time safety cap — mirrors lyra-sparkline's `MAX_BARS`. */
 export const MAX_WORDS = 150;
+/** Largest accepted font size in CSS pixels. This keeps measurement and
+ *  placement geometry finite enough for an interactive render even when a
+ *  caller supplies an otherwise-valid but impractically large number. */
+export const MAX_FONT_SIZE_PX = 512;
+/** Maximum number of candidate positions tested for any one word. Together
+ *  with `MAX_WORDS`, this puts a hard upper bound on spiral-search work. */
+export const MAX_SPIRAL_ITERATIONS = 4096;
 /** Minimum gap enforced both between placed words and around the returned bounding box. */
 export const GAP = 3;
 const ROTATE_PROBABILITY = 0.25;
@@ -70,12 +77,19 @@ const MAX_RADIUS_AREA_FACTOR = 6;
 const MIN_SANE_FONT_SIZE = 1;
 
 /** Normalizes possibly-invalid minFontSize/maxFontSize into a finite,
- *  positive, correctly-ordered pair — non-finite/negative inputs fall back
- *  to MIN_SANE_FONT_SIZE, and a reversed pair (max < min) is swapped rather
- *  than left to invert the weight-to-size mapping. */
+ *  positive, bounded, correctly-ordered pair — non-finite/negative inputs
+ *  fall back to MIN_SANE_FONT_SIZE, huge finite values are capped, and a
+ *  reversed pair (max < min) is swapped rather than left to invert the
+ *  weight-to-size mapping. */
 function resolveFontSizeBounds(minFontSize: number, maxFontSize: number): [number, number] {
-  const min = Number.isFinite(minFontSize) && minFontSize > 0 ? minFontSize : MIN_SANE_FONT_SIZE;
-  const max = Number.isFinite(maxFontSize) && maxFontSize > 0 ? maxFontSize : MIN_SANE_FONT_SIZE;
+  const min =
+    Number.isFinite(minFontSize) && minFontSize > 0
+      ? Math.min(minFontSize, MAX_FONT_SIZE_PX)
+      : MIN_SANE_FONT_SIZE;
+  const max =
+    Number.isFinite(maxFontSize) && maxFontSize > 0
+      ? Math.min(maxFontSize, MAX_FONT_SIZE_PX)
+      : MIN_SANE_FONT_SIZE;
   return min <= max ? [min, max] : [max, min];
 }
 
@@ -163,8 +177,10 @@ export function layoutWordCloud(words: WordCloudWord[], options: WordCloudLayout
     let x = 0;
     let y = 0;
     let foundSpot = placed.length === 0;
+    let iterations = 0;
 
-    while (!foundSpot && radius < maxRadius) {
+    while (!foundSpot && radius < maxRadius && iterations < MAX_SPIRAL_ITERATIONS) {
+      iterations++;
       x = radius * Math.cos(theta);
       y = radius * Math.sin(theta);
       let collides = false;

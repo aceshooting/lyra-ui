@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
-import { MAX_WORDS } from './word-cloud-layout.js';
+import { MAX_FONT_SIZE_PX, MAX_WORDS } from './word-cloud-layout.js';
 
 const WORDS = [
   { text: 'alpha', weight: 10 },
@@ -41,6 +41,31 @@ it('sizes the heaviest word larger than the lightest', async () => {
   const alpha = nodes.find((n) => n.textContent === 'alpha')!;
   const gamma = nodes.find((n) => n.textContent === 'gamma')!;
   expect(Number(alpha.getAttribute('font-size'))).to.be.greaterThan(Number(gamma.getAttribute('font-size')));
+});
+
+it('bounds huge finite font-size attributes before rendering', async () => {
+  const el = (await fixture(
+    html`<lyra-word-cloud
+      .words=${[{ text: 'bounded', weight: 1 }]}
+      min-font-size="1e100"
+      max-font-size="1e100"
+    ></lyra-word-cloud>`,
+  )) as LyraWordCloud;
+  await el.updateComplete;
+
+  const word = el.shadowRoot!.querySelector('[part="word"]')!;
+  expect(Number(word.getAttribute('font-size'))).to.equal(MAX_FONT_SIZE_PX);
+});
+
+it('bounds huge finite font sizes assigned directly as properties', async () => {
+  const el = (await fixture(html`<lyra-word-cloud></lyra-word-cloud>`)) as LyraWordCloud;
+  el.words = [{ text: 'bounded', weight: 1 }];
+  el.minFontSize = Number.MAX_VALUE;
+  el.maxFontSize = Number.MAX_VALUE;
+  await el.updateComplete;
+
+  const word = el.shadowRoot!.querySelector('[part="word"]')!;
+  expect(Number(word.getAttribute('font-size'))).to.equal(MAX_FONT_SIZE_PX);
 });
 
 it('shows a "No data" placeholder and no word nodes when words is empty', async () => {

@@ -11,6 +11,23 @@ import { styles } from './virtual-list.styles.js';
  *  chat-list row that the initial scrollbar/spacer size doesn't jump wildly
  *  once real measurements arrive. Irrelevant in fixed-`row-height` mode. */
 const DEFAULT_ROW_ESTIMATE_PX = 48;
+const DEFAULT_OVERSCAN_ROWS = 6;
+/** Largest accepted overscan on either side of the visible range. This keeps
+ *  an accidental huge value from defeating virtualization. */
+export const MAX_OVERSCAN_ROWS = 100;
+
+function normalizeOverscan(value: string | number | null): number {
+  if (value === null) return DEFAULT_OVERSCAN_ROWS;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_OVERSCAN_ROWS;
+  return Math.min(MAX_OVERSCAN_ROWS, Math.max(0, Math.floor(numeric)));
+}
+
+const overscanConverter = {
+  fromAttribute(value: string | null): number {
+    return normalizeOverscan(value);
+  },
+};
 
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -140,8 +157,11 @@ export class LyraVirtualList extends LyraElement {
    *  a numeric string fixes every row to that many pixels. */
   @property({ attribute: 'row-height' }) rowHeight = 'auto';
 
-  /** Extra rows rendered beyond the visible viewport on each side, to reduce blank-frame risk during fast scrolling. */
-  @property({ type: Number }) overscan = 6;
+  /** Extra rows rendered beyond the visible viewport on each side, to reduce
+   *  blank-frame risk during fast scrolling. Normalized to a whole number in
+   *  the inclusive range 0–`MAX_OVERSCAN_ROWS`; non-finite values use the
+   *  default. */
+  @property({ converter: overscanConverter }) overscan = DEFAULT_OVERSCAN_ROWS;
 
   /** When set and it matches a row's `keyFunction` result, that row is smoothly scrolled into view whenever this changes. */
   @property({ attribute: 'active-id' }) activeId = '';
@@ -343,8 +363,12 @@ export class LyraVirtualList extends LyraElement {
     const viewBottom = viewTop + this.viewportHeight;
     this.visibleStart = this.findIndexAtOrAfter(viewTop);
     this.visibleEnd = this.findIndexAtOrBefore(viewBottom);
-    this.renderStart = Math.max(0, this.visibleStart - this.overscan);
-    this.renderEnd = Math.min(n - 1, this.visibleEnd + this.overscan);
+    // Property assignments bypass Lit's attribute converter, so normalize at
+    // the arithmetic boundary too. This preserves virtualization even when
+    // JavaScript writes Infinity, NaN, a negative, or an excessive number.
+    const overscan = normalizeOverscan(this.overscan);
+    this.renderStart = Math.max(0, this.visibleStart - overscan);
+    this.renderEnd = Math.min(n - 1, this.visibleEnd + overscan);
   }
 
   private attachContainerListeners(): void {

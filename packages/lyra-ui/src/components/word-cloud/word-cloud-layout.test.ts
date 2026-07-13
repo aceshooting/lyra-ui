@@ -1,5 +1,12 @@
 import { expect } from '@open-wc/testing';
-import { layoutWordCloud, GAP, MAX_WORDS, type PlacedWord } from './word-cloud-layout.js';
+import {
+  layoutWordCloud,
+  GAP,
+  MAX_FONT_SIZE_PX,
+  MAX_SPIRAL_ITERATIONS,
+  MAX_WORDS,
+  type PlacedWord,
+} from './word-cloud-layout.js';
 
 /** Deterministic stand-in for canvas measureText: width scales with text length and font size. */
 const stubMeasure = (text: string, fontSize: number): number => text.length * fontSize * 0.6;
@@ -189,4 +196,40 @@ it('swaps a reversed minFontSize/maxFontSize instead of inverting the weight-to-
   const big = placed.find((p) => p.text === 'big')!;
   const small = placed.find((p) => p.text === 'small')!;
   expect(big.fontSize).to.be.greaterThan(small.fontSize);
+});
+
+it('clamps huge finite font-size bounds before measuring or placing words', () => {
+  let measuredAt = 0;
+  const { placed } = layoutWordCloud([{ text: 'bounded', weight: 1 }], {
+    ...baseOptions,
+    minFontSize: Number.MAX_VALUE,
+    maxFontSize: Number.MAX_VALUE,
+    measureText: (_text, fontSize) => {
+      measuredAt = fontSize;
+      return fontSize;
+    },
+  });
+
+  expect(measuredAt).to.equal(MAX_FONT_SIZE_PX);
+  expect(placed[0]!.fontSize).to.equal(MAX_FONT_SIZE_PX);
+});
+
+it('stops a pathological spiral after the hard iteration cap', () => {
+  // A dense set of maximum-size square boxes eventually needs more spiral
+  // work than the per-word budget. It remains a finite input, so the test
+  // itself never relies on an actually non-terminating pre-fix case.
+  const words = Array.from({ length: MAX_WORDS }, (_, i) => ({ text: `square-${i}`, weight: 1 }));
+  const result = layoutWordCloud(
+    words,
+    {
+      ...baseOptions,
+      minFontSize: MAX_FONT_SIZE_PX,
+      maxFontSize: MAX_FONT_SIZE_PX,
+      measureText: () => MAX_FONT_SIZE_PX,
+    },
+  );
+
+  expect(MAX_SPIRAL_ITERATIONS).to.equal(4096);
+  expect(result.placed.length).to.be.lessThan(words.length);
+  expect(result.skipped.length).to.equal(words.length - result.placed.length);
 });

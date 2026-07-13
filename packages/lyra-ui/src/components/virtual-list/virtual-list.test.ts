@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './virtual-list.js';
-import type { LyraVirtualList } from './virtual-list.js';
+import { MAX_OVERSCAN_ROWS, type LyraVirtualList } from './virtual-list.js';
 import { styles } from './virtual-list.styles.js';
 
 /** Waits two animation frames -- enough for the component's rAF-coalesced
@@ -56,6 +56,60 @@ it('renders only a small window of DOM rows for a large items array, not every i
   const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
   expect(rows.length).to.be.greaterThan(0);
   expect(rows.length).to.be.lessThan(50);
+});
+
+it('normalizes invalid and excessive overscan attributes to bounded whole-row values', async () => {
+  const cases = [
+    { value: 'Infinity', expected: 6 },
+    { value: 'NaN', expected: 6 },
+    { value: '-20', expected: 0 },
+    { value: '12.9', expected: 12 },
+    { value: '1000000000', expected: MAX_OVERSCAN_ROWS },
+  ];
+  const items = Array.from({ length: 1000 }, (_, i) => i);
+
+  for (const testCase of cases) {
+    const el = (await fixture(
+      html`<lyra-virtual-list
+        style="--lyra-virtual-list-height:200px"
+        row-height="40"
+        overscan=${testCase.value}
+        .items=${items}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+
+    const rowCount = el.shadowRoot!.querySelectorAll('[part="row"]').length;
+    expect(el.overscan, testCase.value).to.equal(testCase.expected);
+    expect(rowCount, testCase.value).to.be.greaterThan(0);
+    expect(rowCount, testCase.value).to.be.lessThan(250);
+  }
+});
+
+it('uses the same bounded overscan fallback for direct property assignments', async () => {
+  const items = Array.from({ length: 1000 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  for (const overscan of [Infinity, NaN, -20, 1_000_000_000]) {
+    el.overscan = overscan;
+    await el.updateComplete;
+    const rowCount = el.shadowRoot!.querySelectorAll('[part="row"]').length;
+    expect(rowCount, String(overscan)).to.be.greaterThan(0);
+    expect(rowCount, String(overscan)).to.be.lessThan(250);
+  }
 });
 
 it('uses role="list"/"listitem" (not listbox/option) and reflects the real item index via aria-setsize/aria-posinset', async () => {
