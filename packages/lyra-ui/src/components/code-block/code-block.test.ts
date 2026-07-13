@@ -103,6 +103,44 @@ describe('shiki highlighting (real peer)', () => {
     });
     expect(internalsOf(el).highlighter!.getLoadedLanguages()).to.include('python');
   });
+
+  it('does not let a superseded async grammar load overwrite a later synchronous highlight', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block language="javascript" .code=${jsSample}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="pre"] span') !== null, undefined, {
+      timeout: 8000,
+    });
+
+    const internals = internalsOf(el);
+    const hl = internals.highlighter!;
+
+    // Switch to a language whose grammar isn't loaded yet -- kicks off an
+    // async load in syncHighlight()'s async branch.
+    el.language = 'rust';
+    await el.updateComplete;
+
+    // Immediately switch back to the already-loaded language before that
+    // load resolves -- takes syncHighlight()'s synchronous branch and
+    // renders correct output right away.
+    el.language = 'javascript';
+    await el.updateComplete;
+    const correctHtml = internals.highlightedHtml;
+    expect(correctHtml).to.not.equal(null);
+
+    // Let the superseded rust load actually finish, then give its `.then`
+    // callback a turn to run.
+    await waitUntil(() => hl.getLoadedLanguages().includes('rust'), 'rust grammar never finished loading', {
+      timeout: 8000,
+    });
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // The stale rust-tokenized result must never clobber the correct,
+    // already-rendered javascript output.
+    expect(internals.highlightedHtml).to.equal(correctHtml);
+    expect(el.language).to.equal('javascript');
+  });
 });
 
 describe('fallback matrix (reaching into private state to exercise both paths deterministically)', () => {
@@ -226,6 +264,27 @@ describe('collapsible / collapsed', () => {
     const bodyB = b.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     expect(bodyA.id).to.not.equal('');
     expect(bodyA.id).to.not.equal(bodyB.id);
+  });
+
+  it('toggles collapsed and fires lyra-toggle on header click', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block collapsible .code=${jsSample}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+
+    let firing = oneEvent(el, 'lyra-toggle');
+    toggle.click();
+    let event = await firing;
+    await el.updateComplete;
+    expect(el.collapsed).to.be.true;
+    expect((event as CustomEvent).detail).to.deep.equal({ collapsed: true });
+
+    firing = oneEvent(el, 'lyra-toggle');
+    toggle.click();
+    event = await firing;
+    await el.updateComplete;
+    expect(el.collapsed).to.be.false;
+    expect((event as CustomEvent).detail).to.deep.equal({ collapsed: false });
   });
 });
 

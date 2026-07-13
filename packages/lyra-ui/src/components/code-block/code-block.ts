@@ -61,6 +61,9 @@ const partTransformer: ShikiTransformer = {
  *   always the raw `code` value (never the highlighted HTML), and always
  *   fires regardless of whether the actual OS clipboard write succeeded —
  *   same convention as `<lyra-json-viewer>`'s own copy button.
+ * @event lyra-toggle - The collapse/expand header button was activated.
+ *   `detail: { collapsed }` — same event name and shape convention as
+ *   `<lyra-thinking-panel>`'s own `lyra-toggle`.
  * @csspart base - The outer container.
  * @csspart header - The row above the code (filename/language/copy/toggle),
  *   present whenever there's anything to put in it.
@@ -162,6 +165,13 @@ export class LyraCodeBlock extends LyraElement {
   }
 
   private syncHighlight(): void {
+    // Bumped unconditionally -- on *every* call, not just the async branch
+    // below -- so that a call landing on the synchronous already-loaded
+    // branch still invalidates any earlier in-flight load from a previous
+    // call. Without this, a load kicked off by an older call can resolve
+    // after a newer call has already rendered correct synchronous output,
+    // and overwrite it with stale tokenization.
+    const token = ++this.highlightToken;
     const hl = this.highlighter;
     const lang = this.language;
     if (!hl || !lang) {
@@ -176,7 +186,6 @@ export class LyraCodeBlock extends LyraElement {
     // meantime rather than leaving a *previous* code/language value's stale
     // highlighted markup on screen while this one loads.
     this.highlightedHtml = null;
-    const token = ++this.highlightToken;
     void loadShikiLanguage(hl, lang).then((ok) => {
       if (token !== this.highlightToken) return; // superseded by a newer code/language change
       this.highlightedHtml = ok ? this.tokenize(hl, lang) : null;
@@ -228,6 +237,7 @@ export class LyraCodeBlock extends LyraElement {
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
+    this.emit<{ collapsed: boolean }>('lyra-toggle', { collapsed: this.collapsed });
   };
 
   private renderHeader(): TemplateResult {
