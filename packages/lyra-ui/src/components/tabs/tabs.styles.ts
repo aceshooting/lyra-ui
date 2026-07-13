@@ -15,6 +15,7 @@ export const styles = css`
     gap: var(--lyra-space-m);
     border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     overflow-x: auto;
+    overflow-y: hidden;
   }
   [part='tab'] {
     appearance: none;
