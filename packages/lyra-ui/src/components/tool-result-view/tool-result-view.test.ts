@@ -130,6 +130,30 @@ it('emits lyra-render-error and falls back when a matched renderer throws synchr
   expect(base(el).querySelector('lyra-json-viewer')).to.exist;
 });
 
+it('emits lyra-render-error and falls back when a candidate matches() predicate throws during dispatch', async () => {
+  registerToolRenderer('flaky_matcher', {
+    render: () => litHtml`<span class="flaky">nope</span>`,
+    matches: () => {
+      throw new Error('matches exploded');
+    },
+  });
+
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lyra-tool-result-view') as LyraToolResultView;
+  el.toolName = 'unrelated_tool_name';
+  el.result = { anything: true };
+  const eventPromise = oneEvent(el, 'lyra-render-error');
+  container.appendChild(el);
+
+  const event = (await eventPromise) as CustomEvent<{ toolName: string; error: unknown }>;
+  expect(event.detail.toolName).to.equal('unrelated_tool_name');
+  expect((event.detail.error as Error).message).to.equal('matches exploded');
+
+  await el.updateComplete;
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('.flaky')).to.not.exist;
+});
+
 it('shows a lyra-skeleton while an async load() is pending, then renders its resolved output', async () => {
   let resolveLoad!: (mod: { default: ToolRendererDefinition }) => void;
   const loadPromise = new Promise<{ default: ToolRendererDefinition }>((resolve) => {
@@ -189,6 +213,35 @@ it('ignores a stale load() resolution superseded by a newer tool-name before it 
 
   expect(base(el).querySelector('.fast'), 'the newer resolution must not be clobbered by the stale one').to.exist;
   expect(base(el).querySelector('.stale')).to.not.exist;
+});
+
+it('does not re-show the loading skeleton for a result-only update once a lazy renderer has already resolved', async () => {
+  registerToolRenderer('slow_tool', {
+    load: () =>
+      Promise.resolve({
+        default: {
+          render: (result) => litHtml`<span class="loaded">${(result as { a: number }).a}</span>`,
+        },
+      }),
+  });
+
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="slow_tool" .result=${{ a: 1 }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+
+  await waitUntil(() => base(el).querySelector('.loaded') !== null);
+  const spanBefore = base(el).querySelector('.loaded');
+  expect(spanBefore!.textContent).to.equal('1');
+
+  el.result = { a: 2 };
+  await waitUntil(() => base(el).querySelector('.loaded')?.textContent === '2');
+
+  expect(base(el).querySelector('lyra-skeleton'), 'a cached load() must not re-show the loading skeleton').to.not
+    .exist;
+  expect(
+    base(el).querySelector('.loaded'),
+    'the already-rendered DOM subtree must be reused in place, not torn down and rebuilt via a loading round-trip',
+  ).to.equal(spanBefore);
 });
 
 it('is accessible in the default, empty (no renderer registered) state', async () => {

@@ -146,7 +146,6 @@ export {
   getDefaultToolRendererRegistry,
   findToolRenderer,
   loadToolRenderer,
-  clearToolRenderers,
 } from './components/tool-result-view/registry.js';
 export type {
   ToolRendererDefinition,

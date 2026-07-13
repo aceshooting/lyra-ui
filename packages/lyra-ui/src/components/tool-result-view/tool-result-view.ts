@@ -25,8 +25,9 @@ const FALLBACK_STATE: RenderState = { kind: 'fallback' };
  * `<lyra-tool-result-view>` — renders a tool call's result via whichever
  * custom renderer a host app has registered for it (see `registerToolRenderer()`
  * in `registry.ts`), falling back to `<lyra-json-viewer>` whenever no
- * renderer matches, a renderer's optional `load()` rejects, or its `render()`
- * throws. This component owns none of the actual visual weight of a
+ * renderer matches, a candidate renderer's `matches()` predicate throws during
+ * dispatch, a renderer's optional `load()` rejects, or its `render()` throws.
+ * This component owns none of the actual visual weight of a
  * populated tool result — that's entirely whatever the registered renderer
  * returns; this is just the dispatch + fallback + loading-state shell.
  *
@@ -43,7 +44,8 @@ const FALLBACK_STATE: RenderState = { kind: 'fallback' };
  * @customElement lyra-tool-result-view
  * @event lyra-render-error - `detail: { toolName, error }` — fired immediately
  * before falling back to `<lyra-json-viewer>`, whether because no renderer
- * matched, a renderer's `load()` rejected, or its `render()` threw.
+ * matched, a candidate renderer's `matches()` predicate threw during dispatch,
+ * a renderer's `load()` rejected, or its `render()` threw.
  * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback view).
  */
 export class LyraToolResultView extends LyraElement {
@@ -71,6 +73,14 @@ export class LyraToolResultView extends LyraElement {
   // no longer current and skip writing its result over a more recent one.
   private generation = 0;
 
+  // The last `def` findToolRenderer() returned that went through a successful
+  // load(), paired with its resolved (post-load) definition. Keyed by `def`
+  // object identity so an unrelated property change (result/args/registry
+  // mutating without dispatch actually landing on a different definition)
+  // can reuse the already-loaded module instead of flashing the loading
+  // skeleton again for a load() that's already resolved and cached.
+  private resolvedLazy?: { def: ToolRendererDefinition; resolved: ToolRendererDefinition };
+
   protected willUpdate(changed: PropertyValues): void {
     if (
       !this.hasUpdated ||
@@ -86,7 +96,14 @@ export class LyraToolResultView extends LyraElement {
   private async resolve(): Promise<void> {
     const generation = ++this.generation;
     const registry = this.registry ?? getDefaultToolRendererRegistry();
-    const def = findToolRenderer(this.toolName, this.result, registry);
+
+    let def: ToolRendererDefinition | undefined;
+    try {
+      def = findToolRenderer(this.toolName, this.result, registry);
+    } catch (error) {
+      this.fail(error);
+      return;
+    }
 
     if (!def) {
       this.fail(new Error(`<lyra-tool-result-view>: no renderer registered for tool "${this.toolName}"`));
@@ -94,6 +111,11 @@ export class LyraToolResultView extends LyraElement {
     }
 
     if (def.load) {
+      if (this.resolvedLazy?.def === def) {
+        this.renderWith(this.resolvedLazy.resolved);
+        return;
+      }
+
       this.renderState = { kind: 'loading' };
       let resolved: ToolRendererDefinition;
       try {
@@ -104,6 +126,7 @@ export class LyraToolResultView extends LyraElement {
         return;
       }
       if (generation !== this.generation) return;
+      this.resolvedLazy = { def, resolved };
       this.renderWith(resolved);
       return;
     }
