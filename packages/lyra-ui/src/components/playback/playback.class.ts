@@ -54,8 +54,12 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     loop: { type: Boolean },
   };
 
+  /** Total number of steps to play through; the index range is `[0, length)`. */
   @property({ type: Number }) length = 0;
+  /** The current step, in `[0, length)`. */
   @property({ type: Number }) index = 0;
+  /** Delay between ticks, in milliseconds, while playing. Clamped to
+   *  `[MIN_INTERVAL_MS, MAX_TIMEOUT_MS]` — see `scheduleTick()`. */
   @property({ type: Number, attribute: 'interval-ms' }) intervalMs = 900;
   // `playing` is declared via `static properties` above (noAccessor) with a
   // hand-written accessor below, so a direct `el.playing = true/false`
@@ -220,7 +224,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
         <button
           part="play-button"
           type="button"
-          aria-label=${this.playing ? 'Pause' : 'Play'}
+          aria-label=${this.playing ? this.localize('pause', 'Pause') : this.localize('play', 'Play')}
           ?disabled=${disabled}
           @click=${() => this.toggle()}
         >
@@ -232,7 +236,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
           min="0"
           max=${maxIndex}
           .value=${String(index)}
-          aria-label="Playback position"
+          aria-label=${this.localize('playbackPosition', 'Playback position')}
           ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value))}
         />

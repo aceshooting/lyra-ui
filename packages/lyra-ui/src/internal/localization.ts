@@ -123,6 +123,9 @@ export type LyraMessageKey =
   | 'temperature'
   | 'selectModel'
   | 'menuLabel'
+  | 'play'
+  | 'pause'
+  | 'playbackPosition'
   | 'kbdEscapeVisual'
   | 'kbdEscapeWord'
   | 'kbdTabWord'
@@ -272,6 +275,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   temperature: 'Temperature',
   selectModel: 'Select a model…',
   menuLabel: 'Menu',
+  play: 'Play',
+  pause: 'Pause',
+  playbackPosition: 'Playback position',
   kbdEscapeVisual: 'Esc',
   kbdEscapeWord: 'Escape',
   kbdTabWord: 'Tab',

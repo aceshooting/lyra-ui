@@ -396,3 +396,37 @@ it('derives the play/pause icon size from --lyra-icon-button-size via a token, n
   await el.updateComplete;
   expect(getComputedStyle(button).fontSize).to.equal('35px');
 });
+
+describe('string localization', () => {
+  function playButton(el: LyraPlayback): HTMLButtonElement {
+    return el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
+  }
+  function slider(el: LyraPlayback): HTMLInputElement {
+    return el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+  }
+
+  it('defaults the play/pause button and slider aria-labels to English', async () => {
+    const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+    expect(playButton(el).getAttribute('aria-label')).to.equal('Play');
+    expect(slider(el).getAttribute('aria-label')).to.equal('Playback position');
+
+    el.play();
+    await el.updateComplete;
+    expect(playButton(el).getAttribute('aria-label')).to.equal('Pause');
+  });
+
+  it('honors a strings override for play/pause/playbackPosition', async () => {
+    const el = (await fixture(html`
+      <lyra-playback
+        length="3"
+        .strings=${{ play: 'Lire', pause: 'Pause', playbackPosition: 'Position de lecture' }}
+      ></lyra-playback>
+    `)) as LyraPlayback;
+    expect(playButton(el).getAttribute('aria-label')).to.equal('Lire');
+    expect(slider(el).getAttribute('aria-label')).to.equal('Position de lecture');
+
+    el.play();
+    await el.updateComplete;
+    expect(playButton(el).getAttribute('aria-label')).to.equal('Pause');
+  });
+});
