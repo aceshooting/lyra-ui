@@ -72,6 +72,30 @@ it('hides the stop button entirely when show-stop is false', async () => {
   expect(el.shadowRoot!.querySelector('[part="stop-button"]')).to.not.exist;
 });
 
+it('turns the stop button off via the plain show-stop="false" attribute string, not just a .showStop property binding', async () => {
+  const el = (await fixture(
+    html`<lyra-generation-status show-stop="false"></lyra-generation-status>`,
+  )) as LyraGenerationStatus;
+  expect(el.showStop).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="stop-button"]')).to.not.exist;
+});
+
+it('defaults show-stop to true when the attribute is entirely absent, and leaves it true for any other attribute spelling', async () => {
+  const absent = (await fixture(html`<lyra-generation-status></lyra-generation-status>`)) as LyraGenerationStatus;
+  expect(absent.showStop).to.be.true;
+  expect(absent.shadowRoot!.querySelector('[part="stop-button"]')).to.exist;
+
+  const bare = (await fixture(html`<lyra-generation-status show-stop></lyra-generation-status>`)) as LyraGenerationStatus;
+  expect(bare.showStop).to.be.true;
+  expect(bare.shadowRoot!.querySelector('[part="stop-button"]')).to.exist;
+
+  const explicitTrue = (await fixture(
+    html`<lyra-generation-status show-stop="true"></lyra-generation-status>`,
+  )) as LyraGenerationStatus;
+  expect(explicitTrue.showStop).to.be.true;
+  expect(explicitTrue.shadowRoot!.querySelector('[part="stop-button"]')).to.exist;
+});
+
 it('emits lyra-stop (no detail) when the built-in stop button is clicked', async () => {
   const el = (await fixture(html`<lyra-generation-status></lyra-generation-status>`)) as LyraGenerationStatus;
   const listener = oneEvent(el, 'lyra-stop');
@@ -157,6 +181,26 @@ it('freezes the elapsed display (does not reset to zero) once active becomes fal
   expect(elapsedText(el), 'the display must not keep advancing once inactive').to.equal(frozen);
 });
 
+it('never renders a NaN-containing elapsed string when started-at is a malformed (non-numeric) value, falling back to its own clock instead', async () => {
+  // `type: Number` conversion of a non-numeric attribute string (an ISO date,
+  // here) fails and lands as `NaN`, exactly like a `Number("...")` parse
+  // failure would -- this is the malformed input this guard exists for.
+  const el = (await fixture(
+    html`<lyra-generation-status active started-at="2024-01-01T00:00:00.000Z"></lyra-generation-status>`,
+  )) as LyraGenerationStatus;
+
+  expect(Number.isNaN(el.startedAt)).to.be.true;
+  const text = elapsedText(el);
+  expect(text).to.not.include('NaN');
+  expect(parseElapsedSeconds(text)).to.be.closeTo(0, 0.3);
+
+  await aTimeout(1150);
+  const later = elapsedText(el);
+  expect(later, 'the ticker should still be advancing from the fallback clock, not stuck on a NaN reading').to.not
+    .include('NaN');
+  expect(parseElapsedSeconds(later)).to.be.greaterThan(0.5);
+});
+
 it('restarts the fallback clock from scratch on a fresh false -> true transition with no started-at', async () => {
   const el = (await fixture(html`<lyra-generation-status active></lyra-generation-status>`)) as LyraGenerationStatus;
   await aTimeout(1150);
@@ -225,6 +269,31 @@ it('clears the ticker on disconnect so it cannot keep updating a detached elemen
   // nothing externally observable left on a detached, un-rendered element.
   await aTimeout(1150);
   expect(el.isConnected).to.be.false;
+});
+
+it('resumes the ticker after being disconnected and reconnected while still active, instead of freezing forever', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lyra-generation-status') as LyraGenerationStatus;
+  el.active = true;
+  container.append(el);
+  await el.updateComplete;
+
+  // Re-parent: a virtualized/reordering list would do exactly this --
+  // remove then immediately re-append the same element, with `active`
+  // never toggling in between.
+  el.remove();
+  expect(el.isConnected).to.be.false;
+  container.append(el);
+  expect(el.isConnected).to.be.true;
+  await el.updateComplete;
+
+  const before = parseElapsedSeconds(elapsedText(el));
+  await aTimeout(1150);
+  const after = parseElapsedSeconds(elapsedText(el));
+  expect(
+    after,
+    'the ticker must keep advancing after a reconnect, not stay frozen at its pre-disconnect reading',
+  ).to.be.greaterThan(before + 0.5);
 });
 
 it('carries no role="status"/aria-live of its own -- see the class doc for why a per-second tick must not be announced', async () => {

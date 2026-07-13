@@ -1,4 +1,12 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { defineElement } from '../../internal/prefix.js';
@@ -69,6 +77,30 @@ function formatThroughput(value: number): string {
   const rounded = clamped < 10 ? Math.round(clamped * 10) / 10 : Math.round(clamped);
   return `${rounded} tok/s`;
 }
+
+/**
+ * String-aware boolean attribute converter for `show-stop`. Lit's built-in
+ * `type: Boolean` converter is presence-based -- the attribute's mere
+ * presence (regardless of its string value) maps to `true`, so a plain-
+ * markup consumer writing the literal `show-stop="false"` would actually get
+ * the button *shown*, the opposite of what that string reads as (the same
+ * bug class `<lyra-streaming-text>`'s `optionalBooleanConverter` and
+ * `<lyra-line-chart>`'s `WithoutBeginAtZero` story both document). Unlike
+ * `<lyra-streaming-text>`'s tri-state converter, this property's default is
+ * `true`, not "unset" -- so this one only needs two states: attribute absent
+ * (or removed) -> `true` (the default); `show-stop="false"` -> `false`;
+ * anything else present (no value, `="true"`, ...) -> `true`.
+ */
+const showStopConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting
+    // for it; only the non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
 
 /**
  * `<lyra-generation-status>` — a compact, ticking status readout shown
@@ -143,10 +175,11 @@ export class LyraGenerationStatus extends LyraElement {
    *  runs only while this is `true` (see the class doc). */
   @property({ type: Boolean, reflect: true }) active = false;
 
-  /** Epoch-ms timestamp of when generation began. Optional -- when unset
-   *  while `active` is `true`, this component captures the current time
-   *  itself the moment `active` becomes `true` and counts from there instead
-   *  (see the class doc). */
+  /** Epoch-ms timestamp of when generation began. Optional -- when unset (or
+   *  when set to a value that fails to parse as a finite number, e.g. an
+   *  ISO-8601 date string) while `active` is `true`, this component captures
+   *  the current time itself the moment `active` becomes `true` and counts
+   *  from there instead (see the class doc). */
   @property({ type: Number, attribute: 'started-at' }) startedAt?: number;
 
   /** Running token count so far. Omitted from the readout entirely (no
@@ -159,8 +192,13 @@ export class LyraGenerationStatus extends LyraElement {
    *  and why. */
   @property({ type: Number, attribute: 'tokens-per-second' }) tokensPerSecond?: number;
 
-  /** Whether the built-in Stop button renders at all. */
-  @property({ type: Boolean, attribute: 'show-stop' }) showStop = true;
+  /** Whether the built-in Stop button renders at all. Defaults to `true`.
+   *  Uses {@link showStopConverter} rather than Lit's default presence-based
+   *  `type: Boolean` handling, so a plain-HTML consumer with no way to write
+   *  a `.showStop` property binding can still turn this off with
+   *  `show-stop="false"`; a Lit template can do the same with either that
+   *  attribute string or a `.showStop=${false}` property binding. */
+  @property({ attribute: 'show-stop', converter: showStopConverter }) showStop = true;
 
   // Recomputed on activation and on every ~1s tick; frozen (not reset) once
   // `active` goes false -- see the class doc's "ticker" paragraph.
@@ -170,6 +208,22 @@ export class LyraGenerationStatus extends LyraElement {
 
   // Only ever set/read while `startedAt` is unset -- see the class doc.
   private fallbackStartMs?: number;
+
+  // A re-parenting host (e.g. a virtualized/reordering list) disconnects and
+  // reconnects this element without ever toggling `active` -- `willUpdate`/
+  // `updated` only react to *changes* of `active`, so with no override here
+  // a still-active element would come back with `disconnectedCallback`'s
+  // cleared ticker never restarted, freezing the readout even though
+  // `active` (still `true`) says generation is ongoing. Restarting from
+  // `computeElapsedMs()` (rather than resuming a stale in-flight interval)
+  // matches how `startTicker()` already re-baselines on every fresh start.
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (this.active) {
+      this.elapsedMs = this.computeElapsedMs();
+      this.startTicker();
+    }
+  }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -194,7 +248,7 @@ export class LyraGenerationStatus extends LyraElement {
   // first-update special case needed.
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('active') && this.active) {
-      if (this.startedAt == null) this.fallbackStartMs = Date.now();
+      if (this.validStartedAt == null) this.fallbackStartMs = Date.now();
       this.elapsedMs = this.computeElapsedMs();
     } else if (this.active && changed.has('startedAt')) {
       // A `started-at` that arrives (or changes) mid-generation should
@@ -233,8 +287,20 @@ export class LyraGenerationStatus extends LyraElement {
     }
   }
 
+  // `startedAt` is host-supplied and, unlike `tokenCount`/`tokensPerSecond`
+  // (both already guarded at their read sites), had no `Number.isFinite`
+  // check of its own -- a non-numeric `started-at` attribute (e.g. an
+  // ISO-8601 date string that failed the `type: Number` conversion, landing
+  // as `NaN`) would flow straight into `Date.now() - start`, permanently
+  // rendering the literal text "NaNm NaNs" with no fallback or recovery.
+  // Treating an invalid value the same as "unset" here restores this
+  // property's own documented fallback-clock behavior instead.
+  private get validStartedAt(): number | undefined {
+    return this.startedAt != null && Number.isFinite(this.startedAt) ? this.startedAt : undefined;
+  }
+
   private computeElapsedMs(): number {
-    const start = this.startedAt ?? this.fallbackStartMs;
+    const start = this.validStartedAt ?? this.fallbackStartMs;
     return start == null ? 0 : Math.max(0, Date.now() - start);
   }
 

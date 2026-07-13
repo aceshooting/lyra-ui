@@ -53,15 +53,31 @@ export const OverAMinute: Story = {
     ></lyra-generation-status>`,
 };
 
+/**
+ * `showStop` demonstrated here via a `.showStop` property binding rather
+ * than a `show-stop="false"` attribute string, matching this repo's
+ * established convention for this exact class of bug (see
+ * `<lyra-line-chart>`'s `WithoutBeginAtZero` story): a boolean property that
+ * defaults to `true` needs more than Lit's presence-based `type: Boolean`
+ * attribute handling to ever be turned off via a plain attribute string --
+ * the attribute's mere *presence*, not its string value, is what that
+ * default handling reads, so `show-stop="false"` would otherwise still
+ * render the button. `showStop` also has its own string-aware converter
+ * (see this component's source) so `show-stop="false"` works correctly too,
+ * for a plain-HTML/non-Lit consumer with no way to write a property
+ * binding -- but the `.showStop` binding shown here is the form guaranteed
+ * to work for *any* boolean property, converter or not, so it stays the
+ * convention for this story.
+ */
 export const NoStopButton: Story = {
-  name: 'show-stop="false"',
+  name: 'No stop button (show-stop off)',
   render: () => html`
     <lyra-generation-status
       active
       started-at=${Date.now() - 4200}
       token-count="88"
       tokens-per-second="21"
-      show-stop="false"
+      .showStop=${false}
     ></lyra-generation-status>
   `,
 };
