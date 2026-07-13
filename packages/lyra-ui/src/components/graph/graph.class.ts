@@ -536,6 +536,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     });
   }
 
+  /**
+   * ArrowRight/ArrowDown move to the next roving-tabindex item, ArrowLeft/
+   * ArrowUp to the previous one, in flat array order (`simNodes` then
+   * `simLinks`) — deliberately not routed through `isRtl()`, unlike this
+   * library's grid/track-based components (e.g. the day grid in
+   * `<lyra-date-picker>`, the resize handle in `<lyra-dock-panel>`). Node
+   * position here comes entirely from the `d3-force` physics simulation
+   * (and live dragging), not from `nodes`' array order or any laid-out
+   * reading direction, so a node's index has no corresponding "visual
+   * left"/"right" for a `dir="rtl"` swap to mirror in the first place —
+   * ArrowRight and ArrowDown already mean the same thing ("next") here,
+   * which a spatial left/right grid never does.
+   */
   private onGraphKeyDown(e: KeyboardEvent, index: number, activate: () => void): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -635,7 +648,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           ${this.graphLiveText || (this.normalizedGraphItem() >= 0 ? `${this.graphItemText(this.normalizedGraphItem())} (1 of ${this.graphItemCount()})` : '')}
         </div>
-        <ul part="data-list" class="sr-only" aria-label="Graph data">
+        <ul part="data-list" class="sr-only" aria-label=${this.localize('graphDataList')}>
           ${this.simNodes.map((node) => html`<li>Node ${node.label ?? node.id}</li>`)}
           ${this.simLinks.map((link) => {
             const source = link.source as SimNode;

@@ -117,7 +117,8 @@ export type LyraMessageKey =
   | 'documentPreviewGenericError'
   | 'exportButtonLabel'
   | 'generationStatusToken'
-  | 'generationStatusTokens';
+  | 'generationStatusTokens'
+  | 'graphDataList';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -236,6 +237,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   exportButtonLabel: 'Export',
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
+  graphDataList: 'Graph data',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

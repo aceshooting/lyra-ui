@@ -729,3 +729,67 @@ it('is accessible', async () => {
   });
   await expect(el).to.be.accessible();
 });
+
+describe('data-list aria-label localization', () => {
+  it('defaults the data-list aria-label to the built-in English "Graph data"', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const list = el.shadowRoot!.querySelector('[part="data-list"]') as HTMLElement;
+    expect(list.getAttribute('aria-label')).to.equal('Graph data');
+  });
+
+  it('localizes the data-list aria-label via .strings (graphDataList)', async () => {
+    const el = (await fixture(
+      html`<lyra-graph .strings=${{ graphDataList: 'Données du graphe' }}></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const list = el.shadowRoot!.querySelector('[part="data-list"]') as HTMLElement;
+    expect(list.getAttribute('aria-label')).to.equal('Données du graphe');
+  });
+});
+
+describe('RTL keyboard navigation', () => {
+  // Force-directed layout has no fixed left-right reading order (node
+  // position comes from the d3-force physics simulation, not array/DOM
+  // order), and ArrowRight/ArrowDown already mean the same thing here
+  // ("next" in flat nodes-then-links order, same as ArrowLeft/ArrowUp both
+  // meaning "previous") -- unlike this library's grid/track-based components
+  // (date-grid, resize handles) there is no physical left/right for RTL to
+  // mirror, so ArrowLeft/ArrowRight must stay un-swapped under dir="rtl".
+  it('does not swap ArrowLeft/ArrowRight roving-tabindex navigation under dir="rtl"', async () => {
+    const wrapper = (await fixture(
+      html`<div dir="rtl"><lyra-graph></lyra-graph></div>`,
+    )) as HTMLDivElement;
+    const el = wrapper.querySelector('lyra-graph') as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    const items = () =>
+      [
+        ...el.shadowRoot!.querySelectorAll('[part="node"]'),
+        ...el.shadowRoot!.querySelectorAll('[part="link"]'),
+      ] as SVGElement[];
+
+    items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
+
+    items()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+  });
+});
