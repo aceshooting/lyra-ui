@@ -81,9 +81,9 @@ export type DialogCloseReason =
  *   call, or (with reason `'unmount'`, not cancelable in practice since the element is already
  *   being removed) removal from the DOM by anything else while still open.
  * @csspart backdrop - The full-viewport scrim behind the panel.
- * @csspart panel - The dialog panel itself (`role="dialog"` while open). Its
- *   max-inline-size is controlled by the `--lyra-dialog-max-width` custom
- *   property (default `32rem`).
+ * @csspart panel - The dialog panel itself (`role="dialog"` while open). Shrink-wraps to its
+ *   content by default, capped at `--lyra-dialog-max-width` (default `32rem`); set
+ *   `--lyra-dialog-width` for an assertive width instead of only a cap.
  * @csspart header - The header row, rendered when `heading` is set (and no
  *   heading is slotted) and/or `closable` is `true`.
  * @csspart heading - The visible `heading`-text element inside `header`,
