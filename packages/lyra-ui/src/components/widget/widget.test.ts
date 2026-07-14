@@ -751,3 +751,30 @@ it('applies tighter header/body padding when compact', async () => {
     'compact body padding should render smaller than the default',
   ).to.be.lessThan(parseFloat(normalBodyStyle.paddingInlineStart));
 });
+
+describe('backdrop-inset', () => {
+  it('backdrop inset falls back to fullscreen-inset when unset', async () => {
+    const el = (await fixture(
+      html`<lyra-widget expandable fullscreen-inset="0px 0px 0px 240px" fullscreen></lyra-widget>`,
+    )) as LyraWidget;
+    await el.updateComplete;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(backdrop).inset).to.equal(getComputedStyle(base).inset);
+  });
+
+  it('decouples backdrop inset from fullscreen-inset when backdrop-inset is set', async () => {
+    const el = (await fixture(
+      html`<lyra-widget
+        expandable
+        fullscreen-inset="0px 0px 0px 240px"
+        backdrop-inset="0px"
+        fullscreen
+      ></lyra-widget>`,
+    )) as LyraWidget;
+    await el.updateComplete;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(backdrop).inset).to.not.equal(getComputedStyle(base).inset);
+  });
+});

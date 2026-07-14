@@ -12,6 +12,7 @@ export const styles = css`
       max(var(--lyra-space-l), var(--lyra-safe-area-inline-end))
       max(var(--lyra-space-l), var(--lyra-safe-area-bottom))
       max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
+    --lyra-widget-backdrop-inset: var(--lyra-widget-fullscreen-inset);
   }
   [part='base'] {
     display: flex;
@@ -129,13 +130,13 @@ export const styles = css`
   }
   [part='backdrop'] {
     position: fixed;
-    inset: var(--lyra-widget-fullscreen-inset, 0);
+    inset: var(--lyra-widget-backdrop-inset, 0);
     background: var(--lyra-widget-overlay-color);
     z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-modal));
   }
   :host([fullscreen]) [part='base'] {
     position: fixed;
-    inset: var(--lyra-widget-fullscreen-inset);
+    inset: var(--lyra-widget-fullscreen-inset, 0);
     z-index: calc(var(--lyra-overlay-stack-index, var(--lyra-layer-modal)) + 1);
     box-shadow: var(--lyra-shadow);
   }

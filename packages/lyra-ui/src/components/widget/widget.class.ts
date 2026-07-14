@@ -90,6 +90,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  `var(--lyra-space-l)` on every side — e.g. `"0 0 0 240px"` to leave a 240px persistent sidebar
    *  visible while fullscreen. */
   @property({ attribute: 'fullscreen-inset' }) fullscreenInset = '';
+  /** Overrides the fullscreen *backdrop*'s own inset independent of `fullscreen-inset` -- e.g.
+   *  `"0"` to dim the full viewport-to-panel-edge region while the panel itself keeps a narrower
+   *  `fullscreen-inset`. Unset (the default) falls back to `fullscreen-inset`, i.e. today's exact
+   *  coupled behavior. */
+  @property({ attribute: 'backdrop-inset' }) backdropInset = '';
   /** Tighter header/body padding for constrained spaces. */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card
@@ -252,7 +257,18 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       ${this.fullscreen
         ? html`<div
             part="backdrop"
-            style=${this.fullscreenInset ? `--lyra-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
+            style=${(() => {
+              const decls: string[] = [];
+              if (this.fullscreenInset) decls.push(`--lyra-widget-fullscreen-inset:${this.fullscreenInset}`);
+              // A custom property's var() fallback resolves per-element using that element's own
+              // cascade, but `:host`'s `--lyra-widget-backdrop-inset: var(--lyra-widget-fullscreen-inset)`
+              // is always *set* (never invalid), so its inherited (already-resolved-at-:host) value
+              // wins over this div's own local `--lyra-widget-fullscreen-inset` override -- the CSS
+              // fallback chain alone can't see it. Resolve the fallback here in JS instead.
+              const backdropInset = this.backdropInset || this.fullscreenInset;
+              if (backdropInset) decls.push(`--lyra-widget-backdrop-inset:${backdropInset}`);
+              return decls.length ? decls.join(';') : nothing;
+            })()}
             @click=${this.onBackdropClick}
           ></div>`
         : nothing}
