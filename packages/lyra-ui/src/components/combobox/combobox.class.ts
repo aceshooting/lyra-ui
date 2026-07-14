@@ -84,11 +84,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
-  @property({ attribute: 'empty-text' }) emptyText = 'No results';
-  /** Status copy shown in the listbox while a `source` fetch is in flight. */
-  @property({ attribute: 'loading-text' }) loadingText = 'Loading…';
-  /** Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count. */
-  @property({ attribute: 'overflow-text' }) overflowText = '+{n} more — refine your search';
+  /** Status copy shown in the listbox when no rows match. Empty string falls back to a localized message. */
+  @property({ attribute: 'empty-text' }) emptyText = '';
+  /** Status copy shown in the listbox while a `source` fetch is in flight. Empty string falls back to a localized message. */
+  @property({ attribute: 'loading-text' }) loadingText = '';
+  /** Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count. Empty string falls back to a localized message. */
+  @property({ attribute: 'overflow-text' }) overflowText = '';
   @property({ attribute: false }) filter: OptionFilter | null = null;
   @property({ attribute: false }) source: ComboboxSource | null = null;
   @property({ attribute: 'max-render', type: Number }) maxRender = 200;
@@ -283,7 +284,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private updateValidity(): void {
     if (this.required && this._selected.length === 0) {
-      this.validityController.setValidity({ valueMissing: true }, 'Please select an option.');
+      this.validityController.setValidity({ valueMissing: true }, this.localize('comboboxRequired'));
     } else {
       this.validityController.setValidity({});
     }
@@ -770,14 +771,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
         </label>
         <div part="combobox" @mousedown=${this.onComboMouseDown}>
-          <div part="tags" style="display:contents">
+          <div part="tags">
             ${shownTags.map(
               (v) => html`<span part="tag"
                 >${this.labelFor(v)}<button
                   part="tag__remove-button"
                   type="button"
                   ?disabled=${this.effectiveDisabled}
-                  aria-label="Remove ${this.labelFor(v)}"
+                  aria-label="${this.localize('remove')} ${this.labelFor(v)}"
                   @click=${(e: Event) => {
                     e.stopPropagation();
                     this.removeValue(v);
@@ -793,7 +794,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
             id=${this.inputId}
             part="combobox-input"
             role="combobox"
-            aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Combobox')}
+            aria-label=${this.getAttribute('aria-label') ||
+            (hasLabel ? nothing : this.placeholder || this.localize('comboboxLabel'))}
             aria-describedby=${describedBy || nothing}
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.listId}
@@ -815,7 +817,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
                 part="clear-button"
                 type="button"
                 ?disabled=${this.effectiveDisabled}
-                aria-label="Clear"
+                aria-label=${this.localize('clear')}
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   this.clear();
@@ -835,12 +837,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           @click=${this.onListboxClick}
         >
           ${this.loading
-            ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">${this.loadingText}</div>`
+            ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">${this.localize('loading', this.loadingText || undefined)}</div>`
             : rows.length === 0
-              ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.emptyText}</div>`
+              ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.localize('noMatches', this.emptyText || undefined)}</div>`
               : html`${this.renderRows(rows, activeId)}
                   ${overflow > 0
-                    ? html`<div part="option-overflow">${this.overflowText.replace('{n}', String(overflow))}</div>`
+                    ? html`<div part="option-overflow">${this.localize('comboboxOverflow', this.overflowText || undefined, { n: overflow })}</div>`
                     : ''}`}
         </div>
         <div id="combobox-error" part="error" ?hidden=${!hasError}>

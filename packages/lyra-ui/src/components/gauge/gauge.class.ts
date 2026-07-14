@@ -1,4 +1,4 @@
-import { html, svg, type TemplateResult } from 'lit';
+import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteNumber } from '../../internal/numbers.js';
@@ -135,20 +135,30 @@ export class LyraGauge extends LyraElement {
   private renderLinear(): TemplateResult {
     const text = this.displayText;
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
+    // Under RTL the meter must still visually fill and read in the same
+    // start-to-end order as the surrounding text, so the physical x=0/x=100
+    // endpoints swap roles -- the same physical-vs-logical horizontal concern
+    // `<lyra-slider>` resolves via `effectiveDirection`/`isRtl()` for its own
+    // track. (The radial variant's arc-sweep math is exempt geometry.)
+    const rtl = this.effectiveDirection === 'rtl';
+    const startX = rtl ? LINEAR_LENGTH : 0;
+    const endX = rtl ? 0 : LINEAR_LENGTH;
     return html`<svg part="base" viewBox="0 0 100 20" preserveAspectRatio="none">
-      <line part="track" x1="0" y1=${LINEAR_BAR_Y} x2="100" y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
+      <line part="track" x1=${startX} y1=${LINEAR_BAR_Y} x2=${endX} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
       <line
         part="fill"
-        x1="0"
+        x1=${startX}
         y1=${LINEAR_BAR_Y}
-        x2="100"
+        x2=${endX}
         y2=${LINEAR_BAR_Y}
         stroke-width=${LINEAR_STROKE}
         stroke-dasharray=${LINEAR_LENGTH}
         stroke-dashoffset=${dashoffset}
       ></line>
-      ${this.label ? svg`<text part="label" x="0" y=${LINEAR_TEXT_Y} aria-hidden="true">${this.label}</text>` : ''}
-      <text part="value" x="100" y=${LINEAR_TEXT_Y} aria-hidden="true">${text}</text>
+      ${this.label
+        ? svg`<text part="label" x=${startX} y=${LINEAR_TEXT_Y} style=${rtl ? 'text-anchor:end' : nothing} aria-hidden="true">${this.label}</text>`
+        : ''}
+      <text part="value" x=${endX} y=${LINEAR_TEXT_Y} style=${rtl ? 'text-anchor:start' : nothing} aria-hidden="true">${text}</text>
     </svg>`;
   }
 

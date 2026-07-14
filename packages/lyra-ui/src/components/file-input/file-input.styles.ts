@@ -35,11 +35,4 @@ export const styles = css`
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='input'] {
-    position: absolute;
-    inline-size: var(--lyra-size-1px);
-    block-size: var(--lyra-size-1px);
-    opacity: 0;
-    overflow: hidden;
-  }
 `;

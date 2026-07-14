@@ -80,6 +80,15 @@ export const styles = css`
     cursor: grab;
     touch-action: none;
   }
+  /* [part^='handle'] is positioned with a logical inset-inline-start:<pct>%
+     (set inline in render()), which the browser anchors to the box's own
+     *start* edge -- the physical right edge under :dir(rtl). The fixed
+     translateX(-50%) above assumes an LTR left edge anchor, so it has to
+     flip sign under RTL or the visible dot ends up a full handle-width off
+     from its true track position. */
+  :host(:dir(rtl)) [part^='handle'] {
+    transform: translateX(50%);
+  }
   /*
    * The visible dot stays var(--lyra-size-14px) by design, but that's well under the ~var(--lyra-size-24px)
    * minimum touch target size despite \`touch-action: none\` signalling this
@@ -101,6 +110,13 @@ export const styles = css`
     block-size: var(--lyra-size-28px);
     transform: translate(-50%, -50%);
     border-radius: 50%;
+  }
+  /* Same logical-inset-vs-physical-transform mismatch as the handle itself:
+     this enlarged hit-area is centered on inset-inline-start: 50%, so its
+     horizontal translate must flip sign under RTL too or the actual drag
+     hit zone detaches from the visible handle. */
+  :host(:dir(rtl)) [part^='handle']::before {
+    transform: translate(50%, -50%);
   }
   [part^='handle']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

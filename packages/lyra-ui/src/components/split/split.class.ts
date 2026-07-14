@@ -191,7 +191,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   /** Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index
    *  and the total panel count (`lyra-split` supports N panels, so a single fixed string can't
    *  express every divider's label; a function can). Unset (the default) keeps today's exact
-   *  `` `Resize divider between panel ${i + 1} and panel ${i + 2}` `` template. */
+   *  localized `Resize divider between panel {a} and panel {b}` template (see `this.localize()`). */
   @property({ attribute: false }) dividerLabel?: (index: number, panelCount: number) => string;
 
   @state() private panelCount = 0;
@@ -943,7 +943,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       dividers.push(html`<div
         part="divider"
         role="separator"
-        aria-label=${this.dividerLabel ? this.dividerLabel(i, this.panelCount) : `Resize divider between panel ${i + 1} and panel ${i + 2}`}
+        aria-label=${this.dividerLabel
+          ? this.dividerLabel(i, this.panelCount)
+          : this.localize('resizeDivider', undefined, {
+              a: i + 1,
+              b: i + 2,
+            })}
         aria-orientation=${this.orientation === 'vertical' ? 'horizontal' : 'vertical'}
         aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
         aria-valuemin=${Math.round(valueMin)}

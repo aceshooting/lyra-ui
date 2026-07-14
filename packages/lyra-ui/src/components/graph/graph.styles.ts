@@ -41,4 +41,8 @@ export const styles = css`
     font-family: var(--lyra-font);
     pointer-events: none;
   }
+  [part='empty'] {
+    color: var(--lyra-color-text-quiet);
+    font-size: var(--lyra-font-size-md-sm);
+  }
 `;

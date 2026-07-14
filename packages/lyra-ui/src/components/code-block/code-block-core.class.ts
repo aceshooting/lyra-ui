@@ -7,6 +7,7 @@ import { chevronIcon } from '../../internal/icons.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { loadShikiHighlighterCore, SHIKI_THEMES, type ShikiHighlighterCore, type ShikiLanguageInput } from './code-loader.js';
 import { styles } from './code-block.styles.js';
+import { codeBlockToggleLabel, codeBlockCopyLabel, codeBlockBodyLabel } from './code-block-shared.js';
 import '../skeleton/skeleton.class.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
@@ -37,6 +38,7 @@ const partTransformer = {
 
 export interface LyraCodeBlockCoreEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
+  'lyra-toggle': CustomEvent<{ collapsed: boolean }>;
 }
 /**
  * `<lyra-code-block-core>` — a build-lean variant of `<lyra-code-block>` for
@@ -288,7 +290,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-controls=${this.bodyId}
-                aria-label=${`${this.localize(this.collapsed ? 'expand' : 'collapse')} code`}
+                aria-label=${codeBlockToggleLabel(this.localize.bind(this), this.collapsed)}
                 @click=${this.toggleCollapsed}
               >
                 <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
@@ -302,7 +304,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
               <button
                 part="copy-button"
                 type="button"
-                aria-label=${this.justCopied ? `${this.localize('copied')} to clipboard` : `${this.localize('copy')} code`}
+                aria-label=${codeBlockCopyLabel(this.localize.bind(this), this.justCopied)}
                 @click=${this.copy}
               >
                 ${this.justCopied ? this.localize('copied') : this.localize('copy')}
@@ -326,7 +328,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
     const showSkeleton = !this.shikiReady && !!this.language && !!this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
-    const bodyLabel = this.filename || (this.language ? `${this.language} code` : 'Code');
+    const bodyLabel = codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
 
     return html`
       <div part="base">

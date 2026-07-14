@@ -622,9 +622,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         min = Math.min(min, value);
         max = Math.max(max, value);
       }
-      return `${series.label}: ${values.length} values, range ${min} to ${max}, ${trend} trend`;
+      return this.localize('chartSummary', undefined, {
+        label: series.label,
+        count: values.length,
+        min,
+        max,
+        trend,
+      });
     });
-    return `${this.effectiveType()} chart${summaries.length ? `. ${summaries.join('. ')}` : ' with no data'}.`;
+    return summaries.length
+      ? this.localize('chartSummaryWithData', undefined, {
+          type: this.effectiveType(),
+          summaries: summaries.join('. '),
+        })
+      : `${this.effectiveType()} chart with no data.`;
   }
 
   private renderDataTable(): TemplateResult {
@@ -635,7 +646,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     );
     return html`
       <table class=${this.showDataTable ? nothing : 'sr-only'}>
-        <caption>${this.accessibleLabel || 'Chart data'}</caption>
+        <caption>${this.accessibleLabel || this.localize('chartData')}</caption>
         <thead>
           <tr>
             <th scope="col">${this.localize('chartCategory')}</th>
@@ -665,7 +676,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         </div>
       `;
     }
-    const label = this.accessibleLabel || this.datasets.map((d) => d.label).join(', ') || 'Chart';
+    const label = this.accessibleLabel || this.datasets.map((d) => d.label).join(', ') || this.localize('chart');
     const description = this.chartDescription();
     return html`
       <div part="base">

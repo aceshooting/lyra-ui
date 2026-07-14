@@ -5,7 +5,7 @@ export const styles = css`
     display: inline-flex;
     vertical-align: middle;
     --lyra-avatar-size: var(--lyra-size-2rem);
-    --lyra-avatar-bg: var(--lyra-color-surface-alt, var(--lyra-color-border));
+    --lyra-avatar-bg: var(--lyra-color-border);
     --lyra-avatar-color: var(--lyra-color-text);
   }
   :host([size='sm']) {

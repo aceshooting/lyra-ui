@@ -63,12 +63,17 @@ export interface LyraTimeRangeEventMap {
  * shortcut that sets both handles at once, the continuous brush underneath
  * is unaffected and both interaction modes coexist.
  *
- * Form-associated (via a directly-attached `ElementInternals`, mirroring
- * `<lyra-combobox>`'s minimal pattern rather than the single-string-value
- * `FormAssociated` mixin, which doesn't fit a two-handle range): an ancestor
+ * Form-associated only for the `<fieldset disabled>` cascade, not for a
+ * submitted value: it attaches `ElementInternals` (like `<lyra-combobox>`'s
+ * minimal pattern, rather than the single-string-value `FormAssociated`
+ * mixin, which doesn't fit a two-handle range) purely so an ancestor
  * `<fieldset disabled>` disables both handles and every preset button
  * through `effectiveDisabled`, the same way it would a native `<input>`,
  * without touching the consumer-facing `disabled` property/attribute itself.
+ * Unlike `<lyra-combobox>`, it never calls `internals.setFormValue()` and
+ * has no `name` — the selected range is not included in the owning form's
+ * `FormData` on submit; read `start`/`end` directly (e.g. from `lyra-change`)
+ * instead of relying on native form submission.
  *
  * @customElement lyra-time-range
  * @event lyra-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
@@ -468,7 +473,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           part="handle-start"
           role="slider"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-label=${this.startLabel}
+          aria-label=${this.localize(
+            'rangeStart',
+            this.startLabel === 'Range start' ? undefined : this.startLabel,
+          )}
           aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
@@ -484,7 +492,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           part="handle-end"
           role="slider"
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
-          aria-label=${this.endLabel}
+          aria-label=${this.localize(
+            'rangeEnd',
+            this.endLabel === 'Range end' ? undefined : this.endLabel,
+          )}
           aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}

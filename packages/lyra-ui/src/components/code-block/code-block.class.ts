@@ -15,6 +15,7 @@ import {
   type ShikiLanguageInput,
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
+import { codeBlockToggleLabel, codeBlockCopyLabel, codeBlockBodyLabel } from './code-block-shared.js';
 import '../skeleton/skeleton.class.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
@@ -45,6 +46,7 @@ const partTransformer = {
 
 export interface LyraCodeBlockEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
+  'lyra-toggle': CustomEvent<{ collapsed: boolean }>;
 }
 /**
  * `<lyra-code-block>` — fenced code display with optional lazy syntax
@@ -339,9 +341,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-controls=${this.bodyId}
-                aria-label=${this.collapsed
-                  ? this.localize('expandCode')
-                  : this.localize('collapseCode')}
+                aria-label=${codeBlockToggleLabel(this.localize.bind(this), this.collapsed)}
                 @click=${this.toggleCollapsed}
               >
                 <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
@@ -355,9 +355,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
               <button
                 part="copy-button"
                 type="button"
-                aria-label=${this.justCopied
-                  ? this.localize('copiedToClipboard')
-                  : this.localize('copyCode')}
+                aria-label=${codeBlockCopyLabel(this.localize.bind(this), this.justCopied)}
                 @click=${this.copy}
               >
                 ${this.justCopied ? this.localize('copied') : this.localize('copy')}
@@ -382,11 +380,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     // See updated()'s identical condition for why languagesOnly is excluded here too.
     const showSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
-    const bodyLabel =
-      this.filename ||
-      (this.language
-        ? this.localize('codeRegionWithLanguage', undefined, { language: this.language })
-        : this.localize('codeRegion'));
+    const bodyLabel = codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
 
     return html`
       <div part="base">

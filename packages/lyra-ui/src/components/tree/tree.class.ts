@@ -5,6 +5,7 @@ import { tag } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
+import '../empty/empty.class.js';
 import './tree-node.class.js';
 import type { LyraTreeNode } from './tree-node.class.js';
 
@@ -29,7 +30,8 @@ export interface TreeItem {
  * @customElement lyra-tree
  * @event lyra-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lyra-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lyra-node-select - `detail: { id }`, dispatched by a descendant `<lyra-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
- * @csspart base
+ * @csspart base - The tree's root wrapper (role="tree").
+ * @csspart empty - The empty-state message shown when `data` is empty.
  * @slot - `<lyra-tree-node>` elements (top-level tree items).
  */
 export class LyraTree extends LyraElement {
@@ -315,6 +317,9 @@ export class LyraTree extends LyraElement {
         @lyra-node-toggle=${this.onNodeActivate}
         @lyra-node-select=${this.onNodeActivate}
       >
+        ${this.data.length === 0
+          ? html`<lyra-empty part="empty" heading=${this.localize('noData')}></lyra-empty>`
+          : nothing}
         <slot></slot>
       </div>
     `;

@@ -43,7 +43,7 @@ export class LyraAvatar extends LyraElement {
    *  has no text of its own for a screen reader to read. */
   @property() alt = '';
 
-  /** Visual size. `'md'` (the default) matches `--lyra-icon-button-size` (2.5rem). */
+  /** Visual size. `'lg'` matches `--lyra-icon-button-size` (2.5rem); `'md'` (the default) is 2rem. */
   @property({ reflect: true }) size: AvatarSize = 'md';
 
   /** `'circle'` (the default) or `'square'`. */
@@ -79,11 +79,19 @@ export class LyraAvatar extends LyraElement {
   render(): TemplateResult {
     const showImage = !this.hasIcon && !!this.src && !this.imageFailed;
     const showInitials = !this.hasIcon && !showImage;
+    // Whenever `alt` is set, [part='base'] needs a real accessible name
+    // regardless of which fallback tier ends up rendering -- the icon-slot
+    // case (its glyph is aria-hidden) and the initials-fallback case (its
+    // text is aria-hidden once `alt` is set, see [part='initials'] below)
+    // both rely on this, not just the icon-slot one. The `showImage` case is
+    // excluded: the `<img>` itself already carries `alt` as its accessible
+    // name, so [part='base'] doesn't need a redundant role/aria-label.
+    const hasAccessibleFallback = (this.hasIcon || showInitials) && this.alt;
     return html`
       <span
         part="base"
-        role=${this.hasIcon && this.alt ? 'img' : nothing}
-        aria-label=${this.hasIcon && this.alt ? this.alt : nothing}
+        role=${hasAccessibleFallback ? 'img' : nothing}
+        aria-label=${hasAccessibleFallback ? this.alt : nothing}
       >
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIcon}
           ><slot @slotchange=${this.onIconSlotChange}></slot

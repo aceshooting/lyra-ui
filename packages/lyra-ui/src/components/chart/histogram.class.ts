@@ -27,7 +27,8 @@ export class LyraHistogram extends LyraChart {
   @property({ converter: { fromAttribute: (value) => normalizeHistogramBinCount(value) } })
   bins = 10;
   @property({ attribute: false }) values: number[] = [];
-  @property() label = 'Frequency';
+  /** Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized "Frequency" when unset. */
+  @property() label = '';
 }
 
 // Both the `labels` and `datasets` accessors below derive from the same
@@ -74,7 +75,12 @@ Object.defineProperty(LyraHistogram.prototype, 'datasets', {
   configurable: true,
   enumerable: true,
   get(this: LyraHistogram): Series[] {
-    return [{ label: this.label, data: binnedBuckets(this).map((b) => b.count) }];
+    return [
+      {
+        label: this.label || this.localize('histogramFrequency'),
+        data: binnedBuckets(this).map((b) => b.count),
+      },
+    ];
   },
   set(_v: Series[]) {
     /* derived from `values`/`bins`; direct writes are ignored */

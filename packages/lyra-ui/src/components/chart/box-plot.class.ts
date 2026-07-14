@@ -256,18 +256,30 @@ export class LyraBoxPlot extends LyraElement {
       const first = medians[0]!;
       const last = medians[medians.length - 1]!;
       const trend = last > first ? 'increasing' : last < first ? 'decreasing' : 'flat';
-      return `${series.label}: ${series.data.length} distributions, median range ${Math.min(...medians)} to ${Math.max(...medians)}, ${trend} median trend`;
+      return this.localize(
+        'boxPlotSeriesSummary',
+        '{label}: {count} distributions, median range {min} to {max}, {trend} median trend',
+        {
+          label: series.label,
+          count: series.data.length,
+          min: Math.min(...medians),
+          max: Math.max(...medians),
+          trend,
+        },
+      );
     });
-    return `Box plot${summaries.length ? `. ${summaries.join('. ')}` : ' with no data'}.`;
+    return summaries.length
+      ? this.localize('boxPlotSummaryWithData', undefined, { summaries: summaries.join('. ') })
+      : 'Box plot with no data.';
   }
 
   private renderDataTable(): TemplateResult {
     return html`
       <table class=${this.showDataTable ? '' : 'sr-only'}>
-        <caption>${this.accessibleLabel || 'Box plot data'}</caption>
+        <caption>${this.accessibleLabel || this.localize('boxPlotData')}</caption>
         <thead>
           <tr>
-            <th scope="col">Category</th>
+            <th scope="col">${this.localize('chartCategory')}</th>
             <th scope="col">Series</th>
             <th scope="col">Min</th>
             <th scope="col">Q1</th>
@@ -281,7 +293,7 @@ export class LyraBoxPlot extends LyraElement {
             series.data.map(
               (point, index) => html`
                 <tr>
-                  <th scope="row">${this.labels[index] ?? `Point ${index + 1}`}</th>
+                  <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, { n: index + 1 })}</th>
                   <td>${series.label}</td>
                   <td>${point.min}</td>
                   <td>${point.q1}</td>
@@ -305,7 +317,7 @@ export class LyraBoxPlot extends LyraElement {
         </div>
       `;
     }
-    const label = this.accessibleLabel || this.boxes.map((b) => b.label).join(', ') || 'Box plot';
+    const label = this.accessibleLabel || this.boxes.map((b) => b.label).join(', ') || this.localize('boxPlot');
     const description = this.boxPlotDescription();
     return html`
       <div part="base">

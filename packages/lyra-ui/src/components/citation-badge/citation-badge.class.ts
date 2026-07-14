@@ -18,6 +18,11 @@ export interface CitationOpenDetail {
   href?: string;
 }
 
+export interface LyraCitationBadgeEventMap {
+  'lyra-citation-activate': CustomEvent<CitationActivateDetail>;
+  'lyra-citation-open': CustomEvent<CitationOpenDetail>;
+}
+
 /** Localization key for the visible (not just color-coded) status word,
  *  folded into the computed accessible name — `null` for `default` omits the
  *  status clause entirely rather than announcing a meaningless
@@ -105,7 +110,7 @@ function isRealPreviewNode(n: Node): boolean {
  * @csspart index - The citation number.
  * @csspart popover - The floating preview panel (only meaningful while open).
  */
-export class LyraCitationBadge extends LyraElement {
+export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** The citation number shown, e.g. `3` renders as `[3]`. */
@@ -172,7 +177,8 @@ export class LyraCitationBadge extends LyraElement {
     if (this.label) return this.label;
     const key = STATUS_MESSAGE_KEY[this.status];
     const statusText = key ? this.localize(key) : '';
-    return statusText ? `Citation ${this.index}, ${statusText}` : `Citation ${this.index}`;
+    const citationLabel = this.localize('citation', undefined, { index: this.index });
+    return statusText ? `${citationLabel}, ${statusText}` : citationLabel;
   }
 
   private onSlotChange = (e: Event): void => {

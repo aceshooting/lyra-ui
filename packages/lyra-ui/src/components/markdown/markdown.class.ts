@@ -87,7 +87,10 @@ export interface LyraMarkdownEventMap {
  *   fallback) output.
  * @csspart heading - Every rendered `<h1>`–`<h6>` (shifted by
  *   `heading-offset`).
+ * @csspart paragraph - Every rendered `<p>`.
+ * @csspart list - Every rendered `<ul>`/`<ol>`.
  * @csspart code-block - Every rendered fenced/indented `<pre>`.
+ * @csspart inline-code - Every rendered inline `<code>` span (backtick spans, not fenced blocks).
  * @csspart link - Every rendered `<a>`.
  * @csspart table - Every rendered `<table>`.
  * @csspart blockquote - Every rendered `<blockquote>`.

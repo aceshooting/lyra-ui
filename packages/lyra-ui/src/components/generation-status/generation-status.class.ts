@@ -41,16 +41,21 @@ function stopIcon(): SVGTemplateResult {
  *  a plain `60`) exists so a value that *rounds* to `"60.0s"` at one-decimal
  *  precision is displayed as `"1m 0s"` instead -- without it, the two
  *  branches could each independently round the same instant to a different
- *  minute. */
-function formatElapsed(ms: number): string {
+ *  minute. `secondsUnit`/`minutesSecondsTemplate` are the already-localized
+ *  seconds suffix and `"{minutes}m {seconds}s"`-shaped template (see the call
+ *  site's `this.localize()` resolution), same shape as `formatTokenCount`'s
+ *  `noun` parameter below. */
+function formatElapsed(ms: number, secondsUnit: string, minutesSecondsTemplate: string): string {
   const totalSeconds = Math.max(0, ms) / 1000;
   if (totalSeconds < 59.95) {
-    return `${(Math.round(totalSeconds * 10) / 10).toFixed(1)}s`;
+    return `${(Math.round(totalSeconds * 10) / 10).toFixed(1)}${secondsUnit}`;
   }
   const wholeSeconds = Math.round(totalSeconds);
   const minutes = Math.floor(wholeSeconds / 60);
   const seconds = wholeSeconds % 60;
-  return `${minutes}m ${seconds}s`;
+  return minutesSecondsTemplate
+    .replace('{minutes}', String(minutes))
+    .replace('{seconds}', String(seconds));
 }
 
 /** `340` -> `"340 tokens"`; `1` -> `"1 token"`. `noun` is the already-localized
@@ -67,11 +72,13 @@ function formatTokenCount(count: number, noun: string): string {
  *  the range (where a whole-number rounding would flatten every early
  *  reading to the same "0" or "1") gets one decimal place, while anything at
  *  or above 10 tok/s rounds to a whole number, which is plenty precise for a
- *  live-updating throughput figure. */
-function formatThroughput(value: number): string {
+ *  live-updating throughput figure. `unit` is the already-localized
+ *  tokens-per-second suffix (see the call site's `this.localize()`
+ *  resolution), same shape as `formatTokenCount`'s `noun` parameter above. */
+function formatThroughput(value: number, unit: string): string {
   const clamped = Math.max(0, value);
   const rounded = clamped < 10 ? Math.round(clamped * 10) / 10 : Math.round(clamped);
-  return `${rounded} tok/s`;
+  return `${rounded} ${unit}`;
 }
 
 /**
@@ -328,7 +335,13 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
 
     return html`
       <div part="base">
-        <span part="elapsed">${formatElapsed(this.elapsedMs)}</span>
+        <span part="elapsed"
+          >${formatElapsed(
+            this.elapsedMs,
+            this.localize('elapsedSecondsUnit'),
+            this.localize('elapsedMinutesSecondsTemplate'),
+          )}</span
+        >
         ${hasTokens
           ? html`<span part="tokens"
               >${formatTokenCount(
@@ -337,7 +350,11 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
               )}</span
             >`
           : nothing}
-        ${hasThroughput ? html`<span part="throughput">${formatThroughput(throughput!)}</span>` : nothing}
+        ${hasThroughput
+          ? html`<span part="throughput"
+              >${formatThroughput(throughput!, this.localize('tokensPerSecondUnit'))}</span
+            >`
+          : nothing}
         ${this.showStop
           ? html`
               <button

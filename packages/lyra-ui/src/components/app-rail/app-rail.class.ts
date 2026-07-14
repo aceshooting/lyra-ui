@@ -540,7 +540,7 @@ export class LyraAppRail extends LyraElement {
       <div
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
-        aria-label=${this.label}
+        aria-label=${this.localize('navigation', this.label === 'Navigation' ? undefined : this.label)}
         role=${this.overlayActive ? 'dialog' : 'navigation'}
         aria-modal=${this.overlayActive ? 'true' : nothing}
         tabindex=${this.overlayActive ? '-1' : nothing}

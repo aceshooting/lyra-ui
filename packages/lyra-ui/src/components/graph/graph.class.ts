@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import { isRtl } from '../../internal/rtl.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
@@ -127,6 +128,7 @@ export interface LyraGraphEventMap {
  * @csspart label - A node label.
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
+ * @csspart empty - The empty-state message, shown when `nodes` is empty.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -507,13 +509,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private graphItemText(index: number): string {
     if (index < this.simNodes.length) {
       const node = this.simNodes[index];
-      return node ? `Node ${node.label ?? node.id}` : '';
+      return node ? this.localize('graphNode', undefined, { label: node.label ?? node.id }) : '';
     }
     const link = this.simLinks[index - this.simNodes.length];
     if (!link) return '';
     const source = typeof link.source === 'object' ? (link.source as SimNode).label ?? (link.source as SimNode).id : String(link.source);
     const target = typeof link.target === 'object' ? (link.target as SimNode).label ?? (link.target as SimNode).id : String(link.target);
-    return `Link from ${source} to ${target}`;
+    return this.localize('graphLink', undefined, { source, target });
   }
 
   private onGraphItemFocus(index: number): void {
@@ -537,17 +539,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   /**
-   * ArrowRight/ArrowDown move to the next roving-tabindex item, ArrowLeft/
-   * ArrowUp to the previous one, in flat array order (`simNodes` then
-   * `simLinks`) — deliberately not routed through `isRtl()`, unlike this
-   * library's grid/track-based components (e.g. the day grid in
-   * `<lyra-date-picker>`, the resize handle in `<lyra-dock-panel>`). Node
-   * position here comes entirely from the `d3-force` physics simulation
-   * (and live dragging), not from `nodes`' array order or any laid-out
-   * reading direction, so a node's index has no corresponding "visual
-   * left"/"right" for a `dir="rtl"` swap to mirror in the first place —
-   * ArrowRight and ArrowDown already mean the same thing ("next") here,
-   * which a spatial left/right grid never does.
+   * The forward physical arrow key (`ArrowRight` in LTR, `ArrowLeft` under
+   * `dir="rtl"` — see `isRtl()`) moves to the next roving-tabindex item, the
+   * backward one to the previous, in flat array order (`simNodes` then
+   * `simLinks`) — the same `forwardKey`/`backwardKey` swap this library's
+   * other "physical arrow key drives sequential previous/next" components
+   * (`<lyra-tabs>`, `<lyra-slider>`, `<lyra-segmented>`) apply under RTL.
+   * `ArrowDown`/`ArrowUp` always mean next/previous regardless of direction.
    */
   private onGraphKeyDown(e: KeyboardEvent, index: number, activate: () => void): void {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -558,9 +556,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     const count = this.graphItemCount();
     if (!count) return;
+    const rtl = isRtl(this);
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next = index;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = Math.min(count - 1, index + 1);
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = Math.max(0, index - 1);
+    if (e.key === forwardKey || e.key === 'ArrowDown') next = Math.min(count - 1, index + 1);
+    else if (e.key === backwardKey || e.key === 'ArrowUp') next = Math.max(0, index - 1);
     else if (e.key === 'Home') next = 0;
     else if (e.key === 'End') next = count - 1;
     else return;
@@ -579,12 +580,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         </div>
       `;
     }
+    if (!this.nodes.length) {
+      return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
+    }
     return html`
       <div part="base">
         <svg
           part="svg"
           role="group"
-          aria-label="Node-link diagram with ${this.simNodes.length} nodes and ${this.simLinks.length} links"
+          aria-label=${this.localize('graphDiagram', undefined, {
+            nodeCount: this.simNodes.length,
+            linkCount: this.simLinks.length,
+          })}
           viewBox="0 0 ${this.width} ${this.height}"
           tabindex=${this.graphItemCount() ? '-1' : '0'}
         >
@@ -597,7 +604,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 part="link"
                 role="button"
                 tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
-                aria-label="Link from ${source.label ?? source.id} to ${target.label ?? target.id}"
+                aria-label=${this.localize('graphLink', undefined, {
+                  source: source.label ?? source.id,
+                  target: target.label ?? target.id,
+                })}
                 stroke-width=${l.width ?? 1.5}
                 x1=${source.x ?? 0}
                 y1=${source.y ?? 0}
@@ -649,11 +659,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           ${this.graphLiveText || (this.normalizedGraphItem() >= 0 ? `${this.graphItemText(this.normalizedGraphItem())} (1 of ${this.graphItemCount()})` : '')}
         </div>
         <ul part="data-list" class="sr-only" aria-label=${this.localize('graphDataList')}>
-          ${this.simNodes.map((node) => html`<li>Node ${node.label ?? node.id}</li>`)}
+          ${this.simNodes.map(
+            (node) => html`<li>${this.localize('graphNode', undefined, { label: node.label ?? node.id })}</li>`,
+          )}
           ${this.simLinks.map((link) => {
             const source = link.source as SimNode;
             const target = link.target as SimNode;
-            return html`<li>Link from ${source.label ?? source.id} to ${target.label ?? target.id}</li>`;
+            return html`<li>${this.localize('graphLink', undefined, {
+              source: source.label ?? source.id,
+              target: target.label ?? target.id,
+            })}</li>`;
           })}
         </ul>
       </div>

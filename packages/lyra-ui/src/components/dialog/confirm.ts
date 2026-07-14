@@ -1,12 +1,14 @@
 import type { LyraDialog, DialogCloseReason } from './dialog.js';
 import './dialog.js';
+import { tag } from '../../internal/prefix.js';
+import { resolveLyraString } from '../../internal/localization.js';
 
 export interface ConfirmOptions {
   /** Dialog title -- rendered as a slotted `<h2>`, which also drives the dialog's accessible name (see dialog.ts). */
   title: string;
   /** Optional supporting text rendered below the title. */
   description?: string;
-  /** Confirm button label. Defaults to `'Confirm'`. */
+  /** Confirm button label. Defaults to the localized `'confirm'` message (`'Confirm'` in English). */
   confirmLabel?: string;
   /** Cancel button label. Defaults to `'Cancel'`. */
   cancelLabel?: string;
@@ -20,8 +22,8 @@ export interface ConfirmOptions {
 // styles.ts. Each filled tone uses its matching on-color token so standalone
 // light/dark fallbacks and a consumer's Web Awesome theme stay paired.
 const BUTTON_BASE_STYLE =
-  'font: inherit; font-size: 0.875rem; padding: var(--lyra-space-xs) var(--lyra-space-m); ' +
-  'border-radius: var(--lyra-radius); cursor: pointer; border: 1px solid var(--lyra-color-border);';
+  'font: inherit; font-size: var(--lyra-font-size-md-sm); padding: var(--lyra-space-xs) var(--lyra-space-m); ' +
+  'border-radius: var(--lyra-radius); cursor: pointer; border: var(--lyra-border-width-thin) solid var(--lyra-color-border);';
 const CANCEL_STYLE = 'background: var(--lyra-color-surface); color: var(--lyra-color-text);';
 const CONFIRM_TONE_STYLE: Record<'neutral' | 'danger', string> = {
   neutral:
@@ -66,14 +68,15 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * if (ok) deleteConversation();
  */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
-  const { title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel', tone = 'neutral' } = options;
+  const { title, description, confirmLabel, cancelLabel = 'Cancel', tone = 'neutral' } = options;
 
   return new Promise<boolean>((resolve) => {
-    const dialog = document.createElement('lyra-dialog') as LyraDialog;
+    const dialog = document.createElement(tag('dialog')) as LyraDialog;
 
     const heading = document.createElement('h2');
     heading.textContent = title;
-    heading.style.cssText = 'margin: 0 0 var(--lyra-space-s) 0; font-size: 1.0625rem; font-weight: 600;';
+    heading.style.cssText =
+      'margin: 0 0 var(--lyra-space-s) 0; font-size: var(--lyra-size-1-0625rem); font-weight: var(--lyra-font-weight-semibold);';
     dialog.appendChild(heading);
 
     if (description) {
@@ -91,7 +94,11 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
 
     const cancelButton = createButton(cancelLabel, CANCEL_STYLE, () => dialog.close('cancel'));
     cancelButton.slot = 'footer';
-    const confirmButton = createButton(confirmLabel, CONFIRM_TONE_STYLE[tone], () => dialog.close('confirm'));
+    const confirmButton = createButton(
+      resolveLyraString(dialog, 'confirm', undefined, confirmLabel),
+      CONFIRM_TONE_STYLE[tone],
+      () => dialog.close('confirm'),
+    );
     confirmButton.slot = 'footer';
     dialog.appendChild(cancelButton);
     dialog.appendChild(confirmButton);

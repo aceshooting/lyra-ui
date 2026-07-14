@@ -19,7 +19,7 @@ import { styles } from './tool-result-dialog.styles.js';
 export type ToolResultStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
 
 /**
- * Reason the dialog was dismissed, forwarded as the `lyra-dialog-close` event
+ * Reason the dialog was dismissed, forwarded as the `lyra-close` event
  * detail -- mirrors `<lyra-dialog>`'s own `DialogCloseReason` shape.
  * `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss
  * triggers, `'close-button'` from the built-in header close button, and any
@@ -158,10 +158,13 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  *  durations are the common case for a single tool call, so they get the
  *  more precise unit; once a call runs a full second or longer, trimming to
  *  (at most) one decimal place of seconds reads better than a 4-5 digit
- *  millisecond count. */
-function formatDuration(ms: number): string {
+ *  millisecond count. `msUnit` resolves the sub-second unit label -- defaults
+ *  to the plain English abbreviation, so every existing call site/test that
+ *  only passes `ms` is unaffected; the render() call site below passes
+ *  `this.localize('durationUnitMs')` instead. */
+function formatDuration(ms: number, msUnit = 'ms'): string {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return `${Math.round(Math.max(0, ms))}ms`;
+    return `${Math.round(Math.max(0, ms))}${msUnit}`;
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
@@ -199,7 +202,7 @@ function formatDuration(ms: number): string {
  * @slot body - The dialog's main content — typically a `<lyra-tabs>` with
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
  * @slot footer - Optional action buttons, rendered in a bottom row.
- * @event lyra-dialog-close - `detail: ToolResultDialogCloseReason`. Fired
+ * @event lyra-close - `detail: ToolResultDialogCloseReason`. Fired
  * exactly once per dismissal, via Escape, a backdrop click, the built-in
  * close button, or a `close()` call.
  * @event lyra-maximize-change - `detail: boolean` (the new `maximized`
@@ -224,7 +227,7 @@ export class LyraToolResultDialog extends LyraElement {
    * Whether the dialog is open. Set this (or call `close()`) — there is no
    * separate `show()`/`hide()` pair. Both paths restore focus to the trigger
    * element identically; only `close()` additionally fires
-   * `lyra-dialog-close`, since a direct assignment carries no reason string
+   * `lyra-close`, since a direct assignment carries no reason string
    * to attach to that event.
    */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -303,7 +306,7 @@ export class LyraToolResultDialog extends LyraElement {
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lyra-dialog-close` detail --
+   * opened. `reason` is forwarded as the `lyra-close` detail --
    * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
    * consumer's own close affordance (e.g. a footer action button) should
    * call this directly with its own reason string, so every dismissal path
@@ -313,13 +316,13 @@ export class LyraToolResultDialog extends LyraElement {
    * Focus restoration follows the `open` lifecycle, so a direct `.open =
    * false` assignment restores focus identically to calling `close()` -- the
    * one thing a direct assignment still can't do is fire
-   * `lyra-dialog-close`, since there's no reason string to attach without
+   * `lyra-close`, since there's no reason string to attach without
    * going through this method.
    */
   close(reason: ToolResultDialogCloseReason = 'api'): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ToolResultDialogCloseReason>('lyra-dialog-close', reason);
+    this.emit<ToolResultDialogCloseReason>('lyra-close', reason);
   }
 
   private onBackdropClick = (): void => {
@@ -372,7 +375,11 @@ export class LyraToolResultDialog extends LyraElement {
                 >${this.localize(STATUS_LABEL_KEY[this.status] ?? STATUS_LABEL_KEY.pending)}</span
               ></span
             >
-            ${hasDuration ? html`<span part="duration">${formatDuration(this.durationMs!)}</span>` : nothing}
+            ${hasDuration
+              ? html`<span part="duration"
+                  >${formatDuration(this.durationMs!, this.localize('durationUnitMs'))}</span
+                >`
+              : nothing}
           </div>
           <div part="header-actions">
             <button

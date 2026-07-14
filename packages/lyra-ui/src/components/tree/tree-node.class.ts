@@ -4,74 +4,9 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { tag } from '../../internal/prefix.js';
 import { chevronIcon } from '../../internal/icons.js';
-import { css } from 'lit';
 import { cascadeUpdateComplete } from './update-cascade.js';
+import { styles } from './tree-node.styles.js';
 import type { TreeItem } from './tree.class.js';
-
-const styles = css`
-  :host {
-    display: block;
-    outline: none; /* the host is the focusable treeitem; the visible ring lives on [part=row] */
-  }
-  :host(:focus-visible) [part='row'] {
-    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-focus-ring-offset);
-  }
-  [part='row'] {
-    display: flex;
-    align-items: center;
-    gap: var(--lyra-space-xs);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
-    /* Depth-based indent is capped at 8rem so a deeply-nested item can't
-       push its content off-screen with no way back; [part=label] below
-       truncates the remaining overflow and tree.styles.ts's [part=base]
-       adds an overflow-x:auto fallback for whatever's left. */
-    padding-inline-start: calc(var(--lyra-space-s) + min(var(--lyra-tree-depth, 0) * 1rem, 8rem));
-    cursor: pointer;
-    border-radius: var(--lyra-radius);
-  }
-  [part='row']:hover {
-    background: var(--lyra-color-brand-quiet);
-  }
-  [part='toggle'] {
-    /* Deliberately smaller than the shared --lyra-icon-button-size (2.5rem,
-       for standalone icon-only buttons) — this toggle sits inline in a
-       compact row, but still needs a real touch target, not a 1rem hitbox. */
-    min-inline-size: 1.75rem;
-    min-block-size: 1.75rem;
-    padding: var(--lyra-space-xs);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: none;
-    color: var(--lyra-color-text-quiet);
-    cursor: pointer;
-    flex: 0 0 auto;
-  }
-  [part='toggle'][hidden] {
-    /* visibility (not display) so the placeholder keeps its layout box --
-       a leaf row still lines up with sibling rows that do have a chevron. */
-    visibility: hidden;
-  }
-  :host([expanded]) [part='toggle'] {
-    transform: rotate(90deg);
-  }
-  [part='label'] {
-    flex: 1 1 auto;
-    min-inline-size: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  [part='badge'] {
-    font-size: 0.75rem;
-    color: var(--lyra-color-text);
-    background: var(--lyra-color-border);
-    border-radius: var(--lyra-radius);
-    padding: 0 0.35rem;
-  }
-`;
 
 export interface LyraTreeNodeEventMap {
   'lyra-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
@@ -95,6 +30,7 @@ export interface LyraTreeNodeEventMap {
  * @csspart toggle - The expand/collapse button.
  * @csspart label - The node label.
  * @csspart badge - The optional node badge.
+ * @csspart group - The wrapper around a node's expanded child items.
  */
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -195,7 +131,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
         ${this.item.badge != null ? html`<span part="badge">${this.item.badge}</span>` : nothing}
       </div>
       ${this.expanded && this.hasChildren
-        ? html`<div role="group">
+        ? html`<div part="group" role="group">
             ${repeat(
               this.item.children!,
               (child) => child.id,

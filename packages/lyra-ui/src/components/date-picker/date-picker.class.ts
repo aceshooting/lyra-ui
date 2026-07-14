@@ -99,7 +99,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ type: Boolean, attribute: 'disable-past' }) disablePast = false;
   @property({ type: Boolean, attribute: 'disable-future' }) disableFuture = false;
   @property({ type: Boolean, attribute: 'with-outside-days' }) withOutsideDays = false;
-  /** Accessible label for the previous-month button. Override for a non-English `locale`. */
+  /** Accessible label for the previous-month button. Left at the built-in default it
+   *  routes through `this.localize()` so a locale/`.strings` override applies without
+   *  requiring this to be set; an explicit override wins verbatim. */
   @property({ attribute: 'previous-label' }) previousLabel = 'Previous month';
   /** Accessible label for the next-month button. Override for a non-English `locale`. */
   @property({ attribute: 'next-label' }) nextLabel = 'Next month';
@@ -495,7 +497,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
           ? html`<button
               part="previous"
               type="button"
-              aria-label=${this.previousLabel}
+              aria-label=${this.localize(
+                'previousMonth',
+                this.previousLabel === 'Previous month' ? undefined : this.previousLabel,
+              )}
               ?disabled=${this.disabled || this.readonly}
               @click=${() => this.nav(-1)}
             >

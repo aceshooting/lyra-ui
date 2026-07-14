@@ -141,7 +141,7 @@ describe('views', () => {
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="view-toggle"]')] as HTMLButtonElement[];
     setTimeout(() => toggles[1]!.click());
     const ev = await oneEvent(el, 'lyra-view-change');
-    expect(ev.detail).to.equal('table');
+    expect(ev.detail).to.deep.equal({ viewId: 'table' });
     expect(el.activeView).to.equal('table');
   });
 
@@ -275,7 +275,7 @@ it('toggles collapsed on collapse-button click and emits lyra-collapse-change', 
   await el.updateComplete;
 
   expect(el.collapsed).to.be.true;
-  expect(detail).to.be.true;
+  expect(detail).to.deep.equal({ collapsed: true });
   expect(el.shadowRoot!.querySelector('[part="body"]')!.hasAttribute('hidden')).to.be.true;
 });
 

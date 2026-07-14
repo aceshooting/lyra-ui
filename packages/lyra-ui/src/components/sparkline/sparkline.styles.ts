@@ -16,14 +16,14 @@ export const styles = css`
   [part='line'] {
     fill: none;
     stroke: var(--lyra-color-brand);
-    stroke-width: 1.5;
+    stroke-width: var(--lyra-sparkline-stroke-width, 1.5);
     stroke-linejoin: round;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
   }
   [part='area'] {
     fill: var(--lyra-color-brand);
-    opacity: 0.15;
+    opacity: var(--lyra-sparkline-area-opacity, 0.15);
     stroke: none;
   }
   [part='bar'] {

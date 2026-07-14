@@ -146,9 +146,9 @@ export const Events: Story = {
         tool-name="run_python"
         status="success"
         duration-ms="820"
-        @lyra-dialog-close=${(e: CustomEvent<string>) => {
+        @lyra-close=${(e: CustomEvent<string>) => {
           const out = document.getElementById('tool-result-dialog-log');
-          if (out) out.textContent = `lyra-dialog-close: ${e.detail}`;
+          if (out) out.textContent = `lyra-close: ${e.detail}`;
         }}
         @lyra-maximize-change=${(e: CustomEvent<boolean>) => {
           const out = document.getElementById('tool-result-dialog-log');

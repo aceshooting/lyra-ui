@@ -27,9 +27,9 @@ export interface WidgetView {
 }
 
 export interface LyraWidgetEventMap {
-  'lyra-collapse-change': CustomEvent<boolean>;
-  'lyra-fullscreen-change': CustomEvent<boolean>;
-  'lyra-view-change': CustomEvent<string>;
+  'lyra-collapse-change': CustomEvent<{ collapsed: boolean }>;
+  'lyra-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
+  'lyra-view-change': CustomEvent<{ viewId: string }>;
 }
 /**
  * `<lyra-widget>` — a titled panel shell with an optional collapse toggle and
@@ -52,10 +52,12 @@ export interface LyraWidgetEventMap {
  *   "exit fullscreen" default icons, so a consumer supplying one is responsible for its own
  *   expand/exit distinction (e.g. by reading the `fullscreen` attribute). Only meaningful while
  *   `expandable`.
- * @event lyra-collapse-change - `detail: boolean` (the new `collapsed` state).
- * @event lyra-fullscreen-change - `detail: boolean` (the new `fullscreen` state).
+ * @slot view-{id} - Content for the view whose `WidgetView.id` matches `{id}`, rendered when
+ *   `views` is non-empty.
+ * @event lyra-collapse-change - `detail: { collapsed }` (the new `collapsed` state).
+ * @event lyra-fullscreen-change - `detail: { fullscreen }` (the new `fullscreen` state).
  * @event lyra-view-change - Fired when the active view changes via a header toggle click.
- *   `detail: string` (the new view's `id`).
+ *   `detail: { viewId }` (the new view's `id`).
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
  * @csspart title - The wrapper around the label/sublabel.
@@ -219,24 +221,24 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private setActiveView = (id: string): void => {
     if (id === this.activeView) return;
     this.activeView = id;
-    this.emit('lyra-view-change', id);
+    this.emit('lyra-view-change', { viewId: id });
   };
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit('lyra-collapse-change', this.collapsed);
+    this.emit('lyra-collapse-change', { collapsed: this.collapsed });
   };
 
   private toggleFullscreen = (e: MouseEvent): void => {
     if (!this.fullscreen) this.explicitTrigger = e.currentTarget as HTMLElement;
     this.fullscreen = !this.fullscreen;
-    this.emit('lyra-fullscreen-change', this.fullscreen);
+    this.emit('lyra-fullscreen-change', { fullscreen: this.fullscreen });
   };
 
   private dismissFullscreen = (): void => {
     if (!this.fullscreen) return;
     this.fullscreen = false;
-    this.emit('lyra-fullscreen-change', false);
+    this.emit('lyra-fullscreen-change', { fullscreen: false });
   };
 
   private onBackdropClick = (): void => {

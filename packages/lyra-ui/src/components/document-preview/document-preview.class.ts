@@ -315,7 +315,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderTextPreview(): TemplateResult {
-    if (this.src === '') return html`<p class="empty-note">No document to display.</p>`;
+    if (this.src === '')
+      return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: 'document' })}</p>`;
     if (safeFetchUrl(this.src) === null) return this.renderError(this.localize('documentPreviewUrlNotAllowed'));
     switch (this.textFetch.kind) {
       case 'loaded':
@@ -330,7 +331,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderImagePreview(): TemplateResult {
-    if (this.src === '') return html`<p class="empty-note">No image to display.</p>`;
+    if (this.src === '')
+      return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: 'image' })}</p>`;
     const src = safeMediaSrc(this.src);
     if (src === null) return this.renderDownloadFallback();
     return html`<img src=${src} alt=${this.filename || this.localize('documentPreviewAlt')} />`;
@@ -342,7 +344,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     return html`
       <div class="fallback">
         <span class="fallback-icon" aria-hidden="true">${fileGlyph()}</span>
-        <p class="fallback-text">Preview not available for ${label}.</p>
+        <p class="fallback-text">${this.localize('documentPreviewNotAvailable', undefined, { label })}</p>
         ${href !== null
           ? html`
               <a
@@ -351,7 +353,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
                 download=${this.filename || ''}
                 @click=${this.onDownloadClick}
               >
-                ${downloadIcon()}<span>Download</span>
+                ${downloadIcon()}<span>${this.localize('download')}</span>
               </a>
             `
           : nothing}
@@ -371,7 +373,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   private renderBody(): TemplateResult {
-    if (this.status === 'converting') return this.renderSpinner('Converting document…', this.progress);
+    if (this.status === 'converting')
+      return this.renderSpinner(this.localize('convertingDocument'), this.progress);
     if (this.status === 'error') return this.renderError(this.errorMessage);
 
     switch (classifyFormat(this.mimeType)) {

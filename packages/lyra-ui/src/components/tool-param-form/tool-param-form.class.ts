@@ -112,6 +112,9 @@ export interface LyraToolParamFormEventMap {
  * @csspart label - A field's label.
  * @csspart description - A field's helper text, from `schema.description`.
  * @csspart error - A field-level or form-level validation message.
+ * @csspart unsupported - The fallback note rendered in place of a control for
+ * a property whose `type` is outside this renderer's scope.
+ * @csspart empty - The message shown when `schema.properties` has no entries.
  */
 export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   static formAssociated = true;
@@ -646,7 +649,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     // dropping the field or throwing. Still carries id=fieldId like every
     // other control-slot render, since renderField's shared, non-boolean
     // branch above always renders a <label for=fieldId> pointing at it.
-    return html`<p class="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: (prop as { type: string }).type })}</p>`;
+    return html`<p part="unsupported" class="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: (prop as { type: string }).type })}</p>`;
   }
 
   private renderField(key: string, prop: ToolParamFormProperty, index: number): TemplateResult {
@@ -681,7 +684,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const props = this.schemaProperties;
     const keys = Object.keys(props);
     return html`<div part="base">
-      ${keys.map((key, i) => this.renderField(key, props[key], i))}
+      ${keys.length === 0
+        ? html`<p part="empty">${this.localize('noColumns')}</p>`
+        : keys.map((key, i) => this.renderField(key, props[key], i))}
       ${this.showFormError && this._formError
         ? html`<p part="error" class="form-error" role="alert">${this._formError}</p>`
         : nothing}

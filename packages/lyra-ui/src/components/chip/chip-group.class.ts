@@ -7,6 +7,10 @@ export interface ChipGroupOverflowToggleDetail {
   expanded: boolean;
 }
 
+export interface LyraChipGroupEventMap {
+  'lyra-overflow-toggle': CustomEvent<ChipGroupOverflowToggleDetail>;
+}
+
 /**
  * `<lyra-chip-group>` — a flex-wrap container for a set of `<lyra-chip>`
  * children (plain light-DOM composition — direct children are the chips,
@@ -34,7 +38,7 @@ export interface ChipGroupOverflowToggleDetail {
  * @csspart base - The flex-wrap container (holds both the slot and the overflow indicator).
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
  */
-export class LyraChipGroup extends LyraElement {
+export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Maximum number of direct children shown before the rest collapse behind

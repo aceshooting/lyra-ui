@@ -73,4 +73,9 @@ export const styles = css`
     font-style: italic;
     color: var(--lyra-color-text-quiet);
   }
+  [part='empty'] {
+    margin: 0;
+    font-size: var(--lyra-font-size-md-sm);
+    color: var(--lyra-color-text-quiet);
+  }
 `;

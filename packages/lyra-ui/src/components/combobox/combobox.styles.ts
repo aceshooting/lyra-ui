@@ -48,6 +48,9 @@ export const styles = css`
     cursor: not-allowed;
   }
 
+  [part='tags'] {
+    display: contents;
+  }
   [part='tag'] {
     display: inline-flex;
     align-items: center;

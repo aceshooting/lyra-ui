@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact inline status pill for one tool/function call an agent made mid-conversation. It renders no detail surface of its own — clicking it fires `lyra-tool-chip-select`, and the consumer decides what to do (typically opening a `<lyra-tool-result-dialog>`).',
+          'A compact inline status pill for one tool/function call an agent made mid-conversation. It renders no detail surface of its own — clicking it fires `lyra-tool-call-chip-select`, and the consumer decides what to do (typically opening a `<lyra-tool-result-dialog>`).',
       },
     },
   },
@@ -103,7 +103,7 @@ export const IntegrationWithToolResultDialog: Story = {
     docs: {
       description: {
         story:
-          'The chip never imports or renders `<lyra-tool-result-dialog>` itself — this story shows the intended consumer wiring: listen for `lyra-tool-chip-select` and open whatever detail surface makes sense at the call site.',
+          'The chip never imports or renders `<lyra-tool-result-dialog>` itself — this story shows the intended consumer wiring: listen for `lyra-tool-call-chip-select` and open whatever detail surface makes sense at the call site.',
       },
     },
   },
@@ -116,7 +116,7 @@ export const IntegrationWithToolResultDialog: Story = {
         summary="Ran successfully"
         duration-ms="820"
         call-id="call-1"
-        @lyra-tool-chip-select=${openResultDialog}
+        @lyra-tool-call-chip-select=${openResultDialog}
       ></lyra-tool-call-chip>
       <lyra-tool-result-dialog tool-name="run_python" status="success" duration-ms="820">
         <pre slot="body" style="margin:0;white-space:pre-wrap;">sum = 5050</pre>
@@ -133,9 +133,9 @@ export const Events: Story = {
         status="running"
         summary="Searching web…"
         call-id="call-9"
-        @lyra-tool-chip-select=${(e: CustomEvent<{ name: string; callId: string }>) => {
+        @lyra-tool-call-chip-select=${(e: CustomEvent<{ name: string; callId: string }>) => {
           const out = document.getElementById('tool-call-chip-log');
-          if (out) out.textContent = `lyra-tool-chip-select: ${JSON.stringify(e.detail)}`;
+          if (out) out.textContent = `lyra-tool-call-chip-select: ${JSON.stringify(e.detail)}`;
         }}
       ></lyra-tool-call-chip>
       <p id="tool-call-chip-log">No event fired yet.</p>

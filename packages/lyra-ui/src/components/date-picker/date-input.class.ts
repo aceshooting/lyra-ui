@@ -123,7 +123,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property({ attribute: 'clear-label' }) clearLabel = '';
   /** Accessible label for the calendar-toggle button. Override for a non-English `locale`. */
   @property({ attribute: 'open-label' }) openLabel = '';
-  /** Accessible name for the calendar popover dialog. Override for a non-English `locale`. */
+  /** Accessible name for the calendar popover dialog. Left at the built-in default it
+   *  routes through `this.localize()` so a locale/`.strings` override applies without
+   *  requiring this to be set; an explicit override wins verbatim. */
   @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
 
   private cleanupFn?: () => void;
@@ -630,7 +632,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             id=${this.inputId}
             part="input"
             type="text"
-            aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.placeholder || 'Date')}
+            aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.placeholder || this.localize('date'))}
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}
@@ -667,7 +669,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             <span part="expand-icon" aria-hidden="true">${calendarIcon()}</span>
           </button>
         </div>
-        <div id=${this.popupId} part="popup" role="dialog" aria-label=${this.dialogLabel}>
+        <div
+          id=${this.popupId}
+          part="popup"
+          role="dialog"
+          aria-label=${this.localize(
+            'chooseDate',
+            this.dialogLabel === 'Choose date' ? undefined : this.dialogLabel,
+          )}
+        >
           <lyra-date-picker
             part="date-picker"
             .value=${this.value}

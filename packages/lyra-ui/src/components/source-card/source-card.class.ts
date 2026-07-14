@@ -14,6 +14,11 @@ export interface SourceCardOpenDetail {
   href?: string;
 }
 
+export interface LyraSourceCardEventMap {
+  'lyra-expand': CustomEvent<SourceCardExpandDetail>;
+  'lyra-open': CustomEvent<SourceCardOpenDetail>;
+}
+
 /**
  * `<lyra-source-card>` — one citation/source entry, meant to be a direct
  * light-DOM child of `<lyra-source-list>` (though it renders and functions
@@ -71,7 +76,7 @@ export interface SourceCardOpenDetail {
  * });
  * ```
  */
-export class LyraSourceCard extends LyraElement {
+export class LyraSourceCard extends LyraElement<LyraSourceCardEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Stable identifier matching a `<lyra-citation-badge>` elsewhere on the page. */

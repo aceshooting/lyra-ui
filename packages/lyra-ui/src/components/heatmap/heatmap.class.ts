@@ -13,7 +13,7 @@ const FALLBACK_NO_DATA_FILL = 'rgba(128,128,128,0.25)';
 const RAMP_STEPS = 7;
 const FALLBACK_SCALE_LO = '#cde2fb';
 const FALLBACK_SCALE_HI = '#0969da';
-const FALLBACK_LABEL_FONT = '10px sans-serif';
+const FALLBACK_LABEL_FONT = '10px system-ui, sans-serif';
 const CAL_PAD_LEFT = 28;
 const CAL_LABEL_H = 16;
 /** Calendar mode's original fixed cell size — now also the effective fallback
@@ -574,7 +574,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       if (this.mode === 'calendar') {
         this.setAttribute(
           'aria-label',
-          `Calendar heatmap of ${this.days.length} days, ${this.valueLabel} range ${range}`,
+          this.localize('heatmapCalendarLabel', undefined, {
+            days: this.days.length,
+            label: this.valueLabel,
+            range,
+          }),
         );
       } else {
         const rows = this.rowLabels.length;
@@ -1198,7 +1202,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const colLabel = this.colLabels[pos.col] ?? `col ${pos.col + 1}`;
     const v = this.values[pos.row]?.[pos.col];
     const valueText = v == null || v < 0 || !Number.isFinite(v) ? 'no data' : String(v);
-    return `Row ${rowLabel}, Col ${colLabel}: ${valueText}`;
+    return this.localize('heatmapMatrixCellLabel', undefined, {
+      row: rowLabel,
+      col: colLabel,
+      value: valueText,
+    });
   }
 
   private calendarCellText(pos: CalendarCellPos): string {
@@ -1307,12 +1315,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       return;
     }
     const { row, col } = this.focusedCell;
+    const rtl = this.effectiveDirection === 'rtl';
     let dRow = 0;
     let dCol = 0;
     if (e.key === 'ArrowUp') dRow = -1;
     else if (e.key === 'ArrowDown') dRow = 1;
-    else if (e.key === 'ArrowLeft') dCol = -1;
-    else if (e.key === 'ArrowRight') dCol = 1;
+    else if (e.key === 'ArrowLeft') dCol = rtl ? 1 : -1;
+    else if (e.key === 'ArrowRight') dCol = rtl ? -1 : 1;
     const next = this.nextInteractiveMatrixCell(row, col, dRow, dCol, rows, cols);
     this.focusedCell = next;
     this.announce(next);
@@ -1336,12 +1345,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       return;
     }
     const { week, weekday } = this.focusedCell;
+    const rtl = this.effectiveDirection === 'rtl';
     let dWeek = 0;
     let dWeekday = 0;
     if (e.key === 'ArrowUp') dWeekday = -1;
     else if (e.key === 'ArrowDown') dWeekday = 1;
-    else if (e.key === 'ArrowLeft') dWeek = -1;
-    else if (e.key === 'ArrowRight') dWeek = 1;
+    else if (e.key === 'ArrowLeft') dWeek = rtl ? 1 : -1;
+    else if (e.key === 'ArrowRight') dWeek = rtl ? -1 : 1;
     const next = this.nextInteractiveCalendarCell(week, weekday, dWeek, dWeekday, weekCount);
     this.focusedCell = next;
     this.announce(next);

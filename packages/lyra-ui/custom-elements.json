@@ -2817,7 +2817,7 @@
                 "text": "AvatarSize"
               },
               "default": "'md'",
-              "description": "Visual size. `'md'` (the default) matches `--lyra-icon-button-size` (2.5rem).",
+              "description": "Visual size. `'lg'` matches `--lyra-icon-button-size` (2.5rem); `'md'` (the default) is 2rem.",
               "attribute": "size",
               "reflects": true
             },
@@ -3056,7 +3056,7 @@
                 "text": "AvatarSize"
               },
               "default": "'md'",
-              "description": "Visual size. `'md'` (the default) matches `--lyra-icon-button-size` (2.5rem).",
+              "description": "Visual size. `'lg'` matches `--lyra-icon-button-size` (2.5rem); `'md'` (the default) is 2rem.",
               "fieldName": "size"
             },
             {
@@ -8615,7 +8615,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'Frequency'",
+              "default": "''",
+              "description": "Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized \"Frequency\" when unset.",
               "attribute": "label"
             },
             {
@@ -9280,7 +9281,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'Frequency'",
+              "default": "''",
+              "description": "Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized \"Frequency\" when unset.",
               "fieldName": "label"
             },
             {
@@ -10669,6 +10671,15 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly. Named `accessible-label` to\nmatch the same override on `lyra-chart`/`lyra-box-plot`.",
+              "attribute": "accessible-label"
+            },
+            {
+              "kind": "field",
               "name": "activeMarkIndex",
               "type": {
                 "text": "number"
@@ -10712,15 +10723,6 @@
               },
               "default": "true",
               "attribute": "begin-at-zero"
-            },
-            {
-              "kind": "field",
-              "name": "chartLabel",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly.",
-              "attribute": "chart-label"
             },
             {
               "kind": "field",
@@ -10815,12 +10817,11 @@
             },
             {
               "kind": "field",
-              "name": "liveText",
+              "name": "liveRegion",
               "type": {
-                "text": "string"
+                "text": "LyraLiveRegion | undefined"
               },
-              "privacy": "private",
-              "default": "''"
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -11635,6 +11636,14 @@
           ],
           "attributes": [
             {
+              "name": "accessible-label",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly. Named `accessible-label` to\nmatch the same override on `lyra-chart`/`lyra-box-plot`.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "bar-gap-ratio",
               "type": {
                 "text": "number | undefined"
@@ -11658,14 +11667,6 @@
               },
               "default": "true",
               "fieldName": "beginAtZero"
-            },
-            {
-              "name": "chart-label",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly.",
-              "fieldName": "chartLabel"
             },
             {
               "name": "height",
@@ -20121,6 +20122,116 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/code-block/code-block-shared.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "codeBlockBodyLabel",
+          "return": {
+            "type": {
+              "text": "string"
+            }
+          },
+          "parameters": [
+            {
+              "name": "localize",
+              "type": {
+                "text": "LyraLocalizeFn"
+              }
+            },
+            {
+              "name": "filename",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "language",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "The `[part=\"body\"]` region's `aria-label`: the filename when set, else a\nlanguage-aware \"Code\" region label."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockCopyLabel",
+          "return": {
+            "type": {
+              "text": "string"
+            }
+          },
+          "parameters": [
+            {
+              "name": "localize",
+              "type": {
+                "text": "LyraLocalizeFn"
+              }
+            },
+            {
+              "name": "justCopied",
+              "type": {
+                "text": "boolean"
+              }
+            }
+          ],
+          "description": "The copy-to-clipboard header button's `aria-label`."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockToggleLabel",
+          "return": {
+            "type": {
+              "text": "string"
+            }
+          },
+          "parameters": [
+            {
+              "name": "localize",
+              "type": {
+                "text": "LyraLocalizeFn"
+              }
+            },
+            {
+              "name": "collapsed",
+              "type": {
+                "text": "boolean"
+              }
+            }
+          ],
+          "description": "The collapse/expand header toggle button's `aria-label`."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "codeBlockBodyLabel",
+          "declaration": {
+            "name": "codeBlockBodyLabel",
+            "module": "src/components/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockCopyLabel",
+          "declaration": {
+            "name": "codeBlockCopyLabel",
+            "module": "src/components/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockToggleLabel",
+          "declaration": {
+            "name": "codeBlockToggleLabel",
+            "module": "src/components/code-block/code-block-shared.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/code-block/code-block.class.ts",
       "declarations": [
         {
@@ -21192,7 +21303,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'No results'",
+              "default": "''",
+              "description": "Status copy shown in the listbox when no rows match. Empty string falls back to a localized message.",
               "attribute": "empty-text"
             },
             {
@@ -21324,8 +21436,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'Loading…'",
-              "description": "Status copy shown in the listbox while a `source` fetch is in flight.",
+              "default": "''",
+              "description": "Status copy shown in the listbox while a `source` fetch is in flight. Empty string falls back to a localized message.",
               "attribute": "loading-text"
             },
             {
@@ -21461,8 +21573,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'+{n} more — refine your search'",
-              "description": "Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count.",
+              "default": "''",
+              "description": "Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count. Empty string falls back to a localized message.",
               "attribute": "overflow-text"
             },
             {
@@ -22034,7 +22146,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'No results'",
+              "default": "''",
+              "description": "Status copy shown in the listbox when no rows match. Empty string falls back to a localized message.",
               "fieldName": "emptyText"
             },
             {
@@ -22066,8 +22179,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'Loading…'",
-              "description": "Status copy shown in the listbox while a `source` fetch is in flight.",
+              "default": "''",
+              "description": "Status copy shown in the listbox while a `source` fetch is in flight. Empty string falls back to a localized message.",
               "fieldName": "loadingText"
             },
             {
@@ -22126,8 +22239,8 @@
               "type": {
                 "text": "string"
               },
-              "default": "'+{n} more — refine your search'",
-              "description": "Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count.",
+              "default": "''",
+              "description": "Status copy shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count. Empty string falls back to a localized message.",
               "fieldName": "overflowText"
             },
             {
@@ -24550,7 +24663,7 @@
                 "text": "string"
               },
               "default": "'Choose date'",
-              "description": "Accessible name for the calendar popover dialog. Override for a non-English `locale`.",
+              "description": "Accessible name for the calendar popover dialog. Left at the built-in default it\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring this to be set; an explicit override wins verbatim.",
               "attribute": "dialog-label"
             },
             {
@@ -25345,7 +25458,7 @@
                 "text": "string"
               },
               "default": "'Choose date'",
-              "description": "Accessible name for the calendar popover dialog. Override for a non-English `locale`.",
+              "description": "Accessible name for the calendar popover dialog. Left at the built-in default it\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring this to be set; an explicit override wins verbatim.",
               "fieldName": "dialogLabel"
             },
             {
@@ -25807,7 +25920,7 @@
                 "text": "string"
               },
               "default": "'Previous month'",
-              "description": "Accessible label for the previous-month button. Override for a non-English `locale`.",
+              "description": "Accessible label for the previous-month button. Left at the built-in default it\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring this to be set; an explicit override wins verbatim.",
               "attribute": "previous-label"
             },
             {
@@ -26578,7 +26691,7 @@
                 "text": "string"
               },
               "default": "'Previous month'",
-              "description": "Accessible label for the previous-month button. Override for a non-English `locale`.",
+              "description": "Accessible label for the previous-month button. Left at the built-in default it\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring this to be set; an explicit override wins verbatim.",
               "fieldName": "previousLabel"
             },
             {
@@ -27291,6 +27404,14 @@
           "members": [
             {
               "kind": "field",
+              "name": "copyTimeoutId",
+              "type": {
+                "text": "ReturnType<typeof setTimeout> | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "copyable",
               "type": {
                 "text": "boolean"
@@ -27326,6 +27447,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "justCopied",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
             },
             {
               "kind": "field",
@@ -29453,6 +29583,15 @@
           "members": [
             {
               "kind": "field",
+              "name": "_isFirstUpdate",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "true"
+            },
+            {
+              "kind": "field",
               "name": "cleanup",
               "type": {
                 "text": "() => void | undefined"
@@ -29912,6 +30051,14 @@
             {
               "description": "Fired after a non-cancelled download completes.",
               "name": "lyra-export-complete"
+            },
+            {
+              "description": "The format menu closed. Same first-render guard as `lyra-show`.",
+              "name": "lyra-hide"
+            },
+            {
+              "description": "The format menu opened. Not fired for markup that renders open from the start.",
+              "name": "lyra-show"
             }
           ],
           "attributes": [
@@ -30145,6 +30292,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLabel",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "description": "Resolves `label`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `label` itself to be set.",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -32262,6 +32419,10 @@
               "name": "data-list"
             },
             {
+              "description": "The empty-state message, shown when `nodes` is empty.",
+              "name": "empty"
+            },
+            {
               "description": "A node label.",
               "name": "label"
             },
@@ -32836,7 +32997,7 @@
                   }
                 }
               ],
-              "description": "ArrowRight/ArrowDown move to the next roving-tabindex item, ArrowLeft/\nArrowUp to the previous one, in flat array order (`simNodes` then\n`simLinks`) — deliberately not routed through `isRtl()`, unlike this\nlibrary's grid/track-based components (e.g. the day grid in\n`<lyra-date-picker>`, the resize handle in `<lyra-dock-panel>`). Node\nposition here comes entirely from the `d3-force` physics simulation\n(and live dragging), not from `nodes`' array order or any laid-out\nreading direction, so a node's index has no corresponding \"visual\nleft\"/\"right\" for a `dir=\"rtl\"` swap to mirror in the first place —\nArrowRight and ArrowDown already mean the same thing (\"next\") here,\nwhich a spatial left/right grid never does."
+              "description": "The forward physical arrow key (`ArrowRight` in LTR, `ArrowLeft` under\n`dir=\"rtl\"` — see `isRtl()`) moves to the next roving-tabindex item, the\nbackward one to the previous, in flat array order (`simNodes` then\n`simLinks`) — the same `forwardKey`/`backwardKey` swap this library's\nother \"physical arrow key drives sequential previous/next\" components\n(`<lyra-tabs>`, `<lyra-slider>`, `<lyra-segmented>`) apply under RTL.\n`ArrowDown`/`ArrowUp` always mean next/previous regardless of direction."
             },
             {
               "kind": "method",
@@ -36571,6 +36732,16 @@
             },
             {
               "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control.\nEmpty (the default) falls back to the localized `'map'` message.",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
               "name": "legend",
               "type": {
                 "text": "LegendEntry[]"
@@ -36871,6 +37042,15 @@
               "fieldName": "center"
             },
             {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control.\nEmpty (the default) falls back to the localized `'map'` message.",
+              "fieldName": "label"
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -37042,8 +37222,20 @@
               "name": "img"
             },
             {
+              "description": "Every rendered inline `<code>` span (backtick spans, not fenced blocks).",
+              "name": "inline-code"
+            },
+            {
               "description": "Every rendered `<a>`.",
               "name": "link"
+            },
+            {
+              "description": "Every rendered `<ul>`/`<ol>`.",
+              "name": "list"
+            },
+            {
+              "description": "Every rendered `<p>`.",
+              "name": "paragraph"
             },
             {
               "description": "Every rendered `<table>`.",
@@ -40516,6 +40708,17 @@
             },
             {
               "kind": "method",
+              "name": "emitValueEvents",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Dispatches the platform-style value-event pair alongside `lyra-change`,\nmirroring `<lyra-select>`/`<lyra-combobox>` so native form bindings and\nframework `v-model` handlers behave consistently across the picker\nfamily."
+            },
+            {
+              "kind": "method",
               "name": "formDisabledCallback",
               "return": {
                 "type": {
@@ -40797,6 +41000,20 @@
             }
           ],
           "events": [
+            {
+              "name": "change",
+              "type": {
+                "text": "Event"
+              },
+              "description": "Fired alongside `lyra-change`, mirroring `<lyra-select>`/`<lyra-combobox>`'s native-style value-change pair so native form bindings/framework `v-model` handlers behave consistently across the picker family."
+            },
+            {
+              "name": "input",
+              "type": {
+                "text": "Event"
+              },
+              "description": "Fired alongside `change`/`lyra-change` (see `change`)."
+            },
             {
               "description": "The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.",
               "name": "lyra-change"
@@ -47657,7 +47874,7 @@
               "type": {
                 "text": "(index: number, panelCount: number) => string | undefined"
               },
-              "description": "Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index\nand the total panel count (`lyra-split` supports N panels, so a single fixed string can't\nexpress every divider's label; a function can). Unset (the default) keeps today's exact\n`` `Resize divider between panel ${i + 1} and panel ${i + 2}` `` template."
+              "description": "Overrides the auto-inserted divider's `aria-label` — receives the divider's 0-based index\nand the total panel count (`lyra-split` supports N panels, so a single fixed string can't\nexpress every divider's label; a function can). Unset (the default) keeps today's exact\nlocalized `Resize divider between panel {a} and panel {b}` template (see `this.localize()`)."
             },
             {
               "kind": "field",
@@ -52992,7 +53209,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated (via a directly-attached `ElementInternals`, mirroring\n`<lyra-combobox>`'s minimal pattern rather than the single-string-value\n`FormAssociated` mixin, which doesn't fit a two-handle range): an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.",
+          "description": "`<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated only for the `<fieldset disabled>` cascade, not for a\nsubmitted value: it attaches `ElementInternals` (like `<lyra-combobox>`'s\nminimal pattern, rather than the single-string-value `FormAssociated`\nmixin, which doesn't fit a two-handle range) purely so an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.\nUnlike `<lyra-combobox>`, it never calls `internals.setFormValue()` and\nhas no `name` — the selected range is not included in the owning form's\n`FormData` on submit; read `start`/`end` directly (e.g. from `lyra-change`)\ninstead of relying on native form submission.",
           "name": "LyraTimeRange",
           "cssParts": [
             {
@@ -55179,7 +55396,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-tool-call-chip>` — a compact inline pill representing one tool/\nfunction call an agent made mid-conversation, e.g.\n`web_search: Searching web…` with a `running` spinner. It owns no detail\nsurface of its own: clicking (or Enter/Space-activating) it only fires\n`lyra-tool-chip-select` — a consumer wires that to opening a\n`<lyra-tool-result-dialog>` (or anything else) at the call site. Keeping\nthe two decoupled means a chip can be reused wherever a compact call\nsummary is useful, with or without a detail surface behind it.\n\nThe default slot is *not* the chip's visible content — the chip's own\nlabel is always built from `name`/`summary`/`status`/`duration-ms`. It's\nreserved for optional rich detail content (e.g. the tool's raw arguments,\na short preview) shown in a floating tooltip on hover/focus, positioned\nwith `internal/positioner.js`'s `place()` the same way `<lyra-combobox>`\npositions its listbox. No tooltip is shown at all when the slot carries no\ncontent — hovering an empty chip does nothing. Hover and keyboard focus are\ntracked as independent reasons to keep the tooltip open (mirrors\n`<lyra-citation-badge>`'s popover), so releasing one modality while the\nother is still active doesn't close it, and the trigger button's\n`aria-describedby` points at the tooltip's id whenever it's open and has\ncontent, so the association reaches assistive tech too.\n\nThe `icon` slot overrides the built-in per-status glyph entirely via the\nplatform's own slot-fallback-content mechanism (`<slot\nname=\"icon\">${fallback}</slot>` — the same pattern `<lyra-stat>`'s\n`caption` slot and `<lyra-file-input>`'s default slot already use):\nwhatever is assigned to `slot=\"icon\"` wins; otherwise the `icon` prop is\nrendered as a literal hint (e.g. an emoji); otherwise the built-in glyph\nfor the current `status` is used.",
+          "description": "`<lyra-tool-call-chip>` — a compact inline pill representing one tool/\nfunction call an agent made mid-conversation, e.g.\n`web_search: Searching web…` with a `running` spinner. It owns no detail\nsurface of its own: clicking (or Enter/Space-activating) it only fires\n`lyra-tool-call-chip-select` (plus, for one minor cycle, the deprecated\n`lyra-tool-chip-select` alias) — a consumer wires that to opening a\n`<lyra-tool-result-dialog>` (or anything else) at the call site. Keeping\nthe two decoupled means a chip can be reused wherever a compact call\nsummary is useful, with or without a detail surface behind it.\n\nThe default slot is *not* the chip's visible content — the chip's own\nlabel is always built from `name`/`summary`/`status`/`duration-ms`. It's\nreserved for optional rich detail content (e.g. the tool's raw arguments,\na short preview) shown in a floating tooltip on hover/focus, positioned\nwith `internal/positioner.js`'s `place()` the same way `<lyra-combobox>`\npositions its listbox. No tooltip is shown at all when the slot carries no\ncontent — hovering an empty chip does nothing. Hover and keyboard focus are\ntracked as independent reasons to keep the tooltip open (mirrors\n`<lyra-citation-badge>`'s popover), so releasing one modality while the\nother is still active doesn't close it, and the trigger button's\n`aria-describedby` points at the tooltip's id whenever it's open and has\ncontent, so the association reaches assistive tech too.\n\nThe `icon` slot overrides the built-in per-status glyph entirely via the\nplatform's own slot-fallback-content mechanism (`<slot\nname=\"icon\">${fallback}</slot>` — the same pattern `<lyra-stat>`'s\n`caption` slot and `<lyra-file-input>`'s default slot already use):\nwhatever is assigned to `slot=\"icon\"` wins; otherwise the `icon` prop is\nrendered as a literal hint (e.g. an emoji); otherwise the built-in glyph\nfor the current `status` is used.",
           "name": "LyraToolCallChip",
           "cssParts": [
             {
@@ -55250,7 +55467,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Unique identifier for this specific invocation — echoed back in `lyra-tool-chip-select`'s\ndetail so a listener can correlate the click with the call it fired for.",
+              "description": "Unique identifier for this specific invocation — echoed back in `lyra-tool-call-chip-select`'s\ndetail so a listener can correlate the click with the call it fired for.",
               "attribute": "call-id"
             },
             {
@@ -55641,6 +55858,10 @@
           "events": [
             {
               "description": "The chip was activated (click or Enter/Space while focused). `detail: { name, callId }`.",
+              "name": "lyra-tool-call-chip-select"
+            },
+            {
+              "description": "Deprecated alias for `lyra-tool-call-chip-select`, fired alongside it for one minor cycle so existing listeners keep working. Removed in the next major.",
               "name": "lyra-tool-chip-select"
             }
           ],
@@ -55651,7 +55872,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Unique identifier for this specific invocation — echoed back in `lyra-tool-chip-select`'s\ndetail so a listener can correlate the click with the call it fired for.",
+              "description": "Unique identifier for this specific invocation — echoed back in `lyra-tool-call-chip-select`'s\ndetail so a listener can correlate the click with the call it fired for.",
               "fieldName": "callId"
             },
             {
@@ -55781,6 +56002,10 @@
               "name": "description"
             },
             {
+              "description": "The message shown when `schema.properties` has no entries.",
+              "name": "empty"
+            },
+            {
               "description": "A field-level or form-level validation message.",
               "name": "error"
             },
@@ -55791,6 +56016,10 @@
             {
               "description": "A field's label.",
               "name": "label"
+            },
+            {
+              "description": "The fallback note rendered in place of a control for a property whose `type` is outside this renderer's scope.",
+              "name": "unsupported"
             }
           ],
           "members": [
@@ -56910,7 +57139,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Whether the dialog is open. Set this (or call `close()`) — there is no\nseparate `show()`/`hide()` pair. Both paths restore focus to the trigger\nelement identically; only `close()` additionally fires\n`lyra-dialog-close`, since a direct assignment carries no reason string\nto attach to that event.",
+              "description": "Whether the dialog is open. Set this (or call `close()`) — there is no\nseparate `show()`/`hide()` pair. Both paths restore focus to the trigger\nelement identically; only `close()` additionally fires\n`lyra-close`, since a direct assignment carries no reason string\nto attach to that event.",
               "attribute": "open",
               "reflects": true
             },
@@ -57048,7 +57277,7 @@
                   }
                 }
               ],
-              "description": "Close the dialog and return focus to whatever had it before the dialog\nopened. `reason` is forwarded as the `lyra-dialog-close` detail --\nbuilt-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a\nconsumer's own close affordance (e.g. a footer action button) should\ncall this directly with its own reason string, so every dismissal path\nfunnels through the same event instead of the consumer having to also\ntoggle `open` itself.\n\nFocus restoration follows the `open` lifecycle, so a direct `.open =\nfalse` assignment restores focus identically to calling `close()` -- the\none thing a direct assignment still can't do is fire\n`lyra-dialog-close`, since there's no reason string to attach without\ngoing through this method."
+              "description": "Close the dialog and return focus to whatever had it before the dialog\nopened. `reason` is forwarded as the `lyra-close` detail --\nbuilt-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a\nconsumer's own close affordance (e.g. a footer action button) should\ncall this directly with its own reason string, so every dismissal path\nfunnels through the same event instead of the consumer having to also\ntoggle `open` itself.\n\nFocus restoration follows the `open` lifecycle, so a direct `.open =\nfalse` assignment restores focus identically to calling `close()` -- the\none thing a direct assignment still can't do is fire\n`lyra-close`, since there's no reason string to attach without\ngoing through this method."
             },
             {
               "kind": "method",
@@ -57172,7 +57401,7 @@
           "events": [
             {
               "description": "`detail: ToolResultDialogCloseReason`. Fired exactly once per dismissal, via Escape, a backdrop click, the built-in close button, or a `close()` call.",
-              "name": "lyra-dialog-close"
+              "name": "lyra-close"
             },
             {
               "description": "`detail: boolean` (the new `maximized` state), fired when the header's maximize/restore toggle is clicked.",
@@ -57216,7 +57445,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Whether the dialog is open. Set this (or call `close()`) — there is no\nseparate `show()`/`hide()` pair. Both paths restore focus to the trigger\nelement identically; only `close()` additionally fires\n`lyra-dialog-close`, since a direct assignment carries no reason string\nto attach to that event.",
+              "description": "Whether the dialog is open. Set this (or call `close()`) — there is no\nseparate `show()`/`hide()` pair. Both paths restore focus to the trigger\nelement identically; only `close()` additionally fires\n`lyra-close`, since a direct assignment carries no reason string\nto attach to that event.",
               "fieldName": "open"
             },
             {
@@ -58525,6 +58754,10 @@
               "name": "badge"
             },
             {
+              "description": "The wrapper around a node's expanded child items.",
+              "name": "group"
+            },
+            {
               "description": "The node label.",
               "name": "label"
             },
@@ -58948,7 +59181,12 @@
           "name": "LyraTree",
           "cssParts": [
             {
+              "description": "The tree's root wrapper (role=\"tree\").",
               "name": "base"
+            },
+            {
+              "description": "The empty-state message shown when `data` is empty.",
+              "name": "empty"
             }
           ],
           "slots": [
@@ -60758,6 +60996,10 @@
             {
               "description": "Rich sublabel content (overrides the `sublabel` attribute).",
               "name": "sublabel"
+            },
+            {
+              "description": "Content for the view whose `WidgetView.id` matches `{id}`, rendered when `views` is non-empty.",
+              "name": "view-{id}"
             }
           ],
           "members": [
@@ -61202,15 +61444,15 @@
           ],
           "events": [
             {
-              "description": "`detail: boolean` (the new `collapsed` state).",
+              "description": "`detail: { collapsed }` (the new `collapsed` state).",
               "name": "lyra-collapse-change"
             },
             {
-              "description": "`detail: boolean` (the new `fullscreen` state).",
+              "description": "`detail: { fullscreen }` (the new `fullscreen` state).",
               "name": "lyra-fullscreen-change"
             },
             {
-              "description": "Fired when the active view changes via a header toggle click. `detail: string` (the new view's `id`).",
+              "description": "Fired when the active view changes via a header toggle click. `detail: { viewId }` (the new view's `id`).",
               "name": "lyra-view-change"
             }
           ],
@@ -61811,6 +62053,17 @@
                   "text": "string"
                 }
               }
+            },
+            {
+              "kind": "method",
+              "name": "fontWeight",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Reads the actual `--lyra-font-weight-semibold` value the same way\n`fontFamily()` reads `--lyra-font` -- must match `[part='word']`'s\n`font-weight` in word-cloud.styles.ts, so a theme/consumer override of\nthat token can't silently desync canvas text measurement (used for the\nspiral layout's collision boxes) from the actually rendered glyph width."
             },
             {
               "kind": "method",

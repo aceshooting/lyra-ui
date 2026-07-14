@@ -144,7 +144,7 @@ export class LyraStat extends LyraElement {
     // so mirror them into a plain-language sr-only announcement.
     const trendAnnouncement =
       rawDirection === 'flat'
-        ? 'unchanged'
+        ? this.localize('trendUnchanged')
         : `${rawDirection === 'up' ? 'increased' : 'decreased'} ${Math.abs(this.trend)}%${
             isGood == null ? '' : isGood ? ', good' : ', bad'
           }`;

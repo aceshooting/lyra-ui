@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'li
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import { isRtl } from '../../internal/rtl.js';
 import { layoutWordCloud, MAX_WORDS, type PlacedWord, type WordCloudLayoutResult, type WordCloudWord } from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
 
@@ -11,11 +12,10 @@ const DEFAULT_MIN_FONT_SIZE = 12;
 const DEFAULT_MAX_FONT_SIZE = 48;
 const PALETTE_SIZE = 8;
 const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df', '#bf3989', '#0a7d91', '#57606a'];
-/** Must match `[part='word']`'s `font-weight` in word-cloud.styles.ts -- canvas
- *  measures at `normal` weight by default, which is narrower than the actually
- *  rendered bold glyphs, so the spiral layout's collision boxes would end up
- *  too small versus what's actually painted if this ever drifts out of sync. */
-const WORD_FONT_WEIGHT = 600;
+/** Fallback for `fontWeight()` below when `--lyra-font-weight-semibold`
+ *  can't be read (e.g. no computed style available). Must match `[part='word']`'s
+ *  default `font-weight` in word-cloud.styles.ts. */
+const DEFAULT_WORD_FONT_WEIGHT = '600';
 const NAV_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End']);
 /** Padding, in px, between a focused word's glyph box and its drawn focus ring. */
 const FOCUS_RING_PAD = 2;
@@ -119,12 +119,21 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   private measureText = (text: string, fontSize: number): number => {
     const ctx = getScratchCtx();
     if (!ctx) return text.length * fontSize * 0.6;
-    ctx.font = `${WORD_FONT_WEIGHT} ${fontSize}px ${this.fontFamily()}`;
+    ctx.font = `${this.fontWeight()} ${fontSize}px ${this.fontFamily()}`;
     return ctx.measureText(text).width;
   };
 
   private fontFamily(): string {
     return getComputedStyle(this).getPropertyValue('--lyra-font').trim() || 'sans-serif';
+  }
+
+  /** Reads the actual `--lyra-font-weight-semibold` value the same way
+   *  `fontFamily()` reads `--lyra-font` -- must match `[part='word']`'s
+   *  `font-weight` in word-cloud.styles.ts, so a theme/consumer override of
+   *  that token can't silently desync canvas text measurement (used for the
+   *  spiral layout's collision boxes) from the actually rendered glyph width. */
+  private fontWeight(): string {
+    return getComputedStyle(this).getPropertyValue('--lyra-font-weight-semibold').trim() || DEFAULT_WORD_FONT_WEIGHT;
   }
 
   private paletteColors(): string[] {
@@ -231,9 +240,16 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.announce(order[0]!);
       return;
     }
+    // Left/Right swap under RTL, matching lyra-tabs's/lyra-tree's identical
+    // physical-direction handling; Up/Down are direction-agnostic and always
+    // mean next/previous through the same stable nav order.
+    const rtl = isRtl(this);
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+
     let next = this.focusedIndex;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = Math.min(order.length - 1, this.focusedIndex + 1);
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = Math.max(0, this.focusedIndex - 1);
+    if (e.key === forwardKey || e.key === 'ArrowDown') next = Math.min(order.length - 1, this.focusedIndex + 1);
+    else if (e.key === backwardKey || e.key === 'ArrowUp') next = Math.max(0, this.focusedIndex - 1);
     else if (e.key === 'Home') next = 0;
     else if (e.key === 'End') next = order.length - 1;
     this.focusedIndex = next;

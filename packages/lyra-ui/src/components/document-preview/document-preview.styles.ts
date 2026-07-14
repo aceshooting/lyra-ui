@@ -12,6 +12,11 @@ export const styles = css`
        (same gap lyra-json-viewer's own --lyra-json-viewer-font documents) --
        contained here so a host page can retheme it. */
     --lyra-document-preview-font: var(--lyra-font-mono);
+    /* Spinner rotation timing -- deliberately slower than the shared
+       --lyra-transition-fast/--lyra-transition-base tokens (those are tuned
+       for one-shot UI transitions, not a continuous loading indicator), but
+       still a retheme-able custom property rather than a bare literal. */
+    --lyra-document-preview-spin-duration: 0.8s;
   }
 
   [part='base'] {
@@ -150,7 +155,7 @@ export const styles = css`
     border-radius: 50%;
     border: var(--lyra-border-width-thick) solid var(--lyra-color-border);
     border-block-start-color: var(--lyra-color-brand);
-    animation: lyra-document-preview-spin 0.8s linear infinite;
+    animation: lyra-document-preview-spin var(--lyra-document-preview-spin-duration) linear infinite;
   }
   /* Determinate progress reuses the same ring shape but holds a fixed
      rotation instead of spinning -- conic-gradient renders the actual fill,

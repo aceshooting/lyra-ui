@@ -17,7 +17,12 @@ export const styles = css`
     block-size: var(--lyra-size-0-375rem);
     border-radius: var(--lyra-radius-pill);
     background: var(--lyra-color-brand);
-    animation: lyra-poll-status-pulse 2s ease-in-out infinite;
+    /* Same transition-cycle token/rationale as lyra-stream-status's and
+       lyra-typing-indicator's own looping pulse: --lyra-transition-base
+       (not -fast) is the length the library reserves for ambient motion,
+       so every looping indicator shares one rhythm instead of hand-rolling
+       its own duration. */
+    animation: lyra-poll-status-pulse var(--lyra-transition-base) infinite;
   }
   [part='indicator'][data-due] {
     background: var(--lyra-color-success);
@@ -39,6 +44,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-inline-size: var(--lyra-icon-button-size);
+    min-block-size: var(--lyra-icon-button-size);
     border: none;
     background: transparent;
     color: inherit;

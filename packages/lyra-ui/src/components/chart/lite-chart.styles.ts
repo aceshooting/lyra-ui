@@ -50,18 +50,18 @@ export const styles = css`
   }
   [part='grid-line'] {
     stroke: var(--lyra-chart-grid-color);
-    stroke-width: 1;
+    stroke-width: var(--lyra-border-width-thin);
   }
   [part='axis-label'] {
     fill: var(--lyra-chart-tick-color);
-    font-size: var(--lyra-size-10px);
-    font-family: var(--lyra-font-family, inherit);
+    font-size: var(--lyra-font-size-2xs);
+    font-family: var(--lyra-font);
   }
   [part='axis-title'] {
     fill: var(--lyra-chart-tick-color);
-    font-size: var(--lyra-size-11px);
+    font-size: var(--lyra-font-size-xs);
     font-weight: var(--lyra-font-weight-semibold);
-    font-family: var(--lyra-font-family, inherit);
+    font-family: var(--lyra-font);
   }
   [part='bar'] {
     cursor: pointer;
@@ -73,11 +73,11 @@ export const styles = css`
   [part='bar']:focus-visible,
   [part='point']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
-    outline-offset: var(--lyra-size-1px);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='line'] {
     fill: none;
-    stroke-width: 2;
+    stroke-width: var(--lyra-border-width-medium);
   }
   [part='point'] {
     cursor: pointer;

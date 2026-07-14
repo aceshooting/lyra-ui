@@ -11,6 +11,8 @@ export type ExportFormat = 'csv' | 'json';
 export interface LyraExportButtonEventMap {
   'lyra-export': CustomEvent<{ format: ExportFormat }>;
   'lyra-export-complete': CustomEvent<{ format: ExportFormat }>;
+  'lyra-show': CustomEvent<undefined>;
+  'lyra-hide': CustomEvent<undefined>;
 }
 /**
  * `<lyra-export-button>` — a CSV/JSON download button, single-format or a
@@ -21,6 +23,9 @@ export interface LyraExportButtonEventMap {
  * @event lyra-export - `detail: { format }`, cancelable — call `preventDefault()`
  *   to substitute the built-in client-side download with a server-generated one.
  * @event lyra-export-complete - Fired after a non-cancelled download completes.
+ * @event lyra-show - The format menu opened. Not fired for markup that renders
+ *   open from the start.
+ * @event lyra-hide - The format menu closed. Same first-render guard as `lyra-show`.
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
@@ -52,6 +57,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private readonly menuId = nextId('export-menu');
   private cleanup?: () => void;
+  private _isFirstUpdate = true;
   /** Which menu item to focus the next time `open` flips true; reset after use. */
   private pendingMenuFocusIndex = 0;
 
@@ -149,6 +155,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this.renderRoot.addEventListener('keydown', this.onKeyDown as EventListener);
   }
 
+  protected willUpdate(): void {
+    this._isFirstUpdate = !this.hasUpdated;
+  }
+
   protected updated(changed: PropertyValues): void {
     if (changed.has('open')) {
       this.cleanup?.();
@@ -157,15 +167,20 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       // openMenu()) means this fires however `open` became true -- via
       // openMenu()'s own click path, or a consumer/test setting
       // `el.open = true` directly (valid API on a `reflect: true`
-      // property), which bypasses openMenu() entirely.
+      // property), which bypasses openMenu() entirely. Mirrors lyra-menu/
+      // lyra-select/lyra-combobox's identical updated()-centralized
+      // lyra-show/lyra-hide emission.
       document.removeEventListener('pointerdown', this.onDocPointer);
       if (this.open) {
         const anchor = this.triggerEl;
         const menu = this.menuEl;
         if (anchor && menu) this.cleanup = place(anchor, menu);
         document.addEventListener('pointerdown', this.onDocPointer);
+        if (!this._isFirstUpdate) this.emit('lyra-show');
         this.focusMenuItem(this.pendingMenuFocusIndex);
         this.pendingMenuFocusIndex = 0;
+      } else {
+        if (!this._isFirstUpdate) this.emit('lyra-hide');
       }
     }
   }
@@ -241,7 +256,12 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         ${label}
       </button>
       ${this.formats.length > 1
-        ? html`<div id=${this.menuId} part="menu" role="menu" aria-label="${label} format">
+        ? html`<div
+            id=${this.menuId}
+            part="menu"
+            role="menu"
+            aria-label=${this.localize('exportFormatMenuLabel', undefined, { label })}
+          >
             ${this.formats.map(
               (f) =>
                 html`<button

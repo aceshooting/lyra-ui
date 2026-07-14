@@ -47,6 +47,10 @@ export interface LyraModelSelectEventMap {
  *
  * @customElement lyra-model-select
  * @event lyra-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
+ * @event {Event} change - Fired alongside `lyra-change`, mirroring `<lyra-select>`/`<lyra-combobox>`'s
+ *   native-style value-change pair so native form bindings/framework `v-model` handlers behave
+ *   consistently across the picker family.
+ * @event {Event} input - Fired alongside `change`/`lyra-change` (see `change`).
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to the
  *   accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
@@ -331,6 +335,18 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.value = next;
     this.hide();
     this.emit('lyra-change', { value: next, inCatalog });
+    this.emitValueEvents();
+  }
+
+  /** Dispatches the platform-style value-event pair alongside `lyra-change`,
+   * mirroring `<lyra-select>`/`<lyra-combobox>` so native form bindings and
+   * framework `v-model` handlers behave consistently across the picker
+   * family. */
+  private emitValueEvents(): void {
+    const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
+    const init: EventInit = { bubbles: true, composed: true };
+    this.dispatchEvent(new EventConstructor('input', init));
+    this.dispatchEvent(new EventConstructor('change', init));
   }
 
   private selectEntry(entry: DisplayEntry): void {
@@ -541,7 +557,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.listId}
         aria-activedescendant=${activeId}
-        aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Model')}
+        aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('model'))}
         aria-required=${this.required ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled}
@@ -555,7 +571,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         >
         <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
       </button>
-      ${this.renderListbox(rows, activeId, 'No models')}
+      ${this.renderListbox(rows, activeId, this.localize('modelSelectNoModels'))}
     `;
   }
 
@@ -571,7 +587,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           id=${this.controlId}
           part="combobox-input"
           role="combobox"
-          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || 'Model')}
+          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('model'))}
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}

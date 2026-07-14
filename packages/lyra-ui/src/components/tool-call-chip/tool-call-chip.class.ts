@@ -144,7 +144,8 @@ function formatDuration(ms: number): string {
  * function call an agent made mid-conversation, e.g.
  * `web_search: Searching web…` with a `running` spinner. It owns no detail
  * surface of its own: clicking (or Enter/Space-activating) it only fires
- * `lyra-tool-chip-select` — a consumer wires that to opening a
+ * `lyra-tool-call-chip-select` (plus, for one minor cycle, the deprecated
+ * `lyra-tool-chip-select` alias) — a consumer wires that to opening a
  * `<lyra-tool-result-dialog>` (or anything else) at the call site. Keeping
  * the two decoupled means a chip can be reused wherever a compact call
  * summary is useful, with or without a detail surface behind it.
@@ -174,8 +175,11 @@ function formatDuration(ms: number): string {
  * @slot - Rich tooltip/detail content, shown on hover/focus. Nothing renders
  * (no hover affordance at all) when this slot is empty.
  * @slot icon - Overrides the built-in status glyph entirely.
- * @event lyra-tool-chip-select - The chip was activated (click or Enter/Space
- * while focused). `detail: { name, callId }`.
+ * @event lyra-tool-call-chip-select - The chip was activated (click or
+ * Enter/Space while focused). `detail: { name, callId }`.
+ * @event lyra-tool-chip-select - Deprecated alias for
+ * `lyra-tool-call-chip-select`, fired alongside it for one minor cycle so
+ * existing listeners keep working. Removed in the next major.
  * @csspart base - The clickable pill (`<button>`).
  * @csspart icon - Wrapper around the status glyph / `icon` slot.
  * @csspart label - Wrapper around `category`, `name` and `summary`.
@@ -212,7 +216,7 @@ export class LyraToolCallChip extends LyraElement {
    *  icon-precedence note. Ignored once anything is assigned to `slot="icon"`. */
   @property() icon = '';
 
-  /** Unique identifier for this specific invocation — echoed back in `lyra-tool-chip-select`'s
+  /** Unique identifier for this specific invocation — echoed back in `lyra-tool-call-chip-select`'s
    *  detail so a listener can correlate the click with the call it fired for. */
   @property({ attribute: 'call-id' }) callId = '';
 
@@ -321,7 +325,12 @@ export class LyraToolCallChip extends LyraElement {
   };
 
   private onClick = (): void => {
-    this.emit<ToolChipSelectDetail>('lyra-tool-chip-select', { name: this.name, callId: this.callId });
+    const detail: ToolChipSelectDetail = { name: this.name, callId: this.callId };
+    this.emit<ToolChipSelectDetail>('lyra-tool-call-chip-select', detail);
+    // Deprecated alias, fired alongside the renamed event above for one
+    // minor cycle so existing `lyra-tool-chip-select` listeners keep
+    // working; removed in the next major.
+    this.emit<ToolChipSelectDetail>('lyra-tool-chip-select', detail);
   };
 
   private get effectiveStatus(): ToolCallStatus {

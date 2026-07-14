@@ -262,7 +262,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       .join('')
       .trim()
       .replace(/\s+/g, ' ');
-    if (!text) return 'Close';
+    if (!text) return this.localize('close');
     const snippet = text.length > 40 ? `${text.slice(0, 40)}…` : text;
     return `Close: ${snippet}`;
   }

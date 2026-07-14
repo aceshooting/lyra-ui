@@ -154,7 +154,15 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-list alterna
   marks()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
   expect(marks()[1]!.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('2 of 6');
+  // `focusMark()` announces immediately, then its own subsequent programmatic
+  // `.focus()` re-announces the identical text via the native `focus` event's
+  // `onMarkFocus()` -- `<lyra-live-region>` treats that as a same-text
+  // reannounce (clears, then re-populates on the next animation frame, so a
+  // screen reader observes a real content change rather than a silent no-op)
+  // -- wait one frame for that reannounce to land before reading the text.
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement & { shadowRoot: ShadowRoot };
+  expect(liveRegion.shadowRoot.querySelector('[part="region"]')!.textContent).to.contain('2 of 6');
 
   marks()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   await el.updateComplete;
@@ -1047,13 +1055,13 @@ describe('scale="sqrt" stacked proportionality', () => {
   });
 });
 
-// --- chartLabel --------------------------------------------------------------------
+// --- accessibleLabel --------------------------------------------------------------------
 
-describe('chartLabel', () => {
+describe('accessibleLabel', () => {
   it('overrides the auto-derived <svg> aria-label when set', async () => {
     const el = (await fixture(html`
       <lyra-lite-chart
-        chart-label="Custom chart description"
+        accessible-label="Custom chart description"
         .labels=${['a']}
         .datasets=${[{ label: 'A', data: [1] }]}
       ></lyra-lite-chart>

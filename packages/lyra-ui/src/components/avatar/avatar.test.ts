@@ -112,4 +112,23 @@ describe('lyra-avatar', () => {
     )) as LyraAvatar;
     await expect(el).to.be.accessible();
   });
+
+  it('exposes alt as an accessible name via role="img" when falling back to initials', async () => {
+    const el = (await fixture(html`<lyra-avatar initials="AB" alt="A. Bee"></lyra-avatar>`)) as LyraAvatar;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('A. Bee');
+  });
+
+  it('exposes alt as an accessible name once an image fails and falls back to initials', async () => {
+    const el = (await fixture(
+      html`<lyra-avatar initials="AB" src="https://example.invalid/nonexistent.png" alt="A. Bee"></lyra-avatar>`,
+    )) as LyraAvatar;
+    const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    img.dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('A. Bee');
+  });
 });

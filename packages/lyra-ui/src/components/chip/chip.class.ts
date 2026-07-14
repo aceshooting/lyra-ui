@@ -15,6 +15,11 @@ export interface ChipSelectDetail {
   selected: boolean;
 }
 
+export interface LyraChipEventMap {
+  'lyra-remove': CustomEvent<ChipRemoveDetail>;
+  'lyra-chip-select': CustomEvent<ChipSelectDetail>;
+}
+
 /**
  * `<lyra-chip>` — a small, content-agnostic pill for a short label: a tag, an
  * active-filter/scope indicator, etc. Distinct from `<lyra-attachment-chip>`
@@ -54,7 +59,7 @@ export interface ChipSelectDetail {
  * @csspart label - Wrapper around the default slot.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
  */
-export class LyraChip extends LyraElement {
+export class LyraChip extends LyraElement<LyraChipEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Status/emphasis color. `neutral` (the default) reads as plain/unstyled. */
@@ -138,7 +143,8 @@ export class LyraChip extends LyraElement {
 
   private get accessibleRemoveLabel(): string {
     const text = this.labelText;
-    return text ? `Remove ${text}` : 'Remove';
+    const removeLabel = this.localize('remove');
+    return text ? `${removeLabel} ${text}` : removeLabel;
   }
 
   private onRemoveClick = (): void => {

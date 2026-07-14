@@ -17,7 +17,7 @@ export const styles = css`
     /* Canvas-drawn axis/month/weekday label font — same resolve-via-
        getComputedStyle pattern as the ramp endpoints above (canvas can't
        consume var() directly). */
-    --lyra-heatmap-label-font: var(--lyra-size-10px) sans-serif;
+    --lyra-heatmap-label-font: var(--lyra-size-10px) var(--lyra-font);
     /* [part="tooltip"] is a real DOM element (not canvas-drawn), so unlike
        the tokens above it consumes these var()s directly — no getComputedStyle
        resolution needed. Own tokens (not the bare --lyra-color-surface/-text)

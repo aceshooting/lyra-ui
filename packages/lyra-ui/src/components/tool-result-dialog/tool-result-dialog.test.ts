@@ -127,11 +127,11 @@ it('toggles maximized and emits lyra-maximize-change when the maximize button is
   expect(el.hasAttribute('maximized')).to.be.true;
 });
 
-it('closes on backdrop click and emits lyra-dialog-close with reason "backdrop"', async () => {
+it('closes on backdrop click and emits lyra-close with reason "backdrop"', async () => {
   const el = (await fixture(
     html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  const listener = oneEvent(el, 'lyra-dialog-close');
+  const listener = oneEvent(el, 'lyra-close');
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   const { detail } = await listener;
 
@@ -139,11 +139,11 @@ it('closes on backdrop click and emits lyra-dialog-close with reason "backdrop"'
   expect(detail).to.equal('backdrop');
 });
 
-it('closes on the built-in close button and emits lyra-dialog-close with reason "close-button"', async () => {
+it('closes on the built-in close button and emits lyra-close with reason "close-button"', async () => {
   const el = (await fixture(
     html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  const listener = oneEvent(el, 'lyra-dialog-close');
+  const listener = oneEvent(el, 'lyra-close');
   (el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement).click();
   const { detail } = await listener;
 
@@ -151,11 +151,11 @@ it('closes on the built-in close button and emits lyra-dialog-close with reason 
   expect(detail).to.equal('close-button');
 });
 
-it('closes on Escape and emits lyra-dialog-close with reason "escape"', async () => {
+it('closes on Escape and emits lyra-close with reason "escape"', async () => {
   const el = (await fixture(
     html`<lyra-tool-result-dialog tool-name="run_python" open></lyra-tool-result-dialog>`,
   )) as LyraToolResultDialog;
-  const listener = oneEvent(el, 'lyra-dialog-close');
+  const listener = oneEvent(el, 'lyra-close');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   const { detail } = await listener;
 
@@ -168,7 +168,7 @@ it('does not respond to Escape while closed', async () => {
     html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   let fired = false;
-  el.addEventListener('lyra-dialog-close', () => (fired = true));
+  el.addEventListener('lyra-close', () => (fired = true));
 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await el.updateComplete;
@@ -181,7 +181,7 @@ it('close() is a no-op when already closed (no duplicate event, no error)', asyn
     html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
   )) as LyraToolResultDialog;
   let count = 0;
-  el.addEventListener('lyra-dialog-close', () => count++);
+  el.addEventListener('lyra-close', () => count++);
 
   el.close('api');
   el.close('api');
@@ -196,7 +196,7 @@ it('close() sets open false, emits with the given reason, and is idempotent once
   )) as LyraToolResultDialog;
   let count = 0;
   let detail: unknown;
-  el.addEventListener('lyra-dialog-close', (e) => {
+  el.addEventListener('lyra-close', (e) => {
     count++;
     detail = (e as CustomEvent).detail;
   });
@@ -318,7 +318,7 @@ it('closes only the topmost dialog on Escape when two instances are open at once
   )) as LyraToolResultDialog;
   await front.updateComplete;
 
-  const listener = oneEvent(front, 'lyra-dialog-close');
+  const listener = oneEvent(front, 'lyra-close');
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   const { detail } = await listener;
 

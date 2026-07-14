@@ -86,7 +86,15 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private emitFiles(fileList: File[]): void {
     const { files, rejected } = this.classify(fileList);
     const messages: string[] = [];
-    if (files.length) messages.push(this.acceptedMessage.replace('{count}', String(files.length)));
+    if (files.length) {
+      messages.push(
+        this.localize(
+          'fileInputAccepted',
+          this.acceptedMessage === '{count} file(s) added.' ? undefined : this.acceptedMessage,
+          { count: files.length },
+        ),
+      );
+    }
     if (rejected.length) messages.push(this.rejectedMessage.replace('{count}', String(rejected.length)));
     this.resultStatus = messages.join(' ');
     this.emit('lyra-files', { files, rejected });
@@ -159,14 +167,25 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return this.resultStatus;
   }
 
+  /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
+   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
+   *  override applies without requiring `label` itself to be set. */
+  private get effectiveLabel(): string {
+    return this.localize(
+      'fileInputDefaultLabel',
+      this.label === 'Drop files here or click to browse' ? undefined : this.label,
+    );
+  }
+
   render(): TemplateResult {
+    const label = this.effectiveLabel;
     return html`
       <div
         part="base"
         role="button"
         tabindex=${this.disabled ? '-1' : '0'}
         aria-disabled=${this.disabled ? 'true' : nothing}
-        aria-label=${this.label}
+        aria-label=${label}
         data-drag-state=${this.dragState}
         @dragenter=${this.onDragEnter}
         @dragover=${this.onDragOver}
@@ -175,11 +194,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         @click=${() => !this.disabled && this.openPicker()}
         @keydown=${this.onKeyDown}
       >
-        <slot>${this.label}</slot>
+        <slot>${label}</slot>
       </div>
       <div part="status" class="sr-only" role="status" aria-live="polite">${this.statusText()}</div>
       <input
         part="input"
+        class="sr-only"
         type="file"
         tabindex="-1"
         aria-hidden="true"

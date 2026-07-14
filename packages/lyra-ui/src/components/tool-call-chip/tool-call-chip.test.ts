@@ -119,7 +119,20 @@ it('omits the duration part entirely when duration-ms is unset, formats it once 
   expect(duration.textContent).to.equal('2s');
 });
 
-it('emits lyra-tool-chip-select with { name, callId } on click', async () => {
+it('emits lyra-tool-call-chip-select with { name, callId } on click', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-call-chip name="web_search" call-id="call-42"></lyra-tool-call-chip>`,
+  )) as LyraToolCallChip;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+
+  setTimeout(() => base.click());
+  const ev = await oneEvent(el, 'lyra-tool-call-chip-select');
+  expect(ev.detail).to.deep.equal({ name: 'web_search', callId: 'call-42' });
+  expect(ev.bubbles).to.be.true;
+  expect(ev.composed).to.be.true;
+});
+
+it('also emits the deprecated lyra-tool-chip-select alias for one minor cycle', async () => {
   const el = (await fixture(
     html`<lyra-tool-call-chip name="web_search" call-id="call-42"></lyra-tool-call-chip>`,
   )) as LyraToolCallChip;

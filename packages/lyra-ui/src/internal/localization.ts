@@ -111,10 +111,6 @@ export type LyraMessageKey =
   | 'dockPanelCollapse'
   | 'dockPanelExpand'
   | 'dockPanelResize'
-  | 'widgetFullscreenPanel'
-  | 'widgetViewGroup'
-  | 'widgetExitFullscreen'
-  | 'widgetExpandToFullscreen'
   | 'documentPreviewAlt'
   | 'documentPreviewUrlNotAllowed'
   | 'documentPreviewFailedToLoad'
@@ -123,6 +119,135 @@ export type LyraMessageKey =
   | 'generationStatusToken'
   | 'generationStatusTokens'
   | 'graphDataList'
+  | 'navigation'
+  | 'attachmentUploading'
+  | 'attachmentUploadFailed'
+  | 'attachmentUntitledFile'
+  | 'chartTrendIncreasing'
+  | 'chartTrendDecreasing'
+  | 'chartTrendFlat'
+  | 'chartSummary'
+  | 'chartSeriesNoData'
+  | 'chartSummaryWithData'
+  | 'chartSummaryEmpty'
+  | 'chartData'
+  | 'chart'
+  | 'boxPlotSeriesSummary'
+  | 'boxPlotSummaryWithData'
+  | 'boxPlotSummaryEmpty'
+  | 'boxPlotData'
+  | 'chartSeriesLabel'
+  | 'boxPlotMin'
+  | 'boxPlotQ1'
+  | 'boxPlotMedian'
+  | 'boxPlotQ3'
+  | 'boxPlotMax'
+  | 'boxPlot'
+  | 'histogramFrequency'
+  | 'liteChartMarkPosition'
+  | 'composerLabel'
+  | 'citation'
+  | 'comboboxOverflow'
+  | 'comboboxRequired'
+  | 'comboboxLabel'
+  | 'rename'
+  | 'previousMonth'
+  | 'nextMonth'
+  | 'chooseDate'
+  | 'date'
+  | 'documentPreviewEmpty'
+  | 'convertingDocument'
+  | 'documentPreviewNotAvailable'
+  | 'documentPreviewGenericFile'
+  | 'download'
+  | 'exportFormatMenuLabel'
+  | 'fileInputDefaultLabel'
+  | 'fileInputAccepted'
+  | 'fileInputRejected'
+  | 'elapsedSecondsUnit'
+  | 'elapsedMinutesSecondsTemplate'
+  | 'tokensPerSecondUnit'
+  | 'graphNode'
+  | 'graphLink'
+  | 'graphDiagram'
+  | 'heatmapMatrixCellLabel'
+  | 'heatmapCalendarLabel'
+  | 'heatmapMatrixLabel'
+  | 'heatmapCalendarCellLabel'
+  | 'kbdEnter'
+  | 'kbdEscape'
+  | 'kbdTab'
+  | 'kbdSpace'
+  | 'kbdBackspace'
+  | 'kbdDelete'
+  | 'kbdHome'
+  | 'kbdEnd'
+  | 'kbdPageUp'
+  | 'kbdPageDown'
+  | 'kbdArrowUp'
+  | 'kbdArrowDown'
+  | 'kbdArrowLeft'
+  | 'kbdArrowRight'
+  | 'kbdPlus'
+  | 'kbdMinus'
+  | 'kbdCommand'
+  | 'kbdControl'
+  | 'kbdOption'
+  | 'kbdAlt'
+  | 'kbdShift'
+  | 'mediaCardUntitledFile'
+  | 'mediaCardOpenName'
+  | 'mediaCardOpenAttachment'
+  | 'mediaCardImageAttachment'
+  | 'mediaCardVideoAttachment'
+  | 'mentionSuggestions'
+  | 'map'
+  | 'model'
+  | 'selectModel'
+  | 'modelSelectNoModels'
+  | 'temperature'
+  | 'play'
+  | 'playbackPosition'
+  | 'selectValueMissing'
+  | 'select'
+  | 'sourceListDefaultLabel'
+  | 'resizeDivider'
+  | 'trendUnchanged'
+  | 'trendIncreased'
+  | 'trendDecreased'
+  | 'trendGoodSuffix'
+  | 'trendBadSuffix'
+  | 'streamStalled'
+  | 'streamStallAnnounce'
+  | 'streamRecoverAnnounce'
+  | 'streamStallClearedAnnounce'
+  | 'thinkingPanelLabel'
+  | 'thoughtFor'
+  | 'thinking'
+  | 'rangeStart'
+  | 'rangeEnd'
+  | 'closeWithContext'
+  | 'toolApprovalHeading'
+  | 'toolApprovalGenericTool'
+  | 'toolApprovalArgsLabel'
+  | 'deny'
+  | 'edit'
+  | 'approve'
+  | 'invalidJson'
+  | 'fieldRequired'
+  | 'fieldMustBeString'
+  | 'fieldMustBeNumber'
+  | 'fieldMustBeInteger'
+  | 'fieldMustBeBoolean'
+  | 'unsupportedFieldType'
+  | 'fieldMustBeOneOf'
+  | 'fieldMustEqual'
+  | 'schemaMustBeObject'
+  | 'schemaPropertiesMustBeFlat'
+  | 'valueMustBeSerializable'
+  | 'valueInvalid'
+  | 'durationUnitMs'
+  | 'durationUnitS'
   | 'selectTools'
   | 'searchToolsPlaceholder'
   | 'useDefaultTools'
@@ -133,13 +258,12 @@ export type LyraMessageKey =
   | 'toolCount'
   | 'toolCountPlural'
   | 'otherCategory'
-  | 'mentionSuggestions'
-  | 'temperature'
-  | 'selectModel'
+  | 'widgetFullscreenPanel'
+  | 'widgetViewGroup'
+  | 'widgetExitFullscreen'
+  | 'widgetExpandToFullscreen'
   | 'menuLabel'
-  | 'play'
   | 'pause'
-  | 'playbackPosition'
   | 'kbdEscapeVisual'
   | 'kbdEscapeWord'
   | 'kbdTabWord'
@@ -165,36 +289,7 @@ export type LyraMessageKey =
   | 'kbdControlWord'
   | 'kbdOptionWord'
   | 'kbdAltWord'
-  | 'kbdShiftWord'
-  | 'selectValueMissing'
-  | 'select'
-  | 'sourceListDefaultLabel'
-  | 'streamStalled'
-  | 'streamStallAnnounce'
-  | 'streamRecoverAnnounce'
-  | 'streamStallClearedAnnounce'
-  | 'thinkingPanelLabel'
-  | 'thoughtFor'
-  | 'thinking'
-  | 'toolApprovalHeading'
-  | 'toolApprovalGenericTool'
-  | 'toolApprovalArgsLabel'
-  | 'deny'
-  | 'edit'
-  | 'approve'
-  | 'invalidJson'
-  | 'fieldRequired'
-  | 'fieldMustBeString'
-  | 'fieldMustBeNumber'
-  | 'fieldMustBeInteger'
-  | 'fieldMustBeBoolean'
-  | 'unsupportedFieldType'
-  | 'fieldMustBeOneOf'
-  | 'fieldMustEqual'
-  | 'schemaMustBeObject'
-  | 'schemaPropertiesMustBeFlat'
-  | 'valueMustBeSerializable'
-  | 'valueInvalid';
+  | 'kbdShiftWord';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -306,10 +401,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   dockPanelCollapse: 'Collapse panel',
   dockPanelExpand: 'Expand panel',
   dockPanelResize: 'Resize panel',
-  widgetFullscreenPanel: 'Fullscreen panel',
-  widgetViewGroup: 'Panel view',
-  widgetExitFullscreen: 'Exit fullscreen',
-  widgetExpandToFullscreen: 'Expand to fullscreen',
   documentPreviewAlt: 'Document preview',
   documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
   documentPreviewFailedToLoad: 'Failed to load document.',
@@ -318,6 +409,135 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
   graphDataList: 'Graph data',
+  navigation: 'Navigation',
+  attachmentUploading: 'Uploading',
+  attachmentUploadFailed: 'Upload failed',
+  attachmentUntitledFile: 'Untitled file',
+  chartTrendIncreasing: 'increasing',
+  chartTrendDecreasing: 'decreasing',
+  chartTrendFlat: 'flat',
+  chartSummary: '{label}: {count} values, range {min} to {max}, {trend} trend',
+  chartSeriesNoData: '{label}: no data',
+  chartSummaryWithData: '{type} chart. {summaries}.',
+  chartSummaryEmpty: '{type} chart with no data.',
+  chartData: 'Chart data',
+  chart: 'Chart',
+  boxPlotSeriesSummary: '{label}: {count} distributions, median range {min} to {max}, {trend} median trend',
+  boxPlotSummaryWithData: 'Box plot. {summaries}.',
+  boxPlotSummaryEmpty: 'Box plot with no data.',
+  boxPlotData: 'Box plot data',
+  chartSeriesLabel: 'Series',
+  boxPlotMin: 'Min',
+  boxPlotQ1: 'Q1',
+  boxPlotMedian: 'Median',
+  boxPlotQ3: 'Q3',
+  boxPlotMax: 'Max',
+  boxPlot: 'Box plot',
+  histogramFrequency: 'Frequency',
+  liteChartMarkPosition: '({index} of {total})',
+  composerLabel: 'Message',
+  citation: 'Citation {index}',
+  comboboxOverflow: '+{n} more — refine your search',
+  comboboxRequired: 'Please select an option.',
+  comboboxLabel: 'Combobox',
+  rename: 'Rename {title}',
+  previousMonth: 'Previous month',
+  nextMonth: 'Next month',
+  chooseDate: 'Choose date',
+  date: 'Date',
+  documentPreviewEmpty: 'No {type} to display.',
+  convertingDocument: 'Converting document…',
+  documentPreviewNotAvailable: 'Preview not available for {label}.',
+  documentPreviewGenericFile: 'this file',
+  download: 'Download',
+  exportFormatMenuLabel: '{label} format',
+  fileInputDefaultLabel: 'Drop files here or click to browse',
+  fileInputAccepted: '{count} file(s) added.',
+  fileInputRejected: '{count} file(s) rejected.',
+  elapsedSecondsUnit: 's',
+  elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
+  tokensPerSecondUnit: 'tok/s',
+  graphNode: 'Node {label}',
+  graphLink: 'Link from {source} to {target}',
+  graphDiagram: 'Node-link diagram with {nodeCount} nodes and {linkCount} links',
+  heatmapMatrixCellLabel: 'Row {row}, Col {col}: {value}',
+  heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
+  heatmapMatrixLabel: 'Heatmap of {rows} × {cols} cells, {label} range {range}',
+  heatmapCalendarCellLabel: '{date}: {value}',
+  kbdEnter: 'Enter',
+  kbdEscape: 'Escape',
+  kbdTab: 'Tab',
+  kbdSpace: 'Space',
+  kbdBackspace: 'Backspace',
+  kbdDelete: 'Delete',
+  kbdHome: 'Home',
+  kbdEnd: 'End',
+  kbdPageUp: 'Page Up',
+  kbdPageDown: 'Page Down',
+  kbdArrowUp: 'Arrow Up',
+  kbdArrowDown: 'Arrow Down',
+  kbdArrowLeft: 'Arrow Left',
+  kbdArrowRight: 'Arrow Right',
+  kbdPlus: 'Plus',
+  kbdMinus: 'Minus',
+  kbdCommand: 'Command',
+  kbdControl: 'Control',
+  kbdOption: 'Option',
+  kbdAlt: 'Alt',
+  kbdShift: 'Shift',
+  mediaCardUntitledFile: 'Untitled file',
+  mediaCardOpenName: 'Open {name}',
+  mediaCardOpenAttachment: 'Open {kind} attachment',
+  mediaCardImageAttachment: 'Image attachment',
+  mediaCardVideoAttachment: 'Video attachment',
+  mentionSuggestions: 'Suggestions',
+  map: 'Map',
+  model: 'Model',
+  selectModel: 'Select a model…',
+  modelSelectNoModels: 'No models',
+  temperature: 'Temperature',
+  play: 'Play',
+  playbackPosition: 'Playback position',
+  selectValueMissing: 'Please select an option.',
+  select: 'Select',
+  sourceListDefaultLabel: 'Sources',
+  resizeDivider: 'Resize divider between panel {a} and panel {b}',
+  trendUnchanged: 'unchanged',
+  trendIncreased: 'increased',
+  trendDecreased: 'decreased',
+  trendGoodSuffix: ', good',
+  trendBadSuffix: ', bad',
+  streamStalled: 'Taking longer than usual…',
+  streamStallAnnounce: 'Connection stalled.',
+  streamRecoverAnnounce: 'Connection restored.',
+  streamStallClearedAnnounce: 'No longer stalled.',
+  thinkingPanelLabel: 'Thinking',
+  thoughtFor: 'Thought for {duration}',
+  thinking: 'Thinking…',
+  rangeStart: 'Range start',
+  rangeEnd: 'Range end',
+  closeWithContext: 'Close: {snippet}',
+  toolApprovalHeading: 'Approve {tool} call?',
+  toolApprovalGenericTool: 'tool',
+  toolApprovalArgsLabel: 'Tool call arguments (JSON)',
+  deny: 'Deny',
+  edit: 'Edit',
+  approve: 'Approve',
+  invalidJson: 'Invalid JSON.',
+  fieldRequired: 'This field is required.',
+  fieldMustBeString: 'Must be a string.',
+  fieldMustBeNumber: 'Must be a finite number.',
+  fieldMustBeInteger: 'Must be a whole number.',
+  fieldMustBeBoolean: 'Must be a boolean.',
+  unsupportedFieldType: 'Unsupported field type "{type}".',
+  fieldMustBeOneOf: 'Must be one of: {values}.',
+  fieldMustEqual: 'Must equal {value}.',
+  schemaMustBeObject: 'Schema must describe an object.',
+  schemaPropertiesMustBeFlat: 'Schema properties must be a flat object.',
+  valueMustBeSerializable: 'Value must be JSON-serializable.',
+  valueInvalid: 'The value is invalid.',
+  durationUnitMs: 'ms',
+  durationUnitS: 's',
   selectTools: 'Select tools',
   searchToolsPlaceholder: 'Search tools…',
   useDefaultTools: 'Use default tools',
@@ -328,13 +548,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   toolCount: '{count} tool',
   toolCountPlural: '{count} tools',
   otherCategory: 'Other',
-  mentionSuggestions: 'Suggestions',
-  temperature: 'Temperature',
-  selectModel: 'Select a model…',
+  widgetFullscreenPanel: 'Fullscreen panel',
+  widgetViewGroup: 'Panel view',
+  widgetExitFullscreen: 'Exit fullscreen',
+  widgetExpandToFullscreen: 'Expand to fullscreen',
   menuLabel: 'Menu',
-  play: 'Play',
   pause: 'Pause',
-  playbackPosition: 'Playback position',
   kbdEscapeVisual: 'Esc',
   kbdEscapeWord: 'Escape',
   kbdTabWord: 'Tab',
@@ -361,35 +580,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdOptionWord: 'Option',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
-  selectValueMissing: 'Please select an option.',
-  select: 'Select',
-  sourceListDefaultLabel: 'Sources',
-  streamStalled: 'Taking longer than usual…',
-  streamStallAnnounce: 'Connection stalled.',
-  streamRecoverAnnounce: 'Connection restored.',
-  streamStallClearedAnnounce: 'No longer stalled.',
-  thinkingPanelLabel: 'Thinking',
-  thoughtFor: 'Thought for {duration}',
-  thinking: 'Thinking…',
-  toolApprovalHeading: 'Approve {tool} call?',
-  toolApprovalGenericTool: 'tool',
-  toolApprovalArgsLabel: 'Tool call arguments (JSON)',
-  deny: 'Deny',
-  edit: 'Edit',
-  approve: 'Approve',
-  invalidJson: 'Invalid JSON.',
-  fieldRequired: 'This field is required.',
-  fieldMustBeString: 'Must be a string.',
-  fieldMustBeNumber: 'Must be a finite number.',
-  fieldMustBeInteger: 'Must be a whole number.',
-  fieldMustBeBoolean: 'Must be a boolean.',
-  unsupportedFieldType: 'Unsupported field type "{type}".',
-  fieldMustBeOneOf: 'Must be one of: {values}.',
-  fieldMustEqual: 'Must equal {value}.',
-  schemaMustBeObject: 'Schema must describe an object.',
-  schemaPropertiesMustBeFlat: 'Schema properties must be a flat object.',
-  valueMustBeSerializable: 'Value must be JSON-serializable.',
-  valueInvalid: 'The value is invalid.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

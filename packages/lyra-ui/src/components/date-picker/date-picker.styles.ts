@@ -43,7 +43,22 @@ export const styles = css`
   [part='next']:hover {
     background: var(--lyra-color-brand-quiet);
   }
-  [part='previous'] svg {
+  /* Rotate the wrapping part element, not the svg -- internal/icons.ts's
+     documented contract ("callers ... rotate the wrapping part element via
+     CSS transform: rotate(...), not the svg"). This previously rotated the
+     inner <svg> directly. */
+  [part='previous'] {
+    transform: rotate(180deg);
+  }
+  /* Under RTL the header's flexbox auto-mirrors (see date-picker.class.ts's
+     ArrowLeft/ArrowRight comment), moving 'previous' to the physical right
+     side and 'next' to the physical left -- so the chevrons must swap
+     rotation in lockstep to keep pointing outward from the month title,
+     matching the unrotated 'next' chevron's LTR orientation. */
+  :host(:dir(rtl)) [part='previous'] {
+    transform: rotate(0deg);
+  }
+  :host(:dir(rtl)) [part='next'] {
     transform: rotate(180deg);
   }
   [part='weekdays'] {

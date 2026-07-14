@@ -97,6 +97,23 @@ function sanitizeSwatchColor(color: string): string | undefined {
   return SAFE_SWATCH_COLOR.test(color.trim()) ? color : undefined;
 }
 
+// Defensive JS-side fallback for choroplethFillOpacity() below, mirroring
+// --lyra-map-choropleth-fill-opacity's own default (see map.styles.ts) --
+// only reached if getComputedStyle somehow can't resolve the custom
+// property at all (e.g. host detached from the document).
+const FALLBACK_FILL_OPACITY = 0.75;
+
+/**
+ * Reads the current `--lyra-map-choropleth-fill-opacity` custom property so
+ * the choropleth fill layer's opacity is retheme-able instead of a literal
+ * hardcoded into the maplibre-gl paint expression.
+ */
+function choroplethFillOpacity(host: Element): number {
+  const raw = getComputedStyle(host).getPropertyValue('--lyra-map-choropleth-fill-opacity').trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : FALLBACK_FILL_OPACITY;
+}
+
 export interface LyraMapEventMap {
   'lyra-map-load': CustomEvent<undefined>;
   'lyra-map-click': CustomEvent<{
@@ -140,6 +157,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) legend: LegendEntry[] = [];
   @property({ attribute: false }) choropleth?: ChoroplethLayer;
   @property({ attribute: false }) markers: MapMarker[] = [];
+
+  /** Accessible name for the map region, applied as `[part="base"]`'s `aria-label` so
+   *  screen-reader users get a description of an otherwise purely visual control.
+   *  Empty (the default) falls back to the localized `'map'` message. */
+  @property() label = '';
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
   @state() private loading = true;
@@ -377,7 +399,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         id: fillLayerId,
         type: 'fill',
         source: sourceId,
-        paint: { 'fill-color': colorExpr as never, 'fill-opacity': 0.75 },
+        paint: { 'fill-color': colorExpr as never, 'fill-opacity': choroplethFillOpacity(this) },
       });
     }
     this._appliedFillLayerId = fillLayerId;
@@ -479,7 +501,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // (same `nothing` pattern `stat.ts` uses to omit its optional trend section)
     // rather than relying on a CSS `:empty` selector that can never match.
     return html`
-      <div part="base">
+      <div part="base" aria-label=${this.label || this.localize('map')}>
         ${this.loading
           ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
           : html`<div part="container"></div>`}

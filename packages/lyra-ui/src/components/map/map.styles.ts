@@ -6,6 +6,11 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     block-size: var(--lyra-size-24rem);
+    /* Choropleth fill-layer opacity -- a data-driven literal (not a color or
+       geometry constant), so it's exposed as a retheme-able custom property
+       instead of being hardcoded into the maplibre-gl paint expression built
+       in map.class.ts. */
+    --lyra-map-choropleth-fill-opacity: 0.75;
   }
   [part='base'] {
     position: relative;

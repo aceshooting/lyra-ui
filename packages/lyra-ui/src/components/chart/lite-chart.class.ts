@@ -2,6 +2,8 @@ import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'li
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import type { LyraLiveRegion } from '../live-region/live-region.class.js';
+import '../live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
 
 export interface LiteSeries {
@@ -236,17 +238,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ attribute: false }) selectedIndex: number[] = [];
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)
-   *  keeps today's auto-derived (English-fallback) label exactly. */
-  @property({ attribute: 'chart-label' }) chartLabel?: string;
+   *  keeps today's auto-derived (English-fallback) label exactly. Named `accessible-label` to
+   *  match the same override on `lyra-chart`/`lyra-box-plot`. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
   @state() private visible = true;
   /** One roving tab stop across all bar/point marks. */
   @state() private activeMarkIndex = 0;
-  @state() private liveText = '';
 
   @query('svg') private svgEl?: SVGSVGElement;
+  @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
   private intersectionObserver?: IntersectionObserver;
 
@@ -352,7 +355,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private markAnnouncement(index: number, marks = this.interactiveMarks()): string {
     const mark = marks[index];
     if (!mark) return '';
-    const series = this.datasets[mark.datasetIndex]?.label ?? 'Series';
+    const series = this.datasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
     const custom = this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
     return `${custom ?? `${series}, ${mark.label}: ${mark.value}`} (${index + 1} of ${marks.length})`;
   }
@@ -361,14 +364,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const marks = this.interactiveMarks();
     if (!marks[index]) return;
     this.activeMarkIndex = index;
-    this.liveText = this.markAnnouncement(index, marks);
+    // `force: true` bypasses `<lyra-live-region>`'s default throttle window --
+    // each roving-tabindex move is its own discrete, user-driven navigation
+    // event (not a streaming firehose), so it must land immediately rather
+    // than waiting out (or getting coalesced by) the throttle.
+    this.liveRegion?.announce(this.markAnnouncement(index, marks), { force: true });
   }
 
   private focusMark(index: number): void {
     const marks = this.interactiveMarks();
     if (!marks[index]) return;
     this.activeMarkIndex = index;
-    this.liveText = this.markAnnouncement(index, marks);
+    this.liveRegion?.announce(this.markAnnouncement(index, marks), { force: true });
     void this.updateComplete.then(() => {
       const markEls = Array.from(this.renderRoot.querySelectorAll('[part="bar"], [part="point"]')) as HTMLElement[];
       markEls[index]?.focus();
@@ -780,9 +787,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       return svg`<text part="axis-label" x=${x} y=${plotY + plotH + 14} text-anchor="middle">${label}</text>`;
     });
 
-    const chartLabel = this.chartLabel ?? (this.datasets.map((d) => d.label).join(', ') || 'Chart');
+    const chartLabel =
+      this.accessibleLabel ?? (this.datasets.map((d) => d.label).join(', ') || this.localize('chart'));
     const marksForA11y = this.interactiveMarks();
-    const activeMark = this.normalizedMarkIndex(marksForA11y);
 
     return html`
       <div part="base">
@@ -803,10 +810,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             ? svg`<text part="axis-title" x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`
             : nothing}
         </svg>
-        <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          ${activeMark >= 0 ? this.liveText || this.markAnnouncement(activeMark, marksForA11y) : ''}
-        </div>
-        <ul part="data-list" class="sr-only" aria-label="Chart data">
+        <lyra-live-region part="live-region"></lyra-live-region>
+        <ul part="data-list" class="sr-only" aria-label=${this.localize('chartData')}>
           ${marksForA11y.map((mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
         </ul>
         ${this.legend

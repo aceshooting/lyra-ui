@@ -68,6 +68,15 @@ export const styles = css`
   :host(:not([collapsed])) [part='toggle'] .chevron {
     transform: rotate(90deg);
   }
+  /* RTL: the resting (collapsed) chevron mirrors to point left, the
+     conventional mirrored disclosure-triangle direction for RTL. Scoped to
+     [collapsed] specifically (rather than a plain :dir(rtl) rule) so it
+     never has to compete with the rule above for the expanded state, which
+     needs no mirroring: rotating this left-right-asymmetric glyph 90deg
+     already produces a left-right-symmetric down chevron. */
+  :host([collapsed]:dir(rtl)) [part='toggle'] .chevron {
+    transform: scaleX(-1);
+  }
   [part='filename'] {
     flex: 1 1 auto;
     min-inline-size: 0;

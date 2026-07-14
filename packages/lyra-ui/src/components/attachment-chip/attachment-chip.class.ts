@@ -345,7 +345,14 @@ export class LyraAttachmentChip extends LyraElement {
 
   render(): TemplateResult {
     const name = this.effectiveName;
-    const displayName = name || this.untitledLabel;
+    // Only routed through `this.localize()` when left at its hardcoded
+    // default -- an explicit `untitled-label` override always wins verbatim,
+    // matching `removeLabel`/`retryLabel` below.
+    const untitledLabel = this.localize(
+      'attachmentUntitledFile',
+      this.untitledLabel === 'Untitled file' ? undefined : this.untitledLabel,
+    );
+    const displayName = name || untitledLabel;
     // A `0`-byte size reads the same as "unknown" here (there's no prop to
     // distinguish a genuinely empty file from a size that was simply never
     // supplied) -- hide the part entirely rather than show a literal "0 B".
@@ -353,11 +360,16 @@ export class LyraAttachmentChip extends LyraElement {
       this.effectiveSize > 0
         ? formatFileSize(this.effectiveSize, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))
         : '';
+    // Same override-wins-verbatim rule as `untitledLabel` above.
+    const uploadingLabel = this.localize(
+      'attachmentUploading',
+      this.uploadingLabel === 'Uploading' ? undefined : this.uploadingLabel,
+    );
     const text = statusText(
       this.status,
       this.progress,
       this.clampedProgress,
-      this.uploadingLabel,
+      uploadingLabel,
       this.uploadFailedLabel,
     );
     const uploading = this.status === 'uploading';
@@ -366,7 +378,7 @@ export class LyraAttachmentChip extends LyraElement {
       <div part="base">
         <span part="thumbnail" aria-hidden="true">${this.renderThumbnail()}</span>
         <span part="meta">
-          <span part="name" title=${name || this.untitledLabel}>${displayName}</span>
+          <span part="name" title=${name || untitledLabel}>${displayName}</span>
           <span part="size" ?hidden=${!sizeText}>${sizeText || nothing}</span>
           <span part="status-text" role=${this.status === 'error' ? 'alert' : nothing} ?hidden=${!text}>${text || nothing}</span>
         </span>
@@ -379,12 +391,12 @@ export class LyraAttachmentChip extends LyraElement {
                   aria-valuenow=${Math.round(this.clampedProgress)}
                   aria-valuemin="0"
                   aria-valuemax="100"
-                  aria-label=${`${this.uploadingLabel} ${displayName}`}
+                  aria-label=${`${uploadingLabel} ${displayName}`}
                 >
                   <div part="progress-fill" style=${`inline-size:${this.clampedProgress}%`}></div>
                 </div>
               `
-            : html`<span part="spinner" role="status" aria-label=${`${this.uploadingLabel} ${displayName}`}></span>`
+            : html`<span part="spinner" role="status" aria-label=${`${uploadingLabel} ${displayName}`}></span>`
           : nothing}
         ${this.status === 'error'
           ? html`<button part="retry-button" type="button" aria-label=${`${this.localize('retry', this.retryLabel === 'Retry' ? undefined : this.retryLabel)} ${displayName}`} @click=${this.onRetryClick}>

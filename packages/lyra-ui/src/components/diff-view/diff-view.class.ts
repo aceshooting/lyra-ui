@@ -1,8 +1,12 @@
 import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { computeLineDiff } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
+
+/** How long the "Copied!" confirmation state lasts before reverting -- matches
+ *  `lyra-copy-button`'s own `COPY_CONFIRM_MS`. */
+const COPY_CONFIRM_MS = 1500;
 
 export interface LyraDiffViewEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
@@ -35,6 +39,15 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
    *  renders no button. */
   @property({ type: Boolean }) copyable = false;
 
+  @state() private justCopied = false;
+
+  private copyTimeoutId?: ReturnType<typeof setTimeout>;
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    clearTimeout(this.copyTimeoutId);
+  }
+
   private get unifiedText(): string {
     return computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'))
       .map((op) => `${op.type === 'add' ? '+' : op.type === 'remove' ? '-' : ' '} ${op.text}`)
@@ -47,6 +60,11 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
       // best-effort -- lyra-copy still fires with the intended text regardless
     });
     this.emit<{ text: string }>('lyra-copy', { text });
+    this.justCopied = true;
+    clearTimeout(this.copyTimeoutId);
+    this.copyTimeoutId = setTimeout(() => {
+      this.justCopied = false;
+    }, COPY_CONFIRM_MS);
   };
 
   render(): TemplateResult {
@@ -54,8 +72,13 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     return html`
       <div part="base">
         ${this.copyable
-          ? html`<button part="copy-button" type="button" aria-label=${this.localize('copyDiff')} @click=${this.onCopyClick}>
-              ${this.localize('copy')}
+          ? html`<button
+              part="copy-button"
+              type="button"
+              aria-label=${this.justCopied ? this.localize('copied') : this.localize('copyDiff')}
+              @click=${this.onCopyClick}
+            >
+              ${this.justCopied ? this.localize('copied') : this.localize('copy')}
             </button>`
           : nothing}
         <pre>${ops.map(

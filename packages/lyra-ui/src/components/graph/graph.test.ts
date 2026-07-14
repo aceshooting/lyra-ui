@@ -759,14 +759,11 @@ describe('data-list aria-label localization', () => {
 });
 
 describe('RTL keyboard navigation', () => {
-  // Force-directed layout has no fixed left-right reading order (node
-  // position comes from the d3-force physics simulation, not array/DOM
-  // order), and ArrowRight/ArrowDown already mean the same thing here
-  // ("next" in flat nodes-then-links order, same as ArrowLeft/ArrowUp both
-  // meaning "previous") -- unlike this library's grid/track-based components
-  // (date-grid, resize handles) there is no physical left/right for RTL to
-  // mirror, so ArrowLeft/ArrowRight must stay un-swapped under dir="rtl".
-  it('does not swap ArrowLeft/ArrowRight roving-tabindex navigation under dir="rtl"', async () => {
+  // Matches the `forwardKey`/`backwardKey` swap this library's other
+  // "physical arrow key drives sequential previous/next" components
+  // (lyra-tabs, lyra-slider, lyra-segmented) apply under dir="rtl": the
+  // physical ArrowLeft becomes "next" and ArrowRight becomes "previous".
+  it('swaps ArrowLeft/ArrowRight roving-tabindex navigation under dir="rtl"', async () => {
     const wrapper = (await fixture(
       html`<div dir="rtl"><lyra-graph></lyra-graph></div>`,
     )) as HTMLDivElement;
@@ -784,11 +781,19 @@ describe('RTL keyboard navigation', () => {
         ...el.shadowRoot!.querySelectorAll('[part="link"]'),
       ] as SVGElement[];
 
+    // ArrowRight is the "backward" physical key under RTL -- from index 0
+    // it stays clamped at the first item instead of advancing.
     items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
+
+    // ArrowLeft is the "forward" physical key under RTL -- advances to the next item.
+    items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     await el.updateComplete;
     expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
 
-    items()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    // ArrowRight then moves back to the previous item.
+    items()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
     expect(items()[0]!.getAttribute('tabindex')).to.equal('0');
   });

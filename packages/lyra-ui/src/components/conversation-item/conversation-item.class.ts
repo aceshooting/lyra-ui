@@ -282,7 +282,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // where focus actually lands, so it needs the same row-specific
     // accessible name (not a generic one) to disambiguate which row a
     // screen-reader user is editing.
-    const renameLabel = `Rename ${displayTitle}`;
+    const renameLabel = this.localize('rename', undefined, { title: displayTitle });
 
     return html`
       <div part="base">
