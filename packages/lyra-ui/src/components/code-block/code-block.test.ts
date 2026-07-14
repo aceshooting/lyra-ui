@@ -81,10 +81,13 @@ describe('shiki highlighting (real peer)', () => {
     expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="pre"] span')).to.not.exist;
 
+    // 8000ms already flaked under load (8-way default @web/test-runner concurrency on this
+    // machine's 16 cores starves the real, unmocked shiki WASM+grammar load) -- same class of
+    // issue as lyra-graph's NODE_COUNT_TIMEOUT below and flag.test.ts's img() helper.
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="pre"] span') !== null,
       'highlighted output never appeared',
-      { timeout: 8000 },
+      { timeout: 15000 },
     );
 
     expect(el.hasAttribute('aria-busy')).to.be.false;

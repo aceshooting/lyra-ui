@@ -8,8 +8,10 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // Resolving a flag now involves two sequential dynamic imports on a cold start (the
   // `@aceshooting/lyra-flags` peer package, then that specific code's own lazy loader module —
   // see flag.ts's bundle-size note) instead of one, so give this more headroom than the
-  // library default (1000ms) to avoid flaking under load.
-  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 8000 });
+  // library default (1000ms) to avoid flaking under load. 8000ms itself still flaked under
+  // 8-way default @web/test-runner concurrency on a 16-core machine — same class of issue as
+  // lyra-graph's NODE_COUNT_TIMEOUT and code-block.test.ts's shiki wait.
+  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 15000 });
   return el.shadowRoot!.querySelector('img')!;
 }
 
