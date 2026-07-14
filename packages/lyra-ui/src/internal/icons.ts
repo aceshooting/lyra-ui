@@ -80,3 +80,8 @@ export function expandIcon(): SVGTemplateResult {
     <line x1="3" y1="21" x2="10" y2="14"></line>
   `);
 }
+
+/** A three-quarter-arc spinner glyph. Rotate the wrapping part element via CSS animation for a loading state. */
+export function spinnerIcon(): SVGTemplateResult {
+  return icon(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
+}
