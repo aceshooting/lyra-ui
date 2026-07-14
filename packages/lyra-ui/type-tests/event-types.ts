@@ -17,6 +17,21 @@ import type {
   StatRow,
   TimeRangePreset,
 } from '../src/lyra.js';
+import type {
+  LyraChipEventMap,
+  LyraChipGroupEventMap,
+  LyraCitationBadgeEventMap,
+  LyraCopyButtonEventMap,
+  LyraDiffViewEventMap,
+  LyraFileInputEventMap,
+  LyraHeatmapEventMap,
+  LyraLiteChartEventMap,
+  LyraMediaCardEventMap,
+  LyraSelectEventMap,
+  LyraSourceCardEventMap,
+  LyraSplitEventMap,
+  LyraTimeRangeEventMap,
+} from '../src/lyra.js';
 
 const publicTypes: [
   StatRow,
@@ -31,6 +46,28 @@ const publicTypes: [
   FormAssociatedInterface,
 ] | undefined = undefined;
 void publicTypes;
+
+// Compile-only guard: fails to typecheck if the root barrel (src/lyra.ts) ever
+// stops re-exporting one of these component event-map types, even though the
+// owning class itself stays exported -- otherwise a consumer building a typed
+// wrapper/event helper for one of these components has no way to name its
+// event-detail type from the package root.
+const barrelEventMapTypes: [
+  LyraChipEventMap,
+  LyraChipGroupEventMap,
+  LyraCitationBadgeEventMap,
+  LyraCopyButtonEventMap,
+  LyraDiffViewEventMap,
+  LyraFileInputEventMap,
+  LyraHeatmapEventMap,
+  LyraLiteChartEventMap,
+  LyraMediaCardEventMap,
+  LyraSelectEventMap,
+  LyraSourceCardEventMap,
+  LyraSplitEventMap,
+  LyraTimeRangeEventMap,
+] | undefined = undefined;
+void barrelEventMapTypes;
 
 declare const slider: LyraSlider;
 slider.addEventListener('lyra-change', (event) => {

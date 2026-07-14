@@ -37,6 +37,40 @@ if (!versionMatch) {
   errors.push(`README.md claims lyra-ui is published at ${versionMatch[1]}, but package.json says ${pkg.version} — update the "## Status" section`);
 }
 
+// The Web Awesome comparison paragraph ("That free-Pro-equivalent group is X of lyra-ui's Y
+// tags. The other Z have no Web Awesome equivalent...") can't be independently verified against
+// the manifest (X is a curated, not derived, count), but its own arithmetic and its Y against the
+// real tag count can be -- this is exactly the drift class that recurred here once already.
+const comparisonMatch = readme.match(/is (\d+) of lyra-ui's (\d+) tags\. The other (\d+) have no Web Awesome\s+equivalent/);
+if (!comparisonMatch) {
+  errors.push('README.md: could not find the "is <X> of lyra-ui\'s <Y> tags. The other <Z> have no Web Awesome equivalent" sentence to check');
+} else {
+  const [, proEquivalent, claimedTotal, other] = comparisonMatch.map(Number);
+  if (claimedTotal !== tagCount) {
+    errors.push(
+      `README.md's Web Awesome comparison paragraph claims ${claimedTotal} total tags, but custom-elements.json currently has ${tagCount} — update both numbers in that paragraph`,
+    );
+  } else if (proEquivalent + other !== claimedTotal) {
+    errors.push(
+      `README.md's Web Awesome comparison paragraph is internally inconsistent: ${proEquivalent} + ${other} !== ${claimedTotal}`,
+    );
+  }
+}
+
+// "N-component conversation/agent UI kit" in that same paragraph must match the family table's
+// own "Conversation & Agent UI" row further down -- the two numbers describe the same family.
+const kitMatch = readme.match(/(\d+)-component conversation\/agent UI kit/);
+const familyRowMatch = readme.match(/\| Conversation & Agent UI \| (\d+) \|/);
+if (!kitMatch) {
+  errors.push('README.md: could not find the "<N>-component conversation/agent UI kit" phrase to check');
+} else if (!familyRowMatch) {
+  errors.push('README.md: could not find the "Conversation & Agent UI" family table row to check');
+} else if (kitMatch[1] !== familyRowMatch[1]) {
+  errors.push(
+    `README.md says "${kitMatch[1]}-component conversation/agent UI kit" but the family table lists ${familyRowMatch[1]} tags for that family — update one to match the other`,
+  );
+}
+
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;

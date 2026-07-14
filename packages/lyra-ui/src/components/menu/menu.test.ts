@@ -447,6 +447,25 @@ it('skips a disabled item during type-ahead even when its text would otherwise m
   expect(document.activeElement).to.equal(blueberry);
 });
 
+it('skips a hidden or aria-hidden item during type-ahead even when its text would otherwise match', async () => {
+  const el = (await fixture(html`
+    <lyra-menu>
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="a">Apple</lyra-menu-item>
+      <lyra-menu-item value="b" hidden>Banana</lyra-menu-item>
+      <lyra-menu-item value="c" aria-hidden="true">Berry</lyra-menu-item>
+      <lyra-menu-item value="d">Blueberry</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [, , , blueberry] = items(el);
+
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(document.activeElement).to.equal(blueberry);
+});
+
 it('does not intercept Arrow/Home/End/Escape from a non-LyraMenuItem child slotted into the default slot', async () => {
   const el = (await fixture(html`
     <lyra-menu label="Row actions">

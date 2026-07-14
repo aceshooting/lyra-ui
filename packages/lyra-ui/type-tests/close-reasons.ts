@@ -2,6 +2,7 @@ import type {
   DialogCloseReason,
   ResponsivePanelCloseReason,
   ToolApprovalDialogCloseReason,
+  ToolResultDialogCloseReason,
   ToolSelectDialogCloseReason,
 } from '../src/lyra.js';
 
@@ -11,6 +12,7 @@ type _DialogReasonIsStringLike = Assert<IsStringLike<DialogCloseReason>>;
 type _ResponsiveReasonIsStringLike = Assert<IsStringLike<ResponsivePanelCloseReason>>;
 type _ApprovalReasonIsStringLike = Assert<IsStringLike<ToolApprovalDialogCloseReason>>;
 type _SelectReasonIsStringLike = Assert<IsStringLike<ToolSelectDialogCloseReason>>;
+type _ResultReasonIsStringLike = Assert<IsStringLike<ToolResultDialogCloseReason>>;
 
 const applicationReason: DialogCloseReason = 'application-timeout';
 void applicationReason;

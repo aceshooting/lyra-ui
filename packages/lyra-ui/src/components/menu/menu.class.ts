@@ -458,7 +458,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.typeAheadBuffer = '';
     }, 500);
 
-    const navigable = this.items.filter((i) => !i.disabled);
+    const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
     const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentIndex = current ? navigable.indexOf(current) : -1;

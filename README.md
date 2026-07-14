@@ -21,13 +21,13 @@ free, open-source components wherever Web Awesome Pro normally charges, with the
 compatible attributes, slots, events, parts, and `--wa-*` token names under a `lyra-` prefix
 instead of `wa-`; component-specific notes call out any intentional differences.
 
-That free-Pro-equivalent group is 17 of lyra-ui's 85 tags. The other 68 have no Web Awesome
+That free-Pro-equivalent group is 17 of lyra-ui's 92 tags. The other 75 have no Web Awesome
 equivalent at all, free or paid — Web Awesome doesn't sell them in any tier: dashboard atoms (stat
 tiles, tables, gauges, empty/skeleton states, split panes, widgets), temporal & graph widgets (time
 range, playback scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't
 offer (histogram, box plot, and a dependency-free `lyra-lite-chart`), MapLibre GL maps with
 choropleth layers, a drag-drop file dropzone, and — the largest single family by far — a
-46-component conversation/agent UI kit (chat composer, tool-call/result/approval dialogs, streaming
+53-component conversation/agent UI kit (chat composer, tool-call/result/approval dialogs, streaming
 text, citations, model selection, and more) for building LLM chat and agent interfaces from
 scratch. As far as we've been able to tell, no established project combines those three things —
 Web Awesome-compatible foundations, dashboard/visualization components, and agent-chat UI — in one
