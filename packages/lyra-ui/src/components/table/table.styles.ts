@@ -39,6 +39,9 @@ export const styles = css`
     border-collapse: collapse;
     font-size: var(--lyra-font-size-md-sm);
   }
+  [part='table'][data-has-column-widths] {
+    table-layout: fixed;
+  }
   [part='header-cell'] {
     position: sticky;
     inset-block-start: 0;

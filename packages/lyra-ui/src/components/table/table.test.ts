@@ -937,3 +937,49 @@ describe('cellStyle column hook', () => {
     expect(cell.style.getPropertyValue('--lyra-table-sticky-offset')).to.not.equal('');
   });
 });
+
+describe('headerCell', () => {
+  it('renders col.label by default when headerCell is unset', async () => {
+    const columns: TableColumn<{ id: number }>[] = [{ key: 'id', label: 'ID', cell: (row) => row.id }];
+    const el = (await fixture(html`<lyra-table .columns=${columns} .rows=${[{ id: 1 }]}></lyra-table>`)) as LyraTable;
+    const th = el.shadowRoot!.querySelector('th[data-col-key="id"]')!;
+    expect(th.textContent).to.contain('ID');
+  });
+
+  it('renders headerCell(column) instead of the plain label when set', async () => {
+    const columns: TableColumn<{ id: number }>[] = [
+      {
+        key: 'id',
+        label: 'ID',
+        headerCell: (col) => html`<strong class="custom">${col.label}!</strong>`,
+        cell: (row) => row.id,
+      },
+    ];
+    const el = (await fixture(html`<lyra-table .columns=${columns} .rows=${[{ id: 1 }]}></lyra-table>`)) as LyraTable;
+    const th = el.shadowRoot!.querySelector('th[data-col-key="id"]')!;
+    expect(th.querySelector('.custom')).to.exist;
+    expect(th.textContent).to.contain('ID!');
+  });
+});
+
+describe('column width', () => {
+  it('does not set table-layout: fixed when no column defines width', async () => {
+    const columns: TableColumn<{ id: number }>[] = [{ key: 'id', label: 'ID', cell: (row) => row.id }];
+    const el = (await fixture(html`<lyra-table .columns=${columns} .rows=${[{ id: 1 }]}></lyra-table>`)) as LyraTable;
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(getComputedStyle(table).tableLayout).to.equal('auto');
+  });
+
+  it('sets table-layout: fixed and applies <col> widths when a column defines width', async () => {
+    const columns: TableColumn<{ id: number }>[] = [
+      { key: 'id', label: 'ID', width: '120px', cell: (row) => row.id },
+      { key: 'name', label: 'Name', cell: () => 'x' },
+    ];
+    const el = (await fixture(html`<lyra-table .columns=${columns} .rows=${[{ id: 1 }]}></lyra-table>`)) as LyraTable;
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(getComputedStyle(table).tableLayout).to.equal('fixed');
+    const cols = el.shadowRoot!.querySelectorAll('colgroup col');
+    expect(cols).to.have.lengthOf(2);
+    expect((cols[0] as HTMLElement).style.getPropertyValue('inline-size')).to.equal('120px');
+  });
+});

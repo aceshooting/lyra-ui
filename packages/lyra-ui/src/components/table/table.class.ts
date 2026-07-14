@@ -11,6 +11,18 @@ import '../empty/empty.class.js';
 export interface TableColumn<T> {
   key: string;
   label: string;
+  /** Renders custom content into this column's <th>, in place of the plain `label` text -- e.g. a
+   *  drag-to-resize handle or an interactive header affordance. Omit for the default plain-text
+   *  `label` rendering (unchanged output). Receives the column definition itself -- there is no
+   *  per-row data at header scope. */
+  headerCell?: (column: TableColumn<T>) => unknown;
+  /** CSS length (e.g. '120px', '20%') for this column's width. Omit for today's intrinsic/auto
+   *  sizing (unchanged). When any column defines `width`, the table switches to
+   *  `table-layout: fixed` so declared widths are authoritative rather than advisory. */
+  width?: string;
+  /** CSS length for this column's minimum width (e.g. '80px'). Has no effect unless at least one
+   *  column in the table also defines `width` (see `width`'s own doc). */
+  minWidth?: string;
   sortable?: boolean;
   align?: 'start' | 'end';
   /** Responsive priority — `undefined` (the default) means "always visible".
@@ -577,6 +589,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
     const focusedCol = this.focusedColKey();
     const focusedRow = this.focusedRowKey();
+    const hasColumnWidths = this.columns.some((col) => col.width);
 
     return html`
       <div part="base" ?data-force-visible=${this.showAllColumns}>
@@ -584,9 +597,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           part="table"
           role="grid"
           aria-label=${this.getAttribute('aria-label') || nothing}
+          ?data-has-column-widths=${hasColumnWidths}
           @click=${this.onTableClick}
           @keydown=${this.onTableKeyDown}
         >
+          <colgroup>
+            ${this.columns.map(
+              (col) =>
+                html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,
+            )}
+          </colgroup>
           <thead part="head">
             <tr role="row">
               ${this.columns.map((col) => {
@@ -604,7 +624,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                   aria-sort=${col.sortable ? ariaSort : nothing}
                   tabindex=${col.key === focusedCol ? '0' : '-1'}
                 >
-                  ${col.label}
+                  ${col.headerCell ? col.headerCell(col) : col.label}
                   ${active
                     ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
                         >${chevronIcon()}</span
