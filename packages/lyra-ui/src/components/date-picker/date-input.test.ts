@@ -995,3 +995,44 @@ it('defaults the clear/expand/dialog labels to English but lets them be overridd
   expect(expandBtn().getAttribute('aria-label')).to.equal('Ouvrir le calendrier');
   expect(popup().getAttribute('aria-label')).to.equal('Choisir une date');
 });
+
+describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
+  it('spellcheck defaults to true', async () => {
+    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    expect(input.spellcheck).to.be.true;
+  });
+
+  it('forwards spellcheck=false, autocapitalize, and autocorrect onto the native input', async () => {
+    const el = (await fixture(html`
+      <lyra-date-input spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-date-input>
+    `)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    expect(input.spellcheck).to.be.false;
+    expect(input.getAttribute('autocapitalize')).to.equal('off');
+    expect(input.getAttribute('autocorrect')).to.equal('off');
+  });
+});
+
+describe('blur/focus bubbling', () => {
+  it('re-dispatches a bubbling, composed blur event when the native input blurs', async () => {
+    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.focus();
+    const eventPromise = oneEvent(el, 'blur');
+    input.blur();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+
+  it('re-dispatches a bubbling, composed focus event when the native input focuses', async () => {
+    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    const eventPromise = oneEvent(el, 'focus');
+    input.focus();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+});

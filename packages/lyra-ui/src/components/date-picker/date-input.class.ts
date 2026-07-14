@@ -53,6 +53,29 @@ const monthsConverter: ComplexAttributeConverter<1 | 2> = {
   toAttribute: normalizeCalendarMonths,
 };
 
+/**
+ * String-aware boolean attribute converter for `spellcheck`. Lit's built-in
+ * `type: Boolean` converter is presence-based -- the attribute's mere
+ * presence (regardless of its string value) maps to `true`, so a plain-
+ * markup consumer writing the literal `spellcheck="false"` would actually get
+ * `true` (this component's default), the opposite of what that string reads
+ * as -- the same bug class `<lyra-textarea>`'s `spellcheckConverter` and
+ * `<lyra-generation-status>`'s `showStopConverter` document and fix. Mirrors
+ * that shape: attribute absent (or removed) -> `true` (the default);
+ * `spellcheck="false"` -> `false`; anything else present (no value,
+ * `="true"`, ...) -> `true`.
+ */
+const spellcheckConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting
+    // for it; only the non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
+
 const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   fromAttribute: normalizeWeekdayFormat,
   toAttribute: normalizeWeekdayFormat,
@@ -64,6 +87,8 @@ export interface LyraDateInputEventMap {
   'lyra-clear': CustomEvent<undefined>;
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
 
@@ -80,6 +105,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @event change - Fired on committed date transitions.
  * @event lyra-show / lyra-hide - Calendar popover lifecycle.
  * @event lyra-clear - The clear button was used.
+ * @event blur - Re-dispatched from the internal `<input>`'s own `blur`, bubbling and composed
+ *   unlike the native event.
+ * @event focus - Re-dispatched from the internal `<input>`'s own `focus`, for the same reason as
+ *   `blur`.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-label - The label wrapper.
  * @csspart input-wrapper - The input and button wrapper.
@@ -113,6 +142,24 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
+  /** Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the
+   *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
+   *  presence-based `type: Boolean` converter -- see that converter's doc comment. A bare
+   *  `.spellcheck` property binding can still turn this off with `spellcheck="false"`; a Lit
+   *  template can do the same with either that attribute string or a `.spellcheck=${false}`
+   *  binding. */
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the
+   *  attribute (browser default). */
+  @property() autocapitalize = '';
+  /** Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty
+   *  string omits the attribute (browser default).
+   *  Named `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`
+   *  collision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,
+   *  which conflicts with this component's `string`-typed property of the same name. The explicit
+   *  attribute mapping preserves the standard lowercase `autocorrect` wire name in both Lit and
+   *  generated component metadata. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
   @property() locale = '';
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
@@ -565,6 +612,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   private onInputBlur = (): void => {
     this.touched = true;
+    this.emit('blur');
+  };
+
+  private onInputFocus = (): void => {
+    this.emit('focus');
   };
 
   formStateRestoreCallback(
@@ -636,6 +688,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}
+            spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
             .value=${this.displayText}
             placeholder=${this.placeholder}
             ?required=${this.required}
@@ -643,6 +698,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             ?readonly=${this.readonly}
             @change=${this.onInputChange}
             @keydown=${this.onInputKey}
+            @focus=${this.onInputFocus}
             @blur=${this.onInputBlur}
           />
           ${this.withClear && hasValue
