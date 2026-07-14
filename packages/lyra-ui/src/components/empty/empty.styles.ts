@@ -17,7 +17,7 @@ export const styles = css`
   :host([compact]) [part='base'] {
     align-items: flex-start;
     text-align: start;
-    padding: var(--lyra-space-xs);
+    padding: var(--lyra-empty-compact-padding, var(--lyra-space-xs));
   }
   [part='icon'] {
     font-size: var(--lyra-font-size-3xl);

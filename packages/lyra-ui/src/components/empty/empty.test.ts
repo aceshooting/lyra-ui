@@ -287,3 +287,14 @@ it('applies compact styling to [part="base"] and [part="heading"] when compact',
     'compact padding should render smaller than the default',
   ).to.be.lessThan(parseFloat(getComputedStyle(normalBase).paddingBlockStart));
 });
+
+it('--lyra-empty-compact-padding overrides the default compact padding', async () => {
+  const defaultEl = (await fixture(html`<lyra-empty compact heading="Nothing here"></lyra-empty>`)) as LyraEmpty;
+  const overriddenEl = (await fixture(
+    html`<lyra-empty compact heading="Nothing here" style="--lyra-empty-compact-padding: 8px 2px;"></lyra-empty>`,
+  )) as LyraEmpty;
+  const defaultPadding = getComputedStyle(defaultEl.shadowRoot!.querySelector('[part="base"]')!).padding;
+  const overriddenPadding = getComputedStyle(overriddenEl.shadowRoot!.querySelector('[part="base"]')!).padding;
+  expect(overriddenPadding).to.equal('8px 2px');
+  expect(overriddenPadding).to.not.equal(defaultPadding);
+});
