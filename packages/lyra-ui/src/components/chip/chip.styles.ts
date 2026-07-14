@@ -69,7 +69,12 @@ export const styles = css`
   }
   [part='base'][aria-pressed='true'] {
     background: var(--lyra-chip-bg);
-    border-color: var(--lyra-chip-accent);
+    /* Falls back to --lyra-chip-accent (today's exact value) so every
+       existing consumer, including all 4 \`tone\` variants, renders
+       byte-identical when unset. A consumer with a per-item arbitrary
+       color sets --lyra-chip-pressed-border directly, leaving
+       --lyra-chip-accent (and therefore the label text color) untouched. */
+    border-color: var(--lyra-chip-pressed-border, var(--lyra-chip-accent));
   }
 
   [part='icon'] {

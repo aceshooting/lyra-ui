@@ -6206,10 +6206,12 @@ affordance, only rendered while `removable`)
 (component-local trio swapped per `tone` rather than repeating background/color/border per part per
 tone; default `var(--lyra-color-text)` / `var(--lyra-color-surface)` / `var(--lyra-color-border)` —
 mirrors the same accent/bg/border vocabulary `<lyra-tool-call-chip>`/`<lyra-attachment-chip>` use),
-plus shared tokens (`--lyra-space-xs`, `--lyra-space-s`, `--lyra-color-brand`/`-brand-quiet`,
-`--lyra-color-success`/`-success-quiet`, `--lyra-color-warning`/`-warning-quiet`,
-`--lyra-color-danger`/`-danger-quiet`, `--lyra-icon-button-size`, `--lyra-focus-ring-width`,
-`--lyra-focus-ring-color`, `--lyra-focus-ring-offset`, `--lyra-transition-fast`).
+`--lyra-chip-pressed-border` (border color while pressed/selected — falls back to
+`--lyra-chip-accent`), plus shared tokens (`--lyra-space-xs`, `--lyra-space-s`,
+`--lyra-color-brand`/`-brand-quiet`, `--lyra-color-success`/`-success-quiet`,
+`--lyra-color-warning`/`-warning-quiet`, `--lyra-color-danger`/`-danger-quiet`,
+`--lyra-icon-button-size`, `--lyra-focus-ring-width`, `--lyra-focus-ring-color`,
+`--lyra-focus-ring-offset`, `--lyra-transition-fast`).
 
 **Optional peer deps:** none.
 
