@@ -10,11 +10,20 @@ import { LyraOption } from './option.class.js';
 import './option.class.js';
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
+export type LyraComboboxSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface ComboboxSourceRow {
   value: string;
   label: string;
   sub?: string;
+  /** Optional decorative leading visual. */
+  icon?: unknown;
+  /** Optional trailing metadata badge. */
+  badge?: string | number;
+  /** Spoken option label when the visible row needs additional context. */
+  accessibleLabel?: string;
+  /** Opaque application payload retained in `selectedRows`. */
+  data?: unknown;
   dotColor?: string;
   group?: string;
   disabled?: boolean;
@@ -54,8 +63,10 @@ export interface LyraComboboxEventMap {
  * @csspart listbox - The options popover.
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
+ * @csspart option-icon - An async option row's optional decorative leading visual.
  * @csspart option-label - An option row's label/sub wrapper.
  * @csspart option-sub - An option row's secondary line (when `sub` is set).
+ * @csspart option-badge - An async option row's optional trailing metadata badge.
  * @csspart option-overflow - The "+N more" indicator shown when rows are capped by `maxRender`.
  * @csspart tags - The multi-select tag container.
  * @csspart tag - An individual selected tag.
@@ -82,6 +93,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
+  /** Visual size — same `xs`–`xl` scale as `lyra-select`'s `size`. */
+  @property({ reflect: true }) size: LyraComboboxSize = 'm';
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
   /** Status copy shown in the listbox when no rows match. Empty string falls back to a localized message. */
@@ -120,6 +133,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // is still in flight.
   private _sourceWarmed = false;
   private _selectedLabelCache = new Map<string, string>();
+  private _selectedRowCache = new Map<string, ComboboxSourceRow>();
   // Rebuilt once per render (in render(), before renderRows()) from the
   // currently-visible row set -- backs the delegated listbox click/mousedown
   // handlers' data-value lookup below, instead of each option row closing
@@ -276,10 +290,32 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const old = this._selected;
     this._restoredStateActive = false;
     this._selected = Array.isArray(next) ? [...next] : next ? [next] : [];
+    const selected = new Set(this._selected);
+    for (const value of selected) {
+      const row =
+        this.effectiveRows.find((candidate) => candidate.value === value) ??
+        this.asyncRows.find((candidate) => candidate.value === value);
+      if (row) this._selectedRowCache.set(value, row);
+    }
+    for (const value of this._selectedRowCache.keys()) {
+      if (!selected.has(value)) this._selectedRowCache.delete(value);
+    }
     this.syncFormValue();
     this.reflectSelected();
     this.updateValidity();
     this.requestUpdate('value', old);
+  }
+
+  /** Structured rows corresponding to the current selection, including opaque async-row data. */
+  get selectedRows(): ComboboxSourceRow[] {
+    return this._selected
+      .map(
+        (value) =>
+          this._selectedRowCache.get(value) ??
+          this.effectiveRows.find((row) => row.value === value) ??
+          this.asyncRows.find((row) => row.value === value),
+      )
+      .filter((row): row is ComboboxSourceRow => row != null);
   }
 
   private updateValidity(): void {
@@ -559,13 +595,22 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private pickRow(row: ComboboxSourceRow): void {
     if (this.effectiveDisabled || row.disabled) return;
     const selectionChanged = this.multiple || this._selected[0] !== row.value;
-    this._selectedLabelCache.set(row.value, row.label);
     if (this.multiple) {
       const set = new Set(this._selected);
-      set.has(row.value) ? set.delete(row.value) : set.add(row.value);
+      if (set.has(row.value)) {
+        set.delete(row.value);
+        this._selectedRowCache.delete(row.value);
+      } else {
+        set.add(row.value);
+        this._selectedLabelCache.set(row.value, row.label);
+        this._selectedRowCache.set(row.value, row);
+      }
       this.value = [...set];
       this.query = '';
     } else {
+      this._selectedLabelCache.set(row.value, row.label);
+      this._selectedRowCache.clear();
+      this._selectedRowCache.set(row.value, row);
       this.value = row.value;
       this.query = '';
       this.hide();
@@ -617,6 +662,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         .then((rows) => {
           if (token !== this.sourceToken || !this.isConnected) return;
           this.asyncRows = rows;
+          const selected = new Set(this._selected);
+          for (const row of rows) {
+            if (selected.has(row.value)) this._selectedRowCache.set(row.value, row);
+          }
         })
         .catch((err) => {
           if (token !== this.sourceToken || !this.isConnected) return;
@@ -737,13 +786,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           data-value=${o.value}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${o.disabled ? 'true' : 'false'}
+          aria-label=${o.accessibleLabel || nothing}
           ?data-active=${id === activeId}
         >
+          ${o.icon ? html`<span part="option-icon" aria-hidden="true">${o.icon}</span>` : ''}
           ${o.dotColor ? html`<span part="option-dot" style=${`background:${o.dotColor}`}></span>` : ''}
           <span part="option-label">
             <span>${o.label}</span>
             ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
           </span>
+          ${o.badge != null ? html`<span part="option-badge">${o.badge}</span>` : ''}
         </div>`,
       );
     });

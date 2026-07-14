@@ -986,6 +986,55 @@ it('is accessible while showing the loading state (async source pending)', async
   await expect(el).to.be.accessible();
 });
 
+it('renders structured async-row adornments and preserves selected opaque data', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  const payload = { kind: 'city', longitude: 6.13 };
+  el.source = async () => [
+    {
+      value: 'lux',
+      label: 'Luxembourg',
+      sub: 'Lëtzebuerg',
+      icon: html`<span>⌖</span>`,
+      badge: 'City',
+      accessibleLabel: 'Luxembourg, city in Luxembourg',
+      data: payload,
+    },
+  ];
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  expect(row.getAttribute('aria-label')).to.equal('Luxembourg, city in Luxembourg');
+  expect(row.querySelector('[part="option-icon"]')?.getAttribute('aria-hidden')).to.equal('true');
+  expect(row.querySelector('[part="option-badge"]')?.textContent).to.equal('City');
+  row.click();
+  await el.updateComplete;
+  expect(el.selectedRows).to.have.length(1);
+  expect(el.selectedRows[0]!.data).to.equal(payload);
+});
+
+it('retains a loaded async row when its value is selected programmatically before a later query omits it', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  const payload = { kind: 'city', longitude: 6.13 };
+  el.source = async (query) =>
+    query ? [] : [{ value: 'lux', label: 'Luxembourg', data: payload }];
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  el.value = 'lux';
+  await el.updateComplete;
+  await typeQuery(el, 'elsewhere');
+  await aTimeout(250);
+  await el.updateComplete;
+
+  expect(el.selectedRows).to.have.length(1);
+  expect(el.selectedRows[0]!.data).to.equal(payload);
+});
+
 it('is accessible while showing the empty state (no matching rows)', async () => {
   const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
   el.open = true;
@@ -1386,4 +1435,46 @@ it('skips a trailing disabled option so End lands on the last navigable row', as
   await el.updateComplete;
   const activeRow = el.shadowRoot!.getElementById(input.getAttribute('aria-activedescendant')!);
   expect(activeRow?.textContent).to.contain('Banana');
+});
+
+describe('size', () => {
+  it('defaults to size="m" and reflects the attribute', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    expect(el.size).to.equal('m');
+    expect(el.getAttribute('size')).to.equal('m');
+  });
+
+  it('a non-default size changes the trigger min-block-size', async () => {
+    const mEl = (await fixture(basic())) as LyraCombobox;
+    const xsEl = (await fixture(html`
+      <lyra-combobox size="xs">
+        <lyra-option value="a">Apple</lyra-option>
+      </lyra-combobox>
+    `)) as LyraCombobox;
+    const mBox = mEl.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+    const xsBox = xsEl.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+    expect(parseFloat(getComputedStyle(xsBox).minHeight)).to.be.lessThan(
+      parseFloat(getComputedStyle(mBox).minHeight),
+    );
+  });
+
+  it('the "+N" overflow tag scales its font-size with size', async () => {
+    const mEl = (await fixture(html`
+      <lyra-combobox multiple max-options-visible="0">
+        <lyra-option value="a" selected>Apple</lyra-option>
+      </lyra-combobox>
+    `)) as LyraCombobox;
+    const xsEl = (await fixture(html`
+      <lyra-combobox multiple max-options-visible="0" size="xs">
+        <lyra-option value="a" selected>Apple</lyra-option>
+      </lyra-combobox>
+    `)) as LyraCombobox;
+    await mEl.updateComplete;
+    await xsEl.updateComplete;
+    const mTag = mEl.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
+    const xsTag = xsEl.shadowRoot!.querySelector('[part="tag"]') as HTMLElement;
+    expect(parseFloat(getComputedStyle(xsTag).fontSize)).to.be.lessThan(
+      parseFloat(getComputedStyle(mTag).fontSize),
+    );
+  });
 });

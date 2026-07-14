@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ComboboxSource, OptionFilter } from './combobox.js';
+import type { ComboboxSource, LyraCombobox, OptionFilter } from './combobox.js';
 
 const meta: Meta = {
   title: 'Combobox',
@@ -29,6 +29,28 @@ export const Multiple: Story = {
       <lyra-option value="c">Cherry</lyra-option>
       <lyra-option value="d">Date</lyra-option>
     </lyra-combobox>
+  `,
+};
+
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem; max-width: 24rem">
+      <lyra-combobox size="xs" label="Extra small" placeholder="Choose a value…">
+        <lyra-option value="a">Alpha</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox size="s" label="Small" placeholder="Choose a value…">
+        <lyra-option value="a">Alpha</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox size="m" label="Medium" placeholder="Choose a value…">
+        <lyra-option value="a">Alpha</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox size="l" label="Large" placeholder="Choose a value…">
+        <lyra-option value="a">Alpha</lyra-option>
+      </lyra-combobox>
+      <lyra-combobox size="xl" label="Extra large" placeholder="Choose a value…">
+        <lyra-option value="a">Alpha</lyra-option>
+      </lyra-combobox>
+    </div>
   `,
 };
 
@@ -71,6 +93,64 @@ export const AsyncSource: Story = {
       <lyra-combobox label="Fruit (async)" placeholder="Type to search…" with-clear
         style="max-width: 22rem" .source=${source}
       ></lyra-combobox>
+    `;
+  },
+};
+
+export const RichAsyncRows: Story = {
+  render: () => {
+    const source: ComboboxSource = async (query) => {
+      const rows = [
+        {
+          value: 'case-42',
+          label: 'Alpine Energy v Commission',
+          sub: 'Judgment · 14 July 2026',
+          icon: html`<span>§</span>`,
+          badge: 12,
+          accessibleLabel: 'Alpine Energy versus Commission, judgment, 12 citations',
+          data: { kind: 'judgment', citationCount: 12 },
+        },
+        {
+          value: 'case-77',
+          label: 'Northwind v Council',
+          sub: 'Opinion · 8 May 2026',
+          icon: html`<span>◇</span>`,
+          badge: 'Draft',
+          accessibleLabel: 'Northwind versus Council, draft opinion',
+          data: { kind: 'opinion', citationCount: 0 },
+        },
+      ];
+      return rows.filter((row) => row.label.toLowerCase().includes(query.toLowerCase()));
+    };
+
+    const reportSelection = (event: Event) => {
+      const combobox = event.currentTarget as LyraCombobox;
+      const output = combobox.parentElement?.querySelector('output');
+      const row = combobox.selectedRows[0];
+      const data = row?.data as { kind?: string } | undefined;
+      if (output) output.textContent = row ? `${row.label} — payload kind: ${data?.kind ?? 'unknown'}` : 'No selection';
+    };
+
+    return html`
+      <div>
+        <style>
+          .rich-results::part(option-icon) {
+            color: var(--lyra-color-brand);
+          }
+          .rich-results::part(option-badge) {
+            font-weight: var(--lyra-font-weight-semibold);
+          }
+        </style>
+        <lyra-combobox
+          class="rich-results"
+          label="Case"
+          placeholder="Search cases…"
+          style="max-width: 28rem"
+          .source=${source}
+          @change=${reportSelection}
+        ></lyra-combobox>
+        <output aria-live="polite">Select a result to inspect its retained data payload.</output>
+      </div>
     `;
   },
 };

@@ -3,6 +3,39 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    --lyra-combobox-trigger-padding: var(--lyra-space-xs) var(--lyra-space-s);
+    --lyra-combobox-trigger-min-height: var(--lyra-size-2-5rem);
+    --lyra-combobox-font-size: var(--lyra-font-size-md);
+    --lyra-combobox-tag-padding: var(--lyra-size-0-1rem) var(--lyra-size-0-4rem);
+    --lyra-combobox-tag-font-size: var(--lyra-font-size-sm);
+  }
+  :host([size='xs']) {
+    --lyra-combobox-trigger-padding: var(--lyra-size-0-125rem) var(--lyra-space-xs);
+    --lyra-combobox-trigger-min-height: var(--lyra-size-1-5rem);
+    --lyra-combobox-font-size: var(--lyra-font-size-xs);
+    --lyra-combobox-tag-padding: 0 var(--lyra-size-0-25rem);
+    --lyra-combobox-tag-font-size: var(--lyra-font-size-2xs);
+  }
+  :host([size='s']) {
+    --lyra-combobox-trigger-padding: var(--lyra-space-xs) var(--lyra-space-xs);
+    --lyra-combobox-trigger-min-height: var(--lyra-size-1-875rem);
+    --lyra-combobox-font-size: var(--lyra-font-size-sm);
+    --lyra-combobox-tag-padding: var(--lyra-size-0-05rem) var(--lyra-size-0-3125rem);
+    --lyra-combobox-tag-font-size: var(--lyra-font-size-xs);
+  }
+  :host([size='l']) {
+    --lyra-combobox-trigger-padding: var(--lyra-space-s) var(--lyra-space-m);
+    --lyra-combobox-trigger-min-height: var(--lyra-size-3rem);
+    --lyra-combobox-font-size: var(--lyra-font-size-lg);
+    --lyra-combobox-tag-padding: var(--lyra-size-0-15rem) var(--lyra-size-0-5rem);
+    --lyra-combobox-tag-font-size: var(--lyra-font-size-md-sm);
+  }
+  :host([size='xl']) {
+    --lyra-combobox-trigger-padding: var(--lyra-space-m) var(--lyra-space-l);
+    --lyra-combobox-trigger-min-height: var(--lyra-size-3-5rem);
+    --lyra-combobox-font-size: var(--lyra-font-size-xl);
+    --lyra-combobox-tag-padding: var(--lyra-size-0-25rem) var(--lyra-size-0-625rem);
+    --lyra-combobox-tag-font-size: var(--lyra-font-size-md);
   }
   [part='form-control-label'] {
     display: block;
@@ -30,11 +63,12 @@ export const styles = css`
     align-items: center;
     gap: var(--lyra-space-xs);
     inline-size: 100%;
-    min-block-size: var(--lyra-size-2-5rem);
-    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    min-block-size: var(--lyra-combobox-trigger-min-height);
+    padding: var(--lyra-combobox-trigger-padding);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
+    font-size: var(--lyra-combobox-font-size);
     cursor: text;
   }
   [part='combobox']:focus-within {
@@ -55,8 +89,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lyra-space-xs);
-    padding: var(--lyra-size-0-1rem) var(--lyra-size-0-4rem);
-    font-size: var(--lyra-font-size-sm);
+    padding: var(--lyra-combobox-tag-padding);
+    font-size: var(--lyra-combobox-tag-font-size);
     background: var(--lyra-color-brand-quiet);
     color: var(--lyra-color-text);
     border-radius: var(--lyra-radius);
@@ -149,8 +183,8 @@ export const styles = css`
 
   [part='option'] {
     display: flex;
-    flex-direction: column;
-    align-items: start;
+    align-items: center;
+    gap: var(--lyra-space-xs);
     inline-size: 100%;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
     border: var(--lyra-border-width-thin) solid transparent;
@@ -182,14 +216,30 @@ export const styles = css`
     border-radius: 50%;
     flex: 0 0 auto;
   }
+  [part='option-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    color: var(--lyra-color-text-quiet);
+  }
   [part='option-label'] {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     min-inline-size: 0;
   }
   [part='option-sub'] {
     font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
+  }
+  [part='option-badge'] {
+    flex: 0 0 auto;
+    padding: 0 var(--lyra-space-xs);
+    border-radius: var(--lyra-radius-pill);
+    background: var(--lyra-color-brand-quiet);
+    color: var(--lyra-color-text-quiet);
+    font-size: var(--lyra-font-size-xs);
   }
   [part='option-overflow'],
   .loading {
