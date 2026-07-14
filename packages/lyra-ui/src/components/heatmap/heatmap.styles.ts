@@ -39,6 +39,12 @@ export const styles = css`
        attention-grabbing color distinct from the sequential data ramp) so an
        annotation reads clearly against any point on that ramp. */
     --lyra-heatmap-annotation-color: var(--lyra-color-danger);
+    /* Canvas-drawn ring around the persistently selectedCell — same
+       resolve-via-getComputedStyle pattern. A dedicated token so a host can
+       retheme it independently of the focus ring
+       (--lyra-heatmap-focus-ring-color) and the annotation ring
+       (--lyra-heatmap-annotation-color) it's drawn between. */
+    --lyra-heatmap-selected-color: var(--lyra-color-success);
   }
   [part='base'] {
     position: relative;

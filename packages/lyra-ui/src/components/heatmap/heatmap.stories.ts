@@ -141,6 +141,21 @@ export const Annotations: Story = {
   `,
 };
 
+export const Selection: Story = {
+  render: () => html`
+    <lyra-heatmap
+      .rowLabels=${['Mon', 'Tue', 'Wed']}
+      .colLabels=${['00h', '06h', '12h', '18h']}
+      .values=${[
+        [3, 8, 12, 4],
+        [1, 2, 9, 5],
+        [0, 4, 6, 2],
+      ]}
+      .selectedCell=${{ row: 1, col: 2 }}
+    ></lyra-heatmap>
+  `,
+};
+
 /**
  * `cellText` overrides the built-in English tooltip/live-region template —
  * here with a French translation — for both matrix and calendar modes.

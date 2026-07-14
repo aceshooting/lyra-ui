@@ -34853,6 +34853,15 @@
             },
             {
               "kind": "field",
+              "name": "selectedCell",
+              "type": {
+                "text": "HeatmapSelectedCell | null"
+              },
+              "default": "null",
+              "description": "The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in\ncalendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring\n`<lyra-lite-chart>`'s `selectedIndex` -- this component never mutates it itself; a consumer\nwires it up from `lyra-cell-click` (or any other source) to build a toggle-select\ninteraction. Unset (the default, `null`) draws no selection ring, adds no selected-cell text\nto the host's `aria-label`, and adds no \"(selected)\" suffix to the live-region announcement,\nreproducing today's exact output."
+            },
+            {
+              "kind": "field",
               "name": "stopLocaleSubscription",
               "type": {
                 "text": "() => void | undefined"
@@ -35350,6 +35359,25 @@
             },
             {
               "kind": "method",
+              "name": "isSelectedPos",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pos",
+                  "type": {
+                    "text": "CellPos"
+                  }
+                }
+              ],
+              "description": "Whether `selectedCell` refers to the given grid position, in whichever mode is active --\n`row`/`col` equality in matrix mode, resolved-date equality in calendar mode (looking the\nposition's actual date up via `calendarCellAt()`, the same way the annotation ring resolves\n`ann.date` against `cells`). Shared by the live-region announcement, which needs to know\nwhether the just-announced cell *is* the selection."
+            },
+            {
+              "kind": "method",
               "name": "labelColor",
               "privacy": "private",
               "return": {
@@ -35719,6 +35747,28 @@
                 }
               },
               "description": "Reads the customizable ramp endpoints off the host's computed style."
+            },
+            {
+              "kind": "method",
+              "name": "selectedCellDescription",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "The localized \"Selected: <cell>.\" description appended to the host `aria-label`, or `''` when\n`selectedCell` is unset or doesn't resolve to a real cell in the current grid."
+            },
+            {
+              "kind": "method",
+              "name": "selectedColor",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Reads the customizable canvas-drawn selected-cell-ring stroke color off the host's computed style."
             },
             {
               "kind": "method",

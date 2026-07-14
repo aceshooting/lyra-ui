@@ -2195,6 +2195,13 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   by `date` (whichever pair matches the active `mode`; the other fields are ignored). Draws a
   stroked ring over the matching cell; an annotation with a `label` also gets its own
   `[part="legend-annotation"]` entry in the legend.
+- `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
+  row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
+  persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."
+  description to the host's own `aria-label`, and appends a "(selected)" suffix to the live-region
+  announcement when the focused cell is the selection. Purely a controlled property — mirrors
+  `<lyra-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
+  `null`) reproduces today's exact output.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
   position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
@@ -2261,7 +2268,10 @@ canvas-drawn axis/month/weekday label font), `--lyra-heatmap-focus-ring-color` (
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
 `--lyra-heatmap-annotation-color` (default `var(--lyra-color-danger)` — the canvas-drawn ring
 stroked around an annotated cell, deliberately not one of the sequential ramp colors so it stays
-visible regardless of what it's drawn over). `--lyra-heatmap-tooltip-bg` (default
+visible regardless of what it's drawn over). `--lyra-heatmap-selected-color` (default
+`var(--lyra-color-success)` — the canvas-drawn ring stroked around the persistent `selectedCell`, a
+dedicated token distinct from both the focus ring and the annotation ring so a host can retheme it
+independently). `--lyra-heatmap-tooltip-bg` (default
 `var(--lyra-color-surface)`) and `--lyra-heatmap-tooltip-text` (default `var(--lyra-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
 directly, no `getComputedStyle` bridging needed. Also consumes `--lyra-color-text-quiet` (axis label

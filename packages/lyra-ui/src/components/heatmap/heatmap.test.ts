@@ -1497,3 +1497,100 @@ describe('weekdayLabelText', () => {
     expect(seen.slice().sort()).to.deep.equal([1, 3, 5]);
   });
 });
+
+describe('selectedCell', () => {
+  it('draws no selection and adds no aria-label suffix by default', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['Mon', 'Tue']}
+        .colLabels=${['00h', '06h']}
+        .values=${[[1, 2], [3, 4]]}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    expect(el.selectedCell).to.be.null;
+    expect(el.getAttribute('aria-label')).to.not.include('Selected');
+  });
+
+  it('appends a "Selected: ..." description to the host aria-label in matrix mode', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['Mon', 'Tue']}
+        .colLabels=${['00h', '06h']}
+        .values=${[[1, 2], [3, 4]]}
+        .selectedCell=${{ row: 1, col: 0 }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.include('Selected: Row Tue, Col 00h: 3.');
+  });
+
+  it('appends a "Selected: ..." description in calendar mode, resolved by date', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        mode="calendar"
+        .days=${[
+          { date: '2026-01-04', value: 5 },
+          { date: '2026-01-05', value: 7 },
+        ]}
+        .selectedCell=${{ date: '2026-01-05' }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.include('Selected: Jan 5: 7.');
+  });
+
+  it('ignores a selectedCell outside the current grid bounds', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['Mon']}
+        .colLabels=${['00h']}
+        .values=${[[1]]}
+        .selectedCell=${{ row: 5, col: 9 }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.not.include('Selected');
+  });
+
+  it('appends a "(selected)" suffix to the live-region announcement for the selected cell', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['Mon', 'Tue']}
+        .colLabels=${['00h', '06h']}
+        .values=${[[1, 2], [3, 4]]}
+        .selectedCell=${{ row: 0, col: 0 }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    expect(liveRegion.textContent).to.include('(selected)');
+  });
+
+  it('is left to the consumer -- selectedCell is not reset alongside focusedCell on a grid-shape change', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['Mon', 'Tue']}
+        .colLabels=${['00h']}
+        .values=${[[1], [2]]}
+        .selectedCell=${{ row: 1, col: 0 }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    el.colLabels = ['00h', '06h'];
+    await el.updateComplete;
+    expect(el.selectedCell).to.deep.equal({ row: 1, col: 0 });
+  });
+
+  it('is accessible with a selected cell', async () => {
+    const el = await fixture(html`
+      <lyra-heatmap
+        .rowLabels=${['Mon', 'Tue']}
+        .colLabels=${['00h', '06h']}
+        .values=${[[1, 2], [3, 4]]}
+        .selectedCell=${{ row: 1, col: 0 }}
+      ></lyra-heatmap>
+    `);
+    await expect(el).to.be.accessible();
+  });
+});

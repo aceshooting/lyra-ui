@@ -36,6 +36,7 @@ export const MAX_BUCKET_COUNT = 256;
 const RING_LINE_WIDTH = 2;
 const FALLBACK_FOCUS_RING_COLOR = '#0969da';
 const FALLBACK_ANNOTATION_COLOR = '#cf222e';
+const FALLBACK_SELECTED_COLOR = '#1a7f37';
 const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const MS_PER_DAY = 86_400_000;
 
@@ -63,6 +64,15 @@ export interface HeatmapAnnotation {
   col?: number;
   date?: string;
   label?: string;
+}
+
+/** A single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
+ *  calendar mode (whichever pair matches the active `mode`; the other field is ignored),
+ *  mirroring `HeatmapAnnotation`'s own row/col/date shape. */
+export interface HeatmapSelectedCell {
+  row?: number;
+  col?: number;
+  date?: string;
 }
 
 const HEX_RE = /^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -351,6 +361,16 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
   /** Cells to ring-highlight — `row`/`col` in matrix mode, `date` in calendar mode. See `HeatmapAnnotation`. */
   @property({ attribute: false }) annotations: HeatmapAnnotation[] = [];
+  /**
+   * The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
+   * calendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring
+   * `<lyra-lite-chart>`'s `selectedIndex` -- this component never mutates it itself; a consumer
+   * wires it up from `lyra-cell-click` (or any other source) to build a toggle-select
+   * interaction. Unset (the default, `null`) draws no selection ring, adds no selected-cell text
+   * to the host's `aria-label`, and adds no "(selected)" suffix to the live-region announcement,
+   * reproducing today's exact output.
+   */
+  @property({ attribute: false }) selectedCell: HeatmapSelectedCell | null = null;
   /** Formats the per-cell tooltip and keyboard live-region text — receives the cell position
    *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its value. Falls back to
    *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
@@ -601,29 +621,49 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // role/aria-label on every update.
     if (!this.authorSuppliedRole) this.setAttribute('role', 'group');
     if (!this.authorSuppliedAriaLabel) {
+      let label: string;
       if (this.mode === 'calendar') {
-        this.setAttribute(
-          'aria-label',
-          this.localize('heatmapCalendarLabel', undefined, {
-            days: this.days.length,
-            label: this.valueLabel,
-            range,
-          }),
-        );
+        label = this.localize('heatmapCalendarLabel', undefined, {
+          days: this.days.length,
+          label: this.valueLabel,
+          range,
+        });
       } else {
         const rows = this.rowLabels.length;
         const cols = this.colLabels.length;
-        this.setAttribute(
-          'aria-label',
-          this.localize('heatmapMatrixLabel', undefined, {
-            rows,
-            cols,
-            label: this.valueLabel,
-            range,
-          }),
-        );
+        label = this.localize('heatmapMatrixLabel', undefined, {
+          rows,
+          cols,
+          label: this.valueLabel,
+          range,
+        });
       }
+      // A persistent selection description, appended to the host's own accessible name -- *not*
+      // an `aria-describedby` idref pointing into this element's shadow root, since an idref like
+      // that can't resolve across the shadow boundary. Reusing the plain aria-label string here
+      // keeps it discoverable any time a screen reader user queries this element's accessible
+      // name, regardless of which cell (if any) currently has keyboard focus.
+      const selectedText = this.selectedCellDescription();
+      this.setAttribute('aria-label', selectedText ? `${label} ${selectedText}` : label);
     }
+  }
+
+  /** The localized "Selected: <cell>." description appended to the host `aria-label`, or `''` when
+   *  `selectedCell` is unset or doesn't resolve to a real cell in the current grid. */
+  private selectedCellDescription(): string {
+    if (!this.selectedCell) return '';
+    if (this.mode === 'calendar') {
+      if (this.selectedCell.date == null) return '';
+      const match = this.cachedCalendarGrid.cells.find((c) => c.date === this.selectedCell!.date);
+      if (!match) return '';
+      return this.localize('heatmapSelectedCellLabel', undefined, {
+        cell: this.calendarCellText({ week: match.week, weekday: match.weekday }),
+      });
+    }
+    const { row, col } = this.selectedCell;
+    if (row == null || col == null) return '';
+    if (row < 0 || row >= this.rowLabels.length || col < 0 || col >= this.colLabels.length) return '';
+    return this.localize('heatmapSelectedCellLabel', undefined, { cell: this.matrixCellText({ row, col }) });
   }
 
   /**
@@ -660,6 +700,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'focusedCell',
         'colorSteps',
         'cellColor',
+        'selectedCell',
       ].some((name) => changed.has(name))
     ) {
       this.draw();
@@ -706,6 +747,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return (
       getComputedStyle(this).getPropertyValue('--lyra-heatmap-annotation-color').trim() || FALLBACK_ANNOTATION_COLOR
     );
+  }
+
+  /** Reads the customizable canvas-drawn selected-cell-ring stroke color off the host's computed style. */
+  private selectedColor(): string {
+    return getComputedStyle(this).getPropertyValue('--lyra-heatmap-selected-color').trim() || FALLBACK_SELECTED_COLOR;
+  }
+
+  /** Whether `selectedCell` refers to the given grid position, in whichever mode is active --
+   *  `row`/`col` equality in matrix mode, resolved-date equality in calendar mode (looking the
+   *  position's actual date up via `calendarCellAt()`, the same way the annotation ring resolves
+   *  `ann.date` against `cells`). Shared by the live-region announcement, which needs to know
+   *  whether the just-announced cell *is* the selection. */
+  private isSelectedPos(pos: CellPos): boolean {
+    if (!this.selectedCell) return false;
+    if ('week' in pos) {
+      if (this.selectedCell.date == null) return false;
+      return this.calendarCellAt(pos).date === this.selectedCell.date;
+    }
+    return this.selectedCell.row === pos.row && this.selectedCell.col === pos.col;
   }
 
   private draw(): void {
@@ -949,6 +1009,21 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
     }
 
+    // Persistent "selected" ring, drawn after the annotation ring and before the keyboard focus
+    // ring so focus visually layers on top of a selection when both target the same cell.
+    // Independent of focusedCell -- unlike the transient focus cursor, this persists across focus
+    // moves and hover, driven entirely by the controlled `selectedCell` property.
+    if (this.selectedCell?.date != null) {
+      const match = cells.find((c) => c.date === this.selectedCell!.date);
+      if (match) {
+        ctx.lineWidth = RING_LINE_WIDTH;
+        ctx.strokeStyle = this.selectedColor();
+        const x = this.columnXFor(match.week);
+        const y = this.rowYFor(match.weekday);
+        ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
+      }
+    }
+
     // Keyboard focus ring, redrawn on top of the fill pass (and any
     // annotation rings) on every draw.
     if (this.focusedCell && 'week' in this.focusedCell) {
@@ -1062,6 +1137,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         if (ann.row < 0 || ann.row >= rows || ann.col < 0 || ann.col >= cols) continue;
         const x = PAD_LEFT + ann.col * cellSize;
         const y = PAD_TOP + ann.row * cellSize;
+        ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
+      }
+    }
+
+    // Persistent "selected" ring, drawn after the annotation ring and before the keyboard focus
+    // ring so focus visually layers on top of a selection when both target the same cell.
+    // Independent of focusedCell -- see drawCalendar()'s twin of this block.
+    if (this.selectedCell?.row != null && this.selectedCell.col != null) {
+      const { row, col } = this.selectedCell;
+      if (row >= 0 && row < rows && col >= 0 && col < cols) {
+        ctx.lineWidth = RING_LINE_WIDTH;
+        ctx.strokeStyle = this.selectedColor();
+        const x = PAD_LEFT + col * cellSize;
+        const y = PAD_TOP + row * cellSize;
         ctx.strokeRect(x + 1, y + 1, cellSize - 3, cellSize - 3);
       }
     }
@@ -1274,7 +1363,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /** Refreshes the visually-hidden live-region text for a newly-focused cell. */
   private announce(pos: CellPos): void {
-    this.liveText = this.resolveCellText(pos);
+    const text = this.resolveCellText(pos);
+    this.liveText = this.isSelectedPos(pos) ? `${text}${this.localize('heatmapCellSelectedSuffix')}` : text;
   }
 
   private emitCellClick(pos: CellPos): void {
