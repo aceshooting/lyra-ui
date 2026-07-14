@@ -159,8 +159,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) markers: MapMarker[] = [];
 
   /** Accessible name for the map region, applied as `[part="base"]`'s `aria-label` so
-   *  screen-reader users get a description of an otherwise purely visual control.
-   *  Empty (the default) falls back to the localized `'map'` message. */
+   *  screen-reader users get a description of an otherwise purely visual control. A plain
+   *  `aria-label` attribute on the host itself is honored as a fallback when this is left
+   *  unset, matching `<lyra-slider>`/`<lyra-checkbox>`/`<lyra-switch>`. Empty (the default,
+   *  with no host `aria-label` either) falls back to the localized `'map'` message. */
   @property() label = '';
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
@@ -501,7 +503,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // (same `nothing` pattern `stat.ts` uses to omit its optional trend section)
     // rather than relying on a CSS `:empty` selector that can never match.
     return html`
-      <div part="base" aria-label=${this.label || this.localize('map')}>
+      <div part="base" aria-label=${this.label || this.getAttribute('aria-label') || this.localize('map')}>
         ${this.loading
           ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
           : html`<div part="container"></div>`}
