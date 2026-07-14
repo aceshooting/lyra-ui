@@ -43,6 +43,37 @@ it('offers a format menu when multiple formats are configured', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="menu-item"]').length).to.equal(2);
 });
 
+it('renders custom format descriptors and carries their id through lyra-export', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.formats = [
+    'csv',
+    { id: 'xlsx', label: 'Excel', description: 'Native spreadsheet format', extension: 'xlsx' },
+  ];
+  await el.updateComplete;
+  const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
+  expect(items[1]!.querySelector('[part="format-label"]')!.textContent).to.equal('Excel');
+  expect(items[1]!.querySelector('[part="format-description"]')!.textContent).to.equal(
+    'Native spreadsheet format',
+  );
+  const exportEvent = oneEvent(el, 'lyra-export');
+  items[1]!.click();
+  expect((await exportEvent).detail.format).to.equal('xlsx');
+});
+
+it('disables activation and exposes busy state while loading', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.loading = true;
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(trigger.disabled).to.be.true;
+  expect(trigger.getAttribute('aria-busy')).to.equal('true');
+  expect(el.hasAttribute('loading')).to.be.true;
+  let exported = false;
+  el.addEventListener('lyra-export', () => (exported = true));
+  trigger.click();
+  expect(exported).to.be.false;
+});
+
 it('reflects open as a host attribute so the menu becomes visible', async () => {
   const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
   el.formats = ['csv', 'json'];

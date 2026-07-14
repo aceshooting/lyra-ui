@@ -8,8 +8,21 @@ import { styles } from './export-button.styles.js';
 
 export type ExportFormat = 'csv' | 'json';
 
+export interface ExportFormatDescriptor {
+  /** Stable id carried through `lyra-export`. */
+  id: string;
+  /** Consumer-supplied, already-localized menu label. */
+  label: string;
+  /** Optional consumer-supplied secondary menu text. */
+  description?: string;
+  /** Optional metadata for the external export handler. */
+  extension?: string;
+}
+
+export type ExportFormatOption = ExportFormat | ExportFormatDescriptor;
+
 export interface LyraExportButtonEventMap {
-  'lyra-export': CustomEvent<{ format: ExportFormat }>;
+  'lyra-export': CustomEvent<{ format: string }>;
   'lyra-export-complete': CustomEvent<{ format: ExportFormat }>;
   'lyra-show': CustomEvent<undefined>;
   'lyra-hide': CustomEvent<undefined>;
@@ -29,6 +42,8 @@ export interface LyraExportButtonEventMap {
  * @csspart trigger - The button that triggers the export (or opens the format menu).
  * @csspart menu - The format-choice menu, shown when more than one format is configured.
  * @csspart menu-item - A single format option inside the menu.
+ * @csspart format-label - A format option's primary label.
+ * @csspart format-description - A custom format option's optional secondary text.
  */
 export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -40,8 +55,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  degrading to a blank file while only JSON had a fallback. */
   @property({ attribute: false }) columns: CsvColumn[] = [];
   @property() filename = 'export';
-  @property({ attribute: false }) formats: ExportFormat[] = ['csv'];
+  @property({ attribute: false }) formats: ExportFormatOption[] = ['csv'];
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Controlled busy state for async/server-generated exports. */
+  @property({ type: Boolean, reflect: true }) loading = false;
   /** Trigger button text, also feeds the format menu's `aria-label` (as
    *  "`${label} format`") so assistive tech gets an accessible name for it.
    *  Left at its default English `'Export'`, the rendered text instead
@@ -114,7 +131,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       return;
     }
 
-    if (this.formats.length <= 1 || this.disabled) return;
+    if (this.formats.length <= 1 || this.disabled || this.loading) return;
 
     const items = this.menuItemEls();
     const currentIndex = items.indexOf(e.target as HTMLButtonElement);
@@ -157,6 +174,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   protected willUpdate(): void {
     this._isFirstUpdate = !this.hasUpdated;
+    this.toggleAttribute('aria-busy', this.loading);
   }
 
   protected updated(changed: PropertyValues): void {
@@ -209,10 +227,19 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     });
   }
 
-  private doExport(format: ExportFormat): void {
-    if (this.disabled) return;
+  private formatId(format: ExportFormatOption): string {
+    return typeof format === 'string' ? format : format.id;
+  }
+
+  private formatLabel(format: ExportFormatOption): string {
+    return typeof format === 'string' ? format.toUpperCase() : format.label;
+  }
+
+  private doExport(formatOption: ExportFormatOption): void {
+    if (this.disabled || this.loading) return;
     this.closeMenu();
     this.triggerEl?.focus();
+    const format = this.formatId(formatOption);
     const ev = this.emit('lyra-export', { format }, { cancelable: true });
     if (ev.defaultPrevented) return;
 
@@ -222,14 +249,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         `${this.filename}.csv`,
         'text/csv;charset=utf-8;',
       );
-    } else {
+    } else if (format === 'json') {
       downloadBlob(JSON.stringify(this.rowsForExport(), null, 2), `${this.filename}.json`, 'application/json');
+    } else {
+      // Custom formats are intentionally handler-only: Lyra owns the menu and
+      // event contract but does not pull format-specific encoders into the base bundle.
+      return;
     }
     this.emit('lyra-export-complete', { format });
   }
 
   private onTriggerClick(): void {
-    if (this.disabled) return;
+    if (this.disabled || this.loading) return;
     if (this.formats.length <= 1) this.doExport(this.formats[0] ?? 'csv');
     else this.open ? this.closeMenu() : this.openMenu();
   }
@@ -247,7 +278,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       <button
         part="trigger"
         type="button"
-        ?disabled=${this.disabled}
+        ?disabled=${this.disabled || this.loading}
+        aria-busy=${this.loading ? 'true' : nothing}
         aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
         aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}
         aria-controls=${this.formats.length > 1 ? this.menuId : nothing}
@@ -268,10 +300,13 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
                   part="menu-item"
                   role="menuitem"
                   type="button"
-                  ?disabled=${this.disabled}
+                  ?disabled=${this.disabled || this.loading}
                   @click=${() => this.doExport(f)}
                 >
-                  ${f.toUpperCase()}
+                  <span part="format-label">${this.formatLabel(f)}</span>
+                  ${typeof f !== 'string' && f.description
+                    ? html`<span part="format-description">${f.description}</span>`
+                    : nothing}
                 </button>`,
             )}
           </div>`

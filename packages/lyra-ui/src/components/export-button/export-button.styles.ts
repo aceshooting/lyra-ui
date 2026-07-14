@@ -67,7 +67,10 @@ export const styles = css`
     }
   }
   [part='menu-item'] {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--lyra-size-1px);
     inline-size: 100%;
     text-align: start;
     padding: var(--lyra-space-xs) var(--lyra-space-s);
@@ -88,5 +91,9 @@ export const styles = css`
   [part='menu-item']:disabled {
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
+  }
+  [part='format-description'] {
+    color: var(--lyra-color-text-quiet);
+    font-size: var(--lyra-font-size-sm);
   }
 `;
