@@ -22,7 +22,7 @@ export const styles = css`
   }
   [part='fill'] {
     fill: none;
-    stroke: var(--lyra-color-brand);
+    stroke: var(--lyra-gauge-fill, var(--lyra-color-brand));
     stroke-linecap: round;
     transition: stroke-dashoffset var(--lyra-transition-base);
   }

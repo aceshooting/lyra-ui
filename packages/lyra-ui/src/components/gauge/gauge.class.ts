@@ -4,7 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteNumber } from '../../internal/numbers.js';
 import { styles } from './gauge.styles.js';
 
-export type GaugeType = 'radial' | 'linear';
+export type GaugeType = 'radial' | 'ring' | 'linear';
 
 // Radial gauge sweeps 270° (like a speedometer), leaving a 90° gap at the bottom.
 const SWEEP_DEG = 270;
@@ -40,9 +40,10 @@ function arcPath(startDeg: number, endDeg: number): string {
 // technique used for the linear variant's fill line below.
 const RADIAL_ARC_D = arcPath(START_DEG, START_DEG + SWEEP_DEG);
 const RADIAL_ARC_LENGTH = (SWEEP_DEG / 360) * 2 * Math.PI * RADIUS;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * `<lyra-gauge>` — a radial or linear meter. First-party invention; no
+ * `<lyra-gauge>` — a radial, full-circle ring, or linear meter. First-party invention; no
  * generic gauge widget exists in Web Awesome.
  *
  * @customElement lyra-gauge
@@ -51,6 +52,7 @@ const RADIAL_ARC_LENGTH = (SWEEP_DEG / 360) * 2 * Math.PI * RADIUS;
  * @csspart fill - The animated fill arc/line.
  * @csspart value - The value text.
  * @csspart label - The label text.
+ * @cssprop [--lyra-gauge-fill=var(--lyra-color-brand)] - Fill stroke for radial, ring, and linear gauges.
  */
 export class LyraGauge extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -63,6 +65,12 @@ export class LyraGauge extends LyraElement {
   /** Imperative override for the displayed/announced value text, e.g. `'72°F'` for a raw `value` of `72`.
    * An empty string is treated the same as unset and falls back to the numeric `value`. */
   @property({ attribute: false }) valueLabel?: string;
+
+  // `label` supplies the default meter name, but an author-provided host
+  // `aria-label` must win. Track the value last applied by the component so
+  // later label updates remain distinguishable from author attribute edits.
+  private appliedAriaLabel: string | null = null;
+  private explicitAriaLabel: string | null = null;
 
   // Normalizes a reversed min > max domain by swapping lo/hi, but only once
   // both bounds are finite -- shared by `ratio` (fill geometry) and
@@ -106,8 +114,14 @@ export class LyraGauge extends LyraElement {
     else this.removeAttribute('aria-valuemin');
     if (Number.isFinite(hi)) this.setAttribute('aria-valuemax', String(hi));
     else this.removeAttribute('aria-valuemax');
-    if (this.label) this.setAttribute('aria-label', this.label);
+    const currentAriaLabel = this.getAttribute('aria-label');
+    if (currentAriaLabel !== this.appliedAriaLabel) {
+      this.explicitAriaLabel = currentAriaLabel;
+    }
+    const nextAriaLabel = this.explicitAriaLabel || this.label || null;
+    if (nextAriaLabel) this.setAttribute('aria-label', nextAriaLabel);
     else this.removeAttribute('aria-label');
+    this.appliedAriaLabel = nextAriaLabel;
     if (this.valueLabel) this.setAttribute('aria-valuetext', this.valueLabel);
     else this.removeAttribute('aria-valuetext');
   }
@@ -162,8 +176,30 @@ export class LyraGauge extends LyraElement {
     </svg>`;
   }
 
+  private renderRing(): TemplateResult {
+    const text = this.displayText;
+    const dashoffset = RING_CIRCUMFERENCE * (1 - this.ratio);
+    return html`<svg part="base" viewBox="0 0 100 100">
+      <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
+      <circle
+        part="fill"
+        cx=${CENTER}
+        cy=${CENTER}
+        r=${RADIUS}
+        stroke-width=${STROKE}
+        stroke-dasharray=${RING_CIRCUMFERENCE}
+        stroke-dashoffset=${dashoffset}
+        transform="rotate(-90 50 50)"
+      ></circle>
+      <text part="value" x="50" y="52" aria-hidden="true">${text}</text>
+      ${this.label ? svg`<text part="label" x="50" y="68" aria-hidden="true">${this.label}</text>` : ''}
+    </svg>`;
+  }
+
   render(): TemplateResult {
-    return this.type === 'linear' ? this.renderLinear() : this.renderRadial();
+    if (this.type === 'linear') return this.renderLinear();
+    if (this.type === 'ring') return this.renderRing();
+    return this.renderRadial();
   }
 }
 
@@ -173,4 +209,3 @@ declare global {
     'lyra-gauge': LyraGauge;
   }
 }
-

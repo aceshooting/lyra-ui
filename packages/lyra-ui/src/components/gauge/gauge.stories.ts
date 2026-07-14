@@ -17,6 +17,21 @@ export const Linear: Story = {
   render: () => html`<lyra-gauge type="linear" value="40" max="100" label="Disk"></lyra-gauge>`,
 };
 
+export const Ring: Story = {
+  render: () => html`
+    <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap">
+      <lyra-gauge type="ring" value="72" max="100" label="Score"></lyra-gauge>
+      <lyra-gauge
+        type="ring"
+        value="84"
+        max="100"
+        label="Coverage"
+        style="--lyra-gauge-fill: var(--lyra-color-success)"
+      ></lyra-gauge>
+    </div>
+  `,
+};
+
 export const WithValueLabel: Story = {
   render: () => html`<lyra-gauge value="72" max="100" label="Temp" .valueLabel=${'72°F'}></lyra-gauge>`,
 };

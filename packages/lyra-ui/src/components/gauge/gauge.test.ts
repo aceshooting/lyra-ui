@@ -14,6 +14,14 @@ it('reflects value/min/max as ARIA meter attributes', async () => {
   expect(el.getAttribute('aria-label')).to.equal('CPU');
 });
 
+it('preserves an explicit host accessible name instead of replacing it with the visible label', async () => {
+  const el = (await fixture(html`
+    <lyra-gauge aria-label="Overall quality score" label="Score" value="82"></lyra-gauge>
+  `)) as LyraGauge;
+
+  expect(el.getAttribute('aria-label')).to.equal('Overall quality score');
+});
+
 it('normalizes a reversed min > max domain in aria-value* so it agrees with the visual fill instead of pinning aria-valuenow', async () => {
   const lowValue = (await fixture(
     html`<lyra-gauge value="5" min="100" max="0"></lyra-gauge>`,
@@ -167,6 +175,23 @@ it('renders a linear track when type is linear', async () => {
   expect(valueEl!.textContent).to.equal('10');
   expect(labelEl).to.exist;
   expect(labelEl!.textContent).to.equal('Battery');
+});
+
+it('renders a full-circle ring with circumference-based progress when type is ring', async () => {
+  const el = (await fixture(
+    html`<lyra-gauge type="ring" value="25" max="100" label="Score"></lyra-gauge>`,
+  )) as LyraGauge;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as SVGCircleElement;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGCircleElement;
+  const circumference = 2 * Math.PI * 40;
+  expect(track.tagName.toLowerCase()).to.equal('circle');
+  expect(Number(fill.getAttribute('stroke-dasharray'))).to.be.closeTo(circumference, 0.001);
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(circumference * 0.75, 0.001);
+  expect(fill.getAttribute('transform')).to.equal('rotate(-90 50 50)');
+});
+
+it('exposes a per-instance gauge fill token for radial, ring, and linear variants', () => {
+  expect(styles.cssText).to.include('stroke: var(--lyra-gauge-fill, var(--lyra-color-brand))');
 });
 
 it('omits the label part in linear mode when label is empty', async () => {
