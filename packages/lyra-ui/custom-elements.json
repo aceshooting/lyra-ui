@@ -509,6 +509,17 @@
             },
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "description": "Accessible name overriding `label` (and its localized default) for the nav landmark / dialog\nrole, mirroring `<lyra-date-input>`'s `accessibleLabel` pattern. Reads the host's own\n`aria-label` attribute -- unset (the default, `null`) reproduces today's exact\n`label`/localized-default output.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "baseEl",
               "type": {
                 "text": "HTMLElement | undefined"
@@ -645,7 +656,7 @@
                 "text": "string"
               },
               "default": "'Navigation'",
-              "description": "Accessible name for the rail's navigation landmark, and for its dialog\nrole while the mobile overlay is open.",
+              "description": "Accessible name for the rail's navigation landmark, and for its dialog\nrole while the mobile overlay is open. A host-level `aria-label`\nattribute takes precedence over this when both are set -- see\n`accessibleLabel`.",
               "attribute": "label"
             },
             {
@@ -1166,6 +1177,15 @@
           ],
           "attributes": [
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name overriding `label` (and its localized default) for the nav landmark / dialog\nrole, mirroring `<lyra-date-input>`'s `accessibleLabel` pattern. Reads the host's own\n`aria-label` attribute -- unset (the default, `null`) reproduces today's exact\n`label`/localized-default output.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "dragging",
               "type": {
                 "text": "boolean"
@@ -1198,7 +1218,7 @@
                 "text": "string"
               },
               "default": "'Navigation'",
-              "description": "Accessible name for the rail's navigation landmark, and for its dialog\nrole while the mobile overlay is open.",
+              "description": "Accessible name for the rail's navigation landmark, and for its dialog\nrole while the mobile overlay is open. A host-level `aria-label`\nattribute takes precedence over this when both are set -- see\n`accessibleLabel`.",
               "fieldName": "label"
             },
             {
@@ -16152,7 +16172,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-chat-composer>` — the message input for a chat/agent conversation\nsurface: an auto-resizing textarea plus a send/stop button. Form-\nassociated via the `FormAssociated` mixin (see `<lyra-date-input>` for the\nsame shape), so it participates in native `<form>` submission/validation/\nreset like any other text control — `name`/`value`/`disabled`/`required`/\n`checkValidity()`/`reportValidity()` all come from that mixin.\n\nAuto-resize reads the textarea's own *computed* line-height/padding/\nborder at runtime (`resizeTextarea()`) rather than assuming a fixed\npx-per-row constant, so it stays correct under a consumer's own font-size/\nline-height overrides. It grows between `min-rows` and `max-rows`, then\nswitches to internal scrolling. A `ResizeObserver` on the textarea itself\nre-runs the same fit whenever its *width* changes (a responsive\nbreakpoint, a sidebar toggling, a window resize, an orientation change)\neven though `value`/`min-rows`/`max-rows` never did -- a narrower box\nwraps the same text across more lines, so the previously-fitted height\nwould otherwise go stale and clip content with no scrollbar to reveal it.\n\nEnter-to-send (only active while `submit-on-enter` is true, the default):\nplain Enter submits and is prevented from inserting a newline; Shift+Enter\nalways inserts a newline no matter what; an IME composition step (checked\nvia `isComposing`, with `keyCode === 229` as a defense-in-depth fallback\nfor browsers that report `isComposing` inconsistently on the\ncompositionend-adjacent keydown) is never treated as a submit trigger;\nand while `status` isn't `\"idle\"` Enter is left alone to insert a newline\ntoo, rather than trying to submit again -- there is nothing meaningful to\nsubmit while a previous message is still sending/streaming, and the\ntextarea deliberately stays interactive (see `disabled` below) so a user\ncan keep composing their next message in the meantime.\n\n`lyra-submit`'s `detail.value` is always the exact, untrimmed current\nvalue (`detail.value === value` at the moment it fires) -- trimming is\nleft to the consumer so it never silently diverges from what `value`\nitself reports. Submitting does not clear `value`; the consumer clears it\nonce the submission has actually been accepted (so e.g. a failed send can\nleave the text in place for retry).",
+          "description": "`<lyra-chat-composer>` — the message input for a chat/agent conversation\nsurface: an auto-resizing textarea plus a send/stop button. Form-\nassociated via the `FormAssociated` mixin (see `<lyra-date-input>` for the\nsame shape), so it participates in native `<form>` submission/validation/\nreset like any other text control — `name`/`value`/`disabled`/`required`/\n`checkValidity()`/`reportValidity()` all come from that mixin.\n\nAuto-resize reads the textarea's own *computed* line-height/padding/\nborder at runtime (`resizeTextarea()`) rather than assuming a fixed\npx-per-row constant, so it stays correct under a consumer's own font-size/\nline-height overrides. It grows between `min-rows` and `max-rows`, then\nswitches to internal scrolling. A `ResizeObserver` on the textarea itself\nre-runs the same fit whenever its *width* changes (a responsive\nbreakpoint, a sidebar toggling, a window resize, an orientation change)\neven though `value`/`min-rows`/`max-rows` never did -- a narrower box\nwraps the same text across more lines, so the previously-fitted height\nwould otherwise go stale and clip content with no scrollbar to reveal it.\n\nEnter-to-send (only active while `submit-on-enter` is true, the default):\nplain Enter submits and is prevented from inserting a newline; Shift+Enter\nalways inserts a newline no matter what; an IME composition step (checked\nvia `isComposing`, with `keyCode === 229` as a defense-in-depth fallback\nfor browsers that report `isComposing` inconsistently on the\ncompositionend-adjacent keydown) is never treated as a submit trigger;\nand while `status` isn't `\"idle\"` Enter is left alone to insert a newline\ntoo, rather than trying to submit again -- there is nothing meaningful to\nsubmit while a previous message is still sending/streaming, and the\ntextarea deliberately stays interactive (see `disabled` below) so a user\ncan keep composing their next message in the meantime.\n\nDeliberately no label/hint/error chrome -- a composite chat-input control, not a labeled form\nfield; wrap it in your own layout for that context.\n\n`lyra-submit`'s `detail.value` is always the exact, untrimmed current\nvalue (`detail.value === value` at the moment it fires) -- trimming is\nleft to the consumer so it never silently diverges from what `value`\nitself reports. Submitting does not clear `value`; the consumer clears it\nonce the submission has actually been accepted (so e.g. a failed send can\nleave the text in place for retry).",
           "name": "LyraChatComposer",
           "cssParts": [
             {
@@ -16199,6 +16219,26 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default). No `wrap` property here -- the auto-resize\nlogic above already assumes unwrapped natural text flow.\n\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich a same-named `string`-typed reactive property here would override unsoundly from the\ntype checker's point of view (even though the browser itself would happily let this class's\nown accessor win at runtime). The explicit attribute mapping preserves the standard\nlowercase `autocorrect` wire name in both Lit and generated component metadata.",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "attribute": "autocapitalize"
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -16309,6 +16349,11 @@
             },
             {
               "kind": "field",
+              "name": "onTextareaFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onTextareaInput",
               "privacy": "private"
             },
@@ -16330,6 +16375,16 @@
               },
               "default": "''",
               "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the internal `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default. Uses spellcheckConverter rather than Lit's default\npresence-based `type: Boolean` handling, so a plain-HTML consumer with no way to write a\n`.spellcheck` property binding can still turn this off with `spellcheck=\"false\"`; a Lit\ntemplate can do the same with either that attribute string or a `.spellcheck=${false}`\nproperty binding.",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -16648,6 +16703,24 @@
           ],
           "attributes": [
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default). No `wrap` property here -- the auto-resize\nlogic above already assumes unwrapped natural text flow.\n\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich a same-named `string`-typed reactive property here would override unsoundly from the\ntype checker's point of view (even though the browser itself would happily let this class's\nown accessor win at runtime). The explicit attribute mapping preserves the standard\nlowercase `autocorrect` wire name in both Lit and generated component metadata.",
+              "fieldName": "autoCorrect"
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -16683,6 +16756,15 @@
               },
               "default": "''",
               "fieldName": "placeholder"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the internal `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default. Uses spellcheckConverter rather than Lit's default\npresence-based `type: Boolean` handling, so a plain-HTML consumer with no way to write a\n`.spellcheck` property binding can still turn this off with `spellcheck=\"false\"`; a Lit\ntemplate can do the same with either that attribute string or a `.spellcheck=${false}`\nproperty binding.",
+              "fieldName": "spellcheck"
             },
             {
               "name": "status",
@@ -17412,7 +17494,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-checkbox>` — a boolean form control. Structurally the same idea as\n`<lyra-switch>` (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with checkbox semantics: `role=\"checkbox\"` +\nan `aria-checked` that can also be `\"mixed\"`, and a visual box/checkmark\ninstead of a track/thumb.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin — see `<lyra-combobox>` for the same\ndirect-`ElementInternals` shape with a non-string value.",
+          "description": "`<lyra-checkbox>` — a boolean form control. Structurally the same idea as\n`<lyra-switch>` (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with checkbox semantics: `role=\"checkbox\"` +\nan `aria-checked` that can also be `\"mixed\"`, and a visual box/checkmark\ninstead of a track/thumb.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin — see `<lyra-combobox>` for the same\ndirect-`ElementInternals` shape with a non-string value.\n\nDeliberately no hint/error chrome of its own -- the default slot already carries real, visible\nlabel text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`\nprops has nothing to add here. A consumer needing hint/error messaging composes it in their own\nwrapper (e.g. `<lyra-tool-param-form>` folds a boolean field's validation error into adjacent\ndescription text / `aria-label` rather than a `<lyra-checkbox>`-owned slot), the same way a\nnative `<input type=\"checkbox\">` plus `<label>` pairs with an externally-owned error node.",
           "name": "LyraCheckbox",
           "cssParts": [
             {
@@ -18508,6 +18590,13 @@
           "kind": "class",
           "description": "`<lyra-chip>` — a small, content-agnostic pill for a short label: a tag, an\nactive-filter/scope indicator, etc. Distinct from `<lyra-attachment-chip>`\n(specifically file-shaped, with a thumbnail/size/upload-progress) — this\none carries no domain assumptions at all, just a label and an optional\nleading icon/dot.\n\n`tone` tints the whole pill using the same loud-color-on-quiet-tint\nconvention `<lyra-tool-call-chip>`/`<lyra-citation-badge>` already\nestablish for status coloring: background is the tone's `-quiet` tint,\ntext/icon is the tone's loud color. `neutral` (the default) has no\ndedicated token pair of its own, so it falls back to a plain\nbordered-surface look — the same \"no signal\" treatment\n`<lyra-citation-badge>`'s `default` status and `<lyra-tool-call-chip>`'s\n`pending` status already use.\n\nThis is a controlled component: clicking the remove (×) button only fires\n`lyra-remove` — the chip never removes itself from the DOM on its own\ninteraction, the same contract `<lyra-attachment-chip>`/\n`<lyra-conversation-item>` already follow. A consumer owns the underlying\nlist and decides whether/how the click actually removes anything.",
           "name": "LyraChip",
+          "cssProperties": [
+            {
+              "description": "Background while a toggleable chip is selected, independently themeable from its resting background.",
+              "name": "--lyra-chip-pressed-bg",
+              "default": "var(--lyra-chip-bg)"
+            }
+          ],
           "cssParts": [
             {
               "description": "The pill's root container.",
@@ -21061,8 +21150,16 @@
               "name": "option"
             },
             {
+              "description": "An async option row's optional trailing metadata badge.",
+              "name": "option-badge"
+            },
+            {
               "description": "An option row's leading status dot (when `dot-color` is set).",
               "name": "option-dot"
+            },
+            {
+              "description": "An async option row's optional decorative leading visual.",
+              "name": "option-icon"
             },
             {
               "description": "An option row's label/sub wrapper.",
@@ -21209,6 +21306,12 @@
               "name": "_selectedLabelCache",
               "privacy": "private",
               "default": "new Map<string, string>()"
+            },
+            {
+              "kind": "field",
+              "name": "_selectedRowCache",
+              "privacy": "private",
+              "default": "new Map<string, ComboboxSourceRow>()"
             },
             {
               "kind": "field",
@@ -21632,6 +21735,26 @@
                 "text": "boolean"
               },
               "attribute": "required",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "selectedRows",
+              "type": {
+                "text": "ComboboxSourceRow[]"
+              },
+              "description": "Structured rows corresponding to the current selection, including opaque async-row data.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "size",
+              "type": {
+                "text": "LyraComboboxSize"
+              },
+              "default": "'m'",
+              "description": "Visual size — same `xs`–`xl` scale as `lyra-select`'s `size`.",
+              "attribute": "size",
               "reflects": true
             },
             {
@@ -22276,6 +22399,15 @@
                 "text": "boolean"
               },
               "fieldName": "required"
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "LyraComboboxSize"
+              },
+              "default": "'m'",
+              "description": "Visual size — same `xs`–`xl` scale as `lyra-select`'s `size`.",
+              "fieldName": "size"
             },
             {
               "name": "value",
@@ -23250,6 +23382,26 @@
             },
             {
               "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the in-place rename `<input>`'s own `autocorrect` (Safari/WebKit-specific).\nEmpty string omits the attribute (browser default). Named `autoCorrect` to avoid\n`HTMLElement.autocorrect`'s incompatible DOM typing -- mirrors `<lyra-textarea>`'s identical\nchoice.",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the in-place rename `<input>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
               "name": "draftTitle",
               "type": {
                 "text": "string"
@@ -23379,6 +23531,11 @@
             },
             {
               "kind": "field",
+              "name": "onTitleInputFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onTitleInputKeyDown",
               "privacy": "private"
             },
@@ -23390,6 +23547,16 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the in-place rename `<input>`'s own `spellcheck`. Defaults to `true`, matching\nthe native element's own default. `spellcheck=\"false\"` is parsed as false.",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -23646,6 +23813,24 @@
               "fieldName": "active"
             },
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the in-place rename `<input>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the in-place rename `<input>`'s own `autocorrect` (Safari/WebKit-specific).\nEmpty string omits the attribute (browser default). Named `autoCorrect` to avoid\n`HTMLElement.autocorrect`'s incompatible DOM typing -- mirrors `<lyra-textarea>`'s identical\nchoice.",
+              "fieldName": "autoCorrect"
+            },
+            {
               "name": "editable",
               "type": {
                 "text": "boolean"
@@ -23675,6 +23860,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the in-place rename `<input>`'s own `spellcheck`. Defaults to `true`, matching\nthe native element's own default. `spellcheck=\"false\"` is parsed as false.",
+              "fieldName": "spellcheck"
             },
             {
               "name": "title",
@@ -24659,6 +24853,26 @@
             },
             {
               "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default).\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich conflicts with this component's `string`-typed property of the same name. The explicit\nattribute mapping preserves the standard lowercase `autocorrect` wire name in both Lit and\ngenerated component metadata.",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
               "name": "cleanupFn",
               "type": {
                 "text": "() => void | undefined"
@@ -24897,6 +25111,11 @@
             },
             {
               "kind": "field",
+              "name": "onInputFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onInputKey",
               "privacy": "private"
             },
@@ -24980,6 +25199,16 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default. Uses spellcheckConverter rather than Lit's default\npresence-based `type: Boolean` converter -- see that converter's doc comment. A bare\n`.spellcheck` property binding can still turn this off with `spellcheck=\"false\"`; a Lit\ntemplate can do the same with either that attribute string or a `.spellcheck=${false}`\nbinding.",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -25437,8 +25666,16 @@
           ],
           "events": [
             {
+              "description": "Re-dispatched from the internal `<input>`'s own `blur`, bubbling and composed unlike the native event.",
+              "name": "blur"
+            },
+            {
               "description": "Fired on committed date transitions.",
               "name": "change"
+            },
+            {
+              "description": "Re-dispatched from the internal `<input>`'s own `focus`, for the same reason as `blur`.",
+              "name": "focus"
             },
             {
               "description": "Fired on edits.",
@@ -25461,6 +25698,24 @@
               },
               "default": "null",
               "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default).\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich conflicts with this component's `string`-typed property of the same name. The explicit\nattribute mapping preserves the standard lowercase `autocorrect` wire name in both Lit and\ngenerated component metadata.",
+              "fieldName": "autoCorrect"
             },
             {
               "name": "clear-label",
@@ -25599,6 +25854,15 @@
                 "text": "boolean"
               },
               "fieldName": "readonly"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default. Uses spellcheckConverter rather than Lit's default\npresence-based `type: Boolean` converter -- see that converter's doc comment. A bare\n`.spellcheck` property binding can still turn this off with `spellcheck=\"false\"`; a Lit\ntemplate can do the same with either that attribute string or a `.spellcheck=${false}`\nbinding.",
+              "fieldName": "spellcheck"
             },
             {
               "name": "weekday-format",
@@ -26829,7 +27093,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-dialog>` — a general-purpose modal/overlay. `role=\"dialog\"`,\nfocus-trapped while open, dismissible via Escape or a backdrop click, and\nscroll-locks the document for as long as it's open. Chrome stays minimal by\ndefault — no built-in title bar or close button; a consumer supplies a\nheading and any close affordance itself via the default/`footer` slots.\n`heading`/`closable` are an opt-in convenience for the common case where\nhand-building that chrome isn't worth it (see below).\n\nAccessible name / visible header, in priority order:\n1. If a heading element (`h1`–`h6` or `[role=\"heading\"]`) is a *direct\n   child* (not inside `slot=\"footer\"`), its text content becomes\n   `aria-label` on the panel — unchanged, and takes priority over `heading`\n   below so an existing consumer that already slots its own heading keeps\n   rendering it exactly as before.\n2. Otherwise, when `heading` is set, a visible header row (`part=\"header\"`)\n   renders containing that text (`part=\"heading\"`), which becomes the\n   `aria-labelledby` target.\n3. Otherwise, when `label` is set, an invisible (`.sr-only`, exposed as the\n   `label` part) element carrying that text is rendered inside the panel\n   and `aria-labelledby` points at it instead.\nOnly one of cases 2/3 ever renders at a time, so exactly one element ever\nclaims `aria-labelledby`. `label` itself never renders visible chrome on\nits own — `::part(label)` can be restyled to make the sr-only text visible,\nor `heading` can be set instead, if a consumer wants visible chrome without\nslotting a real heading element.\n\nThe slotted-heading case deliberately uses `aria-label` (a copied string)\nrather than `aria-labelledby` pointing at the heading's `id`: the heading is\n*light-DOM* content while `[part=\"panel\"]` lives in this element's\n*shadow* tree, and an ID-reference attribute can't resolve across that\nboundary (verified against axe's `aria-dialog-name` rule) — unlike the\n`heading`/`label`-prop cases above, where the target element is rendered\ninside the same shadow root it labels, so `aria-labelledby` there is safe.\n\n`closable` renders a close (X) button in the header row (creating one, with\nno heading text, if `heading` is unset) that closes the dialog via the same\n`close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.\n\nStacking: opening one `<lyra-dialog>` while another is already open (e.g. a\n`confirm()` launched from within an already-open dialog) is supported --\nEscape and the Tab focus trap only ever act on the topmost open dialog, so\ndialogs beneath it stay open and untouched until the one on top closes.",
+          "description": "`<lyra-dialog>` — a general-purpose modal/overlay. `role=\"dialog\"`,\nfocus-trapped while open, dismissible via Escape or a backdrop click, and\nscroll-locks the document for as long as it's open. Chrome stays minimal by\ndefault — no built-in title bar or close button; a consumer supplies a\nheading and any close affordance itself via the default/`footer` slots.\n`heading`/`closable` are an opt-in convenience for the common case where\nhand-building that chrome isn't worth it (see below).\n\nAccessible name / visible header, in priority order:\n0. If the host element itself has an `aria-label` attribute set, its value\n   becomes `aria-label` on the panel outright, overriding every source\n   below (including a slotted heading) — the standard ARIA convention for\n   a consumer that wants full control over the announced name regardless\n   of whatever `heading`/`label` props are also set. Also suppresses the\n   visible header/`heading` row and the sr-only `label` element from\n   rendering at all, same as case 1 already does to cases 2/3 below.\n1. Otherwise, if a heading element (`h1`–`h6` or `[role=\"heading\"]`) is a *direct\n   child* (not inside `slot=\"footer\"`), its text content becomes\n   `aria-label` on the panel — unchanged, and takes priority over `heading`\n   below so an existing consumer that already slots its own heading keeps\n   rendering it exactly as before.\n2. Otherwise, when `heading` is set, a visible header row (`part=\"header\"`)\n   renders containing that text (`part=\"heading\"`), which becomes the\n   `aria-labelledby` target.\n3. Otherwise, when `label` is set, an invisible (`.sr-only`, exposed as the\n   `label` part) element carrying that text is rendered inside the panel\n   and `aria-labelledby` points at it instead.\nOnly one of cases 2/3 ever renders at a time, so exactly one element ever\nclaims `aria-labelledby`. `label` itself never renders visible chrome on\nits own — `::part(label)` can be restyled to make the sr-only text visible,\nor `heading` can be set instead, if a consumer wants visible chrome without\nslotting a real heading element.\n\nThe slotted-heading case deliberately uses `aria-label` (a copied string)\nrather than `aria-labelledby` pointing at the heading's `id`: the heading is\n*light-DOM* content while `[part=\"panel\"]` lives in this element's\n*shadow* tree, and an ID-reference attribute can't resolve across that\nboundary (verified against axe's `aria-dialog-name` rule) — unlike the\n`heading`/`label`-prop cases above, where the target element is rendered\ninside the same shadow root it labels, so `aria-labelledby` there is safe.\n\n`closable` renders a close (X) button in the header row (creating one, with\nno heading text, if `heading` is unset) that closes the dialog via the same\n`close()` path as Escape/backdrop-dismiss, with reason `'close-button'`.\n\nStacking: opening one `<lyra-dialog>` while another is already open (e.g. a\n`confirm()` launched from within an already-open dialog) is supported --\nEscape and the Tab focus trap only ever act on the topmost open dialog, so\ndialogs beneath it stay open and untouched until the one on top closes.",
           "name": "LyraDialog",
           "cssParts": [
             {
@@ -26876,6 +27140,17 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "description": "Host-level `aria-label` override for the panel's accessible name — wins over every other\nsource (a slotted heading, `heading`, `label`), matching `<lyra-date-input>`'s\n`accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain\n`aria-label` attribute on `<lyra-dialog>` itself, not a public JS property.",
+              "attribute": "aria-label"
+            },
             {
               "kind": "field",
               "name": "closable",
@@ -27258,6 +27533,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Host-level `aria-label` override for the panel's accessible name — wins over every other\nsource (a slotted heading, `heading`, `label`), matching `<lyra-date-input>`'s\n`accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain\n`aria-label` attribute on `<lyra-dialog>` itself, not a public JS property.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "closable",
               "type": {
@@ -29026,6 +29310,12 @@
           "kind": "class",
           "description": "`<lyra-empty>` — a generic empty/no-data state. First-party invention (no\nWeb Awesome equivalent); fills a gap common to dashboard-style apps.",
           "name": "LyraEmpty",
+          "cssProperties": [
+            {
+              "description": "Cross-axis and text alignment used in compact mode; set to `center` for dense but centered empty states.",
+              "name": "--lyra-empty-compact-align"
+            }
+          ],
           "cssParts": [
             {
               "description": "The wrapper around the `actions`-slotted content.",
@@ -29587,6 +29877,14 @@
           "name": "LyraExportButton",
           "cssParts": [
             {
+              "description": "A custom format option's optional secondary text.",
+              "name": "format-description"
+            },
+            {
+              "description": "A format option's primary label.",
+              "name": "format-label"
+            },
+            {
               "description": "The format-choice menu, shown when more than one format is configured.",
               "name": "menu"
             },
@@ -29687,7 +29985,7 @@
               "kind": "field",
               "name": "formats",
               "type": {
-                "text": "ExportFormat[]"
+                "text": "ExportFormatOption[]"
               },
               "default": "['csv']"
             },
@@ -29700,6 +29998,17 @@
               "default": "'Export'",
               "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
               "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Controlled busy state for async/server-generated exports.",
+              "attribute": "loading",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -29856,9 +30165,9 @@
               },
               "parameters": [
                 {
-                  "name": "format",
+                  "name": "formatOption",
                   "type": {
-                    "text": "ExportFormat"
+                    "text": "ExportFormatOption"
                   }
                 }
               ]
@@ -29948,6 +30257,42 @@
                 }
               ],
               "description": "Opens the menu (if closed) and focuses `index`, or moves focus there directly if already open."
+            },
+            {
+              "kind": "method",
+              "name": "formatId",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "format",
+                  "type": {
+                    "text": "ExportFormatOption"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "formatLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "format",
+                  "type": {
+                    "text": "ExportFormatOption"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -30105,6 +30450,15 @@
               "default": "'Export'",
               "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
               "fieldName": "label"
+            },
+            {
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Controlled busy state for async/server-generated exports.",
+              "fieldName": "loading"
             },
             {
               "name": "locale",
@@ -31437,8 +31791,15 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-gauge>` — a radial or linear meter. First-party invention; no\ngeneric gauge widget exists in Web Awesome.",
+          "description": "`<lyra-gauge>` — a radial, full-circle ring, or linear meter. First-party invention; no\ngeneric gauge widget exists in Web Awesome.",
           "name": "LyraGauge",
+          "cssProperties": [
+            {
+              "description": "Fill stroke for radial, ring, and linear gauges.",
+              "name": "--lyra-gauge-fill",
+              "default": "var(--lyra-color-brand)"
+            }
+          ],
           "cssParts": [
             {
               "description": "The root `<svg>`.",
@@ -31462,6 +31823,15 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "appliedAriaLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null"
+            },
             {
               "kind": "field",
               "name": "displayText",
@@ -31508,6 +31878,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "explicitAriaLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null"
             },
             {
               "kind": "field",
@@ -31767,6 +32146,16 @@
             {
               "kind": "method",
               "name": "renderRadial",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderRing",
               "privacy": "private",
               "return": {
                 "type": {
@@ -32430,6 +32819,10 @@
           "name": "LyraGraph",
           "cssParts": [
             {
+              "description": "The marker used by directed graph links.",
+              "name": "arrowhead"
+            },
+            {
               "description": "The graph wrapper.",
               "name": "base"
             },
@@ -32465,6 +32858,16 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded from the host to the semantic graph SVG.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "activeGraphItem",
               "type": {
                 "text": "number"
@@ -32472,6 +32875,12 @@
               "privacy": "private",
               "default": "0",
               "description": "One roving tab stop across all nodes and links; nodes are the initial entry order."
+            },
+            {
+              "kind": "field",
+              "name": "arrowMarkerId",
+              "privacy": "private",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -32899,6 +33308,42 @@
             },
             {
               "kind": "method",
+              "name": "linkAccessibleText",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "link",
+                  "type": {
+                    "text": "SimLink"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "linkCoordinates",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "{ x1: number; y1: number; x2: number; y2: number }"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "link",
+                  "type": {
+                    "text": "SimLink"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "localize",
               "privacy": "protected",
               "return": {
@@ -32933,6 +33378,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "nodeAccessibleText",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": {
+                    "text": "GraphNode"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -33112,7 +33575,7 @@
           ],
           "events": [
             {
-              "description": "`detail: { source, target }`.",
+              "description": "`detail: { source, target, id? }`.",
               "name": "lyra-link-click"
             },
             {
@@ -33121,6 +33584,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded from the host to the semantic graph SVG.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "charge-strength",
               "type": {
@@ -36798,7 +37270,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control.\nEmpty (the default) falls back to the localized `'map'` message.",
+              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control. A plain\n`aria-label` attribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-slider>`/`<lyra-checkbox>`/`<lyra-switch>`. Empty (the default,\nwith no host `aria-label` either) falls back to the localized `'map'` message.",
               "attribute": "label"
             },
             {
@@ -37108,7 +37580,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control.\nEmpty (the default) falls back to the localized `'map'` message.",
+              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control. A plain\n`aria-label` attribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-slider>`/`<lyra-checkbox>`/`<lyra-switch>`. Empty (the default,\nwith no host `aria-label` either) falls back to the localized `'map'` message.",
               "fieldName": "label"
             },
             {
@@ -38539,7 +39011,7 @@
                 "text": "string"
               },
               "privacy": "private",
-              "description": "Resolves `label`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `label` itself to be set.",
+              "description": "Resolves `label`'s effective text: a host-level plain `aria-label` attribute on\n`<lyra-mention-popover>` itself wins first (checked via a plain `getAttribute()` read, not a\nreactive property, matching `<lyra-combobox>`'s/`<lyra-table>`'s identical fallback); failing\nthat, an explicit `label` override wins verbatim; left at the built-in default it instead\nroutes through `this.localize()` so a locale/`.strings` override applies without requiring\n`label` itself to be set.",
               "readonly": true
             },
             {
@@ -38600,7 +39072,7 @@
                 "text": "string"
               },
               "default": "'Suggestions'",
-              "description": "Accessible name for the `role=\"listbox\"` popup.",
+              "description": "Accessible name for the `role=\"listbox\"` popup. Also settable as a plain `aria-label`\nattribute on `<lyra-mention-popover>` itself, which takes precedence over this property when\npresent -- matches `<lyra-combobox>`'s/`<lyra-table>`'s identical host `aria-label` fallback.",
               "attribute": "label"
             },
             {
@@ -38984,7 +39456,7 @@
                 "text": "string"
               },
               "default": "'Suggestions'",
-              "description": "Accessible name for the `role=\"listbox\"` popup.",
+              "description": "Accessible name for the `role=\"listbox\"` popup. Also settable as a plain `aria-label`\nattribute on `<lyra-mention-popover>` itself, which takes precedence over this property when\npresent -- matches `<lyra-combobox>`'s/`<lyra-table>`'s identical host `aria-label` fallback.",
               "fieldName": "label"
             },
             {
@@ -39588,7 +40060,7 @@
                 "text": "string"
               },
               "privacy": "private",
-              "description": "Resolves `label`'s effective text: an explicit override wins verbatim; left at the\nbuilt-in default it instead routes through `this.localize()` so a locale/`.strings`\noverride applies without requiring `label` itself to be set.",
+              "description": "Resolves `label`'s effective text: a host-level `aria-label` attribute wins first\n(unset by default, so this is a no-op for every existing consumer); otherwise an\nexplicit `label` override wins verbatim; left at the built-in default it instead\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring `label` itself to be set.",
               "readonly": true
             },
             {
@@ -39629,7 +40101,7 @@
                 "text": "string"
               },
               "default": "'Menu'",
-              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.\nLocalized (`menuLabel`) when left at its default.",
+              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.\nLocalized (`menuLabel`) when left at its default. A host-level\n`aria-label` attribute takes precedence over both this prop and the\nlocalized default, matching `lyra-select`/`lyra-model-select`'s\nestablished `this.getAttribute('aria-label') || <computed default>`\nprecedence (see `effectiveLabel`).",
               "attribute": "label"
             },
             {
@@ -40095,7 +40567,7 @@
                 "text": "string"
               },
               "default": "'Menu'",
-              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.\nLocalized (`menuLabel`) when left at its default.",
+              "description": "Accessible name for the `role=\"menu\"` popup — override with something\nspecific (e.g. \"Row actions\") when a page has more than one menu.\nLocalized (`menuLabel`) when left at its default. A host-level\n`aria-label` attribute takes precedence over both this prop and the\nlocalized default, matching `lyra-select`/`lyra-model-select`'s\nestablished `this.getAttribute('aria-label') || <computed default>`\nprecedence (see `effectiveLabel`).",
               "fieldName": "label"
             },
             {
@@ -40177,7 +40649,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-model-select>` — a provider/model picker that renders as a closed\ndropdown when a fixed `catalog` is available, or as a filterable free-text\ncombobox when it isn't (or when `allow-custom` explicitly permits typing\nsomething outside the catalog). Built directly on the shared\ntrigger-button/aria-activedescendant listbox technique `<lyra-select>` uses\nand the filter-as-you-type suggestion-popup technique `<lyra-combobox>`\nuses — not by composing either element, since the mode switch and the\nstale-value handling below are specific to this control.\n\nA `value` that isn't present in `catalog` (e.g. a model id saved from a\nprovider whose live catalog has since changed) is never silently dropped:\n`effectiveEntries` appends it to the rendered option list as a synthetic,\nvisually-distinct row (dashed border, italic label, \"not in catalog\"\nbadge — see `model-select.styles.ts`) computed fresh from `catalog` +\n`value` on every render, without ever mutating the `catalog` property\nitself.",
+          "description": "`<lyra-model-select>` — a provider/model picker that renders as a closed\ndropdown when a fixed `catalog` is available, or as a filterable free-text\ncombobox when it isn't (or when `allow-custom` explicitly permits typing\nsomething outside the catalog). Built directly on the shared\ntrigger-button/aria-activedescendant listbox technique `<lyra-select>` uses\nand the filter-as-you-type suggestion-popup technique `<lyra-combobox>`\nuses — not by composing either element, since the mode switch and the\nstale-value handling below are specific to this control.\n\nA `value` that isn't present in `catalog` (e.g. a model id saved from a\nprovider whose live catalog has since changed) is never silently dropped:\n`effectiveEntries` appends it to the rendered option list as a synthetic,\nvisually-distinct row (dashed border, italic label, \"not in catalog\"\nbadge — see `model-select.styles.ts`) computed fresh from `catalog` +\n`value` on every render, without ever mutating the `catalog` property\nitself.\n\nShips an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +\n`hint`/`error` parts), mirroring `<lyra-select>`'s exact pattern -- left unset, neither renders.\nPairs with the existing `label` prop/part (also mirroring `<lyra-select>`) for a full\nlabel/hint/error field.",
           "name": "LyraModelSelect",
           "cssParts": [
             {
@@ -40189,12 +40661,20 @@
               "name": "combobox-input"
             },
             {
+              "description": "The error message.",
+              "name": "error"
+            },
+            {
               "description": "The dropdown indicator.",
               "name": "expand-icon"
             },
             {
               "description": "The `<label>` element (only rendered — and only contributes to the accessible name — once `label` is non-empty).",
               "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
             },
             {
               "description": "The options popover (shared by both modes).",
@@ -40219,6 +40699,16 @@
             {
               "description": "The trigger button (closed-dropdown mode's positioning anchor).",
               "name": "trigger"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
             }
           ],
           "members": [
@@ -40295,6 +40785,26 @@
               "description": "Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty.",
               "attribute": "allow-custom",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the free-text mode's native `<input>`'s own `autocorrect` (Safari/WebKit-specific).\nEmpty string omits the attribute (browser default). Named `autoCorrect` (capital `C`), not\n`autocorrect`, purely to dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a\n`boolean`-typed `HTMLElement.autocorrect` IDL member, which conflicts with this string-typed\nproperty of the same name -- same fix as `<lyra-textarea>`/`<lyra-date-input>`. The explicit\nattribute mapping preserves the lowercase wire name in generated component metadata.",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits\nthe attribute (browser default).",
+              "attribute": "autocapitalize"
             },
             {
               "kind": "field",
@@ -40386,6 +40896,16 @@
             },
             {
               "kind": "field",
+              "name": "errorText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Error text below the field (overridden by slotted `error` content). Unset (the default): no\nerror chrome renders.",
+              "attribute": "error-text"
+            },
+            {
+              "kind": "field",
               "name": "filteredEntries",
               "type": {
                 "text": "DisplayEntry[]"
@@ -40410,6 +40930,34 @@
               },
               "static": true,
               "default": "true"
+            },
+            {
+              "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Hint text below the field. Unset (the default): no hint chrome renders.",
+              "attribute": "hint"
             },
             {
               "kind": "field",
@@ -40486,6 +41034,16 @@
             {
               "kind": "field",
               "name": "onDocPointer",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
               "privacy": "private"
             },
             {
@@ -40580,6 +41138,16 @@
               },
               "attribute": "required",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,\nmatching the native element's own default. No effect in closed-dropdown mode (no native text\ninput there). `spellcheck=\"false\"` is parsed as `false` (see `spellcheckConverter` above).",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -40949,6 +41517,31 @@
             },
             {
               "kind": "method",
+              "name": "renderHintError",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "hasError",
+                  "type": {
+                    "text": "boolean"
+                  }
+                },
+                {
+                  "name": "hasHint",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ],
+              "description": "`part=\"hint\"`/`part=\"error\"` — mirrors `lyra-select`'s identical hint/error chrome, rendered\nidentically in both closed-dropdown and free-text mode."
+            },
+            {
+              "kind": "method",
               "name": "renderLabel",
               "privacy": "private",
               "return": {
@@ -41062,11 +41655,19 @@
           ],
           "events": [
             {
+              "description": "Re-dispatched from the free-text mode's internal native `<input>`'s own `blur` -- bubbling and composed (unlike the native event, which is neither), so a listener above the shadow boundary can observe it. Closed-dropdown mode's trigger `<button>` has no equivalent re-dispatch, matching `<lyra-select>`'s own trigger.",
+              "name": "blur"
+            },
+            {
               "name": "change",
               "type": {
                 "text": "Event"
               },
               "description": "Fired alongside `lyra-change`, mirroring `<lyra-select>`/`<lyra-combobox>`'s native-style value-change pair so native form bindings/framework `v-model` handlers behave consistently across the picker family."
+            },
+            {
+              "description": "Re-dispatched from the free-text mode's internal native `<input>`'s own `focus`, for the same reason as `blur`.",
+              "name": "focus"
             },
             {
               "name": "input",
@@ -41091,11 +41692,47 @@
               "fieldName": "allowCustom"
             },
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits\nthe attribute (browser default).",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the free-text mode's native `<input>`'s own `autocorrect` (Safari/WebKit-specific).\nEmpty string omits the attribute (browser default). Named `autoCorrect` (capital `C`), not\n`autocorrect`, purely to dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a\n`boolean`-typed `HTMLElement.autocorrect` IDL member, which conflicts with this string-typed\nproperty of the same name -- same fix as `<lyra-textarea>`/`<lyra-date-input>`. The explicit\nattribute mapping preserves the lowercase wire name in generated component metadata.",
+              "fieldName": "autoCorrect"
+            },
+            {
               "name": "disabled",
               "type": {
                 "text": "boolean"
               },
               "fieldName": "disabled"
+            },
+            {
+              "name": "error-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Error text below the field (overridden by slotted `error` content). Unset (the default): no\nerror chrome renders.",
+              "fieldName": "errorText"
+            },
+            {
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Hint text below the field. Unset (the default): no hint chrome renders.",
+              "fieldName": "hint"
             },
             {
               "name": "label",
@@ -41158,6 +41795,15 @@
                 "text": "boolean"
               },
               "fieldName": "required"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,\nmatching the native element's own default. No effect in closed-dropdown mode (no native text\ninput there). `spellcheck=\"false\"` is parsed as `false` (see `spellcheckConverter` above).",
+              "fieldName": "spellcheck"
             },
             {
               "name": "value",
@@ -41729,6 +42375,1778 @@
           "declaration": {
             "name": "*",
             "module": "src/components/model-settings-panel/model-settings-panel.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pagination/pagination.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-pagination>` — controlled, server-friendly page navigation with an\neditable page jump and optional item-range summary.\n\nThe component never mutates `page`. Activating a control emits\n`lyra-page-change`; the consumer applies the requested page after its own\nrouting or data-fetch decision. Once the `page` property changes, a polite\nlive region announces the applied page.",
+          "name": "LyraPagination",
+          "cssProperties": [
+            {
+              "description": "Control inline/block size; defaults from the `size` variant.",
+              "name": "--lyra-pagination-control-size"
+            },
+            {
+              "description": "Control font size; defaults from the `size` variant.",
+              "name": "--lyra-pagination-font-size"
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The navigation wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The previous/page/next control group.",
+              "name": "controls"
+            },
+            {
+              "description": "The visually hidden applied-page announcement.",
+              "name": "live-region"
+            },
+            {
+              "description": "The next-page button.",
+              "name": "next-button"
+            },
+            {
+              "description": "The next-page directional icon.",
+              "name": "next-icon"
+            },
+            {
+              "description": "The total page count shown after the input.",
+              "name": "page-count"
+            },
+            {
+              "description": "The current-page input and page-count wrapper.",
+              "name": "page-field"
+            },
+            {
+              "description": "The validated numeric page-jump input.",
+              "name": "page-input"
+            },
+            {
+              "description": "The previous-page button.",
+              "name": "previous-button"
+            },
+            {
+              "description": "The previous-page directional icon.",
+              "name": "previous-icon"
+            },
+            {
+              "description": "The item-range summary.",
+              "name": "summary"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded from the host to the internal navigation landmark.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "commitPage",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "controlsDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "currentPage",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "attribute": "disabled",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "draftPage",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "hideSummary",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "attribute": "hide-summary",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "initialized",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "invalidDraft",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "itemLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional item noun used in the summary. Empty uses the localized `item`/`items` keys.",
+              "attribute": "item-label"
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Pagination'",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "liveText",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Disables navigation and exposes `aria-busy=\"true\"` while a page is loading.",
+              "attribute": "loading",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "nextLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Next'",
+              "attribute": "next-label"
+            },
+            {
+              "kind": "field",
+              "name": "normalizedPageSize",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "normalizedTotalItems",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "onPageInput",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onPageKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "page",
+              "type": {
+                "text": "number"
+              },
+              "default": "1",
+              "description": "The currently applied page. Controlled; this component never mutates it.",
+              "attribute": "page",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "pageCount",
+              "type": {
+                "text": "number"
+              },
+              "description": "Total page count derived from `totalItems` and `pageSize`.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "pageLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Page'",
+              "attribute": "page-label"
+            },
+            {
+              "kind": "field",
+              "name": "pageSize",
+              "type": {
+                "text": "number"
+              },
+              "default": "20",
+              "description": "Number of items represented by one page. Non-positive values produce no pages.",
+              "attribute": "page-size"
+            },
+            {
+              "kind": "field",
+              "name": "previousLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Previous'",
+              "attribute": "previous-label"
+            },
+            {
+              "kind": "field",
+              "name": "size",
+              "type": {
+                "text": "LyraPaginationSize"
+              },
+              "default": "'m'",
+              "attribute": "size",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "totalItems",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Total number of items across every page. Non-positive values render the empty state.",
+              "attribute": "total-items"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatNumber",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localizedProperty",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "defaultValue",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "requestPage",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "page",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "summaryText",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "validRequestedPage",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "number | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when a user requests a valid page. `detail: { page }`.",
+              "name": "lyra-page-change"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded from the host to the internal navigation landmark.",
+              "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "fieldName": "disabled"
+            },
+            {
+              "name": "hide-summary",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "fieldName": "hideSummary"
+            },
+            {
+              "name": "item-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional item noun used in the summary. Empty uses the localized `item`/`items` keys.",
+              "fieldName": "itemLabel"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Pagination'",
+              "fieldName": "label"
+            },
+            {
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Disables navigation and exposes `aria-busy=\"true\"` while a page is loading.",
+              "fieldName": "loading"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "next-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Next'",
+              "fieldName": "nextLabel"
+            },
+            {
+              "name": "page",
+              "type": {
+                "text": "number"
+              },
+              "default": "1",
+              "description": "The currently applied page. Controlled; this component never mutates it.",
+              "fieldName": "page"
+            },
+            {
+              "name": "page-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Page'",
+              "fieldName": "pageLabel"
+            },
+            {
+              "name": "page-size",
+              "type": {
+                "text": "number"
+              },
+              "default": "20",
+              "description": "Number of items represented by one page. Non-positive values produce no pages.",
+              "fieldName": "pageSize"
+            },
+            {
+              "name": "previous-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Previous'",
+              "fieldName": "previousLabel"
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "LyraPaginationSize"
+              },
+              "default": "'m'",
+              "fieldName": "size"
+            },
+            {
+              "name": "total-items",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Total number of items across every page. Non-positive values render the empty state.",
+              "fieldName": "totalItems"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-pagination",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPagination",
+          "declaration": {
+            "name": "LyraPagination",
+            "module": "src/components/pagination/pagination.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pagination/pagination.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-pagination",
+          "declaration": {
+            "name": "LyraPagination",
+            "module": "src/components/pagination/pagination.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/pagination/pagination.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/phone-input/phone-input.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction.",
+          "name": "LyraPhoneInput",
+          "cssParts": [
+            {
+              "description": "The selected country's calling code.",
+              "name": "calling-code"
+            },
+            {
+              "description": "Optional country adornment slot wrapper.",
+              "name": "country-prefix"
+            },
+            {
+              "description": "The native country selector.",
+              "name": "country-select"
+            },
+            {
+              "description": "The error or validation message.",
+              "name": "error"
+            },
+            {
+              "description": "The outer form-control wrapper.",
+              "name": "form-control"
+            },
+            {
+              "description": "The visible label.",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
+            },
+            {
+              "description": "The native telephone input.",
+              "name": "input"
+            },
+            {
+              "description": "The country selector and telephone input wrapper.",
+              "name": "input-wrapper"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Optional visual displayed before the country selector, such as a flag.",
+              "name": "country-prefix"
+            },
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
+            },
+            {
+              "description": "Custom label content.",
+              "name": "label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "adapter",
+              "type": {
+                "text": "PhoneNumberAdapter | undefined"
+              },
+              "description": "Formatting and validation implementation. No metadata is bundled by default."
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'tel'",
+              "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
+              "name": "availableCountries",
+              "type": {
+                "text": "PhoneCountry[]"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "countries",
+              "type": {
+                "text": "readonly PhoneCountry[]"
+              },
+              "default": "[]",
+              "description": "Explicit country rows. Takes precedence over `adapter.countries`."
+            },
+            {
+              "kind": "field",
+              "name": "country",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "description": "Currently selected ISO 3166-1 alpha-2 country code.",
+              "attribute": "country"
+            },
+            {
+              "kind": "field",
+              "name": "countryLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Select'",
+              "description": "Accessible name for the country selector.",
+              "attribute": "country-label"
+            },
+            {
+              "kind": "field",
+              "name": "defaultCountry",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Country selected when no explicit `country` has been set.",
+              "attribute": "default-country"
+            },
+            {
+              "kind": "field",
+              "name": "editableValue",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveCountryLabel",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectivePhoneLabel",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
+              "name": "errorId",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "errorText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "error-text"
+            },
+            {
+              "kind": "field",
+              "name": "eventDetail",
+              "type": {
+                "text": "LyraPhoneInputEventDetail"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "explicitCountry",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "hasCountryPrefixSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "hint"
+            },
+            {
+              "kind": "field",
+              "name": "hintId",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "incompleteMessage",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "incompleteText",
+              "type": {
+                "text": "string"
+              },
+              "default": "'The value is invalid.'",
+              "description": "Validation message for a number that may still become valid with more digits.",
+              "attribute": "incomplete-text"
+            },
+            {
+              "kind": "field",
+              "name": "input",
+              "type": {
+                "text": "HTMLInputElement | undefined"
+              },
+              "description": "The underlying telephone input for platform-specific integrations.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputElement",
+              "type": {
+                "text": "HTMLInputElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "inputId",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "inputValue",
+              "type": {
+                "text": "string"
+              },
+              "description": "Editable display text, including a partial or invalid number.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputmode",
+              "type": {
+                "text": "'tel' | 'numeric' | 'text'"
+              },
+              "default": "'tel'",
+              "attribute": "inputmode"
+            },
+            {
+              "kind": "field",
+              "name": "invalidMessage",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "invalidText",
+              "type": {
+                "text": "string"
+              },
+              "default": "'The value is invalid.'",
+              "description": "Validation message for a completed but invalid number.",
+              "attribute": "invalid-text"
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onCountryChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onCountryPrefixSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onInput",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "phoneLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the telephone input.",
+              "attribute": "phone-label"
+            },
+            {
+              "kind": "field",
+              "name": "phoneStatus",
+              "type": {
+                "text": "PhoneNumberStatus"
+              },
+              "description": "Current parse/validation state.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "placeholder",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "selectedCountry",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "status",
+              "type": {
+                "text": "PhoneNumberStatus"
+              },
+              "privacy": "private",
+              "default": "'empty'"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "touched",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "value",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "applyParsed",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "raw",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "parsed",
+                  "type": {
+                    "text": "PhoneNumberParseResult"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Blur the internal telephone input."
+            },
+            {
+              "kind": "method",
+              "name": "countryName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "row",
+                  "type": {
+                    "text": "PhoneCountry"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focus the internal telephone input."
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "parse",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "PhoneNumberParseResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "input",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "select",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Select all editable telephone text."
+            },
+            {
+              "kind": "method",
+              "name": "updateValidity",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when the internal telephone input loses focus.",
+              "name": "blur"
+            },
+            {
+              "description": "Fired when the native input commits or the country changes.",
+              "name": "change"
+            },
+            {
+              "description": "Fired when the internal telephone input receives focus.",
+              "name": "focus"
+            },
+            {
+              "description": "Fired for user edits and country changes; detail contains canonical and display values.",
+              "name": "input"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'tel'",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "country",
+              "type": {
+                "text": "string"
+              },
+              "description": "Currently selected ISO 3166-1 alpha-2 country code.",
+              "fieldName": "country"
+            },
+            {
+              "name": "country-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "'Select'",
+              "description": "Accessible name for the country selector.",
+              "fieldName": "countryLabel"
+            },
+            {
+              "name": "default-country",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Country selected when no explicit `country` has been set.",
+              "fieldName": "defaultCountry"
+            },
+            {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterkeyhint"
+            },
+            {
+              "name": "error-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "errorText"
+            },
+            {
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "hint"
+            },
+            {
+              "name": "incomplete-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "'The value is invalid.'",
+              "description": "Validation message for a number that may still become valid with more digits.",
+              "fieldName": "incompleteText"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "'tel' | 'numeric' | 'text'"
+              },
+              "default": "'tel'",
+              "fieldName": "inputmode"
+            },
+            {
+              "name": "invalid-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "'The value is invalid.'",
+              "description": "Validation message for a completed but invalid number.",
+              "fieldName": "invalidText"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "label"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "phone-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the telephone input.",
+              "fieldName": "phoneLabel"
+            },
+            {
+              "name": "placeholder",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "placeholder"
+            }
+          ],
+          "mixins": [
+            {
+              "name": "FormAssociated",
+              "module": "/src/internal/form-associated.js"
+            }
+          ],
+          "superclass": {
+            "name": "LyraPhoneInputBase",
+            "module": "src/components/phone-input/phone-input.class.ts"
+          },
+          "tagName": "lyra-phone-input",
+          "customElement": true
+        },
+        {
+          "kind": "function",
+          "name": "loadLibphonenumberAdapter",
+          "return": {
+            "type": {
+              "text": "Promise<PhoneNumberAdapter>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "loader",
+              "type": {
+                "text": "() => Promise<LibphonenumberModuleLike<CountryCode>>"
+              }
+            }
+          ],
+          "description": "Lazily creates an adapter from a `libphonenumber-js`-compatible module.\nKeeping the loader consumer-supplied avoids a static import, so neither the\ndependency nor its numbering metadata enters Lyra's base bundle."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPhoneInput",
+          "declaration": {
+            "name": "LyraPhoneInput",
+            "module": "src/components/phone-input/phone-input.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadLibphonenumberAdapter",
+          "declaration": {
+            "name": "loadLibphonenumberAdapter",
+            "module": "src/components/phone-input/phone-input.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/phone-input/phone-input.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-phone-input",
+          "declaration": {
+            "name": "LyraPhoneInput",
+            "module": "src/components/phone-input/phone-input.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/phone-input/phone-input.class.js"
           }
         }
       ]
@@ -44116,6 +46534,10 @@
               "name": "segment"
             },
             {
+              "description": "An optional leading icon supplied by the item's `icon` field.",
+              "name": "segment-icon"
+            },
+            {
               "description": "The segment's label text.",
               "name": "segment-label"
             }
@@ -45904,7 +48326,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-slider>` — a numeric range control (e.g. an LLM \"temperature\"\nsetting), form-associated. Mirrors native `<input type=\"range\">`\nsemantics: `value` is the string form-submitted via `FormAssociated`,\n`valueAsNumber` is the ergonomic numeric accessor (mirroring the native\n`<input type=range>` IDL attribute of the same name) kept in sync with it\nin both directions — reads parse `value`, writes stringify back to it.\n\nUnlike the mixin's other consumers, an unset `value` is eagerly defaulted\n— on connect, and again after `form.reset()` — to the midpoint of\n`[min, max]` snapped to `step`, the same \"range sanitization algorithm\"\ndefault a native range input applies. A slider always represents *some*\nnumber, so `required` (inherited from `FormAssociated`) only has a window\nto block submission before that default lands, matching how `required`\nisn't a meaningful constraint on a native range input either.\n\nClicking anywhere on the track (not just the 16px thumb) jumps the thumb\nto that point and continues the same gesture as a drag, matching native\n`<input type=range>` click-to-seek.",
+          "description": "`<lyra-slider>` — a numeric range control (e.g. an LLM \"temperature\"\nsetting), form-associated. Mirrors native `<input type=\"range\">`\nsemantics: `value` is the string form-submitted via `FormAssociated`,\n`valueAsNumber` is the ergonomic numeric accessor (mirroring the native\n`<input type=range>` IDL attribute of the same name) kept in sync with it\nin both directions — reads parse `value`, writes stringify back to it.\n\nUnlike the mixin's other consumers, an unset `value` is eagerly defaulted\n— on connect, and again after `form.reset()` — to the midpoint of\n`[min, max]` snapped to `step`, the same \"range sanitization algorithm\"\ndefault a native range input applies. A slider always represents *some*\nnumber, so `required` (inherited from `FormAssociated`) only has a window\nto block submission before that default lands, matching how `required`\nisn't a meaningful constraint on a native range input either.\n\nClicking anywhere on the track (not just the 16px thumb) jumps the thumb\nto that point and continues the same gesture as a drag, matching native\n`<input type=range>` click-to-seek.\n\nDeliberately no label/hint/error chrome -- `label` here is an accessible-name override, not\nvisible label text; a labeled-field consumer wraps this element in their own layout.",
           "name": "LyraSlider",
           "cssParts": [
             {
@@ -50724,12 +53146,24 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-switch>` — a boolean toggle-switch form control. Structurally the\nsame idea as a checkbox (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with switch semantics: `role=\"switch\"` +\n`aria-checked` read to assistive tech as an on/off state rather than a\nchecked/unchecked one, and there is no indeterminate state.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin (that mixin's `value` accessor assumes a string —\nsee `<lyra-combobox>` for the same direct-`ElementInternals` shape with a\nnon-string value).",
+          "description": "`<lyra-switch>` — a boolean toggle-switch form control. Structurally the\nsame idea as a checkbox (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with switch semantics: `role=\"switch\"` +\n`aria-checked` read to assistive tech as an on/off state rather than a\nchecked/unchecked one, and there is no indeterminate state.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin (that mixin's `value` accessor assumes a string —\nsee `<lyra-combobox>` for the same direct-`ElementInternals` shape with a\nnon-string value).\n\nShips an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +\n`hint`/`error` CSS parts), mirroring `<lyra-select>`'s pattern for those two pieces -- left\nunset, neither renders. Deliberately no separate top-of-field `label` prop/slot/part mirroring\n`<lyra-select>`'s `form-control-label`: the default slot already *is* this control's visible,\nclickable label (same as `<lyra-checkbox>`), so a second label surface would be redundant.",
           "name": "LyraSwitch",
           "cssParts": [
             {
               "description": "The whole interactive control (`role=\"switch\"`); wraps the track and label.",
               "name": "base"
+            },
+            {
+              "description": "The error message.",
+              "name": "error"
+            },
+            {
+              "description": "The outer wrapper around the switch, error and hint.",
+              "name": "form-control"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
             },
             {
               "description": "The wrapper around the default slot.",
@@ -50748,6 +53182,14 @@
             {
               "description": "Label text, rendered next to the track. Clicking it toggles the switch, the same as clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the control still has an accessible name.",
               "name": ""
+            },
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
             }
           ],
           "members": [
@@ -50882,6 +53324,16 @@
             },
             {
               "kind": "field",
+              "name": "errorText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Error text below the switch (overridden by slotted `error` content). Unset: no error chrome\nrenders.",
+              "attribute": "error-text"
+            },
+            {
+              "kind": "field",
               "name": "form",
               "type": {
                 "text": "HTMLFormElement | null"
@@ -50899,12 +53351,40 @@
             },
             {
               "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "hasLabelSlot",
               "type": {
                 "text": "boolean"
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Hint text below the switch. Unset: no hint chrome renders.",
+              "attribute": "hint"
             },
             {
               "kind": "field",
@@ -50951,6 +53431,16 @@
             {
               "kind": "field",
               "name": "onClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
               "privacy": "private"
             },
             {
@@ -51301,6 +53791,24 @@
                 "text": "boolean"
               },
               "fieldName": "disabled"
+            },
+            {
+              "name": "error-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Error text below the switch (overridden by slotted `error` content). Unset: no error chrome\nrenders.",
+              "fieldName": "errorText"
+            },
+            {
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Hint text below the switch. Unset: no hint chrome renders.",
+              "fieldName": "hint"
             },
             {
               "name": "locale",
@@ -52814,15 +55322,92 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-textarea>` — a bare, multiline plain-text input primitive. Form-associated via the\n`FormAssociated` mixin (see `<lyra-chat-composer>`/`<lyra-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nDeliberately no auto-resize and no label/hint/error chrome -- the thin `lyra-*` equivalent of a\nplain `wa-textarea`, not a rebuild of `<lyra-chat-composer>`. A consumer wanting a labeled field\nwraps this element in whatever form-field layout it already uses.",
+          "description": "`<lyra-textarea>` — a multiline plain-text input primitive, form-associated via the\n`FormAssociated` mixin (see `<lyra-chat-composer>`/`<lyra-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nShips an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +\n`form-control-label`/`hint`/`error` parts), mirroring `<lyra-select>`'s exact pattern -- left\nunset, the chrome remains hidden. A consumer preferring their own form-field layout can still\nignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.",
           "name": "LyraTextarea",
+          "cssProperties": [
+            {
+              "description": "Maximum auto-grown block size before the textarea scrolls.",
+              "name": "--lyra-textarea-max-block-size",
+              "default": "none"
+            }
+          ],
           "cssParts": [
+            {
+              "description": "The error message.",
+              "name": "error"
+            },
+            {
+              "description": "The outer wrapper around label, textarea, error and hint.",
+              "name": "form-control"
+            },
+            {
+              "description": "The `<label>` element.",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
+            },
             {
               "description": "The native `<textarea>` element.",
               "name": "textarea"
             }
           ],
+          "slots": [
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
+            },
+            {
+              "description": "Custom label content.",
+              "name": "label"
+            }
+          ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name overriding the label/placeholder-derived default. Takes precedence over both\n`label` and `placeholder` when set, matching `<lyra-date-input>`'s `accessibleLabel`.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the native `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default).",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the native `<textarea>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Native editing-assistance attributes forwarded to the wrapped textarea. Empty strings omit\nthe corresponding attribute and retain the browser default.",
+              "attribute": "autocomplete"
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -52853,6 +55438,95 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
+              "name": "errorText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "error-text"
+            },
+            {
+              "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "hint"
+            },
+            {
+              "kind": "field",
+              "name": "input",
+              "type": {
+                "text": "HTMLTextAreaElement | null"
+              },
+              "description": "The internal native `<textarea>` element, for direct DOM access (caret position, selection,\n`setRangeText()`) that has no first-class `lyra-*` equivalent -- mirrors `wa-textarea`'s own\n`input` getter.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "lastObservedWidth",
+              "type": {
+                "text": "number | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -52868,12 +55542,37 @@
             },
             {
               "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onChange",
               "privacy": "private"
             },
             {
               "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onInput",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
               "privacy": "private"
             },
             {
@@ -52892,8 +55591,24 @@
                 "text": "TextareaResize"
               },
               "default": "'vertical'",
-              "description": "Native CSS `resize` behavior for the textarea.",
+              "description": "Native CSS `resize` behavior for the textarea, plus `'auto'`: a `ResizeObserver`-driven\ngrow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize=\"auto\"`).",
               "attribute": "resize"
+            },
+            {
+              "kind": "field",
+              "name": "resizeObserver",
+              "type": {
+                "text": "ResizeObserver | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "resizeRaf",
+              "type": {
+                "text": "number | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -52904,6 +55619,37 @@
               "default": "3",
               "description": "Visible text rows.",
               "attribute": "rows"
+            },
+            {
+              "kind": "field",
+              "name": "selectionDirection",
+              "type": {
+                "text": "TextareaSelectionDirection | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionEnd",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionStart",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the native `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default.",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -52937,6 +55683,25 @@
                 "text": "HTMLTextAreaElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "touched",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "wrap",
+              "type": {
+                "text": "TextareaWrap"
+              },
+              "default": "'soft'",
+              "description": "Forwarded to the native `<textarea>`'s own `wrap`.",
+              "attribute": "wrap"
             },
             {
               "kind": "method",
@@ -52974,6 +55739,25 @@
             },
             {
               "kind": "method",
+              "name": "armResizeObserver",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -53007,6 +55791,43 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "fitToContent",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
               }
             },
             {
@@ -53079,9 +55900,148 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "select",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Passthrough to the native `<textarea>`'s `setRangeText()`. Mirrors `wa-textarea`'s own method\nof the same name/signature. No-op if the element hasn't rendered yet."
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setSelectionRange",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "direction",
+                  "optional": true,
+                  "type": {
+                    "text": "TextareaSelectionDirection"
+                  }
+                }
+              ]
             }
           ],
           "events": [
+            {
+              "description": "Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed (unlike the native event, which is neither), so a listener above the shadow boundary can observe it.",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`.",
+              "name": "focus"
+            },
             {
               "description": "Fired on the native `change` timing (control loses focus after a committed edit). `detail: { value }`.",
               "name": "lyra-change"
@@ -53092,6 +56052,82 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name overriding the label/placeholder-derived default. Takes precedence over both\n`label` and `placeholder` when set, matching `<lyra-date-input>`'s `accessibleLabel`.",
+              "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the native `<textarea>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Native editing-assistance attributes forwarded to the wrapped textarea. Empty strings omit\nthe corresponding attribute and retain the browser default.",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the native `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default).",
+              "fieldName": "autoCorrect"
+            },
+            {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
+            },
+            {
+              "name": "error-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "errorText"
+            },
+            {
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "hint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "label"
+            },
             {
               "name": "locale",
               "type": {
@@ -53119,7 +56155,7 @@
                 "text": "TextareaResize"
               },
               "default": "'vertical'",
-              "description": "Native CSS `resize` behavior for the textarea.",
+              "description": "Native CSS `resize` behavior for the textarea, plus `'auto'`: a `ResizeObserver`-driven\ngrow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize=\"auto\"`).",
               "fieldName": "resize"
             },
             {
@@ -53130,6 +56166,24 @@
               "default": "3",
               "description": "Visible text rows.",
               "fieldName": "rows"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the native `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default.",
+              "fieldName": "spellcheck"
+            },
+            {
+              "name": "wrap",
+              "type": {
+                "text": "TextareaWrap"
+              },
+              "default": "'soft'",
+              "description": "Forwarded to the native `<textarea>`'s own `wrap`.",
+              "fieldName": "wrap"
             }
           ],
           "mixins": [
@@ -53642,7 +56696,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated only for the `<fieldset disabled>` cascade, not for a\nsubmitted value: it attaches `ElementInternals` (like `<lyra-combobox>`'s\nminimal pattern, rather than the single-string-value `FormAssociated`\nmixin, which doesn't fit a two-handle range) purely so an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.\nUnlike `<lyra-combobox>`, it never calls `internals.setFormValue()` and\nhas no `name` — the selected range is not included in the owning form's\n`FormData` on submit; read `start`/`end` directly (e.g. from `lyra-change`)\ninstead of relying on native form submission.",
+          "description": "`<lyra-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated only for the `<fieldset disabled>` cascade, not for a\nsubmitted value: it attaches `ElementInternals` (like `<lyra-combobox>`'s\nminimal pattern, rather than the single-string-value `FormAssociated`\nmixin, which doesn't fit a two-handle range) purely so an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.\nUnlike `<lyra-combobox>`, it never calls `internals.setFormValue()` and\nhas no `name` — the selected range is not included in the owning form's\n`FormData` on submit; read `start`/`end` directly (e.g. from `lyra-change`)\ninstead of relying on native form submission.\n\nDeliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle\naccessible-name overrides, not visible label text, the same carve-out `<lyra-slider>` states for\nits own single-handle `label`; a labeled-field consumer wraps this element in their own layout.",
           "name": "LyraTimeRange",
           "cssParts": [
             {
@@ -55293,7 +58347,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lyra-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lyra-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.",
+          "description": "`<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lyra-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lyra-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe textarea always hardcodes `spellcheck=\"false\"`, `autocapitalize=\"off\"`,\nand `autocorrect=\"off\"` (not exposed as configurable properties, unlike\n`<lyra-textarea>`/`<lyra-chat-composer>`'s passthrough props) — its content\nis always raw JSON, never prose, so a mobile browser's default sentence\nauto-capitalization/auto-correction would otherwise silently corrupt keys\nand values as the user types.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.",
           "name": "LyraToolApprovalDialog",
           "cssParts": [
             {
@@ -59187,8 +62241,20 @@
               "name": "badge"
             },
             {
+              "description": "The primary and secondary text wrapper.",
+              "name": "content"
+            },
+            {
+              "description": "The optional secondary description.",
+              "name": "description"
+            },
+            {
               "description": "The wrapper around a node's expanded child items.",
               "name": "group"
+            },
+            {
+              "description": "The optional decorative leading icon.",
+              "name": "icon"
             },
             {
               "description": "The node label.",
@@ -59681,7 +62747,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name for the tree -- `role=\"tree\"` lives on an internal element, not the host, so `aria-label`/`aria-labelledby` set directly on `<lyra-tree>` would not label it.",
+              "description": "Accessible name forwarded to the internal `role=\"tree\"` element. A host `aria-label` is also\nforwarded as a fallback when `label` is empty; `label` takes precedence when both are set.\nExternal `aria-labelledby` idrefs are not forwarded across the shadow boundary.",
               "attribute": "label"
             },
             {
@@ -60027,7 +63093,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name for the tree -- `role=\"tree\"` lives on an internal element, not the host, so `aria-label`/`aria-labelledby` set directly on `<lyra-tree>` would not label it.",
+              "description": "Accessible name forwarded to the internal `role=\"tree\"` element. A host `aria-label` is also\nforwarded as a fallback when `label` is empty; `label` takes precedence when both are set.\nExternal `aria-labelledby` idrefs are not forwarded across the shadow boundary.",
               "fieldName": "label"
             },
             {
@@ -60128,6 +63194,23 @@
           "kind": "class",
           "description": "`<lyra-typing-indicator>` — a purely presentational \"assistant is\nresponding\" presence cue. No events, no interactivity: a consumer mounts\nit while a response is being generated and removes it (or hides it) once\nreal content has arrived.\n\nThree visual variants share one component rather than three separate tags\nbecause callers pick between them along a single axis — how the\nsurrounding surface wants the cue to read — and nothing else about the\ncomponent differs:\n- `dots` (default) — three dots with a staggered bounce, the classic\n  \"typing…\" affordance for a standalone status line.\n- `pulse` — a single breathing dot, a quieter cue for a tighter space\n  (e.g. next to an avatar).\n- `cursor` — a blinking vertical bar, meant to sit inline at the tail end\n  of streamed text that is still being appended to.\n\nAccessibility: this indicator typically mounts and unmounts around a real\ngeneration lifecycle (appears when a response starts, disappears once one\narrives) rather than emitting a stream of updates of its own, so it does\n*not* route through `<lyra-live-region>`/`Announcer`\n(`../../internal/announcer.js`) — that machinery exists to coalesce many\nrapidly-changing announcements into one, and there is only ever a single\nannouncement here: the mount itself. A plain `role=\"status\"` plus an\naccessible name derived from `label` is sufficient, set both as an\n`aria-label` on the host *and* as a visually-hidden text node in the\nshadow tree, so the name survives even if only one of the two is picked up\nby a given assistive-tech/browser pairing. An untouched-default, empty, or\nwhitespace-only `label` falls back to the localized \"Thinking…\" copy in\nboth places, rather than leaving the component with no accessible name at\nall. The animated dots/pulse/cursor\nshape is `aria-hidden=\"true\"` — it's decorative; `label` is the entire\naccessible content, so nothing narrates individual animation frames.",
           "name": "LyraTypingIndicator",
+          "cssProperties": [
+            {
+              "description": "Animation duration and timing function shared by all variants.",
+              "name": "--lyra-transition-ambient",
+              "default": "1.8s ease-in-out"
+            },
+            {
+              "description": "Delay for the second dot in the dots variant.",
+              "name": "--lyra-typing-dot-stagger-1",
+              "default": "600ms"
+            },
+            {
+              "description": "Delay for the third dot in the dots variant.",
+              "name": "--lyra-typing-dot-stagger-2",
+              "default": "1200ms"
+            }
+          ],
           "cssParts": [
             {
               "description": "The decorative (`aria-hidden`) wrapper around the animated shape.",
