@@ -198,6 +198,11 @@ export type LyraMessageKey =
   | 'heatmapNoDataValue'
   | 'heatmapDefaultRowLabel'
   | 'heatmapDefaultColLabel'
+  | 'heatmapSelectedCellLabel'
+  | 'heatmapCellSelectedSuffix'
+  | 'inputLabel'
+  | 'showPassword'
+  | 'hidePassword'
   | 'mediaCardUntitledFile'
   | 'mediaCardOpenName'
   | 'mediaCardOpenAttachment'
@@ -492,6 +497,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   heatmapNoDataValue: 'no data',
   heatmapDefaultRowLabel: 'row {n}',
   heatmapDefaultColLabel: 'col {n}',
+  heatmapSelectedCellLabel: 'Selected: {cell}.',
+  heatmapCellSelectedSuffix: ' (selected)',
+  inputLabel: 'Text',
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
   mediaCardUntitledFile: 'Untitled file',
   mediaCardOpenName: 'Open {name}',
   mediaCardOpenAttachment: 'Open {kind} attachment',
