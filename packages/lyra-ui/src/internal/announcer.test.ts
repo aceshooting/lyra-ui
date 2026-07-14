@@ -35,20 +35,30 @@ it('collapses repeated calls within a window to only the latest text', async () 
 
 it('anchors the flush deadline to the first call in a burst, not later calls', async () => {
   const flushes: string[] = [];
-  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: (text) => flushes.push(text) });
-
+  let flushElapsed: number | undefined;
   const start = performance.now();
+  const a = new Announcer({
+    throttleMs: THROTTLE_MS,
+    onFlush: (text) => {
+      flushElapsed ??= performance.now() - start;
+      flushes.push(text);
+    },
+  });
+
   a.announce('a');
   await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS / 2));
   a.announce('b'); // still inside the first call's window
 
   await waitUntil(() => flushes.length === 1, 'expected exactly one flush', { timeout: 2000 });
-  const elapsed = performance.now() - start;
 
-  // A (wrong) sliding-window reset would push the deadline out to
+  // Timestamp is captured inside onFlush itself, not after waitUntil
+  // resolves -- waitUntil's own poll `interval` (50ms by default) can add
+  // slack on top of the real flush time, which previously made this
+  // assertion measure polling granularity instead of the timer's actual
+  // deadline. A (wrong) sliding-window reset would push the deadline out to
   // ~1.5x THROTTLE_MS from `start`; trailing-edge-from-first-call lands
   // close to 1x. Assert well below the reset case's deadline.
-  expect(elapsed).to.be.below(THROTTLE_MS * 1.4);
+  expect(flushElapsed).to.be.below(THROTTLE_MS * 1.4);
   expect(flushes).to.deep.equal(['b']);
 });
 
