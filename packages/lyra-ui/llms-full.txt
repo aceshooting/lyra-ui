@@ -723,6 +723,8 @@ shadow-internal native button doesn't participate in an ancestor form's submissi
   clearing `disabled`
 - `disabled: boolean = false` (reflected)
 
+**Getters/methods:** `focus(options?)`/`blur()` — forwarded to the internal native `<button>`.
+
 **Events:** none (a plain native `click` bubbles and composes through the shadow boundary
 unmodified; disabled while `disabled` or `loading`).
 
@@ -2199,6 +2201,11 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   Unset (the default) falls back to the built-in English "Row X, Col Y: value" (matrix) / "Jan 15:
   value" — short month + day, **not** a weekday abbreviation (calendar) — template. Additive, not
   breaking.
+- `cellInteractive?: (pos: MatrixCellPos | CalendarCellPos, value: number) => boolean` (attribute:
+  false) — opts individual cells out of the interaction model; receives the cell position and its
+  value, return `false` to make that cell present-but-non-interactive (no hover tooltip, click, or
+  keyboard roving-focus stop) without losing the layout/color-ramp machinery. Unset (the default)
+  keeps every cell interactive, unchanged.
 - `columnX?: (index: number) => number` (attribute: false, calendar mode only) — overrides the
   internal week-column x-coordinate formula (`CAL_PAD_LEFT + week * (CAL_CELL + CAL_GAP)`) used
   consistently across drawing, hit-testing, the focus ring, and month-label positioning, so a
@@ -2218,6 +2225,20 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   zero-count day rendered as a neutral hairline, distinct from both "no data" and the ramp's own
   lightest step) without a synthetic ramp color, which can't safely reserve an exact value on a
   skewed dataset. Unset (the default) reproduces the exact ramp/no-data behavior for every cell.
+- `weekdayLabelText?: (jsWeekday: number) => string | undefined` (attribute: false, calendar mode
+  only) — overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
+  `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it
+  instead of the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default)
+  reproduces today's exact locale-derived output.
+- `colorSteps?: string[]` (attribute: false) — a discrete array (≥2 entries) of CSS colors used as
+  exact ramp steps instead of linearly interpolating between `--lyra-heatmap-scale-lo`/`-hi`;
+  governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
+  interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
+  than 2 entries) keeps today's 2-endpoint interpolation exactly.
+
+**Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
+color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
+force a redraw manually.
 
 **Events:** `lyra-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode)

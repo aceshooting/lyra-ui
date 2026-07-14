@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-ui",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "Free, clean-room Lit web components — a companion to Web Awesome.",
   "keywords": [
     "web-components",
@@ -265,7 +265,8 @@
     "contract-checklist": "node scripts/check-contract-checklist.mjs",
     "manifest": "cem analyze --litelement --outdir .",
     "manifest:check": "node scripts/check-manifest.mjs",
-    "contract-policy": "pnpm run style-policy && pnpm run provenance-policy && pnpm run contract-checklist && pnpm run manifest:check && pnpm run test:architecture",
+    "llms-freshness": "node scripts/check-llms-freshness.mjs",
+    "contract-policy": "pnpm run style-policy && pnpm run provenance-policy && pnpm run contract-checklist && pnpm run manifest:check && pnpm run llms-freshness && pnpm run test:architecture",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run build && pnpm run manifest"
   },
