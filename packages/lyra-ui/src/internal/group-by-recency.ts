@@ -13,8 +13,9 @@ export interface GroupByRecencyOptions<T> {
    *  itself *is* a `Date` — the simplest possible default for the common
    *  case of grouping a plain array of dates. A returned `number` is treated
    *  as a standard JS epoch-milliseconds value (`Date.prototype.getTime()`'s
-   *  own unit) — not GreyCat's micros `time` type; a caller bridging from
-   *  GreyCat data converts in its own `getTimestamp` callback. */
+   *  own unit) — not a microsecond-epoch `time` type some backends use; a
+   *  caller bridging from such data converts in its own `getTimestamp`
+   *  callback. */
   getTimestamp?: (item: T) => Date | number | string;
   /** The "current" instant bucket boundaries are computed relative to.
    *  Defaults to `new Date()`. Overridable for deterministic tests (and for

@@ -2,9 +2,9 @@
  * A type-keyed dispatch registry for tool-result renderers -- a tiny plugin
  * system so a host app can teach `<lyra-tool-result-view>` how to draw the
  * result of e.g. a `get_weather` or `run_query` tool call without this
- * library knowing anything about either. Dispatch is a two-step lookup
- * (elipa-inspired): an exact match on the tool's name first, falling back to
- * a facade/shape-based `matches(payload)` scan when no name matches --
+ * library knowing anything about either. Dispatch is a two-step lookup: an
+ * exact match on the tool's name first, falling back to a facade/shape-based
+ * `matches(payload)` scan when no name matches --
  * useful when several tool names share one result shape (e.g. every
  * "*_search" tool returning `{ results: [...] }`) or when the caller doesn't
  * reliably know the tool name at all.
