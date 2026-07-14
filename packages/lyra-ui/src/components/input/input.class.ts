@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
@@ -99,6 +99,12 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    * of hand-rolling a second regex-based check — a real native input of the right `type` already
    * computes `typeMismatch`/`rangeUnderflow`/`rangeOverflow`/`stepMismatch` correctly. Falls back to
    * the base mixin's plain required-and-empty check before the first render (`inputEl` unset).
+   *
+   * A typed native input (`number`, `email`, …) also runs its own value-sanitization algorithm on
+   * assignment, which silently rewrites an unparseable non-empty value to `''` without setting any
+   * `ValidityState` flag — left unchecked, `native.validity.valid` would then read `true` (empty is
+   * fine when not required) while `this.value`/the bridged form value still held the literal invalid
+   * string. Detect that mismatch and report it as `badInput` instead of trusting native blindly.
    */
   protected updateValidity(): void {
     const native = this.inputEl;
@@ -111,8 +117,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       return;
     }
     native.value = this.value;
+    const sanitizedAway = this.value !== '' && native.value === '';
     const v = native.validity;
     if (v.valid) {
+      if (sanitizedAway) {
+        this[SET_ANCHORED_VALIDITY]({ badInput: true }, this.localize('valueInvalid'));
+        return;
+      }
       this[SET_ANCHORED_VALIDITY]({});
       return;
     }
@@ -123,9 +134,17 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
         rangeUnderflow: v.rangeUnderflow,
         rangeOverflow: v.rangeOverflow,
         stepMismatch: v.stepMismatch,
+        badInput: v.badInput,
       },
       native.validationMessage,
     );
+  }
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('type') || changed.has('min') || changed.has('max') || changed.has('step')) {
+      this.updateValidity();
+    }
   }
 
   private onInput = (): void => {

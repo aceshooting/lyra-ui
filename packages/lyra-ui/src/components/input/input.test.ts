@@ -121,6 +121,22 @@ describe('lyra-input', () => {
       el.value = 'anything';
       expect(el.checkValidity()).to.be.true;
     });
+
+    it('type="number" rejects a non-numeric value silently sanitized away by the native input', async () => {
+      const el = (await fixture(html`<lyra-input type="number"></lyra-input>`)) as LyraInput;
+      el.value = 'not-a-number';
+      expect(el.checkValidity()).to.be.false;
+    });
+
+    it('recomputes validity when max narrows below the current value without a value write', async () => {
+      const el = (await fixture(
+        html`<lyra-input type="number" max="10" value="5"></lyra-input>`,
+      )) as LyraInput;
+      expect(el.checkValidity()).to.be.true;
+      el.max = 3;
+      await el.updateComplete;
+      expect(el.checkValidity()).to.be.false;
+    });
   });
 
   it('is accessible', async () => {
