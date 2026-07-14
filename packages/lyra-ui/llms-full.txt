@@ -707,6 +707,92 @@ original declarative `value`, matching native `defaultValue` behavior.
 
 ---
 
+## `lyra-button`
+
+A generic action-button primitive, the `lyra-*` equivalent of a plain `wa-button`. Renders an
+internal native `<button>` (this library has no runtime dependency on Web Awesome); `type="submit"`/
+`type="reset"` are handled by the component itself via the host's own `closest('form')`, since a
+shadow-internal native button doesn't participate in an ancestor form's submission on its own.
+
+**Properties:**
+- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
+- `appearance: 'filled' | 'outlined' | 'plain' = 'filled'` (reflected)
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `type: 'button' | 'submit' | 'reset' = 'button'`
+- `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
+  clearing `disabled`
+- `disabled: boolean = false` (reflected)
+
+**Events:** none (a plain native `click` bubbles and composes through the shadow boundary
+unmodified; disabled while `disabled` or `loading`).
+
+**Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
+
+**CSS parts:** `base`, `label`, `start`, `end`, `spinner` (present only while `loading`).
+
+**Themeable custom properties:** `--lyra-button-accent`, `--lyra-button-fill`,
+`--lyra-button-on-fill`, `--lyra-button-border` (each swapped by the active `variant`, default
+`neutral` falls back to plain text/surface/border tokens).
+
+**Optional peer deps:** none.
+
+```html
+<lyra-button variant="brand" appearance="filled">Save</lyra-button>
+<lyra-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lyra-button>
+```
+
+**Known gotchas:**
+- A host `aria-label` is forwarded to the internal button as a literal string (for an icon-only
+  button); an external `aria-labelledby`/`aria-describedby` idref is not copied across the shadow
+  boundary.
+
+---
+
+## `lyra-input`
+
+A single-line plain-text input primitive, the `lyra-*` equivalent of a plain `wa-input`,
+form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships the same opt-in
+`label`/`hint`/`errorText` form-control chrome as `lyra-textarea`/`lyra-select`.
+
+**Properties:**
+- `type: 'text' | 'password' | 'email' | 'number' = 'text'`
+- `value: string = ''` (from `FormAssociated`)
+- `placeholder: string = ''`
+- `label: string = ''`
+- `hint: string = ''`
+- `errorText: string = ''` (attribute `error-text`)
+- `accessibleLabel: string | null = null` (attribute `aria-label`)
+- `autocomplete: string = ''`
+- `min?: number` / `max?: number` / `step?: number` (attribute: false — `type="number"` only)
+- `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
+- `name`/`disabled`/`required` (from `FormAssociated`)
+
+**Events:** `lyra-input` (`detail: { value }`, fired on every user-driven edit), `lyra-change`
+(`detail: { value }`, fired on the native `change` timing), `blur`/`focus` (re-dispatched bubbling +
+composed from the internal native input's own `blur`/`focus`).
+
+**Slots:** `label`, `hint`, `error`.
+
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
+(present only when `type="password"`), `hint`, `error`.
+
+**Themeable custom properties:** shared tokens only.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-input type="password" label="Password"></lyra-input>
+<lyra-input type="email" label="Email" required></lyra-input>
+```
+
+**Known gotchas:**
+- `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
+  own browser-computed `validity` (format/range/step), bridged into this element's own
+  `ElementInternals` — not a second hand-rolled regex check.
+- `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
+
+---
+
 ## `lyra-phone-input`
 
 A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164

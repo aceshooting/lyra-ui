@@ -80,6 +80,8 @@ import './components/diff-view/diff-view.js';
 import './components/poll-status/poll-status.js';
 import './components/code-block/code-block-core.js';
 import './components/textarea/textarea.js';
+import './components/button/button.js';
+import './components/input/input.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -365,6 +367,12 @@ export type {
   TextareaSelectionDirection,
 } from './components/textarea/textarea.js';
 
+export { LyraButton } from './components/button/button.js';
+export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType } from './components/button/button.js';
+
+export { LyraInput } from './components/input/input.js';
+export type { LyraInputType } from './components/input/input.js';
+
 export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
 export type { LyraChartEventMap } from './components/chart/chart.js';
 export type { LyraChatComposerEventMap } from './components/chat-composer/chat-composer.js';
@@ -388,6 +396,7 @@ export type { LyraFileInputEventMap } from './components/file-input/file-input.j
 export type { LyraGenerationStatusEventMap } from './components/generation-status/generation-status.js';
 export type { LyraGraphEventMap } from './components/graph/graph.js';
 export type { LyraHeatmapEventMap } from './components/heatmap/heatmap.js';
+export type { LyraInputEventMap } from './components/input/input.js';
 export type { LyraJsonViewerEventMap } from './components/json-viewer/json-viewer.js';
 export type { LyraLiteChartEventMap } from './components/chart/lite-chart.js';
 export type { LyraMapEventMap } from './components/map/map.js';

@@ -161,7 +161,7 @@ roving-tabindex list) to match. No per-component RTL flag or opt-in needed.
 
 ## Components
 
-The catalog below lists all 95 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 97 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -177,6 +177,8 @@ API details.
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lyra-textarea>` | `wa-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
+| `<lyra-input>` | `wa-input` | Form-associated single-line field (`text`/`password`/`email`/`number`) with label/hint/error chrome and a built-in password-visibility toggle |
+| `<lyra-button>` | `wa-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via the closest ancestor `<form>` |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 
 **Dashboard atoms**

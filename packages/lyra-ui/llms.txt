@@ -28,7 +28,7 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lyra-select` (a closed-list, button-trigger single-select sharing `lyra-option` with
   `lyra-combobox`), `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`,
   `lyra-phone-input` (optional `libphonenumber-js` peer, loaded through a consumer adapter), `lyra-sparkline`,
-  `lyra-textarea`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
+  `lyra-textarea`, `lyra-input`, `lyra-button`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
 - **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
   `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-pagination`, `lyra-gauge`,
   `lyra-export-button`, `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
