@@ -3346,6 +3346,10 @@ inline size; component-specific, no shared width token exists), plus shared toke
 `--lyra-color-brand`, `--lyra-color-text-quiet`, `--lyra-color-danger`, `--lyra-color-danger-quiet`,
 `--lyra-radius`, `--lyra-icon-button-size`, `--lyra-focus-ring-*`, `--lyra-transition-fast`.
 
+`[part=bubble]`'s background resolves through `--lyra-color-surface`. If your own panel/container
+background already maps to that same token, override `[part=bubble]`'s background explicitly (e.g.
+via `::part(bubble)`) so message bubbles stay visually distinct from the surrounding panel.
+
 **Optional peer deps:** none. Internally renders a `<lyra-live-region>` (a first-party sibling
 component, auto-imported alongside this one, not an npm peer) for the status-transition
 announcements described below.

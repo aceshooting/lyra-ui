@@ -101,7 +101,7 @@ export interface LyraChatMessageEventMap {
  * @slot avatar - An avatar/icon for the message author.
  * @slot badges - Small status/metric chips (e.g. token count, latency, model name) — entirely app-supplied; this component computes none of that itself.
  * @slot actions - Action controls (e.g. copy, retry), rendered at the end of the footer.
- * @slot attachments - File/image attachment chips, rendered below the message body.
+ * @slot attachments - File/image attachment chips, rendered below the message body by default; see `attachments-position`.
  * @event lyra-retry - Fired by the built-in retry button, only rendered when `status="failed"`.
  * @event lyra-collapse-toggle - `detail: boolean` (the new `collapsed` state) — fired when the user activates the built-in collapse button.
  * @csspart bubble - The message bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed (e.g. a `lyra-retry` listener flipping `status` away from `"failed"`).
@@ -152,6 +152,13 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  built-in toggle button is rendered, mirroring `lyra-widget`'s identical
    *  `collapsible`/`collapsed` pair. */
   @property({ type: Boolean, reflect: true }) collapsed = false;
+
+  /** Where the `attachments` slot renders relative to the message body.
+   *  `'after'` (the default) reproduces today's exact DOM order. `'before'`
+   *  renders attachments immediately above the body -- both DOM and visual
+   *  order move together (no CSS `order` trick), so reading/focus order
+   *  always matches what's on screen. */
+  @property({ attribute: 'attachments-position' }) attachmentsPosition: 'before' | 'after' = 'after';
 
   @state() private hasAvatarSlot = false;
   @state() private hasBadgesSlot = false;
@@ -282,6 +289,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     // `statusText` is already truthy whenever `status === 'failed'`, so it
     // alone covers that case here too.
     const showFooter = Boolean(statusText) || Boolean(ts) || this.hasActionsSlot;
+    const attachmentsBlock = html`<div part="attachments" ?hidden=${!this.hasAttachmentsSlot}>
+      <slot name="attachments" @slotchange=${this.onAttachmentsSlotChange}></slot>
+    </div>`;
 
     return html`
       <div part="bubble" tabindex="-1">
@@ -305,12 +315,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
               </button>`
             : nothing}
         </div>
+        ${this.attachmentsPosition === 'before' ? attachmentsBlock : nothing}
         <div part="body" id=${this.bodyId} ?hidden=${this.collapsed}>
           <slot></slot>
         </div>
-        <div part="attachments" ?hidden=${!this.hasAttachmentsSlot}>
-          <slot name="attachments" @slotchange=${this.onAttachmentsSlotChange}></slot>
-        </div>
+        ${this.attachmentsPosition === 'before' ? nothing : attachmentsBlock}
         <div part="footer" ?hidden=${!showFooter}>
           ${statusText
             ? html`<span part="status-indicator" aria-hidden="true"></span><span part="status-text"

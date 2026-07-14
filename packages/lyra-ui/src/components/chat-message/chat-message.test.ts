@@ -329,3 +329,30 @@ it('is accessible fully populated: avatar, badges, attachments, actions, timesta
   `)) as LyraChatMessage;
   await expect(el).to.be.accessible();
 });
+
+describe('attachments-position', () => {
+  it('defaults to "after" -- attachments render after the body in DOM order', async () => {
+    const el = (await fixture(html`
+      <lyra-chat-message><span slot="attachments">file.png</span>Hello</lyra-chat-message>
+    `)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]')!;
+    const parts = Array.from(bubble.children).map((c) => c.getAttribute('part'));
+    expect(parts.indexOf('body')).to.be.lessThan(parts.indexOf('attachments'));
+  });
+
+  it('renders attachments before the body when attachments-position="before"', async () => {
+    const el = (await fixture(html`
+      <lyra-chat-message attachments-position="before"
+        ><span slot="attachments">file.png</span>Hello</lyra-chat-message
+      >
+    `)) as LyraChatMessage;
+    const bubble = el.shadowRoot!.querySelector('[part="bubble"]')!;
+    const parts = Array.from(bubble.children).map((c) => c.getAttribute('part'));
+    expect(parts.indexOf('attachments')).to.be.lessThan(parts.indexOf('body'));
+  });
+
+  it('reflects attachments-position onto the property', async () => {
+    const el = (await fixture(html`<lyra-chat-message attachments-position="before"></lyra-chat-message>`)) as LyraChatMessage;
+    expect(el.attachmentsPosition).to.equal('before');
+  });
+});
