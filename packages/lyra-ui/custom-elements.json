@@ -61210,7 +61210,7 @@
                 "text": "string"
               },
               "default": "'json'",
-              "description": "Forward-compatible fallback-kind selector — see the class doc; only `\"json\"` is implemented today.",
+              "description": "Fallback-kind selector — see the class doc's `fallback` paragraph for the full \"json\" vs \"text\" behavior.",
               "attribute": "fallback",
               "reflects": true
             },
@@ -61527,7 +61527,7 @@
                 "text": "string"
               },
               "default": "'json'",
-              "description": "Forward-compatible fallback-kind selector — see the class doc; only `\"json\"` is implemented today.",
+              "description": "Fallback-kind selector — see the class doc's `fallback` paragraph for the full \"json\" vs \"text\" behavior.",
               "fieldName": "fallback"
             },
             {

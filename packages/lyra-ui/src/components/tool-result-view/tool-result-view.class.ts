@@ -70,7 +70,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   /** The tool call's original arguments, if available — handed to the matched renderer's `render()` alongside `result`. */
   @property({ attribute: false }) args: unknown;
 
-  /** Forward-compatible fallback-kind selector — see the class doc; only `"json"` is implemented today. */
+  /** Fallback-kind selector — see the class doc's `fallback` paragraph for the full "json" vs "text" behavior. */
   @property({ reflect: true }) fallback = 'json';
 
   /** Shows a copy-to-clipboard affordance alongside the fallback view (both `"json"` and `"text"` kinds) — forwarded to `<lyra-json-viewer>`'s own `copyable`, or renders a `<lyra-copy-button>` next to the text fallback. */

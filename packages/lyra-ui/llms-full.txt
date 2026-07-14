@@ -4006,7 +4006,7 @@ shell around it.
   `<lyra-json-viewer>` fallback)
 - `args: unknown` (property only, no attribute) — the tool call's original arguments, if available,
   handed to the matched renderer's `render()` alongside `result`
-- `fallback: 'json'|'text' = 'json'` (reflected) — fallback-kind selector. `"json"` (the default) is
+- `fallback: string = 'json'` (reflected) — fallback-kind selector. `"json"` (the default) is
   an unconditional `<lyra-json-viewer>`. `"text"` renders a *string* `result` as preformatted text
   instead — falling back to the `"json"` behavior when `result` isn't a string, so setting
   `fallback="text"` defensively against an unpredictable result shape never renders broken output.
