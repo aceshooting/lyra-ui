@@ -65,25 +65,41 @@ export interface HeatmapAnnotation {
   label?: string;
 }
 
-const HEX_RE = /^([0-9a-f]{3}|[0-9a-f]{6})$/i;
-const RGB_RE = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i;
+const HEX_RE = /^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const RGB_RE = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i;
 
 /**
- * Parses a strict `#rgb` or `#rrggbb` hex string into an `[r, g, b]` triple,
- * or `null` if `hex` isn't one (rather than silently coercing an unparsable
- * string to `0` via `Number.parseInt(..., 16)` returning `NaN`).
+ * Parses a strict `#rgb`/`#rgba`/`#rrggbb`/`#rrggbbaa` hex string into an
+ * `[r, g, b, a]` quadruple (`a` in `[0, 1]`, defaulting to `1` for the
+ * 3/6-digit alpha-less forms), or `null` if `hex` isn't one (rather than
+ * silently coercing an unparsable string to `0` via
+ * `Number.parseInt(..., 16)` returning `NaN`).
  */
-export function hexToRgb(hex: string): [number, number, number] | null {
+export function hexToRgb(hex: string): [number, number, number, number] | null {
   const clean = hex.trim().replace('#', '');
   if (!HEX_RE.test(clean)) return null;
-  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const hasAlpha = clean.length === 4 || clean.length === 8;
+  const full = clean.length <= 4 ? clean.split('').map((c) => c + c).join('') : clean;
   const num = Number.parseInt(full, 16);
-  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+  if (hasAlpha) {
+    return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, (num & 255) / 255];
+  }
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255, 1];
 }
 
-function parseRgbString(value: string): [number, number, number] | null {
+function parseRgbString(value: string): [number, number, number, number] | null {
   const match = RGB_RE.exec(value);
-  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+  if (!match) return null;
+  const a = match[4] === undefined ? 1 : Number(match[4]);
+  return [Number(match[1]), Number(match[2]), Number(match[3]), a];
+}
+
+/** Formats an `[r, g, b, a]` quadruple as the shortest equivalent CSS color —
+ *  `rgb(r, g, b)` when fully opaque (matching every pre-alpha-support call
+ *  site's output exactly), `rgba(r, g, b, a)` otherwise. */
+function formatRgb([r, g, b, a]: [number, number, number, number]): string {
+  const alpha = Math.min(1, Math.max(0, a));
+  return alpha >= 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
 }
 
 let scratchCtx: CanvasRenderingContext2D | null | undefined;
@@ -131,7 +147,11 @@ const bucketCountConverter = {
 
 /**
  * Resolves any syntactically valid CSS `<color>` — hex, `rgb()`, `hsl()`,
- * `oklch()`, a named color, etc. — to an `[r, g, b]` triple.
+ * `oklch()`, a named color, etc. — to an `[r, g, b, a]` quadruple (`a` in
+ * `[0, 1]`, `1` for an opaque input). A translucent input (e.g.
+ * `rgba(255,255,255,.028)`, a common way to key a color ramp off a themed
+ * "quiet surface" token) round-trips its alpha rather than silently
+ * resolving to the fully opaque equivalent.
  *
  * Hand-rolling a parser for every CSS color syntax is unnecessary and
  * error-prone (a naive hex-only parser silently turns an unrecognized format
@@ -143,8 +163,8 @@ const bucketCountConverter = {
  * back to `fallbackHex` (with a one-time `console.warn`) instead of
  * silently drawing the wrong color.
  */
-export function resolveRgb(color: string, fallbackHex: string): [number, number, number] {
-  const fallback = hexToRgb(fallbackHex) ?? [0, 0, 0];
+export function resolveRgb(color: string, fallbackHex: string): [number, number, number, number] {
+  const fallback = hexToRgb(fallbackHex) ?? [0, 0, 0, 1];
   const direct = hexToRgb(color);
   if (direct) return direct;
 
@@ -163,13 +183,15 @@ export function resolveRgb(color: string, fallbackHex: string): [number, number,
   return hexToRgb(normalized) ?? parseRgbString(normalized) ?? fallback;
 }
 
-/** Linearly interpolates between two already-resolved `[r, g, b]` triples at `t` in `[0, 1]`. */
-function mixRgb(from: [number, number, number], to: [number, number, number], t: number): string {
+/** Linearly interpolates between two already-resolved `[r, g, b, a]` quadruples at `t` in `[0, 1]`,
+ *  formatting the result as `rgb(...)` when fully opaque or `rgba(...)` when either endpoint is translucent. */
+function mixRgb(from: [number, number, number, number], to: [number, number, number, number], t: number): string {
   const clamped = Math.min(1, Math.max(0, t));
   const r = Math.round(from[0] + (to[0] - from[0]) * clamped);
   const g = Math.round(from[1] + (to[1] - from[1]) * clamped);
   const b = Math.round(from[2] + (to[2] - from[2]) * clamped);
-  return `rgb(${r}, ${g}, ${b})`;
+  const a = from[3] + (to[3] - from[3]) * clamped;
+  return formatRgb([r, g, b, a]);
 }
 
 /** Linearly interpolates between two CSS colors (any valid syntax) at `t` in `[0, 1]`. */
@@ -419,8 +441,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private cachedRamp: {
     key: string;
     colors: string[];
-    loRgb: [number, number, number];
-    hiRgb: [number, number, number];
+    loRgb: [number, number, number, number];
+    hiRgb: [number, number, number, number];
   } | null = null;
 
   /** The cell currently under the pointer (`null` when not hovering one) — drives `[part="tooltip"]`. */
@@ -701,17 +723,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private colorRamp(bucketCount: number): {
     colors: string[];
-    loRgb: [number, number, number];
-    hiRgb: [number, number, number];
+    loRgb: [number, number, number, number];
+    hiRgb: [number, number, number, number];
   } {
     const steps = this.colorSteps;
     if (steps && steps.length >= 2) {
       const key = `steps ${steps.join(' ')}`;
       if (this.cachedRamp?.key === key) return this.cachedRamp;
-      const colors = steps.map((c) => {
-        const [r, g, b] = resolveRgb(c, FALLBACK_SCALE_LO);
-        return `rgb(${r}, ${g}, ${b})`;
-      });
+      const colors = steps.map((c) => formatRgb(resolveRgb(c, FALLBACK_SCALE_LO)));
       const loRgb = resolveRgb(steps[0]!, FALLBACK_SCALE_LO);
       const hiRgb = resolveRgb(steps[steps.length - 1]!, FALLBACK_SCALE_HI);
       this.cachedRamp = { key, colors, loRgb, hiRgb };

@@ -34082,7 +34082,7 @@
               "kind": "field",
               "name": "cachedRamp",
               "type": {
-                "text": "{\n    key: string;\n    colors: string[];\n    loRgb: [number, number, number];\n    hiRgb: [number, number, number];\n  } | null"
+                "text": "{\n    key: string;\n    colors: string[];\n    loRgb: [number, number, number, number];\n    hiRgb: [number, number, number, number];\n  } | null"
               },
               "privacy": "private",
               "default": "null"
@@ -34589,7 +34589,7 @@
               "privacy": "private",
               "return": {
                 "type": {
-                  "text": "{\n    colors: string[];\n    loRgb: [number, number, number];\n    hiRgb: [number, number, number];\n  }"
+                  "text": "{\n    colors: string[];\n    loRgb: [number, number, number, number];\n    hiRgb: [number, number, number, number];\n  }"
                 }
               },
               "parameters": [
@@ -35467,7 +35467,7 @@
           "name": "hexToRgb",
           "return": {
             "type": {
-              "text": "[number, number, number] | null"
+              "text": "[number, number, number, number] | null"
             }
           },
           "parameters": [
@@ -35478,7 +35478,7 @@
               }
             }
           ],
-          "description": "Parses a strict `#rgb` or `#rrggbb` hex string into an `[r, g, b]` triple,\nor `null` if `hex` isn't one (rather than silently coercing an unparsable\nstring to `0` via `Number.parseInt(..., 16)` returning `NaN`)."
+          "description": "Parses a strict `#rgb`/`#rgba`/`#rrggbb`/`#rrggbbaa` hex string into an\n`[r, g, b, a]` quadruple (`a` in `[0, 1]`, defaulting to `1` for the\n3/6-digit alpha-less forms), or `null` if `hex` isn't one (rather than\nsilently coercing an unparsable string to `0` via\n`Number.parseInt(..., 16)` returning `NaN`)."
         },
         {
           "kind": "function",
@@ -35533,7 +35533,7 @@
           "name": "resolveRgb",
           "return": {
             "type": {
-              "text": "[number, number, number]"
+              "text": "[number, number, number, number]"
             }
           },
           "parameters": [
@@ -35550,7 +35550,7 @@
               }
             }
           ],
-          "description": "Resolves any syntactically valid CSS `<color>` — hex, `rgb()`, `hsl()`,\n`oklch()`, a named color, etc. — to an `[r, g, b]` triple.\n\nHand-rolling a parser for every CSS color syntax is unnecessary and\nerror-prone (a naive hex-only parser silently turns an unrecognized format\ninto `NaN` -> `0`, i.e. solid black). The canvas 2D context already\nimplements the full CSS color grammar via its `fillStyle` setter, so this\nnormalizes through that instead. Assigning an unparsable string to\n`fillStyle` is a spec'd no-op (the previous value is kept, it never\nthrows), so a sentinel round-trip is used to detect that case and fall\nback to `fallbackHex` (with a one-time `console.warn`) instead of\nsilently drawing the wrong color."
+          "description": "Resolves any syntactically valid CSS `<color>` — hex, `rgb()`, `hsl()`,\n`oklch()`, a named color, etc. — to an `[r, g, b, a]` quadruple (`a` in\n`[0, 1]`, `1` for an opaque input). A translucent input (e.g.\n`rgba(255,255,255,.028)`, a common way to key a color ramp off a themed\n\"quiet surface\" token) round-trips its alpha rather than silently\nresolving to the fully opaque equivalent.\n\nHand-rolling a parser for every CSS color syntax is unnecessary and\nerror-prone (a naive hex-only parser silently turns an unrecognized format\ninto `NaN` -> `0`, i.e. solid black). The canvas 2D context already\nimplements the full CSS color grammar via its `fillStyle` setter, so this\nnormalizes through that instead. Assigning an unparsable string to\n`fillStyle` is a spec'd no-op (the previous value is kept, it never\nthrows), so a sentinel round-trip is used to detect that case and fall\nback to `fallbackHex` (with a one-time `console.warn`) instead of\nsilently drawing the wrong color."
         },
         {
           "kind": "variable",

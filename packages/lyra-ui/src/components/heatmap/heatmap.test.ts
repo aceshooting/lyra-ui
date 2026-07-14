@@ -471,10 +471,16 @@ describe('per-update-cycle caching (perf)', () => {
 });
 
 describe('hexToRgb', () => {
-  it('parses 3- and 6-digit hex strings', () => {
-    expect(hexToRgb('#fff')).to.deep.equal([255, 255, 255]);
-    expect(hexToRgb('#0969da')).to.deep.equal([9, 105, 218]);
-    expect(hexToRgb('0969da')).to.deep.equal([9, 105, 218]);
+  it('parses 3- and 6-digit hex strings as fully opaque', () => {
+    expect(hexToRgb('#fff')).to.deep.equal([255, 255, 255, 1]);
+    expect(hexToRgb('#0969da')).to.deep.equal([9, 105, 218, 1]);
+    expect(hexToRgb('0969da')).to.deep.equal([9, 105, 218, 1]);
+  });
+
+  it('parses 4- and 8-digit hex-with-alpha strings', () => {
+    expect(hexToRgb('#0f08')).to.deep.equal([0, 255, 0, 136 / 255]);
+    expect(hexToRgb('#0969da80')).to.deep.equal([9, 105, 218, 0x80 / 255]);
+    expect(hexToRgb('#0969daff')).to.deep.equal([9, 105, 218, 1]);
   });
 
   it('returns null (not a NaN-derived value) for a non-hex string', () => {
@@ -484,18 +490,31 @@ describe('hexToRgb', () => {
 });
 
 describe('resolveRgb', () => {
-  it('resolves hex colors directly', () => {
-    expect(resolveRgb('#0969da', '#000000')).to.deep.equal([9, 105, 218]);
+  it('resolves hex colors directly as fully opaque', () => {
+    expect(resolveRgb('#0969da', '#000000')).to.deep.equal([9, 105, 218, 1]);
   });
 
   it('resolves non-hex CSS color syntax (rgb, hsl, named) via canvas normalization', () => {
-    expect(resolveRgb('rgb(9, 105, 218)', '#000000')).to.deep.equal([9, 105, 218]);
-    expect(resolveRgb('hsl(0, 100%, 50%)', '#000000')).to.deep.equal([255, 0, 0]);
-    expect(resolveRgb('red', '#000000')).to.deep.equal([255, 0, 0]);
+    expect(resolveRgb('rgb(9, 105, 218)', '#000000')).to.deep.equal([9, 105, 218, 1]);
+    expect(resolveRgb('hsl(0, 100%, 50%)', '#000000')).to.deep.equal([255, 0, 0, 1]);
+    expect(resolveRgb('red', '#000000')).to.deep.equal([255, 0, 0, 1]);
+  });
+
+  it('preserves a translucent rgba()/hsla() alpha channel instead of silently resolving to opaque (gap #65)', () => {
+    // The exact alpha may be quantized to 8 bits by the browser's canvas
+    // fillStyle serializer (e.g. Chromium: .028 -> 7/255 ~= 0.027), so this
+    // asserts it's nowhere near the fully-opaque `1` a dropped-alpha bug
+    // would silently produce, rather than pinning an exact float.
+    const [r, g, b, a] = resolveRgb('rgba(255, 255, 255, .028)', '#000000');
+    expect([r, g, b]).to.deep.equal([255, 255, 255]);
+    expect(a).to.be.closeTo(0.028, 0.01);
+
+    const rgbaDirect = resolveRgb('rgba(9, 105, 218, 0.5)', '#000000');
+    expect(rgbaDirect).to.deep.equal([9, 105, 218, 0.5]);
   });
 
   it('falls back to the given fallback (not black) for an unparsable color string', () => {
-    expect(resolveRgb('not-a-real-color', '#123456')).to.deep.equal([0x12, 0x34, 0x56]);
+    expect(resolveRgb('not-a-real-color', '#123456')).to.deep.equal([0x12, 0x34, 0x56, 1]);
   });
 });
 
@@ -508,6 +527,11 @@ describe('mixColor', () => {
 
   it('interpolates between two non-hex CSS colors', () => {
     expect(mixColor('rgb(0, 0, 0)', 'rgb(255, 255, 255)', 0.5)).to.equal('rgb(128, 128, 128)');
+  });
+
+  it('interpolates alpha and emits rgba() when either endpoint is translucent (gap #65)', () => {
+    expect(mixColor('rgba(0, 0, 0, 0)', 'rgba(255, 255, 255, 1)', 0.5)).to.equal('rgba(128, 128, 128, 0.5)');
+    expect(mixColor('#0969da', 'rgba(9, 105, 218, 0.5)', 1)).to.equal('rgba(9, 105, 218, 0.5)');
   });
 });
 
