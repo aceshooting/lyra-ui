@@ -256,7 +256,7 @@
     "manifest": "cem analyze --litelement --outdir .",
     "manifest:check": "node scripts/check-manifest.mjs",
     "contract-policy": "pnpm run style-policy && pnpm run provenance-policy && pnpm run contract-checklist && pnpm run manifest:check && pnpm run test:architecture",
-    "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json",
+    "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run build && pnpm run manifest"
   },
   "dependencies": {

@@ -57,16 +57,30 @@ Note that `pnpm readme:check` **passing here proves nothing about the release co
 the README's "## Status" version against `packages/lyra-ui/package.json` *before* `pnpm changeset
 version` bumps it, so it necessarily passes pre-bump and then goes stale the moment the version
 lands. Step 5 is what actually keeps it honest — don't treat this green check as covering it.
+(As of 2026-07-14 the check also cross-validates the root README's Web-Awesome-comparison
+paragraph — its total-tag count and the "N-component conversation/agent UI kit" phrase against the
+family table — not just the "## Status" version line; that paragraph had drifted independently and
+silently for a release or more before anything caught it, since nothing regex-matched it.)
+
+`pnpm lint` (inside the gate above) covers `type-tests/*.ts` too as of 2026-07-14 — it previously
+didn't (`test:types` existed as its own script but nothing invoked it, not `lint`, not CI, not this
+gate), so a public type going missing from the root barrel (`src/lyra.ts`) or a new close-reason
+union shipping with no compile-time contract coverage could land undetected. If you ever add a new
+public type-only export, consider whether `packages/lyra-ui/type-tests/` should assert it stays
+importable/shaped-correctly — `lint` now enforces whatever's actually written there, not more.
 
 These are the exact steps `.github/workflows/ci.yml`'s `build-test` job runs. If you want extra
 confidence, also run the `platform-contracts` job's suite locally: `pnpm --filter @aceshooting/lyra-ui test:platform` (needs Firefox/WebKit via Playwright).
 
 ## 3. Lightweight regression spot-check
 
-This is deliberately **not** a full re-audit of every historically-completed finding in
-`docs/superpowers/feature_requests/lyra_improvement_done.md` (that took ~9 parallel agents and
-several minutes of wall-clock time when last run, and found the 3 regressions this command now
-guards against structurally). Instead, scope it to what's actually changing this release:
+This is deliberately **not** a full re-audit of every historically-completed finding in the
+completed-work ledger (a local, gitignored planning doc — locate it with `find . -iname
+'lyra_improvement_done.md'` rather than hardcoding a path here, since it has moved before and this
+doc must stay untracked-directory-agnostic per AGENTS.md's local-tooling rule) — that took ~9
+parallel agents and several minutes of wall-clock time when last run, and found the 3 regressions
+this command now guards against structurally. Instead, scope it to what's actually changing this
+release:
 
 ```bash
 git diff --stat $(git describe --tags --match 'lyra-ui@*' --abbrev=0)..HEAD -- packages/lyra-ui
@@ -86,6 +100,15 @@ If the diff is large (a broad refactor, many components touched, or several conc
 worked in this tree recently), tell the user and ask before running the full ledger re-audit
 instead of this spot-check — it's the right call for a big release, but expensive to run by
 default on every patch.
+
+The full ledger re-audit has now found real, previously-undetected regressions both times it's
+been run for a large release (3 findings in the 2026-07-13 round that led to this command's
+creation; 4 more in a 2026-07-14 round — a menu keyboard-nav gap, 13 component event-map types
+silently missing from the root barrel, an uncovered type contract, and the README-comparison-
+paragraph drift noted in step 2). None of the 2026-07-14 findings were caught by the step-2 gate or
+this spot-check — only the full agent-driven re-read of the ledger's own claims against current
+source caught them. Lean toward recommending the full audit for any release with a large diff
+rather than defaulting to the lightweight spot-check.
 
 ## 4. Run the release
 
