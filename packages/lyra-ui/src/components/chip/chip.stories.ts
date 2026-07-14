@@ -140,6 +140,27 @@ export const ToggleSelection: Story = {
   },
 };
 
+export const CustomPressedBackground: Story = {
+  name: 'Custom pressed background',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lyra-chip-pressed-bg` changes only the selected state, leaving the resting `--lyra-chip-bg` independent.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-chip
+      toggleable
+      selected
+      style="--lyra-chip-bg: var(--lyra-color-surface); --lyra-chip-pressed-bg: var(--lyra-color-warning-quiet);"
+    >
+      Priority filter
+    </lyra-chip>
+  `,
+};
+
 export const GroupBasic: Story = {
   name: 'lyra-chip-group — basic wrap, no overflow limit',
   render: () => html`

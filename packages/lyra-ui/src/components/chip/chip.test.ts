@@ -157,7 +157,9 @@ describe('selected', () => {
     // The fixture opts into selected mode by starting already selected/pressed -- the same
     // boolean both enables `[part='base']`'s interactive semantics and represents its current
     // pressed value (see the property's own doc comment), so a chip that starts `selected`
-    // starts already reflecting `aria-pressed="true"`; clicking it toggles that value off.
+    // starts already reflecting `aria-pressed="true"`; clicking it toggles that value off. Toggle
+    // mode itself is sticky (see `toggleable`'s doc comment), so once opted in via `selected` the
+    // chip keeps announcing `aria-pressed="false"` (not omitting it) once unpressed.
     const el = (await fixture(html`<lyra-chip selected value="v1">Tag</lyra-chip>`)) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('button');
@@ -169,7 +171,7 @@ describe('selected', () => {
     expect(ev.detail).to.deep.equal({ value: 'v1', selected: false });
     expect(el.selected).to.be.false;
     await el.updateComplete;
-    expect(base.getAttribute('aria-pressed')).to.be.null;
+    expect(base.getAttribute('aria-pressed')).to.equal('false');
   });
 
   it('toggles via Enter/Space while focused, preventing default Space page-scroll', async () => {
@@ -269,5 +271,44 @@ describe('pressed-border override', () => {
     )) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).borderColor).to.not.equal('rgb(1, 2, 3)');
+  });
+});
+
+describe('pressed-background override', () => {
+  it('pressed background falls back to --lyra-chip-bg by default', async () => {
+    const el = (await fixture(html`<lyra-chip selected>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const restingBg = getComputedStyle(base).backgroundColor;
+    el.selected = false;
+    await el.updateComplete;
+    expect(getComputedStyle(base).backgroundColor).to.equal(restingBg);
+  });
+
+  it('uses --lyra-chip-pressed-bg when set, independent of the resting background', async () => {
+    const el = (await fixture(
+      html`<lyra-chip selected style="--lyra-chip-pressed-bg: rgb(4, 5, 6);">Tag</lyra-chip>`,
+    )) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('aria-pressed', () => {
+  it('is omitted entirely when the chip is not in toggle mode', async () => {
+    const el = (await fixture(html`<lyra-chip>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.hasAttribute('aria-pressed')).to.be.false;
+  });
+
+  it('is explicitly "false" (not omitted) for a toggleable-but-unpressed chip', async () => {
+    const el = (await fixture(html`<lyra-chip toggleable>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-pressed')).to.equal('false');
+  });
+
+  it('is "true" once pressed', async () => {
+    const el = (await fixture(html`<lyra-chip selected>Tag</lyra-chip>`)) as LyraChip;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-pressed')).to.equal('true');
   });
 });

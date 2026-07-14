@@ -68,7 +68,10 @@ export const styles = css`
     outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='base'][aria-pressed='true'] {
-    background: var(--lyra-chip-bg);
+    /* Falls back to --lyra-chip-bg (today's exact value) so every existing consumer renders
+       byte-identical when unset. A consumer wanting a distinct "active" tint independent of the
+       resting background sets --lyra-chip-pressed-bg directly. */
+    background: var(--lyra-chip-pressed-bg, var(--lyra-chip-bg));
     /* Falls back to --lyra-chip-accent (today's exact value) so every
        existing consumer, including all 4 \`tone\` variants, renders
        byte-identical when unset. A consumer with a per-item arbitrary

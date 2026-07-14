@@ -58,6 +58,8 @@ export interface LyraChipEventMap {
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
+ * @cssprop [--lyra-chip-pressed-bg=var(--lyra-chip-bg)] - Background while a toggleable chip is
+ * selected, independently themeable from its resting background.
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -175,7 +177,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
         part="base"
         role=${toggleMode ? 'button' : nothing}
         tabindex=${toggleMode ? '0' : nothing}
-        aria-pressed=${pressed ? 'true' : nothing}
+        aria-pressed=${toggleMode ? (pressed ? 'true' : 'false') : nothing}
         @click=${toggleMode ? this.onBaseClick : nothing}
         @keydown=${toggleMode ? this.onBaseKeyDown : nothing}
       >
@@ -199,4 +201,3 @@ declare global {
     'lyra-chip': LyraChip;
   }
 }
-
