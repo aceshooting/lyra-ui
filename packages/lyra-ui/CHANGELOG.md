@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.10.0
+
+### Minor Changes
+
+- f506542: `lyra-heatmap` gains a `selectedCell` property (`{ row, col }` in matrix mode, `{ date }` in
+  calendar mode) — a controlled, consumer-owned marker (mirroring `lyra-lite-chart`'s
+  `selectedIndex`) that draws a persistent canvas ring independent of keyboard focus, appends a
+  "Selected: ..." description to the host's own `aria-label` so it stays discoverable after focus
+  moves elsewhere, and appends a "(selected)" suffix to the keyboard live-region announcement. Unset
+  (the default, `null`) reproduces today's exact output.
+- 6f6d758: Add `lyra-button`, a generic action-button primitive (`variant`/`appearance`/`size`/`loading`/`disabled`/`type`, default + `start`/`end` slots) -- the `lyra-*` equivalent of a plain `wa-button`.
+- 5eda04d: Add `lyra-input`, a single-line plain-text input primitive (`type="text"`/`"password"`/`"email"`/`"number"`, label/hint/error chrome, form-associated validation, a built-in password-visibility toggle) -- the `lyra-*` equivalent of a plain `wa-input`.
+- 7c95e95: `lyra-tool-result-view` gains a real `fallback="text"` mode (previously accepted as an attribute
+  value but silently treated identically to `"json"`): a string `result` renders as preformatted text
+  instead of being forced through `<lyra-json-viewer>`'s tree view, falling back to the `"json"`
+  behavior when `result` isn't a string. A new `copyable` property adds a copy-to-clipboard affordance
+  to either fallback kind. Additive — unset, both fallback kinds and every existing consumer render
+  byte-identical to before.
+
+### Patch Changes
+
+- 83fe6ba: Fix `lyra-heatmap`'s `llms-full.txt` section, which was missing four real, already-shipped members
+  (`cellInteractive`, `weekdayLabelText`, `colorSteps`, `refreshTheme`), and add a matching
+  `focus()`/`blur()` mention to `lyra-button`'s own section. Add a `pnpm run llms-freshness` lint gate
+  (wired into `contract-policy`, so it runs in `lint`/CI/`publish.sh`) that fails the build if any
+  custom element's public property isn't mentioned anywhere in its own `llms-full.txt` section, so
+  this can't silently drift again. A small baseline of ~20 pre-existing drift items on unrelated
+  components (chart family, dialog, menu, split, tree-node, widget, etc.), discovered while building
+  this check, is exempted for now via a documented allowlist in the script — out of scope for this
+  change, left for a follow-up cleanup.
+
 ## 2.9.0
 
 ### Minor Changes
