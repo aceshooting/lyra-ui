@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { html as litHtml } from 'lit';
 import './segmented.js';
 import type { LyraSegmented } from './segmented.js';
 
@@ -81,5 +82,31 @@ describe('lyra-segmented', () => {
       html`<lyra-segmented label="View" .items=${items()} value="day"></lyra-segmented>`,
     )) as LyraSegmented;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('item icon', () => {
+  it('renders no [part=segment-icon] when items have no icon', async () => {
+    const items = [
+      { value: 'a', label: 'A' },
+      { value: 'b', label: 'B' },
+    ];
+    const el = (await fixture(html`<lyra-segmented .items=${items} value="a"></lyra-segmented>`)) as LyraSegmented;
+    expect(el.shadowRoot!.querySelector('[part="segment-icon"]')).to.not.exist;
+  });
+
+  it('renders item.icon before the label when set', async () => {
+    const items = [
+      { value: 'a', label: 'A', icon: litHtml`<span class="dot"></span>` },
+      { value: 'b', label: 'B' },
+    ];
+    const el = (await fixture(html`<lyra-segmented .items=${items} value="a"></lyra-segmented>`)) as LyraSegmented;
+    const button = el.shadowRoot!.querySelector('[part="segment"]')!;
+    const icon = button.querySelector('[part="segment-icon"]');
+    expect(icon).to.exist;
+    expect(icon!.querySelector('.dot')).to.exist;
+    const children = Array.from(button.children);
+    const labelIndex = children.findIndex((c) => c.getAttribute('part') === 'segment-label');
+    expect(children.indexOf(icon as Element)).to.be.lessThan(labelIndex);
   });
 });

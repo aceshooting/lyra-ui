@@ -21,6 +21,13 @@ export const styles = css`
     padding: var(--lyra-size-0-125rem) var(--lyra-space-s);
     cursor: pointer;
   }
+  [part='segment-icon'] {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-end: var(--lyra-space-xs);
+    inline-size: var(--lyra-size-1em);
+    block-size: var(--lyra-size-1em);
+  }
   [part='segment'][aria-disabled='true'] {
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;

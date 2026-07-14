@@ -8,6 +8,9 @@ import { styles } from './segmented.styles.js';
 export interface SegmentedItem {
   value: string;
   label: string;
+  /** Optional leading icon rendered before this item's label. Omit for today's text-only
+   *  rendering (unchanged). */
+  icon?: unknown;
   disabled?: boolean;
 }
 
@@ -104,7 +107,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             aria-disabled=${item.disabled ? 'true' : 'false'}
             tabindex=${item.value === this.value ? '0' : '-1'}
             @click=${() => this.select(item)}
-          ><span part="segment-label">${item.label}</span></button>`,
+          >${item.icon ? html`<span part="segment-icon" aria-hidden="true">${item.icon}</span>` : nothing}<span part="segment-label">${item.label}</span></button>`,
         )}
       </div>
     `;
