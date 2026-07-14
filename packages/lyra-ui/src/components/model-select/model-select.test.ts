@@ -597,3 +597,129 @@ it('is accessible (free-text mode, default and open)', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+// -- Hint/error chrome -------------------------------------------------------
+
+describe('hint/error chrome', () => {
+  it('renders no hint/error chrome when hint/errorText are unset (today\'s exact bare output, closed dropdown mode)', async () => {
+    const el = (await fixture(html`<lyra-model-select .catalog=${CATALOG}></lyra-model-select>`)) as LyraModelSelect;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.true;
+    expect(error.hidden).to.be.true;
+  });
+
+  it('renders no hint/error chrome when hint/errorText are unset (free-text mode)', async () => {
+    const el = (await fixture(html`<lyra-model-select></lyra-model-select>`)) as LyraModelSelect;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.true;
+    expect(error.hidden).to.be.true;
+  });
+
+  it('renders hint/errorText text and un-hides the matching parts (closed dropdown mode)', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select hint="Pick a model" error-text="Required" .catalog=${CATALOG}></lyra-model-select>`,
+    )) as LyraModelSelect;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.false;
+    expect(hint.textContent).to.contain('Pick a model');
+    expect(error.hidden).to.be.false;
+    expect(error.textContent).to.contain('Required');
+  });
+
+  it('renders hint/errorText text and un-hides the matching parts (free-text mode)', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select
+        allow-custom
+        hint="Pick a model"
+        error-text="Required"
+        .catalog=${CATALOG}
+      ></lyra-model-select>`,
+    )) as LyraModelSelect;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.false;
+    expect(hint.textContent).to.contain('Pick a model');
+    expect(error.hidden).to.be.false;
+    expect(error.textContent).to.contain('Required');
+  });
+
+  it('renders slotted hint/error content and un-hides the matching parts', async () => {
+    const el = (await fixture(html`
+      <lyra-model-select .catalog=${CATALOG}>
+        <span slot="hint">Custom hint</span>
+        <span slot="error">Custom error</span>
+      </lyra-model-select>
+    `)) as LyraModelSelect;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.false;
+    expect(error.hidden).to.be.false;
+  });
+
+  it('wires aria-describedby on the trigger to the rendered hint/error ids', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select hint="Pick a model" error-text="Required" .catalog=${CATALOG}></lyra-model-select>`,
+    )) as LyraModelSelect;
+    const describedBy = trigger(el).getAttribute('aria-describedby') ?? '';
+    expect(describedBy).to.contain('error');
+    expect(describedBy).to.contain('hint');
+  });
+
+  it('wires aria-describedby on the combobox input to the rendered hint/error ids', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select allow-custom hint="Pick a model" error-text="Required"></lyra-model-select>`,
+    )) as LyraModelSelect;
+    const describedBy = input(el).getAttribute('aria-describedby') ?? '';
+    expect(describedBy).to.contain('error');
+    expect(describedBy).to.contain('hint');
+  });
+
+  it('omits aria-describedby entirely when neither hint nor errorText is set', async () => {
+    const el = (await fixture(html`<lyra-model-select .catalog=${CATALOG}></lyra-model-select>`)) as LyraModelSelect;
+    expect(trigger(el).hasAttribute('aria-describedby')).to.be.false;
+  });
+});
+
+// -- Editing-assistance and event-bridging passthrough (free-text mode) -----
+
+describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
+  it('spellcheck defaults to true (matching the native input default)', async () => {
+    const el = (await fixture(html`<lyra-model-select></lyra-model-select>`)) as LyraModelSelect;
+    expect(input(el).spellcheck).to.be.true;
+  });
+
+  it('forwards spellcheck=false, autocapitalize, and autocorrect onto the native input', async () => {
+    const el = (await fixture(html`
+      <lyra-model-select spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-model-select>
+    `)) as LyraModelSelect;
+    const inp = input(el);
+    expect(inp.spellcheck).to.be.false;
+    expect(inp.getAttribute('autocapitalize')).to.equal('off');
+    expect(inp.getAttribute('autocorrect')).to.equal('off');
+  });
+});
+
+describe('blur/focus bubbling', () => {
+  it('re-dispatches a bubbling, composed blur event when the free-text input blurs', async () => {
+    const el = (await fixture(html`<lyra-model-select></lyra-model-select>`)) as LyraModelSelect;
+    const inp = input(el);
+    inp.focus();
+    const eventPromise = oneEvent(el, 'blur');
+    inp.blur();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+
+  it('re-dispatches a bubbling, composed focus event when the free-text input focuses', async () => {
+    const el = (await fixture(html`<lyra-model-select></lyra-model-select>`)) as LyraModelSelect;
+    const eventPromise = oneEvent(el, 'focus');
+    input(el).focus();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+});

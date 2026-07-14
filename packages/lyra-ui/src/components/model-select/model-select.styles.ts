@@ -201,4 +201,25 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
     font-size: var(--lyra-font-size-md-sm);
   }
+
+  [part='hint'] {
+    margin-block-start: var(--lyra-space-xs);
+    font-size: var(--lyra-font-size-sm);
+    color: var(--lyra-color-text-quiet);
+  }
+  /* :empty never matches here -- the part always contains a literal slot
+     child element regardless of assigned/text content -- so real emptiness
+     is tracked in JS (hasHintSlot) and reflected via the hidden attribute
+     instead (same fix as lyra-select's identical part). */
+  [part='hint'][hidden] {
+    display: none;
+  }
+  [part='error'] {
+    margin-block-start: var(--lyra-space-xs);
+    font-size: var(--lyra-font-size-sm);
+    color: var(--lyra-color-danger);
+  }
+  [part='error'][hidden] {
+    display: none;
+  }
 `;

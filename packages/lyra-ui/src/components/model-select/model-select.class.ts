@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { place } from '../../internal/positioner.js';
@@ -6,6 +6,25 @@ import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './model-select.styles.js';
+
+/**
+ * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
+ * converter is presence-based -- the attribute's mere presence (regardless of its string value)
+ * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
+ * actually get `true` (this property's default), the opposite of what that string reads as -- the
+ * same bug class `<lyra-textarea>`'s `spellcheckConverter` and `<lyra-date-input>`'s identical
+ * converter document and fix.
+ */
+const spellcheckConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting for it; only the
+    // non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
 
 /** A catalog row: a selectable model, keyed by `id` with a display `label`. */
 export interface LyraModelCatalogEntry {
@@ -26,6 +45,8 @@ interface DisplayEntry extends LyraModelCatalogEntry {
 
 export interface LyraModelSelectEventMap {
   'lyra-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-model-select>` — a provider/model picker that renders as a closed
@@ -45,12 +66,25 @@ export interface LyraModelSelectEventMap {
  * `value` on every render, without ever mutating the `catalog` property
  * itself.
  *
+ * Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +
+ * `hint`/`error` parts), mirroring `<lyra-select>`'s exact pattern -- left unset, neither renders.
+ * Pairs with the existing `label` prop/part (also mirroring `<lyra-select>`) for a full
+ * label/hint/error field.
+ *
  * @customElement lyra-model-select
  * @event lyra-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
  * @event {Event} change - Fired alongside `lyra-change`, mirroring `<lyra-select>`/`<lyra-combobox>`'s
  *   native-style value-change pair so native form bindings/framework `v-model` handlers behave
  *   consistently across the picker family.
  * @event {Event} input - Fired alongside `change`/`lyra-change` (see `change`).
+ * @event blur - Re-dispatched from the free-text mode's internal native `<input>`'s own `blur` --
+ *   bubbling and composed (unlike the native event, which is neither), so a listener above the
+ *   shadow boundary can observe it. Closed-dropdown mode's trigger `<button>` has no equivalent
+ *   re-dispatch, matching `<lyra-select>`'s own trigger.
+ * @event focus - Re-dispatched from the free-text mode's internal native `<input>`'s own `focus`,
+ *   for the same reason as `blur`.
+ * @slot hint - Custom hint content.
+ * @slot error - Custom error content.
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to the
  *   accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
@@ -62,6 +96,8 @@ export interface LyraModelSelectEventMap {
  * @csspart option-label - An option row's label.
  * @csspart option-badge - The "not in catalog" badge on a synthetic stale-value row.
  * @csspart expand-icon - The dropdown indicator.
+ * @csspart hint - The hint message.
+ * @csspart error - The error message.
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static formAssociated = true;
@@ -90,7 +126,26 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    * today's `aria-label || placeholder || 'Model'` chain untouched.
    */
   @property() label = '';
+  /** Hint text below the field. Unset (the default): no hint chrome renders. */
+  @property() hint = '';
+  /** Error text below the field (overridden by slotted `error` content). Unset (the default): no
+   *  error chrome renders. */
+  @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
+  /** Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,
+   *  matching the native element's own default. No effect in closed-dropdown mode (no native text
+   *  input there). `spellcheck="false"` is parsed as `false` (see `spellcheckConverter` above). */
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  /** Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits
+   *  the attribute (browser default). */
+  @property() autocapitalize = '';
+  /** Forwarded to the free-text mode's native `<input>`'s own `autocorrect` (Safari/WebKit-specific).
+   *  Empty string omits the attribute (browser default). Named `autoCorrect` (capital `C`), not
+   *  `autocorrect`, purely to dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a
+   *  `boolean`-typed `HTMLElement.autocorrect` IDL member, which conflicts with this string-typed
+   *  property of the same name -- same fix as `<lyra-textarea>`/`<lyra-date-input>`. The explicit
+   *  attribute mapping preserves the lowercase wire name in generated component metadata. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ type: Boolean, reflect: true }) open = false;
 
   @state() private activeIndex = -1;
@@ -101,6 +156,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // Set on first blur; gates the `data-invalid` reflection below so
   // validity styling never flashes on first render (matches lyra-select).
   @state() private touched = false;
+  // `[part]:empty` never matches -- the part always contains a literal <slot> child element
+  // regardless of assigned content -- so real emptiness is tracked here instead (same fix as
+  // lyra-select's identical hasHintSlot/hasErrorSlot) and reflected via the hidden attribute.
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -153,6 +213,13 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
+  }
+
+  protected willUpdate(): void {
+    if (!this.hasUpdated) {
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+    }
   }
 
   disconnectedCallback(): void {
@@ -433,6 +500,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     // whatever the user had typed before Escape.
     if (!this.open) this.query = this.labelFor(this.value);
     this.show();
+    // Bubbling, composed re-dispatch of the native (non-bubbling,
+    // non-composed) input focus -- so a host-level listener on
+    // <lyra-model-select> can observe it across the shadow boundary.
+    this.emit('focus');
   };
   private onInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
@@ -442,6 +513,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private onInputBlur = (): void => {
     this.touched = true;
     this.hide();
+    // Same re-dispatch reasoning as onInputFocus above.
+    this.emit('blur');
   };
   private onInputKeyDown = (e: KeyboardEvent): void => {
     const rows = this.filteredEntries;
@@ -536,9 +609,30 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     `;
   }
 
+  private onHintSlotChange = (e: Event): void => {
+    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onErrorSlotChange = (e: Event): void => {
+    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   /** `part="form-control-label"` — see `label`'s doc comment for its precedence over `aria-label`. */
   private renderLabel(): TemplateResult {
     return html`<label part="form-control-label" for=${this.controlId} ?hidden=${!this.label}>${this.label}</label>`;
+  }
+
+  /** `part="hint"`/`part="error"` — mirrors `lyra-select`'s identical hint/error chrome, rendered
+   *  identically in both closed-dropdown and free-text mode. */
+  private renderHintError(hasError: boolean, hasHint: boolean): TemplateResult {
+    return html`
+      <div id="model-select-error" part="error" ?hidden=${!hasError}>
+        ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+      </div>
+      <div id="model-select-hint" part="hint" ?hidden=${!hasHint}>
+        ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+      </div>
+    `;
   }
 
   private renderClosed(): TemplateResult {
@@ -546,6 +640,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasValue = this._value.length > 0;
     const hasLabel = this.label.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
+      .filter(Boolean)
+      .join(' ');
     return html`
       ${this.renderLabel()}
       <button
@@ -558,6 +657,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-controls=${this.listId}
         aria-activedescendant=${activeId}
         aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('model'))}
+        aria-describedby=${describedBy || nothing}
         aria-required=${this.required ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled}
@@ -572,6 +672,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
       </button>
       ${this.renderListbox(rows, activeId, this.localize('modelSelectNoModels'))}
+      ${this.renderHintError(hasError, hasHint)}
     `;
   }
 
@@ -579,6 +680,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const rows = this.filteredEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.label.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const describedBy = [hasError ? 'model-select-error' : '', hasHint ? 'model-select-hint' : '']
+      .filter(Boolean)
+      .join(' ');
     return html`
       ${this.renderLabel()}
       <div part="combobox" @mousedown=${this.onComboMouseDown}>
@@ -592,9 +698,13 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}
           aria-autocomplete="list"
+          aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           autocomplete="off"
+          spellcheck=${this.spellcheck}
+          autocapitalize=${this.autocapitalize || nothing}
+          autocorrect=${this.autoCorrect || nothing}
           .value=${this.open ? this.query : this.labelFor(this._value)}
           placeholder=${this.placeholder}
           ?disabled=${this.effectiveDisabled}
@@ -606,6 +716,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>
       </div>
       ${this.renderListbox(rows, activeId, this.localize('noMatches'))}
+      ${this.renderHintError(hasError, hasHint)}
     `;
   }
 
