@@ -58,6 +58,9 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * to that point and continues the same gesture as a drag, matching native
  * `<input type=range>` click-to-seek.
  *
+ * Deliberately no label/hint/error chrome -- `label` here is an accessible-name override, not
+ * visible label text; a labeled-field consumer wraps this element in their own layout.
+ *
  * @customElement lyra-slider
  * @event lyra-input - Fired continuously during an active drag or a
  *   keyboard step (including OS key-repeat while a key is held), mirroring

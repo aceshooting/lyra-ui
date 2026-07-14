@@ -63,6 +63,13 @@ export interface LyraCheckboxEventMap {
  * `FormAssociated` mixin — see `<lyra-combobox>` for the same
  * direct-`ElementInternals` shape with a non-string value.
  *
+ * Deliberately no hint/error chrome of its own -- the default slot already carries real, visible
+ * label text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`
+ * props has nothing to add here. A consumer needing hint/error messaging composes it in their own
+ * wrapper (e.g. `<lyra-tool-param-form>` folds a boolean field's validation error into adjacent
+ * description text / `aria-label` rather than a `<lyra-checkbox>`-owned slot), the same way a
+ * native `<input type="checkbox">` plus `<label>` pairs with an externally-owned error node.
+ *
  * @customElement lyra-checkbox
  * @slot - Label text, rendered next to the box. Clicking it toggles the
  * checkbox, the same as clicking a native checkbox's associated `<label>`.

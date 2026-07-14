@@ -34,6 +34,11 @@ export type LyraMessageKey =
   | 'noMatches'
   | 'previous'
   | 'next'
+  | 'paginationLabel'
+  | 'paginationPage'
+  | 'paginationSummary'
+  | 'paginationEmptySummary'
+  | 'paginationApplied'
   | 'cancel'
   | 'confirm'
   | 'search'
@@ -323,6 +328,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   noMatches: 'No matches',
   previous: 'Previous',
   next: 'Next',
+  paginationLabel: 'Pagination',
+  paginationPage: 'Page',
+  paginationSummary: '{start}–{end} of {total} {itemLabel}',
+  paginationEmptySummary: '{total} {itemLabel}',
+  paginationApplied: 'Page {page} of {totalPages}',
   cancel: 'Cancel',
   confirm: 'Confirm',
   search: 'Search',

@@ -47,6 +47,8 @@ export const ROOT_BARREL_TAGS = [
   'lyra-model-select',
   'lyra-model-settings-panel',
   'lyra-option',
+  'lyra-pagination',
+  'lyra-phone-input',
   'lyra-playback',
   'lyra-poll-status',
   'lyra-responsive-panel',

@@ -31,6 +31,7 @@ export interface LyraSegmentedEventMap {
  *   `detail: { value }`.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart segment - A single `role="radio"` button.
+ * @csspart segment-icon - An optional leading icon supplied by the item's `icon` field.
  * @csspart segment-label - The segment's label text.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {

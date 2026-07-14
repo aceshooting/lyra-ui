@@ -17,11 +17,13 @@ import './components/copy-button/copy-button.js';
 import './components/split/split.js';
 import './components/time-range/time-range.js';
 import './components/playback/playback.js';
+import './components/pagination/pagination.js';
 import './components/heatmap/heatmap.js';
 import './components/tree/tree.js';
 import './components/tree/tree-node.js';
 import './components/chart/lite-chart.js';
 import './components/file-input/file-input.js';
+import './components/phone-input/phone-input.js';
 import './components/widget/widget.js';
 import './components/word-cloud/word-cloud.js';
 import './components/dialog/dialog.js';
@@ -88,7 +90,7 @@ export type { ToastVariant, ToastSize } from './components/toast/toast-item.js';
 export { toast } from './components/toast/toaster.js';
 export type { ToastOptions, ToastHandle } from './components/toast/toaster.js';
 export { LyraCombobox } from './components/combobox/combobox.js';
-export type { OptionFilter } from './components/combobox/combobox.js';
+export type { OptionFilter, LyraComboboxSize } from './components/combobox/combobox.js';
 export { LyraOption } from './components/combobox/option.js';
 export { LyraSelect } from './components/select/select.js';
 export type { LyraSelectSize } from './components/select/select.js';
@@ -108,7 +110,11 @@ export type { TableColumn } from './components/table/table.js';
 export { LyraGauge } from './components/gauge/gauge.js';
 export type { GaugeType } from './components/gauge/gauge.js';
 export { LyraExportButton } from './components/export-button/export-button.js';
-export type { ExportFormat } from './components/export-button/export-button.js';
+export type {
+  ExportFormat,
+  ExportFormatDescriptor,
+  ExportFormatOption,
+} from './components/export-button/export-button.js';
 export { escapeCsvField, buildCsv, downloadBlob } from './components/export-button/csv.js';
 export type { CsvColumn } from './components/export-button/csv.js';
 export { LyraCopyButton } from './components/copy-button/copy-button.js';
@@ -126,6 +132,8 @@ export type {
 export { LyraTimeRange } from './components/time-range/time-range.js';
 export type { TimeRangePreset } from './components/time-range/time-range.js';
 export { LyraPlayback } from './components/playback/playback.js';
+export { LyraPagination } from './components/pagination/pagination.js';
+export type { LyraPaginationSize } from './components/pagination/pagination.js';
 export { LyraHeatmap } from './components/heatmap/heatmap.js';
 export type {
   MatrixCellPos,
@@ -147,6 +155,15 @@ export { binValues } from './components/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/chart/histogram-bin.js';
 export { LyraFileInput } from './components/file-input/file-input.js';
 export type { RejectedFile } from './components/file-input/file-input.js';
+export { LyraPhoneInput, loadLibphonenumberAdapter } from './components/phone-input/phone-input.js';
+export type {
+  PhoneNumberStatus,
+  PhoneCountry,
+  PhoneNumberParseResult,
+  PhoneNumberAdapter,
+  LibphonenumberModuleLike,
+  LyraPhoneInputEventDetail,
+} from './components/phone-input/phone-input.js';
 export { LyraWidget } from './components/widget/widget.js';
 export { LyraWordCloud } from './components/word-cloud/word-cloud.js';
 export type { WordCloudWord } from './components/word-cloud/word-cloud.js';
@@ -342,7 +359,11 @@ export type { DiffOp } from './components/diff-view/diff-line-diff.js';
 export { LyraPollStatus } from './components/poll-status/poll-status.js';
 export { LyraCodeBlockCore } from './components/code-block/code-block-core.js';
 export { LyraTextarea } from './components/textarea/textarea.js';
-export type { TextareaResize } from './components/textarea/textarea.js';
+export type {
+  TextareaResize,
+  TextareaWrap,
+  TextareaSelectionDirection,
+} from './components/textarea/textarea.js';
 
 export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
 export type { LyraChartEventMap } from './components/chart/chart.js';
@@ -377,7 +398,9 @@ export type { LyraMenuItemEventMap } from './components/menu/menu-item.js';
 export type { LyraMenuEventMap } from './components/menu/menu.js';
 export type { LyraModelSelectEventMap } from './components/model-select/model-select.js';
 export type { LyraPlaybackEventMap } from './components/playback/playback.js';
+export type { LyraPaginationEventMap } from './components/pagination/pagination.js';
 export type { LyraPollStatusEventMap } from './components/poll-status/poll-status.js';
+export type { LyraPhoneInputEventMap } from './components/phone-input/phone-input.js';
 export type { LyraSegmentedEventMap } from './components/segmented/segmented.js';
 export type { LyraSelectEventMap } from './components/select/select.js';
 export type { LyraSliderEventMap } from './components/slider/slider.js';

@@ -60,6 +60,21 @@ export const WithDisabledItem: Story = {
   `,
 };
 
+export const WithIcons: Story = {
+  name: 'With leading icons',
+  render: () => html`
+    <lyra-segmented
+      label="Layout"
+      .items=${[
+        { value: 'list', label: 'List', icon: html`<span aria-hidden="true">☰</span>` },
+        { value: 'board', label: 'Board', icon: html`<span aria-hidden="true">▦</span>` },
+        { value: 'calendar', label: 'Calendar', icon: html`<span aria-hidden="true">▣</span>` },
+      ]}
+      value="board"
+    ></lyra-segmented>
+  `,
+};
+
 export const AccessibleName: Story = {
   name: 'Accessible name (label prop)',
   parameters: {

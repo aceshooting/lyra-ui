@@ -75,6 +75,10 @@ export interface LyraTimeRangeEventMap {
  * `FormData` on submit; read `start`/`end` directly (e.g. from `lyra-change`)
  * instead of relying on native form submission.
  *
+ * Deliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle
+ * accessible-name overrides, not visible label text, the same carve-out `<lyra-slider>` states for
+ * its own single-handle `label`; a labeled-field consumer wraps this element in their own layout.
+ *
  * @customElement lyra-time-range
  * @event lyra-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
  * @event lyra-change - Fired on release / keyup-commit, or when a preset button is clicked. `detail: { start, end }`.

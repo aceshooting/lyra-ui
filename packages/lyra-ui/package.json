@@ -109,6 +109,8 @@
     "./dist/components/menu/menu.js",
     "./dist/components/model-select/model-select.js",
     "./dist/components/model-settings-panel/model-settings-panel.js",
+    "./dist/components/pagination/pagination.js",
+    "./dist/components/phone-input/phone-input.js",
     "./dist/components/playback/playback.js",
     "./dist/components/poll-status/poll-status.js",
     "./dist/components/responsive-panel/responsive-panel.js",
@@ -203,6 +205,8 @@
     "./src/components/menu/menu.ts",
     "./src/components/model-select/model-select.ts",
     "./src/components/model-settings-panel/model-settings-panel.ts",
+    "./src/components/pagination/pagination.ts",
+    "./src/components/phone-input/phone-input.ts",
     "./src/components/playback/playback.ts",
     "./src/components/poll-status/poll-status.ts",
     "./src/components/responsive-panel/responsive-panel.ts",
@@ -276,6 +280,7 @@
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",
     "dompurify": "^3.4.12",
+    "libphonenumber-js": ">=1.11.0 <2",
     "maplibre-gl": "^5.24.0",
     "marked": "^18.0.6",
     "shiki": "^4.3.1"
@@ -306,6 +311,9 @@
       "optional": true
     },
     "dompurify": {
+      "optional": true
+    },
+    "libphonenumber-js": {
       "optional": true
     },
     "maplibre-gl": {
