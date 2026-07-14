@@ -298,3 +298,21 @@ it('--lyra-empty-compact-padding overrides the default compact padding', async (
   expect(overriddenPadding).to.equal('8px 2px');
   expect(overriddenPadding).to.not.equal(defaultPadding);
 });
+
+it('--lyra-empty-compact-align: center overrides both align-items and text-align in compact mode', async () => {
+  const el = (await fixture(
+    html`<lyra-empty compact heading="Nothing here" style="--lyra-empty-compact-align: center;"></lyra-empty>`,
+  )) as LyraEmpty;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const style = getComputedStyle(base);
+  expect(style.alignItems).to.equal('center');
+  expect(style.textAlign).to.equal('center');
+});
+
+it('compact mode still defaults to flex-start/start when --lyra-empty-compact-align is unset', async () => {
+  const el = (await fixture(html`<lyra-empty compact heading="Nothing here"></lyra-empty>`)) as LyraEmpty;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const style = getComputedStyle(base);
+  expect(style.alignItems).to.equal('flex-start');
+  expect(style.textAlign).to.equal('start');
+});

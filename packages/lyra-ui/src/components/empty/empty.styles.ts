@@ -15,8 +15,11 @@ export const styles = css`
     inline-size: 100%;
   }
   :host([compact]) [part='base'] {
-    align-items: flex-start;
-    text-align: start;
+    /* One custom property feeds both declarations from different fallback literals (today's exact
+       flex-start/start pair). Works because 'center' -- the one realistic override -- is a valid
+       value for both align-items and text-align; a consumer sets this once and both pick it up. */
+    align-items: var(--lyra-empty-compact-align, flex-start);
+    text-align: var(--lyra-empty-compact-align, start);
     padding: var(--lyra-empty-compact-padding, var(--lyra-space-xs));
   }
   [part='icon'] {

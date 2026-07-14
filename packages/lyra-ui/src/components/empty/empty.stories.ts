@@ -38,3 +38,27 @@ export const Compact: Story = {
     </div>
   `,
 };
+
+export const CompactCentered: Story = {
+  name: 'Compact with centered content',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Compact mode stays dense while `--lyra-empty-compact-align: center` centers its heading, description, and actions.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="max-width: 16rem; border: 1px solid var(--lyra-color-border);">
+      <lyra-empty
+        compact
+        heading="No results"
+        description="Try a different search."
+        style="--lyra-empty-compact-align: center;"
+      >
+        <span slot="actions"><button>Reset</button></span>
+      </lyra-empty>
+    </div>
+  `,
+};
