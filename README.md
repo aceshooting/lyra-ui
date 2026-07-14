@@ -66,6 +66,21 @@ mirror, props, events, slots, parts) see
 | Map & file input | 2 | MapLibre GL map with legend/choropleth layers, drag-drop file dropzone |
 | Conversation & Agent UI | 53 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, avatar/card/stepper/segmented, and more — the library's largest family |
 
+## Theming, internationalization & RTL
+
+Every one of the 92 tags is built on the same three guarantees — not opt-in per component:
+
+- **Theming** through `--wa-*`/`--lyra-*` design tokens — retheme by overriding a custom property,
+  no per-component theming API to learn.
+- **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
+  per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
+  is translatable without a rebuild or a per-locale bundle.
+- **RTL** with zero per-component opt-in — set `dir="rtl"` (or an RTL `lang`) anywhere up the tree
+  and every component mirrors its layout and keyboard navigation to match.
+
+See [`packages/lyra-ui/README.md#theming-internationalization--rtl`](./packages/lyra-ui/README.md#theming-internationalization--rtl)
+for the full usage details.
+
 ## Documentation
 
 - **Humans:** the [live docs site](https://aceshooting.github.io/lyra-ui/) (Storybook — every

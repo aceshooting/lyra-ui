@@ -116,6 +116,77 @@ check that the published tarball still contains `custom-elements.json`/`llms.txt
   than the committed `.gitignore` (which would itself name them).
 - License: MIT. TypeScript strict.
 
+## Internationalization (i18n), RTL, and theming
+
+Every component ships with the same three guarantees baked in: any user-facing string can be
+translated, layout doesn't break under a right-to-left language, and the whole visual surface
+retheme through design tokens. These are cross-cutting — verified across every component, not
+opt-in per component — so treat a gap in any of them as a bug, not a missing feature.
+
+**i18n — `this.localize(key, fallback, values)`:**
+
+- Every user-facing string — visible text, `aria-label`/`aria-description`, `title`,
+  `placeholder`, `alt` — routes through `this.localize()` (`LyraElement`, backed by
+  `src/internal/localization.ts`). Never hard-code an English UI string directly in a template.
+  Exception: content that's inherently caller-supplied data (file names, arbitrary API/user
+  text, `Intl`-formatted numbers/dates) isn't an i18n concern — don't route data through
+  `localize()`, only the library's own copy.
+- Message keys live in `localization.ts`'s `LyraMessageKey` union + `DEFAULT_STRINGS`. **Reuse
+  an existing key before adding a new one** — grep `DEFAULT_STRINGS` first — but don't force a
+  reuse where the wording is genuinely different (a component-specific key with a component-name
+  prefix, e.g. `dockPanelResize`, `chartTrendIncreasing`, beats bending an unrelated generic key
+  like `noData` to a different literal string; see the next bullet for why the fallback text
+  must still match whatever `DEFAULT_STRINGS` says for that key).
+- **Never pass a literal, unconditional fallback string as the 2nd argument once the key already
+  has a `DEFAULT_STRINGS` entry.** `resolveLyraString()` resolves `this.strings` overrides, then
+  a *defined* `fallback` argument, and only checks `registerLyraLocale()`-registered translations
+  when both of those are `undefined` — so `this.localize('close', 'Close')` silently defeats
+  translation for that call site forever, even though it renders correctly in English. Call it
+  bare instead: `this.localize('close')`. The one legitimate reason to pass a fallback is when
+  it's *conditionally* derived from a public property a consumer might have explicitly
+  customized away from its built-in default, so an explicit override still wins verbatim while
+  the unmodified case still resolves through the registry:
+  `this.localize('previousMonth', this.previousLabel === 'Previous month' ? undefined : this.previousLabel)`.
+  Passing `this.someProp` unconditionally has the same bug as a literal — it always short-circuits
+  the registry unless the prop happens to be empty/`undefined`.
+- Interpolate via the 3rd `values` argument with `{placeholder}` syntax matching the
+  `DEFAULT_STRINGS` template, e.g. `this.localize('showMoreCount', undefined, { count })` for
+  `'Show {count} more'` — never string-concatenate translated text with data.
+- Test convention: at minimum, one test proves the built-in English fallback renders unchanged
+  with no locale registered; for any component whose behavior depends on a key showing up
+  correctly, add a `.strings` override test (e.g. `.strings=${{ someKey: 'Texte' }}`) that proves
+  the string actually reaches the DOM — a key existing in the union doesn't prove the call site
+  is wired up correctly.
+
+**RTL — logical properties, not a forced `dir`:**
+
+- Components never set their own `dir` attribute. Direction is inherited from the nearest
+  ancestor `dir`/`lang` (or computed style) via `resolveLyraDirection()` /
+  `this.effectiveDirection` (`'ltr' | 'rtl'`).
+- Prefer CSS logical properties over physical ones in every component stylesheet: `inset-inline-
+  start`/`inset-inline-end` (not `left`/`right`), `margin-inline-start`/`margin-inline-end` (not
+  `margin-left`/`margin-right`), `padding-inline-*` (not `padding-left`/`padding-right`),
+  `border-inline-start`/`border-inline-end`, `text-align: start`/`text-align: end` (not
+  `left`/`right`). Logical properties auto-mirror under `dir="rtl"` with zero JS; physical ones
+  silently don't. `:host(:dir(rtl))` is the escape hatch for the rare case that genuinely needs
+  an explicit override (e.g. flipping a directional chevron's rotation).
+- Keyboard navigation that treats `ArrowLeft`/`ArrowRight` as "previous"/"next" (day-grids,
+  roving-tabindex column nav, carousel-style controls) must consult `this.effectiveDirection`
+  and swap which arrow means which under RTL — a plain `ArrowLeft === previous` hardcode is an
+  RTL bug, not just an LTR-only shortcut. This was the single most common RTL miss found in this
+  library's own standardization pass (graph, heatmap, word-cloud roving-focus nav).
+- A directional glyph (a chevron/arrow meaning "expand toward", "previous", "next") must mirror
+  under RTL. Rotate the wrapping `part` element via `:host(:dir(rtl)) [part='x'] { transform: ... }`
+  rather than baking a fixed rotation into the icon itself.
+
+**Theming — design tokens only:** see "Design tokens only" under Coding conventions above — every
+color/space/font/radius value must reference a `--lyra-*` custom property from
+`internal/tokens.styles.ts`, which bridges to Web Awesome's `--wa-*` tokens with a hardcoded
+fallback. This is what makes both i18n and RTL "just work" visually too: token-driven spacing and
+sizing don't hardcode a text direction or a font's natural width, so translated strings (which run
+longer or shorter than English) and mirrored RTL layouts both reflow correctly without a component-
+specific override.
+
 ## Testing conventions
 
 - **Stack:** `@web/test-runner` (`wtr`) + `@web/test-runner-playwright` (Chromium launcher) +

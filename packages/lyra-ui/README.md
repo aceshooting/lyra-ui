@@ -122,10 +122,39 @@ components, `<lyra-map>`, and the entire **Conversation & Agent UI** family (cha
 streaming text, tool-call chips/dialogs, citations, model/settings pickers, and more) — Web
 Awesome has no chat/agent UI component family at all.
 
-## Theming
+## Theming, internationalization & RTL
 
-Components read Web Awesome's `--wa-*` design tokens (with `--lyra-*` fallbacks). Inside a
-WA app they inherit your theme automatically; standalone, they use sensible defaults.
+Every component is built on the same three guarantees, verified across the whole library rather
+than opt-in per component:
+
+**Theming.** Components read Web Awesome's `--wa-*` design tokens (with `--lyra-*` fallbacks).
+Inside a WA app they inherit your theme automatically; standalone, they use sensible defaults —
+override any `--lyra-*`/`--wa-*` custom property to retheme.
+
+**Internationalization.** Every built-in string (button labels, status announcements,
+`aria-label`s) resolves through a small runtime, in two ways you can combine:
+
+```ts
+import { registerLyraLocale, setLyraLocale } from '@aceshooting/lyra-ui';
+
+// App-wide: register translations once, anywhere in the app.
+registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer', /* ... */ });
+setLyraLocale('fr'); // or just set <html lang="fr">/an ancestor `lang` — components pick it up
+```
+
+```html
+<!-- Per-instance: override specific keys on one element without a global registry. -->
+<lyra-toast .strings=${{ close: 'Fermer' }}></lyra-toast>
+```
+
+No rebuild, no per-locale bundle, no per-component API to learn — register the strings once and
+every component that uses that key picks it up reactively, including ones added after your app's
+first render.
+
+**RTL.** Set `dir="rtl"` on `<html>` or any ancestor (or just a `lang` whose default direction is
+RTL, e.g. `ar`/`he`/`fa`) — every component mirrors its layout automatically via CSS logical
+properties and swaps directional keyboard navigation (e.g. the arrow keys in a date grid or a
+roving-tabindex list) to match. No per-component RTL flag or opt-in needed.
 
 ## Components
 
