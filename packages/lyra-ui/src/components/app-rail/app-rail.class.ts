@@ -175,8 +175,16 @@ export class LyraAppRail extends LyraElement {
   @property({ type: Boolean, reflect: true }) open = false;
 
   /** Accessible name for the rail's navigation landmark, and for its dialog
-   *  role while the mobile overlay is open. */
+   *  role while the mobile overlay is open. A host-level `aria-label`
+   *  attribute takes precedence over this when both are set -- see
+   *  `accessibleLabel`. */
   @property() label = 'Navigation';
+
+  /** Accessible name overriding `label` (and its localized default) for the nav landmark / dialog
+   *  role, mirroring `<lyra-date-input>`'s `accessibleLabel` pattern. Reads the host's own
+   *  `aria-label` attribute -- unset (the default, `null`) reproduces today's exact
+   *  `label`/localized-default output. */
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   /** Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the
    *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
@@ -540,7 +548,9 @@ export class LyraAppRail extends LyraElement {
       <div
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
-        aria-label=${this.localize('navigation', this.label === 'Navigation' ? undefined : this.label)}
+        aria-label=${
+          this.accessibleLabel ?? this.localize('navigation', this.label === 'Navigation' ? undefined : this.label)
+        }
         role=${this.overlayActive ? 'dialog' : 'navigation'}
         aria-modal=${this.overlayActive ? 'true' : nothing}
         tabindex=${this.overlayActive ? '-1' : nothing}
@@ -580,4 +590,3 @@ declare global {
     'lyra-app-rail': LyraAppRail;
   }
 }
-

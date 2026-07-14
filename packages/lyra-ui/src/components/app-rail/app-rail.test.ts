@@ -726,3 +726,36 @@ describe('hideToggle', () => {
     expect(getComputedStyle(toggle).display).to.not.equal('none');
   });
 });
+
+describe('aria-label forwarding', () => {
+  it('unset host aria-label reproduces today\'s exact localized-default/label-prop output', async () => {
+    const withDefault = (await fixture(html`<lyra-app-rail><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+    expect(withDefault.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
+      'Navigation',
+    );
+
+    const withLabel = (await fixture(html`<lyra-app-rail label="Main"><a href="/a">A</a></lyra-app-rail>`)) as LyraAppRail;
+    expect(withLabel.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
+      'Main',
+    );
+  });
+
+  it('a host-level aria-label attribute overrides the label prop / localized default on the nav landmark', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail label="Main" aria-label="Custom nav name"><a href="/a">A</a></lyra-app-rail>`,
+    )) as LyraAppRail;
+    expect(el.shadowRoot!.querySelector('[part="base"], [part="panel"]')!.getAttribute('aria-label')).to.equal(
+      'Custom nav name',
+    );
+  });
+
+  it('the host-level aria-label override also applies to the dialog role while the mobile overlay is open', async () => {
+    const el = (await fixture(
+      html`<lyra-app-rail mode="mobile" open aria-label="Custom nav name"><a href="/a">A</a></lyra-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(panel.getAttribute('role')).to.equal('dialog');
+    expect(panel.getAttribute('aria-label')).to.equal('Custom nav name');
+  });
+});
