@@ -316,7 +316,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   private renderTextPreview(): TemplateResult {
     if (this.src === '')
-      return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: 'document' })}</p>`;
+      return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     if (safeFetchUrl(this.src) === null) return this.renderError(this.localize('documentPreviewUrlNotAllowed'));
     switch (this.textFetch.kind) {
       case 'loaded':
@@ -332,14 +332,14 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   private renderImagePreview(): TemplateResult {
     if (this.src === '')
-      return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: 'image' })}</p>`;
+      return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     const src = safeMediaSrc(this.src);
     if (src === null) return this.renderDownloadFallback();
     return html`<img src=${src} alt=${this.filename || this.localize('documentPreviewAlt')} />`;
   }
 
   private renderDownloadFallback(): TemplateResult {
-    const label = this.filename || 'this file';
+    const label = this.filename || this.localize('documentPreviewGenericFile');
     const href = safeLinkHref(this.src);
     return html`
       <div class="fallback">

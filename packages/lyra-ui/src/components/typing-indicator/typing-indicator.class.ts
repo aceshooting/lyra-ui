@@ -34,9 +34,10 @@ export type TypingIndicatorSize = 'sm' | 'md';
  * accessible name derived from `label` is sufficient, set both as an
  * `aria-label` on the host *and* as a visually-hidden text node in the
  * shadow tree, so the name survives even if only one of the two is picked up
- * by a given assistive-tech/browser pairing. An empty or whitespace-only
- * `label` falls back to the default "Thinking…" copy in both places, rather
- * than leaving the component with no accessible name at all. The animated dots/pulse/cursor
+ * by a given assistive-tech/browser pairing. An untouched-default, empty, or
+ * whitespace-only `label` falls back to the localized "Thinking…" copy in
+ * both places, rather than leaving the component with no accessible name at
+ * all. The animated dots/pulse/cursor
  * shape is `aria-hidden="true"` — it's decorative; `label` is the entire
  * accessible content, so nothing narrates individual animation frames.
  *
@@ -54,21 +55,24 @@ export class LyraTypingIndicator extends LyraElement {
 
   /** Accessible name, exposed via `role="status"`. Not re-announced on every
    *  animation frame — only mount (and any later change to this property)
-   *  produces a new announcement. An empty or whitespace-only value falls
-   *  back to the default "Thinking…" copy (see `accessibleLabel`) so the
-   *  component never loses its accessible name. */
+   *  produces a new announcement. An untouched-default, empty, or
+   *  whitespace-only value falls back to the localized "Thinking…" copy (see
+   *  `accessibleLabel`) so the component never loses its accessible name. */
   @property() label = 'Thinking…';
 
   /** Compact sizing for dense layouts (e.g. inline with a message bubble). */
   @property({ reflect: true }) size: TypingIndicatorSize = 'md';
 
-  /** The accessible name actually used, falling back to the default
-   *  "Thinking…" copy when `label` is set to an empty or whitespace-only
-   *  string -- otherwise both the `aria-label` and the sr-only text node
-   *  would go blank, leaving this purely-decorative component with no
-   *  accessible name at all. */
+  /** The accessible name actually used, falling back to the localized
+   *  `'thinking'` message (`"Thinking…"` in English) when `label` is left at
+   *  its untouched default or set to an empty/whitespace-only string --
+   *  otherwise both the `aria-label` and the sr-only text node would go
+   *  blank, leaving this purely-decorative component with no accessible name
+   *  at all. A caller-customized `label` is used verbatim (not a translation
+   *  concern), same convention as `<lyra-date-picker>`'s `previousLabel`. */
   private get accessibleLabel(): string {
-    return this.label.trim() || 'Thinking…';
+    const trimmed = this.label.trim();
+    return this.localize('thinking', trimmed === '' || trimmed === 'Thinking…' ? undefined : trimmed);
   }
 
   protected willUpdate(changed: PropertyValues): void {

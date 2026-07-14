@@ -157,7 +157,7 @@ export class LyraModelSettingsPanel extends LyraElement {
   }
 
   render(): TemplateResult {
-    const temperatureLabel = this.localize('temperature', 'Temperature');
+    const temperatureLabel = this.localize('temperature');
     return html`
       <div part="base">
         <div part="model-row">
@@ -167,7 +167,7 @@ export class LyraModelSettingsPanel extends LyraElement {
             .value=${this.modelValue}
             .allowCustom=${this.allowCustom}
             .disabled=${this.disabled}
-            placeholder=${this.localize('selectModel', 'Select a model…')}
+            placeholder=${this.localize('selectModel')}
             @lyra-change=${this.onModelChange}
           ></lyra-model-select>
         </div>

@@ -129,14 +129,18 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  *  `formatDuration` -- duplicated rather than imported (these are two
  *  independent, separately-consumable components; see this file's header
  *  comment on the icon glyphs for the same rationale) but kept in lockstep
- *  so the same call reports the same duration text in both places. */
-function formatDuration(ms: number): string {
+ *  so the same call reports the same duration text in both places. `msUnit`/
+ *  `sUnit` resolve the two unit labels -- both default to the plain English
+ *  abbreviation, so every existing call site/test that omits them is
+ *  unaffected; the render()/accessibleLabel call sites below pass
+ *  `this.localize('durationUnitMs')`/`this.localize('durationUnitS')` instead. */
+function formatDuration(ms: number, msUnit = 'ms', sUnit = 's'): string {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return `${Math.round(Math.max(0, ms))}ms`;
+    return `${Math.round(Math.max(0, ms))}${msUnit}`;
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}s`;
+  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}${sUnit}`;
 }
 
 /**
@@ -341,7 +345,8 @@ export class LyraToolCallChip extends LyraElement {
     const parts = [this.name || this.localize('toolCall')];
     if (this.summary) parts.push(this.summary);
     parts.push(this.localize(STATUS_LABEL_KEY[this.effectiveStatus]));
-    if (this.durationMs != null && Number.isFinite(this.durationMs)) parts.push(formatDuration(this.durationMs));
+    if (this.durationMs != null && Number.isFinite(this.durationMs))
+      parts.push(formatDuration(this.durationMs, this.localize('durationUnitMs'), this.localize('durationUnitS')));
     return parts.join(' — ');
   }
 
@@ -374,7 +379,11 @@ export class LyraToolCallChip extends LyraElement {
         </span>
         <span part="meta">
           <span part="status-text">${this.localize(STATUS_LABEL_KEY[status])}</span>
-          <span part="duration" ?hidden=${!hasDuration}>${hasDuration ? formatDuration(this.durationMs!) : nothing}</span>
+          <span part="duration" ?hidden=${!hasDuration}
+            >${hasDuration
+              ? formatDuration(this.durationMs!, this.localize('durationUnitMs'), this.localize('durationUnitS'))
+              : nothing}</span
+          >
         </span>
       </button>
       <div part="tooltip" id=${this.tooltipId} role="tooltip" ?hidden=${!this.tooltipOpen}>

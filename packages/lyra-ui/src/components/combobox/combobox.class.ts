@@ -778,7 +778,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
                   part="tag__remove-button"
                   type="button"
                   ?disabled=${this.effectiveDisabled}
-                  aria-label="${this.localize('remove')} ${this.labelFor(v)}"
+                  aria-label=${this.localize('removeWithContext', undefined, { label: this.labelFor(v) })}
                   @click=${(e: Event) => {
                     e.stopPropagation();
                     this.removeValue(v);

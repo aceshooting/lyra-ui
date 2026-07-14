@@ -561,7 +561,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.cachedValueRange = this.computeValueRange();
     }
     const bounds = this.cachedValueRange;
-    const range = bounds ? `${bounds[0]}–${bounds[1]}` : 'no data';
+    const range = bounds ? `${bounds[0]}–${bounds[1]}` : this.localize('heatmapNoDataValue');
     // Only default role/aria-label when the author hasn't already supplied
     // one — the canvas is a genuinely focusable/interactive control
     // (tabindex="0", click/keydown handlers) plus a live role="status"
@@ -585,7 +585,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const cols = this.colLabels.length;
         this.setAttribute(
           'aria-label',
-          `Heatmap of ${rows} × ${cols} cells, ${this.valueLabel} range ${range}`,
+          this.localize('heatmapMatrixLabel', undefined, {
+            rows,
+            cols,
+            label: this.valueLabel,
+            range,
+          }),
         );
       }
     }
@@ -1198,10 +1203,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private matrixCellText(pos: MatrixCellPos): string {
-    const rowLabel = this.rowLabels[pos.row] ?? `row ${pos.row + 1}`;
-    const colLabel = this.colLabels[pos.col] ?? `col ${pos.col + 1}`;
+    const rowLabel =
+      this.rowLabels[pos.row] ?? this.localize('heatmapDefaultRowLabel', undefined, { n: pos.row + 1 });
+    const colLabel =
+      this.colLabels[pos.col] ?? this.localize('heatmapDefaultColLabel', undefined, { n: pos.col + 1 });
     const v = this.values[pos.row]?.[pos.col];
-    const valueText = v == null || v < 0 || !Number.isFinite(v) ? 'no data' : String(v);
+    const valueText = v == null || v < 0 || !Number.isFinite(v) ? this.localize('heatmapNoDataValue') : String(v);
     return this.localize('heatmapMatrixCellLabel', undefined, {
       row: rowLabel,
       col: colLabel,
@@ -1212,8 +1219,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private calendarCellText(pos: CalendarCellPos): string {
     const { date, value } = this.calendarCellAt(pos);
     const label = parseIsoDate(date).toLocaleString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-    const valueText = value < 0 || !Number.isFinite(value) ? 'no data' : String(value);
-    return `${label}: ${valueText}`;
+    const valueText = value < 0 || !Number.isFinite(value) ? this.localize('heatmapNoDataValue') : String(value);
+    return this.localize('heatmapCalendarCellLabel', undefined, { date: label, value: valueText });
   }
 
   /** The raw numeric value at a cell position, in either mode — shared by `resolveCellText()`

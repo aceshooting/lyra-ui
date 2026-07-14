@@ -612,10 +612,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (this.accessibleDescription) return this.accessibleDescription;
     const summaries = this.datasets.map((series) => {
       const values = this.seriesValues(series);
-      if (!values.length) return `${series.label}: no data`;
+      if (!values.length) return this.localize('chartSeriesNoData', undefined, { label: series.label });
       const first = values[0]!;
       const last = values[values.length - 1]!;
-      const trend = last > first ? 'increasing' : last < first ? 'decreasing' : 'flat';
+      const trend =
+        last > first
+          ? this.localize('chartTrendIncreasing')
+          : last < first
+            ? this.localize('chartTrendDecreasing')
+            : this.localize('chartTrendFlat');
       let min = values[0]!;
       let max = values[0]!;
       for (const value of values) {
@@ -635,7 +640,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           type: this.effectiveType(),
           summaries: summaries.join('. '),
         })
-      : `${this.effectiveType()} chart with no data.`;
+      : this.localize('chartSummaryEmpty', undefined, { type: this.effectiveType() });
   }
 
   private renderDataTable(): TemplateResult {

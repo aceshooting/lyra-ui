@@ -357,7 +357,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     if (!mark) return '';
     const series = this.datasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
     const custom = this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
-    return `${custom ?? `${series}, ${mark.label}: ${mark.value}`} (${index + 1} of ${marks.length})`;
+    const position = this.localize('liteChartMarkPosition', undefined, { index: index + 1, total: marks.length });
+    return `${custom ?? `${series}, ${mark.label}: ${mark.value}`} ${position}`;
   }
 
   private onMarkFocus(index: number): void {
@@ -469,9 +470,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     }
     const marks = this.interactiveMarks();
     if (!marks.length) return;
+    // Marks are laid out left-to-right along the x-axis regardless of
+    // direction (the plot itself doesn't mirror under RTL), so the physical
+    // ArrowLeft/ArrowRight keys must swap which one advances vs. retreats
+    // through `marks` to keep "forward" pointing at the next mark visually.
+    const rtl = this.effectiveDirection === 'rtl';
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     let next = markIndex;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = Math.min(marks.length - 1, markIndex + 1);
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = Math.max(0, markIndex - 1);
+    if (e.key === forwardKey || e.key === 'ArrowDown') next = Math.min(marks.length - 1, markIndex + 1);
+    else if (e.key === backwardKey || e.key === 'ArrowUp') next = Math.max(0, markIndex - 1);
     else if (e.key === 'Home') next = 0;
     else if (e.key === 'End') next = marks.length - 1;
     else return;

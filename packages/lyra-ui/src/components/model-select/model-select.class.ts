@@ -229,7 +229,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   private updateValidity(): void {
     if (this.required && !this._value) {
-      this.validityController.setValidity({ valueMissing: true }, 'Please choose a model.');
+      this.validityController.setValidity({ valueMissing: true }, this.localize('modelSelectRequired'));
     } else {
       this.validityController.setValidity({});
     }

@@ -10,7 +10,7 @@ export interface ConfirmOptions {
   description?: string;
   /** Confirm button label. Defaults to the localized `'confirm'` message (`'Confirm'` in English). */
   confirmLabel?: string;
-  /** Cancel button label. Defaults to `'Cancel'`. */
+  /** Cancel button label. Defaults to the localized `'cancel'` message (`'Cancel'` in English). */
   cancelLabel?: string;
   /** `'danger'` fills the confirm button with `--lyra-color-danger` instead of `--lyra-color-brand` -- for destructive actions. */
   tone?: 'neutral' | 'danger';
@@ -68,7 +68,7 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * if (ok) deleteConversation();
  */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
-  const { title, description, confirmLabel, cancelLabel = 'Cancel', tone = 'neutral' } = options;
+  const { title, description, confirmLabel, cancelLabel, tone = 'neutral' } = options;
 
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement(tag('dialog')) as LyraDialog;
@@ -92,7 +92,11 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       dialog.remove();
     });
 
-    const cancelButton = createButton(cancelLabel, CANCEL_STYLE, () => dialog.close('cancel'));
+    const cancelButton = createButton(
+      resolveLyraString(dialog, 'cancel', undefined, cancelLabel),
+      CANCEL_STYLE,
+      () => dialog.close('cancel'),
+    );
     cancelButton.slot = 'footer';
     const confirmButton = createButton(
       resolveLyraString(dialog, 'confirm', undefined, confirmLabel),

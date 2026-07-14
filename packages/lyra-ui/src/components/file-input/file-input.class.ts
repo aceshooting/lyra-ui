@@ -95,7 +95,15 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         ),
       );
     }
-    if (rejected.length) messages.push(this.rejectedMessage.replace('{count}', String(rejected.length)));
+    if (rejected.length) {
+      messages.push(
+        this.localize(
+          'fileInputRejected',
+          this.rejectedMessage === '{count} file(s) rejected.' ? undefined : this.rejectedMessage,
+          { count: rejected.length },
+        ),
+      );
+    }
     this.resultStatus = messages.join(' ');
     this.emit('lyra-files', { files, rejected });
   }

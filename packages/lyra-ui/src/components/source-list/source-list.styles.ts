@@ -41,6 +41,16 @@ export const styles = css`
   :host([expanded]) [part='toggle'] {
     transform: rotate(90deg);
   }
+  /* RTL: the resting (collapsed) chevron mirrors to point left, the
+     conventional mirrored disclosure-triangle direction for RTL. Scoped to
+     the collapsed state specifically (rather than a plain :dir(rtl) rule) so
+     it never has to compete with the rule above for the expanded state, which
+     needs no mirroring: rotating this left-right-asymmetric glyph 90deg
+     already produces a left-right-symmetric down chevron. Mirrors
+     lyra-code-block's identical toggle chevron. */
+  :host(:not([expanded]):dir(rtl)) [part='toggle'] {
+    transform: scaleX(-1);
+  }
   [part='list'] {
     display: flex;
     flex-direction: column;

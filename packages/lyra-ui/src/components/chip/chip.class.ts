@@ -143,8 +143,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   private get accessibleRemoveLabel(): string {
     const text = this.labelText;
-    const removeLabel = this.localize('remove');
-    return text ? `${removeLabel} ${text}` : removeLabel;
+    return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
   }
 
   private onRemoveClick = (): void => {

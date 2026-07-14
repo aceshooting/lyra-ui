@@ -251,26 +251,27 @@ export class LyraBoxPlot extends LyraElement {
   private boxPlotDescription(): string {
     if (this.accessibleDescription) return this.accessibleDescription;
     const summaries = this.boxes.map((series) => {
-      if (!series.data.length) return `${series.label}: no data`;
+      if (!series.data.length) return this.localize('chartSeriesNoData', undefined, { label: series.label });
       const medians = series.data.map((point) => point.median);
       const first = medians[0]!;
       const last = medians[medians.length - 1]!;
-      const trend = last > first ? 'increasing' : last < first ? 'decreasing' : 'flat';
-      return this.localize(
-        'boxPlotSeriesSummary',
-        '{label}: {count} distributions, median range {min} to {max}, {trend} median trend',
-        {
-          label: series.label,
-          count: series.data.length,
-          min: Math.min(...medians),
-          max: Math.max(...medians),
-          trend,
-        },
-      );
+      const trend =
+        last > first
+          ? this.localize('chartTrendIncreasing')
+          : last < first
+            ? this.localize('chartTrendDecreasing')
+            : this.localize('chartTrendFlat');
+      return this.localize('boxPlotSeriesSummary', undefined, {
+        label: series.label,
+        count: series.data.length,
+        min: Math.min(...medians),
+        max: Math.max(...medians),
+        trend,
+      });
     });
     return summaries.length
       ? this.localize('boxPlotSummaryWithData', undefined, { summaries: summaries.join('. ') })
-      : 'Box plot with no data.';
+      : this.localize('boxPlotSummaryEmpty');
   }
 
   private renderDataTable(): TemplateResult {
@@ -280,12 +281,12 @@ export class LyraBoxPlot extends LyraElement {
         <thead>
           <tr>
             <th scope="col">${this.localize('chartCategory')}</th>
-            <th scope="col">Series</th>
-            <th scope="col">Min</th>
-            <th scope="col">Q1</th>
-            <th scope="col">Median</th>
-            <th scope="col">Q3</th>
-            <th scope="col">Max</th>
+            <th scope="col">${this.localize('chartSeriesLabel')}</th>
+            <th scope="col">${this.localize('boxPlotMin')}</th>
+            <th scope="col">${this.localize('boxPlotQ1')}</th>
+            <th scope="col">${this.localize('boxPlotMedian')}</th>
+            <th scope="col">${this.localize('boxPlotQ3')}</th>
+            <th scope="col">${this.localize('boxPlotMax')}</th>
           </tr>
         </thead>
         <tbody>

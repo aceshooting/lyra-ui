@@ -264,7 +264,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       .replace(/\s+/g, ' ');
     if (!text) return this.localize('close');
     const snippet = text.length > 40 ? `${text.slice(0, 40)}…` : text;
-    return `Close: ${snippet}`;
+    return this.localize('closeWithContext', undefined, { snippet });
   }
 
   /** Hide with animation, then remove from the DOM. */

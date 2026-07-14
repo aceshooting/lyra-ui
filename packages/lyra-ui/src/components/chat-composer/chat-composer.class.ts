@@ -341,7 +341,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
           </span>
           <textarea
             part="textarea"
-            aria-label=${this.placeholder || this.localize('composerLabel', 'Message')}
+            aria-label=${this.placeholder || this.localize('composerLabel')}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             .value=${this.value}

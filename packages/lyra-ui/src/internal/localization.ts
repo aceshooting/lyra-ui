@@ -28,6 +28,7 @@ export type LyraMessageKey =
   | 'showLess'
   | 'retry'
   | 'remove'
+  | 'removeWithContext'
   | 'loading'
   | 'loadingDocument'
   | 'noMatches'
@@ -72,6 +73,13 @@ export type LyraMessageKey =
   | 'jsonArray'
   | 'jsonObject'
   | 'jsonValue'
+  | 'jsonCopyLabel'
+  | 'jsonExpandLabel'
+  | 'jsonCollapseLabel'
+  | 'jsonItemCount'
+  | 'jsonItemCountPlural'
+  | 'jsonKeyCount'
+  | 'jsonKeyCountPlural'
   | 'untitledSource'
   | 'sourcePageSuffix'
   | 'toolCall'
@@ -155,10 +163,17 @@ export type LyraMessageKey =
   | 'nextMonth'
   | 'chooseDate'
   | 'date'
+  | 'dateInputMinMessage'
+  | 'dateInputMaxMessage'
+  | 'dateInputPastDisabled'
+  | 'dateInputFutureDisabled'
+  | 'dateInputInvalid'
   | 'documentPreviewEmpty'
   | 'convertingDocument'
   | 'documentPreviewNotAvailable'
   | 'documentPreviewGenericFile'
+  | 'documentPreviewTypeDocument'
+  | 'documentPreviewTypeImage'
   | 'download'
   | 'exportFormatMenuLabel'
   | 'fileInputDefaultLabel'
@@ -174,27 +189,9 @@ export type LyraMessageKey =
   | 'heatmapCalendarLabel'
   | 'heatmapMatrixLabel'
   | 'heatmapCalendarCellLabel'
-  | 'kbdEnter'
-  | 'kbdEscape'
-  | 'kbdTab'
-  | 'kbdSpace'
-  | 'kbdBackspace'
-  | 'kbdDelete'
-  | 'kbdHome'
-  | 'kbdEnd'
-  | 'kbdPageUp'
-  | 'kbdPageDown'
-  | 'kbdArrowUp'
-  | 'kbdArrowDown'
-  | 'kbdArrowLeft'
-  | 'kbdArrowRight'
-  | 'kbdPlus'
-  | 'kbdMinus'
-  | 'kbdCommand'
-  | 'kbdControl'
-  | 'kbdOption'
-  | 'kbdAlt'
-  | 'kbdShift'
+  | 'heatmapNoDataValue'
+  | 'heatmapDefaultRowLabel'
+  | 'heatmapDefaultColLabel'
   | 'mediaCardUntitledFile'
   | 'mediaCardOpenName'
   | 'mediaCardOpenAttachment'
@@ -205,6 +202,7 @@ export type LyraMessageKey =
   | 'model'
   | 'selectModel'
   | 'modelSelectNoModels'
+  | 'modelSelectRequired'
   | 'temperature'
   | 'play'
   | 'playbackPosition'
@@ -318,6 +316,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   showLess: 'Show less',
   retry: 'Retry',
   remove: 'Remove',
+  removeWithContext: 'Remove {label}',
   loading: 'Loading…',
   loadingDocument: 'Loading document…',
   noMatches: 'No matches',
@@ -362,6 +361,13 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   jsonArray: 'array',
   jsonObject: 'object',
   jsonValue: 'value',
+  jsonCopyLabel: 'Copy {label}',
+  jsonExpandLabel: 'Expand {label}',
+  jsonCollapseLabel: 'Collapse {label}',
+  jsonItemCount: '{count} item',
+  jsonItemCountPlural: '{count} items',
+  jsonKeyCount: '{count} key',
+  jsonKeyCountPlural: '{count} keys',
   untitledSource: 'Untitled source',
   sourcePageSuffix: '{base} — p. {page}',
   toolCall: 'Tool call',
@@ -445,10 +451,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   nextMonth: 'Next month',
   chooseDate: 'Choose date',
   date: 'Date',
+  dateInputMinMessage: 'Date must be on or after {min}.',
+  dateInputMaxMessage: 'Date must be on or before {max}.',
+  dateInputPastDisabled: 'Date cannot be in the past.',
+  dateInputFutureDisabled: 'Date cannot be in the future.',
+  dateInputInvalid: 'Enter a valid date.',
   documentPreviewEmpty: 'No {type} to display.',
   convertingDocument: 'Converting document…',
   documentPreviewNotAvailable: 'Preview not available for {label}.',
   documentPreviewGenericFile: 'this file',
+  documentPreviewTypeDocument: 'document',
+  documentPreviewTypeImage: 'image',
   download: 'Download',
   exportFormatMenuLabel: '{label} format',
   fileInputDefaultLabel: 'Drop files here or click to browse',
@@ -464,27 +477,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
   heatmapMatrixLabel: 'Heatmap of {rows} × {cols} cells, {label} range {range}',
   heatmapCalendarCellLabel: '{date}: {value}',
-  kbdEnter: 'Enter',
-  kbdEscape: 'Escape',
-  kbdTab: 'Tab',
-  kbdSpace: 'Space',
-  kbdBackspace: 'Backspace',
-  kbdDelete: 'Delete',
-  kbdHome: 'Home',
-  kbdEnd: 'End',
-  kbdPageUp: 'Page Up',
-  kbdPageDown: 'Page Down',
-  kbdArrowUp: 'Arrow Up',
-  kbdArrowDown: 'Arrow Down',
-  kbdArrowLeft: 'Arrow Left',
-  kbdArrowRight: 'Arrow Right',
-  kbdPlus: 'Plus',
-  kbdMinus: 'Minus',
-  kbdCommand: 'Command',
-  kbdControl: 'Control',
-  kbdOption: 'Option',
-  kbdAlt: 'Alt',
-  kbdShift: 'Shift',
+  heatmapNoDataValue: 'no data',
+  heatmapDefaultRowLabel: 'row {n}',
+  heatmapDefaultColLabel: 'col {n}',
   mediaCardUntitledFile: 'Untitled file',
   mediaCardOpenName: 'Open {name}',
   mediaCardOpenAttachment: 'Open {kind} attachment',
@@ -495,6 +490,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   model: 'Model',
   selectModel: 'Select a model…',
   modelSelectNoModels: 'No models',
+  modelSelectRequired: 'Please choose a model.',
   temperature: 'Temperature',
   play: 'Play',
   playbackPosition: 'Playback position',

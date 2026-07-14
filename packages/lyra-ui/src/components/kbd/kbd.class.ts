@@ -242,7 +242,14 @@ export class LyraKbd extends LyraElement {
       `;
     }
 
-    const tokens = parseShortcut(this.keys, IS_MAC, (key, fallback) => this.localize(key, fallback));
+    // Deliberately drop the second (fallback) argument here: shortcutTokenLabel's
+    // `resolve()` always sets `fallback` to the literal built-in English text for
+    // the key (see the module doc), which already matches DEFAULT_STRINGS for
+    // every key in this map -- forwarding it into `this.localize()`'s own
+    // fallback slot would short-circuit resolveLyraString() before it ever
+    // consults a registerLyraLocale()-registered translation. Passing only `key`
+    // is intentional (KbdLocalize callers may ignore trailing params).
+    const tokens = parseShortcut(this.keys, IS_MAC, (key) => this.localize(key));
     // role="img" treats the chip as one opaque unit (matching
     // lyra-context-meter's/lyra-chart's canvas usage of the same pattern):
     // the individual glyphs and "+" separators aren't real words, so

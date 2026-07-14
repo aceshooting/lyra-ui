@@ -25905,7 +25905,7 @@
                 "text": "string"
               },
               "default": "'Next month'",
-              "description": "Accessible label for the next-month button. Override for a non-English `locale`.",
+              "description": "Accessible label for the next-month button. Left at the built-in default it\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring this to be set; an explicit override wins verbatim.",
               "attribute": "next-label"
             },
             {
@@ -26682,7 +26682,7 @@
                 "text": "string"
               },
               "default": "'Next month'",
-              "description": "Accessible label for the next-month button. Override for a non-English `locale`.",
+              "description": "Accessible label for the next-month button. Left at the built-in default it\nroutes through `this.localize()` so a locale/`.strings` override applies without\nrequiring this to be set; an explicit override wins verbatim.",
               "fieldName": "nextLabel"
             },
             {
@@ -59693,7 +59693,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-typing-indicator>` — a purely presentational \"assistant is\nresponding\" presence cue. No events, no interactivity: a consumer mounts\nit while a response is being generated and removes it (or hides it) once\nreal content has arrived.\n\nThree visual variants share one component rather than three separate tags\nbecause callers pick between them along a single axis — how the\nsurrounding surface wants the cue to read — and nothing else about the\ncomponent differs:\n- `dots` (default) — three dots with a staggered bounce, the classic\n  \"typing…\" affordance for a standalone status line.\n- `pulse` — a single breathing dot, a quieter cue for a tighter space\n  (e.g. next to an avatar).\n- `cursor` — a blinking vertical bar, meant to sit inline at the tail end\n  of streamed text that is still being appended to.\n\nAccessibility: this indicator typically mounts and unmounts around a real\ngeneration lifecycle (appears when a response starts, disappears once one\narrives) rather than emitting a stream of updates of its own, so it does\n*not* route through `<lyra-live-region>`/`Announcer`\n(`../../internal/announcer.js`) — that machinery exists to coalesce many\nrapidly-changing announcements into one, and there is only ever a single\nannouncement here: the mount itself. A plain `role=\"status\"` plus an\naccessible name derived from `label` is sufficient, set both as an\n`aria-label` on the host *and* as a visually-hidden text node in the\nshadow tree, so the name survives even if only one of the two is picked up\nby a given assistive-tech/browser pairing. An empty or whitespace-only\n`label` falls back to the default \"Thinking…\" copy in both places, rather\nthan leaving the component with no accessible name at all. The animated dots/pulse/cursor\nshape is `aria-hidden=\"true\"` — it's decorative; `label` is the entire\naccessible content, so nothing narrates individual animation frames.",
+          "description": "`<lyra-typing-indicator>` — a purely presentational \"assistant is\nresponding\" presence cue. No events, no interactivity: a consumer mounts\nit while a response is being generated and removes it (or hides it) once\nreal content has arrived.\n\nThree visual variants share one component rather than three separate tags\nbecause callers pick between them along a single axis — how the\nsurrounding surface wants the cue to read — and nothing else about the\ncomponent differs:\n- `dots` (default) — three dots with a staggered bounce, the classic\n  \"typing…\" affordance for a standalone status line.\n- `pulse` — a single breathing dot, a quieter cue for a tighter space\n  (e.g. next to an avatar).\n- `cursor` — a blinking vertical bar, meant to sit inline at the tail end\n  of streamed text that is still being appended to.\n\nAccessibility: this indicator typically mounts and unmounts around a real\ngeneration lifecycle (appears when a response starts, disappears once one\narrives) rather than emitting a stream of updates of its own, so it does\n*not* route through `<lyra-live-region>`/`Announcer`\n(`../../internal/announcer.js`) — that machinery exists to coalesce many\nrapidly-changing announcements into one, and there is only ever a single\nannouncement here: the mount itself. A plain `role=\"status\"` plus an\naccessible name derived from `label` is sufficient, set both as an\n`aria-label` on the host *and* as a visually-hidden text node in the\nshadow tree, so the name survives even if only one of the two is picked up\nby a given assistive-tech/browser pairing. An untouched-default, empty, or\nwhitespace-only `label` falls back to the localized \"Thinking…\" copy in\nboth places, rather than leaving the component with no accessible name at\nall. The animated dots/pulse/cursor\nshape is `aria-hidden=\"true\"` — it's decorative; `label` is the entire\naccessible content, so nothing narrates individual animation frames.",
           "name": "LyraTypingIndicator",
           "cssParts": [
             {
@@ -59721,7 +59721,7 @@
                 "text": "string"
               },
               "privacy": "private",
-              "description": "The accessible name actually used, falling back to the default\n\"Thinking…\" copy when `label` is set to an empty or whitespace-only\nstring -- otherwise both the `aria-label` and the sr-only text node\nwould go blank, leaving this purely-decorative component with no\naccessible name at all.",
+              "description": "The accessible name actually used, falling back to the localized\n`'thinking'` message (`\"Thinking…\"` in English) when `label` is left at\nits untouched default or set to an empty/whitespace-only string --\notherwise both the `aria-label` and the sr-only text node would go\nblank, leaving this purely-decorative component with no accessible name\nat all. A caller-customized `label` is used verbatim (not a translation\nconcern), same convention as `<lyra-date-picker>`'s `previousLabel`.",
               "readonly": true
             },
             {
@@ -59759,7 +59759,7 @@
                 "text": "string"
               },
               "default": "'Thinking…'",
-              "description": "Accessible name, exposed via `role=\"status\"`. Not re-announced on every\nanimation frame — only mount (and any later change to this property)\nproduces a new announcement. An empty or whitespace-only value falls\nback to the default \"Thinking…\" copy (see `accessibleLabel`) so the\ncomponent never loses its accessible name.",
+              "description": "Accessible name, exposed via `role=\"status\"`. Not re-announced on every\nanimation frame — only mount (and any later change to this property)\nproduces a new announcement. An untouched-default, empty, or\nwhitespace-only value falls back to the localized \"Thinking…\" copy (see\n`accessibleLabel`) so the component never loses its accessible name.",
               "attribute": "label"
             },
             {
@@ -59984,7 +59984,7 @@
                 "text": "string"
               },
               "default": "'Thinking…'",
-              "description": "Accessible name, exposed via `role=\"status\"`. Not re-announced on every\nanimation frame — only mount (and any later change to this property)\nproduces a new announcement. An empty or whitespace-only value falls\nback to the default \"Thinking…\" copy (see `accessibleLabel`) so the\ncomponent never loses its accessible name.",
+              "description": "Accessible name, exposed via `role=\"status\"`. Not re-announced on every\nanimation frame — only mount (and any later change to this property)\nproduces a new announcement. An untouched-default, empty, or\nwhitespace-only value falls back to the localized \"Thinking…\" copy (see\n`accessibleLabel`) so the component never loses its accessible name.",
               "fieldName": "label"
             },
             {

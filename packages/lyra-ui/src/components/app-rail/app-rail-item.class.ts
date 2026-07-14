@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { place } from '../../internal/positioner.js';
+import { rtlAwarePlacement } from '../../internal/rtl.js';
 import { styles } from './app-rail-item.styles.js';
 
 /**
@@ -66,7 +67,12 @@ export class LyraAppRailItem extends LyraElement {
       if (this.showTooltip) {
         const anchor = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
         const popup = this.renderRoot.querySelector('[part="tooltip"]') as HTMLElement | null;
-        if (anchor && popup) this.stopPositioning = place(anchor, popup, { placement: 'right' });
+        // 'right' is a physical Floating UI placement -- resolve it through the
+        // shared RTL helper (mirrors lyra-menu's identical resolution) so the
+        // flyout still anchors to the rail item's trailing edge (away from the
+        // rail) rather than staying pinned to the physical right under RTL.
+        if (anchor && popup)
+          this.stopPositioning = place(anchor, popup, { placement: rtlAwarePlacement('right', this) });
       }
     }
   }

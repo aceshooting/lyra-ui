@@ -293,28 +293,28 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         today.setHours(0, 0, 0, 0);
         if (min !== null && dates.some((date) => date < min)) {
           flags.rangeUnderflow = true;
-          underflowMessage = `Date must be on or after ${this.min}.`;
+          underflowMessage = this.localize('dateInputMinMessage', undefined, { min: this.min });
         }
         if (this.disablePast && dates.some((date) => date < today)) {
           flags.rangeUnderflow = true;
-          underflowMessage ||= 'Date cannot be in the past.';
+          underflowMessage ||= this.localize('dateInputPastDisabled');
         }
         if (max !== null && dates.some((date) => date > max)) {
           flags.rangeOverflow = true;
-          overflowMessage = `Date must be on or before ${this.max}.`;
+          overflowMessage = this.localize('dateInputMaxMessage', undefined, { max: this.max });
         }
         if (this.disableFuture && dates.some((date) => date > today)) {
           flags.rangeOverflow = true;
-          overflowMessage ||= 'Date cannot be in the future.';
+          overflowMessage ||= this.localize('dateInputFutureDisabled');
         }
       }
     }
 
     let message = '';
-    if (flags.badInput) message = 'Enter a valid date.';
+    if (flags.badInput) message = this.localize('dateInputInvalid');
     else if (flags.rangeUnderflow) message = underflowMessage;
     else if (flags.rangeOverflow) message = overflowMessage;
-    else if (flags.valueMissing) message = 'Please fill out this field.';
+    else if (flags.valueMissing) message = this.localize('fieldRequired');
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 

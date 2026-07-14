@@ -123,8 +123,14 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private searchState: SearchState = EMPTY_SEARCH;
 
   private previewText(type: 'object' | 'array', count: number): string {
-    if (type === 'array') return `${count} ${this.localize(count === 1 ? 'item' : 'items')}`;
-    return `${count} ${this.localize(count === 1 ? 'key' : 'keys')}`;
+    // {count} is interpolated via the values arg (not string-concatenated) --
+    // same "{count} tool"/"{count} tools" template pattern as toolCount/
+    // toolCountPlural, so the count's position relative to the noun stays
+    // translatable rather than fixed to English's "number space noun" order.
+    if (type === 'array') {
+      return this.localize(count === 1 ? 'jsonItemCount' : 'jsonItemCountPlural', undefined, { count });
+    }
+    return this.localize(count === 1 ? 'jsonKeyCount' : 'jsonKeyCountPlural', undefined, { count });
   }
 
   private isExpanded(pathKey: string, depth: number, forceExpand: Set<string>): boolean {
@@ -215,11 +221,17 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   private renderCopyButton(value: unknown, label: string | undefined): TemplateResult | typeof nothing {
     if (!this.copyable) return nothing;
+    // "Copy {label}" is interpolated via the values arg (not string-concatenated)
+    // so word order stays translatable -- label is either caller data (a JSON
+    // key/index) or an already-localized type noun (jsonArray/jsonObject/
+    // jsonValue), matching how e.g. `rename: 'Rename {title}'` composes a verb
+    // with arbitrary/derived data elsewhere in this registry.
+    const resolvedLabel = label ?? this.localize('jsonValue');
     return html`
       <button
         part="copy-button"
         type="button"
-        aria-label=${`${this.localize('copy')} ${label ?? this.localize('jsonValue')}`}
+        aria-label=${this.localize('jsonCopyLabel', undefined, { label: resolvedLabel })}
         @click=${(e: Event) => {
           e.stopPropagation();
           this.copy(value);
@@ -283,7 +295,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           aria-expanded=${hasEntries ? (expanded ? 'true' : 'false') : nothing}
           aria-label=${
             hasEntries
-              ? `${this.localize(expanded ? 'collapse' : 'expand')} ${toggleLabel}`
+              ? // Interpolated via the values arg (not string-concatenated) so word
+                // order stays translatable -- same rationale as renderCopyButton()'s
+                // "Copy {label}" above; toggleLabel is either caller data (a JSON
+                // key/index) or an already-localized type noun.
+                this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: toggleLabel })
               : nothing
           }
           @click=${() => hasEntries && this.toggleNode(pathKey, expanded)}

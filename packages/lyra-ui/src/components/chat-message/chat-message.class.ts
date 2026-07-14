@@ -301,9 +301,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
                 aria-label=${this.localize(this.collapsed ? 'expandMessage' : 'collapseMessage')}
                 @click=${this.toggleCollapsed}
               >
-                <span class="chevron" style=${`transform:rotate(${this.collapsed ? '0deg' : '90deg'})`}
-                  >${chevronIcon()}</span
-                >
+                <span class="chevron">${chevronIcon()}</span>
               </button>`
             : nothing}
         </div>

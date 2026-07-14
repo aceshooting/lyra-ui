@@ -398,7 +398,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     for (const key of required) {
       if (Object.prototype.hasOwnProperty.call(props, key)) continue;
       if (!Object.prototype.hasOwnProperty.call(effective, key) || effective[key] === undefined) {
-        addError(key, 'This field is required.');
+        addError(key, this.localize('fieldRequired'));
         flags.valueMissing = true;
       }
     }

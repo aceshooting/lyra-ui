@@ -170,7 +170,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   }
 
   private get displayFilename(): string {
-    return this.filename || this.localize('mediaCardUntitledFile', 'Untitled file');
+    return this.filename || this.localize('mediaCardUntitledFile');
   }
 
   /** Accessible name for the card's own actionable element (`base` or, for
@@ -178,16 +178,16 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   private get accessibleLabel(): string {
     const name = this.filename || this.alt;
     return name
-      ? this.localize('mediaCardOpenName', 'Open {name}', { name })
-      : this.localize('mediaCardOpenAttachment', 'Open {kind} attachment', { kind: this.resolvedKind });
+      ? this.localize('mediaCardOpenName', undefined, { name })
+      : this.localize('mediaCardOpenAttachment', undefined, { kind: this.resolvedKind });
   }
 
   private get imgAlt(): string {
-    return this.alt || this.filename || this.localize('mediaCardImageAttachment', 'Image attachment');
+    return this.alt || this.filename || this.localize('mediaCardImageAttachment');
   }
 
   private get videoLabel(): string {
-    return this.alt || this.filename || this.localize('mediaCardVideoAttachment', 'Video attachment');
+    return this.alt || this.filename || this.localize('mediaCardVideoAttachment');
   }
 
   /** Per-instance override for `--lyra-media-card-max-height`, applied

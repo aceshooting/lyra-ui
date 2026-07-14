@@ -289,10 +289,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     // Split (rather than interpolate outright) so `toolName` can still land in
     // its own `part="tool-name"` node -- the localized template supplies the
     // surrounding text either side of the `{tool}` placeholder.
-    const [headingBefore, headingAfter] = this.localize(
-      'toolApprovalHeading',
-      'Approve {tool} call?',
-    ).split('{tool}');
+    const [headingBefore, headingAfter] = this.localize('toolApprovalHeading').split('{tool}');
     const toolName = this.toolName || this.localize('toolApprovalGenericTool');
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>

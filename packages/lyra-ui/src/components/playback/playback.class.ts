@@ -224,7 +224,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
         <button
           part="play-button"
           type="button"
-          aria-label=${this.playing ? this.localize('pause', 'Pause') : this.localize('play', 'Play')}
+          aria-label=${this.playing ? this.localize('pause') : this.localize('play')}
           ?disabled=${disabled}
           @click=${() => this.toggle()}
         >
@@ -236,7 +236,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
           min="0"
           max=${maxIndex}
           .value=${String(index)}
-          aria-label=${this.localize('playbackPosition', 'Playback position')}
+          aria-label=${this.localize('playbackPosition')}
           ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value))}
         />

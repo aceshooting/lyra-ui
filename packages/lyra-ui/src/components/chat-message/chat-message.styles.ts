@@ -106,6 +106,21 @@ export const styles = css`
     display: inline-flex;
     transition: transform var(--lyra-transition-fast);
   }
+  /* Chevron points at the content: rotated (pointing down) while expanded,
+     resting (pointing right) while collapsed -- same rotation direction as
+     lyra-code-block's/lyra-thinking-panel's own toggles. */
+  :host(:not([collapsed])) [part='collapse-button'] .chevron {
+    transform: rotate(90deg);
+  }
+  /* RTL: the resting (collapsed) chevron mirrors to point left, the
+     conventional mirrored disclosure-triangle direction for RTL. Scoped to
+     [collapsed] specifically -- like lyra-code-block's identical rule --
+     so it never competes with the expanded-state rule above, which needs
+     no mirroring: rotating this left-right-asymmetric glyph 90deg already
+     produces a left-right-symmetric down chevron. */
+  :host([collapsed]:dir(rtl)) [part='collapse-button'] .chevron {
+    transform: scaleX(-1);
+  }
 
   [part='attachments'] {
     display: flex;

@@ -365,12 +365,17 @@ export class LyraAttachmentChip extends LyraElement {
       'attachmentUploading',
       this.uploadingLabel === 'Uploading' ? undefined : this.uploadingLabel,
     );
+    // Same override-wins-verbatim rule as `untitledLabel`/`uploadingLabel` above.
+    const uploadFailedLabel = this.localize(
+      'attachmentUploadFailed',
+      this.uploadFailedLabel === 'Upload failed' ? undefined : this.uploadFailedLabel,
+    );
     const text = statusText(
       this.status,
       this.progress,
       this.clampedProgress,
       uploadingLabel,
-      this.uploadFailedLabel,
+      uploadFailedLabel,
     );
     const uploading = this.status === 'uploading';
 

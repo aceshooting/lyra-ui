@@ -158,17 +158,18 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  *  durations are the common case for a single tool call, so they get the
  *  more precise unit; once a call runs a full second or longer, trimming to
  *  (at most) one decimal place of seconds reads better than a 4-5 digit
- *  millisecond count. `msUnit` resolves the sub-second unit label -- defaults
- *  to the plain English abbreviation, so every existing call site/test that
- *  only passes `ms` is unaffected; the render() call site below passes
- *  `this.localize('durationUnitMs')` instead. */
-function formatDuration(ms: number, msUnit = 'ms'): string {
+ *  millisecond count. `msUnit`/`sUnit` resolve the two unit labels -- both
+ *  default to the plain English abbreviation, so every existing call
+ *  site/test that omits them is unaffected; the render() call site below
+ *  passes `this.localize('durationUnitMs')`/`this.localize('durationUnitS')`
+ *  instead. */
+function formatDuration(ms: number, msUnit = 'ms', sUnit = 's'): string {
   if (!Number.isFinite(ms) || ms < 1000) {
     return `${Math.round(Math.max(0, ms))}${msUnit}`;
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}s`;
+  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}${sUnit}`;
 }
 
 /**
@@ -377,7 +378,11 @@ export class LyraToolResultDialog extends LyraElement {
             >
             ${hasDuration
               ? html`<span part="duration"
-                  >${formatDuration(this.durationMs!, this.localize('durationUnitMs'))}</span
+                  >${formatDuration(
+                    this.durationMs!,
+                    this.localize('durationUnitMs'),
+                    this.localize('durationUnitS'),
+                  )}</span
                 >`
               : nothing}
           </div>

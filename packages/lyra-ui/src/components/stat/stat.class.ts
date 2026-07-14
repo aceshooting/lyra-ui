@@ -145,8 +145,8 @@ export class LyraStat extends LyraElement {
     const trendAnnouncement =
       rawDirection === 'flat'
         ? this.localize('trendUnchanged')
-        : `${rawDirection === 'up' ? 'increased' : 'decreased'} ${Math.abs(this.trend)}%${
-            isGood == null ? '' : isGood ? ', good' : ', bad'
+        : `${this.localize(rawDirection === 'up' ? 'trendIncreased' : 'trendDecreased')} ${Math.abs(this.trend)}%${
+            isGood == null ? '' : isGood ? this.localize('trendGoodSuffix') : this.localize('trendBadSuffix')
           }`;
 
     return html`
