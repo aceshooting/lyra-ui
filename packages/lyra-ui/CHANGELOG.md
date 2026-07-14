@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.6.0
+
+### Minor Changes
+
+- 78d4b58: `lyra-chat-message` gains an `attachments-position` prop (`'before' | 'after'`, default `'after'`) so the `attachments` slot can render above the message body instead of below it, keeping DOM/visual/reading order in sync.
+- a072af9: `lyra-chip` gains a `--lyra-chip-pressed-border` custom property so a consumer can set the pressed/selected border color independent of `--lyra-chip-accent` (which also drives the label text color). Falls back to `--lyra-chip-accent`, so existing consumers are unaffected.
+- b56bdb2: `lyra-empty` gains a `--lyra-empty-compact-padding` custom property to override `compact`'s fixed uniform padding (e.g. with an asymmetric shorthand like `8px 2px`). Falls back to `var(--lyra-space-xs)`, today's exact value.
+- e029ac2: `lyra-heatmap` calendar mode gains a `weekdayLabelText?: (jsWeekday: number) => string | undefined` hook to override the weekday-axis label text (e.g. for a consumer with its own locale/translation state independent of the browser's runtime locale).
+- 6d5f9c4: Add `lyra-textarea`, a bare multiline plain-text input primitive (value/rows/resize/placeholder, form-associated validation) — the `lyra-*` equivalent of a plain `wa-textarea`.
+- bbe8007: `lyra-segmented`'s `SegmentedItem` gains an optional `icon` field, rendered before the item's label.
+- e98013a: `lyra-table`'s `TableColumn` gains a `headerCell` render hook (mirroring `cell`/`footer`) and `width`/`minWidth` fields. Any column defining `width` switches the table to `table-layout: fixed` so widths are authoritative.
+- 993809a: `lyra-widget` gains a `backdrop-inset` prop to decouple the fullscreen backdrop's inset from the panel's own `fullscreen-inset`. Falls back to `fullscreen-inset`, so existing consumers are unaffected.
+
+### Patch Changes
+
+- 1c78bd2: Fix `lyra-poll-status`, `lyra-typing-indicator`, and `lyra-stream-status`'s ambient "still alive" pulse/bounce animations, which reused `--lyra-transition-base` (180ms — reserved for discrete UI micro-interactions) and rendered as a fast flicker instead of a calm breathing loop. Adds a dedicated `--lyra-transition-ambient` token (1.8s) for infinite looping indicators.
+- e029ac2: Fix `lyra-heatmap`'s `cellColor` hook silently rendering solid black when it returns a CSS custom property or other non-literal color (e.g. `color-mix(...)`) — the value is now resolved via a cached, hidden probe element before being assigned to the canvas `fillStyle`.
+- 600544f: Fix `lyra-skeleton` rendering as an invisible 0×0 box everywhere: `[part='base']` was a bare `<span>` (UA default `display: inline`), so its own `inline-size`/`block-size` were CSS no-ops per spec. Adds `display: block`.
+
 ## 2.5.0
 
 ### Minor Changes
