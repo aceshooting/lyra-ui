@@ -1,18 +1,18 @@
 import { css } from 'lit';
 
-// `--lyra-transition-base` is used (rather than `--lyra-transition-fast`) as
-// the animation-cycle length for every variant below: it's the token the
-// rest of the library reserves for slightly-more-noticeable motion (gauge
-// fill, dialog/popover open), whereas `-fast` is reserved for snappy
+// `--lyra-transition-ambient` is used (rather than `--lyra-transition-fast`
+// or `--lyra-transition-base`) as the animation-cycle length for every
+// variant below: it's the token the library reserves for infinite looping
+// "still alive" motion, whereas `-fast`/`-base` are reserved for snappy
 // discrete state flips (checkbox check, switch thumb). A continuous ambient
-// loop reads calmer at the longer of the two. Note this token is a *compound*
-// value (`180ms ease-out`, duration + timing-function together, exactly like
-// every `transition:` shorthand elsewhere in this library) so it can only
-// ever be spliced into the `animation:` *shorthand* below, never assigned to
-// `animation-duration` alone -- that longhand requires a bare `<time>` and
-// would silently invalidate (collapsing the duration to 0) if given the
-// compound value. For the same reason no extra timing-function keyword can
-// follow it in the shorthand: the token already supplies one.
+// loop reads calmer at the longer duration. Note this token is a *compound*
+// value (`1.8s ease-in-out`, duration + timing-function together, exactly
+// like every `transition:` shorthand elsewhere in this library) so it can
+// only ever be spliced into the `animation:` *shorthand* below, never
+// assigned to `animation-duration` alone -- that longhand requires a bare
+// `<time>` and would silently invalidate (collapsing the duration to 0) if
+// given the compound value. For the same reason no extra timing-function
+// keyword can follow it in the shorthand: the token already supplies one.
 export const styles = css`
   :host {
     display: inline-flex;
@@ -43,18 +43,18 @@ export const styles = css`
     border-radius: 50%;
     background: currentColor;
     opacity: 0.5;
-    animation: lyra-typing-dot-bounce var(--lyra-transition-base) infinite;
+    animation: lyra-typing-dot-bounce var(--lyra-transition-ambient) infinite;
   }
-  /* Fixed (not token-derived) stagger offsets -- --lyra-transition-base is
+  /* Fixed (not token-derived) stagger offsets -- --lyra-transition-ambient is
      a compound "duration timing-function" value like every other transition
      token in this library, so it can't be decomposed via calc() to derive a
      fraction of just its duration; these two delays approximate a third and
      two-thirds of that token's own fallback duration. */
   [part='dot']:nth-child(2) {
-    animation-delay: 60ms;
+    animation-delay: 600ms;
   }
   [part='dot']:nth-child(3) {
-    animation-delay: 120ms;
+    animation-delay: 1200ms;
   }
   @keyframes lyra-typing-dot-bounce {
     0%,
@@ -78,7 +78,7 @@ export const styles = css`
     background: currentColor;
     opacity: 1;
     transform: scale(1);
-    animation: lyra-typing-pulse var(--lyra-transition-base) infinite;
+    animation: lyra-typing-pulse var(--lyra-transition-ambient) infinite;
   }
   @keyframes lyra-typing-pulse {
     0%,
@@ -104,7 +104,7 @@ export const styles = css`
     background: currentColor;
     border-radius: var(--lyra-typing-cursor-width);
     opacity: 1;
-    animation: lyra-typing-cursor-blink var(--lyra-transition-base) infinite;
+    animation: lyra-typing-cursor-blink var(--lyra-transition-ambient) infinite;
   }
   @keyframes lyra-typing-cursor-blink {
     0%,

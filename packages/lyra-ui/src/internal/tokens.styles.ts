@@ -177,10 +177,13 @@ export const tokens = css`
     --lyra-font: var(--wa-font-family-body, system-ui, sans-serif);
 
     /* Motion — every component that animates (popovers, gauge fill, toast)
-       reads from these two instead of hand-rolling its own duration/easing,
-       so the library has one consistent rhythm. */
+       reads from these three instead of hand-rolling its own duration/easing,
+       so the library has one consistent rhythm. -fast/-base are for discrete
+       state-change transitions; -ambient is reserved for infinite looping
+       "still alive" indicators (a calm ~1.8s breathing pulse, not a flicker). */
     --lyra-transition-fast: var(--wa-transition-fast, 120ms ease-out);
     --lyra-transition-base: var(--wa-transition-normal, 180ms ease-out);
+    --lyra-transition-ambient: var(--wa-transition-slow, 1.8s ease-in-out);
 
     /* Disabled state — one opacity value for every disabled control,
        replacing three previously-independent hardcoded values (0.5/0.4/0.35). */
@@ -244,6 +247,7 @@ export const tokens = css`
     :host {
       --lyra-transition-fast: 0.001ms linear;
       --lyra-transition-base: 0.001ms linear;
+      --lyra-transition-ambient: 0.001ms linear;
     }
     :host *,
     :host *::before,

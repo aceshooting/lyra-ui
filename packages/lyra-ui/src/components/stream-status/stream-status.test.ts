@@ -412,3 +412,18 @@ it('is accessible while stalled with slotted message and actions', async () => {
   `)) as LyraStreamStatus;
   await expect(el).to.be.accessible();
 });
+
+it('uses the ambient transition token for its streaming-phase pulse animation', async () => {
+  const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
+  const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  expect(getComputedStyle(indicator).animationDuration).to.equal('1.8s');
+});
+
+it('does not slow down the base/border-color state transitions (only the loop uses the ambient token)', async () => {
+  const el = (await fixture(html`<lyra-stream-status phase="streaming"></lyra-stream-status>`)) as LyraStreamStatus;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  // [part='base'] has two comma-separated transition entries (background-color,
+  // border-color), so the computed transitionDuration list has one 0.18s per
+  // entry -- neither is the 1.8s ambient token.
+  expect(getComputedStyle(base).transitionDuration).to.equal('0.18s, 0.18s');
+});

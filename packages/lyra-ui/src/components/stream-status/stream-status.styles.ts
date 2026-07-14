@@ -62,12 +62,11 @@ export const styles = css`
   /* Only 'streaming' pulses -- a moving dot reads as "actively receiving
      data right now"; every other phase (including 'stalled', which wants
      steady attention via color/tint, not extra motion) stays static. Same
-     transition-cycle token/rationale as lyra-typing-indicator's pulse
-     variant -- see that component's styles for the full explanation of why
-     --lyra-transition-base (not -fast) is the right length for an ambient
-     loop. */
+     token/rationale as lyra-typing-indicator's pulse variant -- see that
+     component's styles for the full explanation of why
+     --lyra-transition-ambient is the right length for an ambient loop. */
   :host([phase='streaming']) [part='indicator'] {
-    animation: lyra-stream-status-pulse var(--lyra-transition-base) infinite;
+    animation: lyra-stream-status-pulse var(--lyra-transition-ambient) infinite;
   }
   @keyframes lyra-stream-status-pulse {
     0%,

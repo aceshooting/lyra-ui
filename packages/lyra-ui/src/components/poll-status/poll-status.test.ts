@@ -120,4 +120,10 @@ describe('lyra-poll-status', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('En pause');
   });
+
+  it('uses the ambient transition token for its looping pulse animation', async () => {
+    const el = (await fixture(html`<lyra-poll-status></lyra-poll-status>`)) as LyraPollStatus;
+    const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+    expect(getComputedStyle(indicator).animationDuration).to.equal('1.8s');
+  });
 });

@@ -104,9 +104,9 @@ it('swaps the rendered shape when variant changes on an already-mounted instance
 
 it('gives every variant a looping animation that is disabled under reduced motion', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include("animation: lyra-typing-dot-bounce var(--lyra-transition-base) infinite;");
-  expect(css).to.include("animation: lyra-typing-pulse var(--lyra-transition-base) infinite;");
-  expect(css).to.include("animation: lyra-typing-cursor-blink var(--lyra-transition-base) infinite;");
+  expect(css).to.include("animation: lyra-typing-dot-bounce var(--lyra-transition-ambient) infinite;");
+  expect(css).to.include("animation: lyra-typing-pulse var(--lyra-transition-ambient) infinite;");
+  expect(css).to.include("animation: lyra-typing-cursor-blink var(--lyra-transition-ambient) infinite;");
   expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
 });
 
@@ -136,4 +136,26 @@ it('is accessible in the pulse and cursor states', async () => {
     html`<lyra-typing-indicator variant="cursor" size="sm"></lyra-typing-indicator>`,
   )) as LyraTypingIndicator;
   await expect(cursor).to.be.accessible();
+});
+
+describe('ambient transition token', () => {
+  it('dots variant bounce animation uses the ambient token, with staggered delays scaled to it', async () => {
+    const el = (await fixture(html`<lyra-typing-indicator variant="dots"></lyra-typing-indicator>`)) as LyraTypingIndicator;
+    const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
+    expect(getComputedStyle(dots[0]).animationDuration).to.equal('1.8s');
+    expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.6s');
+    expect(getComputedStyle(dots[2]).animationDelay).to.equal('1.2s');
+  });
+
+  it('pulse variant uses the ambient token', async () => {
+    const el = (await fixture(html`<lyra-typing-indicator variant="pulse"></lyra-typing-indicator>`)) as LyraTypingIndicator;
+    const pulse = el.shadowRoot!.querySelector('[part="pulse"]') as HTMLElement;
+    expect(getComputedStyle(pulse).animationDuration).to.equal('1.8s');
+  });
+
+  it('cursor variant uses the ambient token', async () => {
+    const el = (await fixture(html`<lyra-typing-indicator variant="cursor"></lyra-typing-indicator>`)) as LyraTypingIndicator;
+    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+    expect(getComputedStyle(cursor).animationDuration).to.equal('1.8s');
+  });
 });
