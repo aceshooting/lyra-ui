@@ -52,6 +52,12 @@ export interface LyraToolApprovalDialogEventMap {
  * `JSON.parse` — the Approve button is `disabled` for as long as the current
  * textarea content fails to parse, so a malformed edit can never be silently
  * approved as either the broken text or a stale copy of the original args.
+ * The textarea always hardcodes `spellcheck="false"`, `autocapitalize="off"`,
+ * and `autocorrect="off"` (not exposed as configurable properties, unlike
+ * `<lyra-textarea>`/`<lyra-chat-composer>`'s passthrough props) — its content
+ * is always raw JSON, never prose, so a mobile browser's default sentence
+ * auto-capitalization/auto-correction would otherwise silently corrupt keys
+ * and values as the user types.
  * The same button relabels to "Cancel" while editing; clicking it discards
  * the draft entirely and returns to the read-only view of the *original*
  * `args` — there is no separate "save" step independent of Approve itself.
@@ -310,6 +316,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   part="args-editor"
                   spellcheck="false"
                   autocomplete="off"
+                  autocapitalize="off"
+                  autocorrect="off"
                   aria-label=${this.localize('toolApprovalArgsLabel')}
                   aria-invalid=${hasError ? 'true' : 'false'}
                   aria-describedby=${hasError ? this.errorId : nothing}

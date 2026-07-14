@@ -152,6 +152,19 @@ describe('editing', () => {
     expect(editButton(el).textContent!.trim()).to.equal('Edit');
   });
 
+  it('disables spellcheck, autocapitalize, and autocorrect on the raw-JSON textarea (JSON is never prose)', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+
+    const ta = textarea(el);
+    expect(ta.getAttribute('spellcheck')).to.equal('false');
+    expect(ta.getAttribute('autocapitalize')).to.equal('off');
+    expect(ta.getAttribute('autocorrect')).to.equal('off');
+  });
+
   it('resets an in-progress edit back to the read-only view every time the dialog re-opens', async () => {
     const el = (await fixture(
       html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,
