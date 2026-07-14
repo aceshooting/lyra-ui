@@ -3141,6 +3141,472 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/button/button.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-button>` — a generic action-button primitive, the `lyra-*` equivalent of a plain\n`wa-button`. Renders an internal native `<button part=\"base\">` (never a real `<wa-button>` —\nthis library has no runtime dependency on Web Awesome, matching `<lyra-copy-button>`/\n`<lyra-export-button>`'s own clean-room, API-mirroring approach). `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nA host `aria-label` is forwarded to the internal button as a literal string (for an icon-only\nbutton with no visible label); external `aria-labelledby`/`aria-describedby` idrefs are not\ncopied across the shadow boundary.",
+          "name": "LyraButton",
+          "cssParts": [
+            {
+              "description": "The internal native `<button>`.",
+              "name": "base"
+            },
+            {
+              "description": "The `end` slot wrapper.",
+              "name": "end"
+            },
+            {
+              "description": "The default-slot label wrapper.",
+              "name": "label"
+            },
+            {
+              "description": "The loading spinner, present only while `loading` is `true`.",
+              "name": "spinner"
+            },
+            {
+              "description": "The `start` slot wrapper.",
+              "name": "start"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Default slot: the button's label content.",
+              "name": ""
+            },
+            {
+              "description": "Trailing icon/content, rendered after the label.",
+              "name": "end"
+            },
+            {
+              "description": "Leading icon/content, rendered before the label.",
+              "name": "start"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "appearance",
+              "type": {
+                "text": "ButtonAppearance"
+              },
+              "default": "'filled'",
+              "attribute": "appearance",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "buttonEl",
+              "type": {
+                "text": "HTMLButtonElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "attribute": "disabled",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shows an internal spinner in place of interaction affordance and disables the button, without\nclearing `disabled` — a consumer's own `disabled` state and a transient `loading` state are\nindependent (mirrors `<lyra-export-button>`'s own `loading`/`disabled` pair).",
+              "attribute": "loading",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "size",
+              "type": {
+                "text": "ButtonSize"
+              },
+              "default": "'m'",
+              "attribute": "size",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "type",
+              "type": {
+                "text": "ButtonType"
+              },
+              "default": "'button'",
+              "description": "Forwarded to this component's own submit/reset handling — see the class doc comment above\nfor why this component (not the shadow-internal `<button>`) owns that behavior.",
+              "attribute": "type"
+            },
+            {
+              "kind": "field",
+              "name": "variant",
+              "type": {
+                "text": "ButtonVariant"
+              },
+              "default": "'neutral'",
+              "description": "Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to mirror `wa-button`'s own attribute name for a mechanical\nmigration off a plain `wa-button`.",
+              "attribute": "variant",
+              "reflects": true
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "appearance",
+              "type": {
+                "text": "ButtonAppearance"
+              },
+              "default": "'filled'",
+              "fieldName": "appearance"
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "fieldName": "disabled"
+            },
+            {
+              "name": "loading",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shows an internal spinner in place of interaction affordance and disables the button, without\nclearing `disabled` — a consumer's own `disabled` state and a transient `loading` state are\nindependent (mirrors `<lyra-export-button>`'s own `loading`/`disabled` pair).",
+              "fieldName": "loading"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "ButtonSize"
+              },
+              "default": "'m'",
+              "fieldName": "size"
+            },
+            {
+              "name": "type",
+              "type": {
+                "text": "ButtonType"
+              },
+              "default": "'button'",
+              "description": "Forwarded to this component's own submit/reset handling — see the class doc comment above\nfor why this component (not the shadow-internal `<button>`) owns that behavior.",
+              "fieldName": "type"
+            },
+            {
+              "name": "variant",
+              "type": {
+                "text": "ButtonVariant"
+              },
+              "default": "'neutral'",
+              "description": "Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to mirror `wa-button`'s own attribute name for a mechanical\nmigration off a plain `wa-button`.",
+              "fieldName": "variant"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-button",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraButton",
+          "declaration": {
+            "name": "LyraButton",
+            "module": "src/components/button/button.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/button/button.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-button",
+          "declaration": {
+            "name": "LyraButton",
+            "module": "src/components/button/button.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/button/button.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/card/card.class.ts",
       "declarations": [
         {
@@ -35640,6 +36106,678 @@
           "declaration": {
             "name": "*",
             "module": "src/components/heatmap/heatmap.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/input/input.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-input>` — a single-line plain-text input primitive, the `lyra-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lyra-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lyra-textarea>`/\n`<lyra-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `type=\"password\"` always renders a\n`password-toggle` eye-icon button that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.",
+          "name": "LyraInput",
+          "cssParts": [
+            {
+              "description": "The error message.",
+              "name": "error"
+            },
+            {
+              "description": "The outer wrapper around label, input, error and hint.",
+              "name": "form-control"
+            },
+            {
+              "description": "The `<label>` element.",
+              "name": "form-control-label"
+            },
+            {
+              "description": "The hint message.",
+              "name": "hint"
+            },
+            {
+              "description": "The native `<input>` element.",
+              "name": "input"
+            },
+            {
+              "description": "The row wrapping the native input and the password-toggle button.",
+              "name": "input-wrapper"
+            },
+            {
+              "description": "The show/hide-password button, present only when `type=\"password\"`.",
+              "name": "password-toggle"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Custom error content.",
+              "name": "error"
+            },
+            {
+              "description": "Custom hint content.",
+              "name": "hint"
+            },
+            {
+              "description": "Custom label content.",
+              "name": "label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name overriding the label/placeholder-derived default. Takes precedence over both\n`label` and `placeholder` when set, matching `<lyra-textarea>`'s `accessibleLabel`.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "errorText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "error-text"
+            },
+            {
+              "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "hint"
+            },
+            {
+              "kind": "field",
+              "name": "input",
+              "type": {
+                "text": "HTMLInputElement | null"
+              },
+              "description": "The internal native `<input>` element, for direct DOM access — mirrors `<lyra-textarea>`'s own `input` getter.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputEl",
+              "type": {
+                "text": "HTMLInputElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "max",
+              "type": {
+                "text": "number | undefined"
+              },
+              "attribute": "max"
+            },
+            {
+              "kind": "field",
+              "name": "min",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "`type=\"number\"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`\nand consulted by that same native input's constraint validation (see `updateValidity()`).",
+              "attribute": "min"
+            },
+            {
+              "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onInput",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onTogglePasswordVisible",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "passwordVisible",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "`type=\"password\"` only — whether the field currently reveals its raw text. Toggled by the\nbuilt-in `password-toggle` button; also settable by a consumer up front.",
+              "attribute": "password-visible"
+            },
+            {
+              "kind": "field",
+              "name": "placeholder",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "step",
+              "type": {
+                "text": "number | undefined"
+              },
+              "attribute": "step"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "touched",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "type",
+              "type": {
+                "text": "LyraInputType"
+              },
+              "default": "'text'",
+              "attribute": "type"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "select",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "updateValidity",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Bridges the internal native `<input>`'s own browser-computed constraint validation (format for\n`type=\"email\"`, range/step for `type=\"number\"`) into this element's `ElementInternals`, instead\nof hand-rolling a second regex-based check — a real native input of the right `type` already\ncomputes `typeMismatch`/`rangeUnderflow`/`rangeOverflow`/`stepMismatch` correctly. Falls back to\nthe base mixin's plain required-and-empty check before the first render (`inputEl` unset).\n\nA typed native input (`number`, `email`, …) also runs its own value-sanitization algorithm on\nassignment, which silently rewrites an unparseable non-empty value to `''` without setting any\n`ValidityState` flag — left unchecked, `native.validity.valid` would then read `true` (empty is\nfine when not required) while `this.value`/the bridged form value still held the literal invalid\nstring. Detect that mismatch and report it as `badInput` instead of trusting native blindly."
+            }
+          ],
+          "events": [
+            {
+              "description": "Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and composed (unlike the native event, which is neither).",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.",
+              "name": "focus"
+            },
+            {
+              "description": "Fired on the native `change` timing (control loses focus after a committed edit). `detail: { value }`.",
+              "name": "lyra-change"
+            },
+            {
+              "description": "Fired on every user-driven edit (not a programmatic `.value` assignment). `detail: { value }`.",
+              "name": "lyra-input"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name overriding the label/placeholder-derived default. Takes precedence over both\n`label` and `placeholder` when set, matching `<lyra-textarea>`'s `accessibleLabel`.",
+              "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "error-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "errorText"
+            },
+            {
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "hint"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "label"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "max",
+              "type": {
+                "text": "number | undefined"
+              },
+              "fieldName": "max"
+            },
+            {
+              "name": "min",
+              "type": {
+                "text": "number | undefined"
+              },
+              "description": "`type=\"number\"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`\nand consulted by that same native input's constraint validation (see `updateValidity()`).",
+              "fieldName": "min"
+            },
+            {
+              "name": "password-visible",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "`type=\"password\"` only — whether the field currently reveals its raw text. Toggled by the\nbuilt-in `password-toggle` button; also settable by a consumer up front.",
+              "fieldName": "passwordVisible"
+            },
+            {
+              "name": "placeholder",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "placeholder"
+            },
+            {
+              "name": "step",
+              "type": {
+                "text": "number | undefined"
+              },
+              "fieldName": "step"
+            },
+            {
+              "name": "type",
+              "type": {
+                "text": "LyraInputType"
+              },
+              "default": "'text'",
+              "fieldName": "type"
+            }
+          ],
+          "mixins": [
+            {
+              "name": "FormAssociated",
+              "module": "/src/internal/form-associated.js"
+            }
+          ],
+          "superclass": {
+            "name": "LyraInputBase",
+            "module": "src/components/input/input.class.ts"
+          },
+          "tagName": "lyra-input",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraInput",
+          "declaration": {
+            "name": "LyraInput",
+            "module": "src/components/input/input.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/input/input.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-input",
+          "declaration": {
+            "name": "LyraInput",
+            "module": "src/components/input/input.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/input/input.class.js"
           }
         }
       ]
