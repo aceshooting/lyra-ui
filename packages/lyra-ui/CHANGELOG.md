@@ -1,5 +1,217 @@
 # Changelog
 
+## 2.5.0
+
+### Minor Changes
+
+- 84cefde: `lyra-attachment-trigger`'s single-capability trigger `aria-label`s ("Attach files"/"Attach an
+  image"/"Use camera"), its multi-capability menu's "Add attachment" label/aria-label, and its menu
+  item labels ("Upload files"/"Upload a photo"/"Take a photo") now route through `this.localize()`,
+  overridable via `.strings`/`registerLyraLocale()`. Default English output is unchanged when no
+  override is set.
+- 6bf30ea: `lyra-avatar` now accepts default-slotted icon/glyph content (e.g. an inline SVG), shown in place of
+  the image/initials and taking priority over both `src` and `initials` — useful for a chat UI
+  distinguishing an "AI" avatar from a "user" avatar by role glyph rather than a photo or initials. Set
+  `alt` alongside the icon for an accessible name, since the glyph itself is treated as decorative.
+- 87890ea: `lyra-checkbox`'s built-in required-field validation message ("Please check this box if you want
+  to continue.") now routes through `this.localize()`, overridable via `.strings`/
+  `registerLyraLocale()`. Default English output is unchanged when no override is set.
+- b720eda: Fixed `lyra-chip`'s opt-in `selected` toggle/pressed mode so it stays interactive after the first
+  click. `[part='base']`'s `role="button"`, `tabindex`, `aria-pressed`, and click/keydown handlers
+  used to be gated on the _current_ value of `selected`, so a chip that started `selected` and was
+  clicked (flipping it to `false`) lost its focusable/clickable semantics on the next render — there
+  was no way to click it back on. `selected` becoming `true` at any point now latches the chip into
+  toggle mode for good, so it stays clickable in both directions. A chip that must be interactive
+  from the outset while starting **unselected** (e.g. an initially-inactive filter chip) can opt in
+  explicitly with the new `toggleable` property, since `selected`'s own default (`false`) can't be
+  told apart from "never opted in" on its own.
+- cbfec47: `lyra-citation-badge`'s visible status words folded into its computed accessible name ("High
+  confidence"/"Medium confidence"/"Low confidence"/"Verified"/"Unverified") now route through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English output is
+  unchanged when no override is set.
+- dba57e9: `lyra-context-meter`'s accessible summary ("{used} of {total} used" / "{used} used") now routes
+  through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English
+  output is unchanged when no override is set.
+- 7379a41: `lyra-conversation-item`'s "Untitled conversation" fallback title now routes through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English output is
+  unchanged when no override is set.
+- acdaa37: `lyra-dock-panel`'s resize-handle and collapse-toggle `aria-label`s ("Resize panel",
+  "Collapse panel"/"Expand panel") now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- eca2ea4: `lyra-document-preview`'s hardcoded English strings — the image-preview `alt` fallback
+  ("Document preview"), the unsafe-URL error ("Document URL is not allowed."), the non-`Error`
+  fetch-failure message ("Failed to load document."), and the empty-`error-message` fallback
+  ("Something went wrong.") — now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Its in-flight text-fetch spinner label ("Loading document…")
+  is now also wired through the existing `loadingDocument` message key. Default English output is
+  unchanged when no override is set.
+- a3c4ebf: `lyra-export-button`'s trigger button text (default "Export", also reused for the format menu's
+  `aria-label`) now routes through `this.localize()` when `label` is left at its built-in default,
+  overridable via `.strings`/`registerLyraLocale()` — matching `lyra-attachment-chip`'s
+  `removeLabel`/`retryLabel` convention. Setting the `label` attribute/property explicitly still
+  overrides it directly. Default English output is unchanged when no override is set.
+- df8341b: `lyra-generation-status`'s stop-button `aria-label` ("Stop generating") now routes through
+  `this.localize()` (sharing the existing `stopGenerating` key used elsewhere in the library), and
+  the tokens segment's singular/plural noun ("token"/"tokens") is now localizable too, matching
+  `lyra-json-viewer`'s/`lyra-word-cloud`'s existing count-noun pattern. Overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- 20ae3e7: `lyra-graph`'s visually-hidden data-list `aria-label` ("Graph data") now routes through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English output is
+  unchanged when no override is set.
+- 8c29581: `lyra-segmented` gains a `label` property giving its `role="radiogroup"` root an accessible name.
+  When unset, a plain `aria-label` attribute on the host element is honored as a fallback, matching
+  `lyra-slider`'s existing `label`/`aria-label` convention. Previously the radiogroup had no way to
+  receive an accessible name at all.
+- 259c0c6: Completed a full-library i18n/RTL/styling standardization pass across the remaining component
+  families not yet covered by earlier rounds — `chart` (and `box-plot`/`histogram`/`lite-chart`),
+  `avatar`, `code-block`, `combobox`, `date-picker`, `dialog`, `document-preview`, `export-button`,
+  `file-input`, `graph`, `heatmap`, `map`, `time-range`, `tool-call-chip`, `tool-param-form`,
+  `tool-result-dialog`, `tree`, `widget`, and several smaller components. Highlights:
+
+  - Routed remaining hardcoded English strings (accessible descriptions, aria-labels, empty-state
+    text) through `this.localize()`.
+  - Fixed RTL gaps: `date-picker`'s previous/next chevrons now mirror under `dir="rtl"` (rotating
+    the wrapping `part`, not the icon), matching the grid's own arrow-key swap.
+  - `lyra-avatar`: fixed a dangling `--lyra-color-surface-alt` token reference, corrected its `size`
+    JSDoc, and extended the accessible-name role/`aria-label` to the initials-fallback path (not
+    just the icon-slot path) whenever `alt` is set.
+  - `lyra-export-button` now fires `lyra-show`/`lyra-hide` on its format menu, matching the same
+    convention already used by `lyra-menu`/`lyra-select`/`lyra-combobox`.
+  - Fixed a `this.localize(key, literalFallback)` pattern that unconditionally short-circuited
+    `registerLyraLocale()` lookups for the affected keys (the fallback is now omitted wherever
+    `DEFAULT_STRINGS` already carries the same default).
+
+  AGENTS.md gained a new "Internationalization (i18n), RTL, and theming" section documenting the
+  resulting standard, and both READMEs now summarize it for consumers.
+
+- 79e4390: Fixed gaps found during a full re-verification pass over previously-completed work:
+
+  - `lyra-menu`'s type-ahead navigation now excludes `hidden`/`aria-hidden` items (it already
+    excluded `disabled` ones), matching the Arrow/Home/End roving-focus navigation it sits next to.
+  - The root barrel (`src/lyra.ts`) now re-exports 13 component event-map types that were previously
+    unreachable from the package root even though their owning classes were exported: `LyraChip`,
+    `LyraChipGroup`, `LyraCitationBadge`, `LyraCopyButton`, `LyraDiffView`, `LyraFileInput`,
+    `LyraHeatmap`, `LyraLiteChart`, `LyraMediaCard`, `LyraSelect`, `LyraSourceCard`, `LyraSplit`, and
+    `LyraTimeRange`'s `*EventMap` types are now all importable from `@aceshooting/lyra-ui`.
+
+- 59d4477: `lyra-media-card`'s hardcoded English fallback strings — the file-chip "Untitled file" name, the
+  `image`/`video` alt-text fallbacks ("Image attachment"/"Video attachment"), and the accessible
+  "Open …" label (both the named and generic-kind forms) — now route through `this.localize()`,
+  overridable via `.strings`/`registerLyraLocale()`. Default English output is unchanged when no
+  override is set.
+- ea774a8: `lyra-mention-popover`'s default listbox accessible name ("Suggestions") now routes through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()` — matching the already-shared
+  `noMatches` key its empty-state row uses. An explicit `label`/`empty-text` value still wins
+  verbatim. Default English output is unchanged when no override is set.
+- cd10606: `<lyra-menu>` gains an opt-in `closeOnEscapeAnywhere` property. Escape has always closed the menu
+  and refocused the trigger when it originates from a real `<lyra-menu-item>`, but slotted non-item
+  content (e.g. a form control slotted alongside the items) previously got full default keyboard
+  behavior with no way to close the menu on Escape. Setting `closeOnEscapeAnywhere` extends that
+  same Escape-closes-and-refocuses behavior to keydowns from anywhere in the list, including slotted
+  non-item content. Defaults to `false`, so existing consumers are unaffected.
+- 7d63af9: `lyra-menu`'s `role="menu"` popup default accessible name ("Menu") now routes through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. An explicit `label` value
+  still wins verbatim. Default English output is unchanged when no override is set.
+- f232381: `lyra-model-settings-panel`'s hardcoded English strings — the visible "Temperature" caption
+  (also reused as the nested `lyra-slider`'s accessible name) and the internal `lyra-model-select`'s
+  "Select a model…" placeholder — now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- 1686322: `lyra-playback`'s play/pause button and position-slider `aria-label`s ("Play"/"Pause",
+  "Playback position") now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- 0cacb4d: `lyra-poll-status`'s pause/resume button aria-label, due-state countdown text ("Refreshing…"), and its
+  three live-region announcements ("Paused."/"Resumed."/"Refreshing now.") now route through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. It also now shows a distinct
+  "Paused" countdown state while `paused`, instead of freezing on whatever value it last displayed.
+  Default English output is unchanged when no override is set.
+- 870523f: `lyra-widget` gains two new named slots, `collapse-icon` and `fullscreen-icon`, overriding the
+  built-in chevron/expand-or-close glyphs on the collapse and fullscreen toggle buttons entirely
+  (platform slot-fallback-content mechanism: whatever is assigned wins, otherwise the default glyph
+  renders unchanged). `WidgetView`'s `label` is now optional and a new `ariaLabel` field lets a view
+  toggle be icon-only while still exposing an accessible name — previously a toggle with no `label`
+  had no accessible name at all.
+- c2bc232: Re-audited every component against the library's i18n/RTL/theming standard and fixed the
+  remaining gaps found:
+
+  - Removed several `this.localize(key, literalFallback)` call sites (`toolApprovalHeading`,
+    `playback`'s play/pause/position labels, `model-settings-panel`'s temperature/model labels,
+    `media-card`'s five accessible-name strings, `kbd`'s shortcut-token labels, `chat-composer`'s
+    composer label) where the literal fallback silently defeated `registerLyraLocale()` translation
+    for that call site.
+  - Routed remaining hardcoded strings through `this.localize()`: `date-picker`'s next-month label
+    and `date-input`'s validation messages, `toast-item`'s/`chip`'s/`combobox`'s remove/close
+    labels (now interpolated via a `{placeholder}` instead of string concatenation), `heatmap`'s
+    matrix/calendar aria-labels and "no data"/row/col fallbacks, `chart`/`box-plot`'s description
+    and data-table text, `lite-chart`'s mark-position announcement, `document-preview`'s empty-state
+    nouns, `json-viewer`'s copy/expand/collapse/count labels, `stat`'s trend announcement,
+    `dialog`'s `confirm()` cancel button, `typing-indicator`'s default label, `tool-param-form`'s
+    edge-case validation message, and `tool-result-dialog`/`tool-call-chip`'s duration seconds unit.
+  - Fixed RTL gaps: `app-rail-item`'s icon tooltip now flips side under `dir="rtl"` via
+    `rtlAwarePlacement()`, `chat-message`'s and `source-list`'s collapse/disclosure chevrons now
+    mirror under RTL, and `lite-chart`'s roving-tabindex point navigation now swaps
+    ArrowLeft/ArrowRight under RTL.
+
+  Also compressed the shared string registry (`internal/localization.ts`): removed 21 `kbd*` base
+  keys (`kbdEnter`, `kbdEscape`, `kbdTab`, etc.) that were fully superseded by their `*Word`/`*Visual`
+  counterparts and had no remaining call sites anywhere in the library, reducing the packed consumer
+  bundle size.
+
+- aeef118: `lyra-select`'s required-field validation message ("Please select an option.") and its
+  trigger's fallback accessible name ("Select", used only when no `aria-label`, `label`, or
+  `placeholder` is set) now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- 4fb27a2: `lyra-skeleton`'s default accessible name ("Loading…") now routes through `this.localize()`
+  (reusing the shared `loading` key), overridable via `.strings`/`registerLyraLocale()`. An
+  explicit `label` still wins verbatim. Default English output is unchanged when no override is set.
+- f7b9f0e: `lyra-source-list`'s fallback header text ("Sources", used only when neither `label` nor
+  `label-plural` is set) now routes through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- f2ea145: `lyra-stepper`'s `StepItem` gains an optional `title` field, rendered as a native `title` tooltip on
+  that step's button — useful for explaining why a `disabled` step is locked (e.g. "Complete Basics
+  first"). Steps that omit it render no `title` attribute at all, unchanged from today.
+- 9e5864a: `lyra-stream-status`'s built-in stalled-message default ("Taking longer than usual…") and its
+  three live-region announcements ("Connection stalled."/"Connection restored."/"No longer
+  stalled.") now route through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`.
+  Default English output is unchanged when no override is set.
+- 9174500: `lyra-switch`'s built-in required-field validation message ("Please turn this on.") now routes
+  through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English
+  output is unchanged when no override is set.
+- 60084ba: `lyra-thinking-panel`'s default header label ("Thinking") and its duration-display text ("Thought
+  for …"/"Thinking…") now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. An explicit `label` still wins verbatim. Default English
+  output is unchanged when no override is set.
+- b113bda: `lyra-tool-approval-dialog`'s heading text, generic tool-name fallback, args-editor accessible
+  name, invalid-JSON fallback error, and its Deny/Edit/Approve button labels now route through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English output is
+  unchanged when no override is set.
+- 3b1f930: `lyra-tool-call-chip`'s visible status labels (Pending/Running/Success/Error/Denied, shared with
+  `lyra-tool-result-dialog`'s identical vocabulary) and its unnamed-tool fallback ("Tool call") now
+  route through `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. Default English
+  output is unchanged when no override is set.
+- bbaea80: `lyra-tool-param-form`'s validation messages (required field, wrong type for a string/number/
+  integer/boolean, enum mismatch, const mismatch, unsupported field type, malformed schema shape,
+  non-serializable value) now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- bda19ac: `lyra-tool-select-dialog`'s dialog title, search placeholder, "use default tools" switch label
+  and hint, category count/"Other" fallback, tools-enabled summary, no-matches message, and the
+  no-tools-available empty state now route through `this.localize()`, overridable via
+  `.strings`/`registerLyraLocale()`. Default English output is unchanged when no override is set.
+- 220bd73: `lyra-widget`'s collapse/expand, exit-fullscreen/expand-to-fullscreen, and view-toggle-group
+  aria-labels, plus its fullscreen dialog's fallback accessible name, now route through
+  `this.localize()`, overridable via `.strings`/`registerLyraLocale()`. The collapse/expand labels
+  reuse `lyra-dock-panel`'s existing `dockPanelCollapse`/`dockPanelExpand` keys. Default English
+  output is unchanged when no override is set.
+
+### Patch Changes
+
+- 00ce49f: Fix `lyra-date-picker`'s day-grid keyboard navigation to swap ArrowLeft/ArrowRight under `dir="rtl"`, matching the grid's own visual mirroring (the day cells use unset `direction`, so the browser already lays them out right-to-left). ArrowUp/ArrowDown (by week) are unaffected.
+- 37e1a2f: `lyra-table`'s header-cell ArrowLeft/ArrowRight roving-tabindex navigation now derives its RTL
+  check through the shared `isRtl()` helper instead of a duplicated inline `getComputedStyle`
+  check, and gains test coverage confirming ArrowRight/ArrowLeft already swap correctly under
+  `dir="rtl"` (a native `<table>` mirrors column visual order under RTL on its own) while
+  ArrowUp/ArrowDown row navigation is unaffected. No behavior change.
+- 2fd3786: Fix calendar-heatmap weekday-axis labels to respect firstDayOfWeek instead of always labeling grid rows 1/3/5.
+
 ## 2.4.0
 
 ### Minor Changes
