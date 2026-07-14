@@ -16,6 +16,49 @@ const links: GraphLink[] = [
   { source: 'c', target: 'd' },
 ];
 
+const relationshipNodes: GraphNode[] = [
+  {
+    id: 'judgment',
+    label: 'Judgment',
+    accessibleLabel: 'Judgment, the source document',
+    description: 'The decision whose citations are shown.',
+    color: 'var(--lyra-color-brand)',
+  },
+  {
+    id: 'opinion',
+    label: 'Opinion',
+    accessibleLabel: 'Advocate General opinion, cited by the judgment',
+    description: 'A related legal opinion.',
+    color: 'var(--lyra-color-success)',
+  },
+  { id: 'regulation', label: 'Regulation', description: 'The governing regulation.' },
+];
+
+const relationshipLinks: GraphLink[] = [
+  {
+    id: 'judgment-cites-opinion',
+    source: 'judgment',
+    target: 'opinion',
+    label: 'cites',
+    accessibleLabel: 'Judgment cites the Advocate General opinion',
+    description: 'A directed citation relationship.',
+    directed: true,
+    color: 'var(--lyra-color-brand)',
+    width: 2.5,
+  },
+  {
+    id: 'judgment-applies-regulation',
+    source: 'judgment',
+    target: 'regulation',
+    label: 'applies',
+    description: 'A dashed directed relationship.',
+    directed: true,
+    color: 'var(--lyra-color-success)',
+    dash: [7, 4],
+    width: 2,
+  },
+];
+
 const meta: Meta = {
   title: 'Graph',
   component: 'lyra-graph',
@@ -75,4 +118,31 @@ export const SeededLayout: Story = {
       <lyra-graph width="320" height="240" style="height: 15rem" seed="42" .nodes=${nodes} .links=${links}></lyra-graph>
     </div>
   `,
+};
+
+export const DirectedRelationships: Story = {
+  render: () => {
+    const reportLink = (event: CustomEvent<{ source: string; target: string; id?: string }>) => {
+      const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
+      if (output) {
+        output.textContent = `Activated ${event.detail.id ?? 'unidentified link'}: ${event.detail.source} → ${event.detail.target}`;
+      }
+    };
+
+    return html`
+      <div>
+        <lyra-graph
+          aria-label="Legal citation relationships"
+          width="520"
+          height="320"
+          seed="42"
+          style="height: 20rem"
+          .nodes=${relationshipNodes}
+          .links=${relationshipLinks}
+          @lyra-link-click=${reportLink}
+        ></lyra-graph>
+        <output aria-live="polite">Activate a link to inspect its stable id.</output>
+      </div>
+    `;
+  },
 };

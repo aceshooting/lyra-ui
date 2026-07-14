@@ -50,6 +50,22 @@ it('renders an svg with a circle per node once d3 loads', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="link"]').length).to.equal(1);
 });
 
+it('forwards a host aria-label to the semantic graph svg', async () => {
+  const el = (await fixture(html`
+    <lyra-graph aria-label="Citation relationships"></lyra-graph>
+  `)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    'Citation relationships',
+  );
+});
+
 it('emits lyra-node-click when a node is activated', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;
@@ -80,6 +96,71 @@ it('emits lyra-link-click with the source/target ids when a link is activated', 
     new MouseEvent('click', { bubbles: true }),
   );
   expect(detail).to.deep.equal({ source: 'a', target: 'b' });
+});
+
+it('renders directed links with arrowheads shortened to the target radius', async () => {
+  const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = [{ source: 'a', target: 'b', directed: true }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const link = el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
+  const target = el.shadowRoot!.querySelectorAll('[part="node"]')[1] as SVGCircleElement;
+  expect(link.getAttribute('marker-end')).to.match(/^url\(#lyra-graph-arrow-/);
+  expect(link.getAttribute('x2')).to.not.equal(target.getAttribute('cx'));
+  expect(el.shadowRoot!.querySelector('[part="arrowhead"]')).to.exist;
+});
+
+it('uses rich accessible labels/descriptions and carries a stable link id through activation', async () => {
+  const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  el.nodes = [
+    { id: 'a', label: 'A', accessibleLabel: 'Document A, 12 citations', description: 'Primary authority' },
+    { id: 'b', label: 'B' },
+  ];
+  el.links = [
+    {
+      id: 'citation-7',
+      source: 'a',
+      target: 'b',
+      label: 'cites',
+      accessibleLabel: 'Document A cites document B seven times',
+      description: 'Seven citations',
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const firstNode = el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement;
+  const link = el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
+  expect(firstNode.getAttribute('aria-label')).to.equal('Document A, 12 citations');
+  expect(firstNode.querySelector('title')?.textContent).to.equal('Primary authority');
+  expect(link.getAttribute('aria-label')).to.equal('Document A cites document B seven times');
+  expect(link.querySelector('title')?.textContent).to.equal('Seven citations');
+  let detail: { source: string; target: string; id?: string } | undefined;
+  el.addEventListener('lyra-link-click', (e) => (detail = (e as CustomEvent).detail));
+  link.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(detail).to.deep.equal({ source: 'a', target: 'b', id: 'citation-7' });
+});
+
+it('applies sanitized per-link color and numeric dash styling', async () => {
+  const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = [{ source: 'a', target: 'b', color: '#ff0000', dash: [4, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const link = el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
+  expect(getComputedStyle(link).stroke).to.equal('rgb(255, 0, 0)');
+  expect(link.getAttribute('stroke-dasharray')).to.equal('4 2');
+
+  el.links = [{ source: 'a', target: 'b', color: 'red; position: fixed', dash: [4, -2, Number.NaN] }];
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement).style.position).to.equal('');
+  expect((el.shadowRoot!.querySelector('[part="link"]') as SVGLineElement).hasAttribute('stroke-dasharray')).to.be.false;
 });
 
 it('emits lyra-node-click when a node is activated via keyboard (Enter/Space)', async () => {

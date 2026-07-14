@@ -10,9 +10,12 @@ export const styles = css`
     block-size: 100%;
   }
   [part='link'] {
-    stroke: var(--lyra-color-border);
+    stroke: var(--lyra-link-color, var(--lyra-color-border));
     fill: none;
     cursor: pointer;
+  }
+  [part='arrowhead'] {
+    fill: context-stroke;
   }
   [part='link']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

@@ -1,8 +1,8 @@
-import { html, svg, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { srOnly } from '../../internal/a11y.js';
+import { nextId, srOnly } from '../../internal/a11y.js';
 import { isRtl } from '../../internal/rtl.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { styles } from './graph.styles.js';
@@ -12,6 +12,10 @@ import '../skeleton/skeleton.class.js';
 export interface GraphNode {
   id: string;
   label?: string;
+  /** Spoken label when it needs more context than the visible label. */
+  accessibleLabel?: string;
+  /** Optional native SVG tooltip text. */
+  description?: string;
   /** Clamped to [6, 24] (a non-finite/missing value uses the midpoint, 15) — never rendered smaller/larger. */
   radius?: number;
   color?: string;
@@ -21,9 +25,24 @@ export interface GraphNode {
  *  a not-yet-created page. A link whose `source` id has no matching node is still dropped
  *  entirely (there is no position to draw a stub from). */
 export interface GraphLink {
+  /** Optional stable id returned by `lyra-link-click`. */
+  id?: string;
   source: string;
   target: string;
   width?: number;
+  /** Optional spoken-name and SVG-tooltip fallback used before the generated source/target text.
+   * It is not rendered as a visible edge label. */
+  label?: string;
+  /** Spoken label for the keyboard-operable link. */
+  accessibleLabel?: string;
+  /** Optional native SVG tooltip text. */
+  description?: string;
+  /** Draw an arrowhead at the target end. */
+  directed?: boolean;
+  /** Per-link stroke color; unsafe CSS declaration delimiters are rejected. */
+  color?: string;
+  /** SVG stroke-dash sequence. Invalid/negative entries are rejected as a whole. */
+  dash?: number[];
 }
 
 // `interface ... extends` heritage clauses only accept an identifier/qualified-name
@@ -36,13 +55,12 @@ type SimulationNodeDatum = import('d3-force').SimulationNodeDatum;
 type SimulationLinkDatum<N extends SimulationNodeDatum> = import('d3-force').SimulationLinkDatum<N>;
 
 interface SimNode extends GraphNode, SimulationNodeDatum {}
-interface SimLink extends SimulationLinkDatum<SimNode> {
-  width?: number;
+type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNode> & {
   /** `true` when `target` couldn't be resolved to a real node -- `target` is then a synthetic,
    *  non-simulated position (kept in sync with `source` every tick), rendered as a short dead-end
    *  stub instead of a real edge, and excluded from `forceLink`'s own simulation input. */
   dangling?: boolean;
-}
+};
 
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 
@@ -99,9 +117,14 @@ function sanitizeNodeColor(color: string | undefined): string | undefined {
   return color != null && !/[;{}]/.test(color) ? color : undefined;
 }
 
+function normalizeLinkDash(dash: number[] | undefined): string | undefined {
+  if (!dash?.length || dash.some((value) => !Number.isFinite(value) || value < 0)) return undefined;
+  return dash.join(' ');
+}
+
 export interface LyraGraphEventMap {
   'lyra-node-click': CustomEvent<{ id: string }>;
-  'lyra-link-click': CustomEvent<{ source: string; target: string }>;
+  'lyra-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
 }
 /**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -120,11 +143,12 @@ export interface LyraGraphEventMap {
  *
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
- * @event lyra-link-click - `detail: { source, target }`.
+ * @event lyra-link-click - `detail: { source, target, id? }`.
  * @csspart base - The graph wrapper.
  * @csspart svg - The graph SVG.
  * @csspart node - A graph node.
  * @csspart link - A graph link.
+ * @csspart arrowhead - The marker used by directed graph links.
  * @csspart label - A node label.
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
@@ -141,6 +165,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property({ type: Number, attribute: 'link-distance' }) linkDistance = 100;
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.1;
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 8;
+  /** Accessible name forwarded from the host to the semantic graph SVG. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** When set, seeds each node's initial x/y deterministically (keyed by
    *  node id, not array index) instead of forceSimulation()'s own random
    *  start, and settles the simulation synchronously — see rebuildSimulation().
@@ -150,6 +176,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  not retroactively reposition already-settled nodes; there is currently
    *  no way to make an already-rendered graph reproducible after the fact. */
   @property({ type: Number }) seed?: number;
+
+  private readonly arrowMarkerId = nextId('graph-arrow');
 
   /** True until the lazy-loaded d3 peer dependencies have settled (success or failure). */
   @state() private loading = true;
@@ -384,12 +412,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.simLinks.forEach((l, i) => {
       const line = this.linkEls[i];
       if (!line) return;
-      const source = l.source as SimNode;
-      const target = l.target as SimNode;
-      line.setAttribute('x1', String(source.x ?? 0));
-      line.setAttribute('y1', String(source.y ?? 0));
-      line.setAttribute('x2', String(target.x ?? 0));
-      line.setAttribute('y2', String(target.y ?? 0));
+      const coordinates = this.linkCoordinates(l);
+      line.setAttribute('x1', String(coordinates.x1));
+      line.setAttribute('y1', String(coordinates.y1));
+      line.setAttribute('x2', String(coordinates.x2));
+      line.setAttribute('y2', String(coordinates.y2));
     });
   }
 
@@ -494,7 +521,45 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private onLinkClick(link: SimLink): void {
     const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
     const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
-    this.emit('lyra-link-click', { source, target });
+    this.emit('lyra-link-click', { source, target, ...(link.id ? { id: link.id } : {}) });
+  }
+
+  private nodeAccessibleText(node: GraphNode): string {
+    return node.accessibleLabel || node.label || node.id;
+  }
+
+  private linkAccessibleText(link: SimLink): string {
+    if (link.accessibleLabel) return link.accessibleLabel;
+    const source =
+      typeof link.source === 'object'
+        ? this.nodeAccessibleText(link.source as SimNode)
+        : String(link.source);
+    const target =
+      typeof link.target === 'object'
+        ? this.nodeAccessibleText(link.target as SimNode)
+        : String(link.target);
+    return link.label || this.localize('graphLink', undefined, { source, target });
+  }
+
+  private linkCoordinates(link: SimLink): { x1: number; y1: number; x2: number; y2: number } {
+    const source = link.source as SimNode;
+    const target = link.target as SimNode;
+    const x1 = source.x ?? 0;
+    const y1 = source.y ?? 0;
+    const targetX = target.x ?? 0;
+    const targetY = target.y ?? 0;
+    if (!link.directed || link.dangling) return { x1, y1, x2: targetX, y2: targetY };
+    const dx = targetX - x1;
+    const dy = targetY - y1;
+    const distance = Math.hypot(dx, dy);
+    if (distance === 0) return { x1, y1, x2: targetX, y2: targetY };
+    const inset = Math.min(this.nodeRadius(target), distance);
+    return {
+      x1,
+      y1,
+      x2: targetX - (dx / distance) * inset,
+      y2: targetY - (dy / distance) * inset,
+    };
   }
 
   private graphItemCount(): number {
@@ -509,13 +574,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private graphItemText(index: number): string {
     if (index < this.simNodes.length) {
       const node = this.simNodes[index];
-      return node ? this.localize('graphNode', undefined, { label: node.label ?? node.id }) : '';
+      return node ? this.localize('graphNode', undefined, { label: this.nodeAccessibleText(node) }) : '';
     }
     const link = this.simLinks[index - this.simNodes.length];
-    if (!link) return '';
-    const source = typeof link.source === 'object' ? (link.source as SimNode).label ?? (link.source as SimNode).id : String(link.source);
-    const target = typeof link.target === 'object' ? (link.target as SimNode).label ?? (link.target as SimNode).id : String(link.target);
-    return this.localize('graphLink', undefined, { source, target });
+    return link ? this.linkAccessibleText(link) : '';
   }
 
   private onGraphItemFocus(index: number): void {
@@ -588,35 +650,51 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         <svg
           part="svg"
           role="group"
-          aria-label=${this.localize('graphDiagram', undefined, {
+          aria-label=${this.accessibleLabel ||
+          this.localize('graphDiagram', undefined, {
             nodeCount: this.simNodes.length,
             linkCount: this.simLinks.length,
           })}
           viewBox="0 0 ${this.width} ${this.height}"
           tabindex=${this.graphItemCount() ? '-1' : '0'}
         >
+          <defs>
+            <marker
+              id=${this.arrowMarkerId}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+              markerUnits="strokeWidth"
+            >
+              <path part="arrowhead" d="M 0 0 L 10 5 L 0 10 z"></path>
+            </marker>
+          </defs>
           <g transform="">
             ${this.simLinks.map((l, linkIndex) => {
-              const source = l.source as SimNode;
-              const target = l.target as SimNode;
               const itemIndex = this.simNodes.length + linkIndex;
+              const coordinates = this.linkCoordinates(l);
+              const color = sanitizeNodeColor(l.color);
+              const dash = normalizeLinkDash(l.dash);
               return svg`<line
                 part="link"
                 role="button"
                 tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
-                aria-label=${this.localize('graphLink', undefined, {
-                  source: source.label ?? source.id,
-                  target: target.label ?? target.id,
-                })}
+                aria-label=${this.linkAccessibleText(l)}
                 stroke-width=${l.width ?? 1.5}
-                x1=${source.x ?? 0}
-                y1=${source.y ?? 0}
-                x2=${target.x ?? 0}
-                y2=${target.y ?? 0}
+                stroke-dasharray=${dash ?? nothing}
+                marker-end=${l.directed ? `url(#${this.arrowMarkerId})` : nothing}
+                style=${styleMap(color ? { '--lyra-link-color': color } : {})}
+                x1=${coordinates.x1}
+                y1=${coordinates.y1}
+                x2=${coordinates.x2}
+                y2=${coordinates.y2}
                 @click=${() => this.onLinkClick(l)}
                 @focus=${() => this.onGraphItemFocus(itemIndex)}
                 @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
-              ></line>`;
+              >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>`;
             })}
             ${this.danglingLinks.map((l) => {
               const source = l.source as SimNode;
@@ -639,7 +717,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   part="node"
                   role="button"
                   tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
-                  aria-label=${n.label ?? n.id}
+                  aria-label=${this.nodeAccessibleText(n)}
                   r=${this.nodeRadius(n)}
                   cx=${n.x ?? 0}
                   cy=${n.y ?? 0}
@@ -647,7 +725,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   @click=${() => this.onNodeClick(n)}
                   @focus=${() => this.onGraphItemFocus(itemIndex)}
                   @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
-                ></circle>
+                >${n.description ? svg`<title>${n.description}</title>` : nothing}</circle>
                 ${n.label
                   ? svg`<text part="label" aria-hidden="true" x=${(n.x ?? 0) + this.nodeRadius(n) + 2} y=${n.y ?? 0}>${n.label}</text>`
                   : ''}
@@ -660,16 +738,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         </div>
         <ul part="data-list" class="sr-only" aria-label=${this.localize('graphDataList')}>
           ${this.simNodes.map(
-            (node) => html`<li>${this.localize('graphNode', undefined, { label: node.label ?? node.id })}</li>`,
+            (node) => html`<li>${this.localize('graphNode', undefined, { label: this.nodeAccessibleText(node) })}</li>`,
           )}
-          ${this.simLinks.map((link) => {
-            const source = link.source as SimNode;
-            const target = link.target as SimNode;
-            return html`<li>${this.localize('graphLink', undefined, {
-              source: source.label ?? source.id,
-              target: target.label ?? target.id,
-            })}</li>`;
-          })}
+          ${this.simLinks.map((link) => html`<li>${this.linkAccessibleText(link)}</li>`)}
         </ul>
       </div>
     `;
