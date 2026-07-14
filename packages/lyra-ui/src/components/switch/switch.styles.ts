@@ -70,6 +70,24 @@ export const styles = css`
     color: var(--lyra-color-text);
   }
 
+  [part='hint'] {
+    margin-block-start: var(--lyra-space-xs);
+    font-size: var(--lyra-font-size-sm);
+    color: var(--lyra-color-text-quiet);
+  }
+  /* :empty never matches here -- same fix as [part='hint']/[part='error'] on lyra-select. */
+  [part='hint'][hidden] {
+    display: none;
+  }
+  [part='error'] {
+    margin-block-start: var(--lyra-space-xs);
+    font-size: var(--lyra-font-size-sm);
+    color: var(--lyra-color-danger);
+  }
+  [part='error'][hidden] {
+    display: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     [part='track'],
     [part='thumb'] {

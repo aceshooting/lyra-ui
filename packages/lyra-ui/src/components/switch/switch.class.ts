@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult } from 'lit';
-import { state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { styles } from './switch.styles.js';
@@ -20,16 +20,27 @@ export interface LyraSwitchEventMap {
  * see `<lyra-combobox>` for the same direct-`ElementInternals` shape with a
  * non-string value).
  *
+ * Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +
+ * `hint`/`error` CSS parts), mirroring `<lyra-select>`'s pattern for those two pieces -- left
+ * unset, neither renders. Deliberately no separate top-of-field `label` prop/slot/part mirroring
+ * `<lyra-select>`'s `form-control-label`: the default slot already *is* this control's visible,
+ * clickable label (same as `<lyra-checkbox>`), so a second label surface would be redundant.
+ *
  * @customElement lyra-switch
  * @slot - Label text, rendered next to the track. Clicking it toggles the
  * switch, the same as clicking a checkbox's associated `<label>`. If left
  * empty, set `aria-label` on the host so the control still has an
  * accessible name.
+ * @slot hint - Custom hint content.
+ * @slot error - Custom error content.
  * @event lyra-change - The user toggled the switch (click or Space/Enter). `detail: { checked }`.
+ * @csspart form-control - The outer wrapper around the switch, error and hint.
  * @csspart base - The whole interactive control (`role="switch"`); wraps the track and label.
  * @csspart track - The pill-shaped background.
  * @csspart thumb - The circular knob that slides across the track.
  * @csspart label - The wrapper around the default slot.
+ * @csspart hint - The hint message.
+ * @csspart error - The error message.
  */
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -43,6 +54,12 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     value: { noAccessor: true },
   };
 
+  /** Hint text below the switch. Unset: no hint chrome renders. */
+  @property() hint = '';
+  /** Error text below the switch (overridden by slotted `error` content). Unset: no error chrome
+   *  renders. */
+  @property({ attribute: 'error-text' }) errorText = '';
+
   // Tracks whether the default slot carries any real (non-whitespace)
   // content, so the label wrapper — and the `gap` next to the track — can
   // collapse to nothing for an icon-only/aria-label-only switch instead of
@@ -52,6 +69,12 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   // common case here, e.g. `<lyra-switch>Enable notifications</lyra-switch>`)
   // is a text node, which `assignedElements` would silently ignore.
   @state() private hasLabelSlot = false;
+  // `[part]:empty` never matches here -- the parts always contain a literal `<slot>` child element
+  // regardless of assigned/text content -- so real emptiness is tracked in JS instead (same fix as
+  // `hasLabelSlot` above, and as `<lyra-select>`'s identical hint/error parts) and reflected via
+  // the `hidden` attribute.
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -172,12 +195,20 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   }
 
   protected willUpdate(): void {
-    // Seed `hasLabelSlot` from the light-DOM children synchronously before
-    // the very first render (same `!hasUpdated` guard as combobox/date-input's
-    // `hasHintSlot` etc.) so declaratively-provided label text doesn't flash
-    // hidden for one frame while waiting on the first `slotchange` event.
+    // Seed `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` from the light-DOM children synchronously
+    // before the very first render (same `!hasUpdated` guard as combobox/date-input's
+    // `hasHintSlot` etc.) so declaratively-provided label/hint/error content doesn't flash hidden
+    // for one frame while waiting on the first `slotchange` event.
     if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.childNodes).some((n) => (n.textContent ?? '').trim().length > 0);
+      // Excludes element children explicitly assigned to the named `hint`/`error` slots -- those
+      // are real childNodes of the host too, and without this filter their own textContent would
+      // wrongly count as default-slot label content (e.g. a bare `<lyra-switch><span
+      // slot="hint">...</span></lyra-switch>` with no actual label text).
+      this.hasLabelSlot = Array.from(this.childNodes).some(
+        (n) => !(n instanceof Element && n.slot) && (n.textContent ?? '').trim().length > 0,
+      );
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
     }
   }
 
@@ -244,26 +275,48 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.hasLabelSlot = nodes.some((n) => (n.textContent ?? '').trim().length > 0);
   };
 
+  private onHintSlotChange = (e: Event): void => {
+    this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onErrorSlotChange = (e: Event): void => {
+    this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   render(): TemplateResult {
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const describedBy = [hasError ? 'switch-error' : '', hasHint ? 'switch-hint' : '']
+      .filter(Boolean)
+      .join(' ');
     return html`
-      <span
-        part="base"
-        role="switch"
-        tabindex=${this.effectiveDisabled ? '-1' : '0'}
-        aria-checked=${this.checked ? 'true' : 'false'}
-        aria-required=${this.required ? 'true' : nothing}
-        aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
-        aria-label=${this.getAttribute('aria-label') || nothing}
-        @click=${this.onClick}
-        @keydown=${this.onKeyDown}
-      >
-        <span part="track">
-          <span part="thumb"></span>
+      <div part="form-control">
+        <span
+          part="base"
+          role="switch"
+          tabindex=${this.effectiveDisabled ? '-1' : '0'}
+          aria-checked=${this.checked ? 'true' : 'false'}
+          aria-required=${this.required ? 'true' : nothing}
+          aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
+          aria-label=${this.getAttribute('aria-label') || nothing}
+          aria-describedby=${describedBy || nothing}
+          @click=${this.onClick}
+          @keydown=${this.onKeyDown}
+        >
+          <span part="track">
+            <span part="thumb"></span>
+          </span>
+          <span part="label" ?hidden=${!this.hasLabelSlot}>
+            <slot @slotchange=${this.onSlotChange}></slot>
+          </span>
         </span>
-        <span part="label" ?hidden=${!this.hasLabelSlot}>
-          <slot @slotchange=${this.onSlotChange}></slot>
-        </span>
-      </span>
+        <div id="switch-error" part="error" ?hidden=${!hasError}>
+          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+        </div>
+        <div id="switch-hint" part="hint" ?hidden=${!hasHint}>
+          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+        </div>
+      </div>
     `;
   }
 }

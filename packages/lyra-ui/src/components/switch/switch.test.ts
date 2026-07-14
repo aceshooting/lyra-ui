@@ -404,3 +404,61 @@ it('is accessible in a checked, labeled, required state', async () => {
   )) as LyraSwitch;
   await expect(el).to.be.accessible();
 });
+
+describe('hint/error chrome', () => {
+  it('renders no hint/error chrome when hint/errorText are unset (today\'s exact bare output)', async () => {
+    const el = (await fixture(html`<lyra-switch>Enable notifications</lyra-switch>`)) as LyraSwitch;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.true;
+    expect(error.hidden).to.be.true;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.hasAttribute('aria-describedby')).to.be.false;
+  });
+
+  it('renders hint/errorText text and un-hides the matching parts', async () => {
+    const el = (await fixture(
+      html`<lyra-switch hint="You can change this later" error-text="Required">Enable notifications</lyra-switch>`,
+    )) as LyraSwitch;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(hint.hidden).to.be.false;
+    expect(hint.textContent).to.contain('You can change this later');
+    expect(error.hidden).to.be.false;
+    expect(error.textContent).to.contain('Required');
+  });
+
+  it('wires aria-describedby on the inner switch to the rendered error/hint ids', async () => {
+    const el = (await fixture(
+      html`<lyra-switch hint="Hint text" error-text="Err text">Enable notifications</lyra-switch>`,
+    )) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-describedby')).to.equal('switch-error switch-hint');
+  });
+
+  it('supports slotted hint/error content in place of the text props, without disturbing the default-slot label', async () => {
+    const el = (await fixture(html`
+      <lyra-switch>
+        Enable notifications
+        <span slot="hint">Slotted hint</span>
+        <span slot="error">Slotted error</span>
+      </lyra-switch>
+    `)) as LyraSwitch;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    expect(hint.hidden).to.be.false;
+    expect(error.hidden).to.be.false;
+    expect(label.hidden).to.be.false;
+  });
+
+  it('does not treat a slotted hint/error-only switch (no default-slot text) as having a label', async () => {
+    const el = (await fixture(html`
+      <lyra-switch>
+        <span slot="hint">Slotted hint</span>
+      </lyra-switch>
+    `)) as LyraSwitch;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    expect(label.hidden).to.be.true;
+  });
+});
