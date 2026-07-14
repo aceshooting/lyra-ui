@@ -754,10 +754,12 @@ unmodified; disabled while `disabled` or `loading`).
 
 A single-line plain-text input primitive, the `lyra-*` equivalent of a plain `wa-input`,
 form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships the same opt-in
-`label`/`hint`/`errorText` form-control chrome as `lyra-textarea`/`lyra-select`.
+`label`/`hint`/`errorText` form-control chrome as `lyra-textarea`/`lyra-select`, and the same
+`size` scale as `lyra-select`/`lyra-combobox`.
 
 **Properties:**
 - `type: 'text' | 'password' | 'email' | 'number' = 'text'`
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
 - `label: string = ''`
@@ -778,13 +780,16 @@ composed from the internal native input's own `blur`/`focus`).
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
 (present only when `type="password"`), `hint`, `error`.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lyra-input-padding-block`, `--lyra-input-padding-inline`,
+`--lyra-input-font-size` — all three auto-swapped per `size` (`xs`…`xl`), the same pattern
+`lyra-select`'s `--lyra-select-trigger-padding`/`--lyra-select-font-size` use.
 
 **Optional peer deps:** none.
 
 ```html
 <lyra-input type="password" label="Password"></lyra-input>
 <lyra-input type="email" label="Email" required></lyra-input>
+<lyra-input size="s" placeholder="Compact"></lyra-input>
 ```
 
 **Known gotchas:**

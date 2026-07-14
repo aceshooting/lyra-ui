@@ -3,6 +3,29 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    --lyra-input-padding-block: var(--lyra-space-s);
+    --lyra-input-padding-inline: var(--lyra-space-s);
+    --lyra-input-font-size: var(--lyra-font-size-md-sm);
+  }
+  :host([size='xs']) {
+    --lyra-input-padding-block: var(--lyra-size-0-125rem);
+    --lyra-input-padding-inline: var(--lyra-space-xs);
+    --lyra-input-font-size: var(--lyra-font-size-xs);
+  }
+  :host([size='s']) {
+    --lyra-input-padding-block: var(--lyra-space-xs);
+    --lyra-input-padding-inline: var(--lyra-space-xs);
+    --lyra-input-font-size: var(--lyra-font-size-sm);
+  }
+  :host([size='l']) {
+    --lyra-input-padding-block: var(--lyra-space-m);
+    --lyra-input-padding-inline: var(--lyra-space-m);
+    --lyra-input-font-size: var(--lyra-font-size-lg);
+  }
+  :host([size='xl']) {
+    --lyra-input-padding-block: var(--lyra-space-l);
+    --lyra-input-padding-inline: var(--lyra-space-l);
+    --lyra-input-font-size: var(--lyra-font-size-xl);
   }
   [part='form-control-label'] {
     display: block;
@@ -23,7 +46,7 @@ export const styles = css`
     gap: var(--lyra-space-xs);
     inline-size: 100%;
     box-sizing: border-box;
-    padding-inline: var(--lyra-space-s);
+    padding-inline: var(--lyra-input-padding-inline);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-surface);
@@ -35,13 +58,13 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     box-sizing: border-box;
-    padding-block: var(--lyra-space-s);
+    padding-block: var(--lyra-input-padding-block);
     border: none;
     outline: none;
     background: transparent;
     color: var(--lyra-color-text);
     font: inherit;
-    font-size: var(--lyra-font-size-md-sm);
+    font-size: var(--lyra-input-font-size);
   }
   [part='input']::placeholder {
     color: var(--lyra-color-text-quiet);

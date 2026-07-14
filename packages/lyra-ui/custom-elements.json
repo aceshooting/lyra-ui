@@ -36166,7 +36166,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-input>` — a single-line plain-text input primitive, the `lyra-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lyra-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lyra-textarea>`/\n`<lyra-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `type=\"password\"` always renders a\n`password-toggle` eye-icon button that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.",
+          "description": "`<lyra-input>` — a single-line plain-text input primitive, the `lyra-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lyra-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lyra-textarea>`/\n`<lyra-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as\n`<lyra-select>`/`<lyra-combobox>`. `type=\"password\"` always renders a\n`password-toggle` eye-icon button that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.",
           "name": "LyraInput",
           "cssParts": [
             {
@@ -36421,6 +36421,17 @@
               },
               "default": "''",
               "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "size",
+              "type": {
+                "text": "LyraInputSize"
+              },
+              "default": "'m'",
+              "description": "Visual size — same `xs`–`xl` scale as `lyra-select`/`lyra-combobox`'s own `size`.",
+              "attribute": "size",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -36767,6 +36778,15 @@
               },
               "default": "''",
               "fieldName": "placeholder"
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "LyraInputSize"
+              },
+              "default": "'m'",
+              "description": "Visual size — same `xs`–`xl` scale as `lyra-select`/`lyra-combobox`'s own `size`.",
+              "fieldName": "size"
             },
             {
               "name": "step",

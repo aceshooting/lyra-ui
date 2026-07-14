@@ -371,7 +371,7 @@ export { LyraButton } from './components/button/button.js';
 export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType } from './components/button/button.js';
 
 export { LyraInput } from './components/input/input.js';
-export type { LyraInputType } from './components/input/input.js';
+export type { LyraInputType, LyraInputSize } from './components/input/input.js';
 
 export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
 export type { LyraChartEventMap } from './components/chart/chart.js';

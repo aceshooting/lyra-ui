@@ -7,6 +7,7 @@ import { eyeIcon, eyeOffIcon } from '../../internal/icons.js';
 import { styles } from './input.styles.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number';
+export type LyraInputSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraInputEventMap {
   'lyra-input': CustomEvent<{ value: string }>;
@@ -22,7 +23,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *
  * Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lyra-textarea>`/
  * `<lyra-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`
- * parts) — left unset, the chrome stays hidden. `type="password"` always renders a
+ * parts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as
+ * `<lyra-select>`/`<lyra-combobox>`. `type="password"` always renders a
  * `password-toggle` eye-icon button that flips the internal native input between
  * `type="password"`/`type="text"` and tracks `passwordVisible`. `type="email"`/`type="number"`
  * (with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own
@@ -52,6 +54,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   static styles = [LyraElement.styles, styles];
 
   @property() type: LyraInputType = 'text';
+  /** Visual size — same `xs`–`xl` scale as `lyra-select`/`lyra-combobox`'s own `size`. */
+  @property({ reflect: true }) size: LyraInputSize = 'm';
   @property() placeholder = '';
   @property() label = '';
   @property() hint = '';

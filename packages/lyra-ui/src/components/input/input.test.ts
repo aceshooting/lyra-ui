@@ -11,6 +11,14 @@ describe('lyra-input', () => {
     expect(input.type).to.equal('text');
   });
 
+  it('defaults to size "m" and reflects a size attribute', async () => {
+    const defaultEl = (await fixture(html`<lyra-input></lyra-input>`)) as LyraInput;
+    expect(defaultEl.size).to.equal('m');
+    const el = (await fixture(html`<lyra-input size="s"></lyra-input>`)) as LyraInput;
+    expect(el.getAttribute('size')).to.equal('s');
+    expect(el.size).to.equal('s');
+  });
+
   it('forwards placeholder/autocomplete/min/max/step onto the native input', async () => {
     const el = (await fixture(
       html`<lyra-input type="number" placeholder="Qty" autocomplete="off" min="1" max="10" step="2"></lyra-input>`,
