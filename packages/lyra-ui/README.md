@@ -158,7 +158,7 @@ roving-tabindex list) to match. No per-component RTL flag or opt-in needed.
 
 ## Components
 
-The catalog below lists all 92 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 93 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -172,6 +172,7 @@ API details.
 | `<lyra-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
+| `<lyra-textarea>` | `wa-textarea` | Bare multiline plain-text input, form-associated |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 
 **Dashboard atoms**

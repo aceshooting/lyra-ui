@@ -77,6 +77,7 @@ import './components/segmented/segmented.js';
 import './components/diff-view/diff-view.js';
 import './components/poll-status/poll-status.js';
 import './components/code-block/code-block-core.js';
+import './components/textarea/textarea.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -340,6 +341,8 @@ export { computeLineDiff } from './components/diff-view/diff-line-diff.js';
 export type { DiffOp } from './components/diff-view/diff-line-diff.js';
 export { LyraPollStatus } from './components/poll-status/poll-status.js';
 export { LyraCodeBlockCore } from './components/code-block/code-block-core.js';
+export { LyraTextarea } from './components/textarea/textarea.js';
+export type { TextareaResize } from './components/textarea/textarea.js';
 
 export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
 export type { LyraChartEventMap } from './components/chart/chart.js';
@@ -385,6 +388,7 @@ export type { LyraStreamStatusEventMap } from './components/stream-status/stream
 export type { LyraSwitchEventMap } from './components/switch/switch.js';
 export type { LyraTableEventMap } from './components/table/table.js';
 export type { LyraTabsEventMap } from './components/tabs/tabs.js';
+export type { LyraTextareaEventMap } from './components/textarea/textarea.js';
 export type { LyraTimeRangeEventMap } from './components/time-range/time-range.js';
 export type { LyraToastItemEventMap } from './components/toast/toast-item.js';
 export type { LyraToolApprovalDialogEventMap } from './components/tool-approval-dialog/tool-approval-dialog.js';

@@ -579,6 +579,44 @@ and `dateTimeFormat(locale, options)`.
 
 ---
 
+## lyra-textarea
+
+A bare, multiline plain-text input primitive -- the thin `lyra-*` equivalent of `wa-textarea`.
+Form-associated (participates in native `<form>` submission/validation/reset via
+`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()`). No auto-resize and no
+label/hint/error chrome -- wrap it in your own form-field layout for those.
+
+```html
+<lyra-textarea placeholder="Notes" rows="4"></lyra-textarea>
+```
+
+### Properties
+
+| Property | Attribute | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `value` | `value` | `string` | `''` | The current text value. |
+| `rows` | `rows` | `number` | `3` | Visible text rows. |
+| `resize` | `resize` | `'none' \| 'vertical' \| 'both'` | `'vertical'` | Native CSS `resize` behavior. |
+| `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
+| `name` | `name` | `string` | `''` | Form field name. |
+| `disabled` | `disabled` | `boolean` | `false` | Disables the control. |
+| `required` | `required` | `boolean` | `false` | Participates in native constraint validation. |
+
+### Events
+
+| Event | Detail | Description |
+| --- | --- | --- |
+| `lyra-input` | `{ value: string }` | Fired on every user-driven edit. |
+| `lyra-change` | `{ value: string }` | Fired on native `change` timing (blur after a committed edit). |
+
+### CSS Parts
+
+| Part | Description |
+| --- | --- |
+| `textarea` | The native `<textarea>` element. |
+
+---
+
 ## `lyra-toast` / `lyra-toast-item` / `toast()`
 
 Stacking toast/notification region. Mirrors `<wa-toast>`/`<wa-toast-item>` under `lyra-`.

@@ -67,6 +67,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-switch',
   'lyra-table',
   'lyra-tabs',
+  'lyra-textarea',
   'lyra-thinking-panel',
   'lyra-time-range',
   'lyra-toast',
