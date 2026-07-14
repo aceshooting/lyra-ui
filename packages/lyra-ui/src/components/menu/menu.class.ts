@@ -121,7 +121,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   /** Accessible name for the `role="menu"` popup — override with something
    *  specific (e.g. "Row actions") when a page has more than one menu.
-   *  Localized (`menuLabel`) when left at its default. */
+   *  Localized (`menuLabel`) when left at its default. A host-level
+   *  `aria-label` attribute takes precedence over both this prop and the
+   *  localized default, matching `lyra-select`/`lyra-model-select`'s
+   *  established `this.getAttribute('aria-label') || <computed default>`
+   *  precedence (see `effectiveLabel`). */
   @property() label = 'Menu';
 
   /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
@@ -472,11 +476,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   }
 
-  /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
-   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
-   *  override applies without requiring `label` itself to be set. */
+  /** Resolves `label`'s effective text: a host-level `aria-label` attribute wins first
+   *  (unset by default, so this is a no-op for every existing consumer); otherwise an
+   *  explicit `label` override wins verbatim; left at the built-in default it instead
+   *  routes through `this.localize()` so a locale/`.strings` override applies without
+   *  requiring `label` itself to be set. */
   private get effectiveLabel(): string {
-    return this.localize('menuLabel', this.label === 'Menu' ? undefined : this.label);
+    return this.getAttribute('aria-label') || this.localize('menuLabel', this.label === 'Menu' ? undefined : this.label);
   }
 
   render(): TemplateResult {

@@ -591,6 +591,24 @@ it('honors a strings override for menuLabel while label is left at its default',
   expect(list(el).getAttribute('aria-label')).to.equal('Menú');
 });
 
+it('honors a host-level aria-label attribute over both the default and an explicit label prop', async () => {
+  const withDefaultLabel = (await fixture(html`
+    <lyra-menu aria-label="Context menu">
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  expect(list(withDefaultLabel).getAttribute('aria-label')).to.equal('Context menu');
+
+  const withExplicitLabel = (await fixture(html`
+    <lyra-menu label="Row actions" aria-label="Context menu">
+      <button slot="trigger" aria-label="Actions">⋮</button>
+      <lyra-menu-item value="rename">Rename</lyra-menu-item>
+    </lyra-menu>
+  `)) as LyraMenu;
+  expect(list(withExplicitLabel).getAttribute('aria-label')).to.equal('Context menu');
+});
+
 it('is accessible while closed', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   await expect(el).to.be.accessible();
