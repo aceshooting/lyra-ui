@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree } from './tree.js';
 import type { LyraTreeNode } from './tree-node.js';
+import { styles as treeNodeStyles } from './tree-node.styles.js';
 
 const data = [
   {
@@ -15,6 +16,12 @@ const data = [
   },
   { id: '2', label: 'Leaf' },
 ];
+
+it('mirrors the collapsed disclosure chevron under RTL while keeping expanded chevrons downward', () => {
+  const css = treeNodeStyles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(":host(:dir(rtl)) [part='toggle'] { transform: rotate(180deg);");
+  expect(css).to.include(":host([expanded]:dir(rtl)) [part='toggle'] { transform: rotate(90deg);");
+});
 
 it('renders top-level treeitems with a tree role', async () => {
   const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
@@ -546,6 +553,20 @@ it('forwards `label` to the internal role="tree" element\'s aria-label, and omit
   expect(base.getAttribute('aria-label')).to.equal('File explorer');
 });
 
+it('sets aria-label on the internal role="tree" element from the label prop, falling back to a forwarded host aria-label', async () => {
+  const el = (await fixture(
+    html`<lyra-tree aria-label="Forwarded label"></lyra-tree>`,
+  )) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[role="tree"]') as HTMLElement;
+  expect(base.getAttribute('aria-label')).to.equal('Forwarded label');
+
+  el.label = 'File explorer';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('File explorer');
+});
+
 it('sets aria-level, aria-setsize, and aria-posinset to the correct values for top-level and nested items', async () => {
   const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
   el.data = data;
@@ -668,4 +689,53 @@ it('keeps arrow-key navigation correct after expandAll() reveals nodes that were
   await el.updateComplete;
   const childA = root.shadowRoot!.querySelector('lyra-tree-node');
   expect(deepActiveElement()).to.equal(childA);
+});
+
+it('renders a structured icon and secondary description without adding another interactive row', async () => {
+  const icon = html`<svg data-test-icon viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"></circle></svg>`;
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = [{ id: 'rich', label: 'Judgment', icon, description: 'Grand Chamber · 2026', badge: 3 }];
+  await el.updateComplete;
+
+  const node = el.querySelector('lyra-tree-node') as HTMLElement;
+  const iconPart = node.shadowRoot!.querySelector('[part="icon"]')!;
+  const description = node.shadowRoot!.querySelector('[part="description"]')!;
+
+  expect(iconPart.querySelector('[data-test-icon]')).to.exist;
+  expect(iconPart.getAttribute('aria-hidden')).to.equal('true');
+  expect(description.textContent).to.equal('Grand Chamber · 2026');
+  expect(node.shadowRoot!.querySelectorAll('[role]').length).to.equal(0);
+  await expect(el).to.be.accessible();
+});
+
+it('uses accessibleLabel as the treeitem host name without changing its visible label', async () => {
+  const el = (await fixture(html`<lyra-tree label="Cases"></lyra-tree>`)) as LyraTree;
+  el.data = [
+    {
+      id: 'case',
+      label: 'C-42/24',
+      description: 'Judgment',
+      accessibleLabel: 'Case C-42/24, Judgment, 3 cited decisions',
+    },
+  ];
+  await el.updateComplete;
+
+  const node = el.querySelector('lyra-tree-node') as HTMLElement;
+  expect(node.getAttribute('aria-label')).to.equal(
+    'Case C-42/24, Judgment, 3 cited decisions',
+  );
+  expect(node.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('C-42/24');
+});
+
+it('removes a stale accessible label when reassigned row data no longer supplies one', async () => {
+  const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+  el.data = [{ id: 'case', label: 'Case', accessibleLabel: 'Detailed case label' }];
+  await el.updateComplete;
+  const node = el.querySelector('lyra-tree-node') as HTMLElement;
+  expect(node.getAttribute('aria-label')).to.equal('Detailed case label');
+
+  el.data = [{ id: 'case', label: 'Case' }];
+  await el.updateComplete;
+
+  expect(node.hasAttribute('aria-label')).to.equal(false);
 });

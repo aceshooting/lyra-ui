@@ -27,6 +27,36 @@ export const Default: Story = {
   render: () => html`<lyra-tree style="max-width: 20rem" label="File explorer" .data=${data}></lyra-tree>`,
 };
 
+export const RichRows: Story = {
+  render: () => html`
+    <lyra-tree
+      style="max-width: 20rem"
+      label="Case hierarchy"
+      .data=${[
+        {
+          id: 'judgment',
+          label: 'C-42/24 — Commission v Example',
+          description: 'Grand Chamber · Judgment · 14 July 2026',
+          accessibleLabel:
+            'Case C-42/24, Commission v Example, Grand Chamber judgment, 14 July 2026',
+          badge: 12,
+          icon: html`<svg aria-hidden="true" viewBox="0 0 16 16" width="1em" height="1em">
+            <circle cx="8" cy="8" r="6" fill="currentColor"></circle>
+          </svg>`,
+          children: [
+            {
+              id: 'opinion',
+              label: 'Opinion of the Advocate General',
+              description: 'Delivered 20 February 2026',
+              icon: html`<span aria-hidden="true">◇</span>`,
+            },
+          ],
+        },
+      ] satisfies TreeItem[]}
+    ></lyra-tree>
+  `,
+};
+
 /** Demonstrates the imperative `expandAll()`/`collapseAll()` methods. */
 export const ExpandCollapseAll: Story = {
   render: () => {

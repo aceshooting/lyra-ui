@@ -14,6 +14,12 @@ export interface TreeItem {
   label: string;
   children?: TreeItem[];
   badge?: string | number;
+  /** Optional decorative leading content, such as an icon TemplateResult. */
+  icon?: unknown;
+  /** Secondary visible row text. */
+  description?: string;
+  /** Spoken treeitem name when it needs more context than the visible row. */
+  accessibleLabel?: string;
 }
 
 /**
@@ -38,7 +44,11 @@ export class LyraTree extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) data: TreeItem[] = [];
-  /** Accessible name for the tree -- `role="tree"` lives on an internal element, not the host, so `aria-label`/`aria-labelledby` set directly on `<lyra-tree>` would not label it. */
+  /**
+   * Accessible name forwarded to the internal `role="tree"` element. A host `aria-label` is also
+   * forwarded as a fallback when `label` is empty; `label` takes precedence when both are set.
+   * External `aria-labelledby` idrefs are not forwarded across the shadow boundary.
+   */
   @property() label = '';
 
   @state() private activeId: string | null = null;
@@ -312,7 +322,7 @@ export class LyraTree extends LyraElement {
       <div
         part="base"
         role="tree"
-        aria-label=${this.label || nothing}
+        aria-label=${this.label || this.getAttribute('aria-label') || nothing}
         @keydown=${this.onTreeKeyDown}
         @lyra-node-toggle=${this.onNodeActivate}
         @lyra-node-select=${this.onNodeActivate}
@@ -332,4 +342,3 @@ declare global {
     'lyra-tree': LyraTree;
   }
 }
-

@@ -51,14 +51,40 @@ export const styles = css`
   :host([expanded]) [part='toggle'] {
     transform: rotate(90deg);
   }
+  :host(:dir(rtl)) [part='toggle'] {
+    transform: rotate(180deg);
+  }
+  :host([expanded]:dir(rtl)) [part='toggle'] {
+    transform: rotate(90deg);
+  }
   [part='label'] {
-    flex: 1 1 auto;
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  [part='icon'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--lyra-color-text-quiet);
+  }
+  [part='content'] {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+  [part='description'] {
+    min-inline-size: 0;
+    color: var(--lyra-color-text-quiet);
+    font-size: var(--lyra-font-size-xs);
+    line-height: var(--lyra-line-height-compact);
+    overflow-wrap: anywhere;
+  }
   [part='badge'] {
+    flex: 0 0 auto;
     font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text);
     background: var(--lyra-color-border);

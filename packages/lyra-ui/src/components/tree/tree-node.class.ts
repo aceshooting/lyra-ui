@@ -28,7 +28,10 @@ export interface LyraTreeNodeEventMap {
  * @event lyra-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).
  * @csspart row - The tree row.
  * @csspart toggle - The expand/collapse button.
+ * @csspart icon - The optional decorative leading icon.
+ * @csspart content - The primary and secondary text wrapper.
  * @csspart label - The node label.
+ * @csspart description - The optional secondary description.
  * @csspart badge - The optional node badge.
  * @csspart group - The wrapper around a node's expanded child items.
  */
@@ -54,6 +57,8 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     this.setAttribute('aria-posinset', String(this.posInSet));
     if (this.hasChildren) this.setAttribute('aria-expanded', String(this.expanded));
     else this.removeAttribute('aria-expanded');
+    if (this.item.accessibleLabel) this.setAttribute('aria-label', this.item.accessibleLabel);
+    else this.removeAttribute('aria-label');
     this.tabIndex = this.item?.id === this.activeId ? 0 : -1;
   }
 
@@ -127,7 +132,15 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
         >
           ${this.hasChildren ? chevronIcon() : nothing}
         </button>
-        <span part="label">${this.item.label}</span>
+        ${this.item.icon != null
+          ? html`<span part="icon" aria-hidden="true">${this.item.icon}</span>`
+          : nothing}
+        <span part="content">
+          <span part="label">${this.item.label}</span>
+          ${this.item.description
+            ? html`<span part="description">${this.item.description}</span>`
+            : nothing}
+        </span>
         ${this.item.badge != null ? html`<span part="badge">${this.item.badge}</span>` : nothing}
       </div>
       ${this.expanded && this.hasChildren
