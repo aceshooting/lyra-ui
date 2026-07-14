@@ -1,8 +1,39 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type TemplateResult,
+  type SVGTemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { styles } from './chat-composer.styles.js';
+
+/**
+ * String-aware boolean attribute converter for `spellcheck`. Lit's built-in
+ * `type: Boolean` converter is presence-based -- the attribute's mere
+ * presence (regardless of its string value) maps to `true`, so a plain-
+ * markup consumer writing the literal `spellcheck="false"` would actually get
+ * `true` (this component's default), the opposite of what that string reads
+ * as -- the same bug class `<lyra-generation-status>`'s `showStopConverter`
+ * documents and fixes for `show-stop`. Mirrors that converter's two-state
+ * shape: attribute absent (or removed) -> `true` (the default);
+ * `spellcheck="false"` -> `false`; anything else present (no value,
+ * `="true"`, ...) -> `true`.
+ */
+const spellcheckConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting
+    // for it; only the non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
 
 export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
 
@@ -51,6 +82,8 @@ export interface LyraChatComposerEventMap {
   'lyra-input': CustomEvent<{ value: string }>;
   'lyra-stop': CustomEvent<undefined>;
   'lyra-submit': CustomEvent<{ value: string }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
 
@@ -84,6 +117,9 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * submit while a previous message is still sending/streaming, and the
  * textarea deliberately stays interactive (see `disabled` below) so a user
  * can keep composing their next message in the meantime.
+ *
+ * Deliberately no label/hint/error chrome -- a composite chat-input control, not a labeled form
+ * field; wrap it in your own layout for that context.
  *
  * `lyra-submit`'s `detail.value` is always the exact, untrimmed current
  * value (`detail.value === value` at the moment it fires) -- trimming is
@@ -120,6 +156,27 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  no cancellation operation to offer. Defaults to `true`, reproducing
    *  today's Stop-button behavior for every `status` other than `'idle'`. */
   @property({ type: Boolean, reflect: true }) stoppable = true;
+  /** Forwarded to the internal `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
+   *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
+   *  presence-based `type: Boolean` handling, so a plain-HTML consumer with no way to write a
+   *  `.spellcheck` property binding can still turn this off with `spellcheck="false"`; a Lit
+   *  template can do the same with either that attribute string or a `.spellcheck=${false}`
+   *  property binding. */
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  /** Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the
+   *  attribute (browser default). */
+  @property() autocapitalize = '';
+  /** Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty
+   *  string omits the attribute (browser default). No `wrap` property here -- the auto-resize
+   *  logic above already assumes unwrapped natural text flow.
+   *
+   *  Named `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`
+   *  collision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,
+   *  which a same-named `string`-typed reactive property here would override unsoundly from the
+   *  type checker's point of view (even though the browser itself would happily let this class's
+   *  own accessor win at runtime). The explicit attribute mapping preserves the standard
+   *  lowercase `autocorrect` wire name in both Lit and generated component metadata. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
 
   @state() private hasLeadingSlot = false;
   @state() private hasChipsSlot = false;
@@ -311,6 +368,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   private onTextareaBlur = (): void => {
     this.touched = true;
+    this.emit('blur');
+  };
+
+  private onTextareaFocus = (): void => {
+    this.emit('focus');
   };
 
   private renderActionButton(): TemplateResult {
@@ -344,6 +406,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
             aria-label=${this.placeholder || this.localize('composerLabel')}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+            spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
             .value=${this.value}
             placeholder=${this.placeholder}
             rows=${Math.max(1, this.minRows || 1)}
@@ -351,6 +416,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
             ?disabled=${this.effectiveDisabled}
             @input=${this.onTextareaInput}
             @keydown=${this.onTextareaKeyDown}
+            @focus=${this.onTextareaFocus}
             @blur=${this.onTextareaBlur}
           ></textarea>
           <span part="trailing">

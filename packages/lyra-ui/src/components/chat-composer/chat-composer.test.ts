@@ -591,3 +591,42 @@ it('is accessible in a populated, busy, chip-laden state', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
+  it('spellcheck defaults to true', async () => {
+    const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+    expect(textareaOf(el).spellcheck).to.be.true;
+  });
+
+  it('forwards spellcheck=false, autocapitalize, and autocorrect onto the native textarea', async () => {
+    const el = (await fixture(html`
+      <lyra-chat-composer spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-chat-composer>
+    `)) as LyraChatComposer;
+    const ta = textareaOf(el);
+    expect(ta.spellcheck).to.be.false;
+    expect(ta.getAttribute('autocapitalize')).to.equal('off');
+    expect(ta.getAttribute('autocorrect')).to.equal('off');
+  });
+});
+
+describe('blur/focus bubbling', () => {
+  it('re-dispatches a bubbling, composed blur event when the native textarea blurs', async () => {
+    const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+    const ta = textareaOf(el);
+    ta.focus();
+    const eventPromise = oneEvent(el, 'blur');
+    ta.blur();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+
+  it('re-dispatches a bubbling, composed focus event when the native textarea focuses', async () => {
+    const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
+    const eventPromise = oneEvent(el, 'focus');
+    textareaOf(el).focus();
+    const ev = await eventPromise;
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+});
