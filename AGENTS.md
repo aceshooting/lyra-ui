@@ -76,9 +76,15 @@ check that the published tarball still contains `custom-elements.json`/`llms.txt
   No raw hex/px design values in component styles, except where an algorithm genuinely
   requires a literal (e.g. gauge sweep-angle math) — and even then, expose the literal as a
   retheme-able `--lyra-*` custom property if it's data-driven (e.g. a color-ramp endpoint).
-- **Events:** dispatch via `this.emit('lyra-whatever', detail)` (from `LyraElement`) — never
-  `dispatchEvent(new CustomEvent(...))` directly. This guarantees `bubbles: true,
-  composed: true, cancelable: true` and the `lyra-` event-name prefix.
+- **Events:** dispatch custom events through `this.emit(name, detail, options)` (from
+  `LyraElement`) — never `dispatchEvent(new CustomEvent(...))` directly. `emit()` guarantees
+  `bubbles: true` and `composed: true`; notifications are deliberately non-cancelable unless the
+  operation is a real veto point and passes `{ cancelable: true }`. The helper does **not** rename
+  the event: use native-style `input`/`change` only when mirroring a native/form-control contract,
+  and name library-specific events explicitly with the `lyra-` prefix. Direct dispatch is reserved
+  for the rare wrapper that must preserve a native `Event`/`InputEvent` instance rather than turn it
+  into a `CustomEvent`. Keep the component event-map type, class JSDoc, tests, stories, and consumer
+  reference aligned with the exact names and details.
 - **Sibling `*.styles.ts` file** per component (e.g. `empty.styles.ts` exports `styles`), not
   inline `css` in the component file. Component sets `static styles = [LyraElement.styles, styles]`.
 - **Granular, tree-shakeable exports.** Each component's `.ts` file is a side-effect-free
@@ -187,6 +193,118 @@ sizing don't hardcode a text direction or a font's natural width, so translated 
 longer or shorter than English) and mirrored RTL layouts both reflow correctly without a component-
 specific override.
 
+## Form-control completeness and native passthrough
+
+Four more cross-cutting guarantees, verified across every component that structurally has the
+surface in question — a gap in an applicable component is a bug, not a missing feature. Not every
+item applies to every component; each is scoped to the component shapes described below.
+
+- **Label/hint/error chrome.** Any form-associated control (the `FormAssociated` mixin, or a
+  hand-rolled `ElementInternals` attachment like `lyra-select`/`lyra-combobox`) ships `label`/
+  `hint`/`errorText` props, matching `label`/`hint`/`error` named slots, and `form-control`/
+  `form-control-label`/`hint`/`error` CSS parts — mirroring `lyra-select`'s template structure
+  (required-asterisk `::after`, `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` tracked in JS since
+  `[part]:empty` never matches a slot-containing part, `aria-describedby` wired to the rendered
+  hint/error ids). The one exception is a control whose own doc comment explicitly states it's a
+  deliberately bare primitive with no chrome, or whose interaction idiom is genuinely incompatible
+  with a generic label/hint/error frame (e.g. a slider's `label` is an accessible-name override,
+  not visible text; a chat composer is a composite input, not a labeled field) — silence isn't an
+  exception on its own, a component relying on this carve-out states it explicitly in its class doc
+  comment the next time that component is touched.
+- **ARIA-name forwarding.** Any component that computes its own internal accessible name must let
+  a host-level `aria-label` win over that computed default. Two established patterns, pick
+  whichever fits the component's own label sources: an `accessibleLabel` property
+  (`@property({ attribute: 'aria-label' })`, `lyra-date-input`'s pattern) when the component
+  already has other label sources (a `label` prop, a placeholder) to arbitrate against in a
+  specific precedence order, or a plain `this.getAttribute('aria-label')` fallback
+  (`lyra-slider`'s pattern) when there's nothing else to arbitrate against.
+- **Resize forwarding.** Any component wrapping a native resizable text-editing surface exposes
+  the same resize vocabulary the native element supports, including auto-grow-to-content — or its
+  doc comment explicitly states the omission (e.g. a fixed-size-by-design surface).
+- **Editing-assistance and event-bridging passthrough.** Any component with an internal native
+  `<input>`/`<textarea>` forwards `spellcheck`/`autocapitalize`/`autocorrect`/`wrap` (whichever
+  apply to that input's `type`), and re-dispatches the internal element's `blur`/`focus` as
+  bubbling, composed events via `this.emit('blur')`/`this.emit('focus')` — native `blur`/`focus`
+  neither bubble nor cross a shadow boundary, so a host-level listener on the custom element itself
+  never sees them otherwise.
+
+## Accessibility, native control contracts, responsive layout, and motion
+
+These guarantees are cross-cutting in the same way as i18n, RTL, and theming. Treat a gap as a bug
+in an existing component and as a release blocker for a new component.
+
+**Shadow-DOM semantics — name the element that owns the role:**
+
+- Putting `aria-label` on a custom-element host does not name a textbox, radiogroup, listbox,
+  dialog, or other semantic element rendered inside its shadow root. If the role lives on an
+  internal element, expose an explicit naming property and deliberately forward a host
+  `aria-label` when that is part of the component's public contract. Apply the final name to the
+  element that actually owns the role.
+- `aria-labelledby`/`aria-describedby` ids do not become valid merely because the same string is
+  copied across a shadow boundary. Generated visible labels, hints, and errors should live in the
+  same shadow tree as the control they describe and use stable generated ids. If external
+  labelling elements are supported, implement that relationship deliberately (for example through
+  the appropriate `ElementInternals` element-reference API); never forward an unresolved idref.
+- Once a semantic role opts into a state, render both values explicitly: a toggle button has
+  `aria-pressed="true"` or `"false"`, a selectable option has `aria-selected="true"` or `"false"`,
+  and an expandable control has `aria-expanded="true"` or `"false"` while it is expandable.
+  Removing the attribute for the false case changes the exposed control contract.
+- A decorative icon is `aria-hidden="true"`; an icon-only action needs a localized accessible
+  name. Visible labels and richer spoken labels are separate public concerns — expose an
+  `accessibleLabel`-style override when forcing detailed assistive text into the visible label
+  would be wrong.
+
+**Native-control wrappers — preserve the useful native contract:**
+
+- A component wrapping an `<input>`, `<textarea>`, `<select>`, or similar element forwards the
+  native attributes that are meaningful for its advertised use: for example `autocomplete`,
+  `inputmode`, `enterkeyhint`, `spellcheck`, `autocapitalize`, `autocorrect`, and `wrap`. Do not add
+  every platform attribute blindly, but do not make a common native behavior impossible through
+  encapsulation either.
+- Expose the focus, selection, and editing surface consumers reasonably need from the wrapped
+  control. For text controls that normally includes `focus()`/`blur()`, `select()`, selection
+  getters, `setSelectionRange()`, `setRangeText()`, or a documented public getter for the native
+  element. Public methods must keep the component's reactive `value`, form value, and validity in
+  sync.
+- Specify event names, detail, timing, cancelability, and programmatic-update behavior before
+  implementation. User edits should remain observable outside the shadow root. If a native event
+  does not bubble or compose (`blur` is the common trap), bridge it intentionally when the mirrored
+  public contract promises host-level observation. Programmatic property assignments remain silent
+  unless the component explicitly documents otherwise.
+- Form-associated wrappers must project `name`, disabled state, reset/default behavior, and
+  constraint validity through `ElementInternals`; rendering `required` on a private native control
+  alone is not sufficient.
+
+**Responsive components — respond to allocation, not page assumptions:**
+
+- Reusable primitives must work in a narrow panel, split pane, dialog, and full page. Prefer
+  logical sizes, `min-inline-size: 0`, intrinsic wrapping/overflow, and container queries tied to
+  the component's own allocation. A viewport media query is appropriate only for an explicit
+  app-shell/viewport component.
+- Any component with a multi-column, label-plus-actions, toolbar, or potentially long translated
+  layout gets a narrow-allocation story/test (320px is a useful baseline) and a long-content case.
+  A wide desktop canvas is not sufficient responsive evidence.
+
+**Motion — durations and phases form one themeable system:**
+
+- Animation durations, delays, stagger phases, and transition timing must use shared tokens or
+  component custom properties that can be overridden coherently. If a compound token cannot be
+  divided with `calc()`, expose the dependent delay/phase values instead of leaving magic literals.
+- Decorative, ambient, and infinite animation must stop or simplify under
+  `prefers-reduced-motion: reduce`. User-controlled spatial feedback may remain when removing it
+  would obscure the interaction, but it should not add nonessential easing or repeated motion.
+- Test the reduced-motion branch for animation-heavy components and test that documented motion
+  custom properties actually reach the rendered animation declarations.
+
+**Public API documentation — one change, one synchronized surface:**
+
+- A public property, type, method, getter, event, slot, CSS part, or custom property is incomplete
+  until the class JSDoc, behavior tests, an illustrative Storybook story, `llms-full.txt`, and the
+  generated `custom-elements.json` agree. Update the package/root component catalog when the
+  component count or summary changes, and update exports for new public types/helpers.
+- Run `pnpm manifest` after JSDoc/API changes and inspect the generated diff. A passing TypeScript
+  build does not catch stale stories, prose, CSS-part lists, or a missing manifest entry.
+
 ## Testing conventions
 
 - **Stack:** `@web/test-runner` (`wtr`) + `@web/test-runner-playwright` (Chromium launcher) +
@@ -202,6 +320,12 @@ specific override.
   hangs — always set up the `oneEvent()` listener *before* triggering the dispatch.
 - Every component gets at least one `it('is accessible', ...)` axe check in addition to
   behavior tests.
+- For a role/control inside shadow DOM, assert accessible-name/state attributes on the actual
+  semantic descendant as well as running axe. Include the false state for stateful ARIA and prove
+  that any public host naming path reaches that descendant.
+- Native-wrapper tests cover relevant attribute forwarding, form/reset/validity behavior, public
+  focus/editing methods, and the exact bubbling/composed event contract. Do not treat a rendered
+  private native element as proof that the host API works.
 - **A failed `expect(x).to.equal(y)` where `x`/`y` are DOM elements can hang the whole test file**
   under `wtr`'s Playwright-controlled browser (chai/loupe's diff-formatting for a DOM node appears
   to deadlock the automated reporting pipeline specifically — the same assertion fails instantly

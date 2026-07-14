@@ -27,6 +27,9 @@ mirrored components look native inside a WA app, and everything is fully usable 
 npm install @aceshooting/lyra-ui
 # runtime dependencies: Lit and Floating UI are installed transitively with this package
 # optional peer: @aceshooting/lyra-flags, only needed for <lyra-flag>
+# optional peer: libphonenumber-js, only when creating a <lyra-phone-input>
+#   adapter with loadLibphonenumberAdapter(); it is never imported by lyra-ui
+#   and international E.164 input works without it
 # optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lyra-graph>
 # optional peer: chart.js, chartjs-plugin-zoom, only needed for the <lyra-*-chart>/<lyra-histogram> family
 # optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lyra-box-plot>
@@ -158,7 +161,7 @@ roving-tabindex list) to match. No per-component RTL flag or opt-in needed.
 
 ## Components
 
-The catalog below lists all 93 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 95 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -166,13 +169,14 @@ API details.
 
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
-| `<lyra-combobox>` + `<lyra-option>` | `wa-combobox` | Filterable single/multi select, form-associated; async data via `source` property, virtual scrolling with `max-render` |
+| `<lyra-combobox>` + `<lyra-option>` | `wa-combobox` | Filterable single/multi select, form-associated; `xs`–`xl` sizing; async rich rows and retained selection payloads via `source`/`selectedRows`; virtual scrolling with `max-render` |
 | `<lyra-select>` | `wa-select` | Closed-list single-select, button trigger (not a text input, no filtering); form-associated, shares `<lyra-option>` with `lyra-combobox` |
 | `<lyra-date-picker>` | `wa-date-picker` | Inline calendar, single + range |
 | `<lyra-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
+| `<lyra-phone-input>` | — (extra) | Country-aware telephone field with canonical E.164 form values; numbering metadata is supplied through an optional adapter |
 | `<lyra-toast>` + `<lyra-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
-| `<lyra-textarea>` | `wa-textarea` | Bare multiline plain-text input, form-associated |
+| `<lyra-textarea>` | `wa-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 
 **Dashboard atoms**
@@ -183,8 +187,9 @@ API details.
 | `<lyra-skeleton>` | — (extra) | Loading placeholder (pulse/sheen) |
 | `<lyra-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
 | `<lyra-table>` | — (extra) | Presentational, sort/select-aware data table; a column's responsive `priority` (`medium`/`low`) hides it first as the container narrows, with a reveal-columns button to force hidden columns back |
-| `<lyra-gauge>` | — (extra) | Radial or linear meter |
-| `<lyra-export-button>` | — (extra) | CSV/JSON download button, injection-safe CSV export |
+| `<lyra-pagination>` | — (extra) | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
+| `<lyra-gauge>` | — (extra) | Radial, full-circle ring, or linear meter with a per-instance fill token |
+| `<lyra-export-button>` | — (extra) | Injection-safe CSV/JSON downloads plus event-handled custom format descriptors and controlled busy state |
 | `<lyra-copy-button>` | — (extra) | Standalone icon-only copy-to-clipboard button for a plain text value, no positioning opinion |
 | `<lyra-split>` | — (extra) | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
 | `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
@@ -197,8 +202,8 @@ API details.
 | `<lyra-time-range>` | — (extra) | Two-handle brush/scrubber over a numeric domain |
 | `<lyra-playback>` | — (extra) | Play/pause index stepper on a fixed interval |
 | `<lyra-heatmap>` | — (extra) | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling |
-| `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
-| `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy for graph/document navigation |
+| `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
+| `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
 
 **Charts**
 
@@ -270,7 +275,7 @@ each one-liner below.
 | `<lyra-avatar>` | — (extra) | Small, fixed-size identity marker — image, or an initials fallback with `lyra-chip`-style tone recoloring |
 | `<lyra-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lyra-*>` counterpart to `wa-card` |
 | `<lyra-stepper>` | — (extra) | Ordered multi-step wizard navigation — label + index, current/completed/locked/error state, click-to-jump, data-driven and controlled |
-| `<lyra-segmented>` | — (extra) | Single-select button row with the WAI-ARIA APG `radiogroup` contract built in (roving tabindex, automatic activation) |
+| `<lyra-segmented>` | — (extra) | Single-select text/icon button row with the WAI-ARIA APG `radiogroup` contract built in (roving tabindex, automatic activation) |
 | `<lyra-diff-view>` | — (extra) | Real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output |
 | `<lyra-poll-status>` | — (extra) | "Next scheduled refresh" countdown with a built-in pause control and live-region announcements |
 | `<lyra-code-block-core>` | — (extra) | Build-lean `lyra-code-block` variant for a consumer whose `languages` map already covers every language it renders — never references shiki's full ~200-language table |

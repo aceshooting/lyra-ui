@@ -22,8 +22,8 @@ composition without registration; for example, `components/empty/empty.class.js`
 ## Contents
 
 - **Shared foundation** — `internal/` (base class, form-association mixin, positioning helper, design tokens)
-- **Form controls, toasts, sparkline, and flags** — `lyra-combobox`/`lyra-option`, `lyra-select`, `lyra-date-picker`/`lyra-date-input`, `lyra-toast` family, `lyra-sparkline`, `lyra-flag`
-- **Dashboard atoms** — `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`, `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
+- **Form controls, toasts, sparkline, and flags** — `lyra-combobox`/`lyra-option`, `lyra-select`, `lyra-date-picker`/`lyra-date-input`, `lyra-phone-input`, `lyra-toast` family, `lyra-sparkline`, `lyra-flag`
+- **Dashboard atoms** — `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-pagination`, `lyra-gauge`, `lyra-export-button`, `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
 - **Temporal & graph** — `lyra-time-range`, `lyra-playback`, `lyra-heatmap`, `lyra-graph`, `lyra-tree`/`lyra-tree-node`
 - **Chart family** — `lyra-chart` (core), typed subclasses, `lyra-histogram`, `lyra-box-plot`,
   `lyra-lite-chart` (dependency-free bar/line alternative, no peer deps)
@@ -193,6 +193,8 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
+- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lyra-select`'s `size`;
+  also scales the "+N" overflow tag's padding/font-size to match)
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
@@ -224,10 +226,17 @@ shared `FormAssociated` mixin — see gotchas).
   `overflowText` row instead of being dropped silently)
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
+- `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
+  selection, including any opaque `data` payload supplied by an async source. Selected async rows
+  remain available after the query changes or a later source result no longer contains them
 
-`ComboboxSourceRow = { value: string; label: string; sub?: string; dotColor?: string; group?:
-string; disabled?: boolean }` — the row shape both the async `source` and the light-DOM
-`<lyra-option>` path normalize to internally.
+`ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
+number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
+boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
+visual, `badge` as trailing metadata, `accessibleLabel` can provide richer spoken text than the
+visible label, and `data` is retained without being rendered for retrieval through `selectedRows`.
+The light-DOM `<lyra-option>` path normalizes its supported label/sub/dot/group fields to the same
+internal row model.
 
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event and does not fire `change`. An actual user selection mutation —
@@ -242,9 +251,10 @@ attribute when provided)
 
 **CSS parts:** `form-control`, `form-control-label`, `combobox`, `tags`, `tag`,
 `tag__remove-button`, `combobox-input`, `clear-button`, `expand-icon`, `listbox`, `option`,
-`option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`, `option-sub`
-(a row's secondary line, when `sub` is set), `option-overflow` (the "+N more" indicator from
-`maxRender`), `error`, `hint`
+`option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the decorative
+leading visual for an async row), `option-label`, `option-sub` (a row's secondary line, when `sub`
+is set), `option-badge` (an async row's trailing metadata), `option-overflow` (the "+N more"
+indicator from `maxRender`), `error`, `hint`
 
 **Themeable custom properties:** shared tokens only.
 
@@ -281,7 +291,14 @@ attribute when provided)
 <script type="module">
   document.getElementById('cb2').source = async (query) => {
     const rows = await fetchFruit(query); // your own lookup
-    return rows.map((r) => ({ value: r.id, label: r.name }));
+    return rows.map((r) => ({
+      value: r.id,
+      label: r.name,
+      icon: renderFruitIcon(r),       // decorative; hidden from assistive technology
+      badge: r.category,
+      accessibleLabel: `${r.name}, ${r.category}`,
+      data: r,                        // retained in cb2.selectedRows after selection
+    }));
   };
 </script>
 ```
@@ -304,7 +321,6 @@ synchronous and fires no `input`/`change` event.
 - a host-level `aria-label` attribute on `<lyra-combobox>` now takes priority over `label`/
   `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
   previously it was silently ignored. Matches the same fallback on `<lyra-select>`.
-- no `size` variant (small/medium/large) unlike sibling `lyra-toast-item`.
 - `aria-required` reflects `required` immediately; `aria-invalid`, by contrast, only reflects
   **after the field has been touched** (first `blur`) — a `required` field with a validity error
   doesn't look invalid to assistive tech before that, by design (avoids flashing invalid styling on
@@ -313,6 +329,10 @@ synchronous and fires no `input`/`change` event.
 - `dotColor`/`sub`/`group` are read from light-DOM `<lyra-option>` children as before, but are also
   first-class fields on `ComboboxSourceRow` for the async `source` path — an async lookup can drive
   the same grouped/dot/sub-text rendering a static option list can.
+- `icon`, `badge`, `accessibleLabel`, and `data` are async-source row features rather than
+  `<lyra-option>` properties. Icons are decorative (`aria-hidden`); use `accessibleLabel` when the
+  visible label/sub/badge combination needs a fuller spoken name. `data` is deliberately opaque and
+  is available only through the read-only `selectedRows` getter.
 - Full ARIA 1.2 combobox pattern (`role=combobox`, roving `aria-activedescendant`, real DOM focus
   kept on the input) is implemented correctly — a genuine strength, safe to build on. Declaratively-
   selected options (`<lyra-option value="b" selected>`) are seeded into the selection (mirroring
@@ -507,10 +527,18 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   calendar-toggle button)
 - `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
   `role="dialog"` calendar popover)
+- `spellcheck: boolean = true` — forwarded to the internal `<input>`
+- `autocapitalize: string = ''` — forwarded to the internal `<input>`; empty omits the attribute
+- `autoCorrect: string = ''` (attribute `autocorrect`, Safari/WebKit-specific) — forwarded to the
+  internal `<input>`; empty omits the attribute. Named `autoCorrect` in JS/TS (not `autocorrect`)
+  to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own boolean `autocorrect` IDL member;
+  the wire attribute is still the plain `autocorrect` name
 
 **Methods:** `show()`, `hide()`, `clear()`
 
-**Events:** `input`, `change`, `lyra-show`, `lyra-hide`, `lyra-clear`
+**Events:** `input`, `change`, `lyra-show`, `lyra-hide`, `lyra-clear`, `blur` (re-dispatched from
+the internal `<input>`'s own `blur`, bubbling and composed unlike the native event), `focus`
+(re-dispatched from the internal `<input>`'s own `focus`, for the same reason as `blur`)
 
 **Slots:** `label`, `error` (overrides `errorText`), `hint`
 
@@ -581,10 +609,10 @@ and `dateTimeFormat(locale, options)`.
 
 ## lyra-textarea
 
-A bare, multiline plain-text input primitive -- the thin `lyra-*` equivalent of `wa-textarea`.
-Form-associated (participates in native `<form>` submission/validation/reset via
-`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()`). No auto-resize and no
-label/hint/error chrome -- wrap it in your own form-field layout for those.
+A multiline plain-text input primitive, form-associated (participates in native `<form>`
+submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValidity()`/
+`reportValidity()`). Ships an opt-in `label`/`hint`/`errorText` form-control chrome mirroring
+`lyra-select` -- left unset, none of it renders.
 
 ```html
 <lyra-textarea placeholder="Notes" rows="4"></lyra-textarea>
@@ -596,11 +624,48 @@ label/hint/error chrome -- wrap it in your own form-field layout for those.
 | --- | --- | --- | --- | --- |
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
-| `resize` | `resize` | `'none' \| 'vertical' \| 'both'` | `'vertical'` | Native CSS `resize` behavior. |
+| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
+| `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
+| `hint` | `hint` | `string` | `''` | Hint text below the field. |
+| `errorText` | `error-text` | `string` | `''` | Error text below the field (overridden by slotted `error` content). |
+| `accessibleLabel` | `aria-label` | `string \| null` | `null` | Accessible-name override forwarded to the internal `<textarea>`; wins over `label`, `placeholder`, and the localized default. |
+| `spellcheck` | `spellcheck` | `boolean` | `true` | Forwarded to the native `<textarea>`. |
+| `autocapitalize` | `autocapitalize` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
+| `autoCorrect` | `autocorrect` | `string` | `''` | Forwarded to the native `<textarea>` (Safari/WebKit-specific); empty omits the attribute. |
+| `wrap` | `wrap` | `'hard' \| 'soft' \| 'off'` | `'soft'` | Native line-wrapping/submission behavior. |
+| `autocomplete` | `autocomplete` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
+| `inputMode` | `inputmode` | `string` | `''` | Virtual-keyboard input hint forwarded to the native `<textarea>`. |
+| `enterKeyHint` | `enterkeyhint` | `string` | `''` | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`. |
 | `name` | `name` | `string` | `''` | Form field name. |
 | `disabled` | `disabled` | `boolean` | `false` | Disables the control. |
 | `required` | `required` | `boolean` | `false` | Participates in native constraint validation. |
+
+The visible label, hint, and error live in the same shadow tree as the native control, so their
+generated ids safely drive the native `<label>`/`aria-describedby` relationships. Name precedence
+is `accessibleLabel`/host `aria-label`, visible `label`, `placeholder`, then the localized
+`textareaLabel` message. External `aria-labelledby`/`aria-describedby` idrefs are not copied across
+the shadow boundary.
+
+### Getters and selection properties
+
+- `input: HTMLTextAreaElement | null` — the internal native control.
+- `selectionStart: number | null`, `selectionEnd: number | null`, and
+  `selectionDirection: 'forward'|'backward'|'none'|null` — readable and writable passthroughs to
+  the native selection state.
+- The shared form-associated getters `form`, `labels`, `validity`, `validationMessage`,
+  `willValidate`, and `effectiveDisabled` are also available.
+
+### Methods
+
+| Method | Description |
+| --- | --- |
+| `focus(options?)` / `blur()` | Focus or blur the internal native control. |
+| `select()` | Select all text. |
+| `setSelectionRange(start, end, direction?)` | Set the native selection range and optional direction. |
+| `setRangeText(replacement, start?, end?, selectMode?)` | Apply a native range edit, then synchronize the component `value`, form value, validity, and auto-grown size without emitting a user event. |
+| `setFormValue(value)` | Set the reactive and submitted value synchronously. |
+| `checkValidity()` / `reportValidity()` | Run native constraint validation through `ElementInternals`. |
 
 ### Events
 
@@ -608,12 +673,178 @@ label/hint/error chrome -- wrap it in your own form-field layout for those.
 | --- | --- | --- |
 | `lyra-input` | `{ value: string }` | Fired on every user-driven edit. |
 | `lyra-change` | `{ value: string }` | Fired on native `change` timing (blur after a committed edit). |
+| `blur` | none | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event. |
+| `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
+
+Programmatic property assignments, selection changes, `setRangeText()`, form reset, and form-state
+restoration are silent. User edits update `value`, submitted form data, and required validity before
+the corresponding `lyra-input`/`lyra-change` event is dispatched. `form.reset()` restores the
+original declarative `value`, matching native `defaultValue` behavior.
+
+### Slots
+
+| Slot | Description |
+| --- | --- |
+| `label` | Custom label content. |
+| `hint` | Custom hint content. |
+| `error` | Custom error content. |
 
 ### CSS Parts
 
 | Part | Description |
 | --- | --- |
+| `form-control` | The outer wrapper around label, textarea, error and hint. |
+| `form-control-label` | The `<label>` element. |
 | `textarea` | The native `<textarea>` element. |
+| `hint` | The hint message. |
+| `error` | The error message. |
+
+### Themeable custom properties
+
+- `--lyra-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
+  bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
+  `value`/`rows` changes, range edits, and container-width changes.
+
+---
+
+## `lyra-phone-input`
+
+A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164
+(for example `+352621123456`) or `''` while the editable input is empty, incomplete, or invalid.
+Numbering-plan metadata and national formatting stay outside Lyra's base bundle: supply a
+synchronous `PhoneNumberAdapter`, or lazily create one from a `libphonenumber-js`-compatible module
+with `loadLibphonenumberAdapter()`. Without an adapter, already-international E.164 input still
+normalizes and validates; national input remains editable with `incomplete` validity.
+
+**Types:**
+
+```ts
+type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
+
+interface PhoneCountry {
+  code: string;         // ISO 3166-1 alpha-2
+  callingCode: string;  // no leading "+"
+  label?: string;       // overrides Intl.DisplayNames
+}
+
+interface PhoneNumberParseResult {
+  status: PhoneNumberStatus;
+  e164?: string;       // required for status: 'valid'
+  formatted?: string;  // best-effort editable display text
+  country?: string;    // detected ISO alpha-2 code
+}
+
+interface PhoneNumberAdapter {
+  readonly countries?: readonly PhoneCountry[];
+  parse(input: string, country?: string): PhoneNumberParseResult;
+}
+```
+
+**Properties:**
+
+- `value: string = ''` — canonical E.164 form/submission value. A programmatic assignment is parsed
+  and normalized synchronously but emits no user event.
+- `name: string = ''`, `disabled: boolean = false`, `required: boolean = false` — native-like
+  form-control properties supplied by `FormAssociated`; inherited disabled fieldsets are included
+  through `effectiveDisabled`.
+- `adapter?: PhoneNumberAdapter` (attribute: false) — synchronous numbering-plan parser/formatter.
+  No metadata implementation is imported by the component itself.
+- `countries: readonly PhoneCountry[] = []` (attribute: false) — explicit selector rows; takes
+  precedence over `adapter.countries`.
+- `defaultCountry: string = ''` (attribute `default-country`) — selected when `country` has not been
+  set explicitly.
+- `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
+  the first explicit/adapter country. Changing the country reparses the editable number.
+- `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
+  visible form-field chrome; each has a matching named slot.
+- `placeholder: string = ''` — forwarded to the native telephone input.
+- host `aria-label` — forwarded to the internal telephone input. Name precedence is `phoneLabel`,
+  host `aria-label`, visible `label`, then `placeholder`.
+- `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
+  native telephone input.
+- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
+  the untouched default routes through the shared localized `select` message.
+- `incompleteText: string = 'The value is invalid.'` (attribute `incomplete-text`) — validation
+  message for dial-like input that can still become valid with more digits. The untouched default
+  routes through the shared localized `valueInvalid` message.
+- `invalidText: string = 'The value is invalid.'` (attribute `invalid-text`) — completed-invalid
+  message, localized through the same shared key while left at its default.
+- `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
+  `enterkeyhint: string = ''` — forwarded to the internal `<input type="tel">`.
+- readonly `input: HTMLInputElement | undefined` — the internal native telephone input.
+- readonly `inputValue: string` — editable formatted/partial text, which remains available even when
+  canonical `value` is `''`.
+- readonly `phoneStatus: PhoneNumberStatus` — current parse state. The host also reflects it through
+  `data-phone-status`.
+- readonly `form`, `labels`, `validity`, `validationMessage`, `willValidate`, and
+  `effectiveDisabled` — the shared form-associated native-like getters.
+
+**Validity:** empty + `required` sets `valueMissing`; incomplete dial-like input sets `badInput`;
+completed-invalid input sets `typeMismatch`; valid E.164 input clears all three. Partial or invalid
+text remains in `inputValue`/the native input so validation never makes a number impossible to edit,
+but its canonical submitted `value` is blank. Native validation feedback is anchored to the
+telephone input, not the adjacent country selector.
+
+**Methods:** `focus(options?)`, `blur()`, and `select()` forward to the native telephone input.
+`setFormValue(value)`, `checkValidity()`, and `reportValidity()` come from `FormAssociated`.
+`form.reset()` restores the original declarative `value` and the default country.
+
+**Events:**
+
+- `input` — every user edit and country change.
+- `change` — native telephone-input commit timing and every country change.
+- `focus` / `blur` — bubbling, composed bridges for the internal native input's non-crossing focus
+  events.
+
+`input`/`change` detail is
+`{ value: string; inputValue: string; country: string; valid: boolean; status: PhoneNumberStatus }`.
+Programmatic property assignments and form reset/state restoration are silent.
+
+**Slots:** `label`, `hint`, `error`, `country-prefix` (optional visual before the country selector,
+such as a consumer-owned `<lyra-flag>`; no flag package is imported automatically).
+
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `country-prefix`,
+`country-select`, `calling-code`, `input`, `hint`, `error`.
+
+**Themeable custom properties:** shared tokens only. The phone-number input and calling code are
+deliberately `dir="ltr"`/isolated because telephone numbers are algorithmic content; surrounding
+form chrome and the country selector inherit LTR/RTL and use logical spacing/borders.
+
+**Optional peer deps:** `libphonenumber-js` is declared optional but never imported by Lyra itself.
+For full national parsing/formatting, install it in the consuming app and pass it through the
+consumer-supplied lazy loader below. Because the import expression lives in consumer code, no
+numbering metadata enters a bundle that does not opt in.
+
+```ts
+import '@aceshooting/lyra-ui/components/phone-input/phone-input.js';
+import { loadLibphonenumberAdapter } from
+  '@aceshooting/lyra-ui/components/phone-input/phone-input.class.js';
+
+const phone = document.querySelector('lyra-phone-input');
+phone.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
+```
+
+```html
+<lyra-phone-input
+  name="mobile"
+  label="Mobile number"
+  hint="Used only for account security"
+  default-country="LU"
+  required
+></lyra-phone-input>
+```
+
+**Known gotchas:**
+
+- An adapter's `parse()` method is synchronous because it runs on every keystroke. Load any optional
+  module first, then assign the resolved adapter. Adapter exceptions degrade to the E.164-only
+  fallback rather than breaking editing.
+- A valid adapter result must include an E.164-shaped `e164`; a malformed "valid" result is treated
+  as invalid instead of entering form submission.
+- Country names use `Intl.DisplayNames` and fall back to the ISO code; set `PhoneCountry.label` for
+  a product-specific name. Calling codes are data, not derived by the component.
+- The component does not import `@aceshooting/lyra-flags`. Compose an optional flag through
+  `country-prefix` and keep it decorative when the adjacent select already announces the country.
 
 ---
 
@@ -904,8 +1135,9 @@ attribute), `description` (rich description content, overrides the `description`
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
-**Themeable custom properties:** shared tokens only (`--lyra-space-xs/-s/-l`,
-`--lyra-color-text-quiet/-border/-text`).
+**Themeable custom properties:** `--lyra-empty-compact-align` (compact mode only; defaults preserve
+the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both), plus
+shared tokens (`--lyra-space-xs/-s/-l`, `--lyra-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
 
@@ -914,6 +1146,8 @@ attribute), `description` (rich description content, overrides the `description`
   <svg slot="" ...></svg> <!-- default slot: any icon/illustration -->
   <div slot="actions"><button>Clear filters</button></div>
 </lyra-empty>
+<lyra-empty compact heading="No results" description="Try a different search."
+  style="--lyra-empty-compact-align: center"></lyra-empty>
 ```
 
 **Known gotchas:**
@@ -1146,18 +1380,94 @@ body's `max-block-size`).
 
 ---
 
+## `lyra-pagination`
+
+Controlled page navigation for server-side or client-side data sets: previous/next buttons, a
+validated numeric page jump, a localized item-range summary, and a polite announcement after the
+host applies a requested page. The component owns no data fetching and never mutates `page`.
+
+**Properties and getters:**
+- `page: number = 1` (reflected) — the currently applied page. Runtime values are presented within
+  the valid `1..pageCount` range, but the public property itself remains controlled and is not
+  rewritten by the component
+- `pageSize: number = 20` (attribute `page-size`) — items per page; finite values are truncated to
+  a non-negative integer for the derived calculations, and zero produces no pages
+- `totalItems: number = 0` (attribute `total-items`) — total item count; finite values are truncated
+  to a non-negative integer for display and page-count calculations
+- `pageCount: number` (readonly getter) — `ceil(totalItems / pageSize)` after the normalization
+  above, or `0` when either normalized input is zero
+- `disabled: boolean = false` (reflected)
+- `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
+  internal navigation landmark
+- `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — omits the built-in range
+  summary while retaining the controls
+- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — changes control height and type size
+- `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
+  selects the localized singular `item` or plural `items` key
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
+  forwarded to the internal `<nav>` landmark; takes precedence over `label`
+- `label: string = 'Pagination'` — fallback accessible name for the internal `<nav>` landmark
+- `pageLabel: string = 'Page'` (attribute `page-label`) — accessible name for the page-jump input
+- `previousLabel: string = 'Previous'` (attribute `previous-label`), `nextLabel: string = 'Next'`
+  (attribute `next-label`) — accessible names for the icon-only directional buttons
+
+Built-in property defaults resolve through the locale registry. A property value customized away
+from its built-in default is treated as an explicit per-instance wording override.
+
+**Events:** `lyra-page-change` (`detail: { page: number }`, bubbles and composes, non-cancelable) —
+emitted for a valid, different requested page. The host applies `event.detail.page` back to `page`
+after routing, fetching, or any other policy decision.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `summary`, `controls`, `previous-button`, `previous-icon`, `page-field`,
+`page-input`, `page-count`, `next-button`, `next-icon`, `live-region`.
+
+**Themeable custom properties:** `--lyra-pagination-control-size` and
+`--lyra-pagination-font-size` (both default from `size`), plus shared color, spacing, border, radius,
+disabled-opacity, and focus-ring tokens.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-pagination total-items="237" page-size="20"></lyra-pagination>
+<script>
+  const pagination = document.querySelector('lyra-pagination');
+  pagination.addEventListener('lyra-page-change', async (event) => {
+    await loadPage(event.detail.page);
+    pagination.page = event.detail.page;
+  });
+</script>
+```
+
+**Known gotchas:**
+- user activation only emits an intent. Until the host applies a new `page`, the numeric input
+  returns to the currently controlled value; assigning the page triggers the localized
+  `role="status"` announcement
+- the jump input accepts only whole pages in `1..pageCount`; empty, fractional, and out-of-range
+  drafts expose `aria-invalid="true"` and emit nothing
+- zero items, zero page size, `disabled`, and `loading` all disable the navigation controls. The
+  empty summary is still rendered via the localized `paginationEmptySummary` message
+  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) unless `hide-summary` is set
+- below a 20rem container allocation the summary and controls stack; the breakpoint responds to
+  the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
+
+---
+
 ## `lyra-gauge`
 
-Dependency-free SVG radial or linear meter (270°-sweep arc math, no charting library).
+Dependency-free SVG radial, full-circle ring, or linear meter (no charting library).
 
 **Properties:**
 - `value: number = 0`
 - `min: number = 0`
 - `max: number = 100`
-- `type: 'radial'|'linear' = 'radial'` (reflected)
+- `type: 'radial'|'ring'|'linear' = 'radial'` (reflected — `radial` is a 270° sweep; `ring` is a
+  full circle that begins at 12 o'clock)
 - `label: string = ''`
-- `valueLabel?: string` (attribute: false — overrides only the *visible* text, see gotchas; an empty
-  string is treated the same as unset and falls back to the numeric `value`)
+- `valueLabel?: string` (attribute: false — overrides both the visible text and the host's
+  `aria-valuetext`; an empty string is treated the same as unset and falls back to the numeric
+  `value` while removing `aria-valuetext`)
 
 **Events:** none.
 
@@ -1165,16 +1475,18 @@ Dependency-free SVG radial or linear meter (270°-sweep arc math, no charting li
 
 **CSS parts:** `base` (the `<svg>`), `track`, `fill`, `value`, `label`
 
-**Themeable custom properties:** `--lyra-color-brand` (fill color, shared token — no per-instance
-gauge-specific custom property exists).
+**Themeable custom properties:** `--lyra-gauge-fill` (fill stroke, falling back to the shared
+`--lyra-color-brand` token).
 
 **Optional peer deps:** none.
 
 ```html
 <lyra-gauge value="72" min="0" max="100" label="CPU"></lyra-gauge>
+<lyra-gauge type="ring" value="84" label="Coverage"
+  style="--lyra-gauge-fill: var(--lyra-color-success)"></lyra-gauge>
 <lyra-gauge type="linear" value="0.4" max="1"></lyra-gauge>
 <script type="module">
-  document.querySelector('lyra-gauge').valueLabel = '72°F'; // changes displayed text only, see gotchas
+  document.querySelector('lyra-gauge').valueLabel = '72°F'; // visible text and announced value
 </script>
 ```
 
@@ -1183,8 +1495,8 @@ gauge-specific custom property exists).
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are
   `aria-hidden="true"` so they're no longer separately exposed inside the same `role="meter"` host.
-- no color-threshold/variant support: a single fixed `--lyra-color-brand` fill regardless
-  of value (no amber/red-near-capacity idiom built in).
+- no automatic color-threshold/variant logic is built in. Set `--lyra-gauge-fill` per instance (or
+  reactively from application state) when the value should select a success/warning/danger color.
 - no documented component-specific sizing custom property; host size is fixed em values
   (`8em`/`12em` radial, `12em`/`1.5em` linear) — resize via plain CSS `width`/`height` on the
   element instead.
@@ -1198,8 +1510,8 @@ gauge-specific custom property exists).
 
 ## `lyra-export-button`
 
-CSV/JSON download button — either single-format (click exports immediately) or multi-format (click
-opens a small menu).
+CSV/JSON download button with extensible event-driven formats — either single-format (click exports
+immediately) or multi-format (click opens a small menu).
 
 **Properties:**
 - `rows: Record<string, unknown>[] = []` (attribute: false)
@@ -1209,21 +1521,27 @@ opens a small menu).
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
   export still produces a proper header + data file in either format
 - `filename: string = 'export'`
-- `formats: ExportFormat[] = ['csv']` (attribute: false; `ExportFormat = 'csv' | 'json'` **only** —
-  no XLSX despite the family sometimes being described as covering it)
+- `formats: ExportFormatOption[] = ['csv']` (attribute: false), where `ExportFormatOption` is the
+  built-in `ExportFormat = 'csv' | 'json'` or an `ExportFormatDescriptor = { id: string; label:
+  string; description?: string; extension?: string }`. Descriptor labels/descriptions are
+  consumer-supplied, already-localized copy. Custom ids are event-only; no custom encoder is bundled
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
+- `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
+  export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
+  not toggle it automatically
 - `label: string = 'Export'` — trigger button text; also feeds the format-choice menu's `aria-label`
   as `` `${label} format` `` so assistive tech gets an accessible name for the menu
 - `open: boolean = false` (reflected)
 
-**Events:** `lyra-export` (`detail: { format }`, **cancelable** — call `preventDefault()` to
+**Events:** `lyra-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one),
-`lyra-export-complete` (`detail: { format }`, fires after a non-cancelled download completes)
+`lyra-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
+built-in download completes), `lyra-show`, `lyra-hide` (format-menu visibility transitions)
 
 **Slots:** none.
 
-**CSS parts:** `trigger`, `menu`, `menu-item`
+**CSS parts:** `trigger`, `menu`, `menu-item`, `format-label`, `format-description`
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1237,6 +1555,19 @@ substitute your own server-generated download instead of the built-in client-sid
   exp.columns = [{ key: 'name', label: 'Name' }, { key: 'value', label: 'Value' }];
   exp.formats = ['csv', 'json']; // shows a format-choice menu instead of exporting immediately
   exp.addEventListener('lyra-export', (e) => console.log('exporting', e.detail.format));
+
+  // Custom formats supply menu copy but remain application-handled.
+  exp.formats = [
+    'csv',
+    { id: 'xlsx', label: 'Excel workbook', description: 'Preserves spreadsheet data types', extension: 'xlsx' },
+  ];
+  exp.addEventListener('lyra-export', async (e) => {
+    if (e.detail.format !== 'xlsx') return;
+    e.preventDefault();
+    exp.loading = true;
+    try { await exportWorkbook(exp.rows); }
+    finally { exp.loading = false; }
+  });
 </script>
 ```
 
@@ -1249,8 +1580,10 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
 ```
 
 **Known gotchas:**
-- XLSX isn't implemented (`ExportFormat` really is `'csv' | 'json'`) — don't pass
-  `'xlsx'` expecting it to work.
+- CSV and JSON are the only built-in encoders. To offer XLSX/PDF/etc., pass an
+  `ExportFormatDescriptor` and handle its id from `lyra-export`; custom formats never trigger a
+  download or `lyra-export-complete` on their own. A descriptor's optional `extension` is metadata
+  for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
 - the multi-format menu (`role="menu"`) supports full arrow-key navigation — ArrowUp/ArrowDown move
@@ -1884,36 +2217,48 @@ same color as `--lyra-heatmap-focus-ring-color`).
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 **Properties:**
-- `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string; radius?:
-  number; color?: string }`; `radius` is clamped to `[6, 24]` (an unset/non-finite value falls back
-  to the midpoint, `15`) so a node can never render invisibly small or absurdly large
-- `links: GraphLink[] = []` (attribute: false) — `GraphLink { source: string; target: string;
-  width?: number }` (source/target are node ids). A link whose `source` id doesn't resolve to a real
-  node is still dropped entirely (there's no position to draw a stub from). A link whose `target` id
-  doesn't resolve instead renders as a short, dashed, non-interactive stub off `source`'s own
-  position (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped
-  — e.g. for a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded
-  from `d3-force`'s own simulation input and from click/keyboard interaction.
+- `nodes: GraphNode[] = []` (attribute: false) — `GraphNode { id: string; label?: string;
+  accessibleLabel?: string; description?: string; radius?: number; color?: string }`;
+  `accessibleLabel` supplies richer spoken text than the visible label, while `description` renders
+  as native SVG `<title>` tooltip text. `radius` is clamped to `[6, 24]` (an unset/non-finite value
+  falls back to the midpoint, `15`) so a node can never render invisibly small or absurdly large
+- `links: GraphLink[] = []` (attribute: false) — `GraphLink { id?: string; source: string; target:
+  string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
+  boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
+  arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
+  tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
+  can override the spoken name and tooltip independently. A link whose `source` id doesn't resolve
+  to a real node is still dropped entirely
+  (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
+  as a short, dashed, non-interactive stub off `source`'s own position
+  (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
+  a wiki-style `[[link]]` reference to a not-yet-created node. A dangling stub is excluded from
+  `d3-force`'s own simulation input and from click/keyboard interaction.
 - `width: number = 800`
 - `height: number = 600`
 - `chargeStrength: number = -300` (attribute `charge-strength` — live-reactive, see gotchas)
 - `linkDistance: number = 100` (attribute `link-distance` — live-reactive, see gotchas)
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible name forwarded
+  to the internal semantic SVG; when unset, the SVG uses the localized node/link-count summary
 - `seed?: number` — when set, seeds each node's initial x/y deterministically
   (keyed by node **id**, not array index/order) instead of `forceSimulation()`'s own random start,
   and settles the simulation synchronously instead of animating the settle (same effect
   `prefers-reduced-motion` has, see gotchas)
 
-**Events:** `lyra-node-click` (`detail: { id }`), `lyra-link-click` (`detail: { source, target }`)
+**Events:** `lyra-node-click` (`detail: { id }`), `lyra-link-click` (`detail: { source, target,
+id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `svg`, `node`, `link`, `label`
+**CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
+`label`, `live-region`, `data-list`, `empty`
 
 **Themeable custom properties:** `--lyra-node-fill` (set inline per-node from `GraphNode.color`,
-falls back to `--lyra-color-brand`); also uses `--lyra-color-border` (link stroke), `--lyra-color-text`
-+ `--lyra-font` (label text), `--lyra-focus-ring-*` (node/link `:focus-visible` outline).
+falls back to `--lyra-color-brand`) and `--lyra-link-color` (set inline per-link from
+`GraphLink.color`, falling back to `--lyra-color-border`); also uses `--lyra-color-text` +
+`--lyra-font` (label text), `--lyra-focus-ring-*` (node/link `:focus-visible` outline).
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
 together; lazy-`import()`ed once per page, `console.warn` once and renders empty if missing —
@@ -1923,9 +2268,17 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 <lyra-graph style="display:block;height:500px"></lyra-graph>
 <script>
   const g = document.querySelector('lyra-graph');
-  g.nodes = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }];
-  g.links = [{ source: 'a', target: 'b' }];
+  g.nodes = [
+    { id: 'a', label: 'A', accessibleLabel: 'Source document A', description: 'The source document' },
+    { id: 'b', label: 'B', description: 'The cited document' },
+  ];
+  g.links = [{
+    id: 'citation-a-b', source: 'a', target: 'b', label: 'cites',
+    accessibleLabel: 'Document A cites document B', description: 'Citation relationship',
+    directed: true, color: 'var(--lyra-color-brand)', dash: [6, 3],
+  }];
   g.addEventListener('lyra-node-click', (e) => console.log(e.detail.id));
+  g.addEventListener('lyra-link-click', (e) => console.log(e.detail.id, e.detail.source, e.detail.target));
 </script>
 ```
 
@@ -1954,6 +2307,9 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 - `GraphNode.color` is sanitized (rejects `;`/`{`/`}`) before being written into the
   `--lyra-node-fill` inline custom property, so an untrusted color string can't break out of that
   CSS declaration.
+- `GraphLink.color` applies the same declaration-delimiter sanitization. `GraphLink.dash` is used
+  only when every entry is finite and non-negative; an empty or invalid array falls back to a solid
+  line rather than partially applying malformed SVG stroke data.
 - a structural `nodes`/`links` change now carries over each already-settled node's position (and any
   in-progress drag) by id when rebuilding the simulation, instead of discarding every node's (x, y)
   and re-running the whole ~300-tick random-start settle from scratch — only genuinely new ids get a
@@ -1984,10 +2340,13 @@ deeply-nested node's own shadow root still reaches it).
 
 **Properties:**
 - `data: TreeItem[] = []` (attribute: false) — `TreeItem { id: string; label: string; children?:
-  TreeItem[]; badge?: string | number }`
+  TreeItem[]; badge?: string | number; icon?: unknown; description?: string; accessibleLabel?:
+  string }`; `icon` renders as a decorative leading visual, `description` as secondary visible row
+  text, and `accessibleLabel` names the `role="treeitem"` host without changing its visible label
 - `label: string = ''` — accessible name for the tree; `role="tree"` lives on an internal
-  `[part="base"]` element, not the host, so this is the only way to label it (`aria-label`/
-  `aria-labelledby` set directly on `<lyra-tree>` wouldn't reach it)
+  `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
+  `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
+  are not forwarded across the shadow boundary.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous *visible* node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
@@ -2003,7 +2362,7 @@ observed internally to keep the roving `activeId` in sync with clicks).
 
 **Slots:** default (holds the `<lyra-tree-node>` elements it manages).
 
-**CSS parts:** `base`
+**CSS parts:** `base`, `empty` (the empty-state message shown when `data` is empty)
 
 **Themeable custom properties:** shared tokens `--lyra-space-xs`/`-s`, `--lyra-color-brand-quiet`,
 `--lyra-color-text-quiet`, `--lyra-color-border`, `--lyra-color-text`, `--lyra-radius`,
@@ -2035,12 +2394,15 @@ descendants of the treeitem, matching the WAI-ARIA treeitem pattern's containmen
 
 **Events:** `lyra-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
 the toggle button or ArrowRight/ArrowLeft), `lyra-node-select` (`detail: { id }`, fired by `select()`
-— via clicking the label or Enter/Space) — dispatched from `lyra-tree-node`, bubble/compose up
+— via clicking anywhere in the row or Enter/Space) — dispatched from `lyra-tree-node`,
+bubble/compose up
 through `lyra-tree`'s light DOM.
 
 **Slots:** none.
 
-**CSS parts:** `row`, `toggle`, `label`, `badge`
+**CSS parts:** `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`. `icon` is
+`aria-hidden="true"`; `content` groups the primary label and optional wrapping secondary
+description while preserving one interactive treeitem per row.
 
 **Themeable custom properties:** `--lyra-tree-depth` (internal, set inline per row for
 indentation), plus the shared tokens listed above.
@@ -2051,7 +2413,14 @@ indentation), plus the shared tokens listed above.
 <lyra-tree></lyra-tree>
 <script>
   document.querySelector('lyra-tree').data = [
-    { id: '1', label: 'Root', children: [{ id: '1a', label: 'Child A' }, { id: '1b', label: 'Child B', badge: 3 }] },
+    {
+      id: '1',
+      label: 'Root',
+      description: 'Two child documents',
+      accessibleLabel: 'Root, two child documents',
+      icon: document.createTextNode('◇'),
+      children: [{ id: '1a', label: 'Child A' }, { id: '1b', label: 'Child B', badge: 3 }],
+    },
   ];
 </script>
 ```
@@ -2068,6 +2437,9 @@ indentation), plus the shared tokens listed above.
   tree's `updateComplete` (e.g. after `focusNode()`) doesn't run before an arbitrarily-nested node has
   actually finished rendering its pushed-down `activeId`/`tabIndex` — one more pending update per
   depth level, otherwise.
+- row enrichment is intentionally structured rather than an unrestricted renderer: use `icon`,
+  `label`, `description`, `badge`, and `accessibleLabel`. This keeps the host as the single
+  `role="treeitem"` interaction target and preserves the APG keyboard model.
 
 ---
 
@@ -2447,6 +2819,10 @@ raw `map` escape hatch for anything unexposed.
   escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas.
+- `label: string = ''` — accessible name for the map region, applied as `[part="base"]`'s
+  `aria-label`. A plain `aria-label` attribute on the host itself is honored as a fallback when
+  `label` is left unset, matching `lyra-slider`/`lyra-checkbox`/`lyra-switch`; with neither set, it
+  falls back to the localized `'map'` message.
 
 **Getters:** `map` → the raw `maplibregl.Map` instance.
 
@@ -2614,6 +2990,11 @@ hand-building that chrome isn't worth it.
   header row (creating one, with no heading text, if `heading` is unset), wired to the same
   `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
 
+Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
+computed accessible name outright, winning over every other source below (a slotted heading,
+`heading`, `label`) — matching `<lyra-date-input>`'s `accessibleLabel` pattern. Left unset, the
+existing three-tier fallback below is unchanged.
+
 **Methods:** `close(reason: DialogCloseReason = 'api'): void` — closes the dialog, emits
 `lyra-dialog-close` with `reason`, and returns focus to whatever had it right before the dialog
 opened. `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
@@ -2673,7 +3054,12 @@ clipped; the viewport is still a hard limit either way), plus shared tokens `--l
 </script>
 ```
 
-Accessible name / visible header, in priority order: (1) if a heading element (`h1`–`h6` or
+Accessible name / visible header, in priority order: (0) if the host element itself has an
+`aria-label` attribute set, its value becomes `aria-label` on the panel outright, overriding every
+source below (including a slotted heading) and suppressing the visible header/`heading` row and the
+sr-only `label` element from rendering at all — the standard ARIA convention for a consumer that
+wants full control over the announced name regardless of whatever `heading`/`label` props are also
+set; (1) otherwise, if a heading element (`h1`–`h6` or
 `[role="heading"]`) is a *direct child* (not inside `slot="footer"`), its text content becomes
 `aria-label` on the panel — takes priority over `heading` below so an existing consumer that already
 slots its own heading keeps rendering it exactly as before; (2) otherwise, when `heading` is set, a
@@ -2888,8 +3274,11 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 
 **Properties:**
 - `items: SegmentedItem[] = []` (attribute: false) — `SegmentedItem { value: string; label: string;
-  disabled?: boolean }`.
+  icon?: unknown; disabled?: boolean }`; `icon` renders as a decorative leading visual inside
+  `segment-icon` and does not replace the required text label.
 - `value: string = ''` — the currently selected item's `value`.
+- `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
+  host-level `aria-label` is used as a fallback.
 
 **Events:** `lyra-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.
@@ -2897,7 +3286,7 @@ keyboard.
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `segment` (a single `role="radio"` button),
-`segment-label` (the segment's label text).
+`segment-icon` (an optional decorative leading icon), `segment-label` (the segment's label text).
 
 **Themeable custom properties:** shared tokens only — `--lyra-color-border`/`-surface`/`-text`/
 `-text-quiet`, `--lyra-radius`, `--lyra-font-size-sm`, `--lyra-font-weight-semibold`,
@@ -2910,8 +3299,8 @@ keyboard.
 <script type="module">
   const seg = document.querySelector('lyra-segmented');
   seg.items = [
-    { value: 'day', label: 'Day' },
-    { value: 'week', label: 'Week' },
+    { value: 'day', label: 'Day', icon: '☀' },
+    { value: 'week', label: 'Week', icon: '▦' },
     { value: 'month', label: 'Month' },
   ];
   seg.value = 'week';
@@ -2925,6 +3314,8 @@ keyboard.
 - this component self-selects on navigation: clicking or arrow-navigating to an item immediately
   updates `value` and fires `lyra-change` — there's no separate "commit" step the way, e.g.,
   `lyra-select`'s popup has.
+- the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
+  host `aria-label`; the component deliberately forwards the resulting name to that internal role.
 
 ---
 
@@ -2998,6 +3389,10 @@ empty string. Restoration updates state, form data, and validity synchronously w
 A boolean toggle-switch form control. `role="switch"` with `aria-checked` read as an on/off state
 rather than checked/unchecked, and no indeterminate state. Structurally the same idea as
 `<lyra-checkbox>` (form-associated via `ElementInternals`, click and Space/Enter both toggle).
+Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots + `hint`/`error`
+CSS parts), mirroring `<lyra-select>`'s pattern for those two pieces — left unset, neither renders.
+Deliberately no separate top-of-field `label` prop/slot/part: the default slot already is this
+control's visible, clickable label (same as `<lyra-checkbox>`).
 
 **Properties:**
 - `checked: boolean = false` (reflected)
@@ -3005,17 +3400,24 @@ rather than checked/unchecked, and no indeterminate state. Structurally the same
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked`
+- `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
+- `errorText: string = ''` (attribute `error-text`) — error text below the switch (overridden by
+  slotted `error` content). Unset: no error chrome renders.
 
 **Events:** `lyra-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
 Space/Enter); not fired for a programmatic `.checked` assignment.
 
-**Slots:** default — label text, rendered next to the track. Clicking it toggles the switch, the
-same as clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so
-the control still has an accessible name.
+**Slots:**
+- default — label text, rendered next to the track. Clicking it toggles the switch, the same as
+  clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
+  control still has an accessible name.
+- `hint` — custom hint content.
+- `error` — custom error content.
 
-**CSS parts:** `base` (the whole interactive control, `role="switch"`), `track` (the pill-shaped
-background), `thumb` (the circular knob that slides across the track), `label` (wrapper around the
-default slot)
+**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` (the
+whole interactive control, `role="switch"`), `track` (the pill-shaped background), `thumb` (the
+circular knob that slides across the track), `label` (wrapper around the default slot), `hint` (the
+hint message), `error` (the error message)
 
 **Themeable custom properties:** `--lyra-switch-track-inline-size` (default `2.25rem`),
 `--lyra-switch-track-block-size` (default `1.25rem`), `--lyra-switch-thumb-offset` (default
@@ -3460,10 +3862,11 @@ variant), `cursor` (the blinking bar in the `cursor` variant)
 **Themeable custom properties:** `--lyra-typing-dot-size` (default `0.5rem`, `0.375rem` at
 `size="sm"`), `--lyra-typing-gap` (default `0.25rem`, `0.1875rem` at `size="sm"`),
 `--lyra-typing-cursor-width` (default `0.125rem`, `0.09375rem` at `size="sm"`),
-`--lyra-typing-cursor-height` (default `1em`, unaffected by `size`) — all component-specific; plus
-the shared `--lyra-transition-base` token, used as each variant's full `animation:` shorthand
-(duration + timing-function together) since it drives a continuous ambient loop rather than a
-discrete state flip (which would instead use `--lyra-transition-fast`).
+`--lyra-typing-cursor-height` (default `1em`, unaffected by `size`),
+`--lyra-typing-dot-stagger-1` (default `600ms`, second dot), and
+`--lyra-typing-dot-stagger-2` (default `1200ms`, third dot). Every variant uses the shared
+`--lyra-transition-ambient` compound duration/timing token (default `1.8s ease-in-out`) as its
+animation cycle.
 
 **Optional peer deps:** none.
 
@@ -3471,6 +3874,9 @@ discrete state flip (which would instead use `--lyra-transition-fast`).
 <lyra-typing-indicator label="Assistant is responding…"></lyra-typing-indicator>
 <lyra-typing-indicator variant="pulse" size="sm"></lyra-typing-indicator>
 <lyra-typing-indicator variant="cursor"></lyra-typing-indicator>
+<lyra-typing-indicator
+  style="--lyra-transition-ambient: 900ms ease-in-out; --lyra-typing-dot-stagger-1: 300ms; --lyra-typing-dot-stagger-2: 600ms"
+></lyra-typing-indicator>
 ```
 
 Accessibility: since this indicator typically mounts and unmounts around a real generation lifecycle
@@ -3488,11 +3894,9 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk
   freezing on its invisible ("off") blink half.
-- the two dot-bounce stagger delays (`60ms`, `120ms`) are fixed literals, not `calc()`-derived
-  fractions of `--lyra-transition-base` — that token is a *compound* `duration timing-function` value
-  (like every `transition:`/`animation:` shorthand token in this library), so it can't be decomposed
-  arithmetically; the two delays just approximate a third and two-thirds of the token's own default
-  duration.
+- `--lyra-transition-ambient` is a compound `duration timing-function` value and cannot be divided
+  with `calc()`. When retiming it, override both stagger properties alongside it to preserve the
+  default one-third/two-thirds dot phasing, as shown above.
 - `size="sm"` shrinks the dot size, gap, and cursor width, but **not** `--lyra-typing-cursor-height`
   (still `1em` at any size) — the cursor bar's height is meant to track surrounding text size via
   `1em`, not the component's own `size` property.
@@ -3817,7 +4221,9 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
 ## `lyra-chat-composer`
 
 The message input for a chat/agent conversation surface: an auto-resizing `<textarea>` plus a
-built-in send/stop button. **Form-associated** via the shared `FormAssociated` mixin (same shape as
+built-in send/stop button. Deliberately no label/hint/error chrome — a composite chat-input
+control, not a labeled form field; wrap it in your own layout for that context. **Form-associated**
+via the shared `FormAssociated` mixin (same shape as
 `<lyra-date-input>`) — `name: string = ''`, `value: string = ''`, `disabled: boolean = false`
 (reflected), `required: boolean = false` (reflected) are all inherited, along with
 `checkValidity()`/`reportValidity()`, so it participates in native `<form>` submission/validation/
@@ -3836,6 +4242,12 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   built-in button's icon/label (send vs. stop) and whether Enter still submits
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
+- `spellcheck: boolean = true` — forwarded to the internal `<textarea>`
+- `autocapitalize: string = ''` — forwarded to the internal `<textarea>`; empty omits the attribute
+- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the internal `<textarea>`
+  (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect`, not `autocorrect`, only
+  to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own `boolean`-typed `autocorrect` IDL
+  member; the host attribute is explicitly mapped to plain `autocorrect`.
 
 **Methods (own):** none beyond the inherited `checkValidity()`/`reportValidity()`.
 
@@ -3847,6 +4259,10 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   trimming is left to the consumer. Submitting does **not** clear `value`
 - `lyra-stop` (no detail) — fired by the built-in button while `status` is `"sending"` or
   `"streaming"`
+- `blur` (no detail) — re-dispatched from the internal `<textarea>`'s own `blur`, bubbling and
+  composed unlike the native event
+- `focus` (no detail) — re-dispatched from the internal `<textarea>`'s own `focus`, for the same
+  reason as `blur`
 
 **Slots:** `leading` (content before the textarea, e.g. an attach-file trigger button), `chips` (an
 attachment tray rendered above the input row), `trailing` (overrides the built-in send/stop button
@@ -4337,6 +4753,12 @@ First-party invention (no Web Awesome equivalent).
   rename button never renders and the row can never enter its editing state; flipping it to `false`
   while a rename is already in progress cancels that edit (discards the draft, like Escape) rather
   than leaving it stranded and still committable.
+- `spellcheck: boolean = true` — forwarded to the in-place rename `<input>`; `spellcheck="false"` is
+  parsed as false (not Lit's default boolean-attribute behavior)
+- `autocapitalize: string = ''` — forwarded to the in-place rename `<input>`; empty omits the attribute
+- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the in-place rename `<input>`
+  (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect` to avoid
+  `HTMLElement.autocorrect`'s incompatible DOM typing.
 
 **Events:** `lyra-select` (no detail payload — identify the row via the platform `id` attribute on the
 event's `target`/`currentTarget`, the same convention `<lyra-attachment-chip>` uses; fires on a click on
@@ -4344,7 +4766,9 @@ event's `target`/`currentTarget`, the same convention `<lyra-attachment-chip>` u
 while not currently renaming), `lyra-rename` (`detail: { title: string }` — an in-place rename was
 committed via Enter or blur-while-editing; does not mutate `title` itself, this is a controlled
 component — not fired when the trimmed draft is empty or unchanged from the original `title`, treated
-as an implicit cancel)
+as an implicit cancel), `blur` (no detail — re-dispatched from the in-place rename `<input>`'s own
+`blur`, bubbling and composed unlike the native event), `focus` (no detail — re-dispatched from the
+in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 
 **Slots:** `actions` — overflow/icon-button controls rendered at the trailing edge of the row (e.g. a
 pin/delete control); only visually shown once it actually has assigned elements.
@@ -4427,7 +4851,20 @@ emitting `lyra-change`.
   id, and once non-empty it takes over as the accessible-name source (an `aria-label` override is
   then only consulted as the fallback). Empty (the default) keeps the original
   `aria-label || placeholder || 'Model'` accessible-name chain untouched.
+- `hint: string = ''` — hint text below the field. Unset (the default): no hint chrome renders.
+- `errorText: string = ''` (attribute `error-text`) — error text below the field (overridden by
+  slotted `error` content). Unset (the default): no error chrome renders.
 - `placeholder: string = ''`
+- `spellcheck: boolean = true` — forwarded to the free-text mode's native `<input>`; no effect in
+  closed-dropdown mode (no native text input there). `spellcheck="false"` is parsed as `false` (a
+  custom converter, not Lit's presence-based `type: Boolean`, so the literal attribute string is
+  honored — matches `<lyra-textarea>`/`<lyra-date-input>`).
+- `autocapitalize: string = ''` — forwarded to the free-text mode's native `<input>`; empty omits
+  the attribute.
+- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the free-text mode's native
+  `<input>`'s own `autocorrect` (Safari/WebKit-specific); empty omits the attribute. Named
+  `autoCorrect` in JS purely to dodge a `lib.dom.d.ts` typing collision — the wire attribute is
+  still plain `autocorrect`.
 - `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
@@ -4450,12 +4887,18 @@ since changed) is never silently dropped: it's appended to the rendered option l
 visually-distinct row (dashed border, italic label, "not in catalog" badge) computed fresh from
 `catalog` + `value` on every access, without ever mutating the `catalog` property itself.
 
-**Events:** `lyra-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is
-selected from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
-actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value distinctly
-from a real catalog pick)
+**Events:**
+- `lyra-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
+  from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
+  actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
+  distinctly from a real catalog pick)
+- `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
+  bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
+  equivalent re-dispatch, matching `<lyra-select>`'s own trigger.
+- `focus` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `focus`,
+  for the same reason as `blur`.
 
-**Slots:** none.
+**Slots:** `hint` (custom hint content), `error` (custom error content).
 
 **CSS parts:** `form-control-label` (the `<label>` element — only rendered, and only contributes to
 the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode's
@@ -4463,7 +4906,8 @@ the accessible name, once `label` is non-empty), `trigger` (closed-dropdown mode
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
 `provider-badge` (the optional leading `provider` label), `listbox` (the options popover, shared by
 both modes), `option`, `option-label`, `option-badge` (the "not in catalog" badge on a synthetic
-stale-value row), `expand-icon` (the dropdown chevron, present in both modes)
+stale-value row), `expand-icon` (the dropdown chevron, present in both modes), `hint` (the hint
+message), `error` (the error message)
 
 **Themeable custom properties:** shared tokens only — `--lyra-space-xs/-s`,
 `--lyra-color-border/-surface/-brand/-brand-quiet/-text-quiet`, `--lyra-radius`, `--lyra-shadow`,
@@ -4500,6 +4944,9 @@ stale-value row), `expand-icon` (the dropdown chevron, present in both modes)
 - In free-text mode, the input's displayed text is `query` only while `open`; while closed it shows the
   committed value's label — so setting `.value` programmatically doesn't require also touching the live
   typed text.
+- `hint`/`errorText` mirror `<lyra-select>`'s identical chrome, including the `aria-describedby` wiring
+  to the rendered `hint`/`error` ids — set on whichever element (`trigger` or `combobox-input`) owns
+  `role="combobox"` for the active mode.
 
 ---
 
@@ -4939,7 +5386,8 @@ accessor itself, which still takes full priority.
   no overlay chrome renders until `mode` is `'mobile'` again. Set this directly, or use the built-in
   toggle button — there is no separate `show()`/`hide()` pair.
 - `label: string = 'Navigation'` — accessible name for the rail's navigation landmark, and for its
-  dialog role while the mobile overlay is open.
+  dialog role while the mobile overlay is open. A host-level `aria-label` attribute (see below)
+  takes precedence over this when both are set.
 - `preferredMode?: 'full' | 'icon-only' | null` (attribute `preferred-mode`) — manually prefers
   `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while `mobile-breakpoint` continues to
   be tracked automatically regardless — e.g. a user's manual collapse toggle that should still yield
@@ -4967,6 +5415,10 @@ accessor itself, which still takes full priority.
   suppress `[part='base']`'s `transition: inline-size` during the drag, which otherwise visibly
   "chases" the pointer instead of tracking it 1:1. Effectively read-only (this component owns the
   transitions), but a plain reflected property like every other boolean here.
+
+Also settable as a plain `aria-label` attribute (not a reactive property): overrides the computed
+`label`/localized-default accessible name on both the navigation landmark and the mobile dialog
+role, matching `<lyra-date-input>`'s `accessibleLabel`.
 
 **Events:** `lyra-mode-change` (`detail: AppRailModeChangeDetail` = `{ mode: AppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing or an explicit `mode` assignment — not
@@ -5219,7 +5671,10 @@ own listbox.
 - `filter: MentionFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive `label`/`description` substring match entirely.
 - `emptyText: string = 'No matches'` (attribute `empty-text`)
-- `label: string = 'Suggestions'` — accessible name for the `role="listbox"` popup.
+- `label: string = 'Suggestions'` — accessible name for the `role="listbox"` popup. A host-level
+  plain `aria-label` attribute on `<lyra-mention-popover>` itself takes priority over this property
+  when present (checked via a plain `getAttribute()` read, not a reactive property) — matches the
+  same fallback on `<lyra-combobox>`/`<lyra-table>`.
 - `filteredItems: MentionItem[]` — read-only getter; `items` filtered by `query` via `filter` (or
   the built-in default). Empty `query` returns `items` unfiltered.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
@@ -5302,6 +5757,9 @@ automatically only on an `anchor` or `query` change while open (a keystroke move
 fresh `query` is the proxy for "the caret may have moved").
 
 **Known gotchas:**
+- a host-level `aria-label` attribute on `<lyra-mention-popover>` now takes priority over `label`
+  (and its localized default) when resolving `[part="listbox"]`'s accessible name — previously it
+  was silently ignored. Matches the same fallback on `<lyra-combobox>`/`<lyra-table>`.
 - The popover opens pre-highlighted on the top match (index 0), unlike `<lyra-combobox>`'s own
   listbox which opens with nothing highlighted (`-1`) — a bare Enter right after opening commits
   immediately.
@@ -5922,6 +6380,12 @@ shared composed-tree focus traversal used by the other modal families.
   disconnect/reconnect fire back-to-back with no update in between.
 - the Approve button's native `disabled` attribute (while the draft is invalid JSON) automatically
   excludes it from the shared Tab trap, whose focusable-set computation skips disabled controls.
+- the raw-JSON `args-editor` textarea always hardcodes `spellcheck="false"`, `autocapitalize="off"`,
+  and `autocorrect="off"` — not exposed as configurable properties, unlike `<lyra-textarea>`'s/
+  `<lyra-chat-composer>`'s passthrough props — since its content is always JSON, never prose; without
+  this a mobile browser (notably iOS Safari, which defaults textarea `autocapitalize` to
+  `'sentences'`) could auto-capitalize or auto-correct key/value text as the user edits, silently
+  corrupting the JSON.
 
 ---
 
@@ -6081,7 +6545,10 @@ menu, an avatar menu, or a history row's overflow menu. Uses the WAI-ARIA "menu 
   side is mirrored under `dir="rtl"`, so e.g. `placement="left-start"` still anchors to the menu's
   trailing edge instead of pinning to the physical left)
 - `label: string = 'Menu'` — accessible name for the `role="menu"` popup; override with something
-  specific (e.g. "Row actions") when a page has more than one menu
+  specific (e.g. "Row actions") when a page has more than one menu. A host-level `aria-label`
+  attribute takes precedence over both this prop and the localized default (unset by default, so
+  a no-op for existing consumers), matching `lyra-select`/`lyra-model-select`'s
+  `this.getAttribute('aria-label') || <computed default>` precedence
 
 **Events:** `lyra-show` (no detail — fires only when `open` transitions to `true`, not for markup
 that renders `open` true from the start), `lyra-hide` (same first-render guard, opposite
@@ -6217,7 +6684,8 @@ already follow.
 - `removable: boolean = false` (reflected — shows the remove (×) button)
 - `selected: boolean = false` (reflected) — opt-in toggle/pressed mode: when set, `[part='base']`
   itself becomes focusable and keyboard-activatable (Enter/Space, mirroring native `<button>`
-  behavior), reflects `aria-pressed`, and toggles on click/activation, emitting `lyra-chip-select`.
+  behavior), reflects `aria-pressed` (explicitly `"false"`, not omitted, whenever toggle mode is
+  active but unpressed), and toggles on click/activation, emitting `lyra-chip-select`.
   Has no effect (no interactive semantics added to `[part='base']`) when combined with `removable`,
   since the remove button already nests inside `[part='base']` — a focusable descendant of a
   `role="button"` ancestor isn't allowed there, and this component's two real use cases (a
@@ -6245,13 +6713,24 @@ affordance, only rendered while `removable`)
 tone; default `var(--lyra-color-text)` / `var(--lyra-color-surface)` / `var(--lyra-color-border)` —
 mirrors the same accent/bg/border vocabulary `<lyra-tool-call-chip>`/`<lyra-attachment-chip>` use),
 `--lyra-chip-pressed-border` (border color while pressed/selected — falls back to
-`--lyra-chip-accent`), plus shared tokens (`--lyra-space-xs`, `--lyra-space-s`,
+`--lyra-chip-accent`), `--lyra-chip-pressed-bg` (background color while pressed/selected — falls
+back to `--lyra-chip-bg`), plus shared tokens (`--lyra-space-xs`, `--lyra-space-s`,
 `--lyra-color-brand`/`-brand-quiet`, `--lyra-color-success`/`-success-quiet`,
 `--lyra-color-warning`/`-warning-quiet`, `--lyra-color-danger`/`-danger-quiet`,
 `--lyra-icon-button-size`, `--lyra-focus-ring-width`, `--lyra-focus-ring-color`,
 `--lyra-focus-ring-offset`, `--lyra-transition-fast`).
 
 **Optional peer deps:** none.
+
+```html
+<lyra-chip
+  toggleable
+  selected
+  style="--lyra-chip-bg: var(--lyra-color-surface); --lyra-chip-pressed-bg: var(--lyra-color-warning-quiet)"
+>
+  Priority filter
+</lyra-chip>
+```
 
 ### `lyra-chip-group`
 

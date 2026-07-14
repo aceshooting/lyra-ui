@@ -27,10 +27,12 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
 - **Form controls, toasts, sparkline, and flags** — `lyra-combobox`/`lyra-option`,
   `lyra-select` (a closed-list, button-trigger single-select sharing `lyra-option` with
   `lyra-combobox`), `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`,
-  `lyra-sparkline`, `lyra-textarea`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
+  `lyra-phone-input` (optional `libphonenumber-js` peer, loaded through a consumer adapter), `lyra-sparkline`,
+  `lyra-textarea`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
 - **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
-  `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-gauge`, `lyra-export-button`,
-  `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud` (zero-dependency SVG word/tag cloud).
+  `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-pagination`, `lyra-gauge`,
+  `lyra-export-button`, `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
+  (zero-dependency SVG word/tag cloud).
 - **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
   `lyra-playback`, `lyra-heatmap` (matrix and calendar layouts), `lyra-graph` (needs the optional peer
   deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
