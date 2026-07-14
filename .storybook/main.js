@@ -34,6 +34,14 @@ const config = {
     viteConfig.plugins = viteConfig.plugins ?? [];
     viteConfig.plugins.push(tailwindcss());
     viteConfig.build = viteConfig.build ?? {};
+    // Vite's default 500kB warning fires on chunks that are already correctly
+    // split (one-per-language addon-docs syntax-highlighter chunks, axe-core,
+    // MapLibre's own WASM+JS) — none of it ships in the published npm
+    // package (see check:packed-consumer, which measures that separately).
+    // Raised past the current largest known chunk (~2.8MB, Storybook's own
+    // iframe runtime) so the warning stays meaningful for a genuine future
+    // regression instead of firing on this site build's normal baseline.
+    viteConfig.build.chunkSizeWarningLimit = 3200;
     viteConfig.build.rollupOptions = viteConfig.build.rollupOptions ?? {};
     viteConfig.build.rollupOptions.output = viteConfig.build.rollupOptions.output ?? {};
     // Split each optional-peer-heavy dependency family into its own chunk so
