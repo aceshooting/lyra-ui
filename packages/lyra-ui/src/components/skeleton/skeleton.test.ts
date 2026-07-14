@@ -104,3 +104,12 @@ it('is accessible', async () => {
   const el = (await fixture(html`<lyra-skeleton></lyra-skeleton>`)) as LyraSkeleton;
   await expect(el).to.be.accessible();
 });
+
+it('renders a visible, nonzero box -- [part=base] uses display:block, not inline', async () => {
+  const el = (await fixture(html`<lyra-skeleton width="120px" height="40px"></lyra-skeleton>`)) as LyraSkeleton;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).display).to.equal('block');
+  const rect = base.getBoundingClientRect();
+  expect(rect.width).to.be.greaterThan(0);
+  expect(rect.height).to.be.greaterThan(0);
+});

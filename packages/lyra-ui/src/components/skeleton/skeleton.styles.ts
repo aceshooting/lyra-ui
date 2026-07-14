@@ -7,6 +7,7 @@ export const styles = css`
     block-size: var(--lyra-skeleton-h, var(--lyra-size-1em));
   }
   [part='base'] {
+    display: block;
     inline-size: 100%;
     block-size: 100%;
     background: var(--lyra-color-border);
