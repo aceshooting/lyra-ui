@@ -7,6 +7,14 @@ export interface ConversationItemRenameDetail {
   title: string;
 }
 
+/** String-aware parsing for the native enumerated `spellcheck` attribute -- mirrors
+ *  `<lyra-textarea>`'s identical converter, since Lit's default boolean converter would otherwise
+ *  treat the mere presence of `spellcheck="false"` as `true`. */
+const spellcheckConverter = {
+  fromAttribute: (value: string | null): boolean => value !== 'false',
+  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
+};
+
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
 // pencil/edit glyph to that module -- it's off limits here -- so this
@@ -56,6 +64,8 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
 
 export interface LyraConversationItemEventMap {
   'lyra-select': CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-conversation-item>` — a selectable row representing one chat
@@ -156,6 +166,20 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
    *  flipped to `false` while a rename is already open, the in-progress edit
    *  is cancelled (discarded, like Escape) rather than left committable. */
   @property({ type: Boolean, reflect: true }) editable = true;
+
+  /** Forwarded to the in-place rename `<input>`'s own `spellcheck`. Defaults to `true`, matching
+   *  the native element's own default. `spellcheck="false"` is parsed as false. */
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+
+  /** Forwarded to the in-place rename `<input>`'s own `autocapitalize`. Empty string omits the
+   *  attribute (browser default). */
+  @property() autocapitalize = '';
+
+  /** Forwarded to the in-place rename `<input>`'s own `autocorrect` (Safari/WebKit-specific).
+   *  Empty string omits the attribute (browser default). Named `autoCorrect` to avoid
+   *  `HTMLElement.autocorrect`'s incompatible DOM typing -- mirrors `<lyra-textarea>`'s identical
+   *  choice. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
 
   @state() private renaming = false;
   @state() private draftTitle = '';
@@ -260,7 +284,15 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     }
   };
 
+  private onTitleInputFocus = (): void => {
+    this.emit('focus');
+  };
+
   private onTitleInputBlur = (): void => {
+    // Native blur/focus neither bubble nor cross the shadow boundary -- re-dispatch so a
+    // host-level listener on the custom element itself can observe them. Always fires, even on
+    // the Escape-driven path below, since the native input really did blur either way.
+    this.emit('blur');
     // If Escape already ended the edit synchronously (cancelRename() runs
     // before this fires), `renaming` is already false by the time the
     // now-removed input's blur event reaches here -- skip so Escape can't
@@ -302,8 +334,12 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                   type="text"
                   .value=${this.draftTitle}
                   aria-label=${renameLabel}
+                  spellcheck=${this.spellcheck}
+                  autocapitalize=${this.autocapitalize || nothing}
+                  autocorrect=${this.autoCorrect || nothing}
                   @input=${this.onTitleInputChange}
                   @keydown=${this.onTitleInputKeyDown}
+                  @focus=${this.onTitleInputFocus}
                   @blur=${this.onTitleInputBlur}
                 />`
               : html`<span part="title" title=${displayTitle}>${displayTitle}</span>`}

@@ -376,6 +376,59 @@ describe('inline rename', () => {
   });
 });
 
+describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
+  it('spellcheck defaults to true on the rename input', async () => {
+    const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+    expect(input.spellcheck).to.be.true;
+  });
+
+  it('forwards spellcheck=false, autocapitalize, and autocorrect onto the rename input', async () => {
+    const el = (await fixture(html`
+      <lyra-conversation-item
+        title="A"
+        spellcheck="false"
+        autocapitalize="off"
+        autocorrect="off"
+      ></lyra-conversation-item>
+    `)) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+    expect(input.spellcheck).to.be.false;
+    expect(input.getAttribute('autocapitalize')).to.equal('off');
+    expect(input.getAttribute('autocorrect')).to.equal('off');
+  });
+});
+
+describe('rename input blur/focus bubbling', () => {
+  it('re-dispatches a bubbling, composed blur event when the rename input blurs', async () => {
+    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+
+    setTimeout(() => input.dispatchEvent(new FocusEvent('blur')));
+    const ev = await oneEvent(el, 'blur');
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+
+  it('re-dispatches a bubbling, composed focus event when the rename input focuses', async () => {
+    const el = (await fixture(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`)) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+
+    setTimeout(() => input.dispatchEvent(new FocusEvent('focus')));
+    const ev = await oneEvent(el, 'focus');
+    expect(ev.bubbles).to.be.true;
+    expect(ev.composed).to.be.true;
+  });
+});
+
 describe('actions slot', () => {
   it('hides the actions part when nothing is slotted', async () => {
     const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
