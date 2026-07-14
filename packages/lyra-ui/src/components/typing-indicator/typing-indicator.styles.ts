@@ -23,6 +23,13 @@ export const styles = css`
     --lyra-typing-gap: var(--lyra-space-xs);
     --lyra-typing-cursor-width: var(--lyra-size-0-125rem);
     --lyra-typing-cursor-height: var(--lyra-size-1em);
+    /* Themeable, not auto-derived from --lyra-transition-ambient: that token is a *compound*
+       value (duration + timing-function, e.g. "1.8s ease-in-out") baked into the animation:
+       shorthand above, so it can't be decomposed via calc() into a fraction of just its duration.
+       A consumer retiming --lyra-transition-ambient keeps the stagger proportional by also
+       setting these two explicitly. */
+    --lyra-typing-dot-stagger-1: 600ms;
+    --lyra-typing-dot-stagger-2: 1200ms;
   }
   :host([size='sm']) {
     --lyra-typing-dot-size: var(--lyra-size-0-375rem);
@@ -45,16 +52,11 @@ export const styles = css`
     opacity: 0.5;
     animation: lyra-typing-dot-bounce var(--lyra-transition-ambient) infinite;
   }
-  /* Fixed (not token-derived) stagger offsets -- --lyra-transition-ambient is
-     a compound "duration timing-function" value like every other transition
-     token in this library, so it can't be decomposed via calc() to derive a
-     fraction of just its duration; these two delays approximate a third and
-     two-thirds of that token's own fallback duration. */
   [part='dot']:nth-child(2) {
-    animation-delay: 600ms;
+    animation-delay: var(--lyra-typing-dot-stagger-1);
   }
   [part='dot']:nth-child(3) {
-    animation-delay: 1200ms;
+    animation-delay: var(--lyra-typing-dot-stagger-2);
   }
   @keyframes lyra-typing-dot-bounce {
     0%,

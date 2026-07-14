@@ -159,3 +159,24 @@ describe('ambient transition token', () => {
     expect(getComputedStyle(cursor).animationDuration).to.equal('1.8s');
   });
 });
+
+describe('themeable stagger delays', () => {
+  it('defaults dot stagger delays to 600ms/1200ms', async () => {
+    const el = (await fixture(html`<lyra-typing-indicator variant="dots"></lyra-typing-indicator>`)) as LyraTypingIndicator;
+    const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
+    expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.6s');
+    expect(getComputedStyle(dots[2]).animationDelay).to.equal('1.2s');
+  });
+
+  it('honors --lyra-typing-dot-stagger-1/-2 overrides', async () => {
+    const el = (await fixture(
+      html`<lyra-typing-indicator
+        variant="dots"
+        style="--lyra-typing-dot-stagger-1: 300ms; --lyra-typing-dot-stagger-2: 600ms;"
+      ></lyra-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
+    expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.3s');
+    expect(getComputedStyle(dots[2]).animationDelay).to.equal('0.6s');
+  });
+});

@@ -46,6 +46,10 @@ export type TypingIndicatorSize = 'sm' | 'md';
  * @csspart dot - Each of the three dots in the `dots` variant.
  * @csspart pulse - The single pulsing dot in the `pulse` variant.
  * @csspart cursor - The blinking bar in the `cursor` variant.
+ * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
+ * shared by all variants.
+ * @cssprop [--lyra-typing-dot-stagger-1=600ms] - Delay for the second dot in the dots variant.
+ * @cssprop [--lyra-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
  */
 export class LyraTypingIndicator extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -108,4 +112,3 @@ declare global {
     'lyra-typing-indicator': LyraTypingIndicator;
   }
 }
-

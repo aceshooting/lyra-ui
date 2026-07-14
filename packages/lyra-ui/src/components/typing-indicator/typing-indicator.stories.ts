@@ -41,6 +41,24 @@ export const CustomLabel: Story = {
   render: () => html`<lyra-typing-indicator label="Generating response…"></lyra-typing-indicator>`,
 };
 
+export const RetimedDots: Story = {
+  name: 'Retimed dots with proportional stagger',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'When retiming the compound `--lyra-transition-ambient` animation token, set the two stagger delays alongside it to preserve the intended one-third/two-thirds phasing.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-typing-indicator
+      label="Generating quickly…"
+      style="--lyra-transition-ambient: 900ms ease-in-out; --lyra-typing-dot-stagger-1: 300ms; --lyra-typing-dot-stagger-2: 600ms;"
+    ></lyra-typing-indicator>
+  `,
+};
+
 export const InlineWithStreamedText: Story = {
   name: 'Inline with streamed text (cursor variant)',
   render: () => html`
