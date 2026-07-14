@@ -154,6 +154,7 @@ export type LyraMessageKey =
   | 'histogramFrequency'
   | 'liteChartMarkPosition'
   | 'composerLabel'
+  | 'textareaLabel'
   | 'citation'
   | 'comboboxOverflow'
   | 'comboboxRequired'
@@ -442,6 +443,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   histogramFrequency: 'Frequency',
   liteChartMarkPosition: '({index} of {total})',
   composerLabel: 'Message',
+  textareaLabel: 'Text',
   citation: 'Citation {index}',
   comboboxOverflow: '+{n} more — refine your search',
   comboboxRequired: 'Please select an option.',
