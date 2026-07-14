@@ -91,6 +91,15 @@ export const PriorityWideContainerNoButton: Story = {
     </div>`,
 };
 
+// `show-all-columns` restores a previously-persisted reveal preference up
+// front, instead of always starting collapsed.
+export const PriorityColumnsRevealed: Story = {
+  render: () =>
+    html`<div style="max-width: 420px;">
+      <lyra-table .columns=${priorityColumns} .rows=${detailRows} show-all-columns></lyra-table>
+    </div>`,
+};
+
 // A <button> inside cell() must own its own click/Enter activation — the
 // table's row-click delegation must not intercept it (see table.ts's
 // INTERACTIVE_SELECTOR guard).

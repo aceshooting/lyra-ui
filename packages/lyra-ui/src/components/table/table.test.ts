@@ -388,6 +388,67 @@ it('keeps [part="reveal-columns-button"] visible and columnsHidden=true (no extr
   expect(events).to.deep.equal([]); // true -> true is not a real transition
 });
 
+it('showAllColumns is a public, reflected property that stays in sync with the reveal button', async () => {
+  const el = (await fixture(
+    html`<lyra-table style="display: block; width: 300px;"></lyra-table>`,
+  )) as LyraTable<Row>;
+  el.columns = priorityColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  await waitUntil(() => el.columnsHidden === true);
+
+  expect(el.showAllColumns).to.be.false;
+  expect(el.hasAttribute('show-all-columns')).to.be.false;
+
+  const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
+  revealButton.click();
+  await el.updateComplete;
+  expect(el.showAllColumns).to.be.true;
+  expect(el.hasAttribute('show-all-columns')).to.be.true;
+
+  revealButton.click();
+  await el.updateComplete;
+  expect(el.showAllColumns).to.be.false;
+  expect(el.hasAttribute('show-all-columns')).to.be.false;
+});
+
+it('emits lyra-columns-revealed with the new state whenever the reveal button is toggled', async () => {
+  const el = (await fixture(
+    html`<lyra-table style="display: block; width: 300px;"></lyra-table>`,
+  )) as LyraTable<Row>;
+  el.columns = priorityColumns;
+  el.rows = rows;
+  await el.updateComplete;
+  await waitUntil(() => el.columnsHidden === true);
+
+  const events: boolean[] = [];
+  el.addEventListener('lyra-columns-revealed', (e) => events.push((e as CustomEvent).detail.revealed));
+  const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
+  revealButton.click();
+  await el.updateComplete;
+  revealButton.click();
+  await el.updateComplete;
+
+  expect(events).to.deep.equal([true, false]);
+});
+
+it('restores a previously-persisted showAllColumns preference from the initial property/attribute', async () => {
+  const el = (await fixture(
+    html`<lyra-table style="display: block; width: 300px;" show-all-columns></lyra-table>`,
+  )) as LyraTable<Row>;
+  el.columns = priorityColumns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  expect(el.showAllColumns).to.be.true;
+  const lowHeader = el.shadowRoot!.querySelector('[part="header-cell"][data-priority="low"]') as HTMLElement;
+  expect(getComputedStyle(lowHeader).display).to.not.equal('none');
+
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null);
+  const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
+  expect(revealButton.getAttribute('aria-pressed')).to.equal('true');
+});
+
 it('never renders [part="reveal-columns-button"] and keeps columnsHidden false regardless of container width when no column declares a priority (regression)', async () => {
   const el = (await fixture(
     html`<lyra-table style="display: block; width: 300px;"></lyra-table>`,

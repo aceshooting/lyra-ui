@@ -53894,7 +53894,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `columns[].sticky` pins a column's header/cells to the\ninline-start (default/`true`) or inline-end (`'end'`) edge while the table scrolls horizontally.",
+          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.",
           "name": "LyraTable",
           "cssParts": [
             {
@@ -54179,9 +54179,10 @@
               "type": {
                 "text": "boolean"
               },
-              "privacy": "private",
               "default": "false",
-              "description": "Forces `priority`-hidden columns back into view, overriding the\n`@container` hide rules in table.styles.ts. Toggled by\n`[part='reveal-columns-button']`."
+              "description": "Forces `priority`-hidden columns back into view, overriding the\n`@container` hide rules in table.styles.ts. Toggles itself on\n`[part='reveal-columns-button']` activation by default — no external\nwiring is required for the button to work. Also settable from outside\n(property or the reflected `show-all-columns` attribute) to restore a\npreviously-persisted preference, and readable back at any time — or via\nthe `lyra-columns-revealed` event, fired whenever the button toggles it\n— to persist the current one.",
+              "attribute": "show-all-columns",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -54627,6 +54628,10 @@
               "name": "lyra-columns-hidden-change"
             },
             {
+              "description": "`showAllColumns` was toggled by `[part='reveal-columns-button']`. `detail: { revealed: boolean }`.",
+              "name": "lyra-columns-revealed"
+            },
+            {
               "description": "The \"load more\" control was activated.",
               "name": "lyra-load-more"
             },
@@ -54725,6 +54730,15 @@
               },
               "default": "''",
               "fieldName": "revealColumnsLabel"
+            },
+            {
+              "name": "show-all-columns",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Forces `priority`-hidden columns back into view, overriding the\n`@container` hide rules in table.styles.ts. Toggles itself on\n`[part='reveal-columns-button']` activation by default — no external\nwiring is required for the button to work. Also settable from outside\n(property or the reflected `show-all-columns` attribute) to restore a\npreviously-persisted preference, and readable back at any time — or via\nthe `lyra-columns-revealed` event, fired whenever the button toggles it\n— to persist the current one.",
+              "fieldName": "showAllColumns"
             },
             {
               "name": "sort-dir",

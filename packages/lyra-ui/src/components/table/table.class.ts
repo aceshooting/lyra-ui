@@ -93,6 +93,7 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
 
 export interface LyraTableEventMap<T = unknown> {
   'lyra-columns-hidden-change': CustomEvent<{ hidden: boolean }>;
+  'lyra-columns-revealed': CustomEvent<{ revealed: boolean }>;
   'lyra-sort': CustomEvent<{ key: string }>;
   'lyra-row-click': CustomEvent<{ row: T }>;
   'lyra-load-more': CustomEvent<undefined>;
@@ -126,10 +127,16 @@ export interface LyraTableEventMap<T = unknown> {
  * column merely declares a `priority`, the button (and the public
  * `columnsHidden` property, see below) reflects whether a `priority` column
  * is *actually* hidden right now — measured via `ResizeObserver` on
- * `[part='base']` plus a post-render DOM check — or `showAllColumns`
+ * `[part='base']` plus a post-render DOM check — or the public `showAllColumns`
  * force-visible mode is currently active (so there's still a way to toggle
- * it back off). `columns[].sticky` pins a column's header/cells to the
- * inline-start (default/`true`) or inline-end (`'end'`) edge while the table scrolls horizontally.
+ * it back off). `showAllColumns` defaults to `false` and toggles itself on
+ * `[part='reveal-columns-button']` activation with no external wiring
+ * required, but is also settable up front (property or the reflected
+ * `show-all-columns` attribute) to restore a previously-persisted
+ * preference, and readable back — directly or via the `lyra-columns-revealed`
+ * event — to persist the current one. `columns[].sticky` pins a column's
+ * header/cells to the inline-start (default/`true`) or inline-end (`'end'`)
+ * edge while the table scrolls horizontally.
  *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
@@ -139,6 +146,8 @@ export interface LyraTableEventMap<T = unknown> {
  *   (a `priority` column just became hidden/un-hidden by the `@container`
  *   rules, or `showAllColumns` force-visible mode was toggled while a
  *   `priority` column was hidden). `detail: { hidden: boolean }`.
+ * @event lyra-columns-revealed - `showAllColumns` was toggled by
+ *   `[part='reveal-columns-button']`. `detail: { revealed: boolean }`.
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
  * @csspart head - The `<thead>` element.
@@ -189,9 +198,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ type: Boolean, attribute: 'columns-hidden', reflect: true }) columnsHidden = false;
 
   /** Forces `priority`-hidden columns back into view, overriding the
-   *  `@container` hide rules in table.styles.ts. Toggled by
-   *  `[part='reveal-columns-button']`. */
-  @state() private showAllColumns = false;
+   *  `@container` hide rules in table.styles.ts. Toggles itself on
+   *  `[part='reveal-columns-button']` activation by default — no external
+   *  wiring is required for the button to work. Also settable from outside
+   *  (property or the reflected `show-all-columns` attribute) to restore a
+   *  previously-persisted preference, and readable back at any time — or via
+   *  the `lyra-columns-revealed` event, fired whenever the button toggles it
+   *  — to persist the current one. */
+  @property({ type: Boolean, attribute: 'show-all-columns', reflect: true }) showAllColumns = false;
 
   /** Roving-tabindex position among header cells; `null` until a header is
    *  clicked/navigated to, at which point `focusedColKey()` falls back to
@@ -458,6 +472,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private toggleColumns = (): void => {
     this.showAllColumns = !this.showAllColumns;
+    this.emit('lyra-columns-revealed', { revealed: this.showAllColumns });
   };
 
   private onTableClick = (e: MouseEvent): void => {
