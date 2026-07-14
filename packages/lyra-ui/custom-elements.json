@@ -16830,7 +16830,7 @@
               "name": "actions"
             },
             {
-              "description": "File/image attachment chips, rendered below the message body.",
+              "description": "File/image attachment chips, rendered below the message body by default; see `attachments-position`.",
               "name": "attachments"
             },
             {
@@ -16851,6 +16851,16 @@
               },
               "privacy": "private",
               "default": "'sent'"
+            },
+            {
+              "kind": "field",
+              "name": "attachmentsPosition",
+              "type": {
+                "text": "'before' | 'after'"
+              },
+              "default": "'after'",
+              "description": "Where the `attachments` slot renders relative to the message body.\n`'after'` (the default) reproduces today's exact DOM order. `'before'`\nrenders attachments immediately above the body -- both DOM and visual\norder move together (no CSS `order` trick), so reading/focus order\nalways matches what's on screen.",
+              "attribute": "attachments-position"
             },
             {
               "kind": "field",
@@ -17296,6 +17306,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "attachments-position",
+              "type": {
+                "text": "'before' | 'after'"
+              },
+              "default": "'after'",
+              "description": "Where the `attachments` slot renders relative to the message body.\n`'after'` (the default) reproduces today's exact DOM order. `'before'`\nrenders attachments immediately above the body -- both DOM and visual\norder move together (no CSS `order` trick), so reading/focus order\nalways matches what's on screen.",
+              "fieldName": "attachmentsPosition"
+            },
             {
               "name": "collapsed",
               "type": {
@@ -33616,11 +33635,18 @@
             },
             {
               "kind": "field",
+              "name": "canvasColorCache",
+              "privacy": "private",
+              "default": "new Map<string, string>()",
+              "description": "Cache of resolved colors for the current draw pass, cleared at the top\nof drawCalendar()/drawMatrix() so a theme change is always picked up on\nthe very next full redraw, while repeated identical cellColor() outputs\nwithin the same pass resolve only once."
+            },
+            {
+              "kind": "field",
               "name": "cellColor",
               "type": {
                 "text": "(pos: MatrixCellPos | CalendarCellPos, value: number) => string | undefined | undefined"
               },
-              "description": "Overrides a cell's computed ramp/no-data color entirely for an exact value -- receives the\ncell position (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its\nvalue, return a CSS color string to force that cell to it, or `undefined` to fall back to the\nnormal `colorSteps`/ramp math unchanged. Lets a consumer designate a value as categorically\noutside the ramp (e.g. a real zero-count day rendered as a neutral hairline, distinct from\nboth \"no data\" and the ramp's own lightest step) without a prepended synthetic ramp color,\nwhich can't safely reserve an exact value on a skewed dataset (the bucket selectors round by\ncontinuous ratio, with no equality-based reservation). Unset (the default) reproduces today's\nexact ramp/no-data behavior for every cell."
+              "description": "Overrides a cell's computed ramp/no-data color entirely for an exact value -- receives the\ncell position (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its\nvalue, return a CSS color string to force that cell to it, or `undefined` to fall back to the\nnormal `colorSteps`/ramp math unchanged. Lets a consumer designate a value as categorically\noutside the ramp (e.g. a real zero-count day rendered as a neutral hairline, distinct from\nboth \"no data\" and the ramp's own lightest step) without a prepended synthetic ramp color,\nwhich can't safely reserve an exact value on a skewed dataset (the bucket selectors round by\ncontinuous ratio, with no equality-based reservation). Unset (the default) reproduces today's\nexact ramp/no-data behavior for every cell. A returned value containing a CSS custom property\n(e.g. `var(--x)`) or other browser-resolvable color syntax (e.g. `color-mix(...)`) is\nautomatically resolved before being used as a canvas fill color."
             },
             {
               "kind": "field",
@@ -33654,6 +33680,14 @@
                 "text": "string[]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "colorProbe",
+              "type": {
+                "text": "HTMLSpanElement | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -33937,6 +33971,14 @@
                 "text": "number[][]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "weekdayLabelText",
+              "type": {
+                "text": "(jsWeekday: number) => string | undefined | undefined"
+              },
+              "description": "Overrides the weekday-axis label text in calendar mode -- receives the real JS weekday index\n(`0` Sunday .. `6` Saturday) for a row that would otherwise render a label (today, only rows\n1/3/5 relative to `firstDayOfWeek` ever do) and, when it returns a string, uses it instead of\nthe built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default) reproduces\ntoday's exact locale-derived output."
             },
             {
               "kind": "method",
@@ -34646,6 +34688,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "resolveCanvasColor",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Resolves a cellColor() return value that may contain a CSS custom\nproperty (or any other CSS color syntax the browser understands, e.g.\ncolor-mix()) into a literal color canvas's fillStyle can actually use --\nfillStyle silently no-ops on an unparseable string, per the Canvas 2D\nspec, leaving whatever the previous cell painted. Falls back to\nnoDataFill() for a genuinely invalid color."
             },
             {
               "kind": "method",
@@ -52749,6 +52810,378 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/textarea/textarea.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lyra-textarea>` — a bare, multiline plain-text input primitive. Form-associated via the\n`FormAssociated` mixin (see `<lyra-chat-composer>`/`<lyra-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nDeliberately no auto-resize and no label/hint/error chrome -- the thin `lyra-*` equivalent of a\nplain `wa-textarea`, not a rebuild of `<lyra-chat-composer>`. A consumer wanting a labeled field\nwraps this element in whatever form-field layout it already uses.",
+          "name": "LyraTextarea",
+          "cssParts": [
+            {
+              "description": "The native `<textarea>` element.",
+              "name": "textarea"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onInput",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "placeholder",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "resize",
+              "type": {
+                "text": "TextareaResize"
+              },
+              "default": "'vertical'",
+              "description": "Native CSS `resize` behavior for the textarea.",
+              "attribute": "resize"
+            },
+            {
+              "kind": "field",
+              "name": "rows",
+              "type": {
+                "text": "number"
+              },
+              "default": "3",
+              "description": "Visible text rows.",
+              "attribute": "rows"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "textareaEl",
+              "type": {
+                "text": "HTMLTextAreaElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired on the native `change` timing (control loses focus after a committed edit). `detail: { value }`.",
+              "name": "lyra-change"
+            },
+            {
+              "description": "Fired on every user-driven edit (not a programmatic `.value` assignment). `detail: { value }`.",
+              "name": "lyra-input"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "placeholder",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "placeholder"
+            },
+            {
+              "name": "resize",
+              "type": {
+                "text": "TextareaResize"
+              },
+              "default": "'vertical'",
+              "description": "Native CSS `resize` behavior for the textarea.",
+              "fieldName": "resize"
+            },
+            {
+              "name": "rows",
+              "type": {
+                "text": "number"
+              },
+              "default": "3",
+              "description": "Visible text rows.",
+              "fieldName": "rows"
+            }
+          ],
+          "mixins": [
+            {
+              "name": "FormAssociated",
+              "module": "/src/internal/form-associated.js"
+            }
+          ],
+          "superclass": {
+            "name": "LyraTextareaBase",
+            "module": "src/components/textarea/textarea.class.ts"
+          },
+          "tagName": "lyra-textarea",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraTextarea",
+          "declaration": {
+            "name": "LyraTextarea",
+            "module": "src/components/textarea/textarea.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/textarea/textarea.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-textarea",
+          "declaration": {
+            "name": "LyraTextarea",
+            "module": "src/components/textarea/textarea.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/textarea/textarea.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/thinking-panel/thinking-panel.class.ts",
       "declarations": [
         {
@@ -61014,6 +61447,16 @@
             },
             {
               "kind": "field",
+              "name": "backdropInset",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Overrides the fullscreen *backdrop*'s own inset independent of `fullscreen-inset` -- e.g.\n`\"0\"` to dim the full viewport-to-panel-edge region while the panel itself keeps a narrower\n`fullscreen-inset`. Unset (the default) falls back to `fullscreen-inset`, i.e. today's exact\ncoupled behavior.",
+              "attribute": "backdrop-inset"
+            },
+            {
+              "kind": "field",
               "name": "bodyId",
               "privacy": "private",
               "readonly": true
@@ -61457,6 +61900,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "backdrop-inset",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Overrides the fullscreen *backdrop*'s own inset independent of `fullscreen-inset` -- e.g.\n`\"0\"` to dim the full viewport-to-panel-edge region while the panel itself keeps a narrower\n`fullscreen-inset`. Unset (the default) falls back to `fullscreen-inset`, i.e. today's exact\ncoupled behavior.",
+              "fieldName": "backdropInset"
+            },
             {
               "name": "collapsed",
               "type": {
