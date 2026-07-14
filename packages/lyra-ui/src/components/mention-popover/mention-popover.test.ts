@@ -324,6 +324,19 @@ it('defaults the listbox accessible name to "Suggestions", overridable via label
   expect(listbox(el).getAttribute('aria-label')).to.equal('Mention someone');
 });
 
+it('a host aria-label attribute overrides the label property and the localized default', async () => {
+  const el = (await fixture(
+    html`<lyra-mention-popover label="Mention someone" aria-label="Custom name"></lyra-mention-popover>`,
+  )) as LyraMentionPopover;
+  const anchor = document.createElement('div');
+  document.body.appendChild(anchor);
+  el.anchor = anchor;
+  el.items = ITEMS;
+  el.open = true;
+  await el.updateComplete;
+  expect(listbox(el).getAttribute('aria-label')).to.equal('Custom name');
+});
+
 it('honors a strings override for mentionSuggestions/noMatches while label/emptyText are left at their defaults', async () => {
   const el = await openWithItems([]);
   el.strings = { mentionSuggestions: 'Suggestions de mention', noMatches: 'Aucun résultat' };

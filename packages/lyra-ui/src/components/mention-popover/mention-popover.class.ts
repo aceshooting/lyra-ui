@@ -267,7 +267,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** Message shown when `items` (post-`query`-filtering) is empty. */
   @property({ attribute: 'empty-text' }) emptyText = 'No matches';
 
-  /** Accessible name for the `role="listbox"` popup. */
+  /** Accessible name for the `role="listbox"` popup. Also settable as a plain `aria-label`
+   *  attribute on `<lyra-mention-popover>` itself, which takes precedence over this property when
+   *  present -- matches `<lyra-combobox>`'s/`<lyra-table>`'s identical host `aria-label` fallback. */
   @property() label = 'Suggestions';
 
   // Highlighted row, opens pre-highlighted on the top match (index 0) so a
@@ -482,11 +484,17 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return this.localize('noMatches', this.emptyText === 'No matches' ? undefined : this.emptyText);
   }
 
-  /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
-   *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
-   *  override applies without requiring `label` itself to be set. */
+  /** Resolves `label`'s effective text: a host-level plain `aria-label` attribute on
+   *  `<lyra-mention-popover>` itself wins first (checked via a plain `getAttribute()` read, not a
+   *  reactive property, matching `<lyra-combobox>`'s/`<lyra-table>`'s identical fallback); failing
+   *  that, an explicit `label` override wins verbatim; left at the built-in default it instead
+   *  routes through `this.localize()` so a locale/`.strings` override applies without requiring
+   *  `label` itself to be set. */
   private get effectiveLabel(): string {
-    return this.localize('mentionSuggestions', this.label === 'Suggestions' ? undefined : this.label);
+    return (
+      this.getAttribute('aria-label') ||
+      this.localize('mentionSuggestions', this.label === 'Suggestions' ? undefined : this.label)
+    );
   }
 
   private renderRow(item: MentionItem, index: number, activeId: string): TemplateResult {
