@@ -360,6 +360,60 @@ it('a consumer-slotted heading keeps working completely unchanged when `heading`
   expect(el.shadowRoot!.querySelector('[part="header"]')).to.not.exist;
 });
 
+describe('aria-label host attribute (ARIA-name forwarding)', () => {
+  it('wins over the label prop -- previously silently ignored', async () => {
+    const el = (await fixture(
+      html`<lyra-dialog label="Delete item?" aria-label="Custom name">body</lyra-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+    expect(panel.getAttribute('aria-label')).to.equal('Custom name');
+    expect(panel.hasAttribute('aria-labelledby')).to.be.false;
+    // The label prop's own sr-only element must not render once aria-label wins.
+    expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
+  });
+
+  it('wins over the heading prop, including its visible header chrome', async () => {
+    const el = (await fixture(
+      html`<lyra-dialog heading="Title" aria-label="Custom name">body</lyra-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+    expect(panel.getAttribute('aria-label')).to.equal('Custom name');
+    expect(panel.hasAttribute('aria-labelledby')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="heading"]')).to.not.exist;
+  });
+
+  it('wins even over a slotted heading', async () => {
+    const el = (await fixture(
+      html`<lyra-dialog aria-label="Custom name"><h2>Real heading</h2></lyra-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+    expect(panel.getAttribute('aria-label')).to.equal('Custom name');
+    expect(panel.hasAttribute('aria-labelledby')).to.be.false;
+  });
+
+  it("leaves today's 3-tier precedence untouched when aria-label is left unset (regression)", async () => {
+    const el = (await fixture(html`<lyra-dialog label="Delete item?">body</lyra-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(panel.hasAttribute('aria-label')).to.be.false;
+    expect(panel.getAttribute('aria-labelledby')).to.exist;
+  });
+
+  it('is accessible with only a host aria-label attribute set (no label/heading props)', async () => {
+    const el = (await fixture(
+      html`<lyra-dialog aria-label="Delete item?" open>Are you sure?</lyra-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
 it('renders no header row at all when both `heading` and `closable` are unset (default)', async () => {
   const el = (await fixture(html`<lyra-dialog label="Untitled">body</lyra-dialog>`)) as LyraDialog;
   await el.updateComplete;

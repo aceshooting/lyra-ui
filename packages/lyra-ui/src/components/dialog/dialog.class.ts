@@ -37,7 +37,14 @@ export type DialogCloseReason =
  * hand-building that chrome isn't worth it (see below).
  *
  * Accessible name / visible header, in priority order:
- * 1. If a heading element (`h1`–`h6` or `[role="heading"]`) is a *direct
+ * 0. If the host element itself has an `aria-label` attribute set, its value
+ *    becomes `aria-label` on the panel outright, overriding every source
+ *    below (including a slotted heading) — the standard ARIA convention for
+ *    a consumer that wants full control over the announced name regardless
+ *    of whatever `heading`/`label` props are also set. Also suppresses the
+ *    visible header/`heading` row and the sr-only `label` element from
+ *    rendering at all, same as case 1 already does to cases 2/3 below.
+ * 1. Otherwise, if a heading element (`h1`–`h6` or `[role="heading"]`) is a *direct
  *    child* (not inside `slot="footer"`), its text content becomes
  *    `aria-label` on the panel — unchanged, and takes priority over `heading`
  *    below so an existing consumer that already slots its own heading keeps
@@ -115,6 +122,12 @@ export class LyraDialog extends LyraElement {
    *  `close()` path Escape/backdrop-dismiss already use, with reason
    *  `'close-button'`. */
   @property({ type: Boolean, attribute: 'closable' }) closable = false;
+
+  /** Host-level `aria-label` override for the panel's accessible name — wins over every other
+   *  source (a slotted heading, `heading`, `label`), matching `<lyra-date-input>`'s
+   *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
+   *  `aria-label` attribute on `<lyra-dialog>` itself, not a public JS property. */
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   /** Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s
    *  `light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since
@@ -261,12 +274,13 @@ export class LyraDialog extends LyraElement {
   }
 
   render(): TemplateResult {
-    // Priority order (see class doc): a slotted heading always wins; only
-    // when there isn't one does `heading` get a turn, then `label`'s
-    // sr-only fallback -- never more than one of the two below claims
-    // aria-labelledby for the same panel.
-    const useHeadingProp = !this.headingText && !!this.heading;
-    const useSrLabel = !this.headingText && !useHeadingProp && this.label.length > 0;
+    // Priority order (see class doc): a host-level aria-label attribute always wins; only when
+    // it's unset does a slotted heading get a turn; only when there isn't one of those either does
+    // `heading` get a turn, then `label`'s sr-only fallback -- never more than one of the two below
+    // claims aria-labelledby for the same panel, and never more than one source ever claims
+    // aria-label.
+    const useHeadingProp = !this.accessibleLabel && !this.headingText && !!this.heading;
+    const useSrLabel = !this.accessibleLabel && !this.headingText && !useHeadingProp && this.label.length > 0;
     const showHeader = useHeadingProp || this.closable;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
@@ -274,7 +288,7 @@ export class LyraDialog extends LyraElement {
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-label=${this.headingText ?? nothing}
+        aria-label=${this.accessibleLabel ?? this.headingText ?? nothing}
         aria-labelledby=${useHeadingProp ? this.headingId : useSrLabel ? this.srLabelId : nothing}
         tabindex="-1"
       >
