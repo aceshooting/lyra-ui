@@ -1343,6 +1343,77 @@ describe('cellColor', () => {
   });
 });
 
+describe('cellColor resolves CSS custom properties for canvas fillStyle', () => {
+  it('resolves a var(...) cellColor to its computed value instead of leaving canvas fillStyle black', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        mode="matrix"
+        style="--test-heatmap-color: rgb(10, 20, 30);"
+        .rowLabels=${['a', 'b']}
+        .colLabels=${['x', 'y']}
+        .values=${[
+          [1, 2],
+          [3, 4],
+        ]}
+        .cellColor=${() => 'var(--test-heatmap-color)'}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // Sample a pixel inside the (0, 0) data cell (PAD_LEFT=60, PAD_TOP=20, cellSize=22).
+    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    expect(Array.from(pixel.slice(0, 3))).to.deep.equal([10, 20, 30]);
+  });
+
+  it('falls back to the no-data fill for an unresolvable cellColor value instead of solid black', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        mode="matrix"
+        .rowLabels=${['a', 'b']}
+        .colLabels=${['x', 'y']}
+        .values=${[
+          [1, 2],
+          [3, 4],
+        ]}
+        .cellColor=${() =>
+          // Missing the required `--` custom-property prefix, so the browser rejects this
+          // string outright (unlike an *unresolved* var() reference, e.g. var(--undefined-token),
+          // which is still syntactically valid and would silently compute to an inherited color).
+          'var(not-a-custom-prop)'}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    expect(Array.from(pixel.slice(0, 3))).to.not.deep.equal([0, 0, 0]);
+  });
+
+  it('still applies a literal, already-resolved cellColor unchanged (fast path)', async () => {
+    const el = (await fixture(html`
+      <lyra-heatmap
+        mode="matrix"
+        .rowLabels=${['a', 'b']}
+        .colLabels=${['x', 'y']}
+        .values=${[
+          [1, 2],
+          [3, 4],
+        ]}
+        .cellColor=${() => 'rgb(9, 9, 9)'}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    expect(Array.from(pixel.slice(0, 3))).to.deep.equal([9, 9, 9]);
+  });
+});
+
 describe('calendar-mode scale (extends the existing matrix-only property)', () => {
   it('scale="sqrt" buckets a low value differently than the default quartile scale for the same skewed value set', async () => {
     const el = (await fixture(
@@ -1377,5 +1448,28 @@ describe('calendar-mode scale (extends the existing matrix-only property)', () =
     const dpr = window.devicePixelRatio || 1;
     const pixel = ctx.getImageData(Math.round(32 * dpr), Math.round(20 * dpr), 1, 1).data;
     expect([pixel[0], pixel[1], pixel[2]]).to.not.deep.equal([0xcd, 0xe2, 0xfb]);
+  });
+});
+
+describe('weekdayLabelText', () => {
+  it('is undefined by default', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar" .days=${[]}></lyra-heatmap>`)) as LyraHeatmap;
+    expect(el.weekdayLabelText).to.be.undefined;
+  });
+
+  it('is called with the real JS weekday index (1, 3, 5) and its return value replaces the built-in label', async () => {
+    const seen: number[] = [];
+    const el = (await fixture(html`
+      <lyra-heatmap
+        mode="calendar"
+        .days=${[{ date: '2026-01-05', value: 3 }]}
+        .weekdayLabelText=${(weekday: number) => {
+          seen.push(weekday);
+          return `W${weekday}`;
+        }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(seen.slice().sort()).to.deep.equal([1, 3, 5]);
   });
 });

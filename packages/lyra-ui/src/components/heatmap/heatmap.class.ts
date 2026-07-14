@@ -348,8 +348,16 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  both "no data" and the ramp's own lightest step) without a prepended synthetic ramp color,
    *  which can't safely reserve an exact value on a skewed dataset (the bucket selectors round by
    *  continuous ratio, with no equality-based reservation). Unset (the default) reproduces today's
-   *  exact ramp/no-data behavior for every cell. */
+   *  exact ramp/no-data behavior for every cell. A returned value containing a CSS custom property
+   *  (e.g. `var(--x)`) or other browser-resolvable color syntax (e.g. `color-mix(...)`) is
+   *  automatically resolved before being used as a canvas fill color. */
   @property({ attribute: false }) cellColor?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string | undefined;
+  /** Overrides the weekday-axis label text in calendar mode -- receives the real JS weekday index
+   *  (`0` Sunday .. `6` Saturday) for a row that would otherwise render a label (today, only rows
+   *  1/3/5 relative to `firstDayOfWeek` ever do) and, when it returns a string, uses it instead of
+   *  the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default) reproduces
+   *  today's exact locale-derived output. */
+  @property({ attribute: false }) weekdayLabelText?: (jsWeekday: number) => string | undefined;
   /** A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly
    *  interpolating between the two `--lyra-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
    *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
@@ -836,7 +844,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const labels = ['', '', '', '', '', '', ''];
     for (const weekday of [1, 3, 5]) {
       const row = (weekday - this.firstDayOfWeek + 7) % 7;
-      labels[row] = formatter.format(new Date(firstWeekStart.getTime() + row * MS_PER_DAY));
+      labels[row] =
+        this.weekdayLabelText?.(weekday) ??
+        formatter.format(new Date(firstWeekStart.getTime() + row * MS_PER_DAY));
     }
     return labels;
   }
@@ -867,6 +877,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const buckets = normalizeBucketCount(this.bucketCount);
     const ramp = this.colorRamp(buckets).colors;
     const noDataFill = this.noDataFill();
+    this.canvasColorCache.clear();
     // Only consulted when `scale === 'sqrt'` — mirrors `drawMatrix()`'s own
     // `hi` bound, reusing the already-cached value range instead of
     // rescanning `sortedValues` for its max.
@@ -887,7 +898,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const y = this.rowYFor(weekday);
         const override = this.cellColor?.({ week, weekday }, value);
         if (override != null) {
-          ctx.fillStyle = override;
+          ctx.fillStyle = this.resolveCanvasColor(override);
         } else if (value < 0 || !Number.isFinite(value)) {
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
@@ -983,6 +994,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const ramp = rampData.colors;
     const { loRgb, hiRgb } = rampData;
     const noDataFill = this.noDataFill();
+    this.canvasColorCache.clear();
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -991,7 +1003,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const y = PAD_TOP + r * cellSize;
         const override = this.cellColor?.({ row: r, col: c }, v);
         if (override != null) {
-          ctx.fillStyle = override;
+          ctx.fillStyle = this.resolveCanvasColor(override);
         } else if (v < 0 || !Number.isFinite(v)) {
           // `v < 0` alone is false for NaN, which would otherwise fall through to
           // the ramp branches below, compute an unparsable rgb(NaN, NaN, NaN)
@@ -1362,6 +1374,35 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const next = this.nextInteractiveCalendarCell(week, weekday, dWeek, dWeekday, weekCount);
     this.focusedCell = next;
     this.announce(next);
+  }
+
+  /** Cache of resolved colors for the current draw pass, cleared at the top
+   *  of drawCalendar()/drawMatrix() so a theme change is always picked up on
+   *  the very next full redraw, while repeated identical cellColor() outputs
+   *  within the same pass resolve only once. */
+  private canvasColorCache = new Map<string, string>();
+  private colorProbe?: HTMLSpanElement;
+
+  /** Resolves a cellColor() return value that may contain a CSS custom
+   *  property (or any other CSS color syntax the browser understands, e.g.
+   *  color-mix()) into a literal color canvas's fillStyle can actually use --
+   *  fillStyle silently no-ops on an unparseable string, per the Canvas 2D
+   *  spec, leaving whatever the previous cell painted. Falls back to
+   *  noDataFill() for a genuinely invalid color. */
+  private resolveCanvasColor(value: string): string {
+    if (!value.includes('var(')) return value;
+    const cached = this.canvasColorCache.get(value);
+    if (cached !== undefined) return cached;
+    if (!this.colorProbe) {
+      this.colorProbe = document.createElement('span');
+      this.colorProbe.style.cssText =
+        'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none;';
+      this.shadowRoot!.appendChild(this.colorProbe);
+    }
+    this.colorProbe.style.color = value;
+    const resolved = this.colorProbe.style.color ? getComputedStyle(this.colorProbe).color : this.noDataFill();
+    this.canvasColorCache.set(value, resolved);
+    return resolved;
   }
 
   render(): TemplateResult {
