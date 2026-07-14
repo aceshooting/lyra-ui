@@ -21,7 +21,7 @@ free, open-source components wherever Web Awesome Pro normally charges, with the
 compatible attributes, slots, events, parts, and `--wa-*` token names under a `lyra-` prefix
 instead of `wa-`; component-specific notes call out any intentional differences.
 
-That free-Pro-equivalent group is 17 of lyra-ui's 92 tags. The other 75 have no Web Awesome
+That free-Pro-equivalent group is 18 of lyra-ui's 93 tags. The other 75 have no Web Awesome
 equivalent at all, free or paid — Web Awesome doesn't sell them in any tier: dashboard atoms (stat
 tiles, tables, gauges, empty/skeleton states, split panes, widgets), temporal & graph widgets (time
 range, playback scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't
@@ -52,14 +52,14 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-92 tags across six component families. Every tag has a live, interactive example on the
+93 tags across six component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
 | Family | Tags | Highlights |
 |---|---:|---|
-| Form controls, toasts, sparkline | 9 | combobox, select, date picker/input, toast, sparkline — plus `<lyra-flag>` for i18n pickers |
+| Form controls, toasts, sparkline | 10 | combobox, select, date picker/input, textarea, toast, sparkline — plus `<lyra-flag>` for i18n pickers |
 | Dashboard atoms | 10 | stat card, sortable table, gauge, CSV/JSON export button, standalone copy button, resizable split, widget shell, word cloud |
 | Temporal & graph | 6 | two-handle time-range brush, playback scrubber, canvas heatmap, force-directed graph, tree |
 | Charts | 12 | line/bar/pie/doughnut/radar/polar-area/scatter/bubble via Chart.js, plus histogram, box plot, and a dependency-free `lyra-lite-chart` |
