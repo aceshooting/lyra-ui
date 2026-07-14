@@ -4006,9 +4006,14 @@ shell around it.
   `<lyra-json-viewer>` fallback)
 - `args: unknown` (property only, no attribute) — the tool call's original arguments, if available,
   handed to the matched renderer's `render()` alongside `result`
-- `fallback: string = 'json'` (reflected) — fallback-kind selector; only `"json"` (an unconditional
-  `<lyra-json-viewer>`) is currently implemented, but other values are accepted and use the same
-  JSON fallback
+- `fallback: 'json'|'text' = 'json'` (reflected) — fallback-kind selector. `"json"` (the default) is
+  an unconditional `<lyra-json-viewer>`. `"text"` renders a *string* `result` as preformatted text
+  instead — falling back to the `"json"` behavior when `result` isn't a string, so setting
+  `fallback="text"` defensively against an unpredictable result shape never renders broken output.
+  Any other value also uses the `"json"` behavior, forward-compatible plumbing only.
+- `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
+  fallback view, for either `fallback` kind: forwarded to `<lyra-json-viewer>`'s own `copyable` for
+  `"json"`, or a `<lyra-copy-button>` rendered next to the text for `"text"`.
 
 **Events:** `lyra-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lyra-json-viewer>`, whether because no renderer matched, a candidate
@@ -4018,11 +4023,16 @@ renderer's `matches()` predicate threw during dispatch, a renderer's `load()` re
 **Slots:** none.
 
 **CSS parts:** `base` — the root wrapper around the resolved renderer's output (or the loading/
-fallback view).
+fallback view). `fallback-text` — the `<pre>` element for the `fallback="text"` kind's preformatted
+result text (only present in that mode). `fallback-copy` — the `<lyra-copy-button>` shown when
+`copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
-**Themeable custom properties:** none — the component's own styling is deliberately minimal (just
-enough to not collapse to a zero-height inline box); all visible styling comes from whatever
-renderer/`<lyra-skeleton>`/`<lyra-json-viewer>` child is currently mounted.
+**Themeable custom properties:** `--lyra-tool-result-view-font` (default `ui-monospace,
+SFMono-Regular, Menlo, Consolas, monospace` — component-specific since no shared monospace token
+exists, matching `<lyra-json-viewer>`'s own `--lyra-json-viewer-font` convention) — only used by the
+`fallback="text"` kind's `[part='fallback-text']`. Otherwise none — the component's own styling is
+deliberately minimal; all visible styling comes from whatever renderer/`<lyra-skeleton>`/
+`<lyra-json-viewer>`/`<lyra-copy-button>` child is currently mounted.
 
 **Optional peer deps:** none required by the component itself — individual registered renderers may
 of course pull in whatever they need (a charting library, a markdown renderer), which is exactly what
@@ -4098,7 +4108,7 @@ a transient network failure) gets a fresh `load()` call rather than being stuck 
 promise forever.
 
 ```ts
-import { registerToolRenderer } from '@aceshooting/lyra-ui/tool-result-view/registry.js';
+import { registerToolRenderer } from '@aceshooting/lyra-ui/components/tool-result-view/registry.js';
 
 registerToolRenderer('get_weather', {
   render: (result, args) => html`<weather-card .data=${result} .city=${args?.city}></weather-card>`,

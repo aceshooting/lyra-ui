@@ -61139,12 +61139,20 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-tool-result-view>` — renders a tool call's result via whichever\ncustom renderer a host app has registered for it (see `registerToolRenderer()`\nin `registry.ts`), falling back to `<lyra-json-viewer>` whenever no\nrenderer matches, a candidate renderer's `matches()` predicate throws during\ndispatch, a renderer's optional `load()` rejects, or its `render()` throws.\nThis component owns none of the actual visual weight of a\npopulated tool result — that's entirely whatever the registered renderer\nreturns; this is just the dispatch + fallback + loading-state shell.\n\nDispatch runs against `registry` when set, otherwise against the\nmodule-level default registry `registerToolRenderer()` writes to — see\n`findToolRenderer()`'s two-step (exact name, then shape-based `matches()`)\nlookup order for the full rule.\n\n`fallback` only implements `\"json\"` today (an unconditional\n`<lyra-json-viewer>`) but is still accepted/reflected as an attribute so a\nconsumer's markup that already sets `fallback=\"…\"` for some future value\ndoesn't need to change again once more fallback kinds land.",
+          "description": "`<lyra-tool-result-view>` — renders a tool call's result via whichever\ncustom renderer a host app has registered for it (see `registerToolRenderer()`\nin `registry.ts`), falling back to `<lyra-json-viewer>` whenever no\nrenderer matches, a candidate renderer's `matches()` predicate throws during\ndispatch, a renderer's optional `load()` rejects, or its `render()` throws.\nThis component owns none of the actual visual weight of a\npopulated tool result — that's entirely whatever the registered renderer\nreturns; this is just the dispatch + fallback + loading-state shell.\n\nDispatch runs against `registry` when set, otherwise against the\nmodule-level default registry `registerToolRenderer()` writes to — see\n`findToolRenderer()`'s two-step (exact name, then shape-based `matches()`)\nlookup order for the full rule.\n\n`fallback` implements two kinds: `\"json\"` (the default, an unconditional `<lyra-json-viewer>`)\nand `\"text\"`, which renders a *string* `result` as preformatted text instead — falling back to\nthe `\"json\"` behavior when `result` isn't a string, so setting `fallback=\"text\"` defensively\nagainst an unpredictable result shape never renders broken output. `copyable` adds a\ncopy-to-clipboard affordance to either fallback kind (forwarded to `<lyra-json-viewer>`'s own\n`copyable` for `\"json\"`; a `<lyra-copy-button>` alongside the text for `\"text\"`).",
           "name": "LyraToolResultView",
           "cssParts": [
             {
               "description": "The root wrapper around the resolved renderer's output (or the loading/fallback view).",
               "name": "base"
+            },
+            {
+              "description": "The `<lyra-copy-button>` shown when `copyable` is set alongside the `fallback=\"text\"` kind (only present when both are set).",
+              "name": "fallback-copy"
+            },
+            {
+              "description": "The `<pre>` element for the `fallback=\"text\"` kind's preformatted result text (only present in that mode).",
+              "name": "fallback-text"
             }
           ],
           "members": [
@@ -61155,6 +61163,17 @@
                 "text": "unknown"
               },
               "description": "The tool call's original arguments, if available — handed to the matched renderer's `render()` alongside `result`."
+            },
+            {
+              "kind": "field",
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shows a copy-to-clipboard affordance alongside the fallback view (both `\"json\"` and `\"text\"` kinds) — forwarded to `<lyra-json-viewer>`'s own `copyable`, or renders a `<lyra-copy-button>` next to the text fallback.",
+              "attribute": "copyable",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -61449,6 +61468,16 @@
             },
             {
               "kind": "method",
+              "name": "renderFallback",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "unknown"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "renderWith",
               "privacy": "private",
               "return": {
@@ -61483,6 +61512,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Shows a copy-to-clipboard affordance alongside the fallback view (both `\"json\"` and `\"text\"` kinds) — forwarded to `<lyra-json-viewer>`'s own `copyable`, or renders a `<lyra-copy-button>` next to the text fallback.",
+              "fieldName": "copyable"
+            },
             {
               "name": "fallback",
               "type": {

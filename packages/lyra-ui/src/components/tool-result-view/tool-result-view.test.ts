@@ -260,3 +260,38 @@ it('is accessible once a matched renderer has populated content', async () => {
   `)) as LyraToolResultView;
   await expect(el).to.be.accessible();
 });
+
+it('fallback="text" renders a plain string result as preformatted text, not lyra-json-viewer', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="unregistered" fallback="text" .result=${'line one\nline two'}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  const pre = base(el).querySelector('[part="fallback-text"]');
+  expect(pre).to.exist;
+  expect(pre!.textContent).to.equal('line one\nline two');
+  expect(base(el).querySelector('lyra-json-viewer')).to.not.exist;
+});
+
+it('fallback="text" still falls back to lyra-json-viewer when the result is not a string', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="unregistered" fallback="text" .result=${{ ok: true }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  expect(base(el).querySelector('lyra-json-viewer')).to.exist;
+  expect(base(el).querySelector('[part="fallback-text"]')).to.not.exist;
+});
+
+it('copyable renders a lyra-copy-button alongside the text fallback, wired to the result text', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="unregistered" fallback="text" copyable .result=${'copy me'}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  const btn = base(el).querySelector('lyra-copy-button') as (HTMLElement & { value: string }) | null;
+  expect(btn).to.exist;
+  expect(btn!.value).to.equal('copy me');
+});
+
+it('copyable also forwards to lyra-json-viewer in the default json fallback', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="unregistered" copyable .result=${{ ok: true }}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  const viewer = base(el).querySelector('lyra-json-viewer') as HTMLElement & { copyable: boolean };
+  expect(viewer.copyable).to.be.true;
+});

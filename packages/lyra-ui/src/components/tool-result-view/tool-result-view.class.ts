@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import {
@@ -11,6 +11,7 @@ import {
 import { styles } from './tool-result-view.styles.js';
 import '../skeleton/skeleton.class.js';
 import '../json-viewer/json-viewer.class.js';
+import '../copy-button/copy-button.class.js';
 
 /** What's currently in `[part="base"]` -- see `resolve()`. */
 type RenderState =
@@ -38,10 +39,12 @@ export interface LyraToolResultViewEventMap {
  * `findToolRenderer()`'s two-step (exact name, then shape-based `matches()`)
  * lookup order for the full rule.
  *
- * `fallback` only implements `"json"` today (an unconditional
- * `<lyra-json-viewer>`) but is still accepted/reflected as an attribute so a
- * consumer's markup that already sets `fallback="…"` for some future value
- * doesn't need to change again once more fallback kinds land.
+ * `fallback` implements two kinds: `"json"` (the default, an unconditional `<lyra-json-viewer>`)
+ * and `"text"`, which renders a *string* `result` as preformatted text instead — falling back to
+ * the `"json"` behavior when `result` isn't a string, so setting `fallback="text"` defensively
+ * against an unpredictable result shape never renders broken output. `copyable` adds a
+ * copy-to-clipboard affordance to either fallback kind (forwarded to `<lyra-json-viewer>`'s own
+ * `copyable` for `"json"`; a `<lyra-copy-button>` alongside the text for `"text"`).
  *
  * @customElement lyra-tool-result-view
  * @event lyra-render-error - `detail: { toolName, error }` — fired immediately
@@ -49,6 +52,8 @@ export interface LyraToolResultViewEventMap {
  * matched, a candidate renderer's `matches()` predicate threw during dispatch,
  * a renderer's `load()` rejected, or its `render()` threw.
  * @csspart base - The root wrapper around the resolved renderer's output (or the loading/fallback view).
+ * @csspart fallback-text - The `<pre>` element for the `fallback="text"` kind's preformatted result text (only present in that mode).
+ * @csspart fallback-copy - The `<lyra-copy-button>` shown when `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -67,6 +72,9 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
 
   /** Forward-compatible fallback-kind selector — see the class doc; only `"json"` is implemented today. */
   @property({ reflect: true }) fallback = 'json';
+
+  /** Shows a copy-to-clipboard affordance alongside the fallback view (both `"json"` and `"text"` kinds) — forwarded to `<lyra-json-viewer>`'s own `copyable`, or renders a `<lyra-copy-button>` next to the text fallback. */
+  @property({ type: Boolean, reflect: true }) copyable = false;
 
   @state() private renderState: RenderState = FALLBACK_STATE;
 
@@ -161,9 +169,19 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
           ? html`<lyra-skeleton variant="rect" height="4rem"></lyra-skeleton>`
           : state.kind === 'rendered'
             ? state.template
-            : html`<lyra-json-viewer .data=${this.result}></lyra-json-viewer>`}
+            : this.renderFallback()}
       </div>
     `;
+  }
+
+  private renderFallback(): unknown {
+    if (this.fallback === 'text' && typeof this.result === 'string') {
+      return html`
+        <pre part="fallback-text">${this.result}</pre>
+        ${this.copyable ? html`<lyra-copy-button part="fallback-copy" .value=${this.result}></lyra-copy-button>` : nothing}
+      `;
+    }
+    return html`<lyra-json-viewer .data=${this.result} ?copyable=${this.copyable}></lyra-json-viewer>`;
   }
 }
 
