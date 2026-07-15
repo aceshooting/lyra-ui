@@ -396,6 +396,18 @@ it('applies max-height as a CSS custom property on the body', async () => {
 });
 
 describe('accessibility', () => {
+  it('forwards a host aria-label to the internal named code region and keeps it reactive', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block aria-label="Installation command" filename="install.sh" .code=${jsSample}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(body.getAttribute('aria-label')).to.equal('Installation command');
+
+    el.accessibleLabel = 'Updated installation command';
+    await el.updateComplete;
+    expect(body.getAttribute('aria-label')).to.equal('Updated installation command');
+  });
+
   it('is accessible in the plain-fallback path (no language set)', async () => {
     const el = (await fixture(
       html`<lyra-code-block filename="notes.txt" .code=${jsSample}></lyra-code-block>`,

@@ -64,7 +64,9 @@ export interface LyraCodeBlockCoreEventMap {
  * Everything else — `code`/`language`/`filename`/`copyable`/`collapsible`/
  * `collapsed`/`maxHeight`, the copy button, the collapse header toggle, the
  * loading-skeleton behavior while the fine-grained highlighter itself
- * resolves — matches `<lyra-code-block>` exactly.
+ * resolves — matches `<lyra-code-block>` exactly. A host `aria-label` (or
+ * the matching `accessibleLabel` property) is forwarded to the internal
+ * focusable element that owns the named `group` role.
  *
  * @customElement lyra-code-block-core
  * @event lyra-copy - The copy button was activated. `detail: { text }` is
@@ -104,6 +106,11 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   /** Shown in the header above the code, when set. */
   @property() filename = '';
+
+  /** Accessible-name override for the internal focusable code region. Maps
+   *  to the host's `aria-label` attribute and wins over `filename` and
+   *  `language`-derived defaults. */
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** Whether the code region can be collapsed via a header toggle. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
@@ -328,7 +335,8 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
     const showSkeleton = !this.shikiReady && !!this.language && !!this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
-    const bodyLabel = codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
+    const bodyLabel =
+      this.accessibleLabel || codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
 
     return html`
       <div part="base">

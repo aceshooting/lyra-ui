@@ -4,6 +4,18 @@ import './code-block-core.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
 
 describe('lyra-code-block-core', () => {
+  it('forwards a host aria-label to the internal named code region and keeps it reactive', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core aria-label="Response payload" language="json"></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    expect(body.getAttribute('aria-label')).to.equal('Response payload');
+
+    el.accessibleLabel = 'Updated response payload';
+    await el.updateComplete;
+    expect(body.getAttribute('aria-label')).to.equal('Updated response payload');
+  });
+
   it('highlights code using a supplied languages map', async () => {
     const el = (await fixture(html`<lyra-code-block-core language="json"></lyra-code-block-core>`)) as LyraCodeBlockCore;
     el.languages = { json: jsonGrammar };

@@ -102,6 +102,27 @@ export const NotCopyable: Story = {
   `,
 };
 
+export const AccessibleNameOverride: Story = {
+  name: 'Accessible code-region name',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The host `aria-label` is forwarded to the internal focusable code region, overriding the filename/language-derived default.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-code-block
+      aria-label="TypeScript greeting implementation"
+      filename="greet.ts"
+      language="typescript"
+      .code=${tsSample}
+      style="max-inline-size:32rem;"
+    ></lyra-code-block>
+  `,
+};
+
 export const CopyEvent: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">

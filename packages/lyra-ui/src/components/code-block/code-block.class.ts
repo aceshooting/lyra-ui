@@ -68,6 +68,11 @@ export interface LyraCodeBlockEventMap {
  * is already a perfectly readable placeholder for it, so a second
  * loading-chrome state would add complexity for little practical benefit.
  *
+ * Set a host `aria-label` (or the matching `accessibleLabel` property) to
+ * override the filename/language-derived name on the internal focusable code
+ * region. The name is forwarded to the element that owns `role="group"`, not
+ * left only on the custom-element host across the shadow boundary.
+ *
  * `languages` is an additive, opt-in escape hatch from that default path for
  * a consumer whose language set is fixed and known ahead of time: a map of
  * language id to an already-imported shiki grammar module (e.g. `import bash
@@ -127,6 +132,11 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   /** Shown in the header above the code, when set. */
   @property() filename = '';
+
+  /** Accessible-name override for the internal focusable code region. Maps
+   *  to the host's `aria-label` attribute and wins over `filename` and
+   *  `language`-derived defaults. */
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** Whether the code region can be collapsed via a header toggle. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
@@ -380,7 +390,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     // See updated()'s identical condition for why languagesOnly is excluded here too.
     const showSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;
-    const bodyLabel = codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
+    const bodyLabel =
+      this.accessibleLabel || codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
 
     return html`
       <div part="base">
