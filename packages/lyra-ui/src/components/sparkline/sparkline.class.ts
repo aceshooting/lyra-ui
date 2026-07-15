@@ -30,6 +30,9 @@ function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
 export class LyraSparkline extends LyraElement {
   static styles = [LyraElement.styles, styles];
 
+  /** Accessible name forwarded to the internal SVG. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   /** The data series to plot. */
   @property({ type: Array }) values: number[] = [];
 
@@ -73,29 +76,27 @@ export class LyraSparkline extends LyraElement {
     });
   }
 
-  protected willUpdate(): void {
+  private accessibleName(): string {
     const v = this.values;
-    this.setAttribute('role', 'img');
+    if (this.accessibleLabel) return this.accessibleLabel;
+
     const last = v.at(-1);
     // Real-world computed data (ratios, averages, percentages) carries
     // floating-point noise that isn't meaningful to announce -- round it for
     // the label the same way a human-facing value would be formatted.
     const formattedLast =
       typeof last === 'number' && Number.isFinite(last)
-        ? last.toLocaleString(undefined, { maximumFractionDigits: 2 })
+        ? last.toLocaleString(this.effectiveLocale || undefined, { maximumFractionDigits: 2 })
         : last;
-    this.setAttribute(
-      'aria-label',
-      v.length
-        ? this.localize('trendOf', undefined, { count: v.length, value: String(formattedLast ?? '') })
-        : this.localize('noData'),
-    );
+    return v.length
+      ? this.localize('trendOf', undefined, { count: v.length, value: String(formattedLast ?? '') })
+      : this.localize('noData');
   }
 
   render(): TemplateResult {
     const v = this.values;
     if (!v.length) {
-      return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" aria-hidden="true"></svg>`;
+      return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" role="img" aria-label=${this.accessibleName()}></svg>`;
     }
 
     const pts = this.points();
@@ -116,7 +117,12 @@ export class LyraSparkline extends LyraElement {
         const barY = Math.min(VIEW, Math.max(0, y));
         return svg`<rect part="bar" x="${x - barWidth / 2}" y="${barY}" width="${barWidth}" height="${VIEW - barY}"></rect>`;
       });
-      return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
+      return html`<svg
+        viewBox="0 0 ${VIEW} ${VIEW}"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label=${this.accessibleName()}
+      >
         ${bars}
       </svg>`;
     }
@@ -131,7 +137,12 @@ export class LyraSparkline extends LyraElement {
           ? `M${pts[0][0]},${pts[0][1]} L${pts[0][0]},${pts[0][1]}`
           : '';
 
-    return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" preserveAspectRatio="none" aria-hidden="true">
+    return html`<svg
+      viewBox="0 0 ${VIEW} ${VIEW}"
+      preserveAspectRatio="none"
+      role="img"
+      aria-label=${this.accessibleName()}
+    >
       ${this.type === 'area' ? svg`<path part="area" d="${d} L${VIEW},${VIEW} L0,${VIEW} Z"></path>` : ''}
       <path part="line" d="${d}"></path>
     </svg>`;
@@ -144,4 +155,3 @@ declare global {
     'lyra-sparkline': LyraSparkline;
   }
 }
-

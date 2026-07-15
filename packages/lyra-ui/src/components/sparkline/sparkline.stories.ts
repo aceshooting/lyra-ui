@@ -34,6 +34,15 @@ export const NoData: Story = {
   render: () => html`<lyra-sparkline></lyra-sparkline>`,
 };
 
+export const AccessibleLabel: Story = {
+  render: () => html`
+    <lyra-sparkline
+      aria-label="Revenue over the last quarter"
+      .values=${[72, 78, 75, 84, 91]}
+    ></lyra-sparkline>
+  `,
+};
+
 export const FlatData: Story = {
   render: () => html`
     <lyra-sparkline type="line" .values=${[5, 5, 5, 5]}></lyra-sparkline>

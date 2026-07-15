@@ -2,15 +2,29 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './sparkline.js';
 import type { LyraSparkline } from './sparkline.js';
 
-it('renders a line path and an aria-label from values', async () => {
+it('applies the image role and generated accessible name to the semantic SVG', async () => {
   const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
   el.values = [1, 3, 2, 5];
   await el.updateComplete;
 
   const path = el.shadowRoot!.querySelector('[part="line"]');
+  const svg = el.shadowRoot!.querySelector('svg')!;
   expect(path).to.exist;
-  expect(el.getAttribute('role')).to.equal('img');
-  expect(el.getAttribute('aria-label')).to.contain('4');
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(svg.getAttribute('role')).to.equal('img');
+  expect(svg.getAttribute('aria-label')).to.contain('4');
+});
+
+it('forwards a host aria-label to the semantic SVG', async () => {
+  const el = (await fixture(
+    `<lyra-sparkline aria-label="Revenue over the last quarter"></lyra-sparkline>`,
+  )) as LyraSparkline;
+  el.values = [1, 3, 2, 5];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    'Revenue over the last quarter',
+  );
 });
 
 it('renders one bar per value in bar mode', async () => {
@@ -98,7 +112,30 @@ it('formats the last value in aria-label instead of announcing raw float noise',
   const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3.456789123];
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('Trend of 3 values, last 3.46');
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    'Trend of 3 values, last 3.46',
+  );
+});
+
+it('formats announced values with the effective locale', async () => {
+  const el = (await fixture(`<lyra-sparkline locale="de-DE"></lyra-sparkline>`)) as LyraSparkline;
+  el.values = [1000, 1234.5];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    'Trend of 2 values, last 1.234,5',
+  );
+});
+
+it('uses per-instance strings for the generated accessible name', async () => {
+  const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
+  el.strings = { trendOf: '{count} Punkte; zuletzt {value}' };
+  el.values = [1, 2, 3];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    '3 Punkte; zuletzt 3',
+  );
 });
 
 it('does not throw on very large data arrays', async () => {
@@ -140,7 +177,9 @@ it('respects explicit min/max overrides for point placement', async () => {
 it('labels the empty state', async () => {
   const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('No data');
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  expect(svg.getAttribute('role')).to.equal('img');
+  expect(svg.getAttribute('aria-label')).to.equal('No data');
 });
 
 it('is accessible', async () => {
