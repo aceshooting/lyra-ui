@@ -5,7 +5,13 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
-import { loadShikiHighlighterCore, SHIKI_THEMES, type ShikiHighlighterCore, type ShikiLanguageInput } from './code-loader.js';
+import {
+  loadShikiHighlighterCore,
+  normalizeShikiLanguage,
+  SHIKI_THEMES,
+  type ShikiHighlighterCore,
+  type ShikiLanguageInput,
+} from './code-loader.js';
 import { styles } from './code-block.styles.js';
 import { codeBlockToggleLabel, codeBlockCopyLabel, codeBlockBodyLabel } from './code-block-shared.js';
 import '../skeleton/skeleton.class.js';
@@ -25,16 +31,26 @@ const COPY_CONFIRM_MS = 1500;
  * tabindex in place would add a second, redundant tab stop over the same
  * scrollable content.
  */
-const partTransformer = {
+function partTransformer(lineNumbers: boolean) {
+  return {
   name: 'lyra-code-block-parts',
-  pre(node: OptionalPeerApi) {
-    node.properties.part = ['pre'];
-    delete node.properties.tabindex;
-  },
-  code(node: OptionalPeerApi) {
-    node.properties.part = ['code'];
-  },
-};
+    pre(node: OptionalPeerApi) {
+      node.properties.part = ['pre'];
+      if (lineNumbers) {
+        const classes = Array.isArray(node.properties.class)
+          ? node.properties.class
+          : node.properties.class
+            ? [node.properties.class]
+            : [];
+        node.properties.class = [...classes, 'line-numbers'];
+      }
+      delete node.properties.tabindex;
+    },
+    code(node: OptionalPeerApi) {
+      node.properties.part = ['code'];
+    },
+  };
+}
 
 export interface LyraCodeBlockCoreEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
@@ -126,6 +142,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
    *  past this height instead of growing the page. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
+  /** Whether to display one-based line numbers beside the code. */
+  @property({ type: Boolean, attribute: 'line-numbers', reflect: true }) lineNumbers = false;
+
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`). This component has no default/full-table fallback highlighter --
    *  a `language` absent from this map always renders the plain-text fallback. Empty (the
@@ -176,7 +195,8 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this language is highlightable at all.
   private preSuppliedGrammar(): ShikiLanguageInput | undefined {
-    return this.languages?.[this.language];
+    const language = normalizeShikiLanguage(this.language);
+    return this.languages?.[language] ?? this.languages?.[this.language];
   }
 
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
@@ -205,14 +225,14 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     // after a newer call has already rendered correct synchronous output,
     // and overwrite it with stale tokenization.
     const token = ++this.highlightToken;
-    const lang = this.language;
+    const lang = normalizeShikiLanguage(this.language);
     if (!lang) {
       this.highlightedHtml = null;
       return;
     }
 
     const languages = this.languages;
-    if (!languages?.[lang]) {
+    if (!languages?.[lang] && !languages?.[this.language]) {
       // Not in the supplied languages map -- there is no default
       // highlighter to fall back to in this variant, so this always
       // renders the plain-text fallback, unlike <lyra-code-block>'s
@@ -250,13 +270,22 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
         // a --lyra-* token. See the dark-mode override in
         // code-block.styles.ts for how the dark half of this activates.
         themes: SHIKI_THEMES,
-        transformers: [partTransformer],
+        transformers: [partTransformer(this.lineNumbers)],
       });
     } catch {
       // Malformed input for this grammar, or any other shiki-internal
       // failure -- fall back to plain text rather than a blank code block.
       return null;
     }
+  }
+
+  private renderPlainCode(): TemplateResult {
+    if (!this.lineNumbers) return html`<code part="code">${this.code}</code>`;
+    return html`
+      <code part="code" class="line-numbered-code">
+        ${this.code.split(/\r\n|\r|\n/).map((line) => html`<span class="line">${line}</span>`)}
+      </code>
+    `;
   }
 
   private writeClipboard(text: string): void {
@@ -354,7 +383,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
             ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
             : this.highlightedHtml !== null
               ? unsafeHTML(this.highlightedHtml)
-              : html`<pre part="pre"><code part="code">${this.code}</code></pre>`}
+              : html`<pre part="pre" class=${this.lineNumbers ? 'line-numbers' : nothing}>${this.renderPlainCode()}</pre>`}
         </div>
       </div>
     `;

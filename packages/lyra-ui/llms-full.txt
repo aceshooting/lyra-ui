@@ -34,7 +34,7 @@ composition without registration; for example, `components/empty/empty.class.js`
   `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block`, `lyra-tool-approval-dialog`,
   `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`, `lyra-chip`/`lyra-chip-group`,
   `lyra-model-settings-panel`, `lyra-context-meter`, `lyra-dock-panel`, `lyra-document-preview`,
-  `lyra-document-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`,
+  `lyra-document-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`, `lyra-archive-viewer`,
   `lyra-media-card`, `lyra-attachment-trigger`, `lyra-kbd`, `lyra-result-card`/`lyra-result-field`,
   `lyra-avatar`, `lyra-card`, `lyra-stepper`, `lyra-segmented`, `lyra-diff-view`, `lyra-poll-status`,
   `lyra-code-block-core` (needs the optional peer `shiki`)
@@ -6598,9 +6598,10 @@ something that announces state *transitions* instead. The Stop button gets a nor
 ## `lyra-code-block`
 
 Fenced code display with optional lazy syntax highlighting and a copy button. First-party invention
-(no Web Awesome equivalent). No highlighting grammar ships in the component itself — it lazy-loads
-the optional peer dependency `shiki` (see `code-loader.ts`) for the actual tokenizing, and degrades
-to a plain `<pre><code>` when that peer isn't installed or `language` is unset/unrecognized. That
+(no Web Awesome equivalent). It lazy-loads the optional peer dependency `shiki` (see
+`code-loader.ts`) for the actual tokenizing, and includes a compact GreyCat/GCL grammar because
+Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer isn't installed or
+`language` is unset/unrecognized. That
 fallback is the *default* rendering path, not a degraded one: unhighlighted code is perfectly usable,
 and it's what every instance renders at zero extra bytes until shiki resolves.
 
@@ -6608,7 +6609,10 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
 - `code: string = ''` — the raw source text
 - `language: string = ''` — a shiki-recognized language id or alias (e.g. `"javascript"`, `"python"`,
   `"json"`); when unset, or when shiki doesn't recognize it, the code renders as plain unhighlighted
-  text regardless of whether shiki itself is available
+  text regardless of whether shiki itself is available. Shiki's bundled catalog covers most common
+  programming, markup, data, and configuration languages, including Python, C, C++, C#, Java,
+  JavaScript, TypeScript, HTML, CSS, JSON, SQL, Go, Rust, YAML, Markdown, and shell scripts. Lyra
+  also includes a built-in GreyCat grammar; use `"gcl"` or `"greycat"` for GreyCat source.
 - `filename: string = ''` — shown in the header, when set
 - `accessibleLabel: string = ''` (attribute `aria-label`) — names the internal focusable code-body
   region; otherwise a localized filename/language description is generated
@@ -6620,6 +6624,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   cannot override a true default)
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page
+- `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
+  numbers for both highlighted output and the plain-text fallback
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — a map of language id to an
   already-imported shiki grammar module (e.g. `{ bash: bashGrammar }` from a module-scope
   `import bash from 'shiki/langs/bash.mjs'`). When `language` matches a key here, highlighting is
@@ -6668,6 +6674,9 @@ highlighting).
   @lyra-copy=${(e) => console.log('copied', e.detail.text)}
 ></lyra-code-block>
 ```
+
+Set `line-numbers` when source context benefits from numbered lines. The option does not change the
+raw `code` value or the `lyra-copy` event payload.
 
 A `<lyra-skeleton variant="rect">` placeholder (with `aria-busy="true"` on the host) stands in only
 while shiki itself is loading for the very first time on the page and `language` is set — it is
@@ -6732,6 +6741,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
 - `copyable: boolean = true` (reflected) — shows the copy-to-clipboard button.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
   code scrolls internally past this height instead of growing the page.
+- `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
+  numbers for highlighted and plain output.
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
@@ -7892,6 +7903,85 @@ plain text, including its title, start/end time, location, and description. No H
 **Optional peer dependency:** install `ical.js` with `pnpm add ical.js`. The component registers
 `text/calendar` and falls back to matching `.ics` filenames in `<lyra-document-viewer>`.
 
+## `lyra-archive-viewer`
+
+Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
+`jszip` peer. It is listing-only: entry content is never rendered or previewed. Files are measured
+through JSZip's public async API, so every file is decompressed once up front to obtain its size;
+there is no cheaper public uncompressed-size API. The list composes `<lyra-virtual-list>` for large
+archives.
+
+**Properties:** `src` and `name` are strings.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+
+**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-size`, `spinner`, and `error`.
+
+**Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
+
+**Optional peer dependency:** install `jszip` with `pnpm add jszip`. The lazy registry registers
+`application/zip` and `application/x-zip-compressed`, with a `.zip` filename fallback, and imports
+the viewer only when a matching archive is opened. `.tar`, `.rar`, and other archive formats fall
+through to `<lyra-document-preview>`'s generic download fallback.
+
+## `lyra-ebook-viewer`
+
+Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `ArrayBuffer`, and
+epub.js renders the reading area into its stable `mount` element, using an internal iframe for
+chapter content.
+
+**Properties:** `src` and `name` are strings. `accessibleLabel` (attribute `aria-label`) overrides
+the reading region's accessible name.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching, opening, or rendering fails.
+
+**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
+`mount`, and `error`.
+
+**Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
+matches `application/epub+zip` and `.epub` filenames.
+
+## `lyra-pptx-viewer`
+
+Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-renderer` peer. A
+localized fidelity notice is always visible because animations, equations, embedded objects,
+speaker notes, and several advanced effects are not rendered.
+
+**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` also names the viewer
+region when `label` is unset.
+
+**Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation.
+
+**Events:** `lyra-load` (`detail: { slideCount }`), `lyra-slide-change` (`detail: { index, count }`),
+and `lyra-render-error` with `detail.error`.
+
+**CSS parts:** `base`, `header`, `name`, `notice`, `error`, `nav`, `previous-button`,
+`previous-icon`, `slide-count`, `next-button`, `next-icon`, and `container`.
+
+**Optional peer dependency:** install `@aiden0z/pptx-renderer` with
+`pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
+filenames.
+
+## `lyra-file-icon`
+
+Localized, tokenized file-format badge for surrounding upload rows, cards, selectors, and viewer
+headers. The companion `getFileTypeMetadata(mimeType, fileName?)` utility covers common document,
+spreadsheet, presentation, code, archive, image, audio, and video formats. An explicit known MIME
+type wins; filename extension fallback is used only for an empty or `application/octet-stream`
+MIME type. Unknown values return a generic file result.
+
+**Properties:** `mimeType` (attribute `mime-type`), `name`, `label`, `decorative`, and
+`variant: 'icon' | 'label'`.
+
+**CSS parts:** `base`, `icon`, and `label`.
+
+**Exports:** `LyraFileTypeMetadata`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
+`getFileTypeMetadata()`, and `registerFileTypeMetadata()` for application-specific mappings.
+
+```html
+<lyra-file-icon mime-type="application/pdf" variant="label"></lyra-file-icon>
+```
+
 ## `lyra-svg-viewer`
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
@@ -8580,7 +8670,7 @@ These apply across the whole library rather than to any one component:
 - **Independence and migration.** Lyra has no runtime, theme, or design-token dependency on
   Shoelace or Web Awesome. The documented `wa-*` comparisons are migration references only; Lyra's
   own `lyra-*` tokens, events, localization runtime, and implementation are the source of truth.
-  For a staged Web Awesome migration, map existing `--wa-*` values to `--lyra-theme-*` explicitly
+  For a staged Web Awesome migration, map existing external theme-input values to `--lyra-theme-*` explicitly
   in application CSS instead of relying on an implicit compatibility layer.
 
 - **Internationalization.** Built-in UI copy, accessible names, descriptions, validation messages,

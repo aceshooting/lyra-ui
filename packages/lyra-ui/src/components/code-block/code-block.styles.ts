@@ -170,6 +170,22 @@ export const styles = css`
   [part='code'] {
     font-family: inherit;
   }
+  [part='pre'].line-numbers {
+    counter-reset: lyra-code-line;
+  }
+  [part='pre'].line-numbers .line {
+    display: block;
+    counter-increment: lyra-code-line;
+  }
+  [part='pre'].line-numbers .line::before {
+    content: counter(lyra-code-line);
+    display: inline-block;
+    min-inline-size: var(--lyra-size-2-5ch);
+    margin-inline-end: var(--lyra-space-s);
+    color: var(--lyra-color-text-quiet);
+    text-align: end;
+    user-select: none;
+  }
   /*
    * Activates shiki's "dual themes" dark variant. codeToHtml() (see
    * tokenize() in code-block.ts) renders every token with its *light* color

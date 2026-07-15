@@ -46,9 +46,44 @@ const pySample = `def fibonacci(n):
     return a
 `;
 
+const languageSamples = {
+  python: `def greet(name):\n    return f"Hello, {name}!"`,
+  c: `#include <stdio.h>\nint main(void) { puts("Hello"); }`,
+  java: `public final class Hello {\n  public static void main(String[] args) {\n    System.out.println("Hello");\n  }\n}`,
+  javascript: 'const greet = (name) => console.log(`Hello, ${name}!`);',
+  typescript: `type User = { name: string };\nconst user: User = { name: "Lyra" };`,
+  greycat: `model User { name: String }\nfn greet(user: User) { return user.name }`,
+  html: `<main><h1>Hello, Lyra</h1></main>`,
+} as const;
+
 export const PythonLanguage: Story = {
   render: () => html`
     <lyra-code-block filename="fib.py" language="python" .code=${pySample} style="max-width: 32rem;"></lyra-code-block>
+  `,
+};
+
+export const CommonLanguages: Story = {
+  name: 'Common languages',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The default viewer lazy-loads Shiki grammars on demand. Python, C, Java, JavaScript, TypeScript, and HTML come from Shiki; GreyCat/GCL is included by Lyra because it is not in Shiki’s bundled catalog.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(18rem,1fr)); gap:0.75rem;">
+      ${Object.entries(languageSamples).map(
+        ([language, code]) => html`
+          <lyra-code-block
+            filename=${language === 'greycat' ? 'hello.gcl' : `hello.${language}`}
+            language=${language}
+            .code=${code}
+          ></lyra-code-block>
+        `,
+      )}
+    </div>
   `,
 };
 
@@ -56,6 +91,18 @@ export const PlainFallback: Story = {
   name: 'No language set (always plain text)',
   render: () => html`
     <lyra-code-block filename="notes.txt" .code=${'Just plain text, never highlighted.\nline two\nline three'} style="max-width: 32rem;"></lyra-code-block>
+  `,
+};
+
+export const WithLineNumbers: Story = {
+  name: 'Optional line numbers',
+  render: () => html`
+    <lyra-code-block
+      filename="example.ts"
+      language="typescript"
+      line-numbers
+      .code=${'const answer = 42;\nconsole.log(answer);\n'}
+    ></lyra-code-block>
   `,
 };
 

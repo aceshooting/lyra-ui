@@ -4,6 +4,14 @@ import './code-block-core.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
 
 describe('lyra-code-block-core', () => {
+  it('renders optional line numbers for plain code', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core line-numbers .code=${'first\nsecond'}></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    expect(el.lineNumbers).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[part="pre"] .line')).to.have.lengthOf(2);
+  });
+
   it('forwards a host aria-label to the internal named code region and keeps it reactive', async () => {
     const el = (await fixture(
       html`<lyra-code-block-core aria-label="Response payload" language="json"></lyra-code-block-core>`,

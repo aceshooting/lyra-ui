@@ -77,6 +77,30 @@ const mammothEsmInteropPlugin = {
   },
 };
 
+const jszipEsmInteropPlugin = {
+  name: 'jszip-esm-interop',
+  transform(context) {
+    if (context.response.is('js') && context.path.endsWith('/jszip/lib/index.js')) {
+      return "export { default } from 'jszip/dist/jszip.min.js';\n";
+    }
+    if (context.response.is('js') && context.path.endsWith('/jszip/dist/jszip.min.js')) {
+      return `${context.body}\nexport default JSZip;\n`;
+    }
+    if (context.response.is('js') && context.path.endsWith('/jszip/dist/jszip.js')) {
+      return `${context.body}\nexport default JSZip;\n`;
+    }
+  },
+};
+
+const echartsProcessInteropPlugin = {
+  name: 'echarts-process-interop',
+  transform(context) {
+    if (context.response.is('js') && context.path.includes('/echarts/')) {
+      return context.body.replaceAll('process.env.NODE_ENV', "'production'");
+    }
+  },
+};
+
 const browserProduct = process.env.WTR_BROWSER ?? 'chromium';
 if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
   throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
@@ -119,6 +143,8 @@ export default {
     maplibreEsmInteropPlugin,
     papaparseEsmInteropPlugin,
     mammothEsmInteropPlugin,
+    jszipEsmInteropPlugin,
+    echartsProcessInteropPlugin,
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait

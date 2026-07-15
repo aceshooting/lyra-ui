@@ -9,6 +9,7 @@ import {
   loadShikiHighlighter,
   loadShikiLanguage,
   loadShikiHighlighterCore,
+  normalizeShikiLanguage,
   SHIKI_THEMES,
   type ShikiHighlighter,
   type ShikiHighlighterCore,
@@ -33,16 +34,26 @@ const COPY_CONFIRM_MS = 1500;
  * tabindex in place would add a second, redundant tab stop over the same
  * scrollable content.
  */
-const partTransformer = {
+function partTransformer(lineNumbers: boolean) {
+  return {
   name: 'lyra-code-block-parts',
-  pre(node: OptionalPeerApi) {
-    node.properties.part = ['pre'];
-    delete node.properties.tabindex;
-  },
-  code(node: OptionalPeerApi) {
-    node.properties.part = ['code'];
-  },
-};
+    pre(node: OptionalPeerApi) {
+      node.properties.part = ['pre'];
+      if (lineNumbers) {
+        const classes = Array.isArray(node.properties.class)
+          ? node.properties.class
+          : node.properties.class
+            ? [node.properties.class]
+            : [];
+        node.properties.class = [...classes, 'line-numbers'];
+      }
+      delete node.properties.tabindex;
+    },
+    code(node: OptionalPeerApi) {
+      node.properties.part = ['code'];
+    },
+  };
+}
 
 export interface LyraCodeBlockEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
@@ -152,6 +163,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
    *  past this height instead of growing the page. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
+  /** Whether to display one-based line numbers beside the code. */
+  @property({ type: Boolean, attribute: 'line-numbers', reflect: true }) lineNumbers = false;
+
   /** A map of language id to an already-imported shiki grammar module's
    *  default export (e.g. `{ bash: bashGrammar }` where `bashGrammar` came
    *  from a module-scope `import bash from 'shiki/langs/bash.mjs'`). When
@@ -218,7 +232,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // on whether this render is taking the fine-grained `languages` path or
   // the default `loadShikiHighlighter()` one.
   private preSuppliedGrammar(): ShikiLanguageInput | undefined {
-    return this.languages?.[this.language];
+    const language = normalizeShikiLanguage(this.language);
+    return this.languages?.[language] ?? this.languages?.[this.language];
   }
 
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
@@ -256,14 +271,14 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     // after a newer call has already rendered correct synchronous output,
     // and overwrite it with stale tokenization.
     const token = ++this.highlightToken;
-    const lang = this.language;
+    const lang = normalizeShikiLanguage(this.language);
     if (!lang) {
       this.highlightedHtml = null;
       return;
     }
 
     const languages = this.languages;
-    if (languages?.[lang]) {
+    if (languages?.[lang] ?? languages?.[this.language]) {
       // Fine-grained opt-in path -- entirely separate from `this.highlighter`
       // below, see `loadShikiHighlighterCore()`'s doc comment for why.
       this.highlightedHtml = null;
@@ -304,13 +319,22 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
         // a --lyra-* token. See the dark-mode override in
         // code-block.styles.ts for how the dark half of this activates.
         themes: SHIKI_THEMES,
-        transformers: [partTransformer],
+        transformers: [partTransformer(this.lineNumbers)],
       });
     } catch {
       // Malformed input for this grammar, or any other shiki-internal
       // failure -- fall back to plain text rather than a blank code block.
       return null;
     }
+  }
+
+  private renderPlainCode(): TemplateResult {
+    if (!this.lineNumbers) return html`<code part="code">${this.code}</code>`;
+    return html`
+      <code part="code" class="line-numbered-code">
+        ${this.code.split(/\r\n|\r|\n/).map((line) => html`<span class="line">${line}</span>`)}
+      </code>
+    `;
   }
 
   private writeClipboard(text: string): void {
@@ -409,7 +433,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
             ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`
             : this.highlightedHtml !== null
               ? unsafeHTML(this.highlightedHtml)
-              : html`<pre part="pre"><code part="code">${this.code}</code></pre>`}
+              : html`<pre part="pre" class=${this.lineNumbers ? 'line-numbers' : nothing}>${this.renderPlainCode()}</pre>`}
         </div>
       </div>
     `;

@@ -26,6 +26,16 @@ it('defaults to no language/filename, collapsible=false, collapsed=false, copyab
   expect(el.collapsed).to.be.false;
   expect(el.copyable).to.be.true;
   expect(el.maxHeight).to.equal('');
+  expect(el.lineNumbers).to.be.false;
+});
+
+it('renders optional line numbers for plain code without changing the copied source', async () => {
+  const el = (await fixture(
+    html`<lyra-code-block line-numbers .code=${'first\nsecond\nthird'}></lyra-code-block>`,
+  )) as LyraCodeBlock;
+  expect(el.lineNumbers).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part="pre"] .line')).to.have.lengthOf(3);
+  expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent!.trim()).to.equal('firstsecondthird');
 });
 
 it('renders plain <pre><code> immediately, HTML-escaped, when language is unset — no skeleton, no shiki wait', async () => {
@@ -120,6 +130,17 @@ describe('shiki highlighting (real peer)', () => {
       timeout: 8000,
     });
     expect(internalsOf(el).highlighter!.getLoadedLanguages()).to.include('python');
+  });
+
+  it('highlights GreyCat source through the built-in gcl grammar', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block language="greycat" .code=${'fn greet(name: String) { return "Hi " + name }'}></lyra-code-block>`,
+    )) as LyraCodeBlock;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="pre"] span') !== null, undefined, {
+      timeout: 8000,
+    });
+    expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.contain('greet');
+    expect(internalsOf(el).highlighter!.getLoadedLanguages()).to.include('gcl');
   });
 
   it('does not let a superseded async grammar load overwrite a later synchronous highlight', async () => {

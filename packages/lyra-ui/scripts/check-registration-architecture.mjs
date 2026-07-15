@@ -37,7 +37,10 @@ assert.ok(optionalBlock, 'root registration allowlist must define ROOT_BARREL_OP
 const expectedOptionalTags = [...optionalBlock[1].matchAll(/'([^']+)'/g)].map((match) => match[1]).sort();
 const importedRootTags = [
   ...rootBarrel.matchAll(/^import '\.\/components\/(?:[^/]+\/)?([^']+)\.js';$/gm),
-].map((match) => `lyra-${match[1]}`);
+]
+  .map((match) => match[1])
+  .filter((moduleName) => !moduleName.endsWith('-register'))
+  .map((moduleName) => `lyra-${moduleName}`);
 if (rootBarrel.includes("export { LyraFlag } from './components/flag/flag.js';")) {
   importedRootTags.push('lyra-flag');
 }

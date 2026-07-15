@@ -83,6 +83,12 @@ import './components/csv-viewer/csv-viewer.js';
 import './components/docx-viewer/docx-viewer.js';
 import './components/email-viewer/email-viewer.js';
 import './components/calendar-viewer/calendar-viewer.js';
+import './components/archive-viewer/archive-viewer.js';
+import './components/archive-viewer/archive-viewer-register.js';
+import './components/ebook-viewer/ebook-viewer.js';
+import './components/ebook-viewer/ebook-viewer-register.js';
+import './components/pptx-viewer/pptx-viewer.js';
+import './components/file-icon/file-icon.js';
 import './components/media-card/media-card.js';
 import './components/attachment-trigger/attachment-trigger.js';
 import './components/kbd/kbd.js';
@@ -406,6 +412,21 @@ export type {
   DocumentRendererRegistry,
   DocumentViewerCloseReason,
 } from './components/document-viewer/document-viewer.js';
+export { LyraEbookViewer } from './components/ebook-viewer/ebook-viewer.js';
+export type { LyraEbookViewerEventMap } from './components/ebook-viewer/ebook-viewer.js';
+export { LyraPptxViewer } from './components/pptx-viewer/pptx-viewer.js';
+export type { LyraPptxViewerEventMap } from './components/pptx-viewer/pptx-viewer.js';
+export {
+  LyraFileIcon,
+  getFileTypeMetadata,
+  registerFileTypeMetadata,
+} from './components/file-icon/file-icon.js';
+export type {
+  LyraFileTypeIcon,
+  LyraFileTypeCategory,
+  LyraFileTypeMetadata,
+  LyraFileIconVariant,
+} from './components/file-icon/file-icon.js';
 export { LyraSvgViewer } from './components/svg-viewer/svg-viewer.js';
 export { LyraHtmlViewer } from './components/html-viewer/html-viewer.js';
 export { LyraDatasetViewer } from './components/dataset-viewer/dataset-viewer.js';
@@ -536,6 +557,7 @@ export * from './components/csv-viewer/csv-viewer.js';
 export * from './components/docx-viewer/docx-viewer.js';
 export * from './components/email-viewer/email-viewer.js';
 export * from './components/calendar-viewer/calendar-viewer.js';
+export * from './components/archive-viewer/archive-viewer.js';
 export type { LyraExportButtonEventMap } from './components/export-button/export-button.js';
 export type { LyraFileInputEventMap } from './components/file-input/file-input.js';
 export type { LyraGenerationStatusEventMap } from './components/generation-status/generation-status.js';

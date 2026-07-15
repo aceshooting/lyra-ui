@@ -1,4 +1,5 @@
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
+import { GREYCAT_LANGUAGE } from './greycat-language.js';
 
 /** Re-exported under a component-scoped name so importers don't need their
  *  own `import type { Highlighter } from 'shiki'`. */
@@ -47,6 +48,16 @@ let highlighter: Promise<ShikiHighlighter | null> | undefined;
  *  resetting alongside it. */
 const unsupportedLanguages = new Set<string>();
 
+const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
+  gcl: GREYCAT_LANGUAGE,
+  greycat: GREYCAT_LANGUAGE,
+};
+
+/** Normalizes ids supplied by filename-oriented integrations and templates. */
+export function normalizeShikiLanguage(lang: string): string {
+  return lang.trim().toLowerCase().replace(/^\./, '');
+}
+
 /**
  * Lazily loads the optional peer dependency `shiki` once per page and builds
  * (and caches) a single `Highlighter` instance seeded with `SHIKI_THEMES` and
@@ -88,17 +99,18 @@ export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
  * succeed on every future render.
  */
 export async function loadShikiLanguage(hl: ShikiHighlighter, lang: string): Promise<boolean> {
-  if (hl.getLoadedLanguages().includes(lang)) return true;
-  if (unsupportedLanguages.has(lang)) return false;
+  const normalizedLanguage = normalizeShikiLanguage(lang);
+  if (hl.getLoadedLanguages().includes(normalizedLanguage)) return true;
+  if (unsupportedLanguages.has(normalizedLanguage)) return false;
   try {
-    await hl.loadLanguage(lang as OptionalPeerApi);
+    await hl.loadLanguage(CUSTOM_LANGUAGES[normalizedLanguage] ?? normalizedLanguage);
     return true;
   } catch {
     // Not a shiki-recognized grammar id/alias, or the grammar failed to
     // load for some other reason — either way, <lyra-code-block> treats an
     // unrecognized language the same as an unset one (plain text), and
     // there's nothing more specific a caller could do with the reason.
-    unsupportedLanguages.add(lang);
+    unsupportedLanguages.add(normalizedLanguage);
     return false;
   }
 }

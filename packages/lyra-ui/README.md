@@ -5,7 +5,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 144 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 148 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -29,6 +29,7 @@ npm install @aceshooting/lyra-ui
 # optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lyra-box-plot>
 # optional peers: mammoth and dompurify, only needed for <lyra-docx-viewer>
 #   — Mammoth converts DOCX files to semantic HTML instead of pixel-exact Word page layout.
+# optional peer: jszip, only needed for <lyra-archive-viewer>
 # optional peer: maplibre-gl, only needed for <lyra-map> — also import
 #   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lyra-map only
 #   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet.
@@ -220,7 +221,7 @@ their own `dir`, so they remain composable inside mixed-direction layouts.
 
 ## Components
 
-The catalog below lists all 133 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 148 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -318,7 +319,7 @@ each one-liner below.
 | `<lyra-generation-status>` | — (extra) | Ticking elapsed-time / token-count / throughput readout for an in-progress response, plus a built-in Stop button |
 | `<lyra-stream-status>` | — (extra) | Compact transport-health indicator (`idle`/`connecting`/`streaming`/`stalled`) with heartbeat-aware stall detection via `recordActivity()` |
 | `<lyra-markdown>` | — (extra) | Sanitized Markdown → HTML (GFM tables, fenced code, links); lazy-loads the optional peers `marked` + `dompurify` |
-| `<lyra-code-block>` | — (extra) | Fenced code display with a copy button; lazy-loads the optional peer `shiki` for syntax highlighting, degrades to plain `<pre><code>` without it |
+| `<lyra-code-block>` | — (extra) | Fenced code display with a copy button, optional line numbers, lazy-loaded `shiki` grammars, and built-in GreyCat/GCL highlighting |
 | `<lyra-live-region>` | — (extra) | Throttled/coalesced ARIA live-region announcer for streaming UIs, built on the reusable internal `Announcer` engine |
 | `<lyra-chat-composer>` | — (extra) | Auto-resizing message `<textarea>` + built-in send/stop button; form-associated, Enter-to-send with Shift+Enter/IME handling |
 | `<lyra-attachment-chip>` | — (extra) | Pre-send or sent file chip with thumbnail/size/upload-progress/retry; derives metadata from a real `File` or from persisted server metadata |
@@ -369,6 +370,10 @@ each one-liner below.
 | `<lyra-docx-viewer>` | — (extra) | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML |
 | `<lyra-email-viewer>` | — (extra) | Optional-PostalMime `.eml` viewer with sanitized HTML and plain-text fallback |
 | `<lyra-calendar-viewer>` | — (extra) | Optional-ical.js `.ics` viewer for event summaries and times |
+| `<lyra-archive-viewer>` | — (extra) | Lists `.zip` entry names and sizes using the optional `jszip` peer; no content preview |
+| `<lyra-ebook-viewer>` | — (extra) | Renders `.epub` ebooks with the optional `epubjs` peer |
+| `<lyra-pptx-viewer>` | — (extra) | Best-effort client-side `.pptx` viewer with a persistent fidelity notice |
+| `<lyra-file-icon>` | — (extra) | Tokenized, localized file-format badge with MIME and filename fallback metadata |
 | `<lyra-media-card>` | — (extra) | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message |
 | `<lyra-avatar>` | — (extra) | Small, fixed-size identity marker — image, or an initials fallback with `lyra-chip`-style tone recoloring |
 | `<lyra-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lyra-*>` counterpart to `wa-card` |

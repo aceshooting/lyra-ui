@@ -1387,6 +1387,491 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/archive-viewer/archive-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "clearArchiveLibraryCache",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadArchiveLibrary",
+          "return": {
+            "type": {
+              "text": "Promise<ArchiveLibraryApi | null>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importJSZip",
+              "default": "() => import('jszip')",
+              "type": {
+                "text": "() => Promise<ArchiveLibraryApi | { default: ArchiveLibraryApi }>"
+              }
+            }
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "loadArchiveLibraryCached",
+          "return": {
+            "type": {
+              "text": "Promise<ArchiveLibraryApi | null>"
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "clearArchiveLibraryCache",
+          "declaration": {
+            "name": "clearArchiveLibraryCache",
+            "module": "src/components/archive-viewer/archive-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadArchiveLibrary",
+          "declaration": {
+            "name": "loadArchiveLibrary",
+            "module": "src/components/archive-viewer/archive-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadArchiveLibraryCached",
+          "declaration": {
+            "name": "loadArchiveLibraryCached",
+            "module": "src/components/archive-viewer/archive-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/archive-viewer/archive-viewer-register.ts",
+      "declarations": [],
+      "exports": []
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/archive-viewer/archive-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. File sizes\nare measured through JSZip's public async API, so opening an archive decompresses each file once.",
+          "name": "LyraArchiveViewer",
+          "cssParts": [
+            {
+              "description": "The root container.",
+              "name": "base"
+            },
+            {
+              "description": "An archive entry row.",
+              "name": "entry"
+            },
+            {
+              "description": "The decorative folder or file icon.",
+              "name": "entry-icon"
+            },
+            {
+              "description": "The entry path.",
+              "name": "entry-name"
+            },
+            {
+              "description": "The human-readable file size.",
+              "name": "entry-size"
+            },
+            {
+              "description": "The error region.",
+              "name": "error"
+            },
+            {
+              "description": "The loading region.",
+              "name": "spinner"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "fetchState",
+              "type": {
+                "text": "ArchiveState"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'idle' }"
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "loadLibrary",
+              "type": {
+                "text": "() => Promise<ArchiveLibraryApi | null>"
+              },
+              "privacy": "private",
+              "default": "loadArchiveLibraryCached"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name associated with the archive.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "renderEntry",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and parse as a ZIP archive.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when fetching or parsing the archive fails.",
+              "name": "lyra-render-error"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name associated with the archive.",
+              "fieldName": "name"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and parse as a ZIP archive.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-archive-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraArchiveViewer",
+          "declaration": {
+            "name": "LyraArchiveViewer",
+            "module": "src/components/archive-viewer/archive-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/archive-viewer/archive-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-archive-viewer",
+          "declaration": {
+            "name": "LyraArchiveViewer",
+            "module": "src/components/archive-viewer/archive-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/archive-viewer/archive-loader.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/archive-viewer/archive-viewer.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/attachment-chip/attachment-chip.class.ts",
       "declarations": [
         {
@@ -24579,6 +25064,17 @@
             },
             {
               "kind": "field",
+              "name": "lineNumbers",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether to display one-based line numbers beside the code.",
+              "attribute": "line-numbers",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -24805,6 +25301,16 @@
             },
             {
               "kind": "method",
+              "name": "renderPlainCode",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "syncHighlight",
               "privacy": "private",
               "return": {
@@ -24929,6 +25435,15 @@
               "default": "''",
               "description": "A shiki-recognized language id or alias (e.g. `\"javascript\"`,\n`\"python\"`, `\"json\"`). When unset, or when it isn't a key in\n`languages`, the code renders as plain unhighlighted text — this\ncomponent has no default/full-table highlighter to fall back to.",
               "fieldName": "language"
+            },
+            {
+              "name": "line-numbers",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether to display one-based line numbers beside the code.",
+              "fieldName": "lineNumbers"
             },
             {
               "name": "locale",
@@ -25327,6 +25842,17 @@
             },
             {
               "kind": "field",
+              "name": "lineNumbers",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether to display one-based line numbers beside the code.",
+              "attribute": "line-numbers",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -25553,6 +26079,16 @@
             },
             {
               "kind": "method",
+              "name": "renderPlainCode",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "syncHighlight",
               "privacy": "private",
               "return": {
@@ -25688,6 +26224,15 @@
               "fieldName": "languagesOnly"
             },
             {
+              "name": "line-numbers",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether to display one-based line numbers beside the code.",
+              "fieldName": "lineNumbers"
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -25809,6 +26354,24 @@
           "description": "Ensures `lang` is loaded into `hl`, loading it on demand the first time\nit's requested rather than bundling every possible grammar up front —\nshiki supports this incrementally via `Highlighter.loadLanguage()`, which\nis what keeps this lazy instead of defeating the point of lazy-loading the\npeer at all. Resolves `false` (and remembers not to retry) when `lang`\nisn't a shiki-recognized grammar id or alias at all, so a caller can fall\nback to plain-text rendering instead of retrying an id that can never\nsucceed on every future render."
         },
         {
+          "kind": "function",
+          "name": "normalizeShikiLanguage",
+          "return": {
+            "type": {
+              "text": "string"
+            }
+          },
+          "parameters": [
+            {
+              "name": "lang",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "Normalizes ids supplied by filename-oriented integrations and templates."
+        },
+        {
           "kind": "variable",
           "name": "SHIKI_DARK_THEME",
           "type": {
@@ -25882,6 +26445,39 @@
           "declaration": {
             "name": "loadShikiLanguage",
             "module": "src/components/code-block/code-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "normalizeShikiLanguage",
+          "declaration": {
+            "name": "normalizeShikiLanguage",
+            "module": "src/components/code-block/code-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/code-block/greycat-language.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "GREYCAT_LANGUAGE",
+          "type": {
+            "text": "OptionalPeerApi"
+          },
+          "default": "{ name: 'gcl', displayName: 'GreyCat', scopeName: 'source.gcl', aliases: ['greycat'], patterns: [ { include: '#comments' }, { include: '#strings' }, { include: '#numbers' }, { include: '#annotations' }, { include: '#keywords' }, { include: '#types' }, { include: '#functions' }, ], repository: { comments: { patterns: [ { match: '//.*$', name: 'comment.line.double-slash.gcl' }, { begin: '/\\\\*', end: '\\\\*/', name: 'comment.block.gcl' }, ], }, strings: { patterns: [ { begin: '\"', end: '\"', name: 'string.quoted.double.gcl', patterns: [{ match: '\\\\\\\\.', name: 'constant.character.escape.gcl' }], }, { begin: \"'\", end: \"'\", name: 'string.quoted.single.gcl' }, { begin: '`', end: '`', name: 'string.quoted.other.gcl' }, ], }, numbers: { patterns: [ { match: '\\\\b(?:0x[0-9a-fA-F]+|\\\\d+(?:\\\\.\\\\d+)?(?:_us|_ms|_s|_min|_hour|_day)?)\\\\b', name: 'constant.numeric.gcl', }, ], }, annotations: { patterns: [{ match: '@[a-zA-Z_][a-zA-Z0-9_]*', name: 'storage.type.annotation.gcl' }], }, keywords: { patterns: [ { match: '\\\\b(?:async|await|break|case|catch|continue|else|enum|export|extends|fn|for|from|if|import|in|let|match|model|new|return|throw|try|type|var|while)\\\\b', name: 'keyword.control.gcl', }, { match: '\\\\b(?:true|false|null|nil)\\\\b', name: 'constant.language.gcl' }, ], }, types: { patterns: [ { match: '\\\\b(?:any|Array|bool|char|Date|duration|float|geo|int|json|Map|node|nodeIndex|nodeList|nodeTime|String|time|uint|void)\\\\b', name: 'storage.type.gcl', }, ], }, functions: { patterns: [{ match: '\\\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\\\s*\\\\()', name: 'entity.name.function.gcl' }], }, }, }",
+          "description": "A compact TextMate grammar for GreyCat's GCL language.\n\nShiki ships grammars for the common languages, but GCL is maintained here\nso consumers can highlight GreyCat source without supplying a grammar map."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "GREYCAT_LANGUAGE",
+          "declaration": {
+            "name": "GREYCAT_LANGUAGE",
+            "module": "src/components/code-block/greycat-language.ts"
           }
         }
       ]
@@ -39810,6 +40406,544 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/ebook-viewer/ebook-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "getEpubJs",
+          "return": {
+            "type": {
+              "text": "Promise<EpubFactory | null>"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadEpubJs",
+          "return": {
+            "type": {
+              "text": "Promise<EpubFactory | null>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importEpub",
+              "default": "() =>\n    import('epubjs') as Promise<{ default: EpubFactory }>",
+              "type": {
+                "text": "() => Promise<{ default: EpubFactory } | EpubFactory>"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "getEpubJs",
+          "declaration": {
+            "name": "getEpubJs",
+            "module": "src/components/ebook-viewer/ebook-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadEpubJs",
+          "declaration": {
+            "name": "loadEpubJs",
+            "module": "src/components/ebook-viewer/ebook-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/ebook-viewer/ebook-viewer-register.ts",
+      "declarations": [],
+      "exports": []
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/ebook-viewer/ebook-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Renders an EPUB with the optional `epubjs` peer. The mount element is kept\nstable because epub.js imperatively owns it and renders chapters in iframes.",
+          "name": "LyraEbookViewer",
+          "cssParts": [
+            {
+              "description": "The viewer container.",
+              "name": "base"
+            },
+            {
+              "description": "The error message region.",
+              "name": "error"
+            },
+            {
+              "description": "The stable element epub.js renders into.",
+              "name": "mount"
+            },
+            {
+              "description": "The next chapter button.",
+              "name": "next-button"
+            },
+            {
+              "description": "The next button icon.",
+              "name": "next-icon"
+            },
+            {
+              "description": "The previous chapter button.",
+              "name": "previous-button"
+            },
+            {
+              "description": "The previous button icon.",
+              "name": "previous-icon"
+            },
+            {
+              "description": "Previous and next chapter controls.",
+              "name": "toolbar"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Host `aria-label` override for the internal reading region.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "book",
+              "type": {
+                "text": "EpubBook | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "ebookState",
+              "type": {
+                "text": "EbookState"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'idle' }"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "mountRef",
+              "type": {
+                "text": "Ref<HTMLDivElement>"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name used as the reading region's accessible-name fallback.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "next",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "previous",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "rendition",
+              "type": {
+                "text": "EpubRendition | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL fetched as an ArrayBuffer and rendered as an EPUB.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderStatus",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult | typeof nothing"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "teardown",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when fetching, opening, or rendering fails.",
+              "name": "lyra-render-error"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Host `aria-label` override for the internal reading region.",
+              "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name used as the reading region's accessible-name fallback.",
+              "fieldName": "name"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL fetched as an ArrayBuffer and rendered as an EPUB.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-ebook-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraEbookViewer",
+          "declaration": {
+            "name": "LyraEbookViewer",
+            "module": "src/components/ebook-viewer/ebook-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/ebook-viewer/ebook-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-ebook-viewer",
+          "declaration": {
+            "name": "LyraEbookViewer",
+            "module": "src/components/ebook-viewer/ebook-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/ebook-viewer/ebook-viewer.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/ebook-viewer/fixtures/minimal-epub-fixture.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "MINIMAL_EPUB_BASE64",
+          "type": {
+            "text": "string"
+          },
+          "default": "'UEsDBAoAAAAAAPSa71xvYassFAAAABQAAAAIAAAAbWltZXR5cGVhcHBsaWNhdGlvbi9lcHViK3ppcFBLAwQKAAAAAAD0mu9cAAAAAAAAAAAAAAAACQAAAE1FVEEtSU5GL1BLAwQKAAAAAAD0mu9cCG1ScO8AAADvAAAAFgAAAE1FVEEtSU5GL2NvbnRhaW5lci54bWw8P3htbCB2ZXJzaW9uPSIxLjAiIGVuY29kaW5nPSJVVEYtOCI/Pgo8Y29udGFpbmVyIHZlcnNpb249IjEuMCIgeG1sbnM9InVybjpvYXNpczpuYW1lczp0YzpvcGVuZG9jdW1lbnQ6eG1sbnM6Y29udGFpbmVyIj48cm9vdGZpbGVzPjxyb290ZmlsZSBmdWxsLXBhdGg9Ik9FQlBTL2NvbnRlbnQub3BmIiBtZWRpYS10eXBlPSJhcHBsaWNhdGlvbi9vZWJwcy1wYWNrYWdlK3htbCIvPjwvcm9vdGZpbGVzPjwvY29udGFpbmVyPlBLAwQKAAAAAAD0mu9cAAAAAAAAAAAAAAAABgAAAE9FQlBTL1BLAwQKAAAAAAD0mu9cEtCDUjQCAAA0AgAAEQAAAE9FQlBTL2NvbnRlbnQub3BmPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHBhY2thZ2UgeG1sbnM9Imh0dHA6Ly93d3cuaWRwZi5vcmcvMjAwNy9vcGYiIHZlcnNpb249IjMuMCIgdW5pcXVlLWlkZW50aWZpZXI9InB1Yi1pZCI+PG1ldGFkYXRhIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyI+PGRjOmlkZW50aWZpZXIgaWQ9InB1Yi1pZCI+dXJuOnV1aWQ6bHlyYS11aS1maXh0dXJlPC9kYzppZGVudGlmaWVyPjxkYzp0aXRsZT5MeXJhIFVJIFRlc3QgRml4dHVyZTwvZGM6dGl0bGU+PGRjOmxhbmd1YWdlPmVuPC9kYzpsYW5ndWFnZT48L21ldGFkYXRhPjxtYW5pZmVzdD48aXRlbSBpZD0ibmF2IiBocmVmPSJuYXYueGh0bWwiIG1lZGlhLXR5cGU9ImFwcGxpY2F0aW9uL3hodG1sK3htbCIgcHJvcGVydGllcz0ibmF2Ii8+PGl0ZW0gaWQ9ImNoYXB0ZXIxIiBocmVmPSJjaGFwdGVyMS54aHRtbCIgbWVkaWEtdHlwZT0iYXBwbGljYXRpb24veGh0bWwreG1sIi8+PC9tYW5pZmVzdD48c3BpbmU+PGl0ZW1yZWYgaWRyZWY9ImNoYXB0ZXIxIi8+PC9zcGluZT48L3BhY2thZ2U+UEsDBAoAAAAAAPSa71yURsK3CAEAAAgBAAAPAAAAT0VCUFMvbmF2LnhodG1sPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48aHRtbCB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94aHRtbCIgeG1sbnM6ZXB1Yj0iaHR0cDovL3d3dy5pZHBmLm9yZy8yMDA3L29wcyI+PGhlYWQ+PHRpdGxlPk5hdmlnYXRpb248L3RpdGxlPjwvaGVhZD48Ym9keT48bmF2IGVwdWI6dHlwZT0idG9jIj48b2w+PGxpPjxhIGhyZWY9ImNoYXB0ZXIxLnhodG1sIj5DaGFwdGVyIDE8L2E+PC9saT48L29sPjwvbmF2PjwvYm9keT48L2h0bWw+UEsDBAoAAAAAAPSa71xdgTg6ywAAAMsAAAAUAAAAT0VCUFMvY2hhcHRlcjEueGh0bWw8P3htbCB2ZXJzaW9uPSIxLjAiIGVuY29kaW5nPSJVVEYtOCI/PjxodG1sIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48aGVhZD48dGl0bGU+Q2hhcHRlciAxPC90aXRsZT48L2hlYWQ+PGJvZHk+PGgxPkNoYXB0ZXIgMTwvaDE+PHA+VGhpcyBpcyBhIHRpbnkgRVBVQiBmaXh0dXJlIGZvciBMeXJhIFVJLjwvcD48L2JvZHk+PC9odG1sPlBLAQIUAAoAAAAAAPSa71xvYassFAAAABQAAAAIAAAAAAAAAAAAAAAAAAAAAABtaW1ldHlwZVBLAQIUAAoAAAAAAPSa71wAAAAAAAAAAAAAAAAJAAAAAAAAAAAAEAAAADoAAABNRVRBLUlORi9QSwECFAAKAAAAAAD0mu9cCG1ScO8AAADvAAAAFgAAAAAAAAAAAAAAAABhAAAATUVUQS1JTkYvY29udGFpbmVyLnhtbFBLAQIUAAoAAAAAAPSa71wAAAAAAAAAAAAAAAAGAAAAAAAAAAAAEAAAAIQBAABPRUJQUy9QSwECFAAKAAAAAAD0mu9cEtCDUjQCAAA0AgAAEQAAAAAAAAAAAAAAAACoAQAAT0VCUFMvY29udGVudC5vcGZQSwECFAAKAAAAAAD0mu9clEbCtwgBAAAIAQAADwAAAAAAAAAAAAAAAAALBAAAT0VCUFMvbmF2LnhodG1sUEsBAhQACgAAAAAA9JrvXF2BODrLAAAAywAAABQAAAAAAAAAAAAAAAAAQAUAAE9FQlBTL2NoYXB0ZXIxLnhodG1sUEsFBgAAAAAHAAcAowEAAD0GAAAAAA=='"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "MINIMAL_EPUB_BASE64",
+          "declaration": {
+            "name": "MINIMAL_EPUB_BASE64",
+            "module": "src/components/ebook-viewer/fixtures/minimal-epub-fixture.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/email-viewer/email-loader.ts",
       "declarations": [
         {
@@ -41684,6 +42818,472 @@
           "declaration": {
             "name": "*",
             "module": "src/components/export-button/export-button.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/file-icon/file-icon.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Displays a localized, tokenized file-type badge from a MIME type.",
+          "name": "LyraFileIcon",
+          "cssParts": [
+            {
+              "description": "The outer presentation wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The format badge.",
+              "name": "icon"
+            },
+            {
+              "description": "The localized format label in `variant=\"label\"` mode.",
+              "name": "label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "decorative",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the badge is decorative and hidden from assistive technology.",
+              "attribute": "decorative",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional visible/accessibility label override.",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "mimeType",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "MIME type used to resolve metadata.",
+              "attribute": "mime-type"
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional filename used for fallback detection with an empty or generic MIME type.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "variant",
+              "type": {
+                "text": "LyraFileIconVariant"
+              },
+              "default": "'icon'",
+              "description": "Shows only the icon or the icon together with its localized label.",
+              "attribute": "variant",
+              "reflects": true
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "decorative",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the badge is decorative and hidden from assistive technology.",
+              "fieldName": "decorative"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional visible/accessibility label override.",
+              "fieldName": "label"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "mime-type",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "MIME type used to resolve metadata.",
+              "fieldName": "mimeType"
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional filename used for fallback detection with an empty or generic MIME type.",
+              "fieldName": "name"
+            },
+            {
+              "name": "variant",
+              "type": {
+                "text": "LyraFileIconVariant"
+              },
+              "default": "'icon'",
+              "description": "Shows only the icon or the icon together with its localized label.",
+              "fieldName": "variant"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-file-icon",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraFileIcon",
+          "declaration": {
+            "name": "LyraFileIcon",
+            "module": "src/components/file-icon/file-icon.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/file-icon/file-icon.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-file-icon",
+          "declaration": {
+            "name": "LyraFileIcon",
+            "module": "src/components/file-icon/file-icon.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/file-icon/file-icon.class.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/file-icon/file-type-metadata.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/file-icon/file-type-metadata.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "getFileTypeMetadata",
+          "return": {
+            "type": {
+              "text": "LyraFileTypeMetadata"
+            }
+          },
+          "parameters": [
+            {
+              "name": "mimeType",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "fileName",
+              "default": "''"
+            }
+          ],
+          "description": "Returns presentation metadata for a MIME type, with a safe generic fallback."
+        },
+        {
+          "kind": "function",
+          "name": "registerFileTypeMetadata",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "parameters": [
+            {
+              "name": "mimeTypes",
+              "type": {
+                "text": "string | readonly string[]"
+              }
+            },
+            {
+              "name": "metadata",
+              "type": {
+                "text": "LyraFileTypeMetadata"
+              }
+            }
+          ],
+          "description": "Adds or replaces a custom MIME mapping used by future metadata lookups."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "getFileTypeMetadata",
+          "declaration": {
+            "name": "getFileTypeMetadata",
+            "module": "src/components/file-icon/file-type-metadata.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "registerFileTypeMetadata",
+          "declaration": {
+            "name": "registerFileTypeMetadata",
+            "module": "src/components/file-icon/file-type-metadata.ts"
           }
         }
       ]
@@ -65784,6 +67384,568 @@
           "declaration": {
             "name": "*",
             "module": "src/components/poll-status/poll-status.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pptx-viewer/pptx-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "getPptxRenderer",
+          "return": {
+            "type": {
+              "text": "Promise<PptxRendererModule | null>"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadPptxRenderer",
+          "return": {
+            "type": {
+              "text": "Promise<PptxRendererModule | null>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importer",
+              "default": "() => import('@aiden0z/pptx-renderer') as Promise<PptxRendererModule>",
+              "type": {
+                "text": "() => Promise<PptxRendererModule>"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "getPptxRenderer",
+          "declaration": {
+            "name": "getPptxRenderer",
+            "module": "src/components/pptx-viewer/pptx-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadPptxRenderer",
+          "declaration": {
+            "name": "loadPptxRenderer",
+            "module": "src/components/pptx-viewer/pptx-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pptx-viewer/pptx-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Best-effort client-side PPTX viewer backed by `@aiden0z/pptx-renderer`.\nThe fidelity notice is intentionally always visible because animations,\nequations, embedded OLE objects, notes, and several advanced effects are\nnot represented by the renderer.",
+          "name": "LyraPptxViewer",
+          "cssParts": [
+            {
+              "description": "The named viewer region.",
+              "name": "base"
+            },
+            {
+              "description": "The renderer-owned output container.",
+              "name": "container"
+            },
+            {
+              "description": "The error region.",
+              "name": "error"
+            },
+            {
+              "description": "The optional presentation-name row.",
+              "name": "header"
+            },
+            {
+              "description": "The presentation name.",
+              "name": "name"
+            },
+            {
+              "description": "Slide navigation controls.",
+              "name": "nav"
+            },
+            {
+              "description": "Next-slide button.",
+              "name": "next-button"
+            },
+            {
+              "description": "Next-slide icon.",
+              "name": "next-icon"
+            },
+            {
+              "description": "The persistent fidelity notice.",
+              "name": "notice"
+            },
+            {
+              "description": "Previous-slide button.",
+              "name": "previous-button"
+            },
+            {
+              "description": "Previous-slide icon.",
+              "name": "previous-icon"
+            },
+            {
+              "description": "Current slide indicator.",
+              "name": "slide-count"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "containerEl",
+              "type": {
+                "text": "HTMLElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "currentSlideIndex",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "errorMessage",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the viewer region.",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional presentation name.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "onSlideChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "phase",
+              "type": {
+                "text": "PptxPhase"
+              },
+              "privacy": "private",
+              "default": "'idle'"
+            },
+            {
+              "kind": "field",
+              "name": "slideCount",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL of the PPTX file.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "viewer",
+              "type": {
+                "text": "OptionalPeerApi | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "goToSlide",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "mount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult | typeof nothing"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "teardown",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired after a presentation opens. `detail: { slideCount }`.",
+              "name": "lyra-load"
+            },
+            {
+              "description": "Fired when fetching or rendering fails.",
+              "name": "lyra-render-error"
+            },
+            {
+              "description": "Fired when the active slide changes.",
+              "name": "lyra-slide-change"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the viewer region.",
+              "fieldName": "label"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional presentation name.",
+              "fieldName": "name"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL of the PPTX file.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-pptx-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPptxViewer",
+          "declaration": {
+            "name": "LyraPptxViewer",
+            "module": "src/components/pptx-viewer/pptx-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pptx-viewer/pptx-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-pptx-viewer",
+          "declaration": {
+            "name": "LyraPptxViewer",
+            "module": "src/components/pptx-viewer/pptx-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/pptx-viewer/pptx-viewer.class.js"
           }
         }
       ]

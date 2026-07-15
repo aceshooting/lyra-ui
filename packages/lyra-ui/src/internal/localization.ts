@@ -146,6 +146,25 @@ export type LyraMessageKey =
   | 'documentPreviewUrlNotAllowed'
   | 'documentPreviewFailedToLoad'
   | 'documentPreviewGenericError'
+  | 'ebookViewerLoadError'
+  | 'ebookViewerRegionLabel'
+  | 'fileTypeFile'
+  | 'fileTypePdf'
+  | 'fileTypeWord'
+  | 'fileTypeSpreadsheet'
+  | 'fileTypePresentation'
+  | 'fileTypeText'
+  | 'fileTypeCode'
+  | 'fileTypeArchive'
+  | 'fileTypeImage'
+  | 'fileTypeAudio'
+  | 'fileTypeVideo'
+  | 'pptxViewerLabel'
+  | 'pptxViewerFidelityNotice'
+  | 'pptxViewerRenderError'
+  | 'pptxViewerPreviousSlide'
+  | 'pptxViewerNextSlide'
+  | 'pptxViewerSlideOf'
   | 'documentViewerLabel'
   | 'documentViewerMissingSanitizer'
   | 'docxViewerLabel'
@@ -226,6 +245,10 @@ export type LyraMessageKey =
   | 'documentPreviewTypeImage'
   | 'documentPreviewTypeEmail'
   | 'documentPreviewTypeCalendar'
+  | 'archiveViewerUnavailable'
+  | 'archiveViewerEmpty'
+  | 'archiveViewerFolder'
+  | 'archiveViewerFile'
   | 'documentPreviewTypeDataset'
   | 'documentPreviewTypeContact'
   | 'download'
@@ -532,6 +555,25 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
   documentPreviewFailedToLoad: 'Failed to load document.',
   documentPreviewGenericError: 'Something went wrong.',
+  ebookViewerLoadError: 'Failed to load the ebook.',
+  ebookViewerRegionLabel: 'Ebook content',
+  fileTypeFile: 'File',
+  fileTypePdf: 'PDF',
+  fileTypeWord: 'Word document',
+  fileTypeSpreadsheet: 'Spreadsheet',
+  fileTypePresentation: 'Presentation',
+  fileTypeText: 'Text file',
+  fileTypeCode: 'Code file',
+  fileTypeArchive: 'Archive',
+  fileTypeImage: 'Image',
+  fileTypeAudio: 'Audio',
+  fileTypeVideo: 'Video',
+  pptxViewerLabel: 'Presentation viewer',
+  pptxViewerFidelityNotice: 'Some slide content may not display.',
+  pptxViewerRenderError: 'Failed to render this presentation.',
+  pptxViewerPreviousSlide: 'Previous slide',
+  pptxViewerNextSlide: 'Next slide',
+  pptxViewerSlideOf: 'Slide {current} of {total}',
   documentViewerLabel: 'Document viewer',
   documentViewerMissingSanitizer: 'This viewer needs the optional "dompurify" package installed to render safely.',
   docxViewerLabel: 'Word document',
@@ -612,6 +654,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewTypeImage: 'image',
   documentPreviewTypeEmail: 'email',
   documentPreviewTypeCalendar: 'calendar',
+  archiveViewerUnavailable: 'Archive preview is unavailable.',
+  archiveViewerEmpty: 'This archive is empty.',
+  archiveViewerFolder: 'Folder',
+  archiveViewerFile: 'File',
   spreadsheetViewerUnavailable: 'Spreadsheet preview is unavailable.',
   csvViewerUnavailable: 'CSV preview is unavailable.',
   documentPreviewTypeDataset: 'dataset',

@@ -26,6 +26,30 @@ describe('loadShikiLanguage', () => {
     expect(hl!.getLoadedLanguages()).to.include('python');
   });
 
+  it('loads the built-in GreyCat grammar through both gcl and greycat aliases', async () => {
+    const hl = await loadShikiHighlighter();
+    const ok = await loadShikiLanguage(hl!, 'greycat');
+    expect(ok).to.be.true;
+    expect(hl!.getLoadedLanguages()).to.include.members(['gcl', 'greycat']);
+
+    const aliasOk = await loadShikiLanguage(hl!, 'GCL');
+    expect(aliasOk).to.be.true;
+  });
+
+  it('normalizes common filename-style language values', async () => {
+    const hl = await loadShikiHighlighter();
+    const ok = await loadShikiLanguage(hl!, '.PYTHON');
+    expect(ok).to.be.true;
+    expect(hl!.getLoadedLanguages()).to.include('python');
+  });
+
+  it('supports the requested common language families through Shiki', async () => {
+    const hl = await loadShikiHighlighter();
+    for (const language of ['python', 'c', 'java', 'javascript', 'typescript', 'html']) {
+      expect(await loadShikiLanguage(hl!, language), language).to.be.true;
+    }
+  });
+
   it('resolves true immediately (no reload) for a language already loaded', async () => {
     const hl = await loadShikiHighlighter();
     await loadShikiLanguage(hl!, 'json');
