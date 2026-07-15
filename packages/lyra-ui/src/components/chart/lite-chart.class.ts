@@ -237,9 +237,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  what the highlight looks like, only which bars it applies to. */
   @property({ attribute: false }) selectedIndex: number[] = [];
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
-   *  'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)
-   *  keeps today's auto-derived (English-fallback) label exactly. Named `accessible-label` to
-   *  match the same override on `lyra-chart`/`lyra-box-plot`. */
+   *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
+   *  takes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label
+   *  exactly. Named `accessible-label` to match the same override on `lyra-chart`/`lyra-box-plot`. */
   @property({ attribute: 'accessible-label' }) accessibleLabel?: string;
 
   @state() private plotWidth = 0;
@@ -357,8 +357,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     if (!mark) return '';
     const series = this.datasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
     const custom = this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
-    const position = this.localize('liteChartMarkPosition', undefined, { index: index + 1, total: marks.length });
-    return `${custom ?? `${series}, ${mark.label}: ${mark.value}`} ${position}`;
+    if (custom) {
+      const position = this.localize('liteChartMarkPosition', undefined, { index: index + 1, total: marks.length });
+      return `${custom} ${position}`;
+    }
+    return this.localize('liteChartMarkSummary', undefined, {
+      series,
+      label: mark.label,
+      value: new Intl.NumberFormat(this.effectiveLocale).format(mark.value),
+      index: index + 1,
+      total: marks.length,
+    });
   }
 
   private onMarkFocus(index: number): void {
@@ -489,11 +498,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   private renderGrid(plotX: number, plotY: number, plotW: number, plotH: number, ticks: number[], lo: number, hi: number) {
     const span = hi - lo || 1;
+    const rtl = this.effectiveDirection === 'rtl';
     return ticks.map((t) => {
       const y = plotY + plotH - ((t - lo) / span) * plotH;
       return svg`
         <line part="grid-line" x1=${plotX} y1=${y} x2=${plotX + plotW} y2=${y}></line>
-        <text part="axis-label" x=${plotX - 6} y=${y} text-anchor="end" dominant-baseline="middle">${this.tickFormat ? this.tickFormat(t) : formatTick(t)}</text>
+        <text
+          part="axis-label"
+          x=${rtl ? plotX + plotW + 6 : plotX - 6}
+          y=${y}
+          text-anchor=${rtl ? 'start' : 'end'}
+          dominant-baseline="middle"
+        >${this.tickFormat ? this.tickFormat(t) : formatTick(t)}</text>
       `;
     });
   }
@@ -752,9 +768,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private renderChart(): TemplateResult {
     const n = this.labels.length;
     const h = this.plotHeight || 200;
-    const padLeft = (this.padLeft ?? PAD_LEFT) + (this.yLabel ? AXIS_TITLE_SPACE : 0);
+    const axisGutter = (this.padLeft ?? PAD_LEFT) + (this.yLabel ? AXIS_TITLE_SPACE : 0);
+    const rtl = this.effectiveDirection === 'rtl';
     const padBottom = PAD_BOTTOM + (this.xLabel ? AXIS_TITLE_SPACE : 0);
-    const plotX = padLeft;
+    const plotX = rtl ? PAD_RIGHT : axisGutter;
     const plotY = PAD_TOP;
     const plotH = Math.max(0, h - plotY - padBottom);
 
@@ -769,12 +786,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       // turns on `overflow-x: auto` so the host scrolls to reveal the rest.
       slot = this.barWidth;
       plotW = Math.max(0, n * slot);
-      w = plotX + plotW + PAD_RIGHT;
+      w = axisGutter + plotW + PAD_RIGHT;
     } else {
       // 'fit' (default): squeeze to the measured host width, byte-for-byte
       // the same computation as before `layout` existed.
       w = this.plotWidth || 400;
-      plotW = Math.max(0, w - plotX - PAD_RIGHT);
+      plotW = Math.max(0, w - axisGutter - PAD_RIGHT);
       slot = n > 0 ? plotW / n : 0;
     }
     const { lo, hi, ticks } = this.domain();
@@ -796,7 +813,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     });
 
     const chartLabel =
-      this.accessibleLabel ?? (this.datasets.map((d) => d.label).join(', ') || this.localize('chart'));
+      this.getAttribute('aria-label') ||
+      this.accessibleLabel ||
+      this.datasets.map((d) => d.label).join(', ') ||
+      this.localize('chart');
     const marksForA11y = this.interactiveMarks();
 
     return html`
@@ -812,7 +832,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           ${categoryLabels}
           ${marks}
           ${this.yLabel
-            ? svg`<text part="axis-title" x=${12} y=${plotY + plotH / 2} text-anchor="middle" transform="rotate(-90, 12, ${plotY + plotH / 2})">${this.yLabel}</text>`
+            ? svg`<text
+                part="axis-title"
+                x=${rtl ? w - 12 : 12}
+                y=${plotY + plotH / 2}
+                text-anchor="middle"
+                transform="rotate(${rtl ? 90 : -90}, ${rtl ? w - 12 : 12}, ${plotY + plotH / 2})"
+              >${this.yLabel}</text>`
             : nothing}
           ${this.xLabel
             ? svg`<text part="axis-title" x=${plotX + plotW / 2} y=${plotY + plotH + padBottom - 2} text-anchor="middle">${this.xLabel}</text>`

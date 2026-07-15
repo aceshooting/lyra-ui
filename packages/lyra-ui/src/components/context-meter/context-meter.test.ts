@@ -117,6 +117,27 @@ it('prefixes the aria-label summary with the label when provided', async () => {
   expect(el.getAttribute('aria-label')).to.equal('128K context window — 8,000 of 10,000 used');
 });
 
+it('preserves an explicit host aria-label instead of replacing it with the generated summary', async () => {
+  const el = (await fixture(html`
+    <lyra-context-meter aria-label="Context window occupancy" total="10000"></lyra-context-meter>
+  `)) as LyraContextMeter;
+  el.segments = SEGMENTS;
+  await el.updateComplete;
+
+  expect(el.getAttribute('aria-label')).to.equal('Context window occupancy');
+  expect(el.getAttribute('role')).to.equal('meter');
+});
+
+it('formats its generated summary with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lyra-context-meter locale="de-DE" total="10000"></lyra-context-meter>
+  `)) as LyraContextMeter;
+  el.segments = SEGMENTS;
+  await el.updateComplete;
+
+  expect(el.getAttribute('aria-label')).to.equal('8.000 of 10.000 used');
+});
+
 it('falls back to a used-only summary when total is 0 or unset', async () => {
   const el = (await fixture(html`<lyra-context-meter></lyra-context-meter>`)) as LyraContextMeter;
   el.segments = [{ label: 'a', value: 5 }];
@@ -211,4 +232,19 @@ it('is accessible with a populated ring meter', async () => {
   el.segments = SEGMENTS;
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('can shrink to a 320px allocation with a long visible label', async () => {
+  const wrapper = await fixture(html`
+    <div style="display: flex; inline-size: 320px;">
+      <lyra-context-meter
+        total="100"
+        label="A deliberately long translated context-window occupancy label"
+      ></lyra-context-meter>
+    </div>
+  `);
+  const el = wrapper.querySelector('lyra-context-meter') as LyraContextMeter;
+
+  expect(getComputedStyle(el).minInlineSize).to.equal('0px');
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });

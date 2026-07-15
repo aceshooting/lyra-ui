@@ -32,8 +32,8 @@ const CENTER = 50;
 const STROKE = 12;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-function formatCount(n: number): string {
-  return Math.round(finiteNumber(n, 0)).toLocaleString();
+function formatCount(n: number, locale: string): string {
+  return Math.round(finiteNumber(n, 0)).toLocaleString(locale);
 }
 
 /**
@@ -66,6 +66,9 @@ export class LyraContextMeter extends LyraElement {
 
   /** Overall accessible label/caption, e.g. `"128K context window"`. */
   @property() label = '';
+
+  private appliedAriaLabel: string | null = null;
+  private explicitAriaLabel: string | null = null;
 
   /** Sum of segment values, clamped so a negative/NaN entry can't produce a negative total. */
   private get usedTotal(): number {
@@ -104,10 +107,13 @@ export class LyraContextMeter extends LyraElement {
 
   private get summary(): string {
     const { used: usedForSummary, total: totalValue } = this.clampedUsedTotal;
-    const used = formatCount(usedForSummary);
+    const used = formatCount(usedForSummary, this.effectiveLocale);
     const phrase =
       totalValue > 0
-        ? this.localize('contextMeterUsedOfTotal', undefined, { used, total: formatCount(totalValue) })
+        ? this.localize('contextMeterUsedOfTotal', undefined, {
+            used,
+            total: formatCount(totalValue, this.effectiveLocale),
+          })
         : this.localize('contextMeterUsed', undefined, { used });
     return this.label ? `${this.label} — ${phrase}` : phrase;
   }
@@ -121,7 +127,13 @@ export class LyraContextMeter extends LyraElement {
     // human-readable summary (used/total, optionally prefixed by `label`)
     // as the accessible name, same as before.
     this.setAttribute('role', 'meter');
-    this.setAttribute('aria-label', this.summary);
+    const currentAriaLabel = this.getAttribute('aria-label');
+    if (currentAriaLabel !== this.appliedAriaLabel) {
+      this.explicitAriaLabel = currentAriaLabel;
+    }
+    const nextAriaLabel = this.explicitAriaLabel || this.summary;
+    this.setAttribute('aria-label', nextAriaLabel);
+    this.appliedAriaLabel = nextAriaLabel;
     const { used, total } = this.clampedUsedTotal;
     this.setAttribute('aria-valuenow', String(used));
     this.setAttribute('aria-valuemin', '0');
@@ -140,7 +152,7 @@ export class LyraContextMeter extends LyraElement {
               <span
                 part="segment"
                 data-tone=${segment.tone ?? 'neutral'}
-                title=${`${segment.label}: ${formatCount(segment.value)}`}
+                title=${`${segment.label}: ${formatCount(segment.value, this.effectiveLocale)}`}
                 style=${styleMap({ flexBasis: `${(ratio * 100).toFixed(4)}%` })}
               ></span>
             `,
@@ -168,7 +180,7 @@ export class LyraContextMeter extends LyraElement {
           stroke-dasharray=${`${segLen} ${CIRCUMFERENCE - segLen}`}
           stroke-dashoffset=${dashoffset}
           transform="rotate(-90 ${CENTER} ${CENTER})"
-        ><title>${`${segment.label}: ${formatCount(segment.value)}`}</title></circle>
+        ><title>${`${segment.label}: ${formatCount(segment.value, this.effectiveLocale)}`}</title></circle>
       `;
     });
     return html`
@@ -191,4 +203,3 @@ declare global {
     'lyra-context-meter': LyraContextMeter;
   }
 }
-

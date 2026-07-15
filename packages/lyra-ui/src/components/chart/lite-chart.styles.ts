@@ -4,6 +4,8 @@ export const styles = css`
   :host {
     display: block;
     position: relative;
+    inline-size: 100%;
+    min-inline-size: 0;
     block-size: var(--lyra-chart-height, var(--lyra-size-280px));
     /* Same token names/fallback chain as chart.ts's --lyra-chart-* — a host
        already theming lyra-chart gets lyra-lite-chart themed for free, and
@@ -92,6 +94,9 @@ export const styles = css`
   [part='legend-item'] {
     display: inline-flex;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     gap: var(--lyra-size-0-35em);
     font-size: var(--lyra-size-0-8rem);
     color: var(--lyra-chart-legend-color);

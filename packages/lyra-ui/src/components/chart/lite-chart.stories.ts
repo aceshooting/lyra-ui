@@ -27,6 +27,29 @@ export const Default: Story = {
   },
 };
 
+/** Narrow-allocation and long-content evidence for the dependency-free chart. */
+export const NarrowLongContent: Story = {
+  name: 'Narrow (320px) with long content',
+  render: () => {
+    const series: LiteSeries[] = [
+      { label: 'Revenue from subscriptions and professional services', data: [12, 19, 14, 22] },
+    ];
+    return html`
+      <div style="inline-size: 320px; max-inline-size: 100%;">
+        <lyra-lite-chart
+          aria-label="Quarterly revenue from subscriptions and professional services"
+          type="bar"
+          height="16rem"
+          legend
+          max-labels="4"
+          .labels=${['First quarter', 'Second quarter', 'Third quarter', 'Fourth quarter']}
+          .datasets=${series}
+        ></lyra-lite-chart>
+      </div>
+    `;
+  },
+};
+
 export const GroupedBars: Story = {
   render: () => {
     const series: LiteSeries[] = [

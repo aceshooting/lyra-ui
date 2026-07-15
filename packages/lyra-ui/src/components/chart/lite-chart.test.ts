@@ -1077,6 +1077,91 @@ describe('accessibleLabel', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('A');
   });
+
+  it('lets a host aria-label win and forwards it to the semantic SVG without duplicating the group role', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        aria-label="Quarterly revenue"
+        accessible-label="Legacy chart label"
+        .labels=${['a']}
+        .datasets=${[{ label: 'A', data: [1] }]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    expect(svg.getAttribute('aria-label')).to.equal('Quarterly revenue');
+    expect(svg.getAttribute('role')).to.equal('group');
+    expect(el.getAttribute('role')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('svg[role]')).to.have.length(1);
+  });
+});
+
+describe('localized mark summaries', () => {
+  it('uses the complete localized template and effective-locale number formatting', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart
+        locale="de-DE"
+        .strings=${{
+          liteChartMarkSummary: '{series} – {label}: {value}; Position {index}/{total}',
+        }}
+        .labels=${['Q1']}
+        .datasets=${[{ label: 'Umsatz', data: [1234.5] }]}
+      ></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="data-list"] li')!.textContent).to.equal(
+      'Umsatz – Q1: 1.234,5; Position 1/1',
+    );
+  });
+
+  it('preserves the built-in English mark summary with no locale override', async () => {
+    const el = (await fixture(html`
+      <lyra-lite-chart .labels=${['Q1']} .datasets=${[{ label: 'Revenue', data: [12] }]}></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="data-list"] li')!.textContent).to.equal(
+      'Revenue, Q1: 12 (1 of 1)',
+    );
+  });
+});
+
+it('positions y-axis labels and title at logical start in RTL', async () => {
+  const el = await mount(html`
+    <lyra-lite-chart
+      style="direction: rtl; inline-size: 320px;"
+      y-label="Revenue"
+      .labels=${['Q1', 'Q2']}
+      .datasets=${[{ label: 'Revenue', data: [12, 20] }]}
+    ></lyra-lite-chart>
+  `);
+
+  const gridLine = el.shadowRoot!.querySelector('[part="grid-line"]')!;
+  const tick = el.shadowRoot!.querySelector('[part="axis-label"]')!;
+  const title = el.shadowRoot!.querySelector('[part="axis-title"]')!;
+  expect(Number(tick.getAttribute('x'))).to.be.greaterThan(Number(gridLine.getAttribute('x2')));
+  expect(tick.getAttribute('text-anchor')).to.equal('start');
+  expect(Number(title.getAttribute('x'))).to.be.greaterThan(160);
+  expect(title.getAttribute('transform')).to.contain('rotate(90');
+});
+
+it('can shrink to a 320px allocation with long chart content', async () => {
+  const wrapper = await fixture(html`
+    <div style="display: flex; inline-size: 320px;">
+      <lyra-lite-chart
+        legend
+        .labels=${['A category label that is intentionally very long', 'Another translated category label']}
+        .datasets=${[{ label: 'A deliberately long translated revenue series label', data: [1, 2] }]}
+      ></lyra-lite-chart>
+    </div>
+  `);
+  const el = wrapper.querySelector('lyra-lite-chart') as LyraLiteChart;
+  await el.updateComplete;
+
+  expect(getComputedStyle(el).minInlineSize).to.equal('0px');
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
 
 // --- selectedIndex -------------------------------------------------------------------

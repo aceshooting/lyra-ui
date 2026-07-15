@@ -38,6 +38,23 @@ export const Ring: Story = {
   },
 };
 
+/** Narrow-allocation and long-content evidence for meters embedded in compact panels. */
+export const NarrowLongContent: Story = {
+  name: 'Narrow (320px) with long content',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lyra-context-meter
+        aria-label="Occupancy of the shared multilingual conversation context window"
+        total="131072"
+        label="Shared multilingual conversation context-window occupancy"
+      ></lyra-context-meter>
+    </div>
+  `,
+  play: async ({ canvasElement }) => {
+    withSegments(canvasElement.querySelector('lyra-context-meter')!, CONTEXT_SEGMENTS);
+  },
+};
+
 export const NearCapacity: Story = {
   name: 'Near capacity (danger tone)',
   render: () => html`<lyra-context-meter total="8000" label="8K context window"></lyra-context-meter>`,

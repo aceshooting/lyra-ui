@@ -4,6 +4,7 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
+    min-inline-size: 0;
   }
   :host([variant='ring']) {
     display: inline-block;
@@ -22,6 +23,8 @@ export const styles = css`
   }
 
   [part='label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text-quiet);
     font-family: var(--lyra-font);
