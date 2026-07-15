@@ -215,6 +215,8 @@ it('reconciles childCount correctly through a forwarding <slot> (children.length
     const indicator = group.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLElement;
     expect(indicator).to.exist;
     expect(indicator.textContent!.trim()).to.equal('+1');
+    const forwardedChips = Array.from(host.querySelectorAll('lyra-chip')) as HTMLElement[];
+    expect(forwardedChips.map((chip) => chip.hidden)).to.deep.equal([false, false, true]);
   } finally {
     console.warn = originalWarn;
   }

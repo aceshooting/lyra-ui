@@ -41,9 +41,9 @@ export interface LyraChipGroupEventMap {
 export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** Maximum number of direct children shown before the rest collapse behind
-   *  a "+N" indicator. Unset (the default) means no limit — every child is
-   *  always shown. */
+  /** Maximum number of assigned children shown before the rest collapse behind a "+N"
+   *  indicator. Flattened slot-forwarded children count the same as direct light-DOM children.
+   *  Unset (the default) means no limit — every child is always shown. */
   @property({ type: Number, attribute: 'max-visible' }) maxVisible?: number;
 
   // Tracks the default slot's assigned-element count, the same
@@ -96,7 +96,9 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   private syncChildVisibility(): void {
     const max = this.maxVisible;
     const overflowing = this.hasOverflow;
-    Array.from(this.children).forEach((child, i) => {
+    const slot = this.shadowRoot?.querySelector('slot');
+    const assignedChildren = slot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
+    assignedChildren.forEach((child, i) => {
       (child as HTMLElement).hidden = overflowing && !this.expanded && i >= (max as number);
     });
   }
@@ -141,4 +143,3 @@ declare global {
     'lyra-chip-group': LyraChipGroup;
   }
 }
-
