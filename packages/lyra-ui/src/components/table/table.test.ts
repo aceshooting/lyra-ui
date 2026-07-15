@@ -1174,4 +1174,35 @@ describe('expandable rows', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1); // only 'b'
   });
+
+  it('activates the chevron toggle via native button keydown (Enter) without triggering row activation or preventDefault', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    let rowClicked = false;
+    el.addEventListener('lyra-row-click', () => (rowClicked = true));
+
+    const toggleButton = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
+    toggleButton.focus();
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    const notPrevented = toggleButton.dispatchEvent(event);
+
+    expect(rowClicked).to.be.false;
+    expect(notPrevented).to.be.true;
+  });
+
+  it('is accessible with expandedContent and an open row', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    el.expandedKeys = new Set(['a']);
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
 });
