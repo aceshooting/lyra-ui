@@ -11,6 +11,9 @@ export type CardAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined
  * direct `<lyra-*>` counterpart to `<wa-card>`'s contract, staying slot-compatible with
  * `lyra-result-card` where they overlap.
  *
+ * The header is allocation-responsive: long or translated header content can shrink and wrap,
+ * and the actions group moves onto another line when both no longer fit side by side.
+ *
  * @customElement lyra-card
  * @slot - The card body.
  * @slot header - Header row content, rendered above the body.

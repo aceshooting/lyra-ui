@@ -51,10 +51,17 @@ export const styles = css`
   }
   [part='header'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    min-inline-size: 0;
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-s) var(--lyra-space-m);
     border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+  }
+  ::slotted([slot='header']) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='actions'] {
     display: flex;

@@ -55,6 +55,22 @@ describe('lyra-card', () => {
     expect(el.hasAttribute('interactive')).to.be.true;
   });
 
+  it('wraps a long header and its actions without overflowing a narrow allocation', async () => {
+    const el = (await fixture(html`
+      <lyra-card style="inline-size: 320px; max-inline-size: 100%;">
+        <span slot="header">QuarterlyGenerationForecastWithAnIntentionallyLongUnbrokenTitle</span>
+        <span slot="actions"><button type="button">Review</button><button type="button">Share</button></span>
+        Body
+      </lyra-card>
+    `)) as LyraCard;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const title = el.querySelector('[slot="header"]') as HTMLElement;
+
+    expect(getComputedStyle(header).flexWrap).to.equal('wrap');
+    expect(getComputedStyle(title).minInlineSize).to.equal('0px');
+    expect(header.scrollWidth).to.be.at.most(header.clientWidth);
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`<lyra-card href="/x"><span slot="header">Title</span>body</lyra-card>`)) as LyraCard;
     await expect(el).to.be.accessible();

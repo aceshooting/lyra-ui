@@ -107,3 +107,27 @@ export const HeaderOnly: Story = {
     </lyra-card>
   `,
 };
+
+export const NarrowHeaderActions: Story = {
+  name: 'Narrow header with long content and actions',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'At a 320px allocation, long or translated header content wraps and the actions group can move to another line without overflowing the card.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-card style="inline-size:320px; max-inline-size:100%;">
+      <span slot="header" style="font-weight:600;">
+        Vierteljährliche Energieerzeugungsprognose für die Dachanlage
+      </span>
+      <span slot="actions">
+        <button type="button">Review</button>
+        <button type="button">Share</button>
+      </span>
+      Body content remains within the same narrow allocation.
+    </lyra-card>
+  `,
+};
