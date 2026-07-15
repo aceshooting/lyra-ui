@@ -368,7 +368,9 @@ export type LyraMessageKey =
   | 'pdfViewerZoomOut'
   | 'pdfViewerCurrentZoom'
   | 'pdfViewerPreviousPage'
-  | 'pdfViewerNextPage';
+  | 'pdfViewerNextPage'
+  | 'spreadsheetViewerUnavailable'
+  | 'csvViewerUnavailable';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -591,6 +593,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewGenericFile: 'this file',
   documentPreviewTypeDocument: 'document',
   documentPreviewTypeImage: 'image',
+  spreadsheetViewerUnavailable: 'Spreadsheet preview is unavailable.',
+  csvViewerUnavailable: 'CSV preview is unavailable.',
   documentPreviewTypeDataset: 'dataset',
   documentPreviewTypeContact: 'contact',
   download: 'Download',
