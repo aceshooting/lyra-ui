@@ -14,6 +14,39 @@ export const styles = css`
        react to the table's own available width instead of the viewport's. */
     container-type: inline-size;
   }
+  [part='filter-label'] {
+    display: flex;
+    align-items: center;
+    gap: var(--lyra-space-s);
+    padding: var(--lyra-space-s);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    color: var(--lyra-color-text-muted);
+    font-size: var(--lyra-font-size-md-sm);
+  }
+  [part='filter'] {
+    min-inline-size: 0;
+    flex: 1;
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    border-radius: var(--lyra-radius-xs);
+    background: var(--lyra-color-surface);
+    color: var(--lyra-color-text);
+    font: inherit;
+  }
+  [part='filter']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='loading'] {
+    display: grid;
+    place-items: center;
+    min-block-size: var(--lyra-size-8rem);
+    padding: var(--lyra-space-l);
+  }
+  [part='pagination'] {
+    display: block;
+    border-block-start: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+  }
   /*
    * Column priority (columns[].priority) hides [data-priority='low']/
    * ['medium'] header/cells as the container narrows. showAllColumns
@@ -100,6 +133,14 @@ export const styles = css`
   [part='row'][aria-selected='true'] {
     background: var(--lyra-color-brand-quiet);
   }
+  [part='group-cell'] {
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    background: var(--lyra-color-surface-raised);
+    color: var(--lyra-color-text-quiet);
+    font-weight: var(--lyra-font-weight-semibold);
+    text-align: start;
+  }
   [part='row']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
@@ -107,6 +148,21 @@ export const styles = css`
   [part='cell'] {
     padding: var(--lyra-space-s);
     border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+  }
+  [part='cell-editor'] {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    padding: var(--lyra-space-xs) var(--lyra-space-s);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
+    border-radius: var(--lyra-radius-xs);
+    background: var(--lyra-color-surface);
+    color: var(--lyra-color-text);
+    font: inherit;
+  }
+  [part='cell-editor']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='cell'][data-align='end'] {
     text-align: end;

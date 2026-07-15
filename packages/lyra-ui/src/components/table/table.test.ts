@@ -13,6 +13,11 @@ const columns: TableColumn<Row>[] = [
   { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
   { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
 ];
+
+const editableColumns: TableColumn<Row>[] = [
+  { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+  { key: 'score', label: 'Score', editable: true, editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+];
 const rows: Row[] = [
   { id: 'a', name: 'Alpha', score: 3 },
   { id: 'b', name: 'Beta', score: 1 },
@@ -29,6 +34,116 @@ it('renders header labels and a row per item, keyed by rowKey', async () => {
   );
   expect(headers).to.deep.equal(['Name', 'Score']);
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
+});
+
+it('opens an editable cell on double-click and emits a typed edit intent', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+  cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
+  expect(input).to.exist;
+  input.value = 'Renamed';
+  const eventPromise = oneEvent(el, 'lyra-cell-edit');
+  input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  const event = await eventPromise;
+
+  expect(event.detail.key).to.equal('name');
+  expect(event.detail.value).to.equal('Renamed');
+  expect(event.detail.row).to.deep.equal(rows[0]);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
+});
+
+it('renders grouped row sections without making group headers focus stops', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [rows[0], rows[1], { id: 'c', name: 'Gamma', score: 2 }];
+  el.rowKey = (r) => r.id;
+  el.groupBy = (r) => (r.score > 2 ? 'Passing' : 'Needs review');
+  await el.updateComplete;
+
+  const groups = [...el.shadowRoot!.querySelectorAll('[part="group-row"]')];
+  expect(groups.length).to.equal(2);
+  expect(groups[0].textContent).to.contain('Passing');
+  expect(groups[1].textContent).to.contain('Needs review');
+  expect(groups[0].getAttribute('tabindex')).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
+});
+
+it('filters rows through the built-in filter field and emits the requested text', async () => {
+  const el = (await fixture(html`<lyra-table filterable></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  const eventPromise = oneEvent(el, 'lyra-filter-change');
+  input.value = 'beta';
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  const event = await eventPromise;
+  await el.updateComplete;
+
+  expect(event.detail).to.deep.equal({ text: 'beta' });
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
+});
+
+it('paginates client-side rows and emits controlled page requests', async () => {
+  const el = (await fixture(html`<lyra-table page-size="1"></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Alpha');
+
+  const next = el.shadowRoot!.querySelector('lyra-pagination')!.shadowRoot!.querySelector(
+    '[part="next-button"]',
+  ) as HTMLButtonElement;
+  const eventPromise = oneEvent(el, 'lyra-page-change');
+  next.click();
+  const event = await eventPromise;
+  expect(event.detail).to.deep.equal({ page: 2 });
+  expect(el.page).to.equal(1);
+
+  el.page = 2;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
+});
+
+it('renders a localized busy state before rows while loading', async () => {
+  const el = (await fixture(html`<lyra-table loading></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="loading"] lyra-spinner')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+  await expect(el).to.be.accessible();
+});
+
+it('supports opt-in multiple row selection without changing the default presentational mode', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  el.selectionMode = 'multiple';
+  await el.updateComplete;
+  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  const eventPromise = oneEvent(el, 'lyra-selection-change');
+  row.click();
+  const event = await eventPromise;
+  expect(event.detail.keys).to.deep.equal(['a']);
+  expect(el.selectedKeys.has('a')).to.be.true;
+  expect(row.getAttribute('aria-selected')).to.equal('true');
 });
 
 it('emits lyra-sort when a sortable header is clicked', async () => {

@@ -53,6 +53,59 @@ export const LoadMore: Story = {
     html`<lyra-table .columns=${columns} .rows=${rows} has-more more-label="Load more rows"></lyra-table>`,
 };
 
+export const Filterable: Story = {
+  render: () =>
+    html`<lyra-table
+      filterable
+      .columns=${columns}
+      .rows=${rows}
+      .rowKey=${(r: DemoRow) => r.id}
+    ></lyra-table>`,
+};
+
+export const Paginated: Story = {
+  render: () =>
+    html`<lyra-table
+      page-size="2"
+      .columns=${columns}
+      .rows=${[
+        ...rows,
+        { id: 'd', name: 'Delta', score: 68 },
+        { id: 'e', name: 'Epsilon', score: 64 },
+      ]}
+      .rowKey=${(r: DemoRow) => r.id}
+    ></lyra-table>`,
+};
+
+export const Loading: Story = {
+  render: () => html`<lyra-table loading .columns=${columns} .rows=${rows}></lyra-table>`,
+};
+
+const editableStoryColumns: TableColumn<DemoRow>[] = [
+  { key: 'name', label: 'Name', editable: true, editValue: (r) => r.name, cell: (r) => r.name },
+  { key: 'score', label: 'Score', editable: true, editType: 'number', editValue: (r) => r.score, cell: (r) => r.score },
+];
+
+export const EditableCells: Story = {
+  render: () =>
+    html`<lyra-table
+      .columns=${editableStoryColumns}
+      .rows=${rows}
+      .rowKey=${(r: DemoRow) => r.id}
+      @lyra-cell-edit=${(event: CustomEvent) => console.log(event.detail)}
+    ></lyra-table>`,
+};
+
+export const GroupedRows: Story = {
+  render: () =>
+    html`<lyra-table
+      .columns=${columns}
+      .rows=${rows}
+      .groupBy=${(r: DemoRow) => (r.score > 80 ? 'Passing' : 'Needs review')}
+      .groupLabel=${(key: string | number, grouped: DemoRow[]) => html`<strong>${key}</strong> (${grouped.length})`}
+    ></lyra-table>`,
+};
+
 interface DetailRow extends DemoRow {
   region: string;
   updated: string;

@@ -7,6 +7,8 @@ import { isRtl } from '../../internal/rtl.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../internal/icons.js';
 import '../empty/empty.class.js';
+import '../pagination/pagination.js';
+import '../spinner/spinner.js';
 
 export interface TableColumn<T> {
   key: string;
@@ -44,6 +46,15 @@ export interface TableColumn<T> {
    *  background that a `cell()`-returned inner element can't paint into the cell's own padding.
    *  Omit for no per-cell style override (the default; unchanged output). */
   cellStyle?(row: T): Record<string, string> | undefined;
+  /** Enables double-click inline editing for this cell. The table emits the
+   *  proposed value and never mutates `row`; apply the change in the consumer
+   *  and pass the updated `rows` back in. */
+  editable?: boolean;
+  /** Reads the value shown in the inline editor. When omitted, `row[key]` is
+   *  used for record-like rows. */
+  editValue?: (row: T) => string | number;
+  /** Native editor type used when `editable` is enabled. */
+  editType?: 'text' | 'number';
   cell: (row: T) => unknown;
 }
 
@@ -98,6 +109,10 @@ export interface LyraTableEventMap<T = unknown> {
   'lyra-row-click': CustomEvent<{ row: T }>;
   'lyra-row-expand-toggle': CustomEvent<{ row: T; key: string | number }>;
   'lyra-load-more': CustomEvent<undefined>;
+  'lyra-selection-change': CustomEvent<{ keys: Array<string | number> }>;
+  'lyra-filter-change': CustomEvent<{ text: string }>;
+  'lyra-page-change': CustomEvent<{ page: number }>;
+  'lyra-cell-edit': CustomEvent<{ row: T; key: string; value: string | number }>;
 }
 /**
  * `<lyra-table>` — a presentational, sort/select-aware data table.
@@ -150,6 +165,24 @@ export interface LyraTableEventMap<T = unknown> {
  * on activation, mirroring `sortKey`/`selectedKey`'s existing
  * presentational-only convention.
  *
+ * Selection is opt-in through the `selectionMode` property. Use `single` or
+ * `multiple` to self-manage row selection; the default `none` remains
+ * presentational. `selectedKeys` contains the raw keys selected in multiple
+ * mode.
+ *
+ * `filterable` adds a compact search field above the grid. `filterText` is
+ * controlled and emits `lyra-filter-change`; `filter` can provide a typed
+ * predicate, otherwise the row is matched against its JSON representation.
+ * `pageSize` enables controlled pagination through the existing
+ * `<lyra-pagination>` primitive. Client mode slices `rows`; server mode
+ * renders the supplied page unchanged while using `totalItems` for the
+ * navigation summary. `loading` keeps the table shell busy and renders an
+ * indeterminate spinner.
+ * Columns with `editable: true` open a native text/number editor on
+ * double-click and emit `lyra-cell-edit`; row mutation remains consumer-owned.
+ * `groupBy` inserts non-focusable group header rows before each group; use
+ * `groupLabel` when the raw group key needs custom content.
+ *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
  * @event lyra-row-click - A row was activated. `detail: { row }`.
@@ -164,6 +197,10 @@ export interface LyraTableEventMap<T = unknown> {
  *   `detail: { row, key }`. Fired only when `expandedContent` is set and
  *   the row passes `canExpand`; does not itself mutate `expandedKeys` — the
  *   consumer updates it and passes the new value back in.
+ * @event lyra-selection-change - Opt-in row selection changed. `detail: { keys }`.
+ * @event lyra-filter-change - The filter field changed. `detail: { text }`.
+ * @event lyra-page-change - A pagination control requested a page. `detail: { page }`.
+ * @event lyra-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
  * @csspart head - The `<thead>` element.
@@ -173,6 +210,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart foot - The `<tfoot>`, only rendered when at least one column defines `footer`.
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
+ * @csspart cell-editor - The native inline cell editor, shown after a double-click on an editable cell.
+ * @csspart group-row - A non-focusable group header row.
+ * @csspart group-cell - The group header cell.
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
@@ -185,6 +225,11 @@ export interface LyraTableEventMap<T = unknown> {
  *   row whose key is in `expandedKeys`.
  * @csspart expanded-cell - The single `colspan`-spanning `<td>` inside
  *   `expanded-row`, containing `expandedContent(row)`.
+ * @csspart group-row - A non-focusable group header row.
+ * @csspart group-cell - The full-width group header cell.
+ * @csspart filter - The optional row-filter input.
+ * @csspart loading - The loading-state wrapper.
+ * @csspart pagination - The optional pagination component.
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static styles = [LyraElement.styles, styles];
@@ -202,6 +247,24 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  targets) can silently attach to the wrong row. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ attribute: false }) selectedKey: string | number | null = null;
+  @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: 'none' | 'single' | 'multiple' = 'none';
+  @property({ attribute: false }) selectedKeys: Set<string | number> = new Set();
+  @property({ type: Boolean, reflect: true }) filterable = false;
+  @property({ attribute: 'filter-text' }) filterText = '';
+  @property({ attribute: false }) filter?: (row: T, text: string) => boolean;
+  @property({ attribute: 'filter-label' }) filterLabel = '';
+  @property({ attribute: 'filter-placeholder' }) filterPlaceholder = '';
+  @property({ type: Boolean, reflect: true }) loading = false;
+  @property({ attribute: 'loading-label' }) loadingLabel = '';
+  @property({ attribute: false }) groupBy?: (row: T) => string | number;
+  @property({ attribute: false }) groupLabel?: (key: string | number, rows: T[]) => unknown;
+  /** Set to a positive value to enable the controlled pagination footer. */
+  @property({ type: Number, attribute: 'page-size' }) pageSize = 0;
+  /** Controlled current page used when `pageSize` is positive. */
+  @property({ type: Number, reflect: true }) page = 1;
+  /** Total item count for server pagination; `-1` derives it from filtered rows. */
+  @property({ type: Number, attribute: 'total-items' }) totalItems = -1;
+  @property({ reflect: true, attribute: 'pagination-mode' }) paginationMode: 'client' | 'server' = 'client';
   /** Renders a full-width panel beneath a row when that row's key is in
    *  `expandedKeys`. Table-level (not per-column) since the panel spans
    *  every column via `colspan`. Setting this makes every row render a
@@ -258,8 +321,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  clicked/navigated to, at which point `focusedRowKey()` falls back to
    *  `selectedKey` (if it matches a row) or the first row. */
   @state() private activeRowKey: string | null = null;
+  @state() private editingCell: { rowKey: string; columnKey: string } | null = null;
 
-  private rowsByKey = new Map<string, T>();
+  private rowsByKey = new Map<string, { row: T; index: number }>();
   private columnsByKey = new Map<string, TableColumn<T>>();
 
   /** Watches `[part='base']`'s own inline-size — the `@container` query
@@ -362,6 +426,56 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return this.rowKey ? this.rowKey(row) : index;
   }
 
+  private matchingEntries(): Array<{ row: T; index: number }> {
+    const text = this.filterText.trim();
+    if (text === '') return this.rows.map((row, index) => ({ row, index }));
+    const normalized = text.toLocaleLowerCase(this.effectiveLocale);
+    return this.rows.flatMap((row, index) => {
+      const matches = this.filter
+        ? this.filter(row, text)
+        : JSON.stringify(row).toLocaleLowerCase(this.effectiveLocale).includes(normalized);
+      return matches ? [{ row, index }] : [];
+    });
+  }
+
+  private get normalizedPageSize(): number {
+    return Number.isFinite(this.pageSize) ? Math.max(0, Math.trunc(this.pageSize)) : 0;
+  }
+
+  private get matchingTotalItems(): number {
+    if (Number.isFinite(this.totalItems) && this.totalItems >= 0) return Math.trunc(this.totalItems);
+    return this.matchingEntries().length;
+  }
+
+  private get pageCount(): number {
+    const pageSize = this.normalizedPageSize;
+    return pageSize > 0 ? Math.ceil(this.matchingTotalItems / pageSize) : 0;
+  }
+
+  private get appliedPage(): number {
+    if (this.pageCount === 0) return 1;
+    const page = Number.isFinite(this.page) ? Math.trunc(this.page) : 1;
+    return Math.min(this.pageCount, Math.max(1, page));
+  }
+
+  private renderedEntries(): Array<{ row: T; index: number }> {
+    const entries = this.matchingEntries();
+    if (this.normalizedPageSize === 0 || this.paginationMode === 'server') return entries;
+    const start = (this.appliedPage - 1) * this.normalizedPageSize;
+    return entries.slice(start, start + this.normalizedPageSize);
+  }
+
+  private onFilterInput = (event: Event): void => {
+    const input = event.currentTarget as HTMLInputElement;
+    this.filterText = input.value;
+    this.emit('lyra-filter-change', { text: this.filterText });
+  };
+
+  private onPaginationChange = (event: Event): void => {
+    event.stopPropagation();
+    this.emit('lyra-page-change', (event as CustomEvent<{ page: number }>).detail);
+  };
+
   /** The header cell that currently owns `tabindex="0"`. */
   private focusedColKey(): string | null {
     const visible = this.visibleHeaders();
@@ -383,12 +497,27 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       const selected = encodeKey(this.selectedKey);
       if (this.rowsByKey.has(selected)) return selected;
     }
-    return this.rows.length > 0 ? encodeKey(this.keyOf(this.rows[0], 0)) : null;
+    const first = this.renderedEntries()[0];
+    return first ? encodeKey(this.keyOf(first.row, first.index)) : null;
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    if (changed.has('rows') || changed.has('rowKey')) {
-      this.rowsByKey = new Map(this.rows.map((row, i) => [encodeKey(this.keyOf(row, i)), row]));
+    if (
+      changed.has('rows') ||
+      changed.has('rowKey') ||
+      changed.has('filterText') ||
+      changed.has('filter') ||
+      changed.has('page') ||
+      changed.has('pageSize') ||
+      changed.has('paginationMode') ||
+      changed.has('totalItems')
+    ) {
+      this.rowsByKey = new Map(
+        this.renderedEntries().map((entry) => [
+          encodeKey(this.keyOf(entry.row, entry.index)),
+          entry,
+        ]),
+      );
     }
     if (changed.has('columns')) {
       this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
@@ -466,6 +595,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const base = this.renderRoot.querySelector('[part="base"]');
     if (base) this.observeBase(base);
     this.observeHeaders();
+    if (changed.has('editingCell') && this.editingCell) {
+      queueMicrotask(() => {
+        (this.renderRoot.querySelector('[part="cell-editor"]') as HTMLInputElement | null)?.focus();
+      });
+    }
     // Deferred to a microtask rather than called synchronously here: a real
     // priority-hidden transition mutates the reactive `columnsHidden`
     // property, and doing that from inside this same updated() call stack
@@ -485,13 +619,68 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private activateRow(key: string): void {
     this.activeRowKey = key;
-    const row = this.rowsByKey.get(key);
-    if (row !== undefined) this.emit('lyra-row-click', { row });
+    const entry = this.rowsByKey.get(key);
+    if (entry === undefined) return;
+    const { row, index } = entry;
+    this.emit('lyra-row-click', { row });
+    if (this.selectionMode === 'single') {
+      this.selectedKey = this.keyOf(row, index);
+      this.emit('lyra-selection-change', { keys: this.selectedKey === null ? [] : [this.selectedKey] });
+    } else if (this.selectionMode === 'multiple') {
+      const rawKey = this.keyOf(row, index);
+      const next = new Set(this.selectedKeys);
+      if (next.has(rawKey)) next.delete(rawKey); else next.add(rawKey);
+      this.selectedKeys = next;
+      this.emit('lyra-selection-change', { keys: [...next] });
+    }
   }
 
+  private editorValue(row: T, column: TableColumn<T>): string {
+    const value = column.editValue?.(row) ?? (row as Record<string, unknown>)[column.key] ?? '';
+    return String(value);
+  }
+
+  private startEditing(rowKey: string, columnKey: string): void {
+    const column = this.columnsByKey.get(columnKey);
+    if (!column?.editable || !this.rowsByKey.has(rowKey)) return;
+    this.editingCell = { rowKey, columnKey };
+  }
+
+  private commitEdit(event: Event, rowKey: string, columnKey: string): void {
+    const input = event.currentTarget as HTMLInputElement;
+    const entry = this.rowsByKey.get(rowKey);
+    const column = this.columnsByKey.get(columnKey);
+    if (!entry || !column?.editable) return;
+    const value = column.editType === 'number' && input.value !== '' ? Number(input.value) : input.value;
+    this.emit('lyra-cell-edit', { row: entry.row, key: columnKey, value });
+    this.editingCell = null;
+  }
+
+  private onEditorKeyDown = (event: KeyboardEvent, rowKey: string, columnKey: string): void => {
+    event.stopPropagation();
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.commitEdit(event, rowKey, columnKey);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.editingCell = null;
+    }
+  };
+
+  private onTableDoubleClick = (event: MouseEvent): void => {
+    const target = event.target as HTMLElement;
+    const table = event.currentTarget as HTMLElement;
+    if (closestInteractive(target, table)) return;
+    const cell = target.closest('[part="cell"][data-col-key]') as HTMLElement | null;
+    const row = target.closest('[data-row-key]') as HTMLElement | null;
+    if (cell && row?.dataset.rowKey && cell.dataset.colKey) {
+      this.startEditing(row.dataset.rowKey, cell.dataset.colKey);
+    }
+  };
+
   private activateExpandToggle(key: string | number): void {
-    const row = this.rowsByKey.get(encodeKey(key));
-    if (row !== undefined) this.emit('lyra-row-expand-toggle', { row, key });
+    const entry = this.rowsByKey.get(encodeKey(key));
+    if (entry !== undefined) this.emit('lyra-row-expand-toggle', { row: entry.row, key });
   }
 
   /** Header cells currently in the tab sequence — excludes columns hidden by
@@ -643,7 +832,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         description=${this.noColumnsDescription}
       ></lyra-empty>`;
     }
-    if (this.rows.length === 0) {
+    if (this.loading) {
+      return html`<div part="base" aria-busy="true">
+        <div part="loading" role="status" aria-live="polite">
+          <lyra-spinner label-placement="after" accessible-label=${this.localize('tableLoading', this.loadingLabel || undefined)}>
+            ${this.localize('tableLoading', this.loadingLabel || undefined)}
+          </lyra-spinner>
+        </div>
+      </div>`;
+    }
+
+    const matchingEntries = this.matchingEntries();
+    if (this.rows.length === 0 && !this.filterable && this.normalizedPageSize === 0) {
       return html`<lyra-empty
         heading=${this.localize('noData', this.emptyHeading || undefined)}
         description=${this.emptyDescription}
@@ -654,127 +854,187 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const focusedRow = this.focusedRowKey();
     const hasColumnWidths = this.columns.some((col) => col.width);
     const hasExpand = Boolean(this.expandedContent);
+    const renderedEntries = this.renderedEntries();
+    const hasPagination = this.normalizedPageSize > 0;
+    const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
+    const filterPlaceholder = this.localize('tableFilterPlaceholder', this.filterPlaceholder || undefined);
+    const tableContent =
+      renderedEntries.length === 0
+        ? html`<lyra-empty
+            compact
+            heading=${this.localize('noData', this.emptyHeading || undefined)}
+            description=${this.emptyDescription}
+          ></lyra-empty>`
+        : html`<table
+            part="table"
+            role="grid"
+            aria-label=${this.getAttribute('aria-label') || nothing}
+            ?data-has-column-widths=${hasColumnWidths}
+            @click=${this.onTableClick}
+            @keydown=${this.onTableKeyDown}
+            @dblclick=${this.onTableDoubleClick}
+          >
+            <colgroup>
+              ${hasExpand ? html`<col style=${styleMap({ 'inline-size': '2.5rem' })} />` : nothing}
+              ${this.columns.map(
+                (col) =>
+                  html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,
+              )}
+            </colgroup>
+            <thead part="head">
+              <tr role="row">
+                ${hasExpand
+                  ? html`<th part="header-cell" data-row-expand-toggle aria-hidden="true"></th>`
+                  : nothing}
+                ${this.columns.map((col) => {
+                  const active = Boolean(col.sortable) && this.sortKey === col.key;
+                  const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+                  return html`<th
+                    part="header-cell"
+                    role="columnheader"
+                    scope="col"
+                    data-col-key=${col.key}
+                    data-align=${col.align ?? 'start'}
+                    data-priority=${col.priority ?? nothing}
+                    data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                    ?data-sortable=${col.sortable}
+                    aria-sort=${col.sortable ? ariaSort : nothing}
+                    tabindex=${col.key === focusedCol ? '0' : '-1'}
+                  >
+                    ${col.headerCell ? col.headerCell(col) : col.label}
+                    ${active
+                      ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
+                          >${chevronIcon()}</span
+                        >`
+                      : nothing}
+                  </th>`;
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              ${repeat(
+                renderedEntries,
+                (entry) => this.keyOf(entry.row, entry.index),
+                (entry, entryIndex) => {
+                  const { row, index } = entry;
+                  const key = this.keyOf(row, index);
+                  const selected = (this.selectedKey !== null && this.selectedKey === key) || this.selectedKeys.has(key);
+                  const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
+                  const rowExpanded = canExpandRow && this.expandedKeys.has(key);
+                  const groupKey = this.groupBy?.(row);
+                  const previousGroupKey =
+                    entryIndex > 0 ? this.groupBy?.(renderedEntries[entryIndex - 1]!.row) : undefined;
+                  const isNewGroup =
+                    this.groupBy !== undefined && (entryIndex === 0 || groupKey !== previousGroupKey);
+                  return [
+                    isNewGroup
+                      ? html`<tr part="group-row" role="row">
+                          <td
+                            part="group-cell"
+                            role="gridcell"
+                            colspan=${this.columns.length + (hasExpand ? 1 : 0)}
+                          >
+                            ${this.groupLabel
+                              ? this.groupLabel(
+                                  groupKey!,
+                                  renderedEntries
+                                    .filter((candidate) => this.groupBy?.(candidate.row) === groupKey)
+                                    .map((candidate) => candidate.row),
+                                )
+                              : String(groupKey)}
+                          </td>
+                        </tr>`
+                      : nothing,
+                    html`<tr
+                      part="row"
+                      role="row"
+                      data-row-key=${encodeKey(key)}
+                      aria-selected=${selected ? 'true' : 'false'}
+                      tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
+                    >
+                      ${hasExpand
+                        ? html`<td part="expand-toggle-cell">
+                            ${canExpandRow
+                              ? html`<button
+                                  type="button"
+                                  part="row-expand-toggle"
+                                  aria-expanded=${String(rowExpanded)}
+                                  aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
+                                  @click=${() => this.activateExpandToggle(key)}
+                                >
+                                  <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
+                                </button>`
+                              : nothing}
+                          </td>`
+                        : nothing}
+                      ${this.columns.map(
+                        (col) =>
+                          html`<td
+                            part="cell"
+                            role="gridcell"
+                            data-col-key=${col.key}
+                            data-align=${col.align ?? 'start'}
+                            data-priority=${col.priority ?? nothing}
+                            data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                            style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
+                          >
+                            ${this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key
+                              ? html`<input
+                                  part="cell-editor"
+                                  type=${col.editType ?? 'text'}
+                                  .value=${this.editorValue(row, col)}
+                                  aria-label=${this.localize('tableEditCell', undefined, { column: col.label })}
+                                  @change=${(event: Event) => this.commitEdit(event, encodeKey(key), col.key)}
+                                  @keydown=${(event: KeyboardEvent) =>
+                                    this.onEditorKeyDown(event, encodeKey(key), col.key)}
+                                />`
+                              : col.cell(row)}
+                          </td>`,
+                      )}
+                    </tr>`,
+                    rowExpanded
+                      ? html`<tr part="expanded-row" role="row">
+                          <td part="expanded-cell" role="gridcell" colspan=${this.columns.length + (hasExpand ? 1 : 0)}>
+                            ${this.expandedContent?.(row)}
+                          </td>
+                        </tr>`
+                      : nothing,
+                  ];
+                },
+              )}
+            </tbody>
+            ${this.columns.some((c) => c.footer)
+              ? html`<tfoot part="foot">
+                  <tr part="footer-row">
+                    ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
+                    ${this.columns.map(
+                      (col) => html`<td
+                        part="footer-cell"
+                        data-col-key=${col.key}
+                        data-align=${col.align ?? 'start'}
+                      >${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`,
+                    )}
+                  </tr>
+                </tfoot>`
+              : nothing}
+          </table>`;
 
     return html`
-      <div part="base" ?data-force-visible=${this.showAllColumns}>
-        <table
-          part="table"
-          role="grid"
-          aria-label=${this.getAttribute('aria-label') || nothing}
-          ?data-has-column-widths=${hasColumnWidths}
-          @click=${this.onTableClick}
-          @keydown=${this.onTableKeyDown}
-        >
-          <colgroup>
-            ${hasExpand ? html`<col style=${styleMap({ 'inline-size': '2.5rem' })} />` : nothing}
-            ${this.columns.map(
-              (col) =>
-                html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,
-            )}
-          </colgroup>
-          <thead part="head">
-            <tr role="row">
-              ${hasExpand
-                ? html`<th part="header-cell" data-row-expand-toggle aria-hidden="true"></th>`
-                : nothing}
-              ${this.columns.map((col) => {
-                const active = Boolean(col.sortable) && this.sortKey === col.key;
-                const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
-                return html`<th
-                  part="header-cell"
-                  role="columnheader"
-                  scope="col"
-                  data-col-key=${col.key}
-                  data-align=${col.align ?? 'start'}
-                  data-priority=${col.priority ?? nothing}
-                  data-sticky=${stickyDirection(col.sticky) ?? nothing}
-                  ?data-sortable=${col.sortable}
-                  aria-sort=${col.sortable ? ariaSort : nothing}
-                  tabindex=${col.key === focusedCol ? '0' : '-1'}
-                >
-                  ${col.headerCell ? col.headerCell(col) : col.label}
-                  ${active
-                    ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
-                        >${chevronIcon()}</span
-                      >`
-                    : nothing}
-                </th>`;
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            ${repeat(
-              this.rows,
-              (row, i) => this.keyOf(row, i),
-              (row, i) => {
-                const key = this.keyOf(row, i);
-                const selected = this.selectedKey !== null && this.selectedKey === key;
-                const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
-                const rowExpanded = canExpandRow && this.expandedKeys.has(key);
-                return [
-                  html`<tr
-                    part="row"
-                    role="row"
-                    data-row-key=${encodeKey(key)}
-                    aria-selected=${selected ? 'true' : 'false'}
-                    tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
-                  >
-                    ${hasExpand
-                      ? html`<td part="expand-toggle-cell">
-                          ${canExpandRow
-                            ? html`<button
-                                type="button"
-                                part="row-expand-toggle"
-                                aria-expanded=${String(rowExpanded)}
-                                aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
-                                @click=${() => this.activateExpandToggle(key)}
-                              >
-                                <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
-                              </button>`
-                            : nothing}
-                        </td>`
-                      : nothing}
-                    ${this.columns.map(
-                      (col) =>
-                        html`<td
-                          part="cell"
-                          role="gridcell"
-                          data-col-key=${col.key}
-                          data-align=${col.align ?? 'start'}
-                          data-priority=${col.priority ?? nothing}
-                          data-sticky=${stickyDirection(col.sticky) ?? nothing}
-                          style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
-                        >
-                          ${col.cell(row)}
-                        </td>`,
-                    )}
-                  </tr>`,
-                  rowExpanded
-                    ? html`<tr part="expanded-row" role="row">
-                        <td part="expanded-cell" role="gridcell" colspan=${this.columns.length + 1}>
-                          ${this.expandedContent?.(row)}
-                        </td>
-                      </tr>`
-                    : nothing,
-                ];
-              },
-            )}
-          </tbody>
-          ${this.columns.some((c) => c.footer)
-            ? html`<tfoot part="foot">
-                <tr part="footer-row">
-                  ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
-                  ${this.columns.map(
-                    (col) => html`<td
-                      part="footer-cell"
-                      data-col-key=${col.key}
-                      data-align=${col.align ?? 'start'}
-                    >${col.footer?.(this.rows) ?? ''}</td>`,
-                  )}
-                </tr>
-              </tfoot>`
-            : nothing}
-        </table>
+      <div part="base" ?data-force-visible=${this.showAllColumns} aria-busy="false">
+        ${this.filterable
+          ? html`<label part="filter-label">
+              ${filterLabel}
+              <input
+                part="filter"
+                type="search"
+                .value=${this.filterText}
+                placeholder=${filterPlaceholder}
+                aria-label=${filterLabel}
+                @input=${this.onFilterInput}
+              />
+            </label>`
+          : nothing}
+        ${tableContent}
         ${this.columnsHidden
           ? html`<button
               part="reveal-columns-button"
@@ -795,6 +1055,17 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             >
               ${this.localize('loadMore', this.moreLabel || undefined)}
             </button>`
+          : nothing}
+        ${hasPagination
+          ? html`<lyra-pagination
+              part="pagination"
+              .page=${this.page}
+              .pageSize=${this.normalizedPageSize}
+              .totalItems=${this.matchingTotalItems}
+              .strings=${this.strings}
+              hide-summary
+              @lyra-page-change=${this.onPaginationChange}
+            ></lyra-pagination>`
           : nothing}
       </div>
     `;
