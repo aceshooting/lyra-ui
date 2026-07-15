@@ -27,4 +27,12 @@ describe('installHappyDomFormAssociatedShims', () => {
     expect(stub.validationMessage).to.equal('');
     expect(stub.willValidate).to.be.true;
   });
+
+  it('installs a stub whose setValidity accepts every call shape AnchoredValidityController uses without throwing', () => {
+    const div = document.createElement('div');
+    const stub = installStubInternalsForTest(div);
+    expect(() => stub.setValidity({})).to.not.throw();
+    expect(() => stub.setValidity({ customError: true }, 'message')).to.not.throw();
+    expect(() => stub.setValidity({ customError: true }, 'message', div)).to.not.throw();
+  });
 });

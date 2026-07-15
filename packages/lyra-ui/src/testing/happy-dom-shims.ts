@@ -6,7 +6,10 @@
  * `lyra-combobox`, `lyra-select`, `lyra-checkbox`, `lyra-model-select`, `lyra-time-range`,
  * `lyra-tool-param-form`, plus anything built on the shared `FormAssociated` mixin) calls
  * `this.attachInternals()` unconditionally in its constructor, so instantiating any of them
- * under happy-dom throws immediately without this.
+ * under happy-dom throws immediately without this. The stub also implements `setValidity()`
+ * as a no-op -- `AnchoredValidityController` (the shared validity-refresh controller every
+ * form-associated component uses) calls `internals.setValidity()` on every update, which would
+ * otherwise throw the moment any of those components' `value` changes, not just at construction.
  *
  * `attachInternals()` is specified on the `HTMLElement` interface (not `Element`), and every
  * `lyra-*` component is an `HTMLElement` subclass (via `LitElement`), so this patches
@@ -32,6 +35,7 @@ interface StubElementInternals {
   setFormValue(value: string | File | FormData | null, state?: string | FormData | null): void;
   checkValidity(): boolean;
   reportValidity(): boolean;
+  setValidity(flags?: Partial<ValidityStateFlags>, message?: string, anchor?: HTMLElement): void;
 }
 
 function createStubInternals(): StubElementInternals {
@@ -49,6 +53,9 @@ function createStubInternals(): StubElementInternals {
     },
     reportValidity(): boolean {
       return true;
+    },
+    setValidity(): void {
+      // Intentional no-op -- happy-dom has no real constraint-validation pipeline to feed.
     },
   };
 }
