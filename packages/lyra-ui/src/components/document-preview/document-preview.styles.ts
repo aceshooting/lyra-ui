@@ -8,7 +8,7 @@ export const styles = css`
        scrollbar, same contract as lyra-json-viewer's identical
        --lyra-json-viewer-max-height. */
     --lyra-document-preview-max-height: none;
-    /* No shared --wa-*/--lyra-* monospace token exists to resolve through
+    /* No shared Web Awesome/Lyra monospace token exists to resolve through
        (same gap lyra-json-viewer's own --lyra-json-viewer-font documents) --
        contained here so a host page can retheme it. */
     --lyra-document-preview-font: var(--lyra-font-mono);

@@ -124,8 +124,9 @@ export interface LyraDocumentPreviewEventMap {
  * The one piece of async work this component *does* own is fetching a
  * `text/*`/`application/json` `src` itself (there's no other way to get a
  * `<pre>`'s text content from a URL) — gated behind the same generation-
- * counter guard `<lyra-tool-result-view>`'s `resolve()` uses, so a `src`
- * reassigned mid-fetch can't have a stale response clobber a newer one. A
+ * counter guard `<lyra-tool-result-view>`'s `resolve()` uses, plus an
+ * `AbortController`, so a `src` reassigned mid-fetch cancels the obsolete
+ * request and can't have a stale response clobber a newer one. A
  * failure here (network error, non-2xx response) renders inline via
  * `[part="error"]` and fires `lyra-render-error`, independently of the
  * host-owned `status` prop — mirrors `<lyra-markdown>`'s identical stance
@@ -175,6 +176,9 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart spinner - The converting/loading indicator — indeterminate (`role="status"`) or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
  * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
  * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
+ * @cssprop [--lyra-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
+ * @cssprop [--lyra-document-preview-font=var(--lyra-font-mono)] - Font used for plain-text previews.
+ * @cssprop [--lyra-document-preview-spin-duration=0.8s] - Duration of one indeterminate loading-indicator rotation.
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -190,6 +194,11 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   /** Shown in the header and used as the download link's suggested filename. */
   @property() filename = '';
+
+  /** Alternative text for an image preview. When omitted, `filename` (or a
+   * localized generic fallback) is used. Set this explicitly to an empty
+   * string when the preview image is decorative. */
+  @property() alt?: string;
 
   /** Host-owned lifecycle state. `"converting"` shows the spinner regardless
    *  of `mime-type`/`src`; `"error"` shows `errorMessage` regardless of
@@ -218,6 +227,33 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   // longer current and skip writing its result over a more recent one --
   // same guard <lyra-tool-result-view>'s resolve() uses.
   private fetchGeneration = 0;
+  private fetchController?: AbortController;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (!this.hasUpdated || this.textFetch.kind !== 'idle') return;
+    const safeTextSrc = safeFetchUrl(this.src);
+    if (
+      classifyFormat(this.mimeType) === 'text' &&
+      safeTextSrc !== null &&
+      this.status !== 'converting' &&
+      this.status !== 'error'
+    ) {
+      void this.fetchText(safeTextSrc);
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.fetchController) this.invalidateTextFetch();
+  }
+
+  private invalidateTextFetch(): void {
+    this.fetchGeneration++;
+    this.fetchController?.abort();
+    this.fetchController = undefined;
+    this.textFetch = IDLE_TEXT_FETCH;
+  }
 
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
@@ -247,16 +283,18 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       // No longer applicable (format changed away from text, src cleared,
       // or status moved to converting/error) -- invalidate any in-flight
       // fetch and drop the stale result so a later re-entry starts clean.
-      this.fetchGeneration++;
-      this.textFetch = IDLE_TEXT_FETCH;
+      this.invalidateTextFetch();
     }
   }
 
   private async fetchText(url: string): Promise<void> {
     const generation = ++this.fetchGeneration;
+    this.fetchController?.abort();
+    const controller = new AbortController();
+    this.fetchController = controller;
     this.textFetch = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await response.text();
       if (generation !== this.fetchGeneration) return;
@@ -266,6 +304,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       const message = error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad');
       this.textFetch = { kind: 'error', message };
       this.emit('lyra-render-error', { error });
+    } finally {
+      if (this.fetchController === controller) this.fetchController = undefined;
     }
   }
 
@@ -335,7 +375,10 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     const src = safeMediaSrc(this.src);
     if (src === null) return this.renderDownloadFallback();
-    return html`<img src=${src} alt=${this.filename || this.localize('documentPreviewAlt')} />`;
+    return html`<img
+      src=${src}
+      alt=${this.alt ?? (this.filename || this.localize('documentPreviewAlt'))}
+    />`;
   }
 
   private renderDownloadFallback(): TemplateResult {

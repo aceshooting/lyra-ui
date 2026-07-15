@@ -52,6 +52,20 @@ export const ImagePreview: Story = {
       src=${imageDataUrl}
       mime-type="image/png"
       filename="swatch.png"
+      alt="A solid red status swatch"
+    ></lyra-document-preview>
+  `,
+};
+
+export const DecorativeImagePreview: Story = {
+  name: 'image/* — decorative image',
+  render: () => html`
+    <lyra-document-preview
+      style="max-width: 20rem;"
+      src=${imageDataUrl}
+      mime-type="image/png"
+      filename="decorative-divider.png"
+      alt=""
     ></lyra-document-preview>
   `,
 };

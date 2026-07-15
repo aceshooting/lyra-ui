@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './document-preview.js';
 import type { LyraDocumentPreview } from './document-preview.js';
+import { styles } from './document-preview.styles.js';
 
 const IMAGE_DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -9,9 +10,9 @@ const IMAGE_DATA_URI =
  *  afterward. `@sinonjs/fake-timers` is unavailable in this test environment
  *  (see `<lyra-stream-status>`'s test file), but this needs no timers at
  *  all -- a plain function swap is enough to control a real fetch() call. */
-function stubFetch(impl: (url: string) => Promise<Response>): () => void {
+function stubFetch(impl: (url: string, init?: RequestInit) => Promise<Response>): () => void {
   const original = window.fetch;
-  window.fetch = ((url: string) => impl(url)) as typeof window.fetch;
+  window.fetch = ((url: string, init?: RequestInit) => impl(url, init)) as typeof window.fetch;
   return () => {
     window.fetch = original;
   };
@@ -164,6 +165,35 @@ describe('text/* and application/json dispatch', () => {
         'content for https://example.test/b.txt',
       );
       expect(urls).to.deep.equal(['https://example.test/a.txt', 'https://example.test/b.txt']);
+    } finally {
+      unstub();
+    }
+  });
+
+  it('aborts the stale in-flight fetch when src changes', async () => {
+    let firstSignal: AbortSignal | undefined;
+    const unstub = stubFetch((url, init) => {
+      if (url.endsWith('/a.txt')) {
+        firstSignal = init?.signal ?? undefined;
+        return new Promise(() => {
+          /* superseded request intentionally stays pending */
+        });
+      }
+      return Promise.resolve(textResponse('fresh content'));
+    });
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      expect(firstSignal).to.exist;
+      expect(firstSignal!.aborted).to.be.false;
+
+      el.src = 'https://example.test/b.txt';
+      await el.updateComplete;
+      expect(firstSignal!.aborted).to.be.true;
+      await aTimeout(20);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('pre')?.textContent).to.equal('fresh content');
     } finally {
       unstub();
     }
@@ -338,6 +368,32 @@ describe('image/* dispatch', () => {
       ></lyra-document-preview>
     `)) as LyraDocumentPreview;
     expect(el.shadowRoot!.querySelector('img')?.getAttribute('src')).to.equal(IMAGE_DATA_URI);
+  });
+
+  it('lets an explicit alt override the filename-derived image description', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        src="https://example.test/chart.png"
+        mime-type="image/png"
+        filename="chart.png"
+        alt="Revenue increased throughout the quarter"
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    expect(el.shadowRoot!.querySelector('img')?.getAttribute('alt')).to.equal(
+      'Revenue increased throughout the quarter',
+    );
+  });
+
+  it('preserves an explicit empty alt for a decorative image preview', async () => {
+    const el = (await fixture(html`
+      <lyra-document-preview
+        src="https://example.test/decoration.png"
+        mime-type="image/png"
+        filename="decoration.png"
+        alt=""
+      ></lyra-document-preview>
+    `)) as LyraDocumentPreview;
+    expect(el.shadowRoot!.querySelector('img')?.getAttribute('alt')).to.equal('');
   });
 });
 
@@ -517,6 +573,18 @@ describe('max-height', () => {
     )) as LyraDocumentPreview;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.style.getPropertyValue('--lyra-document-preview-max-height').trim()).to.equal('12rem');
+  });
+});
+
+describe('motion', () => {
+  it('routes spinner timing through a documented custom property and stops it for reduced motion', async () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('--lyra-document-preview-spin-duration: 0.8s;');
+    expect(css).to.include(
+      'animation: lyra-document-preview-spin var(--lyra-document-preview-spin-duration) linear infinite;',
+    );
+    expect(css).to.include('@media (prefers-reduced-motion: reduce)');
+    expect(css).to.include('.ring { animation: none !important; }');
   });
 });
 
