@@ -18,8 +18,10 @@
  *
  * Call `installHappyDomFormAssociatedShims()` once, in a Vitest `setupFiles` entry, before
  * importing any `lyra-ui` component. It is a no-op wherever `attachInternals` already exists
- * (any real browser, or an environment that already supports it) -- safe to call unconditionally
- * from a shared setup file used across multiple test environments.
+ * (any real browser, or an environment that already supports it) or where `HTMLElement` isn't
+ * even a global (a plain Node test environment with no DOM at all) -- safe to call
+ * unconditionally from a shared setup file used across multiple test environments/projects,
+ * including ones that mix DOM and non-DOM test files under one `setupFiles` entry.
  */
 
 interface StubValidityState {
@@ -61,6 +63,7 @@ function createStubInternals(): StubElementInternals {
 }
 
 export function installHappyDomFormAssociatedShims(): void {
+  if (typeof HTMLElement === 'undefined') return;
   if (typeof HTMLElement.prototype.attachInternals === 'function') return;
   HTMLElement.prototype.attachInternals = function attachInternals(): ElementInternals {
     return createStubInternals() as unknown as ElementInternals;

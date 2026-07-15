@@ -11,6 +11,19 @@ describe('installHappyDomFormAssociatedShims', () => {
     expect(HTMLElement.prototype.attachInternals).to.equal(original);
   });
 
+  it('does not throw when HTMLElement is not a global at all (a plain-Node test project sharing one setupFiles entry with a DOM project)', () => {
+    // Can't literally delete HTMLElement in a real browser test-runner env; simulate the
+    // ReferenceError-throwing lookup the function must guard against instead.
+    const globalWithHtmlElement = globalThis as unknown as { HTMLElement?: unknown };
+    const original = globalWithHtmlElement.HTMLElement;
+    delete globalWithHtmlElement.HTMLElement;
+    try {
+      expect(() => installHappyDomFormAssociatedShims()).to.not.throw();
+    } finally {
+      globalWithHtmlElement.HTMLElement = original;
+    }
+  });
+
   it('installs a stub whose setFormValue accepts every call shape used across the library without throwing', () => {
     // Force-install the stub even though attachInternals exists natively here, purely to verify
     // the stub object's own shape in isolation (the real guard is exercised by the test above).
