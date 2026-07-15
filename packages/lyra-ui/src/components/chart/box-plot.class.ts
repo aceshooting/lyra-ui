@@ -37,10 +37,7 @@ function prefersReducedMotion(): boolean {
 }
 
 // Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lyra-chart-*` tokens)
-// even though `buildConfig()` below only threads `grid`/`tick`/`legend` into
-// Chart.js options today — `LyraBoxPlot` has no tooltip customization, but
-// keeping the resolved shape identical lets a tooltip option use the same
-// theme values without changing this method or box-plot.styles.ts.
+// so scales, legends, and tooltips share the same canvas theme contract.
 interface ThemeColors {
   grid: string;
   tick: string;

@@ -206,8 +206,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  is exactly `0` — `null`/non-finite values are always skipped regardless of this flag. Default
    *  `false` preserves today's behavior of a zero-height but focusable/titled bar. */
   @property({ type: Boolean, attribute: 'skip-zero' }) skipZero = false;
-  /** Overrides the internal `PAD_LEFT` (36px) plot-left-padding constant. Unset (the default) keeps
-   *  today's fixed 36px. */
+  /** Overrides the internal `PAD_LEFT` (36px) axis-gutter constant. The gutter is on the left in
+   *  LTR and the right in RTL, keeping the y axis at logical start. Unset keeps the 36px default. */
   @property({ type: Number, attribute: 'pad-left' }) padLeft?: number;
   /** Overrides the internal `BAR_GROUP_GAP` (0.2) fraction of a category slot left as a gap between
    *  categories. Unset (the default) keeps today's fixed 0.2. */
