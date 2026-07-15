@@ -7834,6 +7834,62 @@ registerDocumentRenderer('application/x-example', {
 When no renderer matches, the viewer renders `<lyra-document-preview>`, which handles text and images
 inline and provides a safe generic fallback for other formats.
 
+## `lyra-svg-viewer`
+
+Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
+the scrollable body.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or sanitizing fails.
+
+**CSS parts:** `base`, `body`, `svg`, `spinner`, and `error`.
+
+**Optional peer dependency:** `dompurify`.
+
+## `lyra-html-viewer`
+
+Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
+inside a bounded, scrollable body.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or sanitizing fails.
+
+**CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
+
+**Optional peer dependency:** `dompurify`.
+
+## `lyra-dataset-viewer`
+
+Fetches tab-, pipe-, or delimiter-separated text and renders an accessible table using the optional
+`papaparse` peer. The document registry matches `.tsv`, `.psv`, and `.dat` filenames.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+
+**CSS parts:** `base`, `body`, `table`, `spinner`, and `error`.
+
+**Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
+
+**Optional peer dependency:** `papaparse`.
+
+## `lyra-contact-viewer`
+
+Fetches a vCard document and renders one accessible card per contact. The document registry matches
+`.vcf` filenames and common `FN`, `N`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+
+**CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,
+`contact-email`, `contact-adr`, `spinner`, and `error`.
+
+**Exports:** `parseVCards()` and the `VCardName`, `VCardTypedValue`, `VCardAddress`, and `VCardContact`
+types.
+
 ---
 
 ## `lyra-media-card`

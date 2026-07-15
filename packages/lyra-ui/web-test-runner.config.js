@@ -54,6 +54,15 @@ export { __lyraMaplibreMap as Map, __lyraMaplibreMarker as Marker, __lyraMaplibr
   },
 };
 
+const papaparseEsmInteropPlugin = {
+  name: 'papaparse-esm-interop',
+  transform(context) {
+    if (context.path.includes('/papaparse/') && context.path.includes('papaparse.js')) {
+      return `${context.body.replaceAll('this, function moduleFactory()', 'window, function moduleFactory()')}\nexport default window.Papa;\n`;
+    }
+  },
+};
+
 const browserProduct = process.env.WTR_BROWSER ?? 'chromium';
 if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
   throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
@@ -94,6 +103,7 @@ export default {
     esbuildPlugin({ ts: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
     maplibreEsmInteropPlugin,
+    papaparseEsmInteropPlugin,
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait

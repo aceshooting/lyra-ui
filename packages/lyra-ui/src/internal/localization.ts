@@ -147,6 +147,18 @@ export type LyraMessageKey =
   | 'documentPreviewFailedToLoad'
   | 'documentPreviewGenericError'
   | 'documentViewerLabel'
+  | 'documentViewerMissingSanitizer'
+  | 'svgViewerLabel'
+  | 'htmlViewerLabel'
+  | 'datasetViewerMissingParser'
+  | 'datasetViewerEmpty'
+  | 'datasetViewerCaption'
+  | 'contactViewerNoContacts'
+  | 'contactViewerUnnamedContact'
+  | 'contactViewerPhoneLabel'
+  | 'contactViewerEmailLabel'
+  | 'contactViewerAddressLabel'
+  | 'contactViewerOrganizationLabel'
   | 'exportButtonLabel'
   | 'generationStatusToken'
   | 'generationStatusTokens'
@@ -210,6 +222,8 @@ export type LyraMessageKey =
   | 'documentPreviewGenericFile'
   | 'documentPreviewTypeDocument'
   | 'documentPreviewTypeImage'
+  | 'documentPreviewTypeDataset'
+  | 'documentPreviewTypeContact'
   | 'download'
   | 'exportFormatMenuLabel'
   | 'fileInputDefaultLabel'
@@ -494,6 +508,18 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewFailedToLoad: 'Failed to load document.',
   documentPreviewGenericError: 'Something went wrong.',
   documentViewerLabel: 'Document viewer',
+  documentViewerMissingSanitizer: 'This viewer needs the optional "dompurify" package installed to render safely.',
+  svgViewerLabel: 'SVG image',
+  htmlViewerLabel: 'HTML document',
+  datasetViewerMissingParser: 'This viewer needs the optional "papaparse" package installed to parse this file.',
+  datasetViewerEmpty: 'This dataset has no rows.',
+  datasetViewerCaption: '{count} rows',
+  contactViewerNoContacts: 'No contacts found in this file.',
+  contactViewerUnnamedContact: 'Unnamed contact',
+  contactViewerPhoneLabel: 'Phone',
+  contactViewerEmailLabel: 'Email',
+  contactViewerAddressLabel: 'Address',
+  contactViewerOrganizationLabel: 'Organization',
   exportButtonLabel: 'Export',
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
@@ -557,6 +583,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewGenericFile: 'this file',
   documentPreviewTypeDocument: 'document',
   documentPreviewTypeImage: 'image',
+  documentPreviewTypeDataset: 'dataset',
+  documentPreviewTypeContact: 'contact',
   download: 'Download',
   exportFormatMenuLabel: '{label} format',
   fileInputDefaultLabel: 'Drop files here or click to browse',

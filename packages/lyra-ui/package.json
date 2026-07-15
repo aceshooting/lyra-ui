@@ -102,6 +102,10 @@
     "./dist/components/dock-panel/dock-panel.js",
     "./dist/components/document-preview/document-preview.js",
     "./dist/components/document-viewer/document-viewer.js",
+    "./dist/components/contact-viewer/contact-viewer.js",
+    "./dist/components/dataset-viewer/dataset-viewer.js",
+    "./dist/components/html-viewer/html-viewer.js",
+    "./dist/components/svg-viewer/svg-viewer.js",
     "./dist/components/details/details.js",
     "./dist/components/details/accordion.js",
     "./dist/components/details/accordion-item.js",
@@ -237,6 +241,10 @@
     "./src/components/dock-panel/dock-panel.ts",
     "./src/components/document-preview/document-preview.ts",
     "./src/components/document-viewer/document-viewer.ts",
+    "./src/components/contact-viewer/contact-viewer.ts",
+    "./src/components/dataset-viewer/dataset-viewer.ts",
+    "./src/components/html-viewer/html-viewer.ts",
+    "./src/components/svg-viewer/svg-viewer.ts",
     "./src/components/details/details.ts",
     "./src/components/details/accordion.ts",
     "./src/components/details/accordion-item.ts",
@@ -369,6 +377,7 @@
     "libphonenumber-js": ">=1.11.0 <2",
     "maplibre-gl": "^5.24.0",
     "marked": "^18.0.6",
+    "papaparse": "^5.5.3",
     "shiki": "^4.3.1"
   },
   "peerDependenciesMeta": {
@@ -408,6 +417,9 @@
     "marked": {
       "optional": true
     },
+    "papaparse": {
+      "optional": true
+    },
     "shiki": {
       "optional": true
     }
@@ -422,6 +434,7 @@
     "@types/d3-force": "^3.0.10",
     "@types/d3-selection": "^3.0.11",
     "@types/d3-zoom": "^3.0.8",
+    "@types/papaparse": "^5.5.2",
     "@types/sinonjs__fake-timers": "^15.0.1",
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
@@ -435,6 +448,7 @@
     "dompurify": "^3.4.12",
     "maplibre-gl": "^5.24.0",
     "marked": "^18.0.6",
+    "papaparse": "^5.5.3",
     "playwright": "^1.61.1",
     "shiki": "^4.3.1",
     "typescript": "^7.0.2"

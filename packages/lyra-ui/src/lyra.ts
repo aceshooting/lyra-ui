@@ -73,6 +73,10 @@ import './components/context-meter/context-meter.js';
 import './components/dock-panel/dock-panel.js';
 import './components/document-preview/document-preview.js';
 import './components/document-viewer/document-viewer.js';
+import './components/svg-viewer/svg-viewer.js';
+import './components/html-viewer/html-viewer.js';
+import './components/dataset-viewer/dataset-viewer.js';
+import './components/contact-viewer/contact-viewer.js';
 import './components/media-card/media-card.js';
 import './components/attachment-trigger/attachment-trigger.js';
 import './components/kbd/kbd.js';
@@ -396,6 +400,12 @@ export type {
   DocumentRendererRegistry,
   DocumentViewerCloseReason,
 } from './components/document-viewer/document-viewer.js';
+export { LyraSvgViewer } from './components/svg-viewer/svg-viewer.js';
+export { LyraHtmlViewer } from './components/html-viewer/html-viewer.js';
+export { LyraDatasetViewer } from './components/dataset-viewer/dataset-viewer.js';
+export type { DatasetTable } from './components/dataset-viewer/dataset-viewer.js';
+export { LyraContactViewer } from './components/contact-viewer/contact-viewer.js';
+export type { VCardAddress, VCardContact, VCardName, VCardTypedValue } from './components/contact-viewer/contact-viewer.js';
 export { LyraMediaCard, safeMediaSrc, safeLinkHref } from './components/media-card/media-card.js';
 export type { MediaCardKind, MediaCardOpenDetail } from './components/media-card/media-card.js';
 export { LyraAttachmentTrigger } from './components/attachment-trigger/attachment-trigger.js';
@@ -510,6 +520,10 @@ export type { LyraDatePickerEventMap } from './components/date-picker/date-picke
 export type { LyraDiffViewEventMap } from './components/diff-view/diff-view.js';
 export type { LyraDocumentPreviewEventMap } from './components/document-preview/document-preview.js';
 export type { LyraDocumentViewerEventMap } from './components/document-viewer/document-viewer.js';
+export type { LyraSvgViewerEventMap } from './components/svg-viewer/svg-viewer.js';
+export type { LyraHtmlViewerEventMap } from './components/html-viewer/html-viewer.js';
+export type { LyraDatasetViewerEventMap } from './components/dataset-viewer/dataset-viewer.js';
+export type { LyraContactViewerEventMap } from './components/contact-viewer/contact-viewer.js';
 export type { LyraExportButtonEventMap } from './components/export-button/export-button.js';
 export type { LyraFileInputEventMap } from './components/file-input/file-input.js';
 export type { LyraGenerationStatusEventMap } from './components/generation-status/generation-status.js';
