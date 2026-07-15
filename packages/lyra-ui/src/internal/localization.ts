@@ -146,6 +146,7 @@ export type LyraMessageKey =
   | 'documentPreviewUrlNotAllowed'
   | 'documentPreviewFailedToLoad'
   | 'documentPreviewGenericError'
+  | 'documentViewerLabel'
   | 'exportButtonLabel'
   | 'generationStatusToken'
   | 'generationStatusTokens'
@@ -492,6 +493,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
   documentPreviewFailedToLoad: 'Failed to load document.',
   documentPreviewGenericError: 'Something went wrong.',
+  documentViewerLabel: 'Document viewer',
   exportButtonLabel: 'Export',
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',

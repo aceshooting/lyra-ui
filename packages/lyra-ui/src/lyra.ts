@@ -72,6 +72,7 @@ import './components/model-settings-panel/model-settings-panel.js';
 import './components/context-meter/context-meter.js';
 import './components/dock-panel/dock-panel.js';
 import './components/document-preview/document-preview.js';
+import './components/document-viewer/document-viewer.js';
 import './components/media-card/media-card.js';
 import './components/attachment-trigger/attachment-trigger.js';
 import './components/kbd/kbd.js';
@@ -382,6 +383,19 @@ export type {
 } from './components/dock-panel/dock-panel.js';
 export { LyraDocumentPreview } from './components/document-preview/document-preview.js';
 export type { DocumentPreviewStatus } from './components/document-preview/document-preview.js';
+export {
+  LyraDocumentViewer,
+  registerDocumentRenderer,
+  getDefaultDocumentRendererRegistry,
+  findDocumentRenderer,
+  loadDocumentRenderer,
+} from './components/document-viewer/document-viewer.js';
+export type {
+  DocumentFile,
+  DocumentRendererDefinition,
+  DocumentRendererRegistry,
+  DocumentViewerCloseReason,
+} from './components/document-viewer/document-viewer.js';
 export { LyraMediaCard, safeMediaSrc, safeLinkHref } from './components/media-card/media-card.js';
 export type { MediaCardKind, MediaCardOpenDetail } from './components/media-card/media-card.js';
 export { LyraAttachmentTrigger } from './components/attachment-trigger/attachment-trigger.js';
@@ -495,6 +509,7 @@ export type { LyraDateInputEventMap } from './components/date-picker/date-input.
 export type { LyraDatePickerEventMap } from './components/date-picker/date-picker.js';
 export type { LyraDiffViewEventMap } from './components/diff-view/diff-view.js';
 export type { LyraDocumentPreviewEventMap } from './components/document-preview/document-preview.js';
+export type { LyraDocumentViewerEventMap } from './components/document-viewer/document-viewer.js';
 export type { LyraExportButtonEventMap } from './components/export-button/export-button.js';
 export type { LyraFileInputEventMap } from './components/file-input/file-input.js';
 export type { LyraGenerationStatusEventMap } from './components/generation-status/generation-status.js';

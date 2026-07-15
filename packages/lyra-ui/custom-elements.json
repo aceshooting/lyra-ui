@@ -36012,6 +36012,608 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/document-viewer/document-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "A dialog-hosted document viewer with a pluggable MIME-type renderer registry.\nA registered renderer receives the current file; files without a matching\nrenderer use `<lyra-document-preview>` as a safe built-in fallback.",
+          "name": "LyraDocumentViewer",
+          "cssParts": [
+            {
+              "description": "Wrapper around the active renderer or fallback preview.",
+              "name": "body"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "mimeType",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "MIME type used for renderer dispatch.",
+              "attribute": "mime-type"
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name passed to the renderer and shown as the dialog heading.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "onDialogClose",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "open",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the viewer is open.",
+              "attribute": "open",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "registry",
+              "type": {
+                "text": "DocumentRendererRegistry | undefined"
+              },
+              "description": "Optional per-instance registry; the default registry is used when unset."
+            },
+            {
+              "kind": "field",
+              "name": "renderState",
+              "type": {
+                "text": "| { kind: 'fallback' }\n    | { kind: 'loading' }\n    | { kind: 'rendered'; template: unknown }\n    | { kind: 'error' }"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'fallback' }"
+            },
+            {
+              "kind": "field",
+              "name": "resolvedLazy",
+              "type": {
+                "text": "{ def: DocumentRendererDefinition; resolved: DocumentRendererDefinition } | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Source URL passed to the renderer or fallback preview.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "currentFile",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "DocumentFile"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "unknown"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderWith",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "def",
+                  "type": {
+                    "text": "DocumentRendererDefinition"
+                  }
+                },
+                {
+                  "name": "file",
+                  "type": {
+                    "text": "DocumentFile"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "resolve",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when the nested dialog dismisses the viewer. The detail is the dialog close reason.",
+              "name": "lyra-close"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "mime-type",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "MIME type used for renderer dispatch.",
+              "fieldName": "mimeType"
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name passed to the renderer and shown as the dialog heading.",
+              "fieldName": "name"
+            },
+            {
+              "name": "open",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the viewer is open.",
+              "fieldName": "open"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Source URL passed to the renderer or fallback preview.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-document-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraDocumentViewer",
+          "declaration": {
+            "name": "LyraDocumentViewer",
+            "module": "src/components/document-viewer/document-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/document-viewer/document-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-document-viewer",
+          "declaration": {
+            "name": "LyraDocumentViewer",
+            "module": "src/components/document-viewer/document-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/document-viewer/document-viewer.class.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/document-viewer/registry.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/document-viewer/registry.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "clearDocumentRenderers",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "description": "Clears the default registry and lazy-load cache for isolated tests."
+        },
+        {
+          "kind": "function",
+          "name": "findDocumentRenderer",
+          "return": {
+            "type": {
+              "text": "DocumentRendererDefinition | undefined"
+            }
+          },
+          "parameters": [
+            {
+              "name": "file",
+              "type": {
+                "text": "DocumentFile"
+              }
+            },
+            {
+              "name": "registry",
+              "default": "defaultRegistry",
+              "type": {
+                "text": "DocumentRendererRegistry"
+              }
+            }
+          ],
+          "description": "Finds an exact MIME-type renderer, then the first matching shape-based renderer."
+        },
+        {
+          "kind": "function",
+          "name": "getDefaultDocumentRendererRegistry",
+          "return": {
+            "type": {
+              "text": "DocumentRendererRegistry"
+            }
+          },
+          "description": "Returns the module-level registry used by default by `<lyra-document-viewer>`."
+        },
+        {
+          "kind": "function",
+          "name": "loadDocumentRenderer",
+          "return": {
+            "type": {
+              "text": "Promise<DocumentRendererDefinition>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "def",
+              "type": {
+                "text": "DocumentRendererDefinition"
+              }
+            }
+          ],
+          "description": "Resolves and identity-caches a lazy renderer. Rejected loads are retried."
+        },
+        {
+          "kind": "function",
+          "name": "registerDocumentRenderer",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "parameters": [
+            {
+              "name": "key",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "def",
+              "type": {
+                "text": "DocumentRendererDefinition"
+              }
+            }
+          ],
+          "description": "Registers or replaces a renderer in the module-level default registry."
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "clearDocumentRenderers",
+          "declaration": {
+            "name": "clearDocumentRenderers",
+            "module": "src/components/document-viewer/registry.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "findDocumentRenderer",
+          "declaration": {
+            "name": "findDocumentRenderer",
+            "module": "src/components/document-viewer/registry.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "getDefaultDocumentRendererRegistry",
+          "declaration": {
+            "name": "getDefaultDocumentRendererRegistry",
+            "module": "src/components/document-viewer/registry.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadDocumentRenderer",
+          "declaration": {
+            "name": "loadDocumentRenderer",
+            "module": "src/components/document-viewer/registry.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "registerDocumentRenderer",
+          "declaration": {
+            "name": "registerDocumentRenderer",
+            "module": "src/components/document-viewer/registry.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/drawer/drawer.class.ts",
       "declarations": [
         {

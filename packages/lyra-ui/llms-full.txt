@@ -34,6 +34,7 @@ composition without registration; for example, `components/empty/empty.class.js`
   `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block`, `lyra-tool-approval-dialog`,
   `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`, `lyra-chip`/`lyra-chip-group`,
   `lyra-model-settings-panel`, `lyra-context-meter`, `lyra-dock-panel`, `lyra-document-preview`,
+  `lyra-document-viewer`,
   `lyra-media-card`, `lyra-attachment-trigger`, `lyra-kbd`, `lyra-result-card`/`lyra-result-field`,
   `lyra-avatar`, `lyra-card`, `lyra-stepper`, `lyra-segmented`, `lyra-diff-view`, `lyra-poll-status`,
   `lyra-code-block-core` (needs the optional peer `shiki`)
@@ -7777,6 +7778,61 @@ available, the region becomes a standard `role="progressbar"` instead, self-desc
   reserved for a `fetch()` that was actually attempted and failed at the network layer; an unsafe/
   malformed `src` is silently treated as unusable instead (a rendered `[part="error"]` message for
   text, a silent fallback for image/download).
+
+---
+
+## `lyra-document-viewer`
+
+A dialog-hosted, format-dispatching full viewer for one document or attachment. It uses a pluggable
+renderer registry and falls back to `<lyra-document-preview>` when no renderer matches the file's MIME
+type. First-party invention.
+
+**Properties:**
+- `open: boolean = false` (reflected) — opens or closes the viewer dialog.
+- `name: string = ''` — display name passed to the renderer and used as the dialog heading.
+- `mimeType: string = ''` (attribute `mime-type`) — MIME type used for exact renderer dispatch.
+- `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
+- `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
+  the module-level registry is used when unset.
+
+**Events:**
+- `lyra-close` — `detail: DocumentViewerCloseReason`, the nested dialog's dismissal reason. The
+  event is emitted after the viewer sets `open` to `false`.
+
+**CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview.
+
+**Renderer registry exports:**
+- `DocumentFile` — `{ name: string; mimeType: string; src: string }`, the value passed to renderers.
+- `DocumentRendererDefinition` — optional `render(file)`, `matches(file)`, and lazy `load()` hooks.
+- `DocumentRendererRegistry` — `Map<string, DocumentRendererDefinition>`.
+- `registerDocumentRenderer(key, definition)` — adds or replaces a default-registry entry.
+- `findDocumentRenderer(file, registry?)` — checks an exact MIME-type key, then the first matching
+  `matches()` entry in registration order.
+- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy definition; rejected loads
+  are retried on the next call.
+
+```html
+<lyra-document-viewer
+  open
+  name="report.pdf"
+  mime-type="application/pdf"
+  src="/files/report.pdf"
+></lyra-document-viewer>
+```
+
+Register a renderer once during application setup. The definition may load a heavy optional viewer
+only when a matching document is opened:
+
+```ts
+import { registerDocumentRenderer } from '@aceshooting/lyra-ui';
+
+registerDocumentRenderer('application/x-example', {
+  render: (file) => `Preview: ${file.name}`,
+});
+```
+
+When no renderer matches, the viewer renders `<lyra-document-preview>`, which handles text and images
+inline and provides a safe generic fallback for other formats.
 
 ---
 

@@ -356,6 +356,7 @@ each one-liner below.
 | `<lyra-kbd>` | — (extra) | Keyboard-shortcut chip; renders platform-appropriate glyphs (⌘ vs. Ctrl) from a single `"mod+k"`-style `keys` string |
 | `<lyra-result-card>` + `<lyra-result-field>` | — (extra) | Small bordered card + label/value row shell, for giving custom `lyra-tool-result-view` renderers a consistent look with no bespoke box |
 | `<lyra-document-preview>` | — (extra) | Format-dispatching document/attachment viewer (`text/*`/JSON inline, `image/*` inline, else a download fallback) plus a host-driven async-conversion status shell |
+| `<lyra-document-viewer>` | — (extra) | Dialog-hosted, format-dispatching full document viewer with a pluggable renderer registry |
 | `<lyra-media-card>` | — (extra) | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message |
 | `<lyra-avatar>` | — (extra) | Small, fixed-size identity marker — image, or an initials fallback with `lyra-chip`-style tone recoloring |
 | `<lyra-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lyra-*>` counterpart to `wa-card` |
