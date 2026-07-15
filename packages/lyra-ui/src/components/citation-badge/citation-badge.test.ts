@@ -83,6 +83,21 @@ describe('accessible name', () => {
     expect(base.getAttribute('aria-label')).to.equal('Citation 1, Non vérifié');
   });
 
+  it('localizes the complete citation-with-status message so translators control its order and punctuation', async () => {
+    const el = (await fixture(html`
+      <lyra-citation-badge
+        index="3"
+        status="verified"
+        .strings=${{
+          citationVerified: 'Vérifiée',
+          citationWithStatus: '{status} — référence {index}',
+        }}
+      ></lyra-citation-badge>
+    `)) as LyraCitationBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Vérifiée — référence 3');
+  });
+
   it('localizes the "Citation {index}" clause itself via this.localize() when .strings overrides the citation key', async () => {
     const el = (await fixture(html`
       <lyra-citation-badge index="3" .strings=${{ citation: 'Référence {index}' }}></lyra-citation-badge>
@@ -271,13 +286,13 @@ describe('hover/focus preview popover', () => {
     expect(popover.hidden, 'focus should still hold the popover open').to.be.false;
   });
 
-  it('associates the popover via aria-describedby only while it is open', async () => {
+  it('keeps the tooltip associated via aria-describedby whenever preview content exists', async () => {
     const el = (await fixture(
       html`<lyra-citation-badge index="1"><p>preview</p></lyra-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
     const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
-    expect(base.hasAttribute('aria-describedby')).to.be.false;
+    expect(base.getAttribute('aria-describedby')).to.equal(popover.id);
 
     base.focus();
     await el.updateComplete;
@@ -285,7 +300,7 @@ describe('hover/focus preview popover', () => {
 
     base.blur();
     await el.updateComplete;
-    expect(base.hasAttribute('aria-describedby')).to.be.false;
+    expect(base.getAttribute('aria-describedby')).to.equal(popover.id);
   });
 
   it('closes immediately on Escape while focus is within the badge', async () => {

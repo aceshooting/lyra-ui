@@ -73,7 +73,10 @@ function isRealPreviewNode(n: Node): boolean {
  * at all when the slot carries no content, and the popover never traps
  * focus — it's supplementary preview content, not a modal, so Tab continues
  * past the badge normally even while it happens to be visible from a mouse
- * hover.
+ * hover. When preview content exists, the button keeps a stable
+ * `aria-describedby` relationship to the `role="tooltip"` panel while it is
+ * both hidden and visible, so assistive technology can resolve the preview
+ * as soon as focus causes it to open.
  *
  * Two distinct signals fire from the same badge: `lyra-citation-activate`
  * (click, or Enter while focused — native `<button>` behavior, no listener
@@ -178,7 +181,9 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     const key = STATUS_MESSAGE_KEY[this.status];
     const statusText = key ? this.localize(key) : '';
     const citationLabel = this.localize('citation', undefined, { index: this.index });
-    return statusText ? `${citationLabel}, ${statusText}` : citationLabel;
+    return statusText
+      ? this.localize('citationWithStatus', undefined, { index: this.index, status: statusText })
+      : citationLabel;
   }
 
   private onSlotChange = (e: Event): void => {
@@ -308,7 +313,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
           part="base"
           type="button"
           aria-label=${this.getAttribute('aria-label') || this.accessibleLabel}
-          aria-describedby=${this.hasPreviewSlot && this.popoverOpen ? this.popoverId : nothing}
+          aria-describedby=${this.hasPreviewSlot ? this.popoverId : nothing}
           @click=${this.onClick}
           @dblclick=${this.onDblClick}
         >
@@ -329,4 +334,3 @@ declare global {
     'lyra-citation-badge': LyraCitationBadge;
   }
 }
-
