@@ -10,7 +10,7 @@ export const styles = css`
     --lyra-json-viewer-max-height: none;
     /* Contained here (rather than left as a bare font-family literal) so a
        host page can retheme it, same rationale as --lyra-widget-overlay-color
-       in widget.styles.ts -- no shared --wa-*/--lyra-* monospace token exists
+       in widget.styles.ts -- no shared --lyra-* monospace token exists
        to resolve through. */
     --lyra-json-viewer-font: var(--lyra-font-mono);
     font-family: var(--lyra-json-viewer-font);

@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     /* Overlay scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
-       --wa-*-overlay token exists in the design system to resolve through,
+       --lyra-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-dialog's own --lyra-dialog-overlay-color and
        lyra-widget's --lyra-widget-overlay-color). */
     --lyra-responsive-panel-overlay-color: var(--lyra-color-overlay);

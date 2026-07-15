@@ -15,8 +15,8 @@ export const styles = css`
     --lyra-attachment-chip-bg: var(--lyra-color-surface);
     --lyra-attachment-chip-border: var(--lyra-color-border);
     /* Compact-mode thumbnail size -- a dedicated token rather than reusing
-       --lyra-icon-button-size (the one token in this library with no --wa-*
-       fallback chain), so a consumer can retheme just the compact thumbnail
+       --lyra-icon-button-size (the one token in this library with no
+       --lyra-theme-* fallback chain), so a consumer can retheme just the compact thumbnail
        independent of every other icon-button-sized control. */
     --lyra-attachment-chip-compact-thumbnail-size: var(--lyra-size-1-75rem);
     --lyra-attachment-chip-compact-font-size: var(--lyra-font-size-xs);

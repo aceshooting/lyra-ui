@@ -18,8 +18,8 @@ export type LyraEventMap = Record<string, Event>;
 
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
- * (Web Awesome `--wa-*` tokens with `--lyra-*` fallbacks). RTL is handled by
- * components using CSS logical properties rather than a forced `dir`.
+ * (`--lyra-theme-*` theme-input properties with hardcoded `--lyra-*` fallbacks).
+ * RTL is handled by components using CSS logical properties rather than a forced `dir`.
  */
 export class LyraElement<Events = LyraEventMap> extends LitElement {
   static styles: CSSResultGroup = [tokens];

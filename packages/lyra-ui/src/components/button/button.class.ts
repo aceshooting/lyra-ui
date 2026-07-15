@@ -54,7 +54,7 @@ export class LyraButton extends LyraElement {
    *  ambient `--lyra-color-surface` -- matching this component's own container, by design, for a
    *  low-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime
    *  default appearance (used whenever a `wa-button` call site sets only `variant`): a solid,
-   *  high-contrast fill for every variant, including `neutral` (`--wa-color-neutral-fill-loud`). */
+   *  high-contrast fill for every variant, including `neutral` (`--lyra-theme-color-neutral-fill-loud`). */
   @property({ reflect: true }) appearance: ButtonAppearance = 'filled';
   @property({ reflect: true }) size: ButtonSize = 'm';
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above

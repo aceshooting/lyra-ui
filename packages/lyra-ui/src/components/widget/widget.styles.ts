@@ -5,7 +5,7 @@ export const styles = css`
     display: block;
     /* Fullscreen scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
-       --wa-*-overlay token exists in the design system to resolve through). */
+       --lyra-*-overlay token exists in the design system to resolve through). */
     --lyra-widget-overlay-color: var(--lyra-color-overlay);
     --lyra-widget-fullscreen-inset:
       max(var(--lyra-space-l), var(--lyra-safe-area-top))

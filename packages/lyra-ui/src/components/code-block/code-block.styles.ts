@@ -10,7 +10,7 @@ export const styles = css`
     --lyra-code-block-max-height: none;
     /* Contained here rather than left as a bare font-family literal so a
        host page can retheme it -- same rationale as --lyra-markdown-font-mono
-       and --lyra-json-viewer-font, no shared --wa-*/--lyra-* monospace token
+       and --lyra-json-viewer-font, no shared --lyra-* monospace token
        exists to resolve through. */
     --lyra-code-block-font: var(--lyra-font-mono);
     font-size: var(--lyra-font-size-sm);

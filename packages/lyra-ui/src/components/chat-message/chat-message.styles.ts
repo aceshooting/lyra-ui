@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Component-specific -- no shared --wa-*/--lyra-* "conversation bubble
+    /* Component-specific -- no shared --lyra-* "conversation bubble
        width" token exists to resolve through, same rationale as
        --lyra-json-viewer-max-height in json-viewer.styles.ts. */
     --lyra-chat-message-max-width: 80%;

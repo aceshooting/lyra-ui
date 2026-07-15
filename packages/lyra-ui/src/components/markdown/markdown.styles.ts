@@ -7,7 +7,7 @@ export const styles = css`
     max-inline-size: 100%;
     /* Contained here (rather than left as a bare font-family literal) so a
        host page can retheme it -- same rationale as lyra-json-viewer's
-       identical --lyra-json-viewer-font, no shared --wa-*/--lyra-*
+       identical --lyra-json-viewer-font, no shared --lyra-*
        monospace token exists to resolve through. */
     --lyra-markdown-font-mono: var(--lyra-font-mono);
     line-height: var(--lyra-line-height-loose);

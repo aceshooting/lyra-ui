@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     /* Backdrop scrim color -- component-specific so a host can retheme it
        without a raw literal leaking into the public API (no shared
-       --wa-*-overlay token exists in the design system to resolve through,
+       --lyra-*-overlay token exists in the design system to resolve through,
        same rationale as lyra-dialog's --lyra-dialog-overlay-color and
        lyra-tool-select-dialog's --lyra-tool-select-dialog-overlay-color). */
     --lyra-tool-approval-dialog-overlay-color: var(--lyra-color-overlay);
