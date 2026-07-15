@@ -763,6 +763,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           ${this.columns.some((c) => c.footer)
             ? html`<tfoot part="foot">
                 <tr part="footer-row">
+                  ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
                   ${this.columns.map(
                     (col) => html`<td
                       part="footer-cell"

@@ -1205,4 +1205,32 @@ describe('expandable rows', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  it('grows a matching leading spacer cell in the footer row when combined with a footer column, keeping real footer cells aligned', async () => {
+    const withFooter: TableColumn<Row>[] = [
+      ...expandableColumns,
+      { key: 'total', label: 'Total', footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0), cell: () => '' },
+    ];
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = withFooter;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    const foot = el.shadowRoot!.querySelector('tfoot[part="foot"]');
+    expect(foot).to.exist;
+    const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')] as HTMLElement[];
+    // 3 real columns + 1 leading spacer cell for the expand-toggle column.
+    expect(footerCells).to.have.length(withFooter.length + 1);
+
+    const spacerCell = footerCells[0]!;
+    expect(spacerCell.hasAttribute('data-col-key')).to.be.false;
+    expect(spacerCell.getAttribute('aria-hidden')).to.equal('true');
+    expect(spacerCell.textContent!.trim()).to.equal('');
+
+    // The real footer cells still line up with their own columns -- not
+    // shifted left into the spacer's place.
+    expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('4');
+  });
 });
