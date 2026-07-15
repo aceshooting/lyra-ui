@@ -55102,7 +55102,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.",
+          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.\n\n`expandedContent` (a table-level `(row: T) => unknown`, not a per-column\nhook, since the resulting panel spans every column via `colspan`) makes\nevery row render a leading chevron-toggle cell before its data columns.\n`canExpand` optionally gates which rows actually get an interactive\ntoggle — a row that fails it still gets a blank leading cell for column\nalignment. Which rows are currently open is fully consumer-owned via\n`expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/\n`keyOf()`) — the table only reads it and emits `lyra-row-expand-toggle`\non activation, mirroring `sortKey`/`selectedKey`'s existing\npresentational-only convention.",
           "name": "LyraTable",
           "cssParts": [
             {
@@ -55112,6 +55112,18 @@
             {
               "description": "Each body `<td>`.",
               "name": "cell"
+            },
+            {
+              "description": "Each row's (and the header's) leading chevron-toggle cell, rendered only when `expandedContent` is set.",
+              "name": "expand-toggle-cell"
+            },
+            {
+              "description": "The single `colspan`-spanning `<td>` inside `expanded-row`, containing `expandedContent(row)`.",
+              "name": "expanded-cell"
+            },
+            {
+              "description": "The full-width panel `<tr>` rendered beneath a row whose key is in `expandedKeys`.",
+              "name": "expanded-row"
             },
             {
               "description": "The `<tfoot>`, only rendered when at least one column defines `footer`.",
@@ -55146,6 +55158,14 @@
               "name": "row"
             },
             {
+              "description": "The chevron icon inside `row-expand-toggle`.",
+              "name": "row-expand-icon"
+            },
+            {
+              "description": "The `<button>` inside `expand-toggle-cell`, absent for a row that fails `canExpand`.",
+              "name": "row-expand-toggle"
+            },
+            {
               "description": "The chevron shown in the active sortable column's header cell.",
               "name": "sort-icon"
             },
@@ -55174,6 +55194,14 @@
               "privacy": "private",
               "default": "null",
               "description": "Roving-tabindex position among body rows; `null` until a row is\nclicked/navigated to, at which point `focusedRowKey()` falls back to\n`selectedKey` (if it matches a row) or the first row."
+            },
+            {
+              "kind": "field",
+              "name": "canExpand",
+              "type": {
+                "text": "(row: T) => boolean | undefined"
+              },
+              "description": "Gates whether a given row gets an interactive chevron/toggle at all,\nwhen `expandedContent` is set. Omit to make every row expandable. A\nrow that fails this check still gets a leading cell (for column\nalignment) but it renders empty — no button, no `aria-expanded`, no\nclick handler."
             },
             {
               "kind": "field",
@@ -55245,6 +55273,23 @@
               },
               "default": "''",
               "attribute": "empty-heading"
+            },
+            {
+              "kind": "field",
+              "name": "expandedContent",
+              "type": {
+                "text": "(row: T) => unknown | undefined"
+              },
+              "description": "Renders a full-width panel beneath a row when that row's key is in\n`expandedKeys`. Table-level (not per-column) since the panel spans\nevery column via `colspan`. Setting this makes every row render a\nleading chevron-toggle cell before all data columns; omit for no\nleading cell at all (unchanged output)."
+            },
+            {
+              "kind": "field",
+              "name": "expandedKeys",
+              "type": {
+                "text": "Set<string | number>"
+              },
+              "default": "new Set()",
+              "description": "Consumer-owned open/closed state, keyed the same way as `rowKey`/\n`selectedKey`. The table never mutates this itself — it only reads it\nto decide which rows currently render `expandedContent`; toggle it in\nresponse to `lyra-row-expand-toggle`, mirroring how `sortKey`/\n`selectedKey` already work."
             },
             {
               "kind": "field",
@@ -55454,6 +55499,24 @@
                   "name": "key",
                   "type": {
                     "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "activateExpandToggle",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string | number"
                   }
                 }
               ]
@@ -55846,6 +55909,10 @@
             {
               "description": "A row was activated. `detail: { row }`.",
               "name": "lyra-row-click"
+            },
+            {
+              "description": "The row-expand chevron was activated. `detail: { row, key }`. Fired only when `expandedContent` is set and the row passes `canExpand`; does not itself mutate `expandedKeys` — the consumer updates it and passes the new value back in.",
+              "name": "lyra-row-expand-toggle"
             },
             {
               "description": "A sortable header was activated. `detail: { key }`.",
