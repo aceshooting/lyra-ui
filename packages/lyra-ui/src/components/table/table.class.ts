@@ -693,7 +693,6 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     role="row"
                     data-row-key=${encodeKey(key)}
                     aria-selected=${selected ? 'true' : 'false'}
-                    aria-expanded=${canExpandRow ? String(rowExpanded) : nothing}
                     tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
                   >
                     ${hasExpand
