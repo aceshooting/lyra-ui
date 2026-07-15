@@ -211,6 +211,7 @@ it('gives the svg an accessible name summarizing the diagram, and hides duplicat
 
 it('uses one roving tab stop with arrow/Home/End navigation and a data-list alternative', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.strings = { graphItemAnnouncement: '{item}, position {index} sur {total}' };
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -229,7 +230,7 @@ it('uses one roving tab stop with arrow/Home/End navigation and a data-list alte
   items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
   expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
-  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('2 of 3');
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('position 2 sur 3');
 
   items()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   await el.updateComplete;

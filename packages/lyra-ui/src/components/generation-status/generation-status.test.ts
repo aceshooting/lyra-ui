@@ -234,18 +234,56 @@ it('renders the tokens segment once token-count is set, using singular/plural wo
   expect(tokensText(el)).to.equal('1 token');
 });
 
-it('localizes the tokens segment singular/plural noun via .strings', async () => {
+it('localizes the complete tokens segment via .strings so translations can reorder the count', async () => {
   const el = (await fixture(html`
     <lyra-generation-status
       token-count="340"
-      .strings=${{ generationStatusToken: 'jeton', generationStatusTokens: 'jetons' }}
+      .strings=${{
+        generationStatusTokenCount: 'Jeton : {count}',
+        generationStatusTokensCount: 'Jetons : {count}',
+      }}
     ></lyra-generation-status>
   `)) as LyraGenerationStatus;
-  expect(tokensText(el)).to.equal('340 jetons');
+  expect(tokensText(el)).to.equal('Jetons : 340');
 
   el.tokenCount = 1;
   await el.updateComplete;
-  expect(tokensText(el)).to.equal('1 jeton');
+  expect(tokensText(el)).to.equal('Jeton : 1');
+});
+
+it('localizes complete elapsed and throughput messages via .strings', async () => {
+  const el = (await fixture(html`
+    <lyra-generation-status
+      tokens-per-second="3.2"
+      .strings=${{
+        generationStatusElapsedSeconds: 'Secondes : {seconds}',
+        generationStatusThroughput: 'Par seconde : {rate}',
+      }}
+    ></lyra-generation-status>
+  `)) as LyraGenerationStatus;
+  el.startedAt = Date.now() - 12_300;
+  el.active = true;
+  await el.updateComplete;
+
+  expect(elapsedText(el)).to.match(/^Secondes : 12\.[3-4]$/);
+  expect(throughputText(el)).to.equal('Par seconde : 3.2');
+});
+
+it('formats elapsed time, token counts, and throughput with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lyra-generation-status
+      lang="de-DE"
+      token-count="1234"
+      tokens-per-second="3.2"
+    ></lyra-generation-status>
+  `)) as LyraGenerationStatus;
+  el.startedAt = Date.now() - 12_300;
+  el.active = true;
+  await el.updateComplete;
+
+  expect(elapsedText(el)).to.match(/^12,[3-4]s$/);
+  expect(tokensText(el)).to.equal('1.234 tokens');
+  expect(throughputText(el)).to.equal('3,2 tok/s');
 });
 
 it('uses a host-supplied tokens-per-second as-is, even while inactive with zero elapsed time', async () => {

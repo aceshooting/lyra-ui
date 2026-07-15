@@ -580,17 +580,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return link ? this.linkAccessibleText(link) : '';
   }
 
+  private graphItemAnnouncement(index: number): string {
+    return this.localize('graphItemAnnouncement', undefined, {
+      item: this.graphItemText(index),
+      index: index + 1,
+      total: this.graphItemCount(),
+    });
+  }
+
   private onGraphItemFocus(index: number): void {
     if (this.normalizedGraphItem(index) < 0) return;
     this.activeGraphItem = index;
-    this.graphLiveText = `${this.graphItemText(index)} (${index + 1} of ${this.graphItemCount()})`;
+    this.graphLiveText = this.graphItemAnnouncement(index);
   }
 
   private focusGraphItem(index: number): void {
     const normalized = this.normalizedGraphItem(index);
     if (normalized < 0) return;
     this.activeGraphItem = normalized;
-    this.graphLiveText = `${this.graphItemText(normalized)} (${normalized + 1} of ${this.graphItemCount()})`;
+    this.graphLiveText = this.graphItemAnnouncement(normalized);
     void this.updateComplete.then(() => {
       const items = [
         ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
@@ -734,7 +742,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           </g>
         </svg>
         <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          ${this.graphLiveText || (this.normalizedGraphItem() >= 0 ? `${this.graphItemText(this.normalizedGraphItem())} (1 of ${this.graphItemCount()})` : '')}
+          ${this.graphLiveText ||
+          (this.normalizedGraphItem() >= 0 ? this.graphItemAnnouncement(this.normalizedGraphItem()) : '')}
         </div>
         <ul part="data-list" class="sr-only" aria-label=${this.localize('graphDataList')}>
           ${this.simNodes.map(

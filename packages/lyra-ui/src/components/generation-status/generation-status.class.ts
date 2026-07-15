@@ -33,7 +33,13 @@ function stopIcon(): SVGTemplateResult {
   `;
 }
 
-/** `4200` -> `"4.2s"`; `65000` -> `"1m 5s"`. Sub-minute durations get one
+interface FormattedElapsed {
+  key: 'generationStatusElapsedSeconds' | 'elapsedMinutesSecondsTemplate';
+  values: Record<string, string>;
+}
+
+/** `4200` produces a localized seconds message; `65000` produces a localized
+ *  minutes-and-seconds message. Sub-minute durations get one
  *  decimal place of seconds (the common case: most single generations finish
  *  in single-digit seconds, where whole-second precision would look static
  *  between ticks); once a full minute is reached, `"Xm Ys"` reads better than
@@ -41,44 +47,45 @@ function stopIcon(): SVGTemplateResult {
  *  a plain `60`) exists so a value that *rounds* to `"60.0s"` at one-decimal
  *  precision is displayed as `"1m 0s"` instead -- without it, the two
  *  branches could each independently round the same instant to a different
- *  minute. `secondsUnit`/`minutesSecondsTemplate` are the already-localized
- *  seconds suffix and `"{minutes}m {seconds}s"`-shaped template (see the call
- *  site's `this.localize()` resolution), same shape as `formatTokenCount`'s
- *  `noun` parameter below. */
-function formatElapsed(ms: number, secondsUnit: string, minutesSecondsTemplate: string): string {
+ *  minute. Returning a message key and values keeps all library-owned words
+ *  and punctuation inside the localized template. */
+function formatElapsed(ms: number, locale: string): FormattedElapsed {
   const totalSeconds = Math.max(0, ms) / 1000;
   if (totalSeconds < 59.95) {
-    return `${(Math.round(totalSeconds * 10) / 10).toFixed(1)}${secondsUnit}`;
+    const seconds = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(Math.round(totalSeconds * 10) / 10);
+    return { key: 'generationStatusElapsedSeconds', values: { seconds } };
   }
   const wholeSeconds = Math.round(totalSeconds);
   const minutes = Math.floor(wholeSeconds / 60);
   const seconds = wholeSeconds % 60;
-  return minutesSecondsTemplate
-    .replace('{minutes}', String(minutes))
-    .replace('{seconds}', String(seconds));
+  const numberFormat = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+  return {
+    key: 'elapsedMinutesSecondsTemplate',
+    values: { minutes: numberFormat.format(minutes), seconds: numberFormat.format(seconds) },
+  };
 }
 
-/** `340` -> `"340 tokens"`; `1` -> `"1 token"`. `noun` is the already-localized
- *  singular/plural word (see the call site's `this.localize()` resolution) --
- *  same plain singular/plural shape `<lyra-json-viewer>`'s array/object
- *  summary and `<lyra-word-cloud>`'s accessible summary already use. */
-function formatTokenCount(count: number, noun: string): string {
+/** Locale-formats a token count after applying the component's documented
+ *  non-negative integer normalization. */
+function formatTokenCount(count: number, locale: string): { rounded: number; formatted: string } {
   const rounded = Math.max(0, Math.round(count));
-  return `${rounded} ${noun}`;
+  return { rounded, formatted: new Intl.NumberFormat(locale).format(rounded) };
 }
 
-/** `27.4` -> `"27 tok/s"`; `3.2` -> `"3.2 tok/s"`. Same shape as this file's
+/** `27.4` -> `"27"`; `3.2` -> `"3.2"`. Same shape as this file's
  *  `formatElapsed`/`<lyra-tool-call-chip>`'s `formatDuration`: the low end of
  *  the range (where a whole-number rounding would flatten every early
  *  reading to the same "0" or "1") gets one decimal place, while anything at
  *  or above 10 tok/s rounds to a whole number, which is plenty precise for a
- *  live-updating throughput figure. `unit` is the already-localized
- *  tokens-per-second suffix (see the call site's `this.localize()`
- *  resolution), same shape as `formatTokenCount`'s `noun` parameter above. */
-function formatThroughput(value: number, unit: string): string {
+ *  live-updating throughput figure. The caller interpolates the result into
+ *  the complete localized throughput message. */
+function formatThroughput(value: number, locale: string): string {
   const clamped = Math.max(0, value);
   const rounded = clamped < 10 ? Math.round(clamped * 10) / 10 : Math.round(clamped);
-  return `${rounded} ${unit}`;
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: clamped < 10 ? 1 : 0 }).format(rounded);
 }
 
 /**
@@ -332,27 +339,27 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
     const hasTokens = this.tokenCount != null && Number.isFinite(this.tokenCount);
     const throughput = this.effectiveTokensPerSecond;
     const hasThroughput = throughput !== undefined;
+    const locale = this.effectiveLocale;
+    const elapsed = formatElapsed(this.elapsedMs, locale);
+    const tokenCount = hasTokens ? formatTokenCount(this.tokenCount!, locale) : undefined;
+    const tokenMessageKey =
+      tokenCount && new Intl.PluralRules(locale).select(tokenCount.rounded) === 'one'
+        ? 'generationStatusTokenCount'
+        : 'generationStatusTokensCount';
 
     return html`
       <div part="base">
-        <span part="elapsed"
-          >${formatElapsed(
-            this.elapsedMs,
-            this.localize('elapsedSecondsUnit'),
-            this.localize('elapsedMinutesSecondsTemplate'),
-          )}</span
-        >
+        <span part="elapsed">${this.localize(elapsed.key, undefined, elapsed.values)}</span>
         ${hasTokens
           ? html`<span part="tokens"
-              >${formatTokenCount(
-                this.tokenCount!,
-                this.localize(this.tokenCount === 1 ? 'generationStatusToken' : 'generationStatusTokens'),
-              )}</span
+              >${this.localize(tokenMessageKey, undefined, { count: tokenCount!.formatted })}</span
             >`
           : nothing}
         ${hasThroughput
           ? html`<span part="throughput"
-              >${formatThroughput(throughput!, this.localize('tokensPerSecondUnit'))}</span
+              >${this.localize('generationStatusThroughput', undefined, {
+                rate: formatThroughput(throughput!, locale),
+              })}</span
             >`
           : nothing}
         ${this.showStop
