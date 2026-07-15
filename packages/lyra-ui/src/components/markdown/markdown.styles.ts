@@ -3,6 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* Contained here (rather than left as a bare font-family literal) so a
        host page can retheme it -- same rationale as lyra-json-viewer's
        identical --lyra-json-viewer-font, no shared --wa-*/--lyra-*
@@ -11,7 +13,11 @@ export const styles = css`
     line-height: var(--lyra-line-height-loose);
   }
   [part='content'] {
-    overflow-wrap: break-word;
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-inline: auto;
+    overflow-wrap: anywhere;
   }
   /* Shared by both the "still loading" and "fell back after a failure"
      states -- see the renderedHtml field doc in markdown.ts. */
@@ -46,7 +52,7 @@ export const styles = css`
     padding: var(--lyra-space-s) var(--lyra-space-m);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-brand-quiet);
-    overflow-x: auto;
+    overflow-inline: auto;
   }
   [part='code-block'] code {
     padding: 0;
@@ -59,10 +65,10 @@ export const styles = css`
     text-underline-offset: var(--lyra-size-0-125rem);
   }
   /* Keeps an oversized source image from overflowing the content wrapper --
-     matches the overflow-wrap: break-word guard on [part='content'] above,
+     matches the overflow-wrap: anywhere guard on [part='content'] above,
      which only covers text, not replaced elements like <img>. */
   [part='img'] {
-    max-width: 100%;
+    max-inline-size: 100%;
   }
   [part='blockquote'] {
     margin-block: 0 var(--lyra-space-s);
@@ -75,6 +81,7 @@ export const styles = css`
     border-collapse: collapse;
     margin-block: 0 var(--lyra-space-s);
     inline-size: 100%;
+    max-inline-size: 100%;
   }
   [part='table'] th,
   [part='table'] td {

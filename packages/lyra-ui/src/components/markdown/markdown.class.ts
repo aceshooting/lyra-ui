@@ -156,11 +156,11 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
    *  today: always the async `import()`, fallback-text window included. */
   @property({ type: Boolean, attribute: 'eager-load' }) eagerLoad = false;
 
-  /** Forward-compatible hint for a dedicated streaming renderer expected to
-   *  build on this component later (coalescing partial tokens as they
-   *  arrive) — setting it has no rendering effect yet. Reflects so a
-   *  consumer can already target `lyra-markdown[streaming]` in CSS ahead of
-   *  that behavior landing. */
+  /** Signals that `content` is still arriving incrementally. Content changes
+   *  continue to render immediately; while this is `true`, the host remains
+   *  `aria-busy="true"` so assistive technology knows the rendered document
+   *  is not final. Set it back to `false` with the final content update.
+   *  Reflects so a consumer can also target `lyra-markdown[streaming]`. */
   @property({ type: Boolean, reflect: true }) streaming = false;
 
   // `null` covers both "the optional peers are still loading" and "a render
@@ -224,7 +224,7 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
   }
 
   protected updated(): void {
-    if (this.deps) {
+    if (this.deps && !this.streaming) {
       this.removeAttribute('aria-busy');
     } else {
       this.setAttribute('aria-busy', 'true');

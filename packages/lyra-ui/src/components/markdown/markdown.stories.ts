@@ -54,6 +54,49 @@ export const CodeBlocks: Story = {
   render: () => html`<lyra-markdown .content=${codeSample}></lyra-markdown>`,
 };
 
+export const NarrowAllocation: Story = {
+  name: 'Narrow allocation with long content',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A 320px allocation with a wide table, a long link, and an unbroken code line demonstrates logical containment and internal overflow.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-markdown
+      style="inline-size:320px; max-inline-size:100%;"
+      .content=${`| Scenario | Long translated description |
+| --- | --- |
+| Narrow panel | VierteljährlicheEnergieerzeugungsprognoseFürDachanlagen |
+
+[A long documentation link](https://example.com/guides/quarterly-generation-forecast-for-rooftop-installations)
+
+\`\`\`ts
+const longUnbrokenValue = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+\`\`\``}
+    ></lyra-markdown>
+  `,
+};
+
+export const Streaming: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`streaming` keeps the host `aria-busy` while partial Markdown is still arriving. Clear it alongside the final `content` update.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-markdown
+      streaming
+      .content=${'## Generating response\n\nThis partial response is still receiving additional content…'}
+    ></lyra-markdown>
+  `,
+};
+
 export const InternalLinks: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.75rem;">

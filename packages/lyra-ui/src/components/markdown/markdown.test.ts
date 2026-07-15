@@ -44,6 +44,24 @@ it('is accessible once populated, richly-formatted content has rendered', async 
   await expect(el).to.be.accessible();
 });
 
+it('uses logical size containment and an internal overflow surface at a narrow allocation', async () => {
+  const el = (await fixture(html`
+    <lyra-markdown
+      style="inline-size: 320px; max-inline-size: 100%;"
+      .content=${'| Very long heading | Another very long heading |\n| --- | --- |\n| alpha | beta |\n\n```\n' +
+      'const unbroken = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";\n```'}
+    ></lyra-markdown>
+  `)) as LyraMarkdown;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+  const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+
+  expect(getComputedStyle(el).minInlineSize).to.equal('0px');
+  expect(getComputedStyle(el).maxInlineSize).to.equal('100%');
+  expect(getComputedStyle(content).minInlineSize).to.equal('0px');
+  expect(getComputedStyle(content).maxInlineSize).to.equal('100%');
+  expect(getComputedStyle(content).overflowInline).to.equal('auto');
+});
+
 it('parses GFM tables, code blocks, links, headings, and blockquotes with part attributes injected, sanitized by default', async () => {
   const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
   let fired = false;
@@ -336,12 +354,25 @@ it('does not set deps or render when the element disconnects before loadMarkdown
   expect(internals.renderedHtml).to.equal(null);
 });
 
-it('reflects the streaming property as a boolean attribute with no rendering effect', async () => {
-  const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+it('reflects streaming and keeps the host busy through incremental renders until the stream completes', async () => {
+  const el = (await fixture(html`<lyra-markdown content="First chunk"></lyra-markdown>`)) as LyraMarkdown;
+  await waitUntil(() => !el.hasAttribute('aria-busy'));
   expect(el.hasAttribute('streaming')).to.be.false;
+
   el.streaming = true;
   await el.updateComplete;
   expect(el.hasAttribute('streaming')).to.be.true;
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+
+  el.content = 'First chunk\n\nSecond chunk';
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="paragraph"]').length === 2);
+  expect(el.getAttribute('aria-busy')).to.equal('true');
+
+  el.streaming = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('streaming')).to.be.false;
+  expect(el.hasAttribute('aria-busy')).to.be.false;
 });
 
 describe('fallback matrix', () => {

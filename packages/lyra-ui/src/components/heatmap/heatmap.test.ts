@@ -76,6 +76,7 @@ it('treats -1 as a no-data sentinel without throwing', async () => {
 
 it('does not throw a RangeError computing the range label/draw for a very large grid (150k+ cells)', async () => {
   const el = (await fixture(html`<lyra-heatmap></lyra-heatmap>`)) as LyraHeatmap;
+  el.locale = 'en-US';
   const cols = 400;
   const rows = 400; // 160,000 cells — spreading this into Math.min/Math.max(...flat) blows the call stack.
   el.rowLabels = Array.from({ length: rows }, (_, r) => `r${r}`);
@@ -85,7 +86,7 @@ it('does not throw a RangeError computing the range label/draw for a very large 
   );
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
-  expect(el.getAttribute('aria-label')).to.contain(`${rows * cols - 1}`);
+  expect(el.getAttribute('aria-label')).to.contain('159,999');
 });
 
 it('treats a NaN cell as no-data instead of leaking whatever color the previous cell painted', async () => {
