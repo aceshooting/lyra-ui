@@ -22,6 +22,20 @@ export const Default: Story = {
   render: () => html`<lyra-copy-button value="npm install @aceshooting/lyra-ui"></lyra-copy-button>`,
 };
 
+export const CustomAccessibleLabel: Story = {
+  render: () => html`
+    <lyra-copy-button
+      aria-label="Copy installation command"
+      value="npm install @aceshooting/lyra-ui"
+      feedback-duration="3000"
+    ></lyra-copy-button>
+  `,
+};
+
+export const Disabled: Story = {
+  render: () => html`<lyra-copy-button disabled value="Unavailable"></lyra-copy-button>`,
+};
+
 export const InACornerOverlay: Story = {
   name: 'In a corner overlay',
   render: () => html`

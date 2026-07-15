@@ -55,4 +55,72 @@ describe('lyra-copy-button', () => {
     await el.updateComplete;
     expect(button.getAttribute('aria-label')).to.equal('Copy');
   });
+
+  it('forwards a host aria-label to the internal semantic button', async () => {
+    const el = (await fixture(html`
+      <lyra-copy-button aria-label="Copy API key" value="secret"></lyra-copy-button>
+    `)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Copy API key');
+
+    button.click();
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copy API key');
+  });
+
+  it('disables the internal button and suppresses activation', async () => {
+    const el = (await fixture(html`
+      <lyra-copy-button disabled value="secret"></lyra-copy-button>
+    `)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    let copies = 0;
+    el.addEventListener('lyra-copy', () => copies++);
+
+    button.click();
+    expect(el.disabled).to.be.true;
+    expect(button.disabled).to.be.true;
+    expect(copies).to.equal(0);
+  });
+
+  it('forwards focus() and blur() to the internal button', async () => {
+    const el = (await fixture(html`<lyra-copy-button></lyra-copy-button>`)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+
+    el.focus();
+    expect(el.shadowRoot!.activeElement === button).to.be.true;
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+  });
+
+  it('uses string overrides for both resting and confirmation labels', async () => {
+    const el = (await fixture(html`<lyra-copy-button></lyra-copy-button>`)) as LyraCopyButton;
+    el.strings = { copy: 'Copier', copied: 'Copié' };
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Copier');
+
+    button.click();
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copié');
+  });
+
+  it('supports a configurable feedback duration', async () => {
+    const el = (await fixture(html`
+      <lyra-copy-button value="hello" feedback-duration="20"></lyra-copy-button>
+    `)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    expect(el.feedbackDuration).to.equal(20);
+    button.click();
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copied!');
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copy');
+  });
+
+  it('is accessible', async () => {
+    const el = await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`);
+    await expect(el).to.be.accessible();
+  });
 });

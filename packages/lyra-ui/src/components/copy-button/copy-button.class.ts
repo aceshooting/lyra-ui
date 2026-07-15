@@ -1,11 +1,11 @@
 import { html, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './copy-button.styles.js';
 
 /** How long the checkmark confirmation state lasts before reverting -- matches
  *  `lyra-code-block`'s own `COPY_CONFIRM_MS`. */
-const COPY_CONFIRM_MS = 1500;
+const DEFAULT_FEEDBACK_DURATION = 1500;
 
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
@@ -69,13 +69,33 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   /** The plain text to copy. */
   @property() value = '';
 
+  /** Accessible name forwarded from the host to the internal button. When unset, the localized
+   *  Copy/Copied state provides the name. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  /** Prevent activation and remove the internal button from the tab order. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
+  /** How long, in milliseconds, the copied confirmation state remains visible. */
+  @property({ type: Number, attribute: 'feedback-duration' }) feedbackDuration = DEFAULT_FEEDBACK_DURATION;
+
   @state() private justCopied = false;
+
+  @query('[part="base"]') private buttonEl?: HTMLButtonElement;
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.buttonEl?.focus(options);
+  }
+
+  override blur(): void {
+    this.buttonEl?.blur();
   }
 
   private writeClipboard(text: string): void {
@@ -91,13 +111,17 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   }
 
   private onClick = (): void => {
+    if (this.disabled) return;
     this.writeClipboard(this.value);
     this.emit('lyra-copy', { text: this.value });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
+    const duration = Number.isFinite(this.feedbackDuration)
+      ? Math.max(0, this.feedbackDuration)
+      : DEFAULT_FEEDBACK_DURATION;
     this.copyTimeoutId = setTimeout(() => {
       this.justCopied = false;
-    }, COPY_CONFIRM_MS);
+    }, duration);
   };
 
   render(): TemplateResult {
@@ -105,7 +129,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
       <button
         part="base"
         type="button"
-        aria-label=${this.justCopied ? this.localize('copied') : this.localize('copy')}
+        ?disabled=${this.disabled}
+        aria-label=${this.accessibleLabel || (this.justCopied ? this.localize('copied') : this.localize('copy'))}
         @click=${this.onClick}
       >
         ${this.justCopied ? checkIcon() : copyIcon()}
