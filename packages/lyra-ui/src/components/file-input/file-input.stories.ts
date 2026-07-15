@@ -21,6 +21,14 @@ export const CustomSlotContent: Story = {
     </lyra-file-input>`,
 };
 
+export const AccessibleNameOverride: Story = {
+  render: () => html`
+    <lyra-file-input aria-label="Upload supporting documents" multiple>
+      <strong aria-hidden="true">＋</strong>
+    </lyra-file-input>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`<lyra-file-input disabled accept=".csv,.xlsx"></lyra-file-input>`,
 };

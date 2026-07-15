@@ -246,10 +246,26 @@ it('removes the dropzone base from the tab order and ignores Enter/Space while d
   expect(clicked).to.be.false;
 });
 
-it('has no aria-disabled attribute when not disabled', async () => {
+it('exposes aria-disabled="false" while enabled', async () => {
   const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.hasAttribute('aria-disabled')).to.be.false;
+  expect(base.getAttribute('aria-disabled')).to.equal('false');
+});
+
+it('forwards a host aria-label to the semantic dropzone and native file input', async () => {
+  const el = (await fixture(html`
+    <lyra-file-input aria-label="Upload attachments" label="Visible instructions"></lyra-file-input>
+  `)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  expect(base.getAttribute('aria-label')).to.equal('Upload attachments');
+  expect(input.getAttribute('aria-label')).to.equal('Upload attachments');
+});
+
+it('focus() delegates to the semantic dropzone', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
 
 it('keeps the accessible name sourced from `label` even when slot content overrides the visible text', async () => {

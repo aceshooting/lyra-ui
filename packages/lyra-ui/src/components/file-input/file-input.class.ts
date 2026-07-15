@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
@@ -21,9 +21,9 @@ export interface LyraFileInputEventMap {
  * where files ultimately get uploaded and processed anyway.
  *
  * @customElement lyra-file-input
- * @slot - Custom drop-zone content, overrides the `label` attribute. The
- * accessible name always comes from `label`, so icon-only slot content
- * remains announced correctly.
+ * @slot - Custom drop-zone content, overrides the visible `label` text. The
+ * accessible name comes from a host `aria-label` when present, then falls
+ * back to `label`, so icon-only slot content remains announced correctly.
  * @event lyra-files - `detail: { files, rejected }`, fired on drop and manual selection.
  * @csspart base - The dropzone's root, clickable/focusable container.
  * @csspart input - The visually-hidden native `<input type="file">`.
@@ -39,6 +39,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property({ attribute: false }) forbiddenMimeTypes: string[] = [];
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
   @property() label = 'Drop files here or click to browse';
+  /** Accessible name forwarded to the semantic dropzone and native file input.
+   * When unset, the effective `label` text is used. */
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Message announced after an accepted selection; `{count}` is replaced by
    * the number of accepted files. */
   @property({ attribute: 'accepted-message' }) acceptedMessage = '{count} file(s) added.';
@@ -48,6 +51,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   @state() private dragState: DragState = 'default';
   @state() private resultStatus = '';
+  @query('[part="base"]') private baseEl?: HTMLElement;
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
 
   private dragCounter = 0;
@@ -112,6 +116,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   openPicker(): void {
     if (this.disabled) return;
     this.inputEl?.click();
+  }
+
+  /** Focuses the semantic dropzone. */
+  override focus(options?: FocusOptions): void {
+    this.baseEl?.focus(options);
   }
 
   private previewState(fileList: File[]): DragState {
@@ -187,13 +196,14 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   render(): TemplateResult {
     const label = this.effectiveLabel;
+    const accessibleLabel = this.accessibleLabel || label;
     return html`
       <div
         part="base"
         role="button"
         tabindex=${this.disabled ? '-1' : '0'}
-        aria-disabled=${this.disabled ? 'true' : nothing}
-        aria-label=${label}
+        aria-disabled=${this.disabled ? 'true' : 'false'}
+        aria-label=${accessibleLabel}
         data-drag-state=${this.dragState}
         @dragenter=${this.onDragEnter}
         @dragover=${this.onDragOver}
@@ -211,6 +221,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         type="file"
         tabindex="-1"
         aria-hidden="true"
+        aria-label=${accessibleLabel}
         accept=${this.accept}
         ?multiple=${this.multiple}
         ?disabled=${this.disabled}
