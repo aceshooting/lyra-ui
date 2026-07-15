@@ -196,6 +196,10 @@ export type LyraMessageKey =
   | 'fileInputDefaultLabel'
   | 'fileInputAccepted'
   | 'fileInputRejected'
+  | 'fileInputAcceptedOne'
+  | 'fileInputAcceptedMany'
+  | 'fileInputRejectedOne'
+  | 'fileInputRejectedMany'
   | 'elapsedSecondsUnit'
   | 'elapsedMinutesSecondsTemplate'
   | 'tokensPerSecondUnit'
@@ -217,6 +221,9 @@ export type LyraMessageKey =
   | 'hidePassword'
   | 'mediaCardUntitledFile'
   | 'mediaCardOpenName'
+  | 'mediaCardOpenImageAttachment'
+  | 'mediaCardOpenVideoAttachment'
+  | 'mediaCardOpenFileAttachment'
   | 'mediaCardOpenAttachment'
   | 'mediaCardImageAttachment'
   | 'mediaCardVideoAttachment'
@@ -509,6 +516,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   fileInputDefaultLabel: 'Drop files here or click to browse',
   fileInputAccepted: '{count} file(s) added.',
   fileInputRejected: '{count} file(s) rejected.',
+  fileInputAcceptedOne: '{count} file added.',
+  fileInputAcceptedMany: '{count} files added.',
+  fileInputRejectedOne: '{count} file rejected.',
+  fileInputRejectedMany: '{count} files rejected.',
   elapsedSecondsUnit: 's',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   tokensPerSecondUnit: 'tok/s',
@@ -530,6 +541,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   hidePassword: 'Hide password',
   mediaCardUntitledFile: 'Untitled file',
   mediaCardOpenName: 'Open {name}',
+  mediaCardOpenImageAttachment: 'Open image attachment',
+  mediaCardOpenVideoAttachment: 'Open video attachment',
+  mediaCardOpenFileAttachment: 'Open file attachment',
   mediaCardOpenAttachment: 'Open {kind} attachment',
   mediaCardImageAttachment: 'Image attachment',
   mediaCardVideoAttachment: 'Video attachment',

@@ -54,3 +54,16 @@ it('defines a complete localizable citation status summary', () => {
 it('defines the default heatmap value label', () => {
   expect(LYRA_DEFAULT_STRINGS.heatmapValueLabel).to.equal('value');
 });
+
+it('defines complete media-card attachment action labels', () => {
+  expect(LYRA_DEFAULT_STRINGS.mediaCardOpenImageAttachment).to.equal('Open image attachment');
+  expect(LYRA_DEFAULT_STRINGS.mediaCardOpenVideoAttachment).to.equal('Open video attachment');
+  expect(LYRA_DEFAULT_STRINGS.mediaCardOpenFileAttachment).to.equal('Open file attachment');
+});
+
+it('defines singular and plural file-input result messages', () => {
+  expect(LYRA_DEFAULT_STRINGS.fileInputAcceptedOne).to.equal('{count} file added.');
+  expect(LYRA_DEFAULT_STRINGS.fileInputAcceptedMany).to.equal('{count} files added.');
+  expect(LYRA_DEFAULT_STRINGS.fileInputRejectedOne).to.equal('{count} file rejected.');
+  expect(LYRA_DEFAULT_STRINGS.fileInputRejectedMany).to.equal('{count} files rejected.');
+});
