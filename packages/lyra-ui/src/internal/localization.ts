@@ -7,6 +7,24 @@ export type LyraMessageKey =
   | 'noData'
   | 'noColumns'
   | 'loadMore'
+  | 'tableFilterLabel'
+  | 'tableFilterPlaceholder'
+  | 'tableLoading'
+  | 'tableEditCell'
+  | 'carousel'
+  | 'carouselLabel'
+  | 'carouselSlide'
+  | 'carouselSlidePosition'
+  | 'carouselIndicators'
+  | 'carouselGoTo'
+  | 'imageComparerLabel'
+  | 'zoomableFrameLabel'
+  | 'zoomControls'
+  | 'zoomOut'
+  | 'zoomIn'
+  | 'scrollerLabel'
+  | 'scrollPrevious'
+  | 'scrollNext'
   | 'showAllColumns'
   | 'showFewerColumns'
   | 'clear'
@@ -219,6 +237,14 @@ export type LyraMessageKey =
   | 'inputLabel'
   | 'showPassword'
   | 'hidePassword'
+  | 'radioRequired'
+  | 'progress'
+  | 'popover'
+  | 'details'
+  | 'breadcrumb'
+  | 'rating'
+  | 'colorPicker'
+  | 'hidePassword'
   | 'mediaCardUntitledFile'
   | 'mediaCardOpenName'
   | 'mediaCardOpenImageAttachment'
@@ -327,6 +353,24 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   noData: 'No data',
   noColumns: 'No columns configured',
   loadMore: 'Load more',
+  tableFilterLabel: 'Filter rows',
+  tableFilterPlaceholder: 'Filter rows',
+  tableLoading: 'Loading rows',
+  tableEditCell: 'Edit {column}',
+  carousel: 'carousel',
+  carouselLabel: 'Carousel',
+  carouselSlide: 'slide',
+  carouselSlidePosition: 'Slide {index} of {total}',
+  carouselIndicators: 'Carousel slides',
+  carouselGoTo: 'Go to slide {index}',
+  imageComparerLabel: 'Image comparison',
+  zoomableFrameLabel: 'Zoomable content',
+  zoomControls: 'Zoom controls',
+  zoomOut: 'Zoom out',
+  zoomIn: 'Zoom in',
+  scrollerLabel: 'Scrollable content',
+  scrollPrevious: 'Scroll backward',
+  scrollNext: 'Scroll forward',
   showAllColumns: 'Show all columns',
   showFewerColumns: 'Show fewer columns',
   clear: 'Clear',
@@ -539,6 +583,13 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   inputLabel: 'Text',
   showPassword: 'Show password',
   hidePassword: 'Hide password',
+  radioRequired: 'Please select an option.',
+  progress: 'Progress',
+  popover: 'Popover',
+  details: 'Details',
+  breadcrumb: 'Breadcrumb',
+  rating: 'Rating',
+  colorPicker: 'Color picker',
   mediaCardUntitledFile: 'Untitled file',
   mediaCardOpenName: 'Open {name}',
   mediaCardOpenImageAttachment: 'Open image attachment',

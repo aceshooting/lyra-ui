@@ -21,7 +21,7 @@ free, open-source components wherever Web Awesome Pro normally charges, with the
 compatible attributes, slots, events, parts, and `--wa-*` token names under a `lyra-` prefix
 instead of `wa-`; component-specific notes call out any intentional differences.
 
-That free-Pro-equivalent group is 18 of lyra-ui's 97 tags. The other 79 have no Web Awesome
+That free-Pro-equivalent group is 55 of lyra-ui's 133 tags. The other 78 have no Web Awesome
 equivalent at all, free or paid — Web Awesome doesn't sell them in any tier: dashboard atoms (stat
 tiles, tables, gauges, empty/skeleton states, split panes, widgets), temporal & graph widgets (time
 range, playback scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't
@@ -52,7 +52,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-97 tags across six component families. Every tag has a live, interactive example on the
+133 tags across seven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -65,10 +65,11 @@ mirror, props, events, slots, parts) see
 | Charts | 12 | line/bar/pie/doughnut/radar/polar-area/scatter/bubble via Chart.js, plus histogram, box plot, and a dependency-free `lyra-lite-chart` |
 | Map & file input | 2 | MapLibre GL map with legend/choropleth layers, drag-drop file dropzone |
 | Conversation & Agent UI | 53 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, avatar/card/stepper/segmented, and more — the library's largest family |
+| Web Awesome parity primitives | 29 | radio/group, spinner, progress bar/ring, badge/tag, callout, color picker, details/accordion, breadcrumb, divider, formatting, rating, popover/tooltip/dropdown, drawer, carousel, image comparer, zoomable frame, and number/time inputs |
 
 ## Theming, internationalization & RTL
 
-Every one of the 97 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 133 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--wa-*`/`--lyra-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.

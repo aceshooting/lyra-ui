@@ -790,13 +790,17 @@ form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships th
 - `errorText: string = ''` (attribute `error-text`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `autocomplete: string = ''`
+- `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
+- `autocapitalize: string = ''` / `autoCorrect: string = ''`
+- `inputMode: string = ''` / `enterKeyHint: string = ''`
 - `min?: number` / `max?: number` / `step?: number` (attribute: false — `type="number"` only)
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
-**Events:** `lyra-input` (`detail: { value }`, fired on every user-driven edit), `lyra-change`
-(`detail: { value }`, fired on the native `change` timing), `blur`/`focus` (re-dispatched bubbling +
-composed from the internal native input's own `blur`/`focus`).
+**Events:** native-style composed `input` and `change`, plus `lyra-input` (`detail: { value }`,
+fired on every user-driven edit) and `lyra-change` (`detail: { value }`, fired on the native
+`change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
+own `blur`/`focus`).
 
 **Slots:** `label`, `hint`, `error`.
 
@@ -820,6 +824,18 @@ composed from the internal native input's own `blur`/`focus`).
   own browser-computed `validity` (format/range/step), bridged into this element's own
   `ElementInternals` — not a second hand-rolled regex check.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
+
+## `lyra-number-input`
+
+A migration-friendly numeric alias of `lyra-input`. It forces `type="number"` while retaining the
+same form association, label/hint/error chrome, native editing passthrough, input/change events,
+and `min`/`max`/`step` validation. It exposes the same properties, slots, events, and CSS parts as
+`lyra-input`.
+
+## `lyra-time-input`
+
+A migration-friendly time alias of `lyra-input`. It forces the native `type="time"` while retaining
+the same form association, chrome, native editing passthrough, events, slots, and CSS parts.
 
 ---
 
@@ -1400,8 +1416,8 @@ accent edge and value tint).
 
 ## `lyra-table`
 
-Presentational, sort/select-aware data table. **The host owns actual sorting/filtering/pagination**
-of `rows` — this component only renders and emits intents.
+Sort/select-aware data table. Sorting remains consumer-controlled; optional filtering, pagination,
+and loading chrome are built in while remaining controlled at the public API boundary.
 
 **Properties:**
 - `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
@@ -1419,7 +1435,8 @@ of `rows` — this component only renders and emits intents.
   `[part='foot']` (`<tfoot>`) only renders at all when at least one column defines `footer`;
   `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
-  no per-cell style override (the default, unchanged output)
+  no per-cell style override (the default, unchanged output); `editable` enables double-click
+  editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -1437,6 +1454,31 @@ of `rows` — this component only renders and emits intents.
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
   sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong row
 - `selectedKey: string | number | null = null` (attribute: false) — **single**-selection only
+- `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
+  opt-in self-managed row selection; the default remains presentational
+- `selectedKeys: Set<string | number> = new Set()` (attribute: false) — the selected raw row keys
+  used by multiple selection
+- `filterable: boolean = false` (attribute `filterable`, reflected) — renders a localized search
+  field above the grid
+- `filterText: string = ''` (attribute `filter-text`) — controlled filter text
+- `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
+  filter field; when omitted, rows are matched against their JSON representation
+- `filterLabel: string = ''` (attribute `filter-label`) and `filterPlaceholder: string = ''`
+  (attribute `filter-placeholder`) — optional localized-label overrides
+- `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel: string = ''`
+  (attribute `loading-label`) — renders a busy spinner and suppresses the grid while loading
+- `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
+  zero disables the pagination footer
+- `page: number = 1` (attribute `page`, reflected) — controlled current page
+- `totalItems: number = -1` (attribute `total-items`) — server-side total item count; `-1` derives
+  the total from filtered rows
+- `paginationMode: 'client'|'server' = 'client'` (attribute `pagination-mode`, reflected) — client
+  mode slices rows; server mode renders the supplied page unchanged
+- Editable columns emit `lyra-cell-edit` on commit and never mutate the supplied row object.
+- `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
+  group row before each group
+- `groupLabel?: (key: string | number, rows: T[]) => unknown` (attribute: false) — custom group
+  header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
   renders a full-width detail row beneath expanded records
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
@@ -1459,7 +1501,11 @@ of `rows` — this component only renders and emits intents.
 (`detail: { row }`), `lyra-load-more` (fired on the "load more" button), `lyra-columns-hidden-change`
 (`detail: { hidden: boolean }`, fired only on a real `columnsHidden` transition),
 `lyra-columns-revealed` (`detail: { revealed: boolean }`), and `lyra-row-expand-toggle`
-(`detail: { row, key }`; the table does not mutate `expandedKeys`)
+(`detail: { row, key }`; the table does not mutate `expandedKeys`), and
+`lyra-selection-change` (`detail: { keys }`) when selection is enabled, `lyra-filter-change`
+(`detail: { text }`), and `lyra-page-change` (`detail: { page }`) from the controlled
+filter/pagination surfaces, and `lyra-cell-edit` (`detail: { row, key, value }`) for editable
+columns
 
 **Slots:** none — content comes entirely from `columns`/`rows`.
 
@@ -1467,7 +1513,8 @@ of `rows` — this component only renders and emits intents.
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
 (shown only when `columnsHidden` is true), `foot` (the `<tfoot>`, only rendered when at least one
 column defines `footer`), `footer-row`, `footer-cell`, `expand-toggle-cell`, `row-expand-toggle`,
-`row-expand-icon`, `expanded-row`, `expanded-cell`
+`row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading`, and
+`pagination`, `cell-editor`, `group-row`, and `group-cell`
 
 **Themeable custom properties:** `--lyra-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`).
@@ -3178,6 +3225,219 @@ an extension-only `accept` list.
   accept/reject decision (and `rejected[].reason`) is always the one made at actual drop time.
 - the click/keyboard-to-browse path is correctly operable (`role="button"`, `tabindex` 0/-1 by
   disabled, `aria-disabled`, Enter/Space handling).
+
+---
+
+## `lyra-drawer`
+
+A modal panel anchored to one edge of the viewport. It inherits the dialog overlay contract:
+focus trapping, Escape and optional backdrop dismissal, document scroll locking, overlay stacking,
+accessible naming, and the cancelable `lyra-dialog-close` event.
+
+**Properties:**
+- `open: boolean = false` (attribute `open`, reflected) — controls visibility
+- `placement: 'start'|'end'|'top'|'bottom' = 'start'` (attribute `placement`, reflected)
+- `heading?: string`, `label: string`, `closable: boolean`, and `noLightDismiss: boolean` — inherited
+  dialog naming and dismissal options
+
+**CSS parts:** `backdrop`, `panel`, `header`, `heading`, `close-button`, `label`, `body`, `footer`.
+
+**Themeable custom properties:** `--lyra-drawer-width`, `--lyra-drawer-height`, and inherited
+dialog surface/overlay tokens.
+
+```html
+<lyra-drawer open placement="end" heading="Filters" closable>
+  <lyra-checkbox label="Only active"></lyra-checkbox>
+</lyra-drawer>
+```
+
+---
+
+## `lyra-carousel`
+
+Accessible carousel for arbitrary slotted slide elements. It shows one assigned element at a time,
+adds slide semantics and localized position labels, and provides keyboard, button, and indicator
+navigation.
+
+**Properties:**
+- `index: number = 0` (attribute `index`, reflected) — active slide index
+- `loop: boolean = false` (attribute `loop`, reflected) — wraps navigation at either end
+- `autoplay: boolean = false` (attribute `autoplay`, reflected) and `autoplayInterval: number = 5000`
+  (attribute `autoplay-interval`) — optional timed advance; autoplay is disabled under reduced motion
+- `showIndicators: boolean = true` (attribute `show-indicators`) — renders slide indicator buttons
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
+  `aria-label` takes precedence
+
+**Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
+`lyra-slide-change` (`detail: { index }`).
+
+**CSS parts:** `base`, `viewport`, `track`, `controls`, `previous-button`, `next-button`,
+`indicators`, and `indicator`.
+
+```html
+<lyra-carousel aria-label="Screenshots">
+  <img alt="Dashboard overview" src="overview.png">
+  <img alt="Dashboard details" src="details.png">
+</lyra-carousel>
+```
+
+---
+
+## `lyra-carousel-item`
+
+Optional semantic wrapper for one slide in `<lyra-carousel>`. The carousel also accepts arbitrary
+slotted elements, so this element is useful when a migration needs the explicit item tag.
+
+**Slots:** default slide content.
+
+**CSS parts:** `base`.
+
+```html
+<lyra-carousel>
+  <lyra-carousel-item>Dashboard overview</lyra-carousel-item>
+  <lyra-carousel-item>Dashboard details</lyra-carousel-item>
+</lyra-carousel>
+```
+
+---
+
+## `lyra-button-group`
+
+Responsive semantic grouping primitive for related action controls. It preserves the slotted
+controls and exposes `role="group"` on its internal wrapper.
+
+**Properties:**
+- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
+- `label: string = ''` — accessible group name; a host `aria-label` is used when `label` is empty
+
+**Slots:** default action controls.
+
+**CSS parts:** `base`.
+
+---
+
+## `lyra-image-comparer`
+
+Before/after comparison surface with two named slots and a keyboard-accessible native range handle.
+
+**Properties:**
+- `position: number = 50` (attribute `position`, reflected) — divider position from 0 to 100
+- `orientation: 'horizontal'|'vertical' = 'horizontal'` (attribute `orientation`, reflected)
+- `accessibleLabel: string | null` (attribute `aria-label`) — accessible name for the comparison
+  and its range handle
+- `beforeLabel`/`afterLabel` — fallback text for empty named slots
+
+**Events:** `lyra-position-change` (`detail: { position }`), plus composed `focus` and `blur` events
+from the internal range handle.
+
+**Slots:** `before`, `after`.
+
+**CSS parts:** `base`, `before`, `after`, `divider`, and `handle`.
+
+```html
+<lyra-image-comparer aria-label="Before and after">
+  <img slot="before" alt="Before" src="before.png">
+  <img slot="after" alt="After" src="after.png">
+</lyra-image-comparer>
+```
+
+---
+
+## `lyra-zoomable-frame`
+
+Scrollable inspection frame with bounded zoom controls and keyboard shortcuts. Scrolling provides
+panning when zoomed content exceeds the viewport.
+
+**Properties:**
+- `zoom: number = 1` (attribute `zoom`, reflected), `minZoom: number = 0.5`, `maxZoom: number = 4`,
+  and `zoomStep: number = 0.25` — bounded zoom configuration
+- `src: string = ''` and `alt: string = ''` — optional image source; otherwise the default slot is
+  rendered
+- `accessibleLabel: string | null` (attribute `aria-label`) — host-level accessible name
+
+**Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update the zoom and emit
+`lyra-zoom-change` (`detail: { zoom }`). The viewport also accepts `+`, `-`, and `0` keyboard
+shortcuts.
+
+**CSS parts:** `base`, `viewport`, `content`, `controls`, `zoom-out`, `zoom-in`, and `reset`.
+
+```html
+<lyra-zoomable-frame src="map-preview.png" alt="Map preview" aria-label="Map preview"></lyra-zoomable-frame>
+```
+
+---
+
+## `lyra-scroller`
+
+Responsive overflow surface with optional previous/next controls. The default slot remains the
+consumer's content, and the viewport is a native scroll container that works in narrow panels as
+well as full-width layouts.
+
+**Properties:**
+- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected)
+- `controls: boolean = false` (reflected) — show previous/next controls
+- `hideScrollbar: boolean = false` (attribute `hide-scrollbar`, reflected)
+- `scrollStep: number = 0` (attribute `scroll-step`) — custom step; zero uses 80% of the viewport
+- `label: string = ''` — accessible region name; a host `aria-label` is used when set
+
+**Events:** `lyra-scroll` with `scrollStart`, `scrollEnd`, `scrollLeft`, and `scrollTop` in the
+detail object.
+
+**Slots:** default scrollable content.
+
+**CSS parts:** `base`, `viewport`, `content`, `previous`, and `next`.
+
+```html
+<lyra-scroller controls label="Project cards">
+  <lyra-card>Solar</lyra-card>
+  <lyra-card>Wind</lyra-card>
+  <lyra-card>Battery</lyra-card>
+</lyra-scroller>
+```
+
+---
+
+## `lyra-resize-observer`
+
+Lifecycle-managed wrapper around the native `ResizeObserver`. It observes all element children in
+the default slot and emits a composed event, while adding no layout of its own.
+
+**Properties:** `disabled: boolean = false` (reflected) and `box: 'content-box' | 'border-box' |
+'device-pixel-content-box' = 'content-box'` (reflected).
+
+**Events:** `lyra-resize` with `{ entries: ResizeObserverEntry[] }` in `detail`.
+
+**Slots:** default observed elements. **CSS parts:** `base`.
+
+---
+
+## `lyra-intersection-observer`
+
+Lifecycle-managed wrapper around the native `IntersectionObserver`. It observes all element children
+in the default slot and emits a composed event, while adding no layout of its own.
+
+**Properties:** `disabled: boolean = false` (reflected), `rootMargin: string = '0px'` (attribute
+`root-margin`), `threshold: number | number[] = 0`, and `root: Element | null = null`.
+
+**Events:** `lyra-intersection` with `{ entries: IntersectionObserverEntry[] }` in `detail`.
+
+**Slots:** default observed elements. **CSS parts:** `base`.
+
+---
+
+## `lyra-mutation-observer`
+
+Lifecycle-managed wrapper around the native `MutationObserver`. All element children in the default
+slot are observed and their mutation records are emitted as a composed event; the wrapper itself
+adds no layout.
+
+**Properties:** `disabled: boolean = false` (reflected), `childList: boolean = true` (attribute
+`child-list`), `observeAttributes: boolean = false` (attribute `attributes`), `characterData: boolean = false` (attribute
+`character-data`), `subtree: boolean = true`, and `attributeFilter: string[] = []`.
+
+**Events:** `lyra-mutation` with `{ records: MutationRecord[] }` in `detail`.
+
+**Slots:** default observed elements. **CSS parts:** `base`.
 
 ---
 
@@ -6869,6 +7129,21 @@ not rendered at all for `type="normal"`)
 
 **Optional peer deps:** none.
 
+### `lyra-dropdown-item`
+
+Compatibility naming alias for `<lyra-menu-item>`. It is a subclass of the same implementation,
+so `value`, `disabled`, `destructive`, `type`, `checked`, `select()`, checkbox events, and menu
+roving focus behave identically.
+
+**Slots:** default label content and optional `icon`.
+
+```html
+<lyra-menu>
+  <button slot="trigger">Actions</button>
+  <lyra-dropdown-item value="archive">Archive</lyra-dropdown-item>
+</lyra-menu>
+```
+
 ```html
 <lyra-menu label="Row actions">
   <button slot="trigger" aria-label="More actions">⋮</button>
@@ -7859,6 +8134,164 @@ the `footer` slot, hidden entirely when empty).
   pattern `lyra-empty`/`lyra-widget` use.
 
 ---
+
+## `lyra-radio`
+
+A form-associated single-choice control. Use it alone or inside `lyra-radio-group`.
+
+**Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
+applicable). A selected radio submits its value through `ElementInternals`.
+
+**Events:** native-style composed `input` and `change`, plus `lyra-change` with
+`{ checked, value }`.
+
+**Slots:** default label content.
+
+**CSS parts:** `base`, `circle`, `dot`, `label`.
+
+```html
+<lyra-radio name="format" value="json">JSON</lyra-radio>
+```
+
+## `lyra-popover`
+
+A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
+
+**Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+**Events:** `lyra-show`, `lyra-hide`. **Slots:** `trigger`, default content. **CSS parts:** `trigger`,
+`popup`, `content`.
+
+## `lyra-tooltip`
+
+A hover/focus tooltip positioned with the shared Floating UI positioner.
+
+**Properties:** `open`, `manual`, `delay`, `placement`, `distance`, `content`, and
+`accessibleLabel` (`aria-label`). **Slots:** `trigger`, default content. **CSS parts:**
+`trigger`, `popup`.
+
+## `lyra-dropdown`
+
+A menu-role popover for consumer-supplied action content. Compose `lyra-menu` when full roving
+menu-item behavior is needed.
+
+**Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+**Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`.
+
+## `lyra-radio-group`
+
+A labeled, keyboard-navigable group of `lyra-radio` controls. Arrow keys, Home, and End move
+focus; arrow navigation selects the next enabled radio.
+
+**Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`, and
+`aria-label` (through `accessibleLabel`).
+
+**Events:** `lyra-change` with `{ value, radio }`.
+
+**Slots:** default radios, `label`, `hint`, `error`.
+
+**CSS parts:** `base`, `label`, `hint`, `error`.
+
+## `lyra-spinner`
+
+An indeterminate busy indicator with a localized `role="status"` name.
+
+**Properties:** `labelPlacement` (`label-placement`): `'none' | 'after'` and `accessibleLabel`
+(`accessible-label`).
+
+**Slots:** default optional visible label. **CSS parts:** `base`, `spinner`, `label`.
+
+## `lyra-progress-bar`
+
+A determinate or indeterminate progress bar.
+
+**Properties:** `value`, `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
+`accessibleLabel` (`accessible-label`).
+The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
+determinate.
+
+**Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
+
+## `lyra-progress-ring`
+
+A circular progress indicator with the same value contract as `lyra-progress-bar`.
+
+**Properties:** `value`, `max`, `indeterminate`, and `accessibleLabel` (`accessible-label`).
+**Slots:** default center label. **CSS parts:** `base`, `track`, `indicator`, `label`.
+
+## `lyra-badge` and `lyra-tag`
+
+Compact status labels. Both expose `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger'`.
+The two tags share the same visual contract; `lyra-tag` is a semantic alias for migration-friendly
+markup.
+
+**Slots:** default content. **CSS parts:** `base`.
+
+## `lyra-callout`
+
+An inline status, warning, or error surface.
+
+**Properties:** `variant`, `heading`, `closable`, `open`, and `accessibleLabel` (`accessible-label`).
+
+**Events:** cancelable `lyra-close`; the callout hides after the event unless a listener calls
+`preventDefault()`.
+
+**Slots:** default message, `heading`, `icon`. **CSS parts:** `base`, `icon`, `content`, `heading`,
+`close-button`.
+
+## `lyra-details`, `lyra-accordion`, and `lyra-accordion-item`
+
+`lyra-details` is a native-semantics disclosure panel. `lyra-accordion` coordinates slotted
+details panels and closes siblings unless `multiple` is true. `lyra-accordion-item` is an
+accordion-compatible alias.
+
+**Properties:** `open`, `disabled`, and `summary` on details/items; `multiple` on accordion.
+**Events:** `lyra-toggle` with `{ open }` from details/items. **Slots:** `summary` and default
+content on details/items; default panels on accordion. **CSS parts:** `base`, `summary`, `content`
+on details/items; `base` on accordion.
+
+## `lyra-divider`
+
+A semantic separator with `orientation: 'horizontal' | 'vertical'`. **CSS part:** `base`.
+
+## `lyra-breadcrumb` and `lyra-breadcrumb-item`
+
+Responsive navigation trail primitives. Breadcrumb has `accessibleLabel` (`accessible-label`);
+items have `href` and `current`. Breadcrumb slots default items; item slots default label content.
+Breadcrumb exposes `base`; item exposes `base`.
+
+## `lyra-format-number`
+
+Locale-aware `Intl.NumberFormat` output. **Properties:** `value`, `locale`, `currency`, `notation`,
+`minimumFractionDigits`, and `maximumFractionDigits`. Default slot is fallback content for a
+non-finite value.
+
+## `lyra-format-date`
+
+Locale-aware `Intl.DateTimeFormat` output. **Properties:** `date`, `locale`, `year`, `month`, `day`,
+`dateStyle`, and `timeStyle`. Default slot is fallback content for an invalid date.
+
+## `lyra-format-bytes`
+
+Locale-aware byte-size output. **Properties:** `value`, `locale`, `unitStep` (`unit-step`), and
+`decimals`.
+
+## `lyra-relative-time`
+
+Locale-aware relative time output. **Properties:** `date`, `locale`, `unit`, `numeric`, and `sync`.
+When `sync` is true the displayed value refreshes periodically.
+
+## `lyra-rating`
+
+A keyboard-accessible star rating control with slider semantics. **Properties:** `value`, `max`,
+`precision`, `readonly`, `disabled`, and `accessibleLabel` (`aria-label`). **Events:**
+`lyra-change` with `{ value }`. **CSS parts:** `base`, `star`.
+
+## `lyra-color-picker`
+
+A form-associated native color picker with label and hint chrome. **Properties:** the shared form
+properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, and `accessibleLabel`
+(`aria-label`). **Slots:** `label`, `hint`. **Events:** composed `input` and `change`, plus
+`lyra-change` with `{ value }`. **CSS parts:** `form-control`, `label`, `input`, `hint`.
 
 ## Cross-cutting notes
 

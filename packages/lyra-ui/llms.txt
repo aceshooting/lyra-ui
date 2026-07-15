@@ -33,6 +33,17 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-pagination`, `lyra-gauge`,
   `lyra-export-button`, `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
   (zero-dependency SVG word/tag cloud).
+- **Web Awesome parity and visual primitives** — `lyra-number-input`/`lyra-time-input`,
+  `lyra-color-picker`, `lyra-radio`/`lyra-radio-group`, `lyra-spinner`,
+  `lyra-progress-bar`/`lyra-progress-ring`, `lyra-badge`/`lyra-tag`, `lyra-callout`,
+  `lyra-details`/`lyra-accordion`/`lyra-accordion-item`, `lyra-divider`,
+  `lyra-breadcrumb`/`lyra-breadcrumb-item`, `lyra-format-number`/`lyra-format-date`/
+  `lyra-format-bytes`/`lyra-relative-time`, `lyra-rating`, `lyra-popover`/`lyra-tooltip`/
+  `lyra-dropdown`, `lyra-drawer`, `lyra-carousel`, `lyra-image-comparer`, and
+  `lyra-zoomable-frame`, `lyra-carousel-item`, `lyra-button-group`, and
+  `lyra-dropdown-item`, and `lyra-scroller` compatibility primitives.
+  Observer utilities include `lyra-resize-observer`, `lyra-intersection-observer`, and
+  `lyra-mutation-observer`.
 - **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
   `lyra-playback`, `lyra-heatmap` (matrix and calendar layouts), `lyra-graph` (needs the optional peer
   deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
@@ -49,6 +60,8 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   dropzone, emits raw `File[]`).
 - **Conversation & Agent UI** — chat/tool-call/agent-config building blocks for streaming AI
   interfaces: `lyra-dialog`/`confirm()`, `lyra-tabs`, `lyra-checkbox`, `lyra-switch`,
+  `lyra-radio`/`lyra-radio-group`, `lyra-input`, `lyra-textarea`, `lyra-callout`, `lyra-spinner`,
+  `lyra-progress-bar`/`lyra-progress-ring`, `lyra-badge`/`lyra-tag`,
   `lyra-json-viewer`, `lyra-live-region` (+ `internal/announcer.ts`'s throttled `Announcer`),
   `lyra-markdown` (needs the optional peers `marked`/`dompurify`), `lyra-chat-message`,
   `lyra-typing-indicator`, `lyra-tool-call-chip`, `lyra-tool-result-view` (+ its

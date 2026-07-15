@@ -161,7 +161,7 @@ roving-tabindex list) to match. No per-component RTL flag or opt-in needed.
 
 ## Components
 
-The catalog below lists all 97 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 133 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -178,7 +178,12 @@ API details.
 | `<lyra-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lyra-textarea>` | `wa-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
 | `<lyra-input>` | `wa-input` | Form-associated single-line field (`text`/`password`/`email`/`number`) with label/hint/error chrome and a built-in password-visibility toggle |
+| `<lyra-number-input>` + `<lyra-time-input>` | `wa-number-input` / `wa-time-input` | Native number/time aliases retaining Lyra form and event contracts |
+| `<lyra-color-picker>` | `wa-color-picker` | Form-associated native color picker with label/hint chrome |
 | `<lyra-button>` | `wa-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via the closest ancestor `<form>` |
+| `<lyra-radio>` + `<lyra-radio-group>` | `wa-radio` / `wa-radio-group` | Form-associated single-choice controls with roving arrow-key navigation and group validation |
+| `<lyra-spinner>` | `wa-spinner` | Localized indeterminate busy indicator with reduced-motion support |
+| `<lyra-progress-bar>` + `<lyra-progress-ring>` | `wa-progress-bar` / `wa-progress-ring` | Determinate or indeterminate progress indicators |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
 
 **Dashboard atoms**
@@ -187,8 +192,12 @@ API details.
 |-----------|---------|-------|
 | `<lyra-empty>` | — (extra) | Generic empty/no-data state |
 | `<lyra-skeleton>` | — (extra) | Loading placeholder (pulse/sheen) |
+| `<lyra-scroller>` | `wa-scroller` | Responsive overflow surface with optional navigation controls |
+| `<lyra-resize-observer>` | `wa-resize-observer` | Lifecycle-managed ResizeObserver for slotted elements |
+| `<lyra-intersection-observer>` | `wa-intersection-observer` | Lifecycle-managed IntersectionObserver for slotted elements |
+| `<lyra-mutation-observer>` | `wa-mutation-observer` | Lifecycle-managed MutationObserver for slotted elements |
 | `<lyra-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
-| `<lyra-table>` | — (extra) | Presentational, sort/select-aware data table; a column's responsive `priority` (`medium`/`low`) hides it first as the container narrows, with a reveal-columns button to force hidden columns back |
+| `<lyra-table>` | — (extra) | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
 | `<lyra-pagination>` | — (extra) | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
 | `<lyra-gauge>` | — (extra) | Radial, full-circle ring, or linear meter with a per-instance fill token |
 | `<lyra-export-button>` | — (extra) | Injection-safe CSV/JSON downloads plus event-handled custom format descriptors and controlled busy state |
@@ -196,6 +205,10 @@ API details.
 | `<lyra-split>` | — (extra) | Resizable panel layout; one pane can opt into responsive `collapse` (`"start"`/`"end"`) to a fixed-width rail, then a floating overlay card, as the split's container narrows |
 | `<lyra-widget>` | — (extra) | Card shell with collapsible header, fullscreen, and customizable chrome |
 | `<lyra-word-cloud>` | — (extra) | Zero-dependency SVG word/tag cloud, spiral-placed by weight |
+| `<lyra-badge>` + `<lyra-tag>` | `wa-badge` / `wa-tag` | Compact semantic status labels |
+| `<lyra-callout>` | `wa-callout` | Dismissible inline status, warning, and error message surface |
+| `<lyra-divider>` | `wa-divider` | Horizontal or vertical semantic separator |
+| `<lyra-rating>` | `wa-rating` | Keyboard-accessible star rating slider |
 
 **Temporal & graph**
 
@@ -206,6 +219,12 @@ API details.
 | `<lyra-heatmap>` | — (extra) | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling |
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
+
+**Overlays**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lyra-popover>` + `<lyra-tooltip>` + `<lyra-dropdown>` | `wa-popover` / `wa-tooltip` / `wa-dropdown` | Floating UI-positioned, RTL-aware overlay primitives with light dismiss and trigger ARIA wiring |
 
 **Charts**
 
@@ -265,10 +284,17 @@ each one-liner below.
 | `<lyra-slider>` | — (extra) | Numeric range control (e.g. an LLM "temperature" setting), form-associated, mirrors native `<input type="range">` semantics |
 | `<lyra-context-meter>` | — (extra) | Segmented bar/ring occupancy meter for a token budget or context window, split across labeled categories |
 | `<lyra-dialog>` + `confirm()` | — (extra) | General-purpose modal/overlay (focus-trapped, Escape/backdrop-dismissible, scroll-locking, dialog stacking); `confirm()` is a promise-based `window.confirm()` replacement built on it |
+| `<lyra-drawer>` | — (extra) | Modal panel anchored to the logical start/end edge or top/bottom, sharing dialog focus, dismissal, stacking, and scroll-lock behavior |
+| `<lyra-carousel>` | `wa-carousel` | Accessible slotted-slide carousel with keyboard navigation, indicators, looping, and reduced-motion-aware autoplay |
+| `<lyra-carousel-item>` | `wa-carousel-item` | Optional semantic slide wrapper for carousel content |
+| `<lyra-button-group>` | `wa-button-group` | Responsive semantic grouping for related action controls |
+| `<lyra-image-comparer>` | `wa-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
+| `<lyra-zoomable-frame>` | `wa-zoomable-frame` | Bounded zoom and scrollable panning for slotted content or an image source |
 | `<lyra-tabs>` | — (extra) | Tab strip over direct light-DOM panels; WAI-ARIA APG automatic-activation keyboard pattern |
 | `<lyra-checkbox>` | — (extra) | Boolean form control, `role="checkbox"` with a visual/`indeterminate` mixed state |
 | `<lyra-switch>` | — (extra) | Boolean toggle-switch form control, `role="switch"` on/off semantics |
 | `<lyra-menu>` + `<lyra-menu-item>` | — (extra) | Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox) |
+| `<lyra-dropdown-item>` | `wa-dropdown-item` | Drop-in naming alias for `<lyra-menu-item>`, including checkbox items and roving focus |
 | `<lyra-chip>` + `<lyra-chip-group>` | — (extra) | Content-agnostic label pill (tag/filter/scope indicator) and a flex-wrap group with a "+N" overflow indicator |
 | `<lyra-kbd>` | — (extra) | Keyboard-shortcut chip; renders platform-appropriate glyphs (⌘ vs. Ctrl) from a single `"mod+k"`-style `keys` string |
 | `<lyra-result-card>` + `<lyra-result-field>` | — (extra) | Small bordered card + label/value row shell, for giving custom `lyra-tool-result-view` renderers a consistent look with no bespoke box |
@@ -281,6 +307,9 @@ each one-liner below.
 | `<lyra-diff-view>` | — (extra) | Real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output |
 | `<lyra-poll-status>` | — (extra) | "Next scheduled refresh" countdown with a built-in pause control and live-region announcements |
 | `<lyra-code-block-core>` | — (extra) | Build-lean `lyra-code-block` variant for a consumer whose `languages` map already covers every language it renders — never references shiki's full ~200-language table |
+| `<lyra-details>` + `<lyra-accordion>` + `<lyra-accordion-item>` | `wa-details` / `wa-accordion` | Native disclosure and coordinated accordion panels |
+| `<lyra-breadcrumb>` + `<lyra-breadcrumb-item>` | `wa-breadcrumb` | Responsive navigation trail |
+| `<lyra-format-number>` + `<lyra-format-date>` + `<lyra-format-bytes>` + `<lyra-relative-time>` | `wa-format-*` / `wa-relative-time` | Locale-aware formatting primitives |
 
 ## Known limitations
 
