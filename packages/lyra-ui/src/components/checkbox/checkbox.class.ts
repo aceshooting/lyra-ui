@@ -49,12 +49,16 @@ function indeterminateGlyph(): SVGTemplateResult {
 }
 
 export interface LyraCheckboxEventMap {
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
   'lyra-change': CustomEvent<{ checked: boolean }>;
+  focus: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
 }
 /**
  * `<lyra-checkbox>` — a boolean form control. Structurally the same idea as
  * `<lyra-switch>` (form-associated via `ElementInternals`, click and
- * Space/Enter both toggle) but with checkbox semantics: `role="checkbox"` +
+ * Space both toggle) but with checkbox semantics: `role="checkbox"` +
  * an `aria-checked` that can also be `"mixed"`, and a visual box/checkmark
  * instead of a track/thumb.
  *
@@ -75,8 +79,12 @@ export interface LyraCheckboxEventMap {
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an
  * accessible name.
- * @event lyra-change - The user toggled the checkbox (click or Space/Enter).
+ * @event input - The user toggled the checkbox; bubbling and composed like a native form event.
+ * @event change - Fired immediately after `input` for the same user toggle.
+ * @event lyra-change - Compatibility alias fired after `input` and `change` (click or Space).
  * `detail: { checked }`. Not fired for a programmatic `.checked` assignment.
+ * @event focus - Re-dispatched from the internal control as a bubbling, composed event.
+ * @event blur - Re-dispatched from the internal control as a bubbling, composed event.
  * @csspart base - The whole interactive control (`role="checkbox"`); wraps the box and label.
  * @csspart box - The small square that shows the checkmark/indeterminate dash.
  * @csspart checkmark - The checkmark (or indeterminate dash) glyph inside the box.
@@ -295,6 +303,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   formResetCallback(): void {
     this.checked = this._defaultChecked;
+    this.touched = false;
+    this.reflectInvalid();
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
@@ -319,10 +329,22 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     return this.internals.reportValidity();
   }
 
+  /** Moves focus to the internal checkbox control. */
+  override focus(options?: FocusOptions): void {
+    this[VALIDITY_ANCHOR]()?.focus(options);
+  }
+
+  /** Removes focus from the internal checkbox control. */
+  override blur(): void {
+    this[VALIDITY_ANCHOR]()?.blur();
+  }
+
   private toggle(): void {
     if (this.effectiveDisabled) return;
     this.checked = !this.checked;
     this.indeterminate = false;
+    this.emit('input');
+    this.emit('change');
     this.emit('lyra-change', { checked: this.checked });
   }
 
@@ -332,10 +354,9 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
-    // Space/Enter both activate, matching lyra-switch's onKeyDown (and
-    // lyra-table's sortable-header/row convention) for role-based clickable
-    // elements — bound to keydown, not keyup/native click-forwarding.
-    if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+    // Native checkboxes toggle with Space. Enter remains available to the
+    // surrounding form's own keyboard behavior.
+    if (e.key === ' ' || e.key === 'Spacebar') {
       // Space would otherwise scroll the page, same as a native checkbox.
       e.preventDefault();
       this.toggle();
@@ -359,6 +380,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   private onBlur = (): void => {
     this.touched = true;
     this.reflectInvalid();
+    this.emit('blur');
+  };
+
+  private onFocus = (): void => {
+    this.emit('focus');
   };
 
   render(): TemplateResult {
@@ -369,12 +395,13 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
         role="checkbox"
         tabindex=${this.effectiveDisabled ? '-1' : '0'}
         aria-checked=${mixed ? 'mixed' : this.checked ? 'true' : 'false'}
-        aria-required=${this.required ? 'true' : nothing}
+        aria-required=${this.required ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-        aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
+        aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-label=${this.getAttribute('aria-label') || nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}
+        @focus=${this.onFocus}
         @blur=${this.onBlur}
       >
         <span part="box"> ${mixed ? indeterminateGlyph() : this.checked ? checkmarkGlyph() : nothing} </span>

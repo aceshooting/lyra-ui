@@ -104,3 +104,22 @@ export const Interactive: Story = {
     <p id="checkbox-log" style="font-family: monospace; margin-top: 0.5rem;">checked: false</p>
   `,
 };
+
+export const NativeEventContract: Story = {
+  name: 'Native event and focus contract',
+  render: () => {
+    const record = (event: Event) => {
+      const output = document.getElementById('checkbox-native-events');
+      if (output) output.textContent = `${output.textContent ?? ''}${event.type} `;
+    };
+    return html`
+      <lyra-checkbox
+        @input=${record}
+        @change=${record}
+        @lyra-change=${record}
+        >Toggle with a click or the Space key</lyra-checkbox
+      >
+      <p id="checkbox-native-events" aria-live="polite">Events: </p>
+    `;
+  },
+};

@@ -34,7 +34,7 @@ it('toggles and emits lyra-change with detail.checked on click', async () => {
   expect(el.checked).to.be.false;
 });
 
-it('toggles on Space and Enter keydown', async () => {
+it('toggles on Space but not Enter, matching the native checkbox keyboard contract', async () => {
   const el = (await fixture(html`<lyra-checkbox>Label</lyra-checkbox>`)) as LyraCheckbox;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
@@ -44,11 +44,30 @@ it('toggles on Space and Enter keydown', async () => {
   let ev = await oneEvent(el, 'lyra-change');
   expect(ev.detail.checked).to.be.true;
 
-  setTimeout(() =>
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
-  );
-  ev = await oneEvent(el, 'lyra-change');
-  expect(ev.detail.checked).to.be.false;
+  let changes = 0;
+  el.addEventListener('lyra-change', () => (changes += 1));
+  const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  base.dispatchEvent(enterEvent);
+  expect(changes).to.equal(0);
+  expect(enterEvent.defaultPrevented).to.be.false;
+  expect(el.checked).to.be.true;
+});
+
+it('emits native-style input and change events before the lyra-change alias for user toggles', async () => {
+  const el = (await fixture(html`<lyra-checkbox>Label</lyra-checkbox>`)) as LyraCheckbox;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const observed: string[] = [];
+  for (const name of ['input', 'change', 'lyra-change']) {
+    el.addEventListener(name, (event) => {
+      observed.push(name);
+      expect(event.bubbles, `${name} bubbles`).to.be.true;
+      expect(event.composed, `${name} is composed`).to.be.true;
+    });
+  }
+
+  base.click();
+
+  expect(observed).to.deep.equal(['input', 'change', 'lyra-change']);
 });
 
 it('preventDefault()s the Space keydown so the page does not scroll', async () => {
@@ -79,11 +98,11 @@ it('is focusable (tabindex 0) when enabled', async () => {
   expect(base.getAttribute('tabindex')).to.equal('0');
 });
 
-it('has no aria-required/aria-disabled attributes in the default state', async () => {
+it('renders explicit false states for aria-required and aria-disabled', async () => {
   const el = (await fixture(html`<lyra-checkbox>Label</lyra-checkbox>`)) as LyraCheckbox;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.hasAttribute('aria-required')).to.be.false;
-  expect(base.hasAttribute('aria-disabled')).to.be.false;
+  expect(base.getAttribute('aria-required')).to.equal('false');
+  expect(base.getAttribute('aria-disabled')).to.equal('false');
 });
 
 it('sets aria-required when required', async () => {
@@ -149,7 +168,7 @@ describe('indeterminate', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
 
     setTimeout(() =>
-      base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+      base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })),
     );
     await oneEvent(el, 'lyra-change');
     expect(el.indeterminate).to.be.false;
@@ -403,6 +422,24 @@ it('resets to unchecked via form.reset() when no default was declared', async ()
   expect(new FormData(form).get('notify')).to.equal(null);
 });
 
+it('clears touched invalid styling on form.reset()', async () => {
+  const form = (await fixture(html`
+    <form><lyra-checkbox name="terms" required>Agree</lyra-checkbox></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-checkbox') as LyraCheckbox;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  base.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(el.hasAttribute('data-invalid')).to.be.true;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+  form.reset();
+  await el.updateComplete;
+  expect(el.hasAttribute('data-invalid')).to.be.false;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+});
+
 it('does not turn a pre-connect checked property assignment into the reset default', async () => {
   const form = document.createElement('form');
   const el = document.createElement('lyra-checkbox') as LyraCheckbox;
@@ -452,7 +489,7 @@ it('temporarily disables through a fieldset without overwriting the author disab
   expect(el.disabled).to.be.false;
   expect(el.effectiveDisabled).to.be.false;
   expect(base.getAttribute('tabindex')).to.equal('0');
-  expect(base.hasAttribute('aria-disabled')).to.be.false;
+  expect(base.getAttribute('aria-disabled')).to.equal('false');
   expect(new FormData(form).get('notify')).to.equal('yes');
 
   expect(explicitlyDisabled.disabled, 'an explicit disabled state survives the fieldset cycle').to.be.true;
@@ -531,13 +568,33 @@ it('un-hides the label part when a slotted element mutates its own text content 
   expect(label.hidden).to.be.false;
 });
 
-it('does not emit lyra-change for a programmatic .checked assignment', async () => {
+it('does not emit input, change, or lyra-change for a programmatic .checked assignment', async () => {
   const el = (await fixture(html`<lyra-checkbox>Label</lyra-checkbox>`)) as LyraCheckbox;
-  let fired = false;
-  el.addEventListener('lyra-change', () => (fired = true));
+  const fired: string[] = [];
+  for (const name of ['input', 'change', 'lyra-change']) {
+    el.addEventListener(name, () => fired.push(name));
+  }
   el.checked = true;
   await el.updateComplete;
-  expect(fired).to.be.false;
+  expect(fired).to.deep.equal([]);
+});
+
+it('forwards focus and blur methods and re-dispatches bubbling, composed events', async () => {
+  const el = (await fixture(html`<lyra-checkbox>Label</lyra-checkbox>`)) as LyraCheckbox;
+
+  const focusPromise = oneEvent(el, 'focus');
+  el.focus();
+  const focusEvent = await focusPromise;
+  expect(focusEvent.bubbles).to.be.true;
+  expect(focusEvent.composed).to.be.true;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+
+  const blurPromise = oneEvent(el, 'blur');
+  el.blur();
+  const blurEvent = await blurPromise;
+  expect(blurEvent.bubbles).to.be.true;
+  expect(blurEvent.composed).to.be.true;
+  expect(el.shadowRoot!.activeElement).to.equal(null);
 });
 
 it('is accessible in the default (unchecked, unlabeled) state', async () => {
