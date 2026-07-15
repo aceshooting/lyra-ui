@@ -73,6 +73,14 @@ it('defines the new motion tokens with the documented fallback values', async ()
   expect(await probeVar('--lyra-transition-base')).to.equal('180ms ease-out');
 });
 
+it('maps logical safe-area insets to the mirrored physical edges in RTL', () => {
+  const cssText = tokens.cssText.replace(/\s+/g, ' ');
+  expect(cssText).to.include(
+    ':host(:dir(rtl)) { --lyra-safe-area-inline-start: env(safe-area-inset-right, 0px); ' +
+      '--lyra-safe-area-inline-end: env(safe-area-inset-left, 0px); }',
+  );
+});
+
 it('defines a single disabled-opacity token', async () => {
   expect(await probeVar('--lyra-opacity-disabled')).to.equal('0.5');
 });

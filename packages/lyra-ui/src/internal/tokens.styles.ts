@@ -205,6 +205,13 @@ export const tokens = css`
     box-sizing: border-box;
   }
 
+  /* Safe-area environment variables are physical. Mirror the logical aliases
+     so inline-start/end keep their meaning when direction is inherited as RTL. */
+  :host(:dir(rtl)) {
+    --lyra-safe-area-inline-start: env(safe-area-inset-right, 0px);
+    --lyra-safe-area-inline-end: env(safe-area-inset-left, 0px);
+  }
+
   /* Standalone (no Web Awesome theme) dark-mode fallback. A real --wa-* value
      from a consumer's theme always wins — this only changes what a bare
      lyra-ui component renders when dropped, unstyled, onto a dark host page
