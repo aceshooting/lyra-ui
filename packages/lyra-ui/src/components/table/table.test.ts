@@ -1051,4 +1051,81 @@ describe('expandable rows', () => {
     expect(el.expandedKeys).to.be.instanceOf(Set);
     expect(el.expandedKeys.size).to.equal(0);
   });
+
+  const expandableColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+  ];
+
+  it('renders no leading toggle cell when expandedContent is unset (unchanged default)', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="expand-toggle-cell"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[data-row-expand-toggle]')).to.not.exist;
+  });
+
+  it('renders a leading toggle cell on the header and every row when expandedContent is set', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-row-expand-toggle]')).to.exist;
+    const toggleCells = el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]');
+    expect(toggleCells.length).to.equal(rows.length);
+    expect(toggleCells[0].querySelector('button')).to.exist;
+  });
+
+  it('renders an empty, non-interactive toggle cell for a row that fails canExpand', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    el.canExpand = (r) => r.id !== 'a';
+    await el.updateComplete;
+    const toggleCells = [...el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]')];
+    expect(toggleCells[0].querySelector('button')).to.not.exist; // row 'a' (Alpha) opted out
+    expect(toggleCells[1].querySelector('button')).to.exist; // row 'b' (Beta)
+  });
+
+  it('emits lyra-row-expand-toggle with { row, key } when the chevron button is clicked, and does not also emit lyra-row-click', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    let rowClicked = false;
+    el.addEventListener('lyra-row-click', () => (rowClicked = true));
+
+    const firstToggleButton = el.shadowRoot!.querySelector('[part="expand-toggle-cell"] button') as HTMLButtonElement;
+    setTimeout(() => firstToggleButton.click());
+    const ev = await oneEvent(el, 'lyra-row-expand-toggle');
+    expect(ev.detail.row).to.deep.equal(rows[0]);
+    expect(ev.detail.key).to.equal('a');
+    expect(rowClicked).to.be.false;
+  });
+
+  it('still emits lyra-row-click when clicking elsewhere in an expandable row', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    let toggleFired = false;
+    el.addEventListener('lyra-row-expand-toggle', () => (toggleFired = true));
+
+    const nameCell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    setTimeout(() => nameCell.click());
+    const ev = await oneEvent(el, 'lyra-row-click');
+    expect(ev.detail.row).to.deep.equal(rows[0]);
+    expect(toggleFired).to.be.false;
+  });
 });

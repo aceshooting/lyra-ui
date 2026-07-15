@@ -111,6 +111,40 @@ export const styles = css`
   [part='cell'][data-align='end'] {
     text-align: end;
   }
+  [part='expand-toggle-cell'] {
+    padding: var(--lyra-space-s);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    text-align: center;
+  }
+  [part='row-expand-toggle'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: none;
+    padding: var(--lyra-space-xs);
+    cursor: pointer;
+    color: inherit;
+  }
+  [part='row-expand-toggle']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='row-expand-icon'] {
+    display: inline-block;
+    transition: transform var(--lyra-transition-fast);
+  }
+  [part='row-expand-icon'] svg {
+    display: block;
+  }
+  [part='row-expand-toggle'][aria-expanded='true'] [part='row-expand-icon'] {
+    transform: rotate(90deg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='row-expand-icon'] {
+      transition: none !important;
+    }
+  }
   /* columns[].sticky pins a column's header/cells to the inline-start edge
      while the table scrolls horizontally — mirrors [part='header-cell']'s
      existing inset-block-start vertical-scroll sticky pattern above, just on

@@ -629,6 +629,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const focusedCol = this.focusedColKey();
     const focusedRow = this.focusedRowKey();
     const hasColumnWidths = this.columns.some((col) => col.width);
+    const hasExpand = Boolean(this.expandedContent);
 
     return html`
       <div part="base" ?data-force-visible=${this.showAllColumns}>
@@ -641,6 +642,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           @keydown=${this.onTableKeyDown}
         >
           <colgroup>
+            ${hasExpand ? html`<col style=${styleMap({ 'inline-size': '2.5rem' })} />` : nothing}
             ${this.columns.map(
               (col) =>
                 html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,
@@ -648,6 +650,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           </colgroup>
           <thead part="head">
             <tr role="row">
+              ${hasExpand
+                ? html`<th part="header-cell" data-row-expand-toggle aria-hidden="true"></th>`
+                : nothing}
               ${this.columns.map((col) => {
                 const active = Boolean(col.sortable) && this.sortKey === col.key;
                 const ariaSort = active ? (this.sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
@@ -680,13 +685,31 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               (row, i) => {
                 const key = this.keyOf(row, i);
                 const selected = this.selectedKey !== null && this.selectedKey === key;
+                const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
+                const rowExpanded = canExpandRow && this.expandedKeys.has(key);
                 return html`<tr
                   part="row"
                   role="row"
                   data-row-key=${encodeKey(key)}
                   aria-selected=${selected ? 'true' : 'false'}
+                  aria-expanded=${canExpandRow ? String(rowExpanded) : nothing}
                   tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
                 >
+                  ${hasExpand
+                    ? html`<td part="expand-toggle-cell">
+                        ${canExpandRow
+                          ? html`<button
+                              type="button"
+                              part="row-expand-toggle"
+                              aria-expanded=${String(rowExpanded)}
+                              aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
+                              @click=${() => this.activateExpandToggle(key)}
+                            >
+                              <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
+                            </button>`
+                          : nothing}
+                      </td>`
+                    : nothing}
                   ${this.columns.map(
                     (col) =>
                       html`<td
