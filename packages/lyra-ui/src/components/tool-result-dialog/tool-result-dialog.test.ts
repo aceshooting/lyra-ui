@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
+import { styles } from './tool-result-dialog.styles.js';
 
 // A stand-in for a slotted component (e.g. lyra-tabs) whose real focusable
 // target lives inside its own shadow root rather than the host tag's
@@ -41,6 +42,20 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('role')).to.equal('dialog');
   expect(panel.getAttribute('aria-modal')).to.equal('true');
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="tool-name"]')!.id);
+});
+
+it('forwards a host aria-label to the internal dialog and lets it win over the generated title', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog
+      open
+      tool-name="run_python"
+      aria-label="Python execution details"
+    ></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+
+  expect(panel.getAttribute('aria-label')).to.equal('Python execution details');
+  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
 });
 
 it('defaults to pending status and reflects status changes onto the host attribute', async () => {
@@ -109,6 +124,47 @@ it('formats sub-second durations in milliseconds and second-plus durations in se
   el.durationMs = 2000;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2s');
+});
+
+it('interpolates duration values through localized message templates', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-result-dialog
+      duration-ms="1500"
+      .strings=${{
+        durationMilliseconds: '{value} millisecondes',
+        durationSeconds: '{value} secondes',
+      }}
+    ></lyra-tool-result-dialog>
+  `)) as LyraToolResultDialog;
+
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('1.5 secondes');
+});
+
+it('omits non-finite durations', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-result-dialog tool-name="run_python"></lyra-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  el.durationMs = Number.NaN;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="duration"]')).to.not.exist;
+});
+
+it('uses themeable running motion and lets footer actions wrap', async () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    'animation: lyra-tool-result-dialog-spin var(--lyra-tool-result-dialog-spin) infinite;',
+  );
+  expect(css).to.match(/\[part='footer'\]\s*\{[^}]*flex-wrap:\s*wrap;/);
+
+  const el = (await fixture(html`
+    <lyra-tool-result-dialog
+      status="running"
+      style="--lyra-tool-result-dialog-spin: 2.5s linear"
+    ></lyra-tool-result-dialog>
+  `)) as LyraToolResultDialog;
+  const glyph = el.shadowRoot!.querySelector('[part="status"] svg')!;
+  expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
 });
 
 it('toggles maximized and emits lyra-maximize-change when the maximize button is clicked', async () => {

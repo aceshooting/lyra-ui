@@ -225,6 +225,7 @@ export { LyraToolResultDialog } from './components/tool-result-dialog/tool-resul
 export type {
   ToolResultStatus,
   ToolResultDialogCloseReason,
+  LyraToolResultDialogEventMap,
 } from './components/tool-result-dialog/tool-result-dialog.js';
 export { LyraChatComposer } from './components/chat-composer/chat-composer.js';
 export type { ChatComposerStatus } from './components/chat-composer/chat-composer.js';

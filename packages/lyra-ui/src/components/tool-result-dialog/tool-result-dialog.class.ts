@@ -33,6 +33,11 @@ export type ToolResultDialogCloseReason =
   | 'api'
   | (string & Record<never, never>);
 
+export interface LyraToolResultDialogEventMap {
+  'lyra-close': CustomEvent<ToolResultDialogCloseReason>;
+  'lyra-maximize-change': CustomEvent<boolean>;
+}
+
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
 // tool-result-specific glyphs to that module -- it's off limits here -- so
@@ -158,18 +163,21 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  *  durations are the common case for a single tool call, so they get the
  *  more precise unit; once a call runs a full second or longer, trimming to
  *  (at most) one decimal place of seconds reads better than a 4-5 digit
- *  millisecond count. `msUnit`/`sUnit` resolve the two unit labels -- both
- *  default to the plain English abbreviation, so every existing call
- *  site/test that omits them is unaffected; the render() call site below
- *  passes `this.localize('durationUnitMs')`/`this.localize('durationUnitS')`
- *  instead. */
-function formatDuration(ms: number, msUnit = 'ms', sUnit = 's'): string {
+ *  millisecond count. The returned numeric value is interpolated through a
+ *  localized duration message by the caller. */
+function formatDuration(ms: number): {
+  key: 'durationMilliseconds' | 'durationSeconds';
+  value: string;
+} {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return `${Math.round(Math.max(0, ms))}${msUnit}`;
+    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, ms))) };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}${sUnit}`;
+  return {
+    key: 'durationSeconds',
+    value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1),
+  };
 }
 
 /**
@@ -220,8 +228,11 @@ function formatDuration(ms: number, msUnit = 'ms', sUnit = 's'): string {
  * @csspart close-button - The built-in close button.
  * @csspart body - The wrapper around the `body` slot.
  * @csspart footer - The wrapper around the `footer` slot.
+ * @cssprop [--lyra-tool-result-dialog-overlay-color=var(--lyra-color-overlay)] - Backdrop color.
+ * @cssprop --lyra-tool-result-dialog-maximized-inset - Insets for the maximized panel.
+ * @cssprop [--lyra-tool-result-dialog-spin=1s linear] - Running-status animation duration and timing.
  */
-export class LyraToolResultDialog extends LyraElement {
+export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /**
@@ -232,6 +243,10 @@ export class LyraToolResultDialog extends LyraElement {
    * to attach to that event.
    */
   @property({ type: Boolean, reflect: true }) open = false;
+
+  /** Accessible name forwarded to the internal element that owns the dialog role. When omitted,
+   *  the visible tool name labels the dialog. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** The tool's name, rendered prominently in the header. */
   @property({ attribute: 'tool-name' }) toolName = '';
@@ -357,15 +372,21 @@ export class LyraToolResultDialog extends LyraElement {
     this.overlay = undefined;
   }
 
+  private localizedDuration(ms: number): string {
+    const duration = formatDuration(ms);
+    return this.localize(duration.key, undefined, { value: duration.value });
+  }
+
   render(): TemplateResult {
-    const hasDuration = this.durationMs != null;
+    const hasDuration = this.durationMs != null && Number.isFinite(this.durationMs);
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-labelledby=${this.titleId}
+        aria-label=${this.accessibleLabel || nothing}
+        aria-labelledby=${this.accessibleLabel ? nothing : this.titleId}
         tabindex="-1"
       >
         <div part="header">
@@ -378,11 +399,7 @@ export class LyraToolResultDialog extends LyraElement {
             >
             ${hasDuration
               ? html`<span part="duration"
-                  >${formatDuration(
-                    this.durationMs!,
-                    this.localize('durationUnitMs'),
-                    this.localize('durationUnitS'),
-                  )}</span
+                  >${this.localizedDuration(this.durationMs!)}</span
                 >`
               : nothing}
           </div>
@@ -418,4 +435,3 @@ declare global {
     'lyra-tool-result-dialog': LyraToolResultDialog;
   }
 }
-

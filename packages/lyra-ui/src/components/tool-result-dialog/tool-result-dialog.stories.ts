@@ -161,3 +161,17 @@ export const Events: Story = {
     </div>
   `,
 };
+
+export const NamedAndRetimed: Story = {
+  render: () => html`
+    <lyra-tool-result-dialog
+      open
+      tool-name="search_web"
+      status="running"
+      aria-label="Web search execution details"
+      style="--lyra-tool-result-dialog-spin: 2.5s linear"
+    >
+      <p slot="body">Searching across configured sources…</p>
+    </lyra-tool-result-dialog>
+  `,
+};

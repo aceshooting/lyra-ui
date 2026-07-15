@@ -16,6 +16,7 @@ export const styles = css`
       max(var(--lyra-space-l), var(--lyra-safe-area-inline-end))
       max(var(--lyra-space-l), var(--lyra-safe-area-bottom))
       max(var(--lyra-space-l), var(--lyra-safe-area-inline-start));
+    --lyra-tool-result-dialog-spin: 1s linear;
     display: none;
     position: fixed;
     inset: 0;
@@ -115,7 +116,7 @@ export const styles = css`
     background: var(--lyra-color-warning-quiet);
   }
   :host([status='running']) [part='status'] svg {
-    animation: lyra-tool-result-dialog-spin 1s linear infinite;
+    animation: lyra-tool-result-dialog-spin var(--lyra-tool-result-dialog-spin) infinite;
   }
   [part='duration'] {
     font-size: var(--lyra-font-size-xs);
@@ -159,6 +160,7 @@ export const styles = css`
   }
   [part='footer'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--lyra-space-s);
