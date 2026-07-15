@@ -1,5 +1,5 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../internal/numbers.js';
@@ -32,6 +32,8 @@ export interface LyraPlaybackEventMap {
   'lyra-play': CustomEvent<undefined>;
   'lyra-pause': CustomEvent<undefined>;
   'lyra-step': CustomEvent<{ index: number }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-playback>` — steps an index through `[0, length)` on a fixed
@@ -42,6 +44,8 @@ export interface LyraPlaybackEventMap {
  * @event lyra-play - Fired when playback starts.
  * @event lyra-pause - Fired when playback stops (including auto-pause).
  * @event lyra-step - `detail: { index }`, fired on every tick and manual step.
+ * @event blur - Re-dispatched from an internal playback control as a bubbling, composed event.
+ * @event focus - Re-dispatched from an internal playback control as a bubbling, composed event.
  * @csspart base - The playback controls wrapper.
  * @csspart play-button - The play/pause button.
  * @csspart slider - The playback position slider.
@@ -78,6 +82,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
 
   private timer?: number;
   private _playing = false;
+  @query('[part="play-button"]') private playButton?: HTMLButtonElement;
 
   get playing(): boolean {
     return this._playing;
@@ -215,6 +220,26 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     this.setIndex(finiteCount(index, 0, this.maxIndex));
   }
 
+  /** Focus the primary play/pause control. */
+  override focus(options?: FocusOptions): void {
+    this.playButton?.focus(options);
+  }
+
+  /** Blur the primary play/pause control. */
+  override blur(): void {
+    this.playButton?.blur();
+  }
+
+  private onControlFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onControlBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
+
   render(): TemplateResult {
     const maxIndex = this.maxIndex;
     const index = finiteCount(this.index, 0, maxIndex);
@@ -227,6 +252,8 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
           aria-label=${this.playing ? this.localize('pause') : this.localize('play')}
           ?disabled=${disabled}
           @click=${() => this.toggle()}
+          @focus=${this.onControlFocus}
+          @blur=${this.onControlBlur}
         >
           ${this.playing ? pauseIcon() : playIcon()}
         </button>
@@ -239,6 +266,8 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
           aria-label=${this.localize('playbackPosition')}
           ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value))}
+          @focus=${this.onControlFocus}
+          @blur=${this.onControlBlur}
         />
       </div>
     `;

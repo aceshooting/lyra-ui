@@ -266,6 +266,32 @@ it('shows a focus ring on the play button when it receives keyboard/programmatic
   expect(style.outlineOffset).to.equal('2px');
 });
 
+it('forwards public focus and blur to the play button', async () => {
+  const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('play-button');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('bridges internal control focus and blur as bubbling, composed host events', async () => {
+  const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
+  const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+
+  const focusPromise = oneEvent(el, 'focus');
+  slider.focus();
+  const focusEvent = await focusPromise;
+  expect(focusEvent.bubbles).to.be.true;
+  expect(focusEvent.composed).to.be.true;
+
+  const blurPromise = oneEvent(el, 'blur');
+  slider.blur();
+  const blurEvent = await blurPromise;
+  expect(blurEvent.bubbles).to.be.true;
+  expect(blurEvent.composed).to.be.true;
+});
+
 it('toggles playback when the rendered play-button is clicked', async () => {
   const el = (await fixture(html`<lyra-playback length="3"></lyra-playback>`)) as LyraPlayback;
   const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
