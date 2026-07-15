@@ -24,6 +24,24 @@ export const Default: Story = {
   render: () => controlledPagination(),
 };
 
+/** `focus()` and `blur()` target the editable page-jump input and surface host focus events. */
+export const ProgrammaticFocus: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; justify-items: start;">
+      ${controlledPagination()}
+      <button
+        type="button"
+        @click=${(event: Event) => {
+          const pagination = (event.currentTarget as HTMLElement).parentElement!.querySelector(
+            'lyra-pagination',
+          ) as LyraPagination;
+          pagination.focus();
+        }}
+      >Focus the page field</button>
+    </div>
+  `,
+};
+
 export const NarrowAllocation: Story = {
   render: () => html`<div style="inline-size: 18rem">
     <lyra-pagination

@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -9,6 +9,8 @@ export type LyraPaginationSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraPaginationEventMap {
   'lyra-page-change': CustomEvent<{ page: number }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 /**
@@ -22,6 +24,8 @@ export interface LyraPaginationEventMap {
  *
  * @customElement lyra-pagination
  * @event lyra-page-change - Fired when a user requests a valid page. `detail: { page }`.
+ * @event blur - Re-dispatched from an internal pagination control as a bubbling, composed event.
+ * @event focus - Re-dispatched from an internal pagination control as a bubbling, composed event.
  * @csspart base - The navigation wrapper.
  * @csspart summary - The item-range summary.
  * @csspart controls - The previous/page/next control group.
@@ -63,7 +67,18 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @state() private draftPage = '';
   @state() private invalidDraft = false;
   @state() private liveText = '';
+  @query('[part="page-input"]') private pageInput?: HTMLInputElement;
   private initialized = false;
+
+  /** Focus the editable page-jump input. */
+  override focus(options?: FocusOptions): void {
+    this.pageInput?.focus(options);
+  }
+
+  /** Blur the editable page-jump input. */
+  override blur(): void {
+    this.pageInput?.blur();
+  }
 
   private get normalizedTotalItems(): number {
     if (!Number.isFinite(this.totalItems)) return 0;
@@ -172,6 +187,16 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.commitPage(event);
   };
 
+  private onControlFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+
+  private onControlBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
+
   render(): TemplateResult {
     const previousLabel = this.localizedProperty('previous', 'Previous', this.previousLabel);
     const nextLabel = this.localizedProperty('next', 'Next', this.nextLabel);
@@ -196,6 +221,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
             aria-label=${previousLabel}
             ?disabled=${this.controlsDisabled || current <= 1}
             @click=${() => this.requestPage(current - 1)}
+            @focus=${this.onControlFocus}
+            @blur=${this.onControlBlur}
           >
             <span part="previous-icon">${chevronIcon()}</span>
           </button>
@@ -215,6 +242,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
               @input=${this.onPageInput}
               @change=${this.commitPage}
               @keydown=${this.onPageKeyDown}
+              @focus=${this.onControlFocus}
+              @blur=${this.onControlBlur}
             />
             <span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.pageCount)}</span>
           </span>
@@ -224,6 +253,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
             aria-label=${nextLabel}
             ?disabled=${this.controlsDisabled || current >= this.pageCount}
             @click=${() => this.requestPage(current + 1)}
+            @focus=${this.onControlFocus}
+            @blur=${this.onControlBlur}
           >
             <span part="next-icon">${chevronIcon()}</span>
           </button>

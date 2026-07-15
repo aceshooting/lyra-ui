@@ -67,6 +67,32 @@ it('commits a valid numeric page jump on Enter', async () => {
   expect(input.value).to.equal('1');
 });
 
+it('forwards public focus and blur to the page input', async () => {
+  const el = await pagination();
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('page-input');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('bridges internal focus and blur as bubbling, composed host events', async () => {
+  const el = await pagination();
+  const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+
+  const focusPromise = oneEvent(el, 'focus');
+  input.focus();
+  const focusEvent = await focusPromise;
+  expect(focusEvent.bubbles).to.be.true;
+  expect(focusEvent.composed).to.be.true;
+
+  const blurPromise = oneEvent(el, 'blur');
+  input.blur();
+  const blurEvent = await blurPromise;
+  expect(blurEvent.bubbles).to.be.true;
+  expect(blurEvent.composed).to.be.true;
+});
+
 it('rejects out-of-range and fractional page jumps', async () => {
   const el = await pagination();
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
