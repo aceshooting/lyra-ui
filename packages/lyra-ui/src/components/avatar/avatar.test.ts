@@ -28,6 +28,21 @@ describe('lyra-avatar', () => {
     expect(el.shadowRoot!.querySelector('[part="initials"]')!.textContent).to.equal('AB');
   });
 
+  it('tries a new image after a previous src failed', async () => {
+    const el = (await fixture(
+      html`<lyra-avatar initials="AB" src="broken.png" alt="A. Bee"></lyra-avatar>`,
+    )) as LyraAvatar;
+    (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+
+    el.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    await el.updateComplete;
+    const replacement = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+    expect(replacement).to.exist;
+    expect(replacement.getAttribute('src')).to.equal('data:image/gif;base64,R0lGODlhAQABAAAAACw=');
+  });
+
   it('defaults size to md, shape to circle, tone to neutral', async () => {
     const el = (await fixture(html`<lyra-avatar initials="AB"></lyra-avatar>`)) as LyraAvatar;
     expect(el.size).to.equal('md');
@@ -102,6 +117,24 @@ describe('lyra-avatar', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal('img');
     expect(base.getAttribute('aria-label')).to.equal('AI assistant');
+  });
+
+  it('lets a host aria-label override alt on the element that owns the image semantics', async () => {
+    const fallback = (await fixture(html`
+      <lyra-avatar initials="AB" alt="A. Bee" aria-label="Account owner"></lyra-avatar>
+    `)) as LyraAvatar;
+    const base = fallback.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('Account owner');
+
+    const image = (await fixture(html`
+      <lyra-avatar
+        src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+        alt="A. Bee"
+        aria-label="Account owner"
+      ></lyra-avatar>
+    `)) as LyraAvatar;
+    expect(image.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('Account owner');
   });
 
   it('is accessible with icon-only content and an alt label', async () => {

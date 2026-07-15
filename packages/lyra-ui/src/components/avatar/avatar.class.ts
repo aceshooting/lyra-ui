@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './avatar.styles.js';
@@ -40,7 +40,8 @@ export class LyraAvatar extends LyraElement {
 
   /** Alt text -- required alongside `src` for accessibility, and also used as the accessible
    *  name (via `aria-label`) when showing icon-only slotted content, since a decorative glyph
-   *  has no text of its own for a screen reader to read. */
+   *  has no text of its own for a screen reader to read. A host `aria-label` overrides this
+   *  value while leaving the visible initials/image unchanged. */
   @property() alt = '';
 
   /** Visual size. `'lg'` matches `--lyra-icon-button-size` (2.5rem); `'md'` (the default) is 2rem. */
@@ -60,7 +61,11 @@ export class LyraAvatar extends LyraElement {
   // in JS instead.
   @state() private hasIcon = false;
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues<this>): void {
+    // A load failure belongs to one URL, not to the avatar forever. Reset before rendering a
+    // newly assigned src so the replacement image gets its own load attempt.
+    if (changed.has('src')) this.imageFailed = false;
+
     // Set from light-DOM children before the first render so the initial paint already reflects
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
     if (!this.hasUpdated) {
@@ -79,6 +84,7 @@ export class LyraAvatar extends LyraElement {
   render(): TemplateResult {
     const showImage = !this.hasIcon && !!this.src && !this.imageFailed;
     const showInitials = !this.hasIcon && !showImage;
+    const accessibleName = this.getAttribute('aria-label') ?? this.alt;
     // Whenever `alt` is set, [part='base'] needs a real accessible name
     // regardless of which fallback tier ends up rendering -- the icon-slot
     // case (its glyph is aria-hidden) and the initials-fallback case (its
@@ -86,21 +92,21 @@ export class LyraAvatar extends LyraElement {
     // both rely on this, not just the icon-slot one. The `showImage` case is
     // excluded: the `<img>` itself already carries `alt` as its accessible
     // name, so [part='base'] doesn't need a redundant role/aria-label.
-    const hasAccessibleFallback = (this.hasIcon || showInitials) && this.alt;
+    const hasAccessibleFallback = (this.hasIcon || showInitials) && accessibleName;
     return html`
       <span
         part="base"
         role=${hasAccessibleFallback ? 'img' : nothing}
-        aria-label=${hasAccessibleFallback ? this.alt : nothing}
+        aria-label=${hasAccessibleFallback ? accessibleName : nothing}
       >
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIcon}
           ><slot @slotchange=${this.onIconSlotChange}></slot
         ></span>
         ${showImage
-          ? html`<img part="image" src=${this.src!} alt=${this.alt} @error=${this.onImageError} />`
+          ? html`<img part="image" src=${this.src!} alt=${accessibleName} @error=${this.onImageError} />`
           : nothing}
         ${showInitials
-          ? html`<span part="initials" aria-hidden=${this.alt ? 'true' : nothing}>${this.initials}</span>`
+          ? html`<span part="initials" aria-hidden=${accessibleName ? 'true' : nothing}>${this.initials}</span>`
           : nothing}
       </span>
     `;

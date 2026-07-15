@@ -61,6 +61,26 @@ export const WithImage: Story = {
   `,
 };
 
+export const AccessibleNameOverride: Story = {
+  name: 'Host aria-label overrides alt',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Use a host `aria-label` when the spoken identity should differ from the image `alt`; the override is forwarded to the internal element that owns the image semantics.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-avatar
+      src="https://picsum.photos/id/64/128/128"
+      alt="Profile photo"
+      aria-label="Signed in as A. Bee"
+      initials="AB"
+    ></lyra-avatar>
+  `,
+};
+
 export const Sizes: Story = {
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
