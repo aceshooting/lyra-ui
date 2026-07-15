@@ -356,11 +356,22 @@ it('announces accepted and rejected selection outcomes through the live region',
   dropWith(base, [makeFile('ok.csv', 'text/csv')]);
   await accepted;
   await el.updateComplete;
-  expect(status.textContent).to.equal('1 file(s) added.');
+  expect(status.textContent).to.equal('1 file added.');
 
   const mixed = oneEvent(el, 'lyra-files');
   dropWith(base, [makeFile('ok.csv', 'text/csv'), makeFile('bad.png', 'image/png')]);
   await mixed;
   await el.updateComplete;
-  expect(status.textContent).to.equal('1 file(s) added. 1 file(s) rejected.');
+  expect(status.textContent).to.equal('1 file added. 1 file rejected.');
+
+  const plural = oneEvent(el, 'lyra-files');
+  dropWith(base, [
+    makeFile('one.csv', 'text/csv'),
+    makeFile('two.csv', 'text/csv'),
+    makeFile('one.png', 'image/png'),
+    makeFile('two.png', 'image/png'),
+  ]);
+  await plural;
+  await el.updateComplete;
+  expect(status.textContent).to.equal('2 files added. 2 files rejected.');
 });

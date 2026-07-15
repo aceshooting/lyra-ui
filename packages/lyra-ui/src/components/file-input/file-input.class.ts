@@ -93,7 +93,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     if (files.length) {
       messages.push(
         this.localize(
-          'fileInputAccepted',
+          files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany',
           this.acceptedMessage === '{count} file(s) added.' ? undefined : this.acceptedMessage,
           { count: files.length },
         ),
@@ -102,7 +102,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     if (rejected.length) {
       messages.push(
         this.localize(
-          'fileInputRejected',
+          rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany',
           this.rejectedMessage === '{count} file(s) rejected.' ? undefined : this.rejectedMessage,
           { count: rejected.length },
         ),
