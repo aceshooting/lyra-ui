@@ -93,6 +93,12 @@ export const styles = css`
       linear-gradient(to right, var(--lyra-heatmap-scale-lo), var(--lyra-heatmap-scale-hi))
     );
   }
+  /* Flex row order already follows inherited direction, placing the low
+     endpoint at inline-start. Mirror the physical CSS gradient as well so
+     its colors stay aligned with those labels, including custom step ramps. */
+  :host(:dir(rtl)) [part='legend'] .bar {
+    transform: scaleX(-1);
+  }
   [part='legend-annotation'] {
     display: inline-flex;
     align-items: center;
