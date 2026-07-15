@@ -491,6 +491,32 @@ it('closes the listbox when the trigger blurs (e.g. tabbing away)', async () => 
   expect(el.open).to.be.false;
 });
 
+it('forwards public focus and blur to the trigger', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('bridges trigger focus and blur as bubbling, composed host events', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+
+  const focusPromise = oneEvent(el, 'focus');
+  btn.focus();
+  const focusEvent = await focusPromise;
+  expect(focusEvent.bubbles).to.be.true;
+  expect(focusEvent.composed).to.be.true;
+
+  const blurPromise = oneEvent(el, 'blur');
+  btn.blur();
+  const blurEvent = await blurPromise;
+  expect(blurEvent.bubbles).to.be.true;
+  expect(blurEvent.composed).to.be.true;
+});
+
 it('reflects an invalid state only after the field has been interacted with once', async () => {
   const el = (await fixture(html`
     <lyra-select required>

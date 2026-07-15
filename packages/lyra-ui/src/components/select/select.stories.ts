@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraSelectSize } from './select.js';
+import type { LyraSelect, LyraSelectSize } from './select.js';
 
 const meta: Meta = {
   title: 'Select',
@@ -18,6 +18,28 @@ export const Default: Story = {
       <lyra-option value="c">Cherry</lyra-option>
       <lyra-option value="d">Date</lyra-option>
     </lyra-select>
+  `,
+};
+
+/** `focus()` and `blur()` target the internal combobox trigger and surface host events. */
+export const ProgrammaticFocus: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-width: 20rem;">
+      <lyra-select label="Fruit" placeholder="Pick one…">
+        <lyra-option value="a">Apple</lyra-option>
+        <lyra-option value="b">Banana</lyra-option>
+      </lyra-select>
+      <button
+        type="button"
+        style="justify-self: start;"
+        @click=${(event: Event) => {
+          const select = (event.currentTarget as HTMLElement).parentElement!.querySelector(
+            'lyra-select',
+          ) as LyraSelect;
+          select.focus();
+        }}
+      >Focus the select</button>
+    </div>
   `,
 };
 

@@ -611,7 +611,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.cachedValueRange = this.computeValueRange();
     }
     const bounds = this.cachedValueRange;
-    const range = bounds ? `${bounds[0]}–${bounds[1]}` : this.localize('heatmapNoDataValue');
+    const range = bounds
+      ? `${this.formatNumericValue(bounds[0])}–${this.formatNumericValue(bounds[1])}`
+      : this.localize('heatmapNoDataValue');
+    const valueLabel = this.localizedValueLabel();
     // Only default role/aria-label when the author hasn't already supplied
     // one — the canvas is a genuinely focusable/interactive control
     // (tabindex="0", click/keydown handlers) plus a live role="status"
@@ -625,7 +628,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       if (this.mode === 'calendar') {
         label = this.localize('heatmapCalendarLabel', undefined, {
           days: this.days.length,
-          label: this.valueLabel,
+          label: valueLabel,
           range,
         });
       } else {
@@ -634,7 +637,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         label = this.localize('heatmapMatrixLabel', undefined, {
           rows,
           cols,
-          label: this.valueLabel,
+          label: valueLabel,
           range,
         });
       }
@@ -678,6 +681,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private computeValueRange(): [number, number] | null {
     const source = this.mode === 'calendar' ? this.days.map((d) => d.value) : this.values.flat();
     return minMax(source.filter((v) => Number.isFinite(v) && v >= 0));
+  }
+
+  private localizedValueLabel(): string {
+    return this.localize('heatmapValueLabel', this.valueLabel === 'value' ? undefined : this.valueLabel);
+  }
+
+  private formatNumericValue(value: number): string {
+    return new Intl.NumberFormat(this.effectiveLocale || undefined).format(value);
   }
 
   protected updated(changed: PropertyValues): void {
@@ -1328,7 +1339,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const colLabel =
       this.colLabels[pos.col] ?? this.localize('heatmapDefaultColLabel', undefined, { n: pos.col + 1 });
     const v = this.values[pos.row]?.[pos.col];
-    const valueText = v == null || v < 0 || !Number.isFinite(v) ? this.localize('heatmapNoDataValue') : String(v);
+    const valueText =
+      v == null || v < 0 || !Number.isFinite(v)
+        ? this.localize('heatmapNoDataValue')
+        : this.formatNumericValue(v);
     return this.localize('heatmapMatrixCellLabel', undefined, {
       row: rowLabel,
       col: colLabel,
@@ -1338,8 +1352,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private calendarCellText(pos: CalendarCellPos): string {
     const { date, value } = this.calendarCellAt(pos);
-    const label = parseIsoDate(date).toLocaleString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-    const valueText = value < 0 || !Number.isFinite(value) ? this.localize('heatmapNoDataValue') : String(value);
+    const label = parseIsoDate(date).toLocaleString(this.effectiveLocale || undefined, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+    const valueText =
+      value < 0 || !Number.isFinite(value)
+        ? this.localize('heatmapNoDataValue')
+        : this.formatNumericValue(value);
     return this.localize('heatmapCalendarCellLabel', undefined, { date: label, value: valueText });
   }
 
@@ -1536,10 +1557,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         </div>
         <div part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
         <div part="legend">
-          <span part="legend-lo">${range ? range[0] : ''}</span>
+          <span part="legend-lo">${range ? this.formatNumericValue(range[0]) : ''}</span>
           <span class="bar"></span>
-          <span part="legend-hi">${range ? range[1] : ''}</span>
-          <span>${this.valueLabel}</span>
+          <span part="legend-hi">${range ? this.formatNumericValue(range[1]) : ''}</span>
+          <span>${this.localizedValueLabel()}</span>
           ${labeledAnnotations.map(
             (a) => html`<span part="legend-annotation"><span class="ring-swatch"></span>${a.label}</span>`,
           )}

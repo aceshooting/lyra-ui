@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
@@ -16,6 +16,8 @@ export interface LyraSelectEventMap {
   'lyra-hide': CustomEvent<undefined>;
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-select>` — a plain closed-list dropdown: a direct `<lyra-*>`
@@ -67,6 +69,8 @@ export interface LyraSelectEventMap {
  *   `<select>` doesn't meaningfully distinguish the two either).
  * @event lyra-show - The listbox opened.
  * @event lyra-hide - The listbox closed.
+ * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
+ * @event focus - Re-dispatched from the trigger as a bubbling, composed event.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart trigger - The trigger button (positioning anchor).
@@ -121,6 +125,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @state() private hasLabelSlot = false;
+  @query('[part="trigger"]') private triggerElement?: HTMLButtonElement;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -152,6 +157,16 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // "ba" instead of restarting the search on every keystroke.
   private typeAheadBuffer = '';
   private typeAheadTimer?: ReturnType<typeof setTimeout>;
+
+  /** Focus the internal select trigger. */
+  override focus(options?: FocusOptions): void {
+    this.triggerElement?.focus(options);
+  }
+
+  /** Blur the internal select trigger. */
+  override blur(): void {
+    this.triggerElement?.blur();
+  }
 
   // Hand-written accessor (mirrors the `value` accessor below, and the
   // `FormAssociated.name` in `../../internal/form-associated.ts`): a
@@ -457,13 +472,20 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.open ? this.hide() : this.show();
   };
 
-  private onTriggerBlur = (): void => {
+  private onTriggerBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
     this.touched = true;
     // A mouse click outside the element is already handled by
     // onDocPointer/hide(), but that leaves keyboard users with no way to
     // dismiss the listbox short of Escape -- tabbing focus away from the
     // trigger should close it too, the same as lyra-combobox's input blur.
     this.hide();
+    this.emit('blur');
+  };
+
+  private onTriggerFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
   };
 
   private onHintSlotChange = (e: Event): void => {
@@ -658,6 +680,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           ?disabled=${this.effectiveDisabled}
           @click=${this.onTriggerClick}
           @keydown=${this.onKeyDown}
+          @focus=${this.onTriggerFocus}
           @blur=${this.onTriggerBlur}
         >
           <span class="trigger-label" ?data-placeholder=${!hasValue}
