@@ -1,9 +1,9 @@
 import { addons } from 'storybook/manager-api';
 import { create } from 'storybook/theming';
 
-// Static color copies from packages/lyra-ui/src/internal/tokens.styles.ts's --wa-* fallbacks.
-// If those fallbacks change, update this file too — Storybook's manager theme API takes literal
-// values, not CSS custom properties, so this can't read tokens.styles.ts directly.
+// Static color copies from packages/lyra-ui/src/internal/tokens.styles.ts's --lyra-theme-*
+// fallbacks. If those fallbacks change, update this file too — Storybook's manager theme API
+// takes literal values, not CSS custom properties, so this can't read tokens.styles.ts directly.
 const lyraTheme = create({
   base: 'light',
   brandTitle: 'Lyra UI',

@@ -13,9 +13,9 @@ for (const required of [
   "{ value: 'high-contrast', title: 'High contrast' }",
   'decorators: [withLyraTheme]',
   'colorScheme',
-  "'--wa-color-surface-default'",
-  "'--wa-color-text-normal'",
-  "'--wa-color-surface-border'",
+  "'--lyra-theme-color-surface-default'",
+  "'--lyra-theme-color-text-normal'",
+  "'--lyra-theme-color-surface-border'",
 ]) {
   if (!preview.includes(required)) {
     throw new Error(`Storybook theme configuration is missing ${required}`);

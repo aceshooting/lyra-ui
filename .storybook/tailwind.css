@@ -8,14 +8,14 @@
 html,
 body {
   min-block-size: 100%;
-  background: var(--wa-color-surface-default, #ffffff);
-  color: var(--wa-color-text-normal, #1f2328);
+  background: var(--lyra-theme-color-surface-default, #ffffff);
+  color: var(--lyra-theme-color-text-normal, #1f2328);
   color-scheme: inherit;
 }
 
 body {
   margin: 0;
-  font-family: var(--wa-font-family-body, system-ui, sans-serif);
+  font-family: var(--lyra-theme-font-family-body, system-ui, sans-serif);
 }
 
 #storybook-root {

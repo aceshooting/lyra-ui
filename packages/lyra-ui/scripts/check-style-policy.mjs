@@ -34,7 +34,7 @@ for (const file of styleFiles(componentsRoot)) {
     }
 
     const custom = customProperty.exec(line)?.[1];
-    if (custom && !/^(?:--lyra-|--wa-|--shiki-)/.test(custom)) {
+    if (custom && !/^(?:--lyra-|--shiki-)/.test(custom)) {
       findings.push(`${file}:${index + 1}: custom property must use a library or integration prefix (${custom})`);
     }
 

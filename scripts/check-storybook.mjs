@@ -142,7 +142,7 @@ async function main() {
     await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'dark');
     const darkTheme = await page.evaluate(() => ({
       scheme: document.documentElement.style.colorScheme,
-      surface: document.documentElement.style.getPropertyValue('--wa-color-surface-default'),
+      surface: document.documentElement.style.getPropertyValue('--lyra-theme-color-surface-default'),
     }));
     if (darkTheme.scheme !== 'dark' || darkTheme.surface !== '#0d1117') {
       throw new Error(`dark Storybook theme did not apply semantic tokens: ${JSON.stringify(darkTheme)}`);
@@ -152,7 +152,7 @@ async function main() {
     await waitForStory(page, baseUrl, 'checkbox--default', { width: 1280, height: 800 }, 'high-contrast');
     const highContrastTheme = await page.evaluate(() => ({
       scheme: document.documentElement.style.colorScheme,
-      surface: document.documentElement.style.getPropertyValue('--wa-color-surface-default'),
+      surface: document.documentElement.style.getPropertyValue('--lyra-theme-color-surface-default'),
     }));
     if (highContrastTheme.scheme !== 'light' || highContrastTheme.surface !== 'Canvas') {
       throw new Error(`high-contrast Storybook theme did not apply semantic tokens: ${JSON.stringify(highContrastTheme)}`);
