@@ -1,6 +1,10 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './conversation-item.js';
-import type { LyraConversationItem } from './conversation-item.js';
+import type { LyraConversationItem, LyraConversationItemEventMap } from './conversation-item.js';
+
+type RenameEvent = LyraConversationItemEventMap['lyra-rename'];
+const renameTitle = (event: RenameEvent): string => event.detail.title;
+void renameTitle;
 
 // The selectable region -- `role="button"`, click/keydown handlers, and
 // (while not renaming) aria-current/aria-label -- lives on `[part="option"]`,
@@ -11,7 +15,7 @@ function optionEl(el: LyraConversationItem): HTMLElement {
   return el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
 }
 
-async function fixtureInListbox(item: import('lit').TemplateResult): Promise<LyraConversationItem> {
+async function fixtureItem(item: import('lit').TemplateResult): Promise<LyraConversationItem> {
   return (await fixture(item)) as LyraConversationItem;
 }
 
@@ -444,12 +448,12 @@ describe('actions slot', () => {
 });
 
 it('is accessible in the default (empty) state', async () => {
-  const el = await fixtureInListbox(html`<lyra-conversation-item></lyra-conversation-item>`);
+  const el = await fixtureItem(html`<lyra-conversation-item></lyra-conversation-item>`);
   await expect(el).to.be.accessible();
 });
 
 it('is accessible in a populated, active state with an excerpt, timestamp, and actions slot', async () => {
-  const el = await fixtureInListbox(html`
+  const el = await fixtureItem(html`
     <lyra-conversation-item
       title="Migrating the table component"
       excerpt="Sure — I can open a PR for that."
@@ -463,7 +467,7 @@ it('is accessible in a populated, active state with an excerpt, timestamp, and a
 });
 
 it('is accessible while renaming', async () => {
-  const el = await fixtureInListbox(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`);
+  const el = await fixtureItem(html`<lyra-conversation-item title="Old name"></lyra-conversation-item>`);
   (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
   await el.updateComplete;
   await expect(el).to.be.accessible();

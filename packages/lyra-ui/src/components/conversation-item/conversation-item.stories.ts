@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A selectable row representing one chat session in a history sidebar list — the intended `renderItem()` payload for a sibling virtualized-list component, but fully usable standalone. `role="option"` expects a `role="listbox"`/`role="group"` ancestor (supplied by that future list, or a plain wrapper as in these stories); title/excerpt/timestamp are individual props, not a bound `.session` object, for consistency with `<lyra-chat-message>`.',
+          'A selectable row representing one chat session in a history sidebar list — the intended `renderItem()` payload for a sibling virtualized-list component, but fully usable standalone. Its selectable region uses `role="button"` and does not require a listbox owner; title/excerpt/timestamp are individual props, not a bound `.session` object, for consistency with `<lyra-chat-message>`.',
       },
     },
   },
@@ -20,19 +20,19 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item
         title="Migrating the table component"
         excerpt="Sure — I can open a PR that swaps the old pagination prop for the new cursor-based API."
         .timestamp=${new Date()}
       ></lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
 export const ActiveAndInactive: Story = {
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;">
+    <nav aria-label="Conversations" style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;">
       <lyra-conversation-item
         title="Nightly build failure"
         excerpt="The lint step hit a type error in chart.ts — looks like a stale import."
@@ -48,50 +48,50 @@ export const ActiveAndInactive: Story = {
         title="Quarterly report outline"
         .timestamp=${new Date('2024-11-02T09:15:00')}
       ></lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
 export const NoExcerptOrTimestamp: Story = {
   name: 'No excerpt / no timestamp',
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item title="Untitled session"></lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
 export const LongContentTruncates: Story = {
   name: 'Long title/excerpt truncate inside a constrained width',
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 16rem;">
+    <nav aria-label="Conversations" style="max-width: 16rem;">
       <lyra-conversation-item
         title="A very long conversation title that should truncate with an ellipsis"
         excerpt="And an equally long last-message preview snippet that also needs to truncate on a single line instead of wrapping."
         .timestamp=${new Date()}
       ></lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
 export const NotEditable: Story = {
   name: 'editable=false (no rename affordance)',
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item
         title="Shared conversation (read-only)"
         excerpt="Rename is unavailable for sessions this consumer doesn't own."
         .timestamp=${new Date()}
-        ?editable=${false}
+        .editable=${false}
       ></lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
 export const InlineRename: Story = {
   name: 'Inline rename — click the pencil, Enter/blur commits, Escape cancels',
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item
         id="rename-demo"
         title="Click the pencil to rename me"
@@ -106,14 +106,14 @@ export const InlineRename: Story = {
       <p id="conversation-item-rename-log" style="font-family: monospace; margin-top: 0.5rem;">
         No rename committed yet.
       </p>
-    </div>
+    </nav>
   `,
 };
 
 export const WithActionsSlot: Story = {
   name: 'actions slot (e.g. a pin/delete control)',
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item title="Pinned research thread" .timestamp=${new Date()} active>
         <button
           slot="actions"
@@ -128,7 +128,7 @@ export const WithActionsSlot: Story = {
           ✕
         </button>
       </lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
@@ -137,13 +137,12 @@ export const HistoryList: Story = {
   render: () => {
     const onSelect = (e: Event) => {
       const clicked = e.currentTarget as HTMLElement;
-      const list = clicked.closest('[role="listbox"]')!;
+      const list = clicked.closest('nav')!;
       for (const item of list.querySelectorAll('lyra-conversation-item')) item.removeAttribute('active');
       clicked.setAttribute('active', '');
     };
     return html`
-      <div
-        role="listbox"
+      <nav
         aria-label="Conversations"
         style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;border:1px solid var(--lyra-color-border);border-radius:0.5rem;padding:0.25rem;"
       >
@@ -171,27 +170,27 @@ export const HistoryList: Story = {
           .timestamp=${new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)}
           @lyra-select=${onSelect}
         ></lyra-conversation-item>
-      </div>
+      </nav>
     `;
   },
 };
 
 export const CustomTimestampFormat: Story = {
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item
         title="Overriding the default formatter"
         excerpt="formatTimestamp swaps the built-in absolute-time rendering for anything a consumer wants."
         .timestamp=${new Date()}
         .formatTimestamp=${(date: Date) => `${date.toLocaleDateString()} · ${date.toLocaleTimeString()}`}
       ></lyra-conversation-item>
-    </div>
+    </nav>
   `,
 };
 
 export const Events: Story = {
   render: () => html`
-    <div role="listbox" aria-label="Conversations" style="max-width: 22rem;">
+    <nav aria-label="Conversations" style="max-width: 22rem;">
       <lyra-conversation-item
         id="ci-events"
         title="Click, or Tab + Enter/Space, to select me"
@@ -202,6 +201,6 @@ export const Events: Story = {
         }}
       ></lyra-conversation-item>
       <p id="conversation-item-event-log" style="font-family: monospace; margin-top: 0.5rem;">No event fired yet.</p>
-    </div>
+    </nav>
   `,
 };

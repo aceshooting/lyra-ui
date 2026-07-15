@@ -64,6 +64,7 @@ function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
 
 export interface LyraConversationItemEventMap {
   'lyra-select': CustomEvent<undefined>;
+  'lyra-rename': CustomEvent<ConversationItemRenameDetail>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -126,6 +127,8 @@ export interface LyraConversationItemEventMap {
  * consumer applies the new title once it's actually persisted. Not fired
  * when the trimmed draft is empty or unchanged from the original `title`
  * (that's treated as an implicit cancel).
+ * @event blur - Re-dispatched from the in-place rename input as a bubbling, composed event.
+ * @event focus - Re-dispatched from the in-place rename input as a bubbling, composed event.
  * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="option"]`, the rename button, and `actions`.
  * @csspart option - The selectable region (`role="button"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
  * @csspart content - Wrapper around the title and excerpt.
@@ -151,10 +154,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
    *  `<lyra-chat-message>`'s identical `timestamp` prop. */
   @property({ attribute: false }) timestamp?: Date | string;
 
-  /** Overrides the default absolute-time rendering of `timestamp` -- this
-   *  library has no i18n system of its own, so an overridable formatter is
-   *  the established way to hand locale-sensitive display back to the
-   *  consumer (mirrors `<lyra-chat-message>`'s identical `formatTimestamp`). */
+  /** Overrides the default absolute-time rendering of `timestamp` when an application
+   *  needs a different timestamp style (mirrors `<lyra-chat-message>`'s identical hook). */
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
 
   /** Whether this is the currently-selected/open session. Drives the
