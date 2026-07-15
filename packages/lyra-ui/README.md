@@ -2,24 +2,18 @@
 
 [![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
 
-**Web Awesome, plus.** Free, clean-room [Lit](https://lit.dev) web components — a companion to
-[Web Awesome](https://webawesome.com) that provides open-source equivalents of selected,
-documented Web Awesome **Pro** surfaces (form controls, date pickers, toasts, charts, …), *plus*
-dozens of original components Web Awesome has no equivalent for at all — dashboard atoms, a chart
-family, temporal/graph/map visualizations, and (newest) a full **Conversation & Agent UI** family
-for building chat/agent products: message bubbles, streaming text, tool-call chips and approval
-dialogs, citations, model/settings pickers, and more. Token-compatible with Web Awesome, so the
-mirrored components look native inside a WA app, and everything is fully usable standalone.
+**Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
+library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
+It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
+[Web Awesome](https://webawesome.com/), with 133 custom elements, native custom-element APIs,
+tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
+and no runtime dependency on either project.
 
-> **Independent project.** Not affiliated with or endorsed by Web Awesome, and no `wa-` prefix or
-> Web Awesome trademark/branding is used here. For components that *do* have a Web Awesome
-> counterpart, this package gives you a free, open-source component wherever Web Awesome Pro
-> normally charges — the public API (attributes, slots, events, CSS parts) mirrors Web Awesome's
-> own documented surface under the `lyra-` prefix. Read the migration notes and component entry
-> before treating a migration as a drop-in swap — but every implementation in this package is original
-> (clean-room; no Web Awesome Pro source was ever available to or copied by this project). Most of
-> the library, and all of the Conversation & Agent UI family, has no Web Awesome counterpart to
-> mirror in the first place — see the "Mirrors" column in the tables below.
+> **Independent implementation.** Lyra is not affiliated with, endorsed by, or a fork or rebrand of
+> Shoelace or Web Awesome. Selected Web Awesome-compatible components retain documented public names
+> under the `lyra-` prefix to make migration easier; component notes identify differences. Shoelace
+> users get a separate `sl-*` migration map because the APIs are not identical. No competitor runtime,
+> theme, token namespace, or source code is required by Lyra.
 
 ## Install
 
@@ -105,17 +99,37 @@ toast({ message: 'Saved', variant: 'success' });
 - **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
   contributor guide for agents working *on* lyra-ui, not the same document as the two above.
 
-## Migrating from Web Awesome Pro
+## Migrating from Web Awesome or Shoelace
 
-For every component marked with a `wa-*` counterpart in the "Mirrors" column, the documented
-compatible surface (attributes, slots, events, CSS parts, and custom properties) uses the same
-public names under the `lyra-` prefix. Read the component notes before migrating: for example,
+For a component marked with a `wa-*` counterpart in the "Mirrors" column, Lyra keeps the documented
+public vocabulary where practical: attributes, slots, events, CSS parts, and custom properties use
+the same names under the `lyra-` prefix. This makes many migrations a predictable import and tag-name
+change, while the component notes remain authoritative for intentional differences. For example,
 Lyra's combobox uses `with-clear`, while Web Awesome's equivalent uses `clearable`.
 
 ```
 <wa-combobox value="x" multiple with-clear>  →  <lyra-combobox value="x" multiple with-clear>
 <wa-date-input value="2026-07-15">           →  <lyra-date-input value="2026-07-15">
 ```
+
+Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
+familiar to many teams. Lyra provides a conceptual migration path rather than claiming a drop-in
+`sl-*` replacement:
+
+| Shoelace | Lyra | Migration note |
+|---|---|---|
+| `<sl-button>` | `<lyra-button>` | Check `variant`, `appearance`, and loading behavior. |
+| `<sl-input>` / `<sl-textarea>` | `<lyra-input>` / `<lyra-textarea>` | Preserve the native editing and form contract; review label/error markup. |
+| `<sl-select>` / `<sl-option>` | `<lyra-select>` / `<lyra-option>` | Review option and value events. |
+| `<sl-dialog>` / `<sl-drawer>` | `<lyra-dialog>` / `<lyra-drawer>` | Review close reasons, focus behavior, and slots. |
+| `<sl-card>` / `<sl-badge>` / `<sl-callout>` | `<lyra-card>` / `<lyra-badge>` / `<lyra-callout>` | Review appearance tokens and dismiss events. |
+| `<sl-spinner>` / `<sl-progress-bar>` | `<lyra-spinner>` / `<lyra-progress-bar>` | Built-in status copy is localized through Lyra's runtime. |
+
+For either migration, update the package import, replace the custom-element prefix, run the
+component's accessibility story, and check its API notes for behavior that cannot be inferred from
+the tag name alone. Lyra's own `--lyra-theme-*` variables are the only theme inputs it reads. For a
+staged Web Awesome migration, map existing values explicitly in application CSS; Lyra does not read
+competitor token variables itself.
 
 Everything else in the tables below — marked `— (extra)` — has no Web Awesome equivalent to
 migrate *from* in the first place, so there's nothing to rename: install the package and import
@@ -130,9 +144,43 @@ Awesome has no chat/agent UI component family at all.
 Every component is built on the same three guarantees, verified across the whole library rather
 than opt-in per component:
 
-**Theming.** Components read Web Awesome's `--wa-*` design tokens (with `--lyra-*` fallbacks).
-Inside a WA app they inherit your theme automatically; standalone, they use sensible defaults —
-override any `--lyra-*`/`--wa-*` custom property to retheme.
+**Theming.** Components read independent `--lyra-theme-*` variables and standalone defaults. Lyra
+does not depend on another library's theme or token namespace. For a ready-made light/dark base
+theme, import `@aceshooting/lyra-ui/theme.css` once and toggle `.lyra-light`/`.lyra-dark` (or the
+matching `data-lyra-theme` attribute) on an ancestor:
+
+```css
+@import '@aceshooting/lyra-ui/theme.css';
+```
+
+```html
+<body class="lyra-dark">
+  <lyra-button variant="brand">Save</lyra-button>
+</body>
+```
+
+Applications can override any `--lyra-theme-*` input directly:
+
+```css
+:root {
+  --lyra-theme-color-surface-default: #101827;
+  --lyra-theme-color-text-normal: #f8fafc;
+  --lyra-theme-color-brand-fill-loud: #60a5fa;
+  --lyra-theme-font-size-m: 1rem;
+  --lyra-theme-border-radius-m: 0.5rem;
+}
+```
+
+See `internal/tokens.styles.ts` for the complete shared token list. Component-specific `--lyra-*`
+custom properties remain available for local overrides.
+
+**Frontend quality guarantees.** Every component is designed as a native custom element and tested
+for the contract that applies to its shape: semantic roles and accessible names inside shadow DOM,
+keyboard navigation, bubbling/composed public events, native form association and validity, logical
+CSS for RTL, narrow-container layouts, reduced motion, and forced-colors behavior. Form controls
+expose label, hint, error, focus, editing, reset, and validity behavior instead of hiding the useful
+native contract behind a private input. Heavy integrations such as Chart.js, MapLibre, D3, Shiki,
+Markdown, phone-number metadata, and flag artwork remain optional peer dependencies.
 
 **Internationalization.** Every built-in string (button labels, status announcements,
 `aria-label`s) resolves through a small runtime, in two ways you can combine:
@@ -154,10 +202,19 @@ No rebuild, no per-locale bundle, no per-component API to learn — register the
 every component that uses that key picks it up reactively, including ones added after your app's
 first render.
 
+Lyra's default messages are English fallbacks, while applications own the translated catalog. Date,
+number, byte, relative-time, and calendar formatting use the browser's `Intl` APIs and the resolved
+locale. Consumer-provided labels, values, file names, and message content are never altered by the
+localization layer. The same runtime also covers accessible names, descriptions, validation messages,
+live-region announcements, empty states, status labels, and action buttons; use `.strings` for a
+component-specific override when needed.
+
 **RTL.** Set `dir="rtl"` on `<html>` or any ancestor (or just a `lang` whose default direction is
 RTL, e.g. `ar`/`he`/`fa`) — every component mirrors its layout automatically via CSS logical
 properties and swaps directional keyboard navigation (e.g. the arrow keys in a date grid or a
-roving-tabindex list) to match. No per-component RTL flag or opt-in needed.
+roving-tabindex list) to match. This covers Arabic, Hebrew, Persian, Urdu, and other RTL locales
+through inherited direction; no per-component RTL flag or opt-in is needed. Components do not force
+their own `dir`, so they remain composable inside mixed-direction layouts.
 
 ## Components
 

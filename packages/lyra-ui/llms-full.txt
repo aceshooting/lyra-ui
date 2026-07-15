@@ -1,18 +1,14 @@
 # @aceshooting/lyra-ui — LLM API Reference
 
-`@aceshooting/lyra-ui` is a library of free, clean-room [Lit](https://lit.dev) web components — a
-companion to [Web Awesome](https://webawesome.com) that reimplements selected Web Awesome **Pro**
-components as open-source equivalents (documented compatible tag shape, attributes, slots, events,
-and CSS parts under a `lyra-` prefix instead of `wa-`), plus a number of extras that have no Web Awesome
-counterpart at all (dashboard atoms, temporal/graph widgets, chart wrappers, a map component, a
-file dropzone). It is **token-compatible with Web Awesome**: every component's stylesheet resolves
-through Web Awesome's `--wa-*` design tokens first, falling back to its own `--lyra-*` tokens, so
-components read as native inside a Web Awesome-themed app and are equally usable standalone with no
-theme at all. This document is the complete, component-by-component API reference intended for
-coding assistants integrating the library; for install instructions, the full component catalog, and
-the `<wa-*>` → `<lyra-*>` migration notes, see the package [README](./README.md) — or the shorter
-curated index at [`llms.txt`](./llms.txt) if you just need the shape of the library before diving in
-here.
+`@aceshooting/lyra-ui` is a free, independent, MIT-licensed [Lit](https://lit.dev) web-component
+library and an open-source alternative to Shoelace and Web Awesome. It combines accessible form
+controls, layout and overlay primitives, dashboards, charts, data visualization, and Conversation &
+Agent UI. Selected components retain documented Web Awesome-compatible public names under a `lyra-`
+prefix to make migration easier, but Lyra has its own implementation, design tokens, localization
+runtime, RTL behavior, and release surface. It has no runtime dependency on either project. This is
+the complete component-by-component API reference for coding assistants integrating the library; for
+installation, the full catalog, and Web Awesome/Shoelace migration notes, see the package
+[README](./README.md) — or the shorter curated index at [`llms.txt`](./llms.txt).
 
 Component entry points such as `components/empty/empty.js` register their custom-element tag.
 Every component also exposes a matching `.class.js` entry for subclassing or type-directed
@@ -105,21 +101,22 @@ Not a custom element itself — infrastructure every `lyra-*` component in the l
   `lyra-citation-badge`, and `lyra-menu` (which resolves its `placement` through
   `rtlAwarePlacement()` first — see `rtl.ts` below — before handing it to `place()`).
 - **`tokens.styles.ts` → `tokens`** (a `css` template prepended to every component's stylesheet) —
-  the whole design-token layer. Every value chains through a `--wa-*` Web Awesome token first, with
-  a hard-coded fallback, e.g. `--lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da)`. Full
+  the whole design-token layer. Every value chains through an independent `--lyra-theme-*` custom
+  property and finally a hard-coded fallback, e.g. `--lyra-color-brand: var(--lyra-theme-color-brand-fill-loud, #0969da)`.
+  Full
   set: `--lyra-color-surface / -text / -text-quiet / -border / -brand / -brand-quiet / -success /
   -success-quiet / -warning / -warning-quiet / -danger / -danger-quiet`,
   `--lyra-color-on-brand / -on-success / -on-warning / -on-danger` (paired
   text/icon colors for content painted on the corresponding solid semantic fill; standalone light
-  and dark fallbacks choose a contrasting foreground for each fill, while a Web Awesome theme can
-  provide its own `*-on-loud` values), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
+  and dark fallbacks choose a contrasting foreground for each fill, while a consumer's own theme
+  can provide its own `*-on-loud` values), `--lyra-space-xs / -s / -m / -l`, `--lyra-radius`, `--lyra-shadow`,
   `--lyra-font`, `--lyra-transition-fast` / `-base` (motion timing every animating component should
   share), `--lyra-opacity-disabled` (one shared disabled-state opacity), `--lyra-focus-ring-width` /
   `-color` / `-offset` (every `:focus-visible` rule should reference these), `--lyra-icon-button-size`
   (minimum tappable box for icon-only buttons; the glyph itself doesn't grow). Also sets
   `:host([hidden]) { display: none !important; }`, an inherited `box-sizing: border-box` reset, and
   a `prefers-color-scheme: dark` fallback that re-points the color tokens' hard-coded defaults at a
-  dark palette (only takes effect when no real `--wa-*` theme value is present).
+  dark palette (only takes effect when no real `--lyra-theme-*` value is set).
 - **`prefix.ts`** — `LYRA_PREFIX = 'lyra'`; `tag(name)` → `` `lyra-${name}` ``; `defineElement(name,
   ctor)` — idempotent `customElements.define`, safe if a module is evaluated twice.
 - **`a11y.ts`** — `nextId(scope)`: monotonic id generator (e.g. `nextId('combobox-list')` →
@@ -544,6 +541,10 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   internal `<input>`; empty omits the attribute. Named `autoCorrect` in JS/TS (not `autocorrect`)
   to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own boolean `autocorrect` IDL member;
   the wire attribute is still the plain `autocorrect` name
+- `autocomplete: string = ''`, `inputMode: string = ''` (attribute `inputmode`), and
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal date input
+- `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
+  (`enterkeyhint`) — forwarded to the internal `<input>`.
 
 **Methods:** `show()`, `hide()`, `clear()`
 
@@ -720,15 +721,14 @@ original declarative `value`, matching native `defaultValue` behavior.
 
 ## `lyra-button`
 
-A generic action-button primitive, the `lyra-*` equivalent of a plain `wa-button`. Renders an
-internal native `<button>` (this library has no runtime dependency on Web Awesome); `type="submit"`/
+A generic action-button primitive. Renders an internal native `<button>`; `type="submit"`/
 `type="reset"` are handled by the component itself via the host's own `closest('form')`, since a
 shadow-internal native button doesn't participate in an ancestor form's submission on its own.
 
 **Properties:**
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'plain' = 'filled'` (reflected) — `'accent'` is a
-  loud, high-contrast filled tier (equivalent to `wa-button`'s own runtime-default appearance),
+  loud, high-contrast filled tier,
   distinct from `'filled'` for `variant="neutral"` specifically (`'filled'` reads the ambient
   surface color there; `'accent'` reads a solid neutral fill)
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
@@ -737,7 +737,11 @@ shadow-internal native button doesn't participate in an ancestor form's submissi
   clearing `disabled`
 - `disabled: boolean = false` (reflected)
 
-**Getters/methods:** `focus(options?)`/`blur()` — forwarded to the internal native `<button>`.
+The shared `m` size uses `--lyra-font-size-m`. The internal button follows the host's inline size through `--lyra-button-width` (default
+`100%`), and the size scale is exposed through `--lyra-button-size-xs/-s/-m/-l/-xl`.
+
+**Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal native
+`<button>`; `click()` also runs the component's submit/reset behavior.
 
 **Events:** none (a plain native `click` bubbles and composes through the shadow boundary
 unmodified; disabled while `disabled` or `loading`).
@@ -746,11 +750,12 @@ unmodified; disabled while `disabled` or `loading`).
 
 **CSS parts:** `base`, `label`, `start`, `end`, `spinner` (present only while `loading`).
 
-**Themeable custom properties:** `--lyra-button-accent`, `--lyra-button-fill`,
+**Themeable custom properties:** `--lyra-button-width`, `--lyra-button-size-xs/-s/-m/-l/-xl`,
+`--lyra-button-accent`, `--lyra-button-fill`,
 `--lyra-button-on-fill`, `--lyra-button-border` (each swapped by the active `variant`, default
 `neutral` falls back to plain text/surface/border tokens), `--lyra-button-accent-fill`,
 `--lyra-button-accent-on-fill` (the `appearance="accent"` fill/foreground pair; `neutral` falls
-back to `--wa-color-neutral-fill-loud`/`-on-loud`, every other variant reuses that variant's own
+back to `--lyra-color-neutral`/`--lyra-color-on-neutral`, every other variant reuses that variant's own
 loud fill token), `--lyra-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
 `--lyra-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
 `prefers-reduced-motion`).
@@ -1880,6 +1885,9 @@ itself (absent for `'wide'`/`collapse="none"`); and the `lyra-split-collapse-cha
 divider adjacent to the collapsed panel is drag/keyboard-disabled (`aria-disabled="true"`) while
 collapsed. `collapse="none"` (the default) is byte-for-byte identical to pre-collapse-feature behavior.
 
+`dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
+localized accessible label generated for each auto-inserted divider.
+
 **Events:** `lyra-resize` (`detail: { sizes }`, fired on every drag step/release **and** every
 keyboard step), `lyra-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render),
@@ -1959,6 +1967,8 @@ position) survives the transition.
   sidebar/toolbar visible during fullscreen
 - `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
   `lyra-empty`'s `compact`
+- `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
+  CSS `inset` independently from `fullscreenInset`; when empty, it follows `fullscreenInset`
 - `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
   chart/table toggle inside the same card chrome; `WidgetView { id: string; label: string; icon?:
   TemplateResult }`. Each entry gets a header toggle button (`[part='view-toggle']`) and a
@@ -1987,7 +1997,7 @@ empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabe
 `backdrop`
 
 **Themeable custom properties:** `--lyra-widget-overlay-color` (default `rgb(0 0 0 / 0.5)` — the
-fullscreen backdrop scrim color; component-specific since no shared `--wa-*`/`--lyra-*` overlay token
+fullscreen backdrop scrim color; component-specific since no shared `--lyra-*` overlay token
 exists), plus shared tokens (`--lyra-space-*`, `--lyra-color-border/-surface/-text-quiet`,
 `--lyra-radius`, `--lyra-shadow`, `--lyra-icon-button-size`, `--lyra-focus-ring-*`).
 
@@ -2269,10 +2279,15 @@ A Canvas-rendered heatmap with a DPR-aware, resize-aware redraw loop, in one of 
 `"matrix"` (default — a `rowLabels` × `colLabels` grid of `values`) or `"calendar"` (a
 GitHub-style Sunday–Saturday × week grid built from `days`, colored by quartile bucket rather than
 the matrix mode's continuous ramp). Every cell is independently addressable despite being
-canvas-drawn (no per-cell DOM node): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
+canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
 with that cell's label + value; the canvas is `tabindex="0"` with arrow-key roving focus (a stroked
 ring redrawn over the focused cell on every draw, plus `[part="live-region"]` announcing it); and a
-click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
+  click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
+
+Set `accessibleCells: true` (`accessible-cells`) to opt into a native-button overlay for each
+interactive matrix/calendar cell. The overlay uses localized `aria-label`s, explicit
+`aria-pressed="true"|"false"` from the controlled `selectedCell`, and roving tabindex/arrow-key
+focus; it continues to emit `lyra-cell-click` and leaves selection state consumer-controlled.
 
 **Properties:**
 - `rowLabels: string[] = []` (attribute: false — matrix mode only)
@@ -2312,6 +2327,11 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   announcement when the focused cell is the selection. Purely a controlled property — mirrors
   `<lyra-lite-chart>`'s `selectedIndex`, this component never mutates it itself. Unset (the default,
   `null`) reproduces today's exact output.
+- `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
+  one `[part="cell"]` native button per interactive cell. Buttons expose localized `aria-label`s,
+  explicit `aria-pressed` state from `selectedCell`, and a roving tabindex; the canvas becomes
+  `aria-hidden` while this mode is enabled. The property is opt-in so the default canvas mode keeps
+  its low DOM footprint.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
   formats the per-cell hover tooltip and keyboard live-region announcement text; receives the cell
   position (`{ row, col }` in matrix mode, `{ week, weekday }` in calendar mode) and its value.
@@ -2370,7 +2390,8 @@ force a redraw manually.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `canvas`, `tooltip` (hover tooltip, positioned over the hovered cell),
+**CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
+button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden `role="status" aria-live="polite"` element announcing the
 keyboard-focused cell), `legend`, `legend-lo`, `legend-hi`, `legend-annotation` (one per labeled
 `annotations` entry)
@@ -2623,6 +2644,8 @@ descendants of the treeitem, matching the WAI-ARIA treeitem pattern's containmen
 - `setSize: number = 1`, `posInSet: number = 1` (attribute: false) — this node's `aria-setsize`/
   `aria-posinset` values among its siblings, pushed down from `<lyra-tree>`; normally set internally,
   not by consumers
+- `hasChildren: boolean` (read-only getter) — reports whether `item.children` contains at least one
+  child; leaf nodes never expose `aria-expanded` and cannot expand or collapse
 
 **Methods:** `expand()`, `collapse()` (each a no-op if already in that state, or a leaf), `select()`
 (fires `lyra-node-select`).
@@ -3169,6 +3192,10 @@ parsing (that's left entirely to the host).
 - `label: string = 'Drop files here or click to browse'`
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
+- `acceptedMessage: string = '{count} file(s) added.'` (attribute `accepted-message`) — live-region
+  message after an accepted selection; `{count}` is replaced with the accepted count
+- `rejectedMessage: string = '{count} file(s) rejected.'` (attribute `rejected-message`) — live-region
+  message after rejected files; `{count}` is replaced with the rejected count
 
 **Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`
 forwards to the interactive dropzone.
@@ -3464,6 +3491,8 @@ hand-building that chrome isn't worth it.
 - `closable: boolean = false` (attribute `closable`) — renders a built-in close (X) button in the
   header row (creating one, with no heading text, if `heading` is unset), wired to the same
   `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
+- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — prevents a backdrop click from
+  closing the dialog; Escape and explicit `close()` calls remain available
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
 computed accessible name outright, winning over every other source below (a slotted heading,
@@ -3501,7 +3530,7 @@ when no heading is slotted and `heading` is unset), `body` (wrapper around the d
 `footer` (wrapper around the `footer` slot)
 
 **Themeable custom properties:** `--lyra-dialog-overlay-color` (default `rgb(0 0 0 / 0.5)` — the
-backdrop scrim color; component-specific since no shared `--wa-*`/`--lyra-*` overlay token exists),
+backdrop scrim color; component-specific since no shared `--lyra-*` overlay token exists),
 `--lyra-dialog-width` (default unset/`auto` — the panel shrink-wraps to content, unchanged; set it
 for an assertive width instead), `--lyra-dialog-max-width` (default `32rem` — the panel's
 max-inline-size cap, via `min(var(--lyra-dialog-max-width, var(--lyra-dialog-width, 32rem)), 100%)`;
@@ -4161,7 +4190,7 @@ fenced/indented `<pre>`), `link` (every rendered `<a>`), `table` (every rendered
 
 **Themeable custom properties:** `--lyra-markdown-font-mono` (default `ui-monospace, SFMono-Regular,
 Menlo, Consolas, monospace` — the code/code-block font; component-specific since no shared
-`--wa-*`/`--lyra-*` monospace token exists), plus shared tokens `--lyra-space-xs/-s/-m/-l`,
+`--lyra-*` monospace token exists), plus shared tokens `--lyra-space-xs/-s/-m/-l`,
 `--lyra-color-brand-quiet`, `--lyra-color-brand`, `--lyra-color-border`, `--lyra-color-text-quiet`,
 `--lyra-radius`.
 
@@ -4243,6 +4272,8 @@ conversation-surface level).
 - `collapsed: boolean = false` (reflected) — whether the message body is hidden; effective whenever
   set, independent of `collapsible` (which only controls whether the toggle button itself is
   rendered) — mirrors `lyra-widget`'s identical `collapsible`/`collapsed` pair
+- `attachmentsPosition: 'before'|'after' = 'after'` (attribute `attachments-position`) — places the
+  `attachments` slot before or after the message body; both the visual and reading order follow it
 
 **Events:** `lyra-retry` (no detail payload; fired by the built-in retry button, only rendered when
 `status="failed"`), `lyra-collapse-toggle` (`detail: boolean`, the new `collapsed` state — fired when
@@ -4875,6 +4906,8 @@ wins when both are present.
   indeterminate state, and filename context so translators can reorder every value
 - `uploadFailedLabel: string = 'Upload failed'` (attribute `upload-failed-label`) — visible status
   text shown for `status="error"`; override for i18n/locale
+- `untitledLabel: string = 'Untitled file'` (attribute `untitled-label`) — fallback filename and
+  tooltip when neither `file` nor `name` supplies a name
 
 The component identifies *which* attachment a `lyra-remove`/`lyra-retry` event is about via the
 platform's own `id` attribute/property rather than a second, differently-named prop. Set `id="..."`
@@ -5369,6 +5402,11 @@ emitting `lyra-change`.
   `<input>`'s own `autocorrect` (Safari/WebKit-specific); empty omits the attribute. Named
   `autoCorrect` in JS purely to dodge a `lib.dom.d.ts` typing collision — the wire attribute is
   still plain `autocorrect`.
+- `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`), and
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the free-text input;
+  they have no effect in closed-dropdown mode
+- `autocomplete: string = 'off'`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
+  (`enterkeyhint`) — forwarded to the free-text mode's native `<input>`.
 - `name: string = ''` (reflected)
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
@@ -5573,6 +5611,9 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 - `searchPlaceholder: string = 'Search tools…'` (attribute `search-placeholder`)
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
+- `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
+  `autoCorrect: string = ''` (`autocorrect`), `inputMode: string = ''` (`inputmode`), and
+  `enterKeyHint: string = ''` (`enterkeyhint`) — forwarded to the search `<input>`.
 
 **Methods:** `close(reason: ToolSelectDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lyra-close` with `reason`, and returns focus to whatever had it before the dialog opened.
@@ -6586,6 +6627,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
   consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
   to the default dynamic-import path unchanged.
+- `languagesOnly: boolean = false` (attribute `languages-only`) — skips the default shiki loader;
+  use when every requested language is supplied through `languages`
 
 **Events:** `lyra-copy` (`detail: { text: string }` — always the raw `code` value, never the
 highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
@@ -6599,7 +6642,7 @@ button is activated, same event name/shape convention as `<lyra-thinking-panel>`
 
 **Themeable custom properties:** `--lyra-code-block-max-height` (default `none` — the consumer-tunable
 scroll cap; only takes effect once `max-height` is set), `--lyra-code-block-font` (default
-`ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` — no shared `--wa-*`/`--lyra-*` monospace
+`ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` — no shared `--lyra-*` monospace
 token exists to resolve through), plus shared tokens `--lyra-color-border`, `--lyra-radius`,
 `--lyra-color-surface`, `--lyra-space-xs/-s/-m`, `--lyra-font`, `--lyra-color-text-quiet`,
 `--lyra-color-text`, `--lyra-color-brand`/`-brand-quiet`, `--lyra-transition-fast`,
@@ -6819,6 +6862,15 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `false` via a PROPERTY binding, e.g. `.editable=${false}` — a `?editable=${false}`
   boolean-attribute binding cannot override a true default). When `false`, `args` is always shown
   read-only and can never be changed before approval.
+- `spellcheck: boolean = false`, `autocapitalize: string = 'off'`,
+  `autoCorrect: string = 'off'` (attribute `autocorrect`), `autocomplete: string = 'off'`,
+  `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
+  and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
+  textarea; the defaults keep browser editing assistance from changing JSON text
+- `spellcheck: boolean = false`, `autocapitalize: string = 'off'`, `autoCorrect: string = 'off'`
+  (`autocorrect`), `autocomplete: string = 'off'`, `wrap: 'hard'|'soft'|'off' = 'soft'`,
+  `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''` (`enterkeyhint`) —
+  forwarded to the raw-JSON `<textarea>` while editing.
 
 **Methods:** `close(reason: ToolApprovalDialogCloseReason = 'api'): void` — closes the dialog, emits
 `lyra-close` with `reason`, and returns focus to whatever had it before the dialog opened; a no-op if
@@ -7061,6 +7113,10 @@ menu, an avatar menu, or a history row's overflow menu. Uses the WAI-ARIA "menu 
   attribute takes precedence over both this prop and the localized default (unset by default, so
   a no-op for existing consumers), matching `lyra-select`/`lyra-model-select`'s
   `this.getAttribute('aria-label') || <computed default>` precedence
+
+- `closeOnEscapeAnywhere: boolean = false` (attribute `close-on-escape-anywhere`) — lets Escape
+  close the menu when focus is on slotted non-menu-item content inside the popup; item activation
+  remains scoped to actual menu items
 
 **Events:** `lyra-show` (no detail — fires only when `open` transitions to `true`, not for markup
 that renders `open` true from the start), `lyra-hide` (same first-render guard, opposite
@@ -7843,6 +7899,8 @@ capability as a row.
   `'Attach files'`); only affects the single-capability button (`[part='trigger']`) — the
   multi-capability menu's own trigger keeps its fixed `'Add attachment'` label regardless. Unset
   (the default) keeps the built-in English default.
+- `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
+  both the single-capability and multi-capability trigger buttons
 
 **Events:** `lyra-pick` (`detail: { capability: 'files' | 'image'; files: FileList }`) — fired once a
 file-backed capability's hidden input produces a real selection. The `FileList` is an independent
@@ -8228,9 +8286,11 @@ markup.
 
 ## `lyra-callout`
 
-An inline status, warning, or error surface.
+An inline status, warning, or error surface. Set `inline` for lightweight reactive form or mutation
+errors without panel chrome.
 
-**Properties:** `variant`, `heading`, `closable`, `open`, and `accessibleLabel` (`accessible-label`).
+**Properties:** `variant`, `heading`, `closable`, `inline`, `open`, and `accessibleLabel`
+(`accessible-label`).
 
 **Events:** cancelable `lyra-close`; the callout hides after the event unless a listener calls
 `preventDefault()`.
@@ -8296,6 +8356,30 @@ properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, an
 ## Cross-cutting notes
 
 These apply across the whole library rather than to any one component:
+
+- **Independence and migration.** Lyra has no runtime, theme, or design-token dependency on
+  Shoelace or Web Awesome. The documented `wa-*` comparisons are migration references only; Lyra's
+  own `lyra-*` tokens, events, localization runtime, and implementation are the source of truth.
+  For a staged Web Awesome migration, map existing `--wa-*` values to `--lyra-theme-*` explicitly
+  in application CSS instead of relying on an implicit compatibility layer.
+
+- **Internationalization.** Built-in UI copy, accessible names, descriptions, validation messages,
+  status announcements, and empty/loading states resolve through `localize()` and the locale runtime.
+  Register an application catalog with `registerLyraLocale()` or override one instance with
+  `.strings`; locale fallback is exact locale, base language, then English. Date, number, byte,
+  relative-time, and calendar output uses `Intl`. Consumer data and slotted content are never
+  translated automatically.
+
+- **RTL and direction.** Direction is inherited from `dir`/`lang`; components do not force their own
+  direction. CSS logical properties mirror layout, while directional keyboard and pointer math
+  consults the effective direction. Test both LTR and RTL for any component with horizontal order,
+  start/end placement, drag deltas, or previous/next navigation.
+
+- **Accessibility and responsive behavior.** Semantic roles live on the shadow-DOM element that owns
+  them, with explicit false states for toggle/selection/expansion ARIA attributes and deliberate
+  host-name forwarding. Form-associated controls preserve `ElementInternals`, reset, validity,
+  focus, and native editing behavior. Reusable layouts respond to their allocated container, and
+  decorative/infinite motion simplifies under `prefers-reduced-motion: reduce`.
 
 - **Packaging.** `custom-elements.json` is now in `package.json`'s `files` allowlist and
   regenerated by a `prepack` script (`pnpm run manifest`) before publish, so a manifest-driven IDE/

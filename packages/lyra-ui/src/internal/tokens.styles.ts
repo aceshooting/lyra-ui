@@ -9,6 +9,7 @@ export const tokens = css`
     --lyra-color-text: var(--lyra-theme-color-text-normal, #1a1a1a);
     --lyra-color-text-quiet: var(--lyra-theme-color-text-quiet, #6b7280);
     --lyra-color-border: var(--lyra-theme-color-surface-border, #8a8a90);
+    --lyra-color-border-strong: var(--lyra-theme-color-border-strong, #4b5563);
     --lyra-color-brand: var(--lyra-theme-color-brand-fill-loud, #0969da);
     --lyra-color-brand-quiet: var(--lyra-theme-color-brand-fill-quiet, #ddf4ff);
     --lyra-color-success: var(--lyra-theme-color-success-fill-loud, #1a7f37);
@@ -45,6 +46,7 @@ export const tokens = css`
     --lyra-font-size-2xs: var(--lyra-theme-font-size-2xs, 0.625rem);
     --lyra-font-size-xs: var(--lyra-theme-font-size-xs, 0.75rem);
     --lyra-font-size-sm: var(--lyra-theme-font-size-sm, 0.8125rem);
+    --lyra-font-size-m: var(--lyra-theme-font-size-m, 1rem);
     --lyra-font-size-md-sm: var(--lyra-theme-font-size-md-sm, 0.875rem);
     --lyra-font-size-md: var(--lyra-theme-font-size-md, 1rem);
     --lyra-font-size-lg: var(--lyra-theme-font-size-lg, 1.125rem);
@@ -230,6 +232,7 @@ export const tokens = css`
       --lyra-color-text: var(--lyra-theme-color-text-normal, #f2f2f2);
       --lyra-color-text-quiet: var(--lyra-theme-color-text-quiet, #9aa1ac);
       --lyra-color-border: var(--lyra-theme-color-surface-border, #6b6b74);
+      --lyra-color-border-strong: var(--lyra-theme-color-border-strong, #c4c9d1);
       --lyra-color-brand: var(--lyra-theme-color-brand-fill-loud, #4ea0f0);
       --lyra-color-brand-quiet: var(--lyra-theme-color-brand-fill-quiet, #163650);
       --lyra-color-success: var(--lyra-theme-color-success-fill-loud, #3fb950);

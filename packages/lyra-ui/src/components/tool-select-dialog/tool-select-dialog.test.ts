@@ -59,6 +59,26 @@ it('renders closed by default, with no role/aria-modal on the panel', async () =
   expect(panel.hasAttribute('aria-modal')).to.be.false;
 });
 
+it('forwards native editing properties to the search input', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-select-dialog
+      autocomplete="off"
+      .spellcheck=${false}
+      autocapitalize="none"
+      autocorrect="off"
+      inputmode="search"
+      enterkeyhint="search"
+    ></lyra-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const search = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  expect(search.getAttribute('autocomplete')).to.equal('off');
+  expect(search.spellcheck).to.be.false;
+  expect(search.getAttribute('autocapitalize')).to.equal('none');
+  expect(search.getAttribute('autocorrect')).to.equal('off');
+  expect(search.getAttribute('inputmode')).to.equal('search');
+  expect(search.getAttribute('enterkeyhint')).to.equal('search');
+});
+
 it('reflects open as an attribute and sets dialog semantics once open', async () => {
   const el = (await fixture(html`<lyra-tool-select-dialog></lyra-tool-select-dialog>`)) as LyraToolSelectDialog;
   el.open = true;

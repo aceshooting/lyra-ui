@@ -56,6 +56,33 @@ export const styles = css`
     display: block;
     inline-size: 100%;
   }
+  [part='canvas'][aria-hidden] {
+    pointer-events: none;
+  }
+  [part='cells'] {
+    position: absolute;
+    inset: 0;
+    direction: ltr;
+    pointer-events: none;
+  }
+  [part='cells'][hidden] {
+    display: none;
+  }
+  [part='cell'] {
+    position: absolute;
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  [part='cell']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-heatmap-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
   [part='canvas']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-heatmap-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);

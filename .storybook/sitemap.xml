@@ -9,8 +9,8 @@
   Generated from a real build's storybook-static/index.json (`entries[id].type === 'docs'`), not
   hand-derived from Storybook's title -> id sanitize() regex, so it can't drift from the actual
   slug algorithm. Regenerate after adding/renaming/removing a component or its `title:` by running
-  `pnpm docs:build` once and re-running the id extraction (see the SEO/discoverability task notes
-  for the one-off script) — this file does not regenerate itself as part of the build.
+  `pnpm docs:build` once and re-running the id extraction — this file does not regenerate itself as
+  part of the build.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aceshooting.github.io/lyra-ui/</loc></url>

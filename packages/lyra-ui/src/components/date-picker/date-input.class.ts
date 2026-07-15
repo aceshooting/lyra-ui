@@ -160,6 +160,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  attribute mapping preserves the standard lowercase `autocorrect` wire name in both Lit and
    *  generated component metadata. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  /** Forwarded to the internal date text input. Empty strings preserve the browser default. */
+  @property() autocomplete = '';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
   @property() locale = '';
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
@@ -691,6 +695,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
             autocorrect=${this.autoCorrect || nothing}
+            autocomplete=${this.autocomplete || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
             .value=${this.displayText}
             placeholder=${this.placeholder}
             ?required=${this.required}

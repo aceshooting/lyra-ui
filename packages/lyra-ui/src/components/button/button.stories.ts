@@ -9,7 +9,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'A generic action-button primitive -- the `lyra-*` equivalent of a plain `wa-button`.',
+        component: 'A generic action-button primitive with tokenized tones, appearances, sizes, and loading feedback.',
       },
     },
   },

@@ -116,6 +116,29 @@ export const HoverFocusClick: Story = {
 };
 
 /**
+ * Opts into persistent native buttons over the canvas for consumers that need
+ * one accessible control per cell. The overlay keeps a roving tab stop and
+ * exposes the controlled `selectedCell` as `aria-pressed`.
+ */
+export const AccessibleCells: Story = {
+  render: () => html`
+    <lyra-heatmap
+      accessible-cells
+      cell-size="28"
+      value-label="events"
+      .rowLabels=${['Mon', 'Tue', 'Wed']}
+      .colLabels=${['0h', '6h', '12h', '18h']}
+      .values=${[
+        [1, 4, 9, 2],
+        [0, 2, 6, 3],
+        [5, 8, 3, 1],
+      ]}
+      .selectedCell=${{ row: 1, col: 2 }}
+    ></lyra-heatmap>
+  `,
+};
+
+/**
  * Cells flagged via `annotations` get a stroked ring; ones with a `label`
  * also surface a swatch + text entry in the legend.
  */

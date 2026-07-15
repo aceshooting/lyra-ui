@@ -70,9 +70,10 @@ check that the published tarball still contains `custom-elements.json`/`llms.txt
   twice). The prefix is a single constant (`LYRA_PREFIX`) so a rename stays cheap.
 - **Design tokens only.** Every color/space/font/radius value in a component's styles must
   reference a `--lyra-*` custom property already defined in `src/internal/tokens.styles.ts`,
-  which itself falls back through `var(--wa-*-token, <hardcoded-default>)` — e.g.
-  `--lyra-color-brand: var(--wa-color-brand-fill-loud, #0969da);`. This is what makes
-  components look native inside a Web Awesome app while still rendering sensibly standalone.
+  which itself falls back through `var(--lyra-theme-*-token, <hardcoded-default>)` — e.g.
+  `--lyra-color-brand: var(--lyra-theme-color-brand-fill-loud, #0969da);`. This is what lets a
+  consumer retheme the whole library by overriding one `--lyra-theme-*` property per token at
+  any ancestor, while every component still renders sensibly with zero configuration.
   No raw hex/px design values in component styles, except where an algorithm genuinely
   requires a literal (e.g. gauge sweep-angle math) — and even then, expose the literal as a
   retheme-able `--lyra-*` custom property if it's data-driven (e.g. a color-ramp endpoint).
@@ -187,8 +188,8 @@ opt-in per component — so treat a gap in any of them as a bug, not a missing f
 
 **Theming — design tokens only:** see "Design tokens only" under Coding conventions above — every
 color/space/font/radius value must reference a `--lyra-*` custom property from
-`internal/tokens.styles.ts`, which bridges to Web Awesome's `--wa-*` tokens with a hardcoded
-fallback. This is what makes both i18n and RTL "just work" visually too: token-driven spacing and
+`internal/tokens.styles.ts`, which bridges to lyra's own `--lyra-theme-*` custom properties with a
+hardcoded fallback. This is what makes both i18n and RTL "just work" visually too: token-driven spacing and
 sizing don't hardcode a text direction or a font's natural width, so translated strings (which run
 longer or shorter than English) and mirrored RTL layouts both reflow correctly without a component-
 specific override.

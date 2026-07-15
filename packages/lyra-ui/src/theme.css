@@ -1,0 +1,58 @@
+/* Lyra's standalone theme inputs. Import this file once at the application root, then
+   switch `.lyra-light`/`.lyra-dark` (or data-lyra-theme) on an ancestor to change modes. */
+:root,
+.lyra-light,
+[data-lyra-theme='light'] {
+  color-scheme: light;
+  --lyra-theme-color-surface-default: #ffffff;
+  --lyra-theme-color-text-normal: #1a1a1a;
+  --lyra-theme-color-text-quiet: #6b7280;
+  --lyra-theme-color-surface-border: #8a8a90;
+  --lyra-theme-color-border-strong: #4b5563;
+  --lyra-theme-color-brand-fill-loud: #0969da;
+  --lyra-theme-color-brand-fill-quiet: #ddf4ff;
+  --lyra-theme-color-brand-on-loud: #ffffff;
+  --lyra-theme-color-success-fill-loud: #1a7f37;
+  --lyra-theme-color-success-fill-quiet: #dafbe1;
+  --lyra-theme-color-success-on-loud: #ffffff;
+  --lyra-theme-color-warning-fill-loud: #9a6700;
+  --lyra-theme-color-warning-fill-quiet: #fff8c5;
+  --lyra-theme-color-warning-on-loud: #ffffff;
+  --lyra-theme-color-danger-fill-loud: #cf222e;
+  --lyra-theme-color-danger-fill-quiet: #ffebe9;
+  --lyra-theme-color-danger-on-loud: #ffffff;
+  --lyra-theme-color-neutral-fill-loud: #1a1a1a;
+  --lyra-theme-color-neutral-on-loud: #ffffff;
+  --lyra-theme-color-focus: #0969da;
+  --lyra-theme-color-no-data: rgb(128 128 128 / 25%);
+  --lyra-theme-font-family-body: system-ui, sans-serif;
+  --lyra-theme-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --lyra-theme-font-size-m: 1rem;
+  --lyra-theme-border-radius-m: 0.375rem;
+}
+
+.lyra-dark,
+[data-lyra-theme='dark'] {
+  color-scheme: dark;
+  --lyra-theme-color-surface-default: #1a1a1a;
+  --lyra-theme-color-text-normal: #f2f2f2;
+  --lyra-theme-color-text-quiet: #9aa1ac;
+  --lyra-theme-color-surface-border: #6b6b74;
+  --lyra-theme-color-border-strong: #c4c9d1;
+  --lyra-theme-color-brand-fill-loud: #4ea0f0;
+  --lyra-theme-color-brand-fill-quiet: #163650;
+  --lyra-theme-color-brand-on-loud: #111827;
+  --lyra-theme-color-success-fill-loud: #3fb950;
+  --lyra-theme-color-success-fill-quiet: #17411e;
+  --lyra-theme-color-success-on-loud: #111827;
+  --lyra-theme-color-warning-fill-loud: #d29922;
+  --lyra-theme-color-warning-fill-quiet: #3b2900;
+  --lyra-theme-color-warning-on-loud: #111827;
+  --lyra-theme-color-danger-fill-loud: #fa524a;
+  --lyra-theme-color-danger-fill-quiet: #4c1210;
+  --lyra-theme-color-danger-on-loud: #111827;
+  --lyra-theme-color-neutral-fill-loud: #e5e7eb;
+  --lyra-theme-color-neutral-on-loud: #111827;
+  --lyra-theme-color-focus: #4ea0f0;
+  --lyra-theme-color-no-data: rgb(180 180 180 / 30%);
+}

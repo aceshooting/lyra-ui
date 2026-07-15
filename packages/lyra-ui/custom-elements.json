@@ -4742,7 +4742,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-button>` — a generic action-button primitive, the `lyra-*` equivalent of a plain\n`wa-button`. Renders an internal native `<button part=\"base\">` (never a real `<wa-button>` —\nthis library has no runtime dependency on Web Awesome, matching `<lyra-copy-button>`/\n`<lyra-export-button>`'s own clean-room, API-mirroring approach). `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nA host `aria-label` is forwarded to the internal button as a literal string (for an icon-only\nbutton with no visible label); external `aria-labelledby`/`aria-describedby` idrefs are not\ncopied across the shadow boundary.",
+          "description": "`<lyra-button>` — a generic action-button primitive. Renders an internal native\n`<button part=\"base\">`. `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nA host `aria-label` is forwarded to the internal button as a literal string (for an icon-only\nbutton with no visible label); external `aria-labelledby`/`aria-describedby` idrefs are not\ncopied across the shadow boundary.",
           "name": "LyraButton",
           "cssParts": [
             {
@@ -4788,7 +4788,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime\ndefault appearance (used whenever a `wa-button` call site sets only `variant`): a solid,\nhigh-contrast fill for every variant, including `neutral` (`--wa-color-neutral-fill-loud`).",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`.",
               "attribute": "appearance",
               "reflects": true
             },
@@ -4930,7 +4930,7 @@
                 "text": "ButtonVariant"
               },
               "default": "'neutral'",
-              "description": "Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to mirror `wa-button`'s own attribute name for a mechanical\nmigration off a plain `wa-button`.",
+              "description": "Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to keep the component's semantic tone vocabulary consistent.",
               "attribute": "variant",
               "reflects": true
             },
@@ -4976,6 +4976,16 @@
                   "text": "void"
                 }
               }
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Activates the internal native button, including submit/reset behavior."
             },
             {
               "kind": "method",
@@ -5111,7 +5121,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime\ndefault appearance (used whenever a `wa-button` call site sets only `variant`): a solid,\nhigh-contrast fill for every variant, including `neutral` (`--wa-color-neutral-fill-loud`).",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`.",
               "fieldName": "appearance"
             },
             {
@@ -5167,7 +5177,7 @@
                 "text": "ButtonVariant"
               },
               "default": "'neutral'",
-              "description": "Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to mirror `wa-button`'s own attribute name for a mechanical\nmigration off a plain `wa-button`.",
+              "description": "Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to keep the component's semantic tone vocabulary consistent.",
               "fieldName": "variant"
             }
           ],
@@ -5219,7 +5229,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-callout>` — an inline message surface for status, warning, and error content.",
+          "description": "`<lyra-callout>` — an inline message surface for status, warning, and error content.\nSet `inline` for lightweight reactive status/error text: it removes the panel chrome while\npreserving the semantic role, optional leading icon, and close action.",
           "name": "LyraCallout",
           "cssParts": [
             {
@@ -5336,6 +5346,16 @@
               },
               "default": "''",
               "attribute": "heading"
+            },
+            {
+              "kind": "field",
+              "name": "inline",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "attribute": "inline",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -5575,6 +5595,15 @@
               },
               "default": "''",
               "fieldName": "heading"
+            },
+            {
+              "description": "Uses the lightweight inline treatment without border, background, or panel padding.",
+              "name": "inline",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "fieldName": "inline"
             },
             {
               "name": "locale",
@@ -29987,6 +30016,16 @@
             },
             {
               "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal date text input. Empty strings preserve the browser default.",
+              "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
               "name": "cleanupFn",
               "type": {
                 "text": "() => void | undefined"
@@ -30070,6 +30109,15 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
               "name": "errorText",
               "type": {
                 "text": "string"
@@ -30126,6 +30174,15 @@
               "kind": "field",
               "name": "inputId",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
             },
             {
               "kind": "field",
@@ -30823,6 +30880,15 @@
               "fieldName": "autocapitalize"
             },
             {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal date text input. Empty strings preserve the browser default.",
+              "fieldName": "autocomplete"
+            },
+            {
               "name": "autocorrect",
               "type": {
                 "text": "string"
@@ -30864,6 +30930,14 @@
               "fieldName": "disablePast"
             },
             {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
+            },
+            {
               "name": "error-text",
               "type": {
                 "text": "string"
@@ -30886,6 +30960,14 @@
               },
               "default": "''",
               "fieldName": "hint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
             },
             {
               "name": "label",
@@ -42932,7 +43014,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw\nloop, in one of two `mode`s:\n\n- `\"matrix\"` (default): a `rowLabels` x `colLabels` grid of `values`. `-1`\n  (or any non-finite value) is treated as \"no data\". `scale=\"sqrt\"`\n  compresses the ramp via `sqrtStep()` so one heavy cell doesn't wash out\n  the rest; the default `\"linear\"` scale maps linearly instead.\n- `\"calendar\"`: a GitHub-style Sunday-Saturday (or `firstDayOfWeek`-anchored\n  — see below) x week grid built from `days`. `scale` governs its\n  bucketing too: the default `\"linear\"` buckets by `quartileBucket()`\n  (today's original behavior, unchanged); `\"sqrt\"` instead compresses via\n  the same `sqrtStep()` magnitude compression matrix mode uses, so one\n  heavy day doesn't wash out the rest. As in matrix mode, a cell whose\n  `value` is negative or non-finite is treated as \"no data\" rather than\n  being bucketed — as is a grid position with no matching entry in `days`\n  at all (a gap in a sparse calendar).\n\nThe sequential color ramp's endpoints are read from the\n`--lyra-heatmap-scale-lo`/`-hi` custom properties (declared in\n`heatmap.styles.ts`) so hosts can retheme it — canvas can't consume\n`var()` directly, so they're resolved once per draw via\n`getComputedStyle`, then normalized to RGB by `resolveRgb()` (any valid\nCSS color syntax, not just hex — see its doc comment).\n\nEvery cell is independently addressable: a `pointermove` hit test over the\ncanvas shows `[part=\"tooltip\"]` with that cell's label + value (hidden on\n`pointerleave`); the canvas is `tabindex=\"0\"` with arrow-key roving focus\n(a stroked ring redrawn over the focused cell on every draw, plus a\nvisually-hidden `aria-live=\"polite\"` status announcement — avoids a\nDOM-node-per-cell overlay, which would be hundreds of nodes for a year\ncalendar); and a click, or Enter/Space on the focused cell, fires\n`lyra-cell-click`. `annotations` additionally strokes a ring around\nspecific cells (e.g. to call out an anomaly), each one optionally\nsurfaced in the legend too via `[part=\"legend-annotation\"]`.\n\n`columnX` (calendar mode only) overrides the x-origin computed for each\nweek column — drawing, hit-testing, the focus ring, and month-label\npositioning all consult it consistently, so a consumer can pixel-align a\ncalendar's week columns with a sibling chart's coordinate system. Unset\n(the default) keeps the original evenly-spaced formula. `rowY` is its\ncalendar-mode vertical analogue — overrides the y-origin computed for each\nweekday row, consulted consistently by drawing, hit-testing, and the focus\nring via the private `rowYFor()` helper (mirroring `columnXFor()` exactly).\n\n`firstDayOfWeek` (calendar mode only, default `0`/Sunday, no-op in matrix\nmode) anchors the calendar grid at a different weekday — `0`-`6`, same\nnumbering as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday) —\nthreaded into `buildCalendarGrid()`.\n\n`cellSize`/`fitToWidth` (previously matrix-mode only) also drive calendar\nmode's per-cell size: unset, calendar mode keeps today's original 11px\ncell size unchanged; explicitly set, the same fixed size (or, with\n`fitToWidth`, the same host-width-derived size matrix mode already\nsupports) governs calendar mode's grid too.",
+          "description": "`<lyra-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw\nloop, in one of two `mode`s:\n\n- `\"matrix\"` (default): a `rowLabels` x `colLabels` grid of `values`. `-1`\n  (or any non-finite value) is treated as \"no data\". `scale=\"sqrt\"`\n  compresses the ramp via `sqrtStep()` so one heavy cell doesn't wash out\n  the rest; the default `\"linear\"` scale maps linearly instead.\n- `\"calendar\"`: a GitHub-style Sunday-Saturday (or `firstDayOfWeek`-anchored\n  — see below) x week grid built from `days`. `scale` governs its\n  bucketing too: the default `\"linear\"` buckets by `quartileBucket()`\n  (today's original behavior, unchanged); `\"sqrt\"` instead compresses via\n  the same `sqrtStep()` magnitude compression matrix mode uses, so one\n  heavy day doesn't wash out the rest. As in matrix mode, a cell whose\n  `value` is negative or non-finite is treated as \"no data\" rather than\n  being bucketed — as is a grid position with no matching entry in `days`\n  at all (a gap in a sparse calendar).\n\nThe sequential color ramp's endpoints are read from the\n`--lyra-heatmap-scale-lo`/`-hi` custom properties (declared in\n`heatmap.styles.ts`) so hosts can retheme it — canvas can't consume\n`var()` directly, so they're resolved once per draw via\n`getComputedStyle`, then normalized to RGB by `resolveRgb()` (any valid\nCSS color syntax, not just hex — see its doc comment).\n\nEvery cell is independently addressable: a `pointermove` hit test over the\ncanvas shows `[part=\"tooltip\"]` with that cell's label + value (hidden on\n`pointerleave`); the canvas is `tabindex=\"0\"` with arrow-key roving focus\n(a stroked ring redrawn over the focused cell on every draw, plus a\nvisually-hidden `aria-live=\"polite\"` status announcement — avoids a\nDOM-node-per-cell overlay, which would be hundreds of nodes for a year\ncalendar); and a click, or Enter/Space on the focused cell, fires\n`lyra-cell-click`. `annotations` additionally strokes a ring around\nspecific cells (e.g. to call out an anomaly), each one optionally\nsurfaced in the legend too via `[part=\"legend-annotation\"]`.\nSet `accessibleCells` when each cell needs a persistent DOM control for\nassistive technology. The opt-in overlay uses native buttons with a\nroving tabindex, localized `aria-label`, and explicit `aria-pressed` state\nderived from the controlled `selectedCell` property; the canvas remains the\nvisual rendering surface underneath.\n\n`columnX` (calendar mode only) overrides the x-origin computed for each\nweek column — drawing, hit-testing, the focus ring, and month-label\npositioning all consult it consistently, so a consumer can pixel-align a\ncalendar's week columns with a sibling chart's coordinate system. Unset\n(the default) keeps the original evenly-spaced formula. `rowY` is its\ncalendar-mode vertical analogue — overrides the y-origin computed for each\nweekday row, consulted consistently by drawing, hit-testing, and the focus\nring via the private `rowYFor()` helper (mirroring `columnXFor()` exactly).\n\n`firstDayOfWeek` (calendar mode only, default `0`/Sunday, no-op in matrix\nmode) anchors the calendar grid at a different weekday — `0`-`6`, same\nnumbering as `CalendarCellPos.weekday` (`0` Sunday .. `6` Saturday) —\nthreaded into `buildCalendarGrid()`.\n\n`cellSize`/`fitToWidth` (previously matrix-mode only) also drive calendar\nmode's per-cell size: unset, calendar mode keeps today's original 11px\ncell size unchanged; explicitly set, the same fixed size (or, with\n`fitToWidth`, the same host-width-derived size matrix mode already\nsupports) governs calendar mode's grid too.",
           "name": "LyraHeatmap",
           "cssParts": [
             {
@@ -42942,6 +43024,14 @@
             {
               "description": "The heatmap canvas.",
               "name": "canvas"
+            },
+            {
+              "description": "An opt-in native button for one matrix or calendar cell.",
+              "name": "cell"
+            },
+            {
+              "description": "The opt-in per-cell accessibility overlay.",
+              "name": "cells"
             },
             {
               "description": "The color legend.",
@@ -42985,6 +43075,16 @@
                 "text": "number | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "accessibleCells",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders an opt-in DOM overlay of native buttons over the canvas. Each\nbutton has a localized accessible name, explicit `aria-pressed=\"true\"` or\n`\"false\"` from `selectedCell`, and participates in a roving tabindex so a\ndense calendar does not create hundreds of tab stops. The selection is\ncontrolled: clicking a cell still emits `lyra-cell-click`, and the\nconsumer updates `selectedCell` when it wants `aria-pressed` to change.",
+              "attribute": "accessible-cells"
             },
             {
               "kind": "field",
@@ -43286,6 +43386,21 @@
             },
             {
               "kind": "field",
+              "name": "onAccessibleCellClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onAccessibleCellFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onAccessibleCellKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onCanvasClick",
               "privacy": "private"
             },
@@ -43433,6 +43548,53 @@
                 "text": "(jsWeekday: number) => string | undefined | undefined"
               },
               "description": "Overrides the weekday-axis label text in calendar mode -- receives the real JS weekday index\n(`0` Sunday .. `6` Saturday) for a row that would otherwise render a label (today, only rows\n1/3/5 relative to `firstDayOfWeek` ever do) and, when it returns a string, uses it instead of\nthe built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default) reproduces\ntoday's exact locale-derived output."
+            },
+            {
+              "kind": "method",
+              "name": "accessibleCellAtKey",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "CellPos | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "accessibleCellKey",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pos",
+                  "type": {
+                    "text": "CellPos"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "accessibleCellPositions",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "CellPos[]"
+                }
+              },
+              "description": "Positions represented by the optional DOM accessibility overlay. The\ncanvas paints empty calendar grid positions too, so those positions get a\nreal date and a no-data announcement just like pointer/keyboard hit tests."
             },
             {
               "kind": "method",
@@ -43760,6 +43922,24 @@
                 }
               ],
               "description": "The first interactive matrix cell in row-major order, or `null` if every cell is excluded —\nused by `onMatrixKeyDown()`'s first-arrow-press case."
+            },
+            {
+              "kind": "method",
+              "name": "focusAccessibleCell",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pos",
+                  "type": {
+                    "text": "CellPos | null"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -44192,6 +44372,16 @@
             },
             {
               "kind": "method",
+              "name": "renderAccessibleCells",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "resolveCanvasColor",
               "privacy": "private",
               "return": {
@@ -44434,6 +44624,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "accessible-cells",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders an opt-in DOM overlay of native buttons over the canvas. Each\nbutton has a localized accessible name, explicit `aria-pressed=\"true\"` or\n`\"false\"` from `selectedCell`, and participates in a roving tabindex so a\ndense calendar does not create hundreds of tab stops. The selection is\ncontrolled: clicking a cell still emits `lyra-cell-click`, and the\nconsumer updates `selectedCell` when it wants `aria-pressed` to change.",
+              "fieldName": "accessibleCells"
+            },
             {
               "name": "bucket-count",
               "type": {
@@ -54092,6 +54291,16 @@
             },
             {
               "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "description": "Native editing and virtual-keyboard hints forwarded to free-text mode's input.",
+              "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
               "name": "catalog",
               "type": {
                 "text": "LyraModelCatalog | undefined"
@@ -54180,6 +54389,15 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
               "name": "errorText",
               "type": {
                 "text": "string"
@@ -54242,6 +54460,15 @@
               "default": "''",
               "description": "Hint text below the field. Unset (the default): no hint chrome renders.",
               "attribute": "hint"
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
             },
             {
               "kind": "field",
@@ -54985,6 +55212,15 @@
               "fieldName": "autocapitalize"
             },
             {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "description": "Native editing and virtual-keyboard hints forwarded to free-text mode's input.",
+              "fieldName": "autocomplete"
+            },
+            {
               "name": "autocorrect",
               "type": {
                 "text": "string"
@@ -54999,6 +55235,14 @@
                 "text": "boolean"
               },
               "fieldName": "disabled"
+            },
+            {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
             },
             {
               "name": "error-text",
@@ -55017,6 +55261,14 @@
               "default": "''",
               "description": "Hint text below the field. Unset (the default): no hint chrome renders.",
               "fieldName": "hint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
             },
             {
               "name": "label",
@@ -65207,7 +65459,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract\nbuilt in: `role=\"radiogroup\"`/`role=\"radio\"`, roving tabindex, automatic activation (click or\narrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End\nnavigation among non-disabled items. First-party invention (no Web Awesome equivalent) --\n\"choose exactly one of N labeled options, rendered as a button row\" is ubiquitous\nsettings/filter-panel UI.",
+          "description": "`<lyra-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract\nbuilt in: `role=\"radiogroup\"`/`role=\"radio\"`, roving tabindex, automatic activation (click or\narrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End\nnavigation among non-disabled items. First-party invention --\n\"choose exactly one of N labeled options, rendered as a button row\" is ubiquitous\nsettings/filter-panel UI.",
           "name": "LyraSegmented",
           "cssParts": [
             {
@@ -65219,7 +65471,7 @@
               "name": "segment"
             },
             {
-              "description": "An optional leading icon supplied by the item's `icon` field.",
+              "description": "Optional leading visual supplied by the item's `icon` field; content may have a natural aspect ratio and is not restricted to a square icon.",
               "name": "segment-icon"
             },
             {
@@ -77997,7 +78249,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lyra-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lyra-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe textarea always hardcodes `spellcheck=\"false\"`, `autocapitalize=\"off\"`,\nand `autocorrect=\"off\"` (not exposed as configurable properties, unlike\n`<lyra-textarea>`/`<lyra-chat-composer>`'s passthrough props) — its content\nis always raw JSON, never prose, so a mobile browser's default sentence\nauto-capitalization/auto-correction would otherwise silently corrupt keys\nand values as the user types.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.",
+          "description": "`<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one\nproposed tool/function call (`toolName` + `args`) and blocks an agent from\nexecuting it until a person explicitly approves or denies it, with an\noptional inline \"edit the arguments before approving\" step.\n\nThis renders its own dialog panel rather than nesting a `<lyra-dialog>` in\nits shadow template. Shared overlay infrastructure coordinates stacking,\nfocus trapping, Escape/backdrop dismissal, and focus return with every\nother overlay in the same document.\n\nApprove/Deny/Edit are built-in chrome (not a `footer` slot a consumer must\nassemble) — this component's interaction shape is fixed enough (there is\nexactly one correct set of actions for \"approve this call\") that requiring\nevery consumer to re-build it would just be boilerplate. A `footer` slot is\nstill offered for *supplementary* content a consumer wants alongside those\nbuttons (e.g. a \"remember this choice for this tool\" checkbox) — its\ncontent renders to the start of the action row, before Deny/Edit/Approve.\n\nEditing: while `editable`, an Edit button swaps the read-only\n`<lyra-json-viewer>` for a plain `<textarea>` pre-filled with\n`JSON.stringify(args, null, 2)`. Every keystroke is re-validated with\n`JSON.parse` — the Approve button is `disabled` for as long as the current\ntextarea content fails to parse, so a malformed edit can never be silently\napproved as either the broken text or a stale copy of the original args.\nThe editor defaults to `spellcheck=\"false\"`, `autocapitalize=\"off\"`,\n`autocorrect=\"off\"`, and `autocomplete=\"off\"` because its content is raw\nJSON, never prose. The corresponding native editing properties remain\nconfigurable for integrations that need different browser behavior.\nThe same button relabels to \"Cancel\" while editing; clicking it discards\nthe draft entirely and returns to the read-only view of the *original*\n`args` — there is no separate \"save\" step independent of Approve itself.\nBoth `editing` and any in-progress draft reset back to the read-only view\nevery time the dialog transitions from closed to open, so a reused\ninstance never leaks one proposal's half-finished edit into the next.\n`editable` flipping to `false` mid-edit does the same (see `willUpdate()`)\nand, if the textarea it unmounts still held focus, `updated()` refocuses\nDeny so the focus trap keeps engaging instead of silently letting focus\nfall through to the document.\n\nInitial focus deliberately does *not* land on Approve:\napproving a tool call is a consequential, potentially irreversible action,\nso a user who opens this dialog and reflexively presses Enter/Space before\nreading anything should deny, not approve. Deny gets the initial focus\ninstead — the same \"focus the safe action\" convention a native destructive-\nconfirmation dialog (delete, discard, etc.) typically follows for its own\nCancel button — rather than the inert dialog panel, which would need an\nextra Tab press before *any* action is reachable at all.",
           "name": "LyraToolApprovalDialog",
           "cssParts": [
             {
@@ -78064,6 +78316,33 @@
               },
               "default": "{}",
               "description": "The proposed call's arguments — any JSON-serializable value, rendered via `<lyra-json-viewer>` (or, while editing, stringified into the textarea)."
+            },
+            {
+              "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "attribute": "autocomplete"
             },
             {
               "kind": "field",
@@ -78135,9 +78414,27 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
               "name": "errorId",
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
             },
             {
               "kind": "field",
@@ -78203,6 +78500,16 @@
             },
             {
               "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Native editing-assistance attributes forwarded to the raw-JSON textarea.",
+              "attribute": "spellcheck"
+            },
+            {
+              "kind": "field",
               "name": "stopLocaleSubscription",
               "type": {
                 "text": "() => void | undefined"
@@ -78246,6 +78553,15 @@
               "default": "''",
               "description": "The proposed tool/function's name, e.g. `web_search`. Drives the heading and the dialog's accessible name.",
               "attribute": "tool-name"
+            },
+            {
+              "kind": "field",
+              "name": "wrap",
+              "type": {
+                "text": "ToolApprovalDialogWrap"
+              },
+              "default": "'soft'",
+              "attribute": "wrap"
             },
             {
               "kind": "method",
@@ -78445,6 +78761,30 @@
           ],
           "attributes": [
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "fieldName": "autoCorrect"
+            },
+            {
               "name": "editable",
               "type": {
                 "text": "boolean"
@@ -78452,6 +78792,22 @@
               "default": "true",
               "description": "Whether an \"Edit\" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval.",
               "fieldName": "editable"
+            },
+            {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
             },
             {
               "name": "locale",
@@ -78476,6 +78832,15 @@
               "fieldName": "open"
             },
             {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Native editing-assistance attributes forwarded to the raw-JSON textarea.",
+              "fieldName": "spellcheck"
+            },
+            {
               "name": "tool-name",
               "type": {
                 "text": "string"
@@ -78483,6 +78848,14 @@
               "default": "''",
               "description": "The proposed tool/function's name, e.g. `web_search`. Drives the heading and the dialog's accessible name.",
               "fieldName": "toolName"
+            },
+            {
+              "name": "wrap",
+              "type": {
+                "text": "ToolApprovalDialogWrap"
+              },
+              "default": "'soft'",
+              "fieldName": "wrap"
             }
           ],
           "superclass": {
@@ -81425,6 +81798,34 @@
           "members": [
             {
               "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Native editing-assistance and virtual-keyboard hints forwarded to the search input.",
+              "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
               "name": "categoryIds",
               "privacy": "private",
               "readonly": true,
@@ -81460,6 +81861,15 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
               "name": "filter",
               "type": {
                 "text": "ToolSelectFilter | null"
@@ -81485,6 +81895,15 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
             },
             {
               "kind": "field",
@@ -81584,6 +82003,15 @@
               },
               "default": "[]",
               "description": "The currently-enabled tool ids."
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -81908,6 +82336,47 @@
           ],
           "attributes": [
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Native editing-assistance and virtual-keyboard hints forwarded to the search input.",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "autoCorrect"
+            },
+            {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
+            },
+            {
               "name": "label",
               "type": {
                 "text": "string"
@@ -81945,6 +82414,14 @@
               },
               "default": "'Search tools…'",
               "fieldName": "searchPlaceholder"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "fieldName": "spellcheck"
             },
             {
               "name": "use-defaults",
@@ -86099,7 +86576,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "Shared base for every Lyra component. Supplies the design-token layer\n(Web Awesome `--wa-*` tokens with `--lyra-*` fallbacks). RTL is handled by\ncomponents using CSS logical properties rather than a forced `dir`.",
+          "description": "Shared base for every Lyra component. Supplies the design-token layer\n(`--lyra-theme-*` theme-input properties with hardcoded `--lyra-*` fallbacks).\nRTL is handled by components using CSS logical properties rather than a forced `dir`.",
           "name": "LyraElement",
           "members": [
             {

@@ -8,12 +8,15 @@ export interface LyraCalloutEventMap { 'lyra-close': CustomEvent<undefined>; }
 
 /**
  * `<lyra-callout>` — an inline message surface for status, warning, and error content.
+ * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
+ * preserving the semantic role, optional leading icon, and close action.
  *
  * @customElement lyra-callout
  * @slot - Message content.
  * @slot heading - Optional heading.
  * @slot icon - Optional icon.
  * @event lyra-close - The close action was accepted. Cancelable before the callout hides.
+ * @attr inline - Uses the lightweight inline treatment without border, background, or panel padding.
  * @csspart base - The callout surface.
  * @csspart icon - The icon wrapper.
  * @csspart content - The message content.
@@ -25,6 +28,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property({ reflect: true }) variant: CalloutVariant = 'neutral';
   @property() heading = '';
   @property({ type: Boolean, reflect: true }) closable = false;
+  @property({ type: Boolean, reflect: true }) inline = false;
   @property({ type: Boolean, reflect: true }) open = true;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   @state() private hasIcon = false;

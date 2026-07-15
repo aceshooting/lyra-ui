@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './callout.js';
 import type { LyraCallout } from './callout.js';
+import { styles } from './callout.styles.js';
 
 it('renders status content and a localized close action', async () => {
   const el = (await fixture(html`<lyra-callout closable>Something happened</lyra-callout>`)) as LyraCallout;
@@ -21,4 +22,14 @@ it('allows close to be vetoed and otherwise hides', async () => {
   const next = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
   next.click();
   expect(el.open).to.be.false;
+});
+
+it('supports a lightweight inline status/error treatment', async () => {
+  const el = (await fixture(html`<lyra-callout inline variant="danger"><span slot="icon">!</span>Try again</lyra-callout>`)) as LyraCallout;
+  expect(el.inline).to.be.true;
+  expect(el.hasAttribute('inline')).to.be.true;
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(':host([inline]) [part=\'base\']');
+  expect(css).to.include('background: transparent;');
+  await expect(el).to.be.accessible();
 });

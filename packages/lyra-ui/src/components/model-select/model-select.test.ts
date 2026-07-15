@@ -700,6 +700,16 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
     expect(inp.getAttribute('autocapitalize')).to.equal('off');
     expect(inp.getAttribute('autocorrect')).to.equal('off');
   });
+
+  it('forwards autocomplete, inputmode, and enterkeyhint onto the free-text input', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select autocomplete="off" inputmode="text" enterkeyhint="done"></lyra-model-select>`,
+    )) as LyraModelSelect;
+    const inp = input(el);
+    expect(inp.getAttribute('autocomplete')).to.equal('off');
+    expect(inp.getAttribute('inputmode')).to.equal('text');
+    expect(inp.getAttribute('enterkeyhint')).to.equal('done');
+  });
 });
 
 describe('blur/focus bubbling', () => {

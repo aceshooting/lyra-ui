@@ -8,8 +8,9 @@ import { styles } from './segmented.styles.js';
 export interface SegmentedItem {
   value: string;
   label: string;
-  /** Optional leading icon rendered before this item's label. Omit for today's text-only
-   *  rendering (unchanged). */
+  /** Optional leading visual rendered before the label. This is intentionally general content,
+   *  not a square-icon-only field: SVG icons, flag glyphs, badges, and other natural-aspect-ratio
+   *  Lit content are supported. */
   icon?: unknown;
   disabled?: boolean;
 }
@@ -22,7 +23,7 @@ export interface LyraSegmentedEventMap {
  * `<lyra-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract
  * built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or
  * arrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End
- * navigation among non-disabled items. First-party invention (no Web Awesome equivalent) --
+ * navigation among non-disabled items. First-party invention --
  * "choose exactly one of N labeled options, rendered as a button row" is ubiquitous
  * settings/filter-panel UI.
  *
@@ -31,7 +32,8 @@ export interface LyraSegmentedEventMap {
  *   `detail: { value }`.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart segment - A single `role="radio"` button.
- * @csspart segment-icon - An optional leading icon supplied by the item's `icon` field.
+ * @csspart segment-icon - Optional leading visual supplied by the item's `icon` field; content
+ *   may have a natural aspect ratio and is not restricted to a square icon.
  * @csspart segment-label - The segment's label text.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {

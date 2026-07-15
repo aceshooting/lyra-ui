@@ -9,33 +9,27 @@ A pnpm workspace hosting `lyra-ui` and its optional companion packages.
 **[Browse the live docs site →](https://aceshooting.github.io/lyra-ui/)** — every component with
 a live example, source code, and API reference.
 
-**Lyra UI isn't just another component library.** It's a free, open-source, clean-room extension of
-[Web Awesome](https://webawesome.com) — an independent companion project, not an official Web
-Awesome product, fork, or rebrand, and not affiliated with, endorsed by, or partnered with Web
-Awesome in any way. No Web Awesome Pro source code was ever available to, or used by, the
-maintainers; every component here was implemented from scratch, referencing only Web Awesome's
-public docs for the surface to mirror. For the components Web Awesome sells only in its **Pro**
-tier — the v1 form controls (combobox, select, date picker/input, toast, sparkline) and the core
-charting family (line/bar/pie/doughnut/radar/polar-area/scatter/bubble chart) — lyra-ui gives you
-free, open-source components wherever Web Awesome Pro normally charges, with the documented
-compatible attributes, slots, events, parts, and `--wa-*` token names under a `lyra-` prefix
-instead of `wa-`; component-specific notes call out any intentional differences.
+**Lyra UI is a free, independent alternative to Shoelace and Web Awesome.** It is a MIT-licensed,
+framework-agnostic Lit web-component library for production interfaces: accessible form controls,
+navigation, overlays, dashboards, data visualization, file workflows, and a complete conversation
+and agent UI toolkit for chat products. It runs on native custom elements, has no runtime dependency
+on Shoelace or Web Awesome, and ships with its own design tokens, localization runtime, RTL support,
+reduced-motion behavior, and form-associated controls.
 
-That free-Pro-equivalent group is 55 of lyra-ui's 133 tags. The other 78 have no Web Awesome
-equivalent at all, free or paid — Web Awesome doesn't sell them in any tier: dashboard atoms (stat
-tiles, tables, gauges, empty/skeleton states, split panes, widgets), temporal & graph widgets (time
-range, playback scrubber, heatmap, force-directed graph, tree), chart extras Web Awesome doesn't
-offer (histogram, box plot, and a dependency-free `lyra-lite-chart`), MapLibre GL maps with
-choropleth layers, a drag-drop file dropzone, and — the largest single family by far — a
-53-component conversation/agent UI kit (chat composer, tool-call/result/approval dialogs, streaming
-text, citations, model selection, and more) for building LLM chat and agent interfaces from
-scratch. As far as we've been able to tell, no established project combines those three things —
-Web Awesome-compatible foundations, dashboard/visualization components, and agent-chat UI — in one
-open, framework-agnostic web-component library.
+Lyra also makes migration practical. Selected components expose a documented Web Awesome-compatible
+surface under the `lyra-` prefix, so many `wa-*` integrations can move through a mechanical tag-name
+and import change, with intentional differences documented per component. Shoelace users get a
+clear `sl-*` → `lyra-*` component map and migration notes; Lyra is an independent implementation,
+not a fork, rebrand, official product, or affiliated project. No Web Awesome Pro source code was
+available to or used by the maintainers.
+
+The result is one open library for everyday UI, dashboards and charts, and AI chat/agent interfaces —
+with the broad component coverage of a general-purpose design system and original building blocks
+for data-heavy and streaming applications.
 
 | Package | Description |
 |---|---|
-| [`packages/lyra-ui`](./packages/lyra-ui) | Free, clean-room Lit web components — a companion to Web Awesome. |
+| [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent Lit web components — an alternative to Shoelace and Web Awesome. |
 | [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. |
 
 See each package's own README for install/usage. For local development:
@@ -52,26 +46,24 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-133 tags across seven component families. Every tag has a live, interactive example on the
+133 custom elements across seven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
-| Family | Tags | Highlights |
-|---|---:|---|
-| Form controls, toasts, sparkline | 13 | combobox, select, date picker/input, textarea, input, button, country-aware phone input, toast, sparkline — plus `<lyra-flag>` for i18n pickers |
-| Dashboard atoms | 11 | stat card, sortable table, pagination, gauge, extensible export button, standalone copy button, resizable split, widget shell, word cloud |
-| Temporal & graph | 6 | two-handle time-range brush, playback scrubber, canvas heatmap, force-directed graph, tree |
-| Charts | 12 | line/bar/pie/doughnut/radar/polar-area/scatter/bubble via Chart.js, plus histogram, box plot, and a dependency-free `lyra-lite-chart` |
-| Map & file input | 2 | MapLibre GL map with legend/choropleth layers, drag-drop file dropzone |
-| Conversation & Agent UI | 53 | chat composer/message, tool-call/result/approval dialogs, streaming text, citations, model select, avatar/card/stepper/segmented, and more — the library's largest family |
-| Web Awesome parity primitives | 29 | radio/group, spinner, progress bar/ring, badge/tag, callout, color picker, details/accordion, breadcrumb, divider, formatting, rating, popover/tooltip/dropdown, drawer, carousel, image comparer, zoomable frame, and number/time inputs |
+| Family | Highlights |
+|---|---|
+| Form controls and input workflows | combobox, select, date picker/input, textarea, input, button, phone input, file input, color/radio/checkbox/switch/slider controls, toast, and sparkline |
+| Dashboard and data visualization | stat card, sortable table, pagination, gauge, export/copy actions, split panes, widgets, word cloud, time range, playback, heatmap, tree, graph, and Chart.js or dependency-free charts |
+| Layout, navigation, and overlays | tabs, menus, breadcrumbs, details/accordion, dialog, drawer, carousel, popover, tooltip, dropdown, scroller, resize/observer utilities, and responsive panels |
+| Conversation and Agent UI | chat messages and composer, streaming text, citations, sources, tool-call/result/approval flows, model selection, document/media previews, and more |
+| Display and utility primitives | badges, tags, callouts, cards, avatars, skeletons, progress, spinners, rating, formatting, markdown, code, JSON, and live-region helpers |
 
 ## Theming, internationalization & RTL
 
 Every one of the 133 tags is built on the same three guarantees — not opt-in per component:
 
-- **Theming** through `--wa-*`/`--lyra-*` design tokens — retheme by overriding a custom property,
+- **Theming** through `--lyra-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.
 - **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
   per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)

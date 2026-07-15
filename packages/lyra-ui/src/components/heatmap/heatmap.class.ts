@@ -251,6 +251,11 @@ export interface LyraHeatmapEventMap {
  * `lyra-cell-click`. `annotations` additionally strokes a ring around
  * specific cells (e.g. to call out an anomaly), each one optionally
  * surfaced in the legend too via `[part="legend-annotation"]`.
+ * Set `accessibleCells` when each cell needs a persistent DOM control for
+ * assistive technology. The opt-in overlay uses native buttons with a
+ * roving tabindex, localized `aria-label`, and explicit `aria-pressed` state
+ * derived from the controlled `selectedCell` property; the canvas remains the
+ * visual rendering surface underneath.
  *
  * `columnX` (calendar mode only) overrides the x-origin computed for each
  * week column — drawing, hit-testing, the focus ring, and month-label
@@ -281,6 +286,8 @@ export interface LyraHeatmapEventMap {
  * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
+ * @csspart cells - The opt-in per-cell accessibility overlay.
+ * @csspart cell - An opt-in native button for one matrix or calendar cell.
  * @csspart tooltip - The hover tooltip.
  * @csspart live-region - The visually hidden keyboard announcement region.
  * @csspart legend - The color legend.
@@ -371,6 +378,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * reproducing today's exact output.
    */
   @property({ attribute: false }) selectedCell: HeatmapSelectedCell | null = null;
+  /**
+   * Renders an opt-in DOM overlay of native buttons over the canvas. Each
+   * button has a localized accessible name, explicit `aria-pressed="true"` or
+   * `"false"` from `selectedCell`, and participates in a roving tabindex so a
+   * dense calendar does not create hundreds of tab stops. The selection is
+   * controlled: clicking a cell still emits `lyra-cell-click`, and the
+   * consumer updates `selectedCell` when it wants `aria-pressed` to change.
+   */
+  @property({ type: Boolean, attribute: 'accessible-cells' }) accessibleCells = false;
   /** Formats the per-cell tooltip and keyboard live-region text — receives the cell position
    *  (`MatrixCellPos` in matrix mode, `CalendarCellPos` in calendar mode) and its value. Falls back to
    *  the built-in English "Row X, Col Y: value" / "Mon DD: value" template when unset. */
@@ -1543,6 +1559,114 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return resolved;
   }
 
+  /** Positions represented by the optional DOM accessibility overlay. The
+   * canvas paints empty calendar grid positions too, so those positions get a
+   * real date and a no-data announcement just like pointer/keyboard hit tests. */
+  private accessibleCellPositions(): CellPos[] {
+    if (this.mode === 'calendar') {
+      const { weekCount } = this.cachedCalendarGrid;
+      const positions: CalendarCellPos[] = [];
+      for (let week = 0; week < weekCount; week++) {
+        for (let weekday = 0; weekday < 7; weekday++) {
+          const pos = { week, weekday };
+          if (this.isCellInteractive(pos)) positions.push(pos);
+        }
+      }
+      return positions;
+    }
+
+    const positions: MatrixCellPos[] = [];
+    for (let row = 0; row < this.rowLabels.length; row++) {
+      for (let col = 0; col < this.colLabels.length; col++) {
+        const pos = { row, col };
+        if (this.isCellInteractive(pos)) positions.push(pos);
+      }
+    }
+    return positions;
+  }
+
+  private accessibleCellKey(pos: CellPos): string {
+    return 'week' in pos ? `calendar-${pos.week}-${pos.weekday}` : `matrix-${pos.row}-${pos.col}`;
+  }
+
+  private accessibleCellAtKey(key: string): CellPos | null {
+    return (
+      this.accessibleCellPositions().find((pos) => this.accessibleCellKey(pos) === key) ?? null
+    );
+  }
+
+  private focusAccessibleCell(pos: CellPos | null): void {
+    if (!pos) return;
+    void this.updateComplete.then(() => {
+      const button = [...(this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="cell"]') ?? [])].find(
+        (candidate) => candidate.dataset.cellKey === this.accessibleCellKey(pos),
+      );
+      button?.focus();
+    });
+  }
+
+  private onAccessibleCellFocus = (e: FocusEvent): void => {
+    const key = (e.currentTarget as HTMLElement).dataset.cellKey;
+    const pos = key ? this.accessibleCellAtKey(key) : null;
+    if (!pos) return;
+    this.focusedCell = pos;
+    this.announce(pos);
+  };
+
+  private onAccessibleCellClick = (e: MouseEvent): void => {
+    const key = (e.currentTarget as HTMLElement).dataset.cellKey;
+    const pos = key ? this.accessibleCellAtKey(key) : null;
+    if (!pos) return;
+    this.focusedCell = pos;
+    this.announce(pos);
+    this.emitCellClick(pos);
+  };
+
+  private onAccessibleCellKeyDown = (e: KeyboardEvent): void => {
+    if (!ARROW_KEYS.has(e.key)) return;
+    const key = (e.currentTarget as HTMLElement).dataset.cellKey;
+    const pos = key ? this.accessibleCellAtKey(key) : null;
+    if (!pos) return;
+    e.preventDefault();
+    this.focusedCell = pos;
+    this.onKeyDown(e);
+    this.focusAccessibleCell(this.focusedCell);
+  };
+
+  private renderAccessibleCells(): TemplateResult {
+    if (!this.accessibleCells) return html``;
+    const positions = this.accessibleCellPositions();
+    const tabStop = this.focusedCell ?? positions[0] ?? null;
+    return html`
+      <div part="cells">
+        ${positions.map((pos) => {
+          const rect = this.cellRect(pos);
+          const key = this.accessibleCellKey(pos);
+          return html`
+            <button
+              part="cell"
+              class="cell"
+              type="button"
+              data-cell-key=${key}
+              aria-label=${this.resolveCellText(pos)}
+              aria-pressed=${this.isSelectedPos(pos) ? 'true' : 'false'}
+              tabindex=${this.samePos(tabStop, pos) ? '0' : '-1'}
+              style=${styleMap({
+                insetInlineStart: `${rect.x}px`,
+                insetBlockStart: `${rect.y}px`,
+                inlineSize: `${rect.w}px`,
+                blockSize: `${rect.h}px`,
+              })}
+              @focus=${this.onAccessibleCellFocus}
+              @click=${this.onAccessibleCellClick}
+              @keydown=${this.onAccessibleCellKeyDown}
+            ></button>
+          `;
+        })}
+      </div>
+    `;
+  }
+
   render(): TemplateResult {
     const range = this.cachedValueRange;
     const labeledAnnotations = this.annotations.filter((a) => a.label);
@@ -1550,12 +1674,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       <div part="base">
         <canvas
           part="canvas"
-          tabindex="0"
+          tabindex=${this.accessibleCells ? '-1' : '0'}
+          ?aria-hidden=${this.accessibleCells}
           @pointermove=${this.onPointerMove}
           @pointerleave=${this.onPointerLeave}
           @click=${this.onCanvasClick}
           @keydown=${this.onKeyDown}
         ></canvas>
+        ${this.renderAccessibleCells()}
         <div
           part="tooltip"
           ?hidden=${!this.hoverCell}

@@ -1012,6 +1012,16 @@ describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
     expect(input.getAttribute('autocapitalize')).to.equal('off');
     expect(input.getAttribute('autocorrect')).to.equal('off');
   });
+
+  it('forwards autocomplete, inputmode, and enterkeyhint onto the native input', async () => {
+    const el = (await fixture(
+      html`<lyra-date-input autocomplete="bday" inputmode="numeric" enterkeyhint="next"></lyra-date-input>`,
+    )) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    expect(input.getAttribute('autocomplete')).to.equal('bday');
+    expect(input.getAttribute('inputmode')).to.equal('numeric');
+    expect(input.getAttribute('enterkeyhint')).to.equal('next');
+  });
 });
 
 describe('blur/focus bubbling', () => {

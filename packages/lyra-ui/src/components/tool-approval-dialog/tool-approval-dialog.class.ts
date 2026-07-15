@@ -7,6 +7,17 @@ import { nextId } from '../../internal/a11y.js';
 import { styles } from './tool-approval-dialog.styles.js';
 import '../json-viewer/json-viewer.class.js';
 
+const spellcheckConverter = {
+  fromAttribute(value: string | null): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value: boolean): string | null {
+    return value ? null : 'false';
+  },
+};
+
+export type ToolApprovalDialogWrap = 'hard' | 'soft' | 'off';
+
 /**
  * Reason the dialog was dismissed, forwarded as the `lyra-close` event detail
  * -- mirrors `<lyra-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
@@ -52,12 +63,10 @@ export interface LyraToolApprovalDialogEventMap {
  * `JSON.parse` — the Approve button is `disabled` for as long as the current
  * textarea content fails to parse, so a malformed edit can never be silently
  * approved as either the broken text or a stale copy of the original args.
- * The textarea always hardcodes `spellcheck="false"`, `autocapitalize="off"`,
- * and `autocorrect="off"` (not exposed as configurable properties, unlike
- * `<lyra-textarea>`/`<lyra-chat-composer>`'s passthrough props) — its content
- * is always raw JSON, never prose, so a mobile browser's default sentence
- * auto-capitalization/auto-correction would otherwise silently corrupt keys
- * and values as the user types.
+ * The editor defaults to `spellcheck="false"`, `autocapitalize="off"`,
+ * `autocorrect="off"`, and `autocomplete="off"` because its content is raw
+ * JSON, never prose. The corresponding native editing properties remain
+ * configurable for integrations that need different browser behavior.
  * The same button relabels to "Cancel" while editing; clicking it discards
  * the draft entirely and returns to the read-only view of the *original*
  * `args` — there is no separate "save" step independent of Approve itself.
@@ -118,6 +127,15 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /** Whether an "Edit" affordance is offered at all. When `false`, `args` is always shown read-only and can never be changed before approval. */
   @property({ type: Boolean, reflect: true }) editable = true;
+
+  /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */
+  @property({ converter: spellcheckConverter }) spellcheck = false;
+  @property() autocapitalize = 'off';
+  @property({ attribute: 'autocorrect' }) autoCorrect = 'off';
+  @property() autocomplete = 'off';
+  @property() wrap: ToolApprovalDialogWrap = 'soft';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
 
   @state() private editing = false;
   /** The textarea's current raw text while editing — deliberately independent of `args` until Approve is pressed, so a malformed in-progress edit never overwrites it. */
@@ -314,10 +332,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             ? html`
                 <textarea
                   part="args-editor"
-                  spellcheck="false"
-                  autocomplete="off"
-                  autocapitalize="off"
-                  autocorrect="off"
+                  spellcheck=${this.spellcheck}
+                  autocomplete=${this.autocomplete || nothing}
+                  autocapitalize=${this.autocapitalize || nothing}
+                  autocorrect=${this.autoCorrect || nothing}
+                  wrap=${this.wrap}
+                  inputmode=${this.inputMode || nothing}
+                  enterkeyhint=${this.enterKeyHint || nothing}
                   aria-label=${this.localize('toolApprovalArgsLabel')}
                   aria-invalid=${hasError ? 'true' : 'false'}
                   aria-describedby=${hasError ? this.errorId : nothing}

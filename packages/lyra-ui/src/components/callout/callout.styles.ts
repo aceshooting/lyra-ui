@@ -13,4 +13,17 @@ export const styles = css`
   [part='content'] { min-inline-size: 0; }
   [part='close-button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lyra-icon-button-size); min-block-size: var(--lyra-icon-button-size); border: 0; border-radius: var(--lyra-radius-pill); background: transparent; color: inherit; cursor: pointer; }
   [part='close-button']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: var(--lyra-focus-ring-offset); }
+  :host([inline]) [part='base'] {
+    gap: var(--lyra-space-xs);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  :host([inline]) [part='icon'] { font-size: var(--lyra-font-size-md); }
+  :host([inline]) [part='heading'] { margin-block-end: 0; }
+  :host([inline]) [part='close-button'] {
+    min-inline-size: var(--lyra-size-1-5rem);
+    min-block-size: var(--lyra-size-1-5rem);
+  }
 `;

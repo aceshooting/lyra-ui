@@ -3,15 +3,23 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
+    /* A host width is meaningful for the public component, so the native
+       button follows it. The variable keeps the contract opt-out-able for
+       compact inline compositions. */
+    --lyra-button-width: 100%;
+    --lyra-button-size-xs: var(--lyra-size-1-5rem);
+    --lyra-button-size-s: var(--lyra-size-1-75rem);
+    --lyra-button-size-m: var(--lyra-size-2rem);
+    --lyra-button-size-l: var(--lyra-size-2-5rem);
+    --lyra-button-size-xl: var(--lyra-size-3rem);
     --lyra-button-accent: var(--lyra-color-text);
     --lyra-button-fill: var(--lyra-color-surface);
     --lyra-button-on-fill: var(--lyra-color-text);
     --lyra-button-border: var(--lyra-color-border);
+    --lyra-button-outlined-border: var(--lyra-color-border-strong);
     /* appearance="accent"'s loud fill for the neutral variant -- every other variant's own
-       --lyra-button-fill/-on-fill (below) already reads a *-fill-loud WA token (see
-       tokens.styles.ts's --lyra-color-brand/-success/-warning/-danger), so those variants'
-       own accent-fill/-on-fill blocks just reuse it, making "accent" and "filled" coincide
-       there -- only the neutral variant needs a dedicated loud fill of its own. */
+       --lyra-button-fill/-on-fill (below) already reads its semantic loud Lyra token, so those
+       variants' accent-fill/-on-fill blocks reuse it. Only neutral needs a dedicated loud fill. */
     --lyra-button-accent-fill: var(--lyra-color-neutral);
     --lyra-button-accent-on-fill: var(--lyra-color-on-neutral);
   }
@@ -49,6 +57,8 @@ export const styles = css`
   }
   [part='base'] {
     display: inline-flex;
+    position: relative;
+    inline-size: var(--lyra-button-width);
     align-items: center;
     justify-content: center;
     gap: var(--lyra-space-2xs);
@@ -70,6 +80,7 @@ export const styles = css`
   :host([appearance='outlined']) [part='base'] {
     background: transparent;
     color: var(--lyra-button-accent);
+    border-color: var(--lyra-button-outlined-border);
   }
   :host([appearance='plain']) [part='base'] {
     background: transparent;
@@ -111,35 +122,44 @@ export const styles = css`
     padding-inline: var(--lyra-space-xs);
     padding-block: var(--lyra-space-2xs);
     font-size: var(--lyra-font-size-xs);
-    min-block-size: var(--lyra-size-1-5rem);
+    min-block-size: var(--lyra-button-size-xs);
   }
   :host([size='s']) [part='base'] {
     padding-inline: var(--lyra-space-s);
     padding-block: var(--lyra-space-2xs);
     font-size: var(--lyra-font-size-sm);
-    min-block-size: var(--lyra-size-1-75rem);
+    min-block-size: var(--lyra-button-size-s);
   }
   :host([size='m']) [part='base'] {
     padding-inline: var(--lyra-space-m);
     padding-block: var(--lyra-space-xs);
-    font-size: var(--lyra-font-size-md-sm);
-    min-block-size: var(--lyra-size-2rem);
+    font-size: var(--lyra-font-size-m);
+    min-block-size: var(--lyra-button-size-m);
   }
   :host([size='l']) [part='base'] {
     padding-inline: var(--lyra-space-l);
     padding-block: var(--lyra-space-s);
     font-size: var(--lyra-font-size-md);
-    min-block-size: var(--lyra-size-2-5rem);
+    min-block-size: var(--lyra-button-size-l);
   }
   :host([size='xl']) [part='base'] {
     padding-inline: var(--lyra-space-2xl);
     padding-block: var(--lyra-space-m);
     font-size: var(--lyra-font-size-lg);
-    min-block-size: var(--lyra-size-3rem);
+    min-block-size: var(--lyra-button-size-xl);
   }
   [part='spinner'] {
     display: inline-flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
     animation: lyra-button-spin 1s linear infinite;
+  }
+  :host([loading]) [part='start'],
+  :host([loading]) [part='label'],
+  :host([loading]) [part='end'] {
+    opacity: 0;
   }
   @keyframes lyra-button-spin {
     to {

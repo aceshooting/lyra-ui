@@ -4,14 +4,16 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Lyra UI
 
-Free, clean-room [Lit](https://lit.dev) web components — a companion to
-[Web Awesome](https://webawesome.com) that provides open-source equivalents of several
-Web Awesome **Pro** components, plus a few extras. Token-compatible with Web Awesome, so
-components look native inside a WA app, and are fully usable standalone.
+Free, independent, MIT-licensed [Lit](https://lit.dev) web components — an open-source alternative
+to [Shoelace](https://shoelace.style/) and [Web Awesome](https://webawesome.com/). Lyra covers
+accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI. Every
+component is self-contained and retheme-able through its own `--lyra-*` design tokens, with no
+competitor theme or runtime dependency required.
 
-> **Independent project.** Not affiliated with or endorsed by Web Awesome. Component APIs
-> intentionally mirror Web Awesome's public API (attributes, slots, events, CSS parts) so
-> migration is a prefix rename — but every implementation here is original (clean-room).
+> **Independent implementation.** Lyra is not affiliated with or endorsed by Shoelace or Web Awesome.
+> Selected Web Awesome-compatible components retain documented public names under `lyra-` to ease
+> migration; Shoelace users can follow the component map in the package README. Every implementation
+> and design token is owned by Lyra.
 
 ## Install
 
@@ -42,9 +44,9 @@ import '@aceshooting/lyra-ui/components/combobox/option.js';
 
 ## Theming
 
-Components read Web Awesome's `--wa-*` design tokens (with `--lyra-*` fallbacks). Inside a
-Web Awesome app they inherit your theme automatically; standalone, they use sensible defaults.
-See the [package README](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui#theming)
+Components read this library's own `--lyra-*` design tokens, with sensible hardcoded
+defaults — override any `--lyra-*` custom property, at the component or an ancestor, to
+retheme. See the [package README](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui#theming)
 for the full token list.
 
 Browse the sidebar for a live example and API reference of every component.

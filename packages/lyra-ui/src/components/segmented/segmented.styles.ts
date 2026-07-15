@@ -25,8 +25,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     margin-inline-end: var(--lyra-space-xs);
-    inline-size: var(--lyra-size-1em);
     block-size: var(--lyra-size-1em);
+    max-inline-size: var(--lyra-size-2-5rem);
   }
   [part='segment'][aria-disabled='true'] {
     opacity: var(--lyra-opacity-disabled);

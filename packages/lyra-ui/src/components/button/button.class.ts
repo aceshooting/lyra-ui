@@ -10,10 +10,8 @@ export type ButtonSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type ButtonType = 'button' | 'submit' | 'reset';
 
 /**
- * `<lyra-button>` — a generic action-button primitive, the `lyra-*` equivalent of a plain
- * `wa-button`. Renders an internal native `<button part="base">` (never a real `<wa-button>` —
- * this library has no runtime dependency on Web Awesome, matching `<lyra-copy-button>`/
- * `<lyra-export-button>`'s own clean-room, API-mirroring approach). `type="submit"`/`type="reset"`
+ * `<lyra-button>` — a generic action-button primitive. Renders an internal native
+ * `<button part="base">`. `type="submit"`/`type="reset"`
  * are handled by this component itself via the host's own `closest('form')` — a shadow-internal
  * native `<button type="submit">` does not participate in an ancestor light-DOM form's submission
  * on its own, since form-submitter semantics don't cross the shadow boundary.
@@ -34,11 +32,9 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  */
 export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];
-  // Participates in an ancestor `<form>.elements` the same way `wa-button` does today (via
-  // `WebAwesomeFormAssociatedElement`) -- without this, a sibling text field's own Enter-to-submit
-  // lookup (`form.elements` scanned for `el.type === 'submit'`) silently fails to find this button.
-  // No `FormAssociated` mixin here: that mixin's own `name`/`value`/`required` submission semantics
-  // don't apply to a plain action button, and would collide with this class's own `disabled`.
+  // A button is form-associated so it is discoverable through form.elements. The generic
+  // FormAssociated mixin is intentionally not used: action buttons do not have its value,
+  // name, or required semantics.
   static formAssociated = true;
 
   constructor() {
@@ -47,14 +43,12 @@ export class LyraButton extends LyraElement {
   }
 
   /** Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named
-   *  `variant` here (not `tone`) to mirror `wa-button`'s own attribute name for a mechanical
-   *  migration off a plain `wa-button`. */
+   *  `variant` here (not `tone`) to keep the component's semantic tone vocabulary consistent. */
   @property({ reflect: true }) variant: ButtonVariant = 'neutral';
   /** `'filled'` (the default) reads `--lyra-button-fill`, which for `variant="neutral"` is the
    *  ambient `--lyra-color-surface` -- matching this component's own container, by design, for a
-   *  low-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime
-   *  default appearance (used whenever a `wa-button` call site sets only `variant`): a solid,
-   *  high-contrast fill for every variant, including `neutral` (`--lyra-theme-color-neutral-fill-loud`). */
+   *  low-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every
+   *  variant, including `neutral`. */
   @property({ reflect: true }) appearance: ButtonAppearance = 'filled';
   @property({ reflect: true }) size: ButtonSize = 'm';
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
@@ -67,6 +61,11 @@ export class LyraButton extends LyraElement {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @query('button') private buttonEl?: HTMLButtonElement;
+
+  /** Activates the internal native button, including submit/reset behavior. */
+  override click(): void {
+    this.buttonEl?.click();
+  }
 
   override focus(options?: FocusOptions): void {
     this.buttonEl?.focus(options);

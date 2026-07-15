@@ -1,7 +1,7 @@
 {
   "name": "@aceshooting/lyra-ui",
   "version": "2.13.0",
-  "description": "Free, clean-room Lit web components — a companion to Web Awesome.",
+  "description": "Free, independent Lit web components: an open-source alternative to Shoelace and Web Awesome with accessible forms, dashboards, charts, and agent UI.",
   "keywords": [
     "web-components",
     "custom-elements",
@@ -16,6 +16,11 @@
     "data-visualization",
     "chat-ui",
     "agent-ui",
+    "accessible-components",
+    "internationalization",
+    "rtl",
+    "shoelace-alternative",
+    "web-awesome-alternative",
     "web-awesome",
     "storybook"
   ],
@@ -50,6 +55,7 @@
     ".": "./dist/lyra.js",
     "./components/*": "./dist/components/*",
     "./internal/*": "./dist/internal/*",
+    "./theme.css": "./dist/theme.css",
     "./testing": "./dist/testing/happy-dom-shims.js"
   },
   "sideEffects": [
@@ -322,6 +328,7 @@
     "./src/components/zoomable-frame/zoomable-frame.ts",
     "./src/components/flag/flag-peer.ts",
     "./dist/lyra.js",
+    "./dist/theme.css",
     "./src/lyra.ts"
   ],
   "scripts": {

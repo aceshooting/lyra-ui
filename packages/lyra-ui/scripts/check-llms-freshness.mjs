@@ -90,34 +90,6 @@ const FORM_ASSOCIATED_SURFACE = new Set([
   'internals',
 ]);
 
-// Pre-existing drift discovered while building this check, on components this task did not touch.
-// It predates this task and is out of scope for it — exempted here so the gate can still catch any
-// *new* drift going forward without failing the build on this known baseline. A future cleanup pass
-// should shrink this set (fix the component's llms-full.txt section, then remove its entry here);
-// nothing should be added to it without the same scrutiny.
-const KNOWN_PENDING_DRIFT = new Set([
-  'lyra-attachment-chip:untitledLabel',
-  'lyra-attachment-trigger:triggerTitle',
-  'lyra-box-plot:accessibleDescription',
-  'lyra-box-plot:accessibleLabel',
-  'lyra-box-plot:showDataTable',
-  'lyra-chart:accessibleDescription',
-  'lyra-chart:accessibleLabel',
-  'lyra-chart:showDataTable',
-  'lyra-lite-chart:accessibleLabel',
-  'lyra-lite-chart:minBarHeight',
-  'lyra-chat-composer:stoppable',
-  'lyra-chat-message:attachmentsPosition',
-  'lyra-code-block:languagesOnly',
-  'lyra-dialog:noLightDismiss',
-  'lyra-file-input:acceptedMessage',
-  'lyra-file-input:rejectedMessage',
-  'lyra-menu:closeOnEscapeAnywhere',
-  'lyra-split:dividerLabel',
-  'lyra-tree-node:hasChildren',
-  'lyra-widget:backdropInset',
-]);
-
 const sections = extractSections(llmsFull);
 const problems = [];
 
@@ -141,7 +113,6 @@ for (const mod of manifest.modules ?? []) {
       .filter((m) => !FORM_ASSOCIATED_SURFACE.has(m.name))
       .map((m) => m.name);
     for (const name of publicNames) {
-      if (KNOWN_PENDING_DRIFT.has(`${tagName}:${name}`)) continue;
       if (!section.includes(name)) {
         problems.push(`${tagName}: property \`${name}\` is not mentioned in its llms-full.txt section`);
       }

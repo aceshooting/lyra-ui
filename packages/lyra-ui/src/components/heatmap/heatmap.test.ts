@@ -114,6 +114,68 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('renders an opt-in native button overlay with persistent per-cell semantics', async () => {
+  const el = (await fixture(html`
+    <lyra-heatmap
+      accessible-cells
+      .rowLabels=${['A', 'B']}
+      .colLabels=${['X', 'Y']}
+      .values=${[
+        [1, 2],
+        [3, 4],
+      ]}
+      .selectedCell=${{ row: 1, col: 0 }}
+    ></lyra-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+  expect(cells.length).to.equal(4);
+  expect(cells[0]!.tagName).to.equal('BUTTON');
+  expect(cells[0]!.getAttribute('aria-label')).to.equal('Row A, Col X: 1');
+  expect(cells[0]!.getAttribute('aria-pressed')).to.equal('false');
+  expect(cells[2]!.getAttribute('aria-pressed')).to.equal('true');
+  expect(cells[0]!.getAttribute('tabindex')).to.equal('0');
+  expect(cells[1]!.getAttribute('tabindex')).to.equal('-1');
+  expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-hidden')).to.equal('');
+  expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('tabindex')).to.equal('-1');
+  await expect(el).to.be.accessible();
+});
+
+it('moves focus through accessible cells with RTL-aware arrow keys and emits the same click event', async () => {
+  const el = (await fixture(html`
+    <lyra-heatmap
+      accessible-cells
+      dir="rtl"
+      .rowLabels=${['A']}
+      .colLabels=${['X', 'Y']}
+      .values=${[[1, 2]]}
+    ></lyra-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+  cells[0]!.focus();
+  cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+  await el.updateComplete;
+  await aTimeout(0);
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset.cellKey).to.equal('matrix-0-1');
+
+  const event = new Promise<CustomEvent>((resolve) => el.addEventListener('lyra-cell-click', resolve, { once: true }));
+  cells[0]!.click();
+  expect((await event).detail).to.deep.equal({ row: 0, col: 0, value: 1 });
+});
+
+it('renders accessible calendar cells with date announcements', async () => {
+  const el = (await fixture(html`
+    <lyra-heatmap accessible-cells mode="calendar" .days=${[{ date: '2026-03-01', value: 7 }]}></lyra-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  const cells = el.shadowRoot!.querySelectorAll('[part="cell"]');
+  expect(cells.length).to.equal(7);
+  expect(cells[0]!.getAttribute('aria-label')).to.contain('Mar 1');
+  expect(cells[0]!.getAttribute('aria-pressed')).to.equal('false');
+});
+
 it('removes the previous MediaQueryList change listener before attaching a new one on a DPR crossing', async () => {
   const originalMatchMedia = window.matchMedia;
   const created: Array<{

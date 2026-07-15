@@ -134,6 +134,13 @@ export class LyraToolSelectDialog extends LyraElement {
   @property() label = 'Select tools';
 
   @property({ attribute: 'search-placeholder' }) searchPlaceholder = 'Search tools…';
+  /** Native editing-assistance and virtual-keyboard hints forwarded to the search input. */
+  @property() autocomplete = '';
+  @property() spellcheck = true;
+  @property() autocapitalize = '';
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
 
   /** Overrides the built-in case-insensitive name/description substring match. */
   @property({ attribute: false }) filter: ToolSelectFilter | null = null;
@@ -369,6 +376,12 @@ export class LyraToolSelectDialog extends LyraElement {
             .value=${this.query}
             placeholder=${searchPlaceholder}
             aria-label=${searchPlaceholder}
+            autocomplete=${this.autocomplete || nothing}
+            .spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
             @input=${this.onSearchInput}
           />
         </div>

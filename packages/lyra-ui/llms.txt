@@ -1,12 +1,12 @@
 # @aceshooting/lyra-ui
 
-> Free, clean-room Lit web components — a companion to Web Awesome that reimplements several
-> Web Awesome Pro components as open-source equivalents (same attributes/slots/events/CSS parts,
-> just a `lyra-` prefix instead of `wa-`), plus a number of extras with no Web Awesome counterpart.
+> Free, independent, MIT-licensed Lit web components — an open-source alternative to Shoelace and
+> Web Awesome. Lyra combines accessible form controls, dashboards, charts, data visualization, and
+> Conversation & Agent UI. Selected Web Awesome-compatible components retain documented public names
+> under a `lyra-` prefix for easier migration; the implementation and design system are standalone.
 
-Token-compatible with Web Awesome: every component resolves its styling through Web Awesome's
-`--wa-*` design tokens first, with `--lyra-*` fallbacks, so it looks native inside a Web
-Awesome-themed app and works standalone with no theme at all.
+Every component resolves its styling through this library's own `--lyra-theme-*` design tokens with
+hardcoded fallbacks, so it works fully standalone with no theme or runtime dependency required.
 
 ## Docs
 
@@ -18,7 +18,8 @@ Awesome-themed app and works standalone with no theme at all.
   known gotchas) for every tag in the library — the primary resource for a coding assistant
   integrating `@aceshooting/lyra-ui`.
 - [README.md](./README.md): Install instructions, the full component catalog, `<wa-*>` →
-  `<lyra-*>` migration notes, theming, and package-level development commands.
+  `<lyra-*>` and `<sl-*>` → `<lyra-*>` migration notes, theming, accessibility, i18n, RTL, and
+  package-level development commands.
 
 ## Component categories
 
@@ -81,5 +82,5 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
 ## Also useful
 
 - Shared internals every tag builds on (`LyraElement` base class, the `FormAssociated` mixin, the
-  floating-ui `positioner`, and the `--lyra-*`/`--wa-*` design-token layer) are documented at the
+  floating-ui `positioner`, and the independent `--lyra-theme-*` design-token layer) are documented at the
   top of `llms-full.txt`, along with cross-cutting packaging notes that apply to the whole library.

@@ -165,6 +165,32 @@ describe('editing', () => {
     expect(ta.getAttribute('autocorrect')).to.equal('off');
   });
 
+  it('forwards configurable native editing properties to the raw-JSON textarea', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-approval-dialog
+        .args=${ARGS}
+        .spellcheck=${true}
+        autocapitalize="sentences"
+        autocorrect="on"
+        autocomplete="off"
+        wrap="hard"
+        inputmode="text"
+        enterkeyhint="done"
+      ></lyra-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+
+    const ta = textarea(el);
+    expect(ta.getAttribute('spellcheck')).to.equal('true');
+    expect(ta.getAttribute('autocapitalize')).to.equal('sentences');
+    expect(ta.getAttribute('autocorrect')).to.equal('on');
+    expect(ta.getAttribute('autocomplete')).to.equal('off');
+    expect(ta.getAttribute('wrap')).to.equal('hard');
+    expect(ta.getAttribute('inputmode')).to.equal('text');
+    expect(ta.getAttribute('enterkeyhint')).to.equal('done');
+  });
+
   it('resets an in-progress edit back to the read-only view every time the dialog re-opens', async () => {
     const el = (await fixture(
       html`<lyra-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lyra-tool-approval-dialog>`,

@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises';
+import { cp, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,3 +25,5 @@ await new Promise((resolve, reject) => {
     else reject(new Error(`tsc failed${signal ? ` (${signal})` : ` with exit code ${code}`}`));
   });
 });
+
+await cp(join(packageDir, 'src', 'theme.css'), join(packageDir, 'dist', 'theme.css'));

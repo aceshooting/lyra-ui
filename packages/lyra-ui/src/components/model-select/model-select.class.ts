@@ -146,6 +146,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  property of the same name -- same fix as `<lyra-textarea>`/`<lyra-date-input>`. The explicit
    *  attribute mapping preserves the lowercase wire name in generated component metadata. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
+  @property() autocomplete = 'off';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
   @property({ type: Boolean, reflect: true }) open = false;
 
   @state() private activeIndex = -1;
@@ -701,10 +705,12 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-          autocomplete="off"
+          autocomplete=${this.autocomplete || nothing}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
           autocorrect=${this.autoCorrect || nothing}
+          inputmode=${this.inputMode || nothing}
+          enterkeyhint=${this.enterKeyHint || nothing}
           .value=${this.open ? this.query : this.labelFor(this._value)}
           placeholder=${this.placeholder}
           ?disabled=${this.effectiveDisabled}

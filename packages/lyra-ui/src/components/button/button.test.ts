@@ -97,6 +97,18 @@ describe('lyra-button', () => {
     expect(input.value).to.equal('');
   });
 
+  it('forwards host click() to the internal native button', async () => {
+    const form = (await fixture(html`<form><lyra-button type="submit">Save</lyra-button></form>`)) as HTMLFormElement;
+    const el = form.querySelector('lyra-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.true;
+  });
+
   it('is accessible', async () => {
     const el = await fixture(html`<lyra-button>Save</lyra-button>`);
     await expect(el).to.be.accessible();
@@ -105,6 +117,19 @@ describe('lyra-button', () => {
   it('is accessible while loading', async () => {
     const el = await fixture(html`<lyra-button .loading=${true}>Save</lyra-button>`);
     await expect(el).to.be.accessible();
+  });
+
+  it('keeps the label space while loading and centers the spinner', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/:host\(\[loading\]\) \[part='label'\][^}]*opacity: 0/);
+    expect(css).to.match(/\[part='spinner'\][^}]*position: absolute/);
+    expect(css).to.match(/\[part='spinner'\][^}]*inset: 0/);
+  });
+
+  it('uses a strong border for outlined buttons', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('border-color: var(--lyra-button-outlined-border);');
+    expect(css).to.include('--lyra-button-outlined-border: var(--lyra-color-border-strong);');
   });
 
   it('ships a default :hover/:active treatment on [part="base"], disabled under reduced motion', () => {
@@ -140,5 +165,18 @@ describe('lyra-button', () => {
     expect(getComputedStyle(accentBase).backgroundColor).to.not.equal(
       getComputedStyle(filledBase).backgroundColor,
     );
+  });
+
+  it('uses the standard medium size token and exposes a rethemeable size scale', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include("font-size: var(--lyra-font-size-m);");
+    expect(css).to.include('--lyra-button-size-s: var(--lyra-size-1-75rem);');
+    expect(css).to.include('min-block-size: var(--lyra-button-size-s);');
+  });
+
+  it('propagates a consumer width from the host to the internal button', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('inline-size: var(--lyra-button-width);');
+    expect(css).to.include('--lyra-button-width: 100%;');
   });
 });
