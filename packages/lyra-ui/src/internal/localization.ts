@@ -131,9 +131,18 @@ export type LyraMessageKey =
   | 'exportButtonLabel'
   | 'generationStatusToken'
   | 'generationStatusTokens'
+  | 'generationStatusElapsedSeconds'
+  | 'generationStatusTokenCount'
+  | 'generationStatusTokensCount'
+  | 'generationStatusThroughput'
   | 'graphDataList'
+  | 'graphItemAnnouncement'
   | 'navigation'
   | 'attachmentUploading'
+  | 'attachmentRetryWithContext'
+  | 'attachmentUploadingWithContext'
+  | 'attachmentUploadingProgress'
+  | 'attachmentUploadingIndeterminate'
   | 'attachmentUploadFailed'
   | 'attachmentUntitledFile'
   | 'chartTrendIncreasing'
@@ -430,9 +439,18 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   exportButtonLabel: 'Export',
   generationStatusToken: 'token',
   generationStatusTokens: 'tokens',
+  generationStatusElapsedSeconds: '{seconds}s',
+  generationStatusTokenCount: '{count} token',
+  generationStatusTokensCount: '{count} tokens',
+  generationStatusThroughput: '{rate} tok/s',
   graphDataList: 'Graph data',
+  graphItemAnnouncement: '{item} ({index} of {total})',
   navigation: 'Navigation',
   attachmentUploading: 'Uploading',
+  attachmentRetryWithContext: 'Retry {label}',
+  attachmentUploadingWithContext: 'Uploading {label}',
+  attachmentUploadingProgress: 'Uploading {percent}%',
+  attachmentUploadingIndeterminate: 'Uploading…',
   attachmentUploadFailed: 'Upload failed',
   attachmentUntitledFile: 'Untitled file',
   chartTrendIncreasing: 'increasing',
