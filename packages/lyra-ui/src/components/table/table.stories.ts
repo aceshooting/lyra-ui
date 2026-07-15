@@ -117,3 +117,56 @@ const actionColumns: TableColumn<DemoRow>[] = [
 export const RowActions: Story = {
   render: () => html`<lyra-table .columns=${actionColumns} .rows=${rows}></lyra-table>`,
 };
+
+// expandedKeys is consumer-owned (mirrors selectedKey/sortKey) -- this story
+// uses a plain module-level Set + a manual re-render to demonstrate the
+// wiring a real consumer would do with their own framework's state.
+const expandableExpandedKeys = new Set<string | number>();
+
+function renderExpandableRows(): unknown {
+  return html`<lyra-table
+    .columns=${detailColumns}
+    .rows=${detailRows}
+    .rowKey=${(r: DetailRow) => r.id}
+    .expandedContent=${(r: DetailRow) =>
+      html`<div style="padding: 4px 8px;">
+        <strong>${r.name}</strong> — region ${r.region}, updated ${r.updated}
+      </div>`}
+    .expandedKeys=${expandableExpandedKeys}
+    @lyra-row-expand-toggle=${(e: CustomEvent<{ key: string | number }>) => {
+      const key = e.detail.key;
+      if (expandableExpandedKeys.has(key)) expandableExpandedKeys.delete(key);
+      else expandableExpandedKeys.add(key);
+      // Re-render this story's own root -- Storybook's `render()` return
+      // value isn't reactive on its own, so force one by re-invoking it via
+      // the same pattern lite-chart.stories.ts's own interactive stories use.
+      const root = (e.currentTarget as HTMLElement).parentElement;
+      if (root) root.replaceChildren(renderExpandableRows() as unknown as Node);
+    }}
+  ></lyra-table>`;
+}
+
+const detailColumns: TableColumn<DetailRow>[] = [
+  { key: 'name', label: 'Name', cell: (r) => r.name },
+  { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+];
+
+export const ExpandableRows: Story = {
+  render: () => html`<div>${renderExpandableRows()}</div>`,
+};
+
+// canExpand opts a specific row out of the toggle entirely (e.g. an
+// unconfigured provider with nothing to show) -- its leading cell renders
+// empty instead of a button, and its key being in expandedKeys (it isn't,
+// here) would still not render a panel for it.
+export const ExpandableRowsWithOptOut: Story = {
+  render: () =>
+    html`<lyra-table
+      .columns=${detailColumns}
+      .rows=${detailRows}
+      .rowKey=${(r: DetailRow) => r.id}
+      .expandedContent=${(r: DetailRow) => html`<div style="padding: 4px 8px;">${r.name} details</div>`}
+      .canExpand=${(r: DetailRow) => r.id !== 'c'}
+      .expandedKeys=${new Set(['a'])}
+    ></lyra-table>`,
+};
