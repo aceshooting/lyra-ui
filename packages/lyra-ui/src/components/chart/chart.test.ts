@@ -9,7 +9,7 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
   expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
 
-  await waitUntil(() => (el as any).chart != null);
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
 
   expect(el.hasAttribute('aria-busy')).to.be.false;
   expect(el.shadowRoot!.querySelector('lyra-skeleton')).to.not.exist;
