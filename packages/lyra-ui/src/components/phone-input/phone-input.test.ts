@@ -183,6 +183,46 @@ it('allows a host aria-label to name the internal telephone input', async () => 
   expect(el.input!.getAttribute('aria-label')).to.equal('Account mobile');
 });
 
+it('gives a host aria-label precedence over phone-label, label, and placeholder defaults', async () => {
+  const el = (await fixture(html`
+    <lyra-phone-input
+      aria-label="Account mobile"
+      phone-label="Telephone"
+      label="Mobile"
+      placeholder="621 123 456"
+      .adapter=${adapter}
+    ></lyra-phone-input>
+  `)) as LyraPhoneInput;
+
+  expect(el.input!.getAttribute('aria-label')).to.equal('Account mobile');
+});
+
+it('exposes selection and range-editing APIs while keeping editable and form values synchronized', async () => {
+  const form = (await fixture(html`
+    <form><lyra-phone-input name="phone" value="+352621123456"></lyra-phone-input></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lyra-phone-input') as LyraPhoneInput;
+
+  el.setSelectionRange(4, 7, 'forward');
+  expect(el.selectionStart).to.equal(4);
+  expect(el.selectionEnd).to.equal(7);
+  expect(el.selectionDirection).to.equal('forward');
+
+  el.selectionStart = 1;
+  el.selectionEnd = 4;
+  expect(el.input!.selectionStart).to.equal(1);
+  expect(el.input!.selectionEnd).to.equal(4);
+
+  el.setRangeText('+33123456789', 0, el.inputValue.length, 'end');
+  expect(el.inputValue).to.equal('+33123456789');
+  expect(el.value).to.equal('+33123456789');
+  expect(new FormData(form).get('phone')).to.equal('+33123456789');
+
+  el.select();
+  expect(el.selectionStart).to.equal(0);
+  expect(el.selectionEnd).to.equal(el.inputValue.length);
+});
+
 it('bridges focus and blur from the shadow input to host-observable events', async () => {
   const el = (await fixture(html`
     <lyra-phone-input label="Phone number" .adapter=${adapter}></lyra-phone-input>

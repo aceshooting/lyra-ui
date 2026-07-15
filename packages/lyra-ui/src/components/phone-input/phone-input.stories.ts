@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { PhoneNumberAdapter } from './phone-input.class.js';
+import type { LyraPhoneInput, PhoneNumberAdapter } from './phone-input.class.js';
 
 const demoAdapter: PhoneNumberAdapter = {
   countries: [
@@ -45,6 +45,31 @@ export const Default: Story = {
       .adapter=${demoAdapter}
       style="max-width: 24rem"
     ></lyra-phone-input>
+  `,
+};
+
+/** Host naming and public focus/selection methods target the native telephone input. */
+export const AccessibleEditingSurface: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-width: 24rem;">
+      <lyra-phone-input
+        aria-label="Account mobile number"
+        value="+352621123456"
+        default-country="LU"
+        .adapter=${demoAdapter}
+      ></lyra-phone-input>
+      <button
+        type="button"
+        style="justify-self: start;"
+        @click=${(event: Event) => {
+          const phoneInput = (event.currentTarget as HTMLElement).parentElement!.querySelector(
+            'lyra-phone-input',
+          ) as LyraPhoneInput;
+          phoneInput.focus();
+          phoneInput.select();
+        }}
+      >Focus and select the number</button>
+    </div>
   `,
 };
 

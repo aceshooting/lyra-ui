@@ -7,6 +7,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './phone-input.styles.js';
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
+export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
 
 export interface PhoneCountry {
   /** ISO 3166-1 alpha-2 region code. */
@@ -157,7 +158,9 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * User edits emit native-style `input` and `change` events. Event detail
  * exposes both the canonical `value` and editable `inputValue`; programmatic
  * property changes are silent. Phone-number text is deliberately LTR while
- * the form chrome and country selector follow the inherited direction.
+ * the form chrome and country selector follow the inherited direction. A host
+ * `aria-label` names the internal telephone input and wins over every derived
+ * or component-specific fallback.
  *
  * @customElement lyra-phone-input
  * @slot label - Custom label content.
@@ -194,7 +197,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+  /** Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Accessible name for the country selector. */
   @property({ attribute: 'country-label' }) countryLabel = 'Select';
   /** Accessible-name override for the telephone input. */
@@ -246,6 +250,30 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Current parse/validation state. */
   get phoneStatus(): PhoneNumberStatus {
     return this.status;
+  }
+
+  get selectionStart(): number | null {
+    return this.inputElement?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.inputElement) this.inputElement.selectionStart = value ?? 0;
+  }
+
+  get selectionEnd(): number | null {
+    return this.inputElement?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.inputElement) this.inputElement.selectionEnd = value ?? 0;
+  }
+
+  get selectionDirection(): PhoneInputSelectionDirection | null {
+    return this.inputElement?.selectionDirection as PhoneInputSelectionDirection | null;
+  }
+
+  set selectionDirection(value: PhoneInputSelectionDirection | null) {
+    if (this.inputElement) this.inputElement.selectionDirection = value ?? 'none';
   }
 
   /** @internal */
@@ -319,7 +347,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   }
 
   private get effectivePhoneLabel(): string | undefined {
-    return this.phoneLabel || this.accessibleLabel || this.label || this.placeholder || undefined;
+    return this.accessibleLabel || this.phoneLabel || this.label || this.placeholder || undefined;
   }
 
   private get incompleteMessage(): string {
@@ -456,6 +484,29 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Select all editable telephone text. */
   select(): void {
     this.inputElement?.select();
+  }
+
+  /** Set the selection range in the editable telephone text. */
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: PhoneInputSelectionDirection,
+  ): void {
+    this.inputElement?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const input = this.inputElement;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    this.applyParsed(input.value, this.parse(input.value));
+    input.value = this.editableValue;
   }
 
   formResetCallback(): void {
