@@ -96,6 +96,7 @@ export interface LyraTableEventMap<T = unknown> {
   'lyra-columns-revealed': CustomEvent<{ revealed: boolean }>;
   'lyra-sort': CustomEvent<{ key: string }>;
   'lyra-row-click': CustomEvent<{ row: T }>;
+  'lyra-row-expand-toggle': CustomEvent<{ row: T; key: string | number }>;
   'lyra-load-more': CustomEvent<undefined>;
 }
 /**
@@ -177,6 +178,24 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  targets) can silently attach to the wrong row. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ attribute: false }) selectedKey: string | number | null = null;
+  /** Renders a full-width panel beneath a row when that row's key is in
+   *  `expandedKeys`. Table-level (not per-column) since the panel spans
+   *  every column via `colspan`. Setting this makes every row render a
+   *  leading chevron-toggle cell before all data columns; omit for no
+   *  leading cell at all (unchanged output). */
+  @property({ attribute: false }) expandedContent?: (row: T) => unknown;
+  /** Gates whether a given row gets an interactive chevron/toggle at all,
+   *  when `expandedContent` is set. Omit to make every row expandable. A
+   *  row that fails this check still gets a leading cell (for column
+   *  alignment) but it renders empty — no button, no `aria-expanded`, no
+   *  click handler. */
+  @property({ attribute: false }) canExpand?: (row: T) => boolean;
+  /** Consumer-owned open/closed state, keyed the same way as `rowKey`/
+   *  `selectedKey`. The table never mutates this itself — it only reads it
+   *  to decide which rows currently render `expandedContent`; toggle it in
+   *  response to `lyra-row-expand-toggle`, mirroring how `sortKey`/
+   *  `selectedKey` already work. */
+  @property({ attribute: false }) expandedKeys: Set<string | number> = new Set();
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
   @property({ attribute: 'more-label' }) moreLabel = '';
   @property({ attribute: 'empty-heading' }) emptyHeading = '';
@@ -444,6 +463,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.activeRowKey = key;
     const row = this.rowsByKey.get(key);
     if (row !== undefined) this.emit('lyra-row-click', { row });
+  }
+
+  private activateExpandToggle(key: string | number): void {
+    const row = this.rowsByKey.get(encodeKey(key));
+    if (row !== undefined) this.emit('lyra-row-expand-toggle', { row, key });
   }
 
   /** Header cells currently in the tab sequence — excludes columns hidden by

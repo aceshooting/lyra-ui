@@ -1044,3 +1044,11 @@ describe('column width', () => {
     expect((cols[0] as HTMLElement).style.getPropertyValue('inline-size')).to.equal('120px');
   });
 });
+
+describe('expandable rows', () => {
+  it('exposes expandedKeys defaulting to an empty Set', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    expect(el.expandedKeys).to.be.instanceOf(Set);
+    expect(el.expandedKeys.size).to.equal(0);
+  });
+});
