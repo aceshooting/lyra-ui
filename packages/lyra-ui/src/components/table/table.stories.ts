@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
-import { html } from 'lit';
+import { html, render } from 'lit';
 import type { TableColumn } from '../../lyra.js';
 
 interface DemoRow {
@@ -141,7 +141,7 @@ function renderExpandableRows(): unknown {
       // value isn't reactive on its own, so force one by re-invoking it via
       // the same pattern lite-chart.stories.ts's own interactive stories use.
       const root = (e.currentTarget as HTMLElement).parentElement;
-      if (root) root.replaceChildren(renderExpandableRows() as unknown as Node);
+      if (root) render(renderExpandableRows(), root);
     }}
   ></lyra-table>`;
 }
