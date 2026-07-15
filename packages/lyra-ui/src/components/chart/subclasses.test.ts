@@ -36,9 +36,15 @@ for (const [tag, expectedType] of TAGS_WITH_TYPE) {
 
   it(`${tag} is accessible`, async () => {
     const el = (await fixture(`<${tag}></${tag}>`)) as any;
+    el.setAttribute('aria-label', `${tag} accessible name`);
     el.datasets = [{ label: 'x', data: [1, 2, 3] }];
     await el.updateComplete;
     await waitUntil(() => el.chart != null, `${tag} never initialized`, { timeout: 2000 });
+    const canvas = el.shadowRoot.querySelector('canvas');
+    expect(canvas.getAttribute('aria-label')).to.equal(`${tag} accessible name`);
+    expect(canvas.getAttribute('role')).to.equal('img');
+    expect(el.getAttribute('role')).to.equal(null);
+    expect(el.shadowRoot.querySelectorAll('[role]')).to.have.length(1);
     await expect(el).to.be.accessible();
   });
 }

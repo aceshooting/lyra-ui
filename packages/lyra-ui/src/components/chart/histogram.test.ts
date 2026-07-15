@@ -54,9 +54,38 @@ it('memoizes the binning pass, reusing the same bucket array while `values`/`bin
 });
 
 it('is accessible', async () => {
-  const el = (await fixture(html`<lyra-histogram></lyra-histogram>`)) as LyraHistogram;
+  const el = (await fixture(html`<lyra-histogram aria-label="Response-time distribution"></lyra-histogram>`)) as LyraHistogram;
   el.values = [1, 2, 3];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
+  expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Response-time distribution');
+  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
   await expect(el).to.be.accessible();
+});
+
+it('redraws its derived labels and counts when values change after initialization', async () => {
+  const el = (await fixture(html`<lyra-histogram bins="2"></lyra-histogram>`)) as LyraHistogram;
+  el.values = [0, 1, 2, 3];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  el.values = [0, 0, 0, 10];
+  await el.updateComplete;
+
+  expect((el as any).chart.data.datasets[0].data).to.deep.equal([3, 1]);
+});
+
+it('can shrink to a 320px allocation with a long series label', async () => {
+  const wrapper = await fixture(html`
+    <div style="display: flex; inline-size: 320px;">
+      <lyra-histogram label="A deliberately long translated frequency distribution label"></lyra-histogram>
+    </div>
+  `);
+  const el = wrapper.querySelector('lyra-histogram') as LyraHistogram;
+  el.values = [1, 2, 3, 4, 5];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(getComputedStyle(el).minInlineSize).to.equal('0px');
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });

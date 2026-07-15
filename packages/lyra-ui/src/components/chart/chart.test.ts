@@ -101,6 +101,32 @@ it('exposes role=img with a dataset-label-derived aria-label', async () => {
   expect(canvas.getAttribute('aria-label')).to.contain('Revenue');
 });
 
+it('forwards a host aria-label to the canvas and keeps the chart role on that semantic element only', async () => {
+  const el = (await fixture(html`
+    <lyra-chart aria-label="Quarterly revenue" accessible-label="Legacy chart label"></lyra-chart>
+  `)) as LyraChart;
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  expect(canvas.getAttribute('aria-label')).to.equal('Quarterly revenue');
+  expect(canvas.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('role')).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
+});
+
+it('formats generated summary values with the effective locale', async () => {
+  const el = (await fixture(html`<lyra-chart locale="de-DE"></lyra-chart>`)) as LyraChart;
+  el.datasets = [{ label: 'Revenue', data: [1234.5, 2345.75] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const description = el.shadowRoot!.querySelector('[part="description"]')!;
+  expect(description.textContent).to.contain('1.234,5');
+  expect(description.textContent).to.contain('2.345,75');
+});
+
 it('exposes a customizable accessible description and a data-table alternative', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.accessibleLabel = 'Revenue history';
@@ -137,6 +163,22 @@ it('is accessible', async () => {
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   await expect(el).to.be.accessible();
+});
+
+it('can shrink to a 320px allocation with long chart content', async () => {
+  const wrapper = await fixture(html`
+    <div style="display: flex; inline-size: 320px;">
+      <lyra-chart></lyra-chart>
+    </div>
+  `);
+  const el = wrapper.querySelector('lyra-chart') as LyraChart;
+  el.labels = ['A category label that is intentionally very long', 'Another translated category label'];
+  el.datasets = [{ label: 'A deliberately long translated revenue series label', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(getComputedStyle(el).minInlineSize).to.equal('0px');
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
 
 it('deep-merges the raw `config` passthrough over the generated options, keeping ungiven generated fields', async () => {
@@ -349,12 +391,28 @@ it('adds a right-side y2 scale when a dataset uses `axis: "y2"`, labelled by `y2
   await waitUntil(() => (el as any).chart != null);
   const config = (el as any).buildConfig();
   expect(config.options.scales.y2).to.exist;
+  expect(config.options.scales.y.position).to.equal('left');
   expect(config.options.scales.y2.position).to.equal('right');
   expect(config.options.scales.y2.grid.drawOnChartArea).to.equal(false);
   expect(config.options.scales.y2.title.display).to.equal(true);
   expect(config.options.scales.y2.title.text).to.equal('Secondary');
   expect(config.data.datasets[1].yAxisID).to.equal('y2');
   expect(config.data.datasets[0].yAxisID).to.equal('y');
+});
+
+it('places primary and secondary y axes at logical start/end in RTL', async () => {
+  const wrapper = await fixture(html`<div dir="rtl"><lyra-chart></lyra-chart></div>`);
+  const el = wrapper.querySelector('lyra-chart') as LyraChart;
+  el.datasets = [
+    { label: 'primary', data: [1, 2] },
+    { label: 'secondary', data: [10, 20], axis: 'y2' },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y.position).to.equal('right');
+  expect(config.options.scales.y2.position).to.equal('left');
 });
 
 it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => {

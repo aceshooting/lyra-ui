@@ -162,7 +162,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ attribute: 'y2-label' }) y2Label = '';
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
-  /** Accessible name applied to the canvas. Falls back to the dataset labels. */
+  /** Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   /** Accessible description for the canvas. When unset, a concise data/trend summary is generated. */
   @property({ attribute: 'accessible-description' }) accessibleDescription = '';
@@ -317,6 +317,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'stacked',
       'config',
       'zoom',
+      'locale',
+      'strings',
       'loading',
     ].some((name) => changed.has(name));
     if (!contentChanged) return;
@@ -404,6 +406,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
 
     const hasY2 = this.datasets.some((s) => s.axis === 'y2');
+    const rtl = this.effectiveDirection === 'rtl';
     // `stacked` only applies to bar/line-family charts sharing a categorical
     // axis, per the design spec — scatter/bubble's linear x scale and the
     // radial r scale above are out of scope.
@@ -417,6 +420,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         stacked,
       },
       y: {
+        position: rtl ? 'right' : 'left',
         beginAtZero: this.beginAtZero,
         title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
         ticks: { color: theme.tick },
@@ -426,7 +430,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ...(hasY2
         ? {
             y2: {
-              position: 'right',
+              position: rtl ? 'left' : 'right',
               grid: { drawOnChartArea: false, color: theme.grid },
               title: { display: !!this.y2Label, text: this.y2Label, color: theme.tick },
               ticks: { color: theme.tick },
@@ -497,6 +501,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         datasets: this.datasets.map((s) => this.seriesToDataset(s)) as never,
       },
       options: {
+        locale: this.effectiveLocale,
         responsive: true,
         maintainAspectRatio: false,
         // Chart.js's own mechanism for horizontal bars (also flips line/area
@@ -608,6 +613,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return (series.data ?? []).filter((value): value is number => value != null && Number.isFinite(value));
   }
 
+  private formatSummaryValue(value: number): string {
+    return new Intl.NumberFormat(this.effectiveLocale).format(value);
+  }
+
+  private accessibleName(fallback: string): string {
+    return this.getAttribute('aria-label') || this.accessibleLabel || fallback;
+  }
+
   private chartDescription(): string {
     if (this.accessibleDescription) return this.accessibleDescription;
     const summaries = this.datasets.map((series) => {
@@ -630,8 +643,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return this.localize('chartSummary', undefined, {
         label: series.label,
         count: values.length,
-        min,
-        max,
+        min: this.formatSummaryValue(min),
+        max: this.formatSummaryValue(max),
         trend,
       });
     });
@@ -651,7 +664,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     );
     return html`
       <table class=${this.showDataTable ? nothing : 'sr-only'}>
-        <caption>${this.accessibleLabel || this.localize('chartData')}</caption>
+        <caption>${this.accessibleName(this.localize('chartData'))}</caption>
         <thead>
           <tr>
             <th scope="col">${this.localize('chartCategory')}</th>
@@ -681,7 +694,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         </div>
       `;
     }
-    const label = this.accessibleLabel || this.datasets.map((d) => d.label).join(', ') || this.localize('chart');
+    const label = this.accessibleName(this.datasets.map((d) => d.label).join(', ') || this.localize('chart'));
     const description = this.chartDescription();
     return html`
       <div part="base">

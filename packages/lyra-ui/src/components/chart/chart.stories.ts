@@ -26,6 +26,28 @@ export const Default: Story = {
   },
 };
 
+/** Narrow-allocation and long-content evidence for charts embedded in panels and dialogs. */
+export const NarrowLongContent: Story = {
+  name: 'Narrow (320px) with long content',
+  render: () => {
+    const series: Series[] = [
+      { label: 'Revenue from subscriptions and professional services', data: [12, 19, 14, 22] },
+    ];
+    return html`
+      <div style="inline-size: 320px; max-inline-size: 100%;">
+        <lyra-chart
+          aria-label="Quarterly revenue from subscriptions and professional services"
+          type="bar"
+          height="16rem"
+          legend
+          .labels=${['First quarter', 'Second quarter', 'Third quarter', 'Fourth quarter']}
+          .datasets=${series}
+        ></lyra-chart>
+      </div>
+    `;
+  },
+};
+
 /**
  * The `config` property is the raw Chart.js passthrough escape hatch — it is
  * deep-merged over the `Series`-generated config, so a nested key like

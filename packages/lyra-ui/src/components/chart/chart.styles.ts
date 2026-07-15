@@ -4,6 +4,8 @@ export const styles = css`
   :host {
     display: block;
     position: relative;
+    inline-size: 100%;
+    min-inline-size: 0;
     block-size: var(--lyra-chart-height, var(--lyra-size-280px));
     /* Chart.js renders to canvas, not the DOM, so it can't consume CSS
        var() directly — chart.ts's themeColors() resolves these once per

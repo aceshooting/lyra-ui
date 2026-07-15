@@ -1,3 +1,4 @@
+import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraChart, lockChartType, type Series } from './chart.class.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -29,6 +30,13 @@ export class LyraHistogram extends LyraChart {
   @property({ attribute: false }) values: number[] = [];
   /** Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized "Frequency" when unset. */
   @property() label = '';
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (['values', 'bins', 'label', 'locale', 'strings'].some((name) => changed.has(name))) {
+      this.refreshTheme();
+    }
+  }
 }
 
 // Both the `labels` and `datasets` accessors below derive from the same
@@ -99,4 +107,3 @@ declare global {
     'lyra-histogram': LyraHistogram;
   }
 }
-
