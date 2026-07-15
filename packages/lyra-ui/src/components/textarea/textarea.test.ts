@@ -32,6 +32,18 @@ it('updates value and fires lyra-input on user typing', async () => {
   expect(el.value).to.equal('hello');
 });
 
+it('also emits composed native-style input and change events', async () => {
+  const el = (await fixture(html`<lyra-textarea></lyra-textarea>`)) as LyraTextarea;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  const seen: string[] = [];
+  el.addEventListener('input', (event) => { expect(event.composed).to.be.true; seen.push(event.type); });
+  el.addEventListener('change', (event) => { expect(event.composed).to.be.true; seen.push(event.type); });
+  textarea.value = 'hello';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  textarea.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(seen).to.deep.equal(['input', 'change']);
+});
+
 it('fires lyra-change on native change (blur-after-edit timing)', async () => {
   const el = (await fixture(html`<lyra-textarea></lyra-textarea>`)) as LyraTextarea;
   const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;

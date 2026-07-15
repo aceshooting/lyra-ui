@@ -6,10 +6,17 @@ import { SET_ANCHORED_VALIDITY } from '../../internal/anchored-validity.js';
 import { eyeIcon, eyeOffIcon } from '../../internal/icons.js';
 import { styles } from './input.styles.js';
 
-export type LyraInputType = 'text' | 'password' | 'email' | 'number';
+export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time';
 export type LyraInputSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
+const spellcheckConverter = {
+  fromAttribute: (value: string | null): boolean => value !== 'false',
+  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
+};
+
 export interface LyraInputEventMap {
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
   'lyra-input': CustomEvent<{ value: string }>;
   'lyra-change': CustomEvent<{ value: string }>;
   blur: CustomEvent<undefined>;
@@ -34,8 +41,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
  *
  * @customElement lyra-input
- * @event lyra-input - Fired on every user-driven edit (not a programmatic `.value` assignment). `detail: { value }`.
- * @event lyra-change - Fired on the native `change` timing (control loses focus after a committed edit). `detail: { value }`.
+ * @event input - Native-style composed event fired on every user-driven edit.
+ * @event change - Native-style composed event fired at the native `change` timing.
+ * @event lyra-input - Compatibility alias for `input`; `detail: { value }`.
+ * @event lyra-change - Compatibility alias for `change`; `detail: { value }`.
  * @event blur - Re-dispatched from the internal native `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
  * @event focus - Re-dispatched from the internal native `<input>`'s own `focus`, for the same reason as `blur`.
@@ -64,6 +73,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  `label` and `placeholder` when set, matching `<lyra-textarea>`'s `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() autocomplete = '';
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property() autocapitalize = '';
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
   /** `type="number"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`
    *  and consulted by that same native input's constraint validation (see `updateValidity()`). */
   @property({ type: Number }) min?: number;
@@ -154,12 +168,14 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   private onInput = (): void => {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
+    this.emit('input');
     this.emit('lyra-input', { value: this.value });
   };
 
   private onChange = (): void => {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;
+    this.emit('change');
     this.emit('lyra-change', { value: this.value });
   };
 
@@ -212,6 +228,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${hasError || (this.touched && !this.internals.validity.valid) ? 'true' : 'false'}
             autocomplete=${this.autocomplete || nothing}
+            spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
             min=${this.min ?? nothing}
             max=${this.max ?? nothing}
             step=${this.step ?? nothing}

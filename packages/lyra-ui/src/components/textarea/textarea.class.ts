@@ -18,6 +18,8 @@ const spellcheckConverter = {
 };
 
 export interface LyraTextareaEventMap {
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
   'lyra-input': CustomEvent<{ value: string }>;
   'lyra-change': CustomEvent<{ value: string }>;
   blur: CustomEvent<undefined>;
@@ -38,8 +40,10 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
  *
  * @customElement lyra-textarea
- * @event lyra-input - Fired on every user-driven edit (not a programmatic `.value` assignment). `detail: { value }`.
- * @event lyra-change - Fired on the native `change` timing (control loses focus after a committed edit). `detail: { value }`.
+ * @event input - Native-style composed event fired on every user-driven edit.
+ * @event change - Native-style composed event fired at the native `change` timing.
+ * @event lyra-input - Compatibility alias for `input`; `detail: { value }`.
+ * @event lyra-change - Compatibility alias for `change`; `detail: { value }`.
  * @event blur - Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it.
@@ -254,12 +258,14 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
     if (this.resize === 'auto') this.fitToContent();
+    this.emit('input');
     this.emit('lyra-input', { value: this.value });
   };
 
   private onChange = (): void => {
     if (!this.textareaEl) return;
     this.value = this.textareaEl.value;
+    this.emit('change');
     this.emit('lyra-change', { value: this.value });
   };
 

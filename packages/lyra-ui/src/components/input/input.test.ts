@@ -32,6 +32,25 @@ describe('lyra-input', () => {
     expect(input.step).to.equal('2');
   });
 
+  it('forwards editing-assistance attributes and exposes native-style input/change events', async () => {
+    const el = (await fixture(html`
+      <lyra-input spellcheck="false" autocapitalize="off" autocorrect="off" inputmode="email" enterkeyhint="done"></lyra-input>
+    `)) as LyraInput;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(input.spellcheck).to.be.false;
+    expect(input.getAttribute('autocapitalize')).to.equal('off');
+    expect(input.getAttribute('autocorrect')).to.equal('off');
+    expect(input.getAttribute('inputmode')).to.equal('email');
+    expect(input.getAttribute('enterkeyhint')).to.equal('done');
+    const seen: string[] = [];
+    el.addEventListener('input', (event) => { seen.push(event.type); });
+    el.addEventListener('change', (event) => { seen.push(event.type); });
+    input.value = 'x';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(seen).to.deep.equal(['input', 'change']);
+  });
+
   it('updates value and fires lyra-input on user typing', async () => {
     const el = (await fixture(html`<lyra-input></lyra-input>`)) as LyraInput;
     const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
