@@ -32191,7 +32191,7 @@
               }
             },
             {
-              "description": "Summary content.",
+              "description": "Summary content. Takes priority over `summary` when any light-DOM child carries `slot=\"summary\"` — the fallback localized \"Details\" text only appears when neither is set.",
               "name": "summary",
               "inheritedFrom": {
                 "name": "LyraDetails",
@@ -32321,6 +32321,19 @@
             },
             {
               "kind": "field",
+              "name": "hasSummarySlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/details/details.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -32337,6 +32350,15 @@
             {
               "kind": "field",
               "name": "onClick",
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraDetails",
+                "module": "src/components/details/details.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onSummarySlotChange",
               "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraDetails",
@@ -32948,7 +32970,7 @@
               "name": ""
             },
             {
-              "description": "Summary content.",
+              "description": "Summary content. Takes priority over `summary` when any light-DOM child carries `slot=\"summary\"` — the fallback localized \"Details\" text only appears when neither is set.",
               "name": "summary"
             }
           ],
@@ -32993,6 +33015,15 @@
             },
             {
               "kind": "field",
+              "name": "hasSummarySlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -33009,6 +33040,11 @@
             {
               "kind": "field",
               "name": "onClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onSummarySlotChange",
               "privacy": "private"
             },
             {
