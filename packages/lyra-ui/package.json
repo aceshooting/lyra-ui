@@ -475,6 +475,9 @@
     },
     "shiki": {
       "optional": true
+    },
+    "xlsx": {
+      "optional": true
     }
   },
   "devDependencies": {
