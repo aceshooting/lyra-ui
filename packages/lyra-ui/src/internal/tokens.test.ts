@@ -119,16 +119,16 @@ it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast again
   expect(await probeVar('--lyra-color-border')).to.equal('#8a8a90');
 });
 
-it('provides a dark-aware fallback under prefers-color-scheme: dark when no --wa-* theme is present', () => {
+it('provides a dark-aware fallback under prefers-color-scheme: dark when no --lyra-theme-* value is set', () => {
   const cssText = tokens.cssText;
   expect(cssText).to.match(/@media\s*\(prefers-color-scheme:\s*dark\)/);
-  // The dark block must still chain through the same --wa-* token names (a real
-  // Web Awesome theme value must still win over this fallback), only the
+  // The dark block must still chain through the same --lyra-theme-* token names (a
+  // consumer's own theme value must still win over this fallback), only the
   // literal fallback hex changes.
   const darkBlockMatch = /@media\s*\(prefers-color-scheme:\s*dark\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
   expect(darkBlockMatch, 'expected a dark-mode block').to.not.equal(null);
-  expect(darkBlockMatch![1]).to.include('--wa-color-surface-default');
-  expect(darkBlockMatch![1]).to.include('--wa-color-text-normal');
+  expect(darkBlockMatch![1]).to.include('--lyra-theme-color-surface-default');
+  expect(darkBlockMatch![1]).to.include('--lyra-theme-color-text-normal');
 });
 
 it('provides light, dark, and forced-colors categorical chart palette values', () => {
@@ -152,11 +152,11 @@ it('keeps every standalone dark fallback semantic pair at WCAG AA contrast', () 
   expectPaletteContrast('dark');
 });
 
-it('chains filled-content and border tokens through the matching Web Awesome semantic roles', () => {
+it('chains filled-content and border tokens through the matching lyra theme-input roles', () => {
   const cssText = tokens.cssText;
   for (const tone of ['brand', 'success', 'warning', 'danger']) {
-    expect(cssText).to.include(`--lyra-color-on-${tone}: var(--wa-color-${tone}-on-loud`);
+    expect(cssText).to.include(`--lyra-color-on-${tone}: var(--lyra-theme-color-${tone}-on-loud`);
   }
-  expect(cssText).to.include('--lyra-color-border: var(--wa-color-surface-border');
-  expect(cssText).to.include('--lyra-focus-ring-color: var(--wa-color-focus');
+  expect(cssText).to.include('--lyra-color-border: var(--lyra-theme-color-surface-border');
+  expect(cssText).to.include('--lyra-focus-ring-color: var(--lyra-theme-color-focus');
 });
