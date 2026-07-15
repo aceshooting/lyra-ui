@@ -3,6 +3,7 @@ import './chat-message.js';
 import '../live-region/live-region.js';
 import type { LyraChatMessage } from './chat-message.js';
 import type { LyraLiveRegion } from '../live-region/live-region.js';
+import { styles } from './chat-message.styles.js';
 
 function liveRegionText(el: LyraChatMessage): string {
   const region = el.shadowRoot!.querySelector('lyra-live-region') as LyraLiveRegion;
@@ -63,6 +64,21 @@ it('uses the default hour:minute formatter, overridable via formatTimestamp', as
   el.formatTimestamp = (d) => `custom:${d.getUTCFullYear()}`;
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement).textContent).to.equal('custom:2024');
+});
+
+it('formats the default timestamp with the effective locale', async () => {
+  const date = new Date('2024-03-01T10:30:00Z');
+  const el = (await fixture(
+    html`<lyra-chat-message locale="ar-EG" .timestamp=${date}>hi</lyra-chat-message>`,
+  )) as LyraChatMessage;
+  const expected = new Intl.DateTimeFormat('ar-EG', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+
+  expect((el.shadowRoot!.querySelector('[part="timestamp"]') as HTMLElement).textContent).to.equal(
+    expected,
+  );
 });
 
 it('does not render the collapse button unless collapsible, and hides the body only while collapsed', async () => {
@@ -294,6 +310,27 @@ it('defaults to English status text when no strings override is set', async () =
   el.status = 'sending';
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Sending…');
+});
+
+it('uses themeable ambient motion for streaming and wraps crowded footer content', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    "animation: lyra-chat-message-pulse var(--lyra-transition-ambient) infinite;",
+  );
+  expect(css).to.match(/\[part='footer'\]\s*\{[^}]*flex-wrap:\s*wrap;/);
+});
+
+it('allows the ambient motion token to retime the streaming indicator', async () => {
+  const el = (await fixture(html`
+    <lyra-chat-message
+      status="streaming"
+      style="--lyra-transition-ambient: 3s linear"
+    >hi</lyra-chat-message>
+  `)) as LyraChatMessage;
+  const indicator = el.shadowRoot!.querySelector('[part="status-indicator"]')!;
+
+  expect(getComputedStyle(indicator).animationDuration).to.equal('3s');
+  expect(getComputedStyle(indicator).animationTimingFunction).to.equal('linear');
 });
 
 it('localizes the live-region status-change announcements via this.localize()', async () => {

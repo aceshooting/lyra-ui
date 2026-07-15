@@ -36,11 +36,10 @@ function retryIcon(): SVGTemplateResult {
   `;
 }
 
-/** `hour:minute` in the runtime's default locale -- the sensible baseline
- *  this library (with no i18n system of its own) can offer without
- *  hardcoding English strings; `formatTimestamp` overrides it. */
-function defaultFormatTimestamp(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+/** `hour:minute` in the component's effective locale; `formatTimestamp`
+ *  overrides it when an application needs a different date/time contract. */
+function defaultFormatTimestamp(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale || undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
@@ -117,6 +116,9 @@ export interface LyraChatMessageEventMap {
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element.
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
  * @csspart actions - The wrapper around the `actions` slot.
+ * @cssprop [--lyra-chat-message-max-width=80%] - Maximum inline size of the message bubble.
+ * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
+ *   and timing function.
  */
 export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -283,7 +285,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   render(): TemplateResult {
     const ts = this.normalizedTimestamp;
-    const formatter = this.formatTimestamp ?? defaultFormatTimestamp;
+    const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
     const statusText = this.statusText;
     const showHeader = this.hasAvatarSlot || this.hasBadgesSlot || this.collapsible;
     // `statusText` is already truthy whenever `status === 'failed'`, so it

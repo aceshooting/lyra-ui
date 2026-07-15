@@ -128,3 +128,31 @@ export const CustomTimestampFormat: Story = {
     </lyra-chat-message>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lyra-chat-message
+        data-role="assistant"
+        status="failed"
+        .timestamp=${new Date()}
+        .strings=${{ chatFailedToSend: 'Die Nachricht konnte nicht gesendet werden' }}
+      >
+        This deliberately long translated-content example demonstrates wrapping in a narrow panel
+        without assuming a desktop viewport.
+        <button slot="actions">Try sending this message again</button>
+      </lyra-chat-message>
+    </div>
+  `,
+};
+
+export const RetimedStreamingMotion: Story = {
+  render: () => html`
+    <lyra-chat-message
+      status="streaming"
+      style="--lyra-transition-ambient: 3s linear"
+    >
+      The streaming indicator uses the shared ambient motion token.
+    </lyra-chat-message>
+  `,
+};

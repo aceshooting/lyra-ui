@@ -130,6 +130,7 @@ export const styles = css`
 
   [part='footer'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--lyra-space-xs);
     font-size: var(--lyra-font-size-xs);
@@ -163,7 +164,7 @@ export const styles = css`
   }
   :host([status='streaming']) [part='status-indicator'] {
     background: var(--lyra-color-brand);
-    animation: lyra-chat-message-pulse 1.5s ease-in-out infinite;
+    animation: lyra-chat-message-pulse var(--lyra-transition-ambient) infinite;
   }
   :host([status='failed']) [part='status-indicator'] {
     background: var(--lyra-color-danger);
