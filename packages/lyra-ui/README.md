@@ -5,7 +5,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 142 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 144 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -367,6 +367,8 @@ each one-liner below.
 | `<lyra-spreadsheet-viewer>` | — (extra) | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows |
 | `<lyra-csv-viewer>` | — (extra) | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows |
 | `<lyra-docx-viewer>` | — (extra) | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML |
+| `<lyra-email-viewer>` | — (extra) | Optional-PostalMime `.eml` viewer with sanitized HTML and plain-text fallback |
+| `<lyra-calendar-viewer>` | — (extra) | Optional-ical.js `.ics` viewer for event summaries and times |
 | `<lyra-media-card>` | — (extra) | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message |
 | `<lyra-avatar>` | — (extra) | Small, fixed-size identity marker — image, or an initials fallback with `lyra-chip`-style tone recoloring |
 | `<lyra-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lyra-*>` counterpart to `wa-card` |

@@ -46,7 +46,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-142 custom elements across five component families. Every tag has a live, interactive example on the
+144 custom elements across five component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).

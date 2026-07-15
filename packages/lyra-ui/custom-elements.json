@@ -5225,6 +5225,538 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/calendar-viewer/calendar-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "clearIcalCache",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadIcal",
+          "return": {
+            "type": {
+              "text": "Promise<OptionalPeerApi | null>"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadIcalDeps",
+          "return": {
+            "type": {
+              "text": "Promise<OptionalPeerApi | null>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importIcal",
+              "default": "() => import('ical.js') as Promise<OptionalPeerApi>",
+              "type": {
+                "text": "() => Promise<OptionalPeerApi>"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "clearIcalCache",
+          "declaration": {
+            "name": "clearIcalCache",
+            "module": "src/components/calendar-viewer/calendar-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadIcal",
+          "declaration": {
+            "name": "loadIcal",
+            "module": "src/components/calendar-viewer/calendar-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadIcalDeps",
+          "declaration": {
+            "name": "loadIcalDeps",
+            "module": "src/components/calendar-viewer/calendar-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/calendar-viewer/calendar-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Parses `.ics` calendars with the optional `ical.js` peer and renders each\nVEVENT as plain text, preserving summaries, times, locations, and details.",
+          "name": "LyraCalendarViewer",
+          "cssParts": [
+            {
+              "description": "The root container.",
+              "name": "base"
+            },
+            {
+              "description": "The scrollable calendar body.",
+              "name": "body"
+            },
+            {
+              "description": "The error region.",
+              "name": "error"
+            },
+            {
+              "description": "One calendar event.",
+              "name": "event"
+            },
+            {
+              "description": "The event description.",
+              "name": "event-description"
+            },
+            {
+              "description": "The event list.",
+              "name": "event-list"
+            },
+            {
+              "description": "The event location.",
+              "name": "event-location"
+            },
+            {
+              "description": "The event title.",
+              "name": "event-summary"
+            },
+            {
+              "description": "The formatted event time.",
+              "name": "event-time"
+            },
+            {
+              "description": "The loading region.",
+              "name": "spinner"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "fetchState",
+              "type": {
+                "text": "CalendarFetchState"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'idle' }"
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "maxHeight",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "CSS length that caps the scrollable event body.",
+              "attribute": "max-height"
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name associated with the calendar.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and parse as an iCalendar document.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "parse",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<ParsedCalendarEvent[]>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "source",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderEvent",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "text": "ParsedCalendarEvent"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when fetching or parsing the calendar fails.",
+              "name": "lyra-render-error"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "max-height",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "CSS length that caps the scrollable event body.",
+              "fieldName": "maxHeight"
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name associated with the calendar.",
+              "fieldName": "name"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and parse as an iCalendar document.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-calendar-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraCalendarViewer",
+          "declaration": {
+            "name": "LyraCalendarViewer",
+            "module": "src/components/calendar-viewer/calendar-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/calendar-viewer/calendar-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-calendar-viewer",
+          "declaration": {
+            "name": "LyraCalendarViewer",
+            "module": "src/components/calendar-viewer/calendar-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/calendar-viewer/calendar-loader.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/calendar-viewer/calendar-viewer.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/callout/callout.class.ts",
       "declarations": [
         {
@@ -39272,6 +39804,616 @@
           "declaration": {
             "name": "LyraDrawerPlacement",
             "module": "./drawer.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/email-viewer/email-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "clearEmailDepsCache",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "getEmailDepsIfLoaded",
+          "return": {
+            "type": {
+              "text": "EmailDeps | undefined"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadEmailAndSanitizer",
+          "return": {
+            "type": {
+              "text": "Promise<EmailDeps>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importPostalMime",
+              "default": "() => import('postal-mime') as Promise<OptionalPeerApi>",
+              "type": {
+                "text": "() => Promise<OptionalPeerApi>"
+              }
+            },
+            {
+              "name": "importDompurify",
+              "default": "() => import('dompurify') as Promise<OptionalPeerApi>",
+              "type": {
+                "text": "() => Promise<OptionalPeerApi>"
+              }
+            }
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "loadEmailDeps",
+          "return": {
+            "type": {
+              "text": "Promise<EmailDeps>"
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "clearEmailDepsCache",
+          "declaration": {
+            "name": "clearEmailDepsCache",
+            "module": "src/components/email-viewer/email-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "getEmailDepsIfLoaded",
+          "declaration": {
+            "name": "getEmailDepsIfLoaded",
+            "module": "src/components/email-viewer/email-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadEmailAndSanitizer",
+          "declaration": {
+            "name": "loadEmailAndSanitizer",
+            "module": "src/components/email-viewer/email-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadEmailDeps",
+          "declaration": {
+            "name": "loadEmailDeps",
+            "module": "src/components/email-viewer/email-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/email-viewer/email-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Parses `.eml` messages with the optional `postal-mime` peer and renders\ntheir HTML body only after DOMPurify sanitization. Plain-text messages remain\nuseful without DOMPurify; attachments are listed as metadata, never opened.",
+          "name": "LyraEmailViewer",
+          "cssParts": [
+            {
+              "description": "An attachment metadata item.",
+              "name": "attachment-item"
+            },
+            {
+              "description": "The attachment list.",
+              "name": "attachment-list"
+            },
+            {
+              "description": "The attachment region.",
+              "name": "attachments"
+            },
+            {
+              "description": "The localized attachment heading.",
+              "name": "attachments-label"
+            },
+            {
+              "description": "The root container.",
+              "name": "base"
+            },
+            {
+              "description": "The scrollable message body.",
+              "name": "body"
+            },
+            {
+              "description": "The sanitized HTML body.",
+              "name": "body-html"
+            },
+            {
+              "description": "The plain-text body.",
+              "name": "body-text"
+            },
+            {
+              "description": "The message date.",
+              "name": "date"
+            },
+            {
+              "description": "The localized date label.",
+              "name": "date-label"
+            },
+            {
+              "description": "The error region.",
+              "name": "error"
+            },
+            {
+              "description": "The sender address.",
+              "name": "from"
+            },
+            {
+              "description": "The localized sender label.",
+              "name": "from-label"
+            },
+            {
+              "description": "Message metadata.",
+              "name": "headers"
+            },
+            {
+              "description": "The loading region.",
+              "name": "spinner"
+            },
+            {
+              "description": "The message subject.",
+              "name": "subject"
+            },
+            {
+              "description": "The localized subject label.",
+              "name": "subject-label"
+            },
+            {
+              "description": "The recipient addresses.",
+              "name": "to"
+            },
+            {
+              "description": "The localized recipient label.",
+              "name": "to-label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "fetchState",
+              "type": {
+                "text": "EmailFetchState"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'idle' }"
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "maxHeight",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "CSS length that caps the scrollable body.",
+              "attribute": "max-height"
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name associated with the message.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and parse as an RFC 822 message.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "parse",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<ParsedEmail>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "buffer",
+                  "type": {
+                    "text": "ArrayBuffer"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderAttachments",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult | typeof nothing"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "attachments",
+                  "type": {
+                    "text": "ParsedEmailAttachment[]"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderHeaders",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "email",
+                  "type": {
+                    "text": "ParsedEmail"
+                  }
+                }
+              ]
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when fetching or parsing the message fails.",
+              "name": "lyra-render-error"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "max-height",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "CSS length that caps the scrollable body.",
+              "fieldName": "maxHeight"
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name associated with the message.",
+              "fieldName": "name"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and parse as an RFC 822 message.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-email-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraEmailViewer",
+          "declaration": {
+            "name": "LyraEmailViewer",
+            "module": "src/components/email-viewer/email-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/email-viewer/email-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-email-viewer",
+          "declaration": {
+            "name": "LyraEmailViewer",
+            "module": "src/components/email-viewer/email-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/email-viewer/email-loader.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/email-viewer/email-viewer.class.js"
           }
         }
       ]

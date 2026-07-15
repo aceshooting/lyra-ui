@@ -34,7 +34,7 @@ composition without registration; for example, `components/empty/empty.class.js`
   `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block`, `lyra-tool-approval-dialog`,
   `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`, `lyra-chip`/`lyra-chip-group`,
   `lyra-model-settings-panel`, `lyra-context-meter`, `lyra-dock-panel`, `lyra-document-preview`,
-  `lyra-document-viewer`, `lyra-docx-viewer`,
+  `lyra-document-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`,
   `lyra-media-card`, `lyra-attachment-trigger`, `lyra-kbd`, `lyra-result-card`/`lyra-result-field`,
   `lyra-avatar`, `lyra-card`, `lyra-stepper`, `lyra-segmented`, `lyra-diff-view`, `lyra-poll-status`,
   `lyra-code-block-core` (needs the optional peer `shiki`)
@@ -7857,6 +7857,40 @@ renderer with `<lyra-document-viewer>` and matches `.docx` filenames when the MI
 ```html
 <lyra-docx-viewer src="/files/report.docx" name="report.docx" max-height="32rem"></lyra-docx-viewer>
 ```
+
+## `lyra-email-viewer`
+
+Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
+sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
+remain available without DOMPurify. Attachments are listed as filename/type/size metadata and their
+content is never rendered by this component.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+
+**CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
+`date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
+`attachment-list`, `attachment-item`, `spinner`, and `error`.
+
+**Optional peer dependencies:** install `postal-mime` and `dompurify` with
+`pnpm add postal-mime dompurify`. The component registers `message/rfc822` and falls back to
+matching `.eml` filenames in `<lyra-document-viewer>`.
+
+## `lyra-calendar-viewer`
+
+Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
+plain text, including its title, start/end time, location, and description. No HTML is injected.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+
+**CSS parts:** `base`, `body`, `event-list`, `event`, `event-summary`, `event-time`, `event-location`,
+`event-description`, `spinner`, and `error`.
+
+**Optional peer dependency:** install `ical.js` with `pnpm add ical.js`. The component registers
+`text/calendar` and falls back to matching `.ics` filenames in `<lyra-document-viewer>`.
 
 ## `lyra-svg-viewer`
 

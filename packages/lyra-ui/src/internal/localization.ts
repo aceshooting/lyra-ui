@@ -224,6 +224,8 @@ export type LyraMessageKey =
   | 'documentPreviewGenericFile'
   | 'documentPreviewTypeDocument'
   | 'documentPreviewTypeImage'
+  | 'documentPreviewTypeEmail'
+  | 'documentPreviewTypeCalendar'
   | 'documentPreviewTypeDataset'
   | 'documentPreviewTypeContact'
   | 'download'
@@ -363,6 +365,17 @@ export type LyraMessageKey =
   | 'kbdOptionWord'
   | 'kbdAltWord'
   | 'kbdShiftWord'
+  | 'emailViewerMissingParser'
+  | 'emailViewerEmpty'
+  | 'emailViewerFrom'
+  | 'emailViewerTo'
+  | 'emailViewerSubject'
+  | 'emailViewerDate'
+  | 'emailViewerAttachments'
+  | 'emailViewerNoSubject'
+  | 'calendarViewerMissingParser'
+  | 'calendarViewerEmpty'
+  | 'calendarViewerNoSummary'
   | 'pdfViewerLabel'
   | 'pdfViewerMissingLibrary'
   | 'pdfViewerPageOf'
@@ -597,6 +610,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewGenericFile: 'this file',
   documentPreviewTypeDocument: 'document',
   documentPreviewTypeImage: 'image',
+  documentPreviewTypeEmail: 'email',
+  documentPreviewTypeCalendar: 'calendar',
   spreadsheetViewerUnavailable: 'Spreadsheet preview is unavailable.',
   csvViewerUnavailable: 'CSV preview is unavailable.',
   documentPreviewTypeDataset: 'dataset',
@@ -737,6 +752,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdOptionWord: 'Option',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  emailViewerMissingParser: 'This viewer needs the optional "postal-mime" package installed to parse this message.',
+  emailViewerEmpty: 'No message to display.',
+  emailViewerFrom: 'From',
+  emailViewerTo: 'To',
+  emailViewerSubject: 'Subject',
+  emailViewerDate: 'Date',
+  emailViewerAttachments: 'Attachments',
+  emailViewerNoSubject: '(no subject)',
+  calendarViewerMissingParser: 'This viewer needs the optional "ical.js" package installed to parse this calendar.',
+  calendarViewerEmpty: 'This calendar has no events.',
+  calendarViewerNoSummary: '(no title)',
   pdfViewerLabel: 'PDF document',
   pdfViewerMissingLibrary: 'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.',
   pdfViewerPageOf: 'Page {page} of {total}',
