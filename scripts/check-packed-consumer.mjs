@@ -29,13 +29,10 @@ const optionalPeers = [
 const bundleEntries = {
   core: {
     fixture: 'core',
-    // Bumped from 750_000: a full-library i18n/RTL re-audit pass fixed real bugs across ~30
-    // components -- dozens of new this.localize() call sites (including replacing string
-    // concatenation with proper {placeholder} interpolation), RTL-aware keyboard nav and
-    // directional-glyph mirroring via the shared isRtl()/rtlAwarePlacement() helpers, and 19 new
-    // registry keys (net of 21 removed dead ones) -- growing the core bundle by real, intentional
-    // correctness code rather than bloat.
-    maxRawBytes: 1_000_000,
+    // Bumped from 1_000_000: the document-viewer phase 4/5 additions registered
+    // <lyra-archive-viewer>, <lyra-ebook-viewer>, <lyra-pptx-viewer>, and <lyra-file-icon> in the
+    // root barrel alongside the existing document viewers, growing the core bundle to ~1010.5 KiB.
+    maxRawBytes: 1_100_000,
   },
   flag: {
     fixture: 'optional',
