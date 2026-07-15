@@ -687,44 +687,53 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                 const selected = this.selectedKey !== null && this.selectedKey === key;
                 const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
                 const rowExpanded = canExpandRow && this.expandedKeys.has(key);
-                return html`<tr
-                  part="row"
-                  role="row"
-                  data-row-key=${encodeKey(key)}
-                  aria-selected=${selected ? 'true' : 'false'}
-                  aria-expanded=${canExpandRow ? String(rowExpanded) : nothing}
-                  tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
-                >
-                  ${hasExpand
-                    ? html`<td part="expand-toggle-cell">
-                        ${canExpandRow
-                          ? html`<button
-                              type="button"
-                              part="row-expand-toggle"
-                              aria-expanded=${String(rowExpanded)}
-                              aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
-                              @click=${() => this.activateExpandToggle(key)}
-                            >
-                              <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
-                            </button>`
-                          : nothing}
-                      </td>`
-                    : nothing}
-                  ${this.columns.map(
-                    (col) =>
-                      html`<td
-                        part="cell"
-                        role="gridcell"
-                        data-col-key=${col.key}
-                        data-align=${col.align ?? 'start'}
-                        data-priority=${col.priority ?? nothing}
-                        data-sticky=${stickyDirection(col.sticky) ?? nothing}
-                        style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
-                      >
-                        ${col.cell(row)}
-                      </td>`,
-                  )}
-                </tr>`;
+                return [
+                  html`<tr
+                    part="row"
+                    role="row"
+                    data-row-key=${encodeKey(key)}
+                    aria-selected=${selected ? 'true' : 'false'}
+                    aria-expanded=${canExpandRow ? String(rowExpanded) : nothing}
+                    tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
+                  >
+                    ${hasExpand
+                      ? html`<td part="expand-toggle-cell">
+                          ${canExpandRow
+                            ? html`<button
+                                type="button"
+                                part="row-expand-toggle"
+                                aria-expanded=${String(rowExpanded)}
+                                aria-label=${this.localize(rowExpanded ? 'collapse' : 'expand')}
+                                @click=${() => this.activateExpandToggle(key)}
+                              >
+                                <span part="row-expand-icon" aria-hidden="true">${chevronIcon()}</span>
+                              </button>`
+                            : nothing}
+                        </td>`
+                      : nothing}
+                    ${this.columns.map(
+                      (col) =>
+                        html`<td
+                          part="cell"
+                          role="gridcell"
+                          data-col-key=${col.key}
+                          data-align=${col.align ?? 'start'}
+                          data-priority=${col.priority ?? nothing}
+                          data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                          style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
+                        >
+                          ${col.cell(row)}
+                        </td>`,
+                    )}
+                  </tr>`,
+                  rowExpanded
+                    ? html`<tr part="expanded-row" role="row">
+                        <td part="expanded-cell" role="gridcell" colspan=${this.columns.length + 1}>
+                          ${this.expandedContent?.(row)}
+                        </td>
+                      </tr>`
+                    : nothing,
+                ];
               },
             )}
           </tbody>

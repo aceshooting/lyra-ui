@@ -1128,4 +1128,50 @@ describe('expandable rows', () => {
     expect(ev.detail.row).to.deep.equal(rows[0]);
     expect(toggleFired).to.be.false;
   });
+
+  it('renders the expanded panel row with the correct colspan when a row key is in expandedKeys', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p class="panel">${r.name} details</p>`;
+    el.expandedKeys = new Set(['a']);
+    await el.updateComplete;
+
+    const expandedRow = el.shadowRoot!.querySelector('[part="expanded-row"]');
+    expect(expandedRow).to.exist;
+    const expandedCell = expandedRow!.querySelector('[part="expanded-cell"]') as HTMLElement;
+    expect(expandedCell.getAttribute('colspan')).to.equal('3'); // 2 columns + 1 toggle column
+    expect(expandedCell.querySelector('.panel')!.textContent).to.equal('Alpha details');
+
+    // Only one row is in expandedKeys — only one expanded-row renders.
+    expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1);
+  });
+
+  it('removes the expanded panel row when its key is removed from expandedKeys', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    el.expandedKeys = new Set(['a']);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="expanded-row"]')).to.exist;
+
+    el.expandedKeys = new Set();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="expanded-row"]')).to.not.exist;
+  });
+
+  it('does not render an expanded panel row for a row that fails canExpand, even if its key is in expandedKeys', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    el.canExpand = (r) => r.id !== 'a';
+    el.expandedKeys = new Set(['a', 'b']);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1); // only 'b'
+  });
 });

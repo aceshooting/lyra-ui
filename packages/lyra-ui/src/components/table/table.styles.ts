@@ -145,6 +145,11 @@ export const styles = css`
       transition: none !important;
     }
   }
+  [part='expanded-row'] [part='expanded-cell'] {
+    padding: var(--lyra-space-s);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    background: var(--lyra-color-surface);
+  }
   /* columns[].sticky pins a column's header/cells to the inline-start edge
      while the table scrolls horizontally — mirrors [part='header-cell']'s
      existing inset-block-start vertical-scroll sticky pattern above, just on
