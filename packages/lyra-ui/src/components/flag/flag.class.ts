@@ -46,9 +46,8 @@ const displayNamesCache = new Map<string, Intl.DisplayNames>();
  * itself if `Intl.DisplayNames` throws (unrecognized region) or isn't
  * available in the current runtime.
  */
-function displayNameFor(code: string): string {
+function displayNameFor(code: string, locale: string): string {
   try {
-    const locale = navigator.language;
     let dn = displayNamesCache.get(locale);
     if (!dn) {
       dn = new Intl.DisplayNames([locale], { type: 'region' });
@@ -130,6 +129,9 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * @example <lyra-flag country="es" variant="compact"></lyra-flag>
  * @example <lyra-flag country="es" variant="detailed"></lyra-flag>
  * @csspart image - The underlying <img>.
+ * @cssprop [--lyra-flag-aspect-ratio=4 / 3] - Rectangular flag aspect ratio.
+ * @cssprop [--lyra-flag-object-fit=cover] - How the image fits its flag frame.
+ * @cssprop --lyra-flag-radius - Rectangular flag corner radius.
  */
 export class LyraFlag extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -150,8 +152,12 @@ export class LyraFlag extends LyraElement {
    */
   @property() src?: string;
 
+  /** Host `aria-label` forwarded to the internal image. Takes precedence over `label` and the
+   *  derived region name; an explicit empty string marks the image decorative. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   /**
-   * Accessible label / `alt` text. Defaults to a localized, human-readable
+   * Accessible label / `alt` text used when `aria-label` is unset. Defaults to a localized, human-readable
    * region name derived from the *resolved country code* via
    * `Intl.DisplayNames` (e.g. `"United Kingdom"`) — for a `language`-only
    * element (e.g. `language="en"`) that's the mapped country's display name,
@@ -268,7 +274,7 @@ export class LyraFlag extends LyraElement {
     const url = this.src ?? this.resolvedSrc;
     if (!url) return html``;
     const code = this.code;
-    const alt = this.label ?? (code ? displayNameFor(code) : '');
+    const alt = this.accessibleLabel ?? this.label ?? (code ? displayNameFor(code, this.effectiveLocale) : '');
     return html`<img part="image" src=${url} alt=${alt} loading="lazy" decoding="async" />`;
   }
 }
@@ -279,4 +285,3 @@ declare global {
     'lyra-flag': LyraFlag;
   }
 }
-

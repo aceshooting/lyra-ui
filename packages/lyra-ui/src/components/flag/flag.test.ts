@@ -174,6 +174,41 @@ it('honors a custom label for accessibility', async () => {
   expect((await img(el)).getAttribute('alt')).to.equal('Français');
 });
 
+it('derives region names with the inherited effective locale', async () => {
+  const wrapper = await fixture(html`
+    <div lang="fr"><lyra-flag src="/de.svg" country="de"></lyra-flag></div>
+  `);
+  const el = wrapper.querySelector('lyra-flag') as LyraFlag;
+  const expected = new Intl.DisplayNames(['fr'], { type: 'region' }).of('DE');
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal(expected);
+
+  el.locale = 'de';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal(
+    new Intl.DisplayNames(['de'], { type: 'region' }).of('DE'),
+  );
+});
+
+it('prefers a host aria-label over label and the derived region name', async () => {
+  const el = (await fixture(html`
+    <lyra-flag src="/fr.svg" country="fr" label="France" aria-label="French flag"></lyra-flag>
+  `)) as LyraFlag;
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('French flag');
+});
+
+it('exposes themeable aspect-ratio and object-fit custom properties', async () => {
+  const el = (await fixture(html`
+    <lyra-flag
+      src="/fr.svg"
+      label="France"
+      style="--lyra-flag-aspect-ratio: 2 / 1; --lyra-flag-object-fit: contain"
+    ></lyra-flag>
+  `)) as LyraFlag;
+  const image = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+  expect(getComputedStyle(el).aspectRatio).to.equal('2 / 1');
+  expect(getComputedStyle(image).objectFit).to.equal('contain');
+});
+
 it('renders nothing for unknown input', async () => {
   const el = (await fixture(html`<lyra-flag></lyra-flag>`)) as LyraFlag;
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;

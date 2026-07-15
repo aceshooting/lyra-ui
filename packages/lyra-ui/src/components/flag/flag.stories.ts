@@ -21,6 +21,19 @@ export const Gallery: Story = {
   `,
 };
 
+export const ThemeableFraming: Story = {
+  render: () => html`
+    <div style="display:flex; gap:1rem; align-items:center;">
+      <lyra-flag
+        country="fr"
+        aria-label="French flag in a wide frame"
+        style="height: 3rem; --lyra-flag-aspect-ratio: 2 / 1; --lyra-flag-object-fit: contain;"
+      ></lyra-flag>
+      <lyra-flag country="jp" aria-label="Japanese flag in a circular frame" round style="height: 3rem;"></lyra-flag>
+    </div>
+  `,
+};
+
 export const FidelityTiers: Story = {
   name: 'Fidelity tiers (compact / standard / detailed)',
   render: () => html`

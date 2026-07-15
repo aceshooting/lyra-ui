@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: var(--lyra-flag-aspect-ratio, 4 / 3);
     block-size: var(--lyra-size-1em);
     line-height: 0;
     vertical-align: middle;
@@ -14,7 +14,7 @@ export const styles = css`
     inline-size: 100%;
     border-radius: var(--lyra-flag-radius, calc(var(--lyra-radius) * 0.33));
     box-shadow: 0 0 0 var(--lyra-size-1px) var(--lyra-color-border) inset;
-    object-fit: cover;
+    object-fit: var(--lyra-flag-object-fit, cover);
   }
   :host([round]) {
     block-size: var(--lyra-size-1em);
