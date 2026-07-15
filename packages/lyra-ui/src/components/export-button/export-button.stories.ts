@@ -100,3 +100,22 @@ export const Loading: Story = {
     ></lyra-export-button>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  render: () => html`
+    <div style="inline-size: 20rem; max-inline-size: 100%;">
+      <lyra-export-button
+        open
+        aria-label="Download the complete quarterly performance report"
+        .formats=${[
+          {
+            id: 'spreadsheet',
+            label: 'Spreadsheet with all regional performance metrics',
+            description: 'Includes every measured category and the complete reporting history',
+          },
+          { id: 'json', label: 'Machine-readable JSON data' },
+        ]}
+      ></lyra-export-button>
+    </div>
+  `,
+};

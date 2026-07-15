@@ -59,14 +59,17 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Controlled busy state for async/server-generated exports. */
   @property({ type: Boolean, reflect: true }) loading = false;
-  /** Trigger button text, also feeds the format menu's `aria-label` (as
-   *  "`${label} format`") so assistive tech gets an accessible name for it.
+  /** Visible trigger button text. It also feeds the format menu's `aria-label`
+   *  when no host `aria-label` supplies a more specific accessible name.
    *  Left at its default English `'Export'`, the rendered text instead
    *  comes from `this.localize('exportButtonLabel', ...)` -- override-able
    *  via `.strings`/`registerLyraLocale()` -- same convention as
    *  `lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this
    *  attribute explicitly for a one-off override that always wins. */
   @property() label = 'Export';
+  /** Accessible name forwarded from the host to the native trigger button.
+   * When unset, the trigger's visible `label` provides its name. */
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @property({ type: Boolean, reflect: true }) open = false;
 
   @query('[part="trigger"]') private triggerEl?: HTMLButtonElement;
@@ -265,6 +268,16 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     else this.open ? this.closeMenu() : this.openMenu();
   }
 
+  /** Focuses the native trigger button. */
+  override focus(options?: FocusOptions): void {
+    this.triggerEl?.focus(options);
+  }
+
+  /** Removes focus from the native trigger button. */
+  override blur(): void {
+    this.triggerEl?.blur();
+  }
+
   /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the
    *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
    *  override applies without requiring `label` itself to be set. */
@@ -274,11 +287,13 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   render(): TemplateResult {
     const label = this.effectiveLabel;
+    const accessibleLabel = this.accessibleLabel || label;
     return html`
       <button
         part="trigger"
         type="button"
         ?disabled=${this.disabled || this.loading}
+        aria-label=${this.accessibleLabel || nothing}
         aria-busy=${this.loading ? 'true' : nothing}
         aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
         aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}
@@ -292,7 +307,9 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
             id=${this.menuId}
             part="menu"
             role="menu"
-            aria-label=${this.localize('exportFormatMenuLabel', undefined, { label })}
+            aria-label=${this.localize('exportFormatMenuLabel', undefined, {
+              label: accessibleLabel,
+            })}
           >
             ${this.formats.map(
               (f) =>

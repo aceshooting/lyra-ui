@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './export-button.js';
 import type { LyraExportButton } from './export-button.js';
+import { styles } from './export-button.styles.js';
 
 const rows = [{ id: 'a', name: 'Alpha' }];
 const columns = [
@@ -487,6 +488,39 @@ it('is accessible with a multi-format menu open, including its accessible name',
   const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
   expect(menu.getAttribute('aria-label')).to.equal('Export format');
   await expect(el).to.be.accessible();
+});
+
+it('forwards a host aria-label to the trigger and derives the menu name from it', async () => {
+  const el = (await fixture(html`
+    <lyra-export-button
+      aria-label="Download metrics"
+      .formats=${['csv', 'json']}
+    ></lyra-export-button>
+  `)) as LyraExportButton;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  expect(trigger.getAttribute('aria-label')).to.equal('Download metrics');
+  expect(trigger.textContent!.trim()).to.equal('Export');
+  expect(menu.getAttribute('aria-label')).to.equal('Download metrics format');
+});
+
+it('focus() delegates to the native trigger button', async () => {
+  const el = (await fixture(html`<lyra-export-button></lyra-export-button>`)) as LyraExportButton;
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+});
+
+it('bounds and wraps a long format menu within the positioner available inline size', () => {
+  const css = styles.cssText
+    .replace(/\s+/g, ' ')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')');
+  expect(css).to.include(
+    'max-inline-size: min(92vw, var(--lyra-size-20rem), var(--lyra-positioner-available-inline-size, 100vw));',
+  );
+  expect(css).to.include('overflow-wrap: anywhere;');
+  expect(css).to.include("[part='menu-item'] { display: flex; flex-direction: column;");
+  expect(css).to.include('box-sizing: border-box;');
 });
 
 describe('label localization', () => {
