@@ -1899,6 +1899,10 @@
               "name": "name"
             },
             {
+              "description": "The preview affordance, rendered when a file or `preview-src` is available.",
+              "name": "preview-button"
+            },
+            {
               "description": "The numeric upload progress bar (`role=\"progressbar\"`), shown only while `status=\"uploading\"` and `progress` is a meaningful (>0) number.",
               "name": "progress"
             },
@@ -2000,6 +2004,15 @@
             },
             {
               "kind": "field",
+              "name": "effectivePreviewSrc",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "effectiveSize",
               "type": {
                 "text": "number"
@@ -2083,6 +2096,11 @@
             },
             {
               "kind": "field",
+              "name": "onPreviewClick",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onRemoveClick",
               "privacy": "private"
             },
@@ -2090,6 +2108,41 @@
               "kind": "field",
               "name": "onRetryClick",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onViewerClose",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "previewOpen",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "previewSrc",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL used to preview or download the attachment when `file` is unset.\nA real `File` takes precedence and is previewed through a temporary blob URL.",
+              "attribute": "preview-src"
+            },
+            {
+              "kind": "field",
+              "name": "previewable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Shows the preview action when a `file` or `preview-src` is available.",
+              "attribute": "previewable",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -2422,6 +2475,10 @@
           ],
           "events": [
             {
+              "description": "The user activated the preview button. `detail: { id, name, mimeType, src }`.",
+              "name": "lyra-preview"
+            },
+            {
               "description": "The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.",
               "name": "lyra-remove"
             },
@@ -2470,6 +2527,24 @@
               "default": "''",
               "description": "Filename, used only while `file` is unset.",
               "fieldName": "name"
+            },
+            {
+              "name": "preview-src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL used to preview or download the attachment when `file` is unset.\nA real `File` takes precedence and is previewed through a temporary blob URL.",
+              "fieldName": "previewSrc"
+            },
+            {
+              "name": "previewable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Shows the preview action when a `file` or `preview-src` is available.",
+              "fieldName": "previewable"
             },
             {
               "name": "progress",
@@ -38542,6 +38617,10 @@
             {
               "description": "Wrapper around the active renderer or fallback preview.",
               "name": "body"
+            },
+            {
+              "description": "The native download action shown when `src` is safe.",
+              "name": "download-link"
             }
           ],
           "members": [
@@ -38620,6 +38699,11 @@
             {
               "kind": "field",
               "name": "onDialogClose",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onDownload",
               "privacy": "private"
             },
             {
@@ -38894,6 +38978,10 @@
             {
               "description": "Fired when the nested dialog dismisses the viewer. The detail is the dialog close reason.",
               "name": "lyra-close"
+            },
+            {
+              "description": "Fired when the viewer's safe download action is activated. The browser download itself is handled by the native link.",
+              "name": "lyra-download"
             }
           ],
           "attributes": [

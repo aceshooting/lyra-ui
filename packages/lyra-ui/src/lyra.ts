@@ -293,6 +293,7 @@ export { LyraAttachmentChip, formatFileSize } from './components/attachment-chip
 export type {
   AttachmentChipStatus,
   AttachmentChipIdDetail,
+  AttachmentChipPreviewDetail,
 } from './components/attachment-chip/attachment-chip.js';
 export { LyraStreamStatus } from './components/stream-status/stream-status.js';
 export type { StreamStatusPhase } from './components/stream-status/stream-status.js';

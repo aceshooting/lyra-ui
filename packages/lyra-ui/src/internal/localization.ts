@@ -166,6 +166,8 @@ export type LyraMessageKey =
   | 'pptxViewerNextSlide'
   | 'pptxViewerSlideOf'
   | 'documentViewerLabel'
+  | 'attachmentPreviewName'
+  | 'attachmentPreviewFile'
   | 'documentViewerMissingSanitizer'
   | 'docxViewerLabel'
   | 'docxViewerMissingConverter'
@@ -575,6 +577,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pptxViewerNextSlide: 'Next slide',
   pptxViewerSlideOf: 'Slide {current} of {total}',
   documentViewerLabel: 'Document viewer',
+  attachmentPreviewName: 'Preview {name}',
+  attachmentPreviewFile: 'Preview file',
   documentViewerMissingSanitizer: 'This viewer needs the optional "dompurify" package installed to render safely.',
   docxViewerLabel: 'Word document',
   docxViewerMissingConverter: 'This viewer needs the optional "mammoth" package installed to convert this document.',

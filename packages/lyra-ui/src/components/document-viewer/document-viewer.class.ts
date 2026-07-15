@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { safeLinkHref } from '../../internal/safe-url.js';
 import type { DialogCloseReason } from '../dialog/dialog.class.js';
 import {
   findDocumentRenderer,
@@ -16,6 +17,7 @@ export type DocumentViewerCloseReason = DialogCloseReason;
 
 export interface LyraDocumentViewerEventMap {
   'lyra-close': CustomEvent<DocumentViewerCloseReason>;
+  'lyra-download': CustomEvent<{ src: string; filename: string }>;
 }
 
 /**
@@ -26,7 +28,10 @@ export interface LyraDocumentViewerEventMap {
  * @customElement lyra-document-viewer
  * @event lyra-close - Fired when the nested dialog dismisses the viewer. The
  *   detail is the dialog close reason.
+ * @event lyra-download - Fired when the viewer's safe download action is
+ *   activated. The browser download itself is handled by the native link.
  * @csspart body - Wrapper around the active renderer or fallback preview.
+ * @csspart download-link - The native download action shown when `src` is safe.
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -115,6 +120,10 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.emit<DocumentViewerCloseReason>('lyra-close', event.detail);
   };
 
+  private onDownload = (): void => {
+    this.emit('lyra-download', { src: this.src, filename: this.name });
+  };
+
   private renderBody(): unknown {
     switch (this.renderState.kind) {
       case 'rendered':
@@ -136,6 +145,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   render(): TemplateResult {
+    const downloadHref = safeLinkHref(this.src);
     return html`
       <lyra-dialog
         ?open=${this.open}
@@ -145,6 +155,17 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         @lyra-dialog-close=${this.onDialogClose}
       >
         <div part="body">${this.renderBody()}</div>
+        ${downloadHref
+          ? html`
+              <a
+                slot="footer"
+                part="download-link"
+                href=${downloadHref}
+                download=${this.name || nothing}
+                @click=${this.onDownload}
+              >${this.localize('download')}</a>
+            `
+          : nothing}
       </lyra-dialog>
     `;
   }

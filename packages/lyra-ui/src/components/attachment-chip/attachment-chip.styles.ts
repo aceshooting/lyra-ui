@@ -155,6 +155,7 @@ export const styles = css`
   }
 
   [part='retry-button'],
+  [part='preview-button'],
   [part='remove-button'] {
     flex: 0 0 auto;
     display: inline-flex;
@@ -175,16 +176,23 @@ export const styles = css`
   [part='retry-button'] {
     color: var(--lyra-color-danger);
   }
+  [part='preview-button'] {
+    color: var(--lyra-color-brand);
+    font-size: var(--lyra-font-size-md-sm);
+  }
   [part='retry-button']:hover,
+  [part='preview-button']:hover,
   [part='remove-button']:hover {
     background: color-mix(in srgb, var(--lyra-color-text) 8%, transparent);
   }
   [part='retry-button']:focus-visible,
+  [part='preview-button']:focus-visible,
   [part='remove-button']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
   [part='retry-button'] svg,
+  [part='preview-button'] svg,
   [part='remove-button'] svg {
     display: block;
   }

@@ -44,8 +44,59 @@ it('defaults to status="pending", removable=true, and empty independent props', 
   expect(el.size).to.equal(0);
   expect(el.mimeType).to.equal('');
   expect(el.thumbnailSrc).to.equal('');
+  expect(el.previewSrc).to.equal('');
+  expect(el.previewable).to.be.true;
   expect(el.progress).to.equal(0);
   expect(el.file).to.be.undefined;
+});
+
+describe('document preview integration', () => {
+  it('opens the document viewer with the File MIME type and blob source', async () => {
+    const file = makeFile('notes.txt', 'text/plain', 12);
+    const el = (await fixture(html`<lyra-attachment-chip .file=${file}></lyra-attachment-chip>`)) as LyraAttachmentChip;
+    const preview = el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement;
+    expect(preview).to.exist;
+
+    const eventPromise = oneEvent(el, 'lyra-preview');
+    preview.click();
+    const event = await eventPromise;
+    expect(event.detail.name).to.equal('notes.txt');
+    expect(event.detail.mimeType).to.equal('text/plain');
+    expect(event.detail.src).to.match(/^blob:/);
+
+    const viewer = el.shadowRoot!.querySelector('lyra-document-viewer') as HTMLElement & { open: boolean };
+    await el.updateComplete;
+    expect(viewer.open).to.be.true;
+    expect((viewer as HTMLElement & { mimeType: string }).mimeType).to.equal('text/plain');
+    expect((viewer as HTMLElement & { name: string }).name).to.equal('notes.txt');
+  });
+
+  it('uses preview-src with the existing mime-type for persisted attachments', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip
+        name="report.pdf"
+        mime-type="application/pdf"
+        preview-src="https://example.test/report.pdf"
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    const eventPromise = oneEvent(el, 'lyra-preview');
+    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
+    const event = await eventPromise;
+    expect(event.detail.mimeType).to.equal('application/pdf');
+    expect(event.detail.src).to.equal('https://example.test/report.pdf');
+  });
+
+  it('localizes the preview action name', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip
+        .file=${makeFile('notes.txt', 'text/plain')}
+        .strings=${{ attachmentPreviewName: 'Aperçu de {name}' }}
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="preview-button"]')!.getAttribute('aria-label')).to.equal(
+      'Aperçu de notes.txt',
+    );
+  });
 });
 
 it('reflects status changes onto the host attribute', async () => {

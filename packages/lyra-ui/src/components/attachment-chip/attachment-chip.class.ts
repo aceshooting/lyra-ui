@@ -1,14 +1,20 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
-import { closeIcon } from '../../internal/icons.js';
+import { closeIcon, expandIcon } from '../../internal/icons.js';
 import { styles } from './attachment-chip.styles.js';
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
 
 export interface AttachmentChipIdDetail {
   id: string;
+}
+
+export interface AttachmentChipPreviewDetail extends AttachmentChipIdDetail {
+  name: string;
+  mimeType: string;
+  src: string;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -153,6 +159,7 @@ function statusText(
  * @customElement lyra-attachment-chip
  * @event lyra-remove - The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.
  * @event lyra-retry - The user activated the retry button. `detail: { id }`. Only rendered while `status="error"`.
+ * @event lyra-preview - The user activated the preview button. `detail: { id, name, mimeType, src }`.
  * @csspart base - The chip's root container.
  * @csspart thumbnail - The leading image thumbnail / generic file glyph.
  * @csspart meta - Wrapper around `name` and `size`.
@@ -163,6 +170,7 @@ function statusText(
  * @csspart progress-fill - The filled portion of `progress`.
  * @csspart spinner - The indeterminate upload spinner, shown instead of `progress` while `status="uploading"` and `progress` is unset/0.
  * @csspart retry-button - The retry affordance, only rendered while `status="error"`.
+ * @csspart preview-button - The preview affordance, rendered when a file or `preview-src` is available.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
  * @cssprop [--lyra-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
  * upload-spinner rotation. The ambient loop stops under reduced motion.
@@ -190,6 +198,13 @@ export class LyraAttachmentChip extends LyraElement {
    *  `file`-derived equivalent to defer to for a non-image file; it's simply
    *  rendered whenever present. */
   @property({ attribute: 'thumbnail-src' }) thumbnailSrc = '';
+
+  /** URL used to preview or download the attachment when `file` is unset.
+   *  A real `File` takes precedence and is previewed through a temporary blob URL. */
+  @property({ attribute: 'preview-src' }) previewSrc = '';
+
+  /** Shows the preview action when a `file` or `preview-src` is available. */
+  @property({ type: Boolean, reflect: true }) previewable = true;
 
   /** Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders. */
   @property({ reflect: true }) status: AttachmentChipStatus = 'pending';
@@ -245,6 +260,8 @@ export class LyraAttachmentChip extends LyraElement {
   private objectUrl?: string;
   private objectUrlFile?: File;
 
+  @state() private previewOpen = false;
+
   // Last-resort id, generated once per instance -- see the class doc's
   // "Identifying which attachment..." section.
   private readonly fallbackId = nextId('attachment-chip');
@@ -259,6 +276,10 @@ export class LyraAttachmentChip extends LyraElement {
 
   private get effectiveMimeType(): string {
     return this.file ? this.file.type : this.mimeType;
+  }
+
+  private get effectivePreviewSrc(): string {
+    return this.file ? this.objectUrl ?? '' : this.previewSrc;
   }
 
   private get resolvedId(): string {
@@ -297,7 +318,7 @@ export class LyraAttachmentChip extends LyraElement {
     // allocation out of the render phase and also handles a file changing to
     // a non-image or to undefined, where no thumbnail render would otherwise
     // revisit the old cache entry.
-    if (this.file?.type.startsWith('image/')) this.ensureObjectUrl(this.file);
+    if (this.file && (this.file.type.startsWith('image/') || this.previewable)) this.ensureObjectUrl(this.file);
     else if (this.objectUrlFile) this.revokeObjectUrl();
   }
 
@@ -312,6 +333,21 @@ export class LyraAttachmentChip extends LyraElement {
 
   private onRetryClick = (): void => {
     this.emit<AttachmentChipIdDetail>('lyra-retry', { id: this.resolvedId });
+  };
+
+  private onPreviewClick = (): void => {
+    if (!this.effectivePreviewSrc) return;
+    this.previewOpen = true;
+    this.emit<AttachmentChipPreviewDetail>('lyra-preview', {
+      id: this.resolvedId,
+      name: this.effectiveName,
+      mimeType: this.effectiveMimeType,
+      src: this.effectivePreviewSrc,
+    });
+  };
+
+  private onViewerClose = (): void => {
+    this.previewOpen = false;
   };
 
   private renderThumbnail(): TemplateResult {
@@ -410,12 +446,29 @@ export class LyraAttachmentChip extends LyraElement {
               ${retryIcon()}
             </button>`
           : nothing}
+        ${this.previewable && this.effectivePreviewSrc
+          ? html`<button
+              part="preview-button"
+              type="button"
+              aria-label=${name ? this.localize('attachmentPreviewName', undefined, { name: displayName }) : this.localize('attachmentPreviewFile')}
+              @click=${this.onPreviewClick}
+            >${expandIcon()}</button>`
+          : nothing}
         ${this.removable
           ? html`<button part="remove-button" type="button" aria-label=${removeWithContext} @click=${this.onRemoveClick}>
               ${closeIcon()}
             </button>`
           : nothing}
       </div>
+      ${this.previewable && this.effectivePreviewSrc
+        ? html`<lyra-document-viewer
+            .open=${this.previewOpen}
+            .name=${displayName}
+            .mimeType=${this.effectiveMimeType}
+            .src=${this.effectivePreviewSrc}
+            @lyra-close=${this.onViewerClose}
+          ></lyra-document-viewer>`
+        : nothing}
     `;
   }
 }

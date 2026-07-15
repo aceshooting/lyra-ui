@@ -21,4 +21,28 @@ export const styles = css`
     max-inline-size: 100%;
     block-size: auto;
   }
+
+  [part='download-link'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--lyra-size-2rem);
+    padding-inline: var(--lyra-space-m);
+    border: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
+    border-radius: var(--lyra-radius);
+    background: var(--lyra-color-brand);
+    color: var(--lyra-color-on-brand);
+    font: inherit;
+    font-weight: var(--lyra-font-weight-semibold);
+    text-decoration: none;
+  }
+
+  [part='download-link']:hover {
+    background: color-mix(in srgb, var(--lyra-color-brand) 85%, var(--lyra-color-shadow));
+  }
+
+  [part='download-link']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
 `;

@@ -115,6 +115,29 @@ describe('dialog wiring', () => {
     expect(event.detail).to.equal('escape');
     expect(el.open).to.be.false;
   });
+
+  it('renders a download action and emits lyra-download for safe sources', async () => {
+    const el = (await fixture(html`
+      <lyra-document-viewer open name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lyra-document-viewer>
+    `)) as LyraDocumentViewer;
+    const link = el.shadowRoot!.querySelector('[part="download-link"]') as HTMLAnchorElement;
+    expect(link).to.exist;
+    expect(link.href).to.equal('https://example.test/report.pdf');
+    expect(link.download).to.equal('report.pdf');
+
+    link.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    const eventPromise = oneEvent(el, 'lyra-download');
+    link.click();
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ src: 'https://example.test/report.pdf', filename: 'report.pdf' });
+  });
+
+  it('omits the download action for an unsafe source', async () => {
+    const el = (await fixture(html`
+      <lyra-document-viewer open name="dangerous.html" src="javascript:alert(1)"></lyra-document-viewer>
+    `)) as LyraDocumentViewer;
+    expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
+  });
 });
 
 describe('accessibility', () => {

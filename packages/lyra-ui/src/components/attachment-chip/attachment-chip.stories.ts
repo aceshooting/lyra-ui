@@ -92,6 +92,24 @@ export const FromRealFile: Story = {
   `,
 };
 
+export const ClickToPreview: Story = {
+  name: 'Click an uploaded file to preview and download',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A real `File` supplies its existing MIME type to `lyra-document-viewer`; activating the preview action opens the dialog and the dialog footer provides the native download action. No second format field or MIME-detection function is needed.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-attachment-chip
+      .file=${sampleTextFile('uploaded-notes.txt', 128)}
+      status="done"
+    ></lyra-attachment-chip>
+  `,
+};
+
 export const FromServerMetadata: Story = {
   name: 'Reconstructed from server-persisted metadata (no File object)',
   parameters: {
