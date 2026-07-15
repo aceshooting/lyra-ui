@@ -174,8 +174,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  attribute (browser default). */
   @property() autocapitalize = '';
   /** Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty
-   *  string omits the attribute (browser default). No `wrap` property here -- the auto-resize
-   *  logic above already assumes unwrapped natural text flow.
+   *  string omits the attribute (browser default).
    *
    *  Named `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`
    *  collision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,

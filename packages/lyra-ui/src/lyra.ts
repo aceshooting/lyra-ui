@@ -165,6 +165,7 @@ export type {
   PhoneNumberAdapter,
   LibphonenumberModuleLike,
   LyraPhoneInputEventDetail,
+  PhoneInputSelectionDirection,
 } from './components/phone-input/phone-input.js';
 export { LyraWidget } from './components/widget/widget.js';
 export { LyraWordCloud } from './components/word-cloud/word-cloud.js';
@@ -228,7 +229,11 @@ export type {
   LyraToolResultDialogEventMap,
 } from './components/tool-result-dialog/tool-result-dialog.js';
 export { LyraChatComposer } from './components/chat-composer/chat-composer.js';
-export type { ChatComposerStatus } from './components/chat-composer/chat-composer.js';
+export type {
+  ChatComposerStatus,
+  ChatComposerWrap,
+  ChatComposerSelectionDirection,
+} from './components/chat-composer/chat-composer.js';
 export { LyraAttachmentChip, formatFileSize } from './components/attachment-chip/attachment-chip.js';
 export type {
   AttachmentChipStatus,
