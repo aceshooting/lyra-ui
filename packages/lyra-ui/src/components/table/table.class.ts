@@ -139,6 +139,17 @@ export interface LyraTableEventMap<T = unknown> {
  * header/cells to the inline-start (default/`true`) or inline-end (`'end'`)
  * edge while the table scrolls horizontally.
  *
+ * `expandedContent` (a table-level `(row: T) => unknown`, not a per-column
+ * hook, since the resulting panel spans every column via `colspan`) makes
+ * every row render a leading chevron-toggle cell before its data columns.
+ * `canExpand` optionally gates which rows actually get an interactive
+ * toggle — a row that fails it still gets a blank leading cell for column
+ * alignment. Which rows are currently open is fully consumer-owned via
+ * `expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/
+ * `keyOf()`) — the table only reads it and emits `lyra-row-expand-toggle`
+ * on activation, mirroring `sortKey`/`selectedKey`'s existing
+ * presentational-only convention.
+ *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
  * @event lyra-row-click - A row was activated. `detail: { row }`.
@@ -149,6 +160,10 @@ export interface LyraTableEventMap<T = unknown> {
  *   `priority` column was hidden). `detail: { hidden: boolean }`.
  * @event lyra-columns-revealed - `showAllColumns` was toggled by
  *   `[part='reveal-columns-button']`. `detail: { revealed: boolean }`.
+ * @event lyra-row-expand-toggle - The row-expand chevron was activated.
+ *   `detail: { row, key }`. Fired only when `expandedContent` is set and
+ *   the row passes `canExpand`; does not itself mutate `expandedKeys` — the
+ *   consumer updates it and passes the new value back in.
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
  * @csspart head - The `<thead>` element.
@@ -161,6 +176,15 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
+ * @csspart expand-toggle-cell - Each row's (and the header's) leading
+ *   chevron-toggle cell, rendered only when `expandedContent` is set.
+ * @csspart row-expand-toggle - The `<button>` inside `expand-toggle-cell`,
+ *   absent for a row that fails `canExpand`.
+ * @csspart row-expand-icon - The chevron icon inside `row-expand-toggle`.
+ * @csspart expanded-row - The full-width panel `<tr>` rendered beneath a
+ *   row whose key is in `expandedKeys`.
+ * @csspart expanded-cell - The single `colspan`-spanning `<td>` inside
+ *   `expanded-row`, containing `expandedContent(row)`.
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static styles = [LyraElement.styles, styles];
