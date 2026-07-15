@@ -40,6 +40,14 @@ it('uses placeholder as the textarea accessible name, falling back to "Message"'
   expect(textareaOf(withPlaceholder).getAttribute('placeholder')).to.equal('Ask anything…');
 });
 
+it('forwards a host aria-label to the textarea ahead of the placeholder-derived name', async () => {
+  const el = (await fixture(html`
+    <lyra-chat-composer aria-label="Compose support request" placeholder="Ask anything…"></lyra-chat-composer>
+  `)) as LyraChatComposer;
+
+  expect(textareaOf(el).getAttribute('aria-label')).to.equal('Compose support request');
+});
+
 it('keeps the internal textarea value in sync with the value property in both directions', async () => {
   const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
   el.value = 'set programmatically';
@@ -592,20 +600,59 @@ it('is accessible in a populated, busy, chip-laden state', async () => {
   await expect(el).to.be.accessible();
 });
 
-describe('spellcheck/autocapitalize/autocorrect passthrough', () => {
+describe('native textarea surface', () => {
   it('spellcheck defaults to true', async () => {
     const el = (await fixture(html`<lyra-chat-composer></lyra-chat-composer>`)) as LyraChatComposer;
     expect(textareaOf(el).spellcheck).to.be.true;
   });
 
-  it('forwards spellcheck=false, autocapitalize, and autocorrect onto the native textarea', async () => {
+  it('forwards native editing-assistance attributes onto the textarea', async () => {
     const el = (await fixture(html`
-      <lyra-chat-composer spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-chat-composer>
+      <lyra-chat-composer
+        spellcheck="false"
+        autocapitalize="off"
+        autocorrect="off"
+        wrap="hard"
+        autocomplete="one-time-code"
+        inputmode="numeric"
+        enterkeyhint="send"
+      ></lyra-chat-composer>
     `)) as LyraChatComposer;
     const ta = textareaOf(el);
     expect(ta.spellcheck).to.be.false;
     expect(ta.getAttribute('autocapitalize')).to.equal('off');
     expect(ta.getAttribute('autocorrect')).to.equal('off');
+    expect(ta.getAttribute('wrap')).to.equal('hard');
+    expect(ta.getAttribute('autocomplete')).to.equal('one-time-code');
+    expect(ta.getAttribute('inputmode')).to.equal('numeric');
+    expect(ta.getAttribute('enterkeyhint')).to.equal('send');
+  });
+
+  it('exposes focus, blur, selection, and range editing while keeping the form value synchronized', async () => {
+    const form = (await fixture(html`
+      <form><lyra-chat-composer name="message" value="hello world"></lyra-chat-composer></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-chat-composer') as LyraChatComposer;
+    const ta = textareaOf(el);
+
+    expect(el.input?.getAttribute('part')).to.equal('textarea');
+    el.focus();
+    expect(el.shadowRoot!.activeElement === ta).to.be.true;
+
+    el.setSelectionRange(6, 11, 'forward');
+    expect(el.selectionStart).to.equal(6);
+    expect(el.selectionEnd).to.equal(11);
+    expect(el.selectionDirection).to.equal('forward');
+
+    el.setRangeText('there', 6, 11, 'select');
+    expect(el.value).to.equal('hello there');
+    expect(new FormData(form).get('message')).to.equal('hello there');
+
+    el.select();
+    expect(el.selectionStart).to.equal(0);
+    expect(el.selectionEnd).to.equal(el.value.length);
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
   });
 });
 

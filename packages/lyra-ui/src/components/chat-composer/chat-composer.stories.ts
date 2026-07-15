@@ -40,6 +40,33 @@ export const AutoResize: Story = {
   `,
 };
 
+/** Host naming, native editing attributes, and public selection methods reach the wrapped textarea. */
+export const NativeEditingSurface: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-width: 32rem;">
+      <lyra-chat-composer
+        aria-label="Compose an assistant message"
+        value="Select or edit this draft"
+        autocomplete="off"
+        inputmode="text"
+        enterkeyhint="send"
+        wrap="soft"
+      ></lyra-chat-composer>
+      <button
+        type="button"
+        style="justify-self: start;"
+        @click=${(event: Event) => {
+          const composer = (event.currentTarget as HTMLElement).parentElement!.querySelector(
+            'lyra-chat-composer',
+          ) as LyraChatComposer;
+          composer.focus();
+          composer.select();
+        }}
+      >Focus and select the draft</button>
+    </div>
+  `,
+};
+
 export const Sending: Story = {
   render: () => html`
     <lyra-chat-composer

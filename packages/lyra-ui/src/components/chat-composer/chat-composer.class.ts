@@ -36,6 +36,8 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
 };
 
 export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
+export type ChatComposerWrap = 'hard' | 'soft' | 'off';
+export type ChatComposerSelectionDirection = 'forward' | 'backward' | 'none';
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
@@ -119,7 +121,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * can keep composing their next message in the meantime.
  *
  * Deliberately no label/hint/error chrome -- a composite chat-input control, not a labeled form
- * field; wrap it in your own layout for that context.
+ * field; wrap it in your own layout for that context. A host `aria-label` is forwarded to the
+ * internal textarea and takes precedence over the placeholder-derived name.
  *
  * `lyra-submit`'s `detail.value` is always the exact, untrimmed current
  * value (`detail.value === value` at the moment it fires) -- trimming is
@@ -135,6 +138,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @event lyra-input - Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.
  * @event lyra-submit - Fired by Enter (per `submit-on-enter`) or the built-in button while `status="idle"`. `detail: { value }`.
  * @event lyra-stop - Fired by the built-in button while `status` is `"sending"` or `"streaming"` and `stoppable` is `true` (the default). No detail.
+ * @event blur - Re-dispatched from the internal native textarea as a bubbling, composed event.
+ * @event focus - Re-dispatched from the internal native textarea as a bubbling, composed event.
  * @csspart base - The bordered root container.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
  * @csspart row - The row holding the leading slot, textarea, and trailing slot/button.
@@ -156,6 +161,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  no cancellation operation to offer. Defaults to `true`, reproducing
    *  today's Stop-button behavior for every `status` other than `'idle'`. */
   @property({ type: Boolean, reflect: true }) stoppable = true;
+  /** Accessible name for the internal textarea. Takes precedence over the placeholder-derived name. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Forwarded to the internal `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
    *  presence-based `type: Boolean` handling, so a plain-HTML consumer with no way to write a
@@ -177,6 +184,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  own accessor win at runtime). The explicit attribute mapping preserves the standard
    *  lowercase `autocorrect` wire name in both Lit and generated component metadata. */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  /** Native editing-assistance attributes forwarded to the internal textarea. */
+  @property() wrap: ChatComposerWrap = 'soft';
+  @property() autocomplete = '';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
 
   @state() private hasLeadingSlot = false;
   @state() private hasChipsSlot = false;
@@ -192,6 +204,69 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
+  }
+
+  /** The internal native textarea for integrations that require direct DOM access. */
+  get input(): HTMLTextAreaElement | null {
+    return this.textareaEl ?? null;
+  }
+
+  get selectionStart(): number | null {
+    return this.textareaEl?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.textareaEl) this.textareaEl.selectionStart = value ?? 0;
+  }
+
+  get selectionEnd(): number | null {
+    return this.textareaEl?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.textareaEl) this.textareaEl.selectionEnd = value ?? 0;
+  }
+
+  get selectionDirection(): ChatComposerSelectionDirection | null {
+    return this.textareaEl?.selectionDirection as ChatComposerSelectionDirection | null;
+  }
+
+  set selectionDirection(value: ChatComposerSelectionDirection | null) {
+    if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.textareaEl?.focus(options);
+  }
+
+  override blur(): void {
+    this.textareaEl?.blur();
+  }
+
+  select(): void {
+    this.textareaEl?.select();
+  }
+
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: ChatComposerSelectionDirection,
+  ): void {
+    this.textareaEl?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const textarea = this.textareaEl;
+    if (!textarea) return;
+    if (start === undefined || end === undefined) {
+      textarea.setRangeText(replacement);
+    } else {
+      textarea.setRangeText(replacement, start, end, selectMode);
+    }
+    this.value = textarea.value;
+    this.resizeTextarea();
   }
 
   protected willUpdate(): void {
@@ -403,12 +478,16 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
           </span>
           <textarea
             part="textarea"
-            aria-label=${this.placeholder || this.localize('composerLabel')}
+            aria-label=${this.accessibleLabel || this.placeholder || this.localize('composerLabel')}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
             autocorrect=${this.autoCorrect || nothing}
+            wrap=${this.wrap}
+            autocomplete=${this.autocomplete || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
             .value=${this.value}
             placeholder=${this.placeholder}
             rows=${Math.max(1, this.minRows || 1)}
