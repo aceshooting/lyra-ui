@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-call-chip.js';
 import type { LyraToolCallChip } from './tool-call-chip.js';
+import { styles } from './tool-call-chip.styles.js';
 
 it('defaults to status="pending" with empty name/category/summary/icon/call-id and no duration', async () => {
   const el = (await fixture(html`<lyra-tool-call-chip></lyra-tool-call-chip>`)) as LyraToolCallChip;
@@ -117,6 +118,42 @@ it('omits the duration part entirely when duration-ms is unset, formats it once 
   el.durationMs = 2000;
   await el.updateComplete;
   expect(duration.textContent).to.equal('2s');
+});
+
+it('interpolates duration values through localized message templates', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-call-chip
+      duration-ms="1500"
+      .strings=${{
+        durationMilliseconds: '{value} millisecondes',
+        durationSeconds: '{value} secondes',
+      }}
+    ></lyra-tool-call-chip>
+  `)) as LyraToolCallChip;
+
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('1.5 secondes');
+  expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.contain(
+    '1.5 secondes',
+  );
+});
+
+it('uses themeable motion values for running and pending statuses', async () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    'animation: lyra-tool-call-chip-spin var(--lyra-tool-call-chip-spin) infinite;',
+  );
+  expect(css).to.include(
+    'animation: lyra-tool-call-chip-pulse var(--lyra-transition-ambient) infinite;',
+  );
+
+  const running = (await fixture(html`
+    <lyra-tool-call-chip
+      status="running"
+      style="--lyra-tool-call-chip-spin: 2.5s linear"
+    ></lyra-tool-call-chip>
+  `)) as LyraToolCallChip;
+  const glyph = running.shadowRoot!.querySelector('[part="icon"] svg')!;
+  expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
 });
 
 it('emits lyra-tool-call-chip-select with { name, callId } on click', async () => {

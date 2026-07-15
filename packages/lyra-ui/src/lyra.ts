@@ -205,7 +205,11 @@ export type {
   TypingIndicatorSize,
 } from './components/typing-indicator/typing-indicator.js';
 export { LyraToolCallChip } from './components/tool-call-chip/tool-call-chip.js';
-export type { ToolCallStatus, ToolChipSelectDetail } from './components/tool-call-chip/tool-call-chip.js';
+export type {
+  ToolCallStatus,
+  ToolChipSelectDetail,
+  LyraToolCallChipEventMap,
+} from './components/tool-call-chip/tool-call-chip.js';
 export { LyraToolResultView } from './components/tool-result-view/tool-result-view.js';
 export {
   registerToolRenderer,

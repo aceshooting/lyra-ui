@@ -23,6 +23,11 @@ export interface ToolChipSelectDetail {
   callId: string;
 }
 
+export interface LyraToolCallChipEventMap {
+  'lyra-tool-call-chip-select': CustomEvent<ToolChipSelectDetail>;
+  'lyra-tool-chip-select': CustomEvent<ToolChipSelectDetail>;
+}
+
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
 // tool-call-specific glyphs to that module -- it's off limits here -- so
@@ -126,21 +131,22 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  *  more precise unit; once a call runs a full second or longer, trimming to
  *  (at most) one decimal place of seconds reads better than a 4-5 digit
  *  millisecond count. Identical algorithm to lyra-tool-result-dialog's own
- *  `formatDuration` -- duplicated rather than imported (these are two
- *  independent, separately-consumable components; see this file's header
- *  comment on the icon glyphs for the same rationale) but kept in lockstep
- *  so the same call reports the same duration text in both places. `msUnit`/
- *  `sUnit` resolve the two unit labels -- both default to the plain English
- *  abbreviation, so every existing call site/test that omits them is
- *  unaffected; the render()/accessibleLabel call sites below pass
- *  `this.localize('durationUnitMs')`/`this.localize('durationUnitS')` instead. */
-function formatDuration(ms: number, msUnit = 'ms', sUnit = 's'): string {
+ *  duration formatter -- duplicated rather than imported because these are
+ *  independent, separately consumable components. The returned numeric
+ *  value is interpolated through a localized duration message by the caller. */
+function formatDuration(ms: number): {
+  key: 'durationMilliseconds' | 'durationSeconds';
+  value: string;
+} {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return `${Math.round(Math.max(0, ms))}${msUnit}`;
+    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, ms))) };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}${sUnit}`;
+  return {
+    key: 'durationSeconds',
+    value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1),
+  };
 }
 
 /**
@@ -194,8 +200,10 @@ function formatDuration(ms: number, msUnit = 'ms', sUnit = 's'): string {
  * @csspart status-text - The visible text twin of the status glyph/color — carries the state in text, not just color.
  * @csspart duration - The formatted `duration-ms`, when set.
  * @csspart tooltip - The floating detail popup (only meaningful while open).
+ * @cssprop [--lyra-tool-call-chip-spin=1s linear] - Running-icon animation duration and timing.
+ * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Pending-icon pulse duration and timing.
  */
-export class LyraToolCallChip extends LyraElement {
+export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** The tool/function name, e.g. `web_search`. */
@@ -345,9 +353,15 @@ export class LyraToolCallChip extends LyraElement {
     const parts = [this.name || this.localize('toolCall')];
     if (this.summary) parts.push(this.summary);
     parts.push(this.localize(STATUS_LABEL_KEY[this.effectiveStatus]));
-    if (this.durationMs != null && Number.isFinite(this.durationMs))
-      parts.push(formatDuration(this.durationMs, this.localize('durationUnitMs'), this.localize('durationUnitS')));
+    if (this.durationMs != null && Number.isFinite(this.durationMs)) {
+      parts.push(this.localizedDuration(this.durationMs));
+    }
     return parts.join(' — ');
+  }
+
+  private localizedDuration(ms: number): string {
+    const duration = formatDuration(ms);
+    return this.localize(duration.key, undefined, { value: duration.value });
   }
 
   render(): TemplateResult {
@@ -380,9 +394,7 @@ export class LyraToolCallChip extends LyraElement {
         <span part="meta">
           <span part="status-text">${this.localize(STATUS_LABEL_KEY[status])}</span>
           <span part="duration" ?hidden=${!hasDuration}
-            >${hasDuration
-              ? formatDuration(this.durationMs!, this.localize('durationUnitMs'), this.localize('durationUnitS'))
-              : nothing}</span
+            >${hasDuration ? this.localizedDuration(this.durationMs!) : nothing}</span
           >
         </span>
       </button>
@@ -399,4 +411,3 @@ declare global {
     'lyra-tool-call-chip': LyraToolCallChip;
   }
 }
-

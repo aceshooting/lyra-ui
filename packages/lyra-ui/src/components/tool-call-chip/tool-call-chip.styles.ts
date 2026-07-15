@@ -11,6 +11,7 @@ export const styles = css`
     --lyra-tool-call-chip-accent: var(--lyra-color-text-quiet);
     --lyra-tool-call-chip-bg: var(--lyra-color-surface);
     --lyra-tool-call-chip-border: var(--lyra-color-border);
+    --lyra-tool-call-chip-spin: 1s linear;
   }
 
   :host([status='running']) {
@@ -81,13 +82,13 @@ export const styles = css`
      spinning once rotated -- a full circle looks identical at every
      rotation frame. */
   :host([status='running']) [part='icon'] svg {
-    animation: lyra-tool-call-chip-spin 1s linear infinite;
+    animation: lyra-tool-call-chip-spin var(--lyra-tool-call-chip-spin) infinite;
   }
   /* Subtler than the spin -- a slow opacity breathe, so a list of several
      still-queued chips doesn't compete visually with any 'running' ones
      next to it. */
   :host([status='pending']) [part='icon'] svg {
-    animation: lyra-tool-call-chip-pulse 1.5s ease-in-out infinite;
+    animation: lyra-tool-call-chip-pulse var(--lyra-transition-ambient) infinite;
   }
 
   [part='label'] {

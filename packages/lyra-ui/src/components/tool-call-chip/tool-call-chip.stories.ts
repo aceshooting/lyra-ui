@@ -160,3 +160,22 @@ export const ReducedMotion: Story = {
     </div>
   `,
 };
+
+export const RetimedMotion: Story = {
+  render: () => html`
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <lyra-tool-call-chip
+        name="search_web"
+        status="running"
+        summary="Searching web…"
+        style="--lyra-tool-call-chip-spin: 2.5s linear"
+      ></lyra-tool-call-chip>
+      <lyra-tool-call-chip
+        name="search_web"
+        status="pending"
+        summary="Queued"
+        style="--lyra-transition-ambient: 3s ease-in-out"
+      ></lyra-tool-call-chip>
+    </div>
+  `,
+};
