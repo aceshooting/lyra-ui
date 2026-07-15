@@ -266,6 +266,8 @@ export type LyraMessageKey =
   | 'valueInvalid'
   | 'durationUnitMs'
   | 'durationUnitS'
+  | 'durationMilliseconds'
+  | 'durationSeconds'
   | 'selectTools'
   | 'searchToolsPlaceholder'
   | 'useDefaultTools'
@@ -574,6 +576,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   valueInvalid: 'The value is invalid.',
   durationUnitMs: 'ms',
   durationUnitS: 's',
+  durationMilliseconds: '{value}ms',
+  durationSeconds: '{value}s',
   selectTools: 'Select tools',
   searchToolsPlaceholder: 'Search tools…',
   useDefaultTools: 'Use default tools',
