@@ -1,0 +1,55 @@
+import { html, nothing, type TemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
+import { LyraElement } from '../../internal/lyra-element.js';
+import { styles } from './callout.styles.js';
+
+export type CalloutVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+export interface LyraCalloutEventMap { 'lyra-close': CustomEvent<undefined>; }
+
+/**
+ * `<lyra-callout>` — an inline message surface for status, warning, and error content.
+ *
+ * @customElement lyra-callout
+ * @slot - Message content.
+ * @slot heading - Optional heading.
+ * @slot icon - Optional icon.
+ * @event lyra-close - The close action was accepted. Cancelable before the callout hides.
+ * @csspart base - The callout surface.
+ * @csspart icon - The icon wrapper.
+ * @csspart content - The message content.
+ * @csspart heading - The heading wrapper.
+ * @csspart close-button - The close button.
+ */
+export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
+  static styles = [LyraElement.styles, styles];
+  @property({ reflect: true }) variant: CalloutVariant = 'neutral';
+  @property() heading = '';
+  @property({ type: Boolean, reflect: true }) closable = false;
+  @property({ type: Boolean, reflect: true }) open = true;
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  @state() private hasIcon = false;
+  @state() private hasHeading = false;
+  private close = (): void => {
+    const event = this.emit('lyra-close', undefined, { cancelable: true });
+    if (!event.defaultPrevented) this.open = false;
+  };
+  private onSlotChange = (event: Event): void => {
+    const slot = event.target as HTMLSlotElement;
+    const present = slot.assignedElements({ flatten: true }).length > 0;
+    if (slot.name === 'icon') this.hasIcon = present;
+    if (slot.name === 'heading') this.hasHeading = present;
+  };
+  render(): TemplateResult {
+    if (!this.open) return html``;
+    const label = this.accessibleLabel || undefined;
+    return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}" aria-label=${label || nothing}>
+      <span part="icon" ?hidden=${!this.hasIcon}><slot name="icon" @slotchange=${this.onSlotChange}></slot></span>
+      <div part="content">
+        <div part="heading" ?hidden=${!this.heading && !this.hasHeading}>${this.heading}<slot name="heading" @slotchange=${this.onSlotChange}></slot></div>
+        <div part="message"><slot></slot></div>
+      </div>
+      <button part="close-button" ?hidden=${!this.closable} aria-label=${this.localize('close')} @click=${this.close}>×</button>
+    </div>`;
+  }
+}
+declare global { interface HTMLElementTagNameMap { 'lyra-callout': LyraCallout; } }
