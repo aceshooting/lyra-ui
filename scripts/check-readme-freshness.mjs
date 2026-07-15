@@ -19,15 +19,32 @@ const tagCount = new Set(
     .filter(Boolean),
 ).size;
 
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
 const errors = [];
 
-const catalogMatch = readme.match(/(\d+) tags across (\w+) component families/);
+const catalogMatch = readme.match(/(\d+) custom elements across (\w+) component families/);
 if (!catalogMatch) {
-  errors.push('README.md: could not find the "<N> tags across <M> component families" line to check');
-} else if (Number(catalogMatch[1]) !== tagCount) {
-  errors.push(
-    `README.md claims ${catalogMatch[1]} tags, but custom-elements.json currently has ${tagCount} — update the "## Components" section (family table + the two counts in the Web Awesome comparison paragraph above it)`,
-  );
+  errors.push('README.md: could not find the "<N> custom elements across <M> component families" line to check');
+} else {
+  if (Number(catalogMatch[1]) !== tagCount) {
+    errors.push(
+      `README.md claims ${catalogMatch[1]} custom elements, but custom-elements.json currently has ${tagCount} — update the "## Components" section`,
+    );
+  }
+  const familyTableMatch = readme.match(/\| Family \| Highlights \|\n\|---\|---\|\n((?:\|.+\|\n?)+)/);
+  const familyRowCount = familyTableMatch ? familyTableMatch[1].trim().split('\n').length : 0;
+  if (!familyTableMatch) {
+    errors.push('README.md: could not find the "| Family | Highlights |" table under "## Components" to check');
+  }
+  const claimedFamilyCount = NUMBER_WORDS.indexOf(catalogMatch[2].toLowerCase());
+  if (claimedFamilyCount === -1) {
+    errors.push(`README.md: "${catalogMatch[2]} component families" is not a recognized number word — update check-readme-freshness.mjs's NUMBER_WORDS list or fix the README`);
+  } else if (claimedFamilyCount !== familyRowCount) {
+    errors.push(
+      `README.md claims ${catalogMatch[2]} component families, but the "## Components" family table has ${familyRowCount} rows — update one to match the other`,
+    );
+  }
 }
 
 const versionMatch = readme.match(/`@aceshooting\/lyra-ui` is published at `([^`]+)`/);
@@ -35,40 +52,6 @@ if (!versionMatch) {
   errors.push('README.md: could not find the "`@aceshooting/lyra-ui` is published at `X.Y.Z`" line to check');
 } else if (versionMatch[1] !== pkg.version) {
   errors.push(`README.md claims lyra-ui is published at ${versionMatch[1]}, but package.json says ${pkg.version} — update the "## Status" section`);
-}
-
-// The Web Awesome comparison paragraph ("That free-Pro-equivalent group is X of lyra-ui's Y
-// tags. The other Z have no Web Awesome equivalent...") can't be independently verified against
-// the manifest (X is a curated, not derived, count), but its own arithmetic and its Y against the
-// real tag count can be -- this is exactly the drift class that recurred here once already.
-const comparisonMatch = readme.match(/is (\d+) of lyra-ui's (\d+) tags\. The other (\d+) have no Web Awesome\s+equivalent/);
-if (!comparisonMatch) {
-  errors.push('README.md: could not find the "is <X> of lyra-ui\'s <Y> tags. The other <Z> have no Web Awesome equivalent" sentence to check');
-} else {
-  const [, proEquivalent, claimedTotal, other] = comparisonMatch.map(Number);
-  if (claimedTotal !== tagCount) {
-    errors.push(
-      `README.md's Web Awesome comparison paragraph claims ${claimedTotal} total tags, but custom-elements.json currently has ${tagCount} — update both numbers in that paragraph`,
-    );
-  } else if (proEquivalent + other !== claimedTotal) {
-    errors.push(
-      `README.md's Web Awesome comparison paragraph is internally inconsistent: ${proEquivalent} + ${other} !== ${claimedTotal}`,
-    );
-  }
-}
-
-// "N-component conversation/agent UI kit" in that same paragraph must match the family table's
-// own "Conversation & Agent UI" row further down -- the two numbers describe the same family.
-const kitMatch = readme.match(/(\d+)-component conversation\/agent UI kit/);
-const familyRowMatch = readme.match(/\| Conversation & Agent UI \| (\d+) \|/);
-if (!kitMatch) {
-  errors.push('README.md: could not find the "<N>-component conversation/agent UI kit" phrase to check');
-} else if (!familyRowMatch) {
-  errors.push('README.md: could not find the "Conversation & Agent UI" family table row to check');
-} else if (kitMatch[1] !== familyRowMatch[1]) {
-  errors.push(
-    `README.md says "${kitMatch[1]}-component conversation/agent UI kit" but the family table lists ${familyRowMatch[1]} tags for that family — update one to match the other`,
-  );
 }
 
 if (errors.length) {
