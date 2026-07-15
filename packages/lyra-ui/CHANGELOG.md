@@ -1,5 +1,94 @@
 # Changelog
 
+## 2.12.0
+
+### Minor Changes
+
+- d612939: Make card headers wrap with their actions in narrow allocations, expose citation previews through
+  a stable tooltip relationship, and localize the complete citation status announcement.
+
+  Add reactive `accessibleLabel` overrides to both code-block variants and media cards so host
+  `aria-label` values reach the actionable or semantic element inside shadow DOM. Media-card's
+  unnamed actions now use complete, per-kind localized messages.
+
+  Keep markdown within logical narrow allocations and make its `streaming` state hold `aria-busy`
+  until the final content update.
+
+- 159f3c9: `lyra-file-input` now forwards host accessible names to its dropzone and file input, exposes an
+  imperative focus target, reports explicit enabled/disabled ARIA state, and announces accepted and
+  rejected file counts with correct singular and plural messages.
+
+  `lyra-export-button` now forwards host accessible names to its trigger, exposes native focus and
+  blur methods, and keeps long format menus within the positioned overlay's available space.
+
+  `lyra-document-preview` now supports explicit image alternative text (including `alt=""` for
+  decorative previews), aborts superseded text fetches, and documents its sizing, font, and spinner
+  motion custom properties.
+
+- 3da4f80: `lyra-button` ships a default `:hover`/`:active` pointer-interaction treatment on `[part='base']`
+  (`filter: brightness(--lyra-button-hover-brightness)` on hover, `transform: scale(--lyra-button-active-scale)`
+  on active, both disabled under `prefers-reduced-motion`) -- previously it had zero hover/active CSS,
+  so a mechanical `wa-button` -> `lyra-button` rename silently dropped all pointer-interaction feedback.
+
+  `lyra-button` is now form-associated (`static formAssociated = true` + `attachInternals()`), so it
+  participates in an ancestor `<form>.elements` the same way `wa-button` does -- a sibling text field's
+  own Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) now finds
+  it, instead of silently failing to submit the form.
+
+  `lyra-button` gains an `appearance="accent"` value -- a loud, high-contrast filled tier equivalent to
+  `wa-button`'s own runtime-default appearance, including for `variant="neutral"` (`'filled'` reads the
+  ambient surface color there, matching `wa-button`'s `appearance="filled"`; `'accent'` reads a solid
+  neutral fill, matching `wa-button`'s own unset-appearance default). New `--lyra-button-accent-fill`/
+  `-accent-on-fill` custom properties back it.
+
+  `lyra-heatmap` gains a `monthLabelText?: (jsMonth: number, year: number) => string | undefined`
+  property, the month-axis analogue of the existing `weekdayLabelText` -- lets a consumer's calendar-mode
+  month labels track the same locale signal (e.g. an app's own i18n store) as every other localizable
+  string on the component, instead of always following `toLocaleString(undefined, ...)`'s browser/OS-
+  language default. Unset (the default) reproduces today's exact locale-derived output.
+
+- 8a1777b: `lyra-skeleton` adds an `announce` switch so grouped or decorative placeholders can avoid
+  duplicating live-region announcements. Pulse and sheen effects now use the shared
+  `--lyra-transition-ambient` motion token and remain disabled by the reduced-motion branch.
+- 8e8a77f: `lyra-tool-result-dialog` now forwards host `aria-label` to the internal dialog, exports its
+  typed event map, localizes complete duration messages, omits non-finite durations, exposes its
+  running-spin timing, and wraps footer actions in narrow layouts.
+
+### Patch Changes
+
+- 6ba4d1f: Localize generation metrics, graph position announcements, attachment upload context, and duration templates. Mirror JSON viewer disclosure chevrons in RTL and give map content a named semantic group with correct host-label precedence.
+- b67a25e: Forward host accessible names to the semantic canvas or SVG in the chart, histogram, box-plot,
+  and lite-chart families. Localize numeric summaries, mirror chart axes in RTL, refresh derived
+  histogram data, improve BoxPlot theming and reduced-motion behavior, and support narrow allocations
+  with long content across charts and context meters.
+- 5dd8066: `lyra-chat-message` now formats its default timestamp with the component's effective locale,
+  uses the shared ambient-motion token for streaming feedback, and wraps crowded footer controls
+  in narrow allocations.
+- e95f942: Adds a complete interpolated localization message for citation status announcements so
+  translations can reorder the citation index and status naturally.
+- 303e701: `lyra-heatmap` now localizes its built-in value label and formats legend, accessible-range, cell,
+  and calendar-date values with the component's effective locale. Explicit `value-label` text remains
+  verbatim.
+- 87eb96a: `lyra-heatmap` now mirrors its low-to-high legend ramp in right-to-left layouts, including
+  consumer-provided multi-stop palettes.
+- 134dba0: Adds a complete interpolated localization message for lite-chart mark announcements so
+  translations can reorder series, label, value, and position naturally.
+- 0260f9b: Harden `lyra-app-rail`, `lyra-attachment-chip`, `lyra-avatar`, and `lyra-chip-group`: respect the
+  configured element prefix, preserve localized attachment-message word order, support image `File`
+  objects in thumbnail-only mode, make spinner timing themeable, retry replacement avatar images,
+  forward avatar accessible-name overrides, and collapse slot-forwarded overflow chips correctly.
+- 9033a43: Forward host naming and native textarea editing APIs through `lyra-chat-composer`, complete
+  `lyra-phone-input` selection and range-editing methods, and expose observable focus/blur contracts
+  for pagination, playback, and select controls.
+- acbbf00: Logical safe-area tokens now mirror the underlying physical browser insets in right-to-left
+  layouts, keeping dialogs, toasts, widgets, and tool overlays clear of notches on the correct side.
+- 1f93e0c: `lyra-sparkline` now applies its generated or consumer-provided accessible name to the internal
+  SVG that owns the image role. Generated value summaries also respect the component's effective
+  locale and per-instance message overrides.
+- 18003e2: `lyra-tool-call-chip` now interpolates duration values through localized message templates and
+  exposes coherent motion controls for its running spin and pending pulse. Its event map is also
+  exported for typed listeners.
+
 ## 2.11.0
 
 ### Minor Changes
