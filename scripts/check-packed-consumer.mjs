@@ -341,7 +341,7 @@ async function main() {
     );
     await run(
       pnpm,
-      ['exec', 'attw', '--profile', 'esm-only', '--format', 'table', '--summary', uiTarball],
+      ['exec', 'attw', '--profile', 'esm-only', '--exclude-entrypoints', './theme.css', '--format', 'table', '--summary', uiTarball],
       root,
       'Are The Types Wrong package check',
     );
