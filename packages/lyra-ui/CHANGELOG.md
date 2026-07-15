@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.13.0
+
+### Minor Changes
+
+- 80cb577: `lyra-table` gains opt-in row selection (`selectionMode: 'single' | 'multiple'`, `selectedKeys`,
+  `lyra-selection-change`), a built-in filter field (`filterable`, `filterText`, `filter`,
+  `lyra-filter-change`), controlled pagination through `<lyra-pagination>` (`pageSize`, `page`,
+  `totalItems`, `paginationMode`, `lyra-page-change`), a `loading` state with an indeterminate
+  spinner, per-column double-click inline editing (`TableColumn.editable`/`editValue`/`editType`,
+  `lyra-cell-edit`), and row grouping (`groupBy`, `groupLabel`). All new properties default to
+  today's exact behavior when left unset.
+- 5628327: `lyra-input` and `lyra-textarea` now also emit native-style `input`/`change` events (composed,
+  matching the native element's own timing) alongside the existing `lyra-input`/`lyra-change`
+  aliases, so consumers migrating from a native `<input>`/`<textarea>` don't need to rename their
+  listeners. Both components also forward `spellcheck`, `autocapitalize`, `autocorrect`,
+  `inputmode`, and `enterkeyhint` to their internal native control.
+- d009cd8: Adds a new "Web Awesome parity primitives" family: `lyra-badge`/`lyra-tag`, `lyra-callout`,
+  `lyra-divider`, `lyra-breadcrumb`/`lyra-breadcrumb-item`, `lyra-details`/`lyra-accordion`/
+  `lyra-accordion-item`, `lyra-button-group`, `lyra-carousel`/`lyra-carousel-item`,
+  `lyra-color-picker`, `lyra-drawer`, `lyra-popover`/`lyra-tooltip`/`lyra-dropdown`/
+  `lyra-dropdown-item`, `lyra-radio`/`lyra-radio-group`, `lyra-rating`, `lyra-spinner`,
+  `lyra-progress-bar`/`lyra-progress-ring`, `lyra-format-number`/`lyra-format-date`/
+  `lyra-format-bytes`/`lyra-relative-time`, `lyra-image-comparer`, `lyra-zoomable-frame`,
+  `lyra-scroller`, and headless `lyra-intersection-observer`/`lyra-mutation-observer`/
+  `lyra-resize-observer` wrappers. `lyra-number-input` and `lyra-time-input` join `lyra-input` as
+  sibling native-input-type primitives.
+
+  These close out the remaining free-tier Web Awesome components with no prior lyra-ui equivalent —
+  133 tags total, up from 97.
+
+### Patch Changes
+
+- 5766257: `installHappyDomFormAssociatedShims()`'s stub `ElementInternals` now implements `setValidity()` as a no-op. `AnchoredValidityController` (used by every form-associated component) calls `internals.setValidity()` on every update, not just at construction, so a consumer's happy-dom test suite installing the shim would throw the moment any shimmed component's value changed after mount.
+
 ## 2.12.0
 
 ### Minor Changes
