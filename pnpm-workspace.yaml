@@ -5,3 +5,5 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
+  core-js: true
+  es5-ext: true
