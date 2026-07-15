@@ -21,6 +21,7 @@ export const styles = css`
     --lyra-attachment-chip-compact-thumbnail-size: var(--lyra-size-1-75rem);
     --lyra-attachment-chip-compact-font-size: var(--lyra-font-size-xs);
     --lyra-attachment-chip-compact-gap: var(--lyra-size-0-25rem);
+    --lyra-attachment-chip-spinner-duration: 0.8s;
   }
 
   :host([compact]) [part='base'] {
@@ -34,7 +35,7 @@ export const styles = css`
     inline-size: var(--lyra-attachment-chip-compact-thumbnail-size);
     block-size: var(--lyra-attachment-chip-compact-thumbnail-size);
   }
-  :host([compact][thumbnail-only][mime-type^='image/']) [part='meta'] {
+  [part='meta'][hidden] {
     display: none;
   }
 
@@ -150,7 +151,7 @@ export const styles = css`
     border-radius: 50%;
     border: var(--lyra-border-width-medium) solid var(--lyra-color-border);
     border-block-start-color: var(--lyra-attachment-chip-accent);
-    animation: lyra-attachment-chip-spin 0.8s linear infinite;
+    animation: lyra-attachment-chip-spin var(--lyra-attachment-chip-spinner-duration) linear infinite;
   }
 
   [part='retry-button'],

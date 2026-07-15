@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './attachment-chip.js';
 import type { LyraAttachmentChip } from './attachment-chip.js';
 import { formatFileSize } from './attachment-chip.js';
+import { styles } from './attachment-chip.styles.js';
 
 function makeFile(name: string, type: string, sizeBytes = 1): File {
   return new File([new Uint8Array(sizeBytes)], name, { type, lastModified: 1700000000000 });
@@ -222,6 +223,20 @@ describe('status accents and progress', () => {
     expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
   });
 
+  it('exposes a themeable spinner duration and stops the ambient loop for reduced motion', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip
+        status="uploading"
+        style="--lyra-attachment-chip-spinner-duration: 240ms"
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+    expect(getComputedStyle(spinner).animationDuration).to.equal('0.24s');
+    expect(styles.cssText).to.match(
+      /@media\s*\(prefers-reduced-motion:\s*reduce\)[^]*\[part='spinner'\][^{]*\{[^}]*animation:\s*none\s*!important/,
+    );
+  });
+
   it('renders a real progressbar with aria-valuenow/min/max once progress is a meaningful number', async () => {
     const el = (await fixture(
       html`<lyra-attachment-chip name="a.zip" status="uploading" progress="42"></lyra-attachment-chip>`,
@@ -377,6 +392,48 @@ describe('id resolution', () => {
 });
 
 describe('label overrides (i18n)', () => {
+  it('uses contextual message templates so translations control word order and punctuation', async () => {
+    const uploading = (await fixture(html`
+      <lyra-attachment-chip
+        name="report.pdf"
+        status="uploading"
+        progress="30"
+        .strings=${{
+          attachmentUploadingProgress: '{percent}% envoyé',
+          attachmentUploadingWithContext: 'Envoi de {label}',
+          removeWithContext: 'Supprimer « {label} »',
+        }}
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(uploading.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('30% envoyé');
+    expect(uploading.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal(
+      'Envoi de report.pdf',
+    );
+    expect(uploading.shadowRoot!.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal(
+      'Supprimer « report.pdf »',
+    );
+
+    const indeterminate = (await fixture(html`
+      <lyra-attachment-chip
+        name="report.pdf"
+        status="uploading"
+        .strings=${{ attachmentUploadingIndeterminate: 'Envoi en cours' }}
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(indeterminate.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Envoi en cours');
+
+    const failed = (await fixture(html`
+      <lyra-attachment-chip
+        name="report.pdf"
+        status="error"
+        .strings=${{ attachmentRetryWithContext: 'Réessayer « {label} »' }}
+      ></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(failed.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute('aria-label')).to.equal(
+      'Réessayer « report.pdf »',
+    );
+  });
+
   it('overrides the remove button aria-label while keeping displayName interpolation', async () => {
     const el = (await fixture(
       html`<lyra-attachment-chip name="invoice.pdf" remove-label="Supprimer"></lyra-attachment-chip>`,
@@ -515,6 +572,14 @@ describe('thumbnailOnly', () => {
     const el = (await fixture(
       html`<lyra-attachment-chip compact thumbnail-only name="a.png" mime-type="image/png"></lyra-attachment-chip>`,
     )) as LyraAttachmentChip;
+    const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
+    expect(getComputedStyle(meta).display).to.equal('none');
+  });
+
+  it('hides [part=meta] when image MIME type comes from a real File object', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-chip compact thumbnail-only .file=${makeFile('a.png', 'image/png')}></lyra-attachment-chip>
+    `)) as LyraAttachmentChip;
     const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
     expect(getComputedStyle(meta).display).to.equal('none');
   });

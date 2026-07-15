@@ -98,25 +98,15 @@ export function formatFileSize(
 
 /** Visible (not just color-coded) text for every non-resting status --
  *  `'pending'`/`'done'` render nothing here, they're resting states.
- *  `clampedProgress` (not the raw `progress`) is what gets displayed, so the
- *  percentage shown here can never drift from the progressbar's own
- *  `aria-valuenow`/fill-width, which reads from the same clamped value.
- *  `uploadingLabel`/`uploadFailedLabel` are the host's (possibly overridden)
- *  verb/phrase -- defaulting to `'Uploading'`/`'Upload failed'` reproduces
- *  today's exact hardcoded text byte-for-byte. */
+ *  The caller supplies already-localized complete messages so translated
+ *  word order and punctuation are preserved here. */
 function statusText(
   status: AttachmentChipStatus,
-  progress: number,
-  clampedProgress: number,
-  uploadingLabel: string,
+  uploadingText: string,
   uploadFailedLabel: string,
 ): string {
   if (status === 'error') return uploadFailedLabel;
-  if (status === 'uploading') {
-    return Number.isFinite(progress) && progress > 0
-      ? `${uploadingLabel} ${Math.round(clampedProgress)}%`
-      : `${uploadingLabel}…`;
-  }
+  if (status === 'uploading') return uploadingText;
   return '';
 }
 
@@ -152,15 +142,13 @@ function statusText(
  * consumer to invent one. When neither is available, a generated internal id
  * is used as a last resort so the event always has *some* id.
  *
- * i18n/locale: every translatable word rendered by this component is
- * override-able via a dedicated property — `removeLabel`/`retryLabel`
- * (the verb prefixed to the remove/retry buttons' `aria-label`, keeping the
- * `displayName` interpolation), and `uploadingLabel`/`uploadFailedLabel` (the
- * verb/phrase used in the visible `status-text`, keeping the live percentage
- * interpolation for `uploadingLabel`). All four default to today's exact
- * hardcoded English text (`'Remove'`, `'Retry'`, `'Uploading'`, `'Upload
- * failed'`), so leaving them unset changes nothing. These are plain
- * properties, not slots — this component still exposes no slots.
+ * i18n/locale: complete contextual messages (including filename/percentage
+ * placement and punctuation) route through the shared localization registry.
+ * `removeLabel`/`retryLabel`/`uploadingLabel`/`uploadFailedLabel` remain as
+ * simple per-instance copy overrides; use the component's `.strings` map or a
+ * registered locale when a translation needs to reorder the interpolated
+ * values. These are plain properties, not slots — this component still
+ * exposes no slots.
  *
  * @customElement lyra-attachment-chip
  * @event lyra-remove - The user activated the remove (×) button. `detail: { id }`. Only rendered while `removable`.
@@ -176,6 +164,8 @@ function statusText(
  * @csspart spinner - The indeterminate upload spinner, shown instead of `progress` while `status="uploading"` and `progress` is unset/0.
  * @csspart retry-button - The retry affordance, only rendered while `status="error"`.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
+ * @cssprop [--lyra-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
+ * upload-spinner rotation. The ambient loop stops under reduced motion.
  */
 export class LyraAttachmentChip extends LyraElement {
   static styles = [LyraElement.styles, styles];
@@ -224,23 +214,17 @@ export class LyraAttachmentChip extends LyraElement {
    *  unset. `false` (the default) reproduces today's exact output. */
   @property({ type: Boolean, reflect: true, attribute: 'thumbnail-only' }) thumbnailOnly = false;
 
-  /** Verb used in the remove button's `aria-label`, interpolated as
-   *  `` `${removeLabel} ${displayName}` `` -- override for i18n/locale.
-   *  Defaults to `'Remove'`, reproducing today's exact `"Remove ${displayName}"`
-   *  text byte-for-byte. */
+  /** Verb used in the remove button's accessible name. For complete control over translated
+   *  word order and punctuation, override the `removeWithContext` message instead. */
   @property({ attribute: 'remove-label' }) removeLabel = 'Remove';
 
-  /** Verb used in the retry button's `aria-label`, interpolated as
-   *  `` `${retryLabel} ${displayName}` `` -- override for i18n/locale.
-   *  Defaults to `'Retry'`, reproducing today's exact `"Retry ${displayName}"`
-   *  text byte-for-byte. */
+  /** Verb used in the retry button's accessible name. For complete control over translated word
+   *  order and punctuation, override the `attachmentRetryWithContext` message instead. */
   @property({ attribute: 'retry-label' }) retryLabel = 'Retry';
 
-  /** Verb used in the visible uploading status text -- rendered as
-   *  `` `${uploadingLabel} ${percent}%` `` once progress is a meaningful
-   *  number, else `` `${uploadingLabel}…` ``. Override for i18n/locale.
-   *  Defaults to `'Uploading'`, reproducing today's exact `"Uploading N%"`/
-   *  `"Uploading…"` text byte-for-byte. */
+  /** Verb used in uploading messages. For complete control over translated word order and
+   *  punctuation, override the `attachmentUploadingWithContext`,
+   *  `attachmentUploadingProgress`, and `attachmentUploadingIndeterminate` messages instead. */
   @property({ attribute: 'uploading-label' }) uploadingLabel = 'Uploading';
 
   /** Visible status text shown for `status="error"`. Override for
@@ -361,28 +345,46 @@ export class LyraAttachmentChip extends LyraElement {
         ? formatFileSize(this.effectiveSize, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))
         : '';
     // Same override-wins-verbatim rule as `untitledLabel` above.
-    const uploadingLabel = this.localize(
-      'attachmentUploading',
-      this.uploadingLabel === 'Uploading' ? undefined : this.uploadingLabel,
-    );
-    // Same override-wins-verbatim rule as `untitledLabel`/`uploadingLabel` above.
     const uploadFailedLabel = this.localize(
       'attachmentUploadFailed',
       this.uploadFailedLabel === 'Upload failed' ? undefined : this.uploadFailedLabel,
     );
-    const text = statusText(
-      this.status,
-      this.progress,
-      this.clampedProgress,
-      uploadingLabel,
-      uploadFailedLabel,
+    const progressPercent = Math.round(this.clampedProgress);
+    const uploadingText = this.hasNumericProgress
+      ? this.localize(
+          'attachmentUploadingProgress',
+          this.uploadingLabel === 'Uploading' ? undefined : `${this.uploadingLabel} {percent}%`,
+          { percent: progressPercent },
+        )
+      : this.localize(
+          'attachmentUploadingIndeterminate',
+          this.uploadingLabel === 'Uploading' ? undefined : `${this.uploadingLabel}…`,
+        );
+    const uploadingWithContext = this.localize(
+      'attachmentUploadingWithContext',
+      this.uploadingLabel === 'Uploading' ? undefined : `${this.uploadingLabel} {label}`,
+      { label: displayName },
     );
+    const retryWithContext = this.localize(
+      'attachmentRetryWithContext',
+      this.retryLabel === 'Retry' ? undefined : `${this.retryLabel} {label}`,
+      { label: displayName },
+    );
+    const removeWithContext = this.localize(
+      'removeWithContext',
+      this.removeLabel === 'Remove' ? undefined : `${this.removeLabel} {label}`,
+      { label: displayName },
+    );
+    const text = statusText(this.status, uploadingText, uploadFailedLabel);
     const uploading = this.status === 'uploading';
 
     return html`
       <div part="base">
         <span part="thumbnail" aria-hidden="true">${this.renderThumbnail()}</span>
-        <span part="meta">
+        <span
+          part="meta"
+          ?hidden=${this.compact && this.thumbnailOnly && this.effectiveMimeType.startsWith('image/')}
+        >
           <span part="name" title=${name || untitledLabel}>${displayName}</span>
           <span part="size" ?hidden=${!sizeText}>${sizeText || nothing}</span>
           <span part="status-text" role=${this.status === 'error' ? 'alert' : nothing} ?hidden=${!text}>${text || nothing}</span>
@@ -396,20 +398,20 @@ export class LyraAttachmentChip extends LyraElement {
                   aria-valuenow=${Math.round(this.clampedProgress)}
                   aria-valuemin="0"
                   aria-valuemax="100"
-                  aria-label=${`${uploadingLabel} ${displayName}`}
+                  aria-label=${uploadingWithContext}
                 >
                   <div part="progress-fill" style=${`inline-size:${this.clampedProgress}%`}></div>
                 </div>
               `
-            : html`<span part="spinner" role="status" aria-label=${`${uploadingLabel} ${displayName}`}></span>`
+            : html`<span part="spinner" role="status" aria-label=${uploadingWithContext}></span>`
           : nothing}
         ${this.status === 'error'
-          ? html`<button part="retry-button" type="button" aria-label=${`${this.localize('retry', this.retryLabel === 'Retry' ? undefined : this.retryLabel)} ${displayName}`} @click=${this.onRetryClick}>
+          ? html`<button part="retry-button" type="button" aria-label=${retryWithContext} @click=${this.onRetryClick}>
               ${retryIcon()}
             </button>`
           : nothing}
         ${this.removable
-          ? html`<button part="remove-button" type="button" aria-label=${`${this.localize('remove', this.removeLabel === 'Remove' ? undefined : this.removeLabel)} ${displayName}`} @click=${this.onRemoveClick}>
+          ? html`<button part="remove-button" type="button" aria-label=${removeWithContext} @click=${this.onRemoveClick}>
               ${closeIcon()}
             </button>`
           : nothing}
@@ -424,4 +426,3 @@ declare global {
     'lyra-attachment-chip': LyraAttachmentChip;
   }
 }
-

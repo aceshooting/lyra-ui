@@ -158,8 +158,54 @@ export const NotRemovable: Story = {
       size="2415919"
       mime-type="image/jpeg"
       status="done"
-      ?removable=${false}
+      .removable=${false}
     ></lyra-attachment-chip>
+  `,
+};
+
+export const Compact: Story = {
+  name: 'Compact attachment tray',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `compact` presentation reduces the thumbnail, text, spacing, and outer chrome while retaining the filename and status information.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:32rem;">
+      <lyra-attachment-chip compact .file=${samplePngFile('site-photo.png')} status="done"></lyra-attachment-chip>
+      <lyra-attachment-chip compact .file=${sampleTextFile('notes.txt', 2048)} status="pending"></lyra-attachment-chip>
+    </div>
+  `,
+};
+
+export const ThumbnailOnly: Story = {
+  name: 'Compact image thumbnail only',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Combining `compact` and `thumbnail-only` hides metadata only for image attachments, including images supplied as real `File` objects. Non-image files retain their identifying text.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+      <lyra-attachment-chip
+        compact
+        thumbnail-only
+        .file=${samplePngFile('site-photo.png')}
+        status="done"
+      ></lyra-attachment-chip>
+      <lyra-attachment-chip
+        compact
+        thumbnail-only
+        .file=${sampleTextFile('notes.txt', 2048)}
+        status="pending"
+      ></lyra-attachment-chip>
+    </div>
   `,
 };
 
