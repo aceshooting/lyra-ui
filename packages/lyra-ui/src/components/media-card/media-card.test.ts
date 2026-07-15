@@ -68,6 +68,7 @@ describe('defaults', () => {
     expect(el.mimeType).to.equal('');
     expect(el.filename).to.equal('');
     expect(el.alt).to.equal('');
+    expect(el.accessibleLabel).to.equal('');
   });
 
   it('renders the inert file-chip fallback with "Untitled file" when nothing is set', async () => {
@@ -498,7 +499,9 @@ describe('string localization', () => {
     const overrides = {
       mediaCardUntitledFile: 'Fichier sans titre',
       mediaCardOpenName: 'Ouvrir {name}',
-      mediaCardOpenAttachment: 'Ouvrir la pièce jointe {kind}',
+      mediaCardOpenFileAttachment: 'Ouvrir la pièce jointe fichier',
+      mediaCardOpenImageAttachment: "Ouvrir la pièce jointe d'image",
+      mediaCardOpenVideoAttachment: 'Ouvrir la pièce jointe vidéo',
       mediaCardImageAttachment: 'Pièce jointe image',
       mediaCardVideoAttachment: 'Pièce jointe vidéo',
     };
@@ -512,7 +515,7 @@ describe('string localization', () => {
       html`<lyra-media-card src="https://example.test/report.pdf" kind="file" .strings=${overrides}></lyra-media-card>`,
     )) as LyraMediaCard;
     expect(openFallback.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Ouvrir la pièce jointe file',
+      'Ouvrir la pièce jointe fichier',
     );
 
     const openNamed = (await fixture(
@@ -526,15 +529,61 @@ describe('string localization', () => {
       html`<lyra-media-card src="https://example.test/a.png" kind="image" .strings=${overrides}></lyra-media-card>`,
     )) as LyraMediaCard;
     expect((image.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('Pièce jointe image');
+    expect(image.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      "Ouvrir la pièce jointe d'image",
+    );
 
     const video = (await fixture(
       html`<lyra-media-card src="https://example.test/a.mp4" kind="video" .strings=${overrides}></lyra-media-card>`,
     )) as LyraMediaCard;
     expect(video.shadowRoot!.querySelector('video')!.getAttribute('aria-label')).to.equal('Pièce jointe vidéo');
+    expect(video.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
+      'Ouvrir la pièce jointe vidéo',
+    );
   });
 });
 
 describe('accessibility', () => {
+  it('forwards a reactive aria-label/action override to each actionable rendering', async () => {
+    const image = (await fixture(html`
+      <lyra-media-card
+        aria-label="Open image in lightbox"
+        src="https://example.test/a.png"
+        kind="image"
+        filename="a.png"
+      ></lyra-media-card>
+    `)) as LyraMediaCard;
+    expect(image.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Open image in lightbox',
+    );
+
+    const video = (await fixture(html`
+      <lyra-media-card
+        aria-label="Open video in dialog"
+        src="https://example.test/a.mp4"
+        kind="video"
+        filename="a.mp4"
+      ></lyra-media-card>
+    `)) as LyraMediaCard;
+    const openButton = video.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement;
+    expect(openButton.getAttribute('aria-label')).to.equal('Open video in dialog');
+
+    const file = (await fixture(html`
+      <lyra-media-card
+        aria-label="Download quarterly report"
+        src="https://example.test/report.pdf"
+        kind="file"
+        filename="report.pdf"
+      ></lyra-media-card>
+    `)) as LyraMediaCard;
+    const link = file.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
+    expect(link.getAttribute('aria-label')).to.equal('Download quarterly report');
+
+    file.accessibleLabel = 'Save quarterly report';
+    await file.updateComplete;
+    expect(link.getAttribute('aria-label')).to.equal('Save quarterly report');
+  });
+
   it('is accessible in the default (empty) state', async () => {
     const el = (await fixture(html`<lyra-media-card></lyra-media-card>`)) as LyraMediaCard;
     await expect(el).to.be.accessible();

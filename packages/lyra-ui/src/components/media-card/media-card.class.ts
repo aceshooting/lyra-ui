@@ -122,6 +122,13 @@ function fileGlyph(): SVGTemplateResult {
  * calls `preventDefault()` on it suppresses that default download/open so it
  * can substitute its own handling instead.
  *
+ * **Accessible action name.** The host `aria-label` maps to
+ * `accessibleLabel` and overrides the filename/alt/per-kind action name on
+ * whichever internal element is actionable for the resolved kind. The name
+ * is therefore applied directly to the button or link across the shadow
+ * boundary; it does not replace the image alt text or the video control's
+ * own label.
+ *
  * @customElement lyra-media-card
  * @event lyra-open - The card (or, for `kind="video"`, its `open-button`)
  * was activated. `detail: { src, filename }`. Cancelable — see the class
@@ -158,6 +165,11 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  Falls back to `filename`, then a generic per-kind description. */
   @property() alt = '';
 
+  /** Accessible-name override for the card's actionable element. Maps to
+   *  the host's `aria-label` attribute and wins over names derived from
+   *  `filename`, `alt`, or the resolved media kind. */
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
+
   /** A CSS length (e.g. `"16rem"`); once set, overrides the
    *  `--lyra-media-card-max-height` custom property for this instance only —
    *  same contract as `<lyra-document-preview>`'s identically-named prop. */
@@ -175,11 +187,13 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
   /** Accessible name for the card's own actionable element (`base` or, for
    *  video, `open-button`) — always phrased as the action it performs. */
-  private get accessibleLabel(): string {
+  private get actionLabel(): string {
+    if (this.accessibleLabel) return this.accessibleLabel;
     const name = this.filename || this.alt;
-    return name
-      ? this.localize('mediaCardOpenName', undefined, { name })
-      : this.localize('mediaCardOpenAttachment', undefined, { kind: this.resolvedKind });
+    if (name) return this.localize('mediaCardOpenName', undefined, { name });
+    if (this.resolvedKind === 'image') return this.localize('mediaCardOpenImageAttachment');
+    if (this.resolvedKind === 'video') return this.localize('mediaCardOpenVideoAttachment');
+    return this.localize('mediaCardOpenFileAttachment');
   }
 
   private get imgAlt(): string {
@@ -220,7 +234,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
   private renderImage(src: string): TemplateResult {
     return html`
-      <button part="base" type="button" style=${this.baseStyle} aria-label=${this.accessibleLabel} @click=${this.onActivate}>
+      <button part="base" type="button" style=${this.baseStyle} aria-label=${this.actionLabel} @click=${this.onActivate}>
         <img part="media" src=${src} alt=${this.imgAlt} />
       </button>
     `;
@@ -230,7 +244,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     return html`
       <div part="base" style=${this.baseStyle}>
         <video part="media" controls src=${src} aria-label=${this.videoLabel}></video>
-        <button part="open-button" type="button" aria-label=${this.accessibleLabel} @click=${this.onActivate}>
+        <button part="open-button" type="button" aria-label=${this.actionLabel} @click=${this.onActivate}>
           ${expandIcon()}
         </button>
       </div>
@@ -251,7 +265,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
           href=${href}
           style=${this.baseStyle}
           download=${this.filename || ''}
-          aria-label=${this.accessibleLabel}
+          aria-label=${this.actionLabel}
           @click=${this.onLinkClick}
         >
           ${content}

@@ -36,6 +36,27 @@ export const Image: Story = {
   `,
 };
 
+export const AccessibleActionLabel: Story = {
+  name: 'Accessible action-name override',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The host `aria-label` names the internal actionable element directly. It overrides the generated open action without replacing the image alt text.',
+      },
+    },
+  },
+  render: () => html`
+    <lyra-media-card
+      aria-label="Open rooftop photo in the project lightbox"
+      src=${SAMPLE_IMAGE}
+      kind="image"
+      filename="roof-photo.jpg"
+      alt="Aerial photo of a rooftop solar installation"
+    ></lyra-media-card>
+  `,
+};
+
 export const Video: Story = {
   render: () => html`
     <lyra-media-card src=${SAMPLE_VIDEO} kind="video" filename="walkthrough.mp4"></lyra-media-card>
