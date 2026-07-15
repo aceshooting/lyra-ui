@@ -1,5 +1,33 @@
 # Changelog
 
+## 3.1.0
+
+### Minor Changes
+
+- de80dc5: Adds `<lyra-archive-viewer>` for listing names and human-readable sizes inside `.zip` archives via
+  the optional `jszip` peer. It registers standard ZIP MIME types and a `.zip` filename fallback with
+  `<lyra-document-viewer>`; other archive formats remain on the generic download fallback.
+- de80dc5: Adds the optional `line-numbers` display to `<lyra-code-block>` and `<lyra-code-block-core>`.
+- 53c7c13: Add sanitized SVG and HTML viewers, plus PapaParse-backed dataset and vCard contact viewers to the document renderer registry.
+- c6dd26c: Adds `<lyra-document-viewer>`, a dialog-hosted, format-dispatching document viewer, plus a
+  `registerDocumentRenderer()` registry for plugging in per-format renderers. Files without a
+  registered renderer fall back to the existing `<lyra-document-preview>` component.
+- d992ee7: Adds `<lyra-docx-viewer>`, rendering `.docx` Word documents as sanitized semantic HTML through the
+  optional `mammoth` and `dompurify` peers. It registers the official WordprocessingML MIME type and
+  falls back to matching `.docx` filenames.
+- de80dc5: Adds `<lyra-ebook-viewer>` using the optional `epubjs` peer and registers EPUB files with the
+  document-viewer registry.
+- 49f7b87: Adds `<lyra-email-viewer>` for sanitized `.eml` messages via the optional `postal-mime` and
+  `dompurify` peers, plus `<lyra-calendar-viewer>` for `.ics` event lists via optional `ical.js`.
+  Both viewers register their standard MIME types and filename-extension fallbacks with
+  `<lyra-document-viewer>`.
+- de80dc5: Adds `getFileTypeMetadata()`, `registerFileTypeMetadata()`, and `<lyra-file-icon>` for localized,
+  tokenized MIME/filename format presentation.
+- 68bb5e3: Adds `<lyra-pdf-viewer>`, a PDF renderer built on optional `pdfjs-dist`, with pagination, zoom, selectable text, and virtualized page rendering.
+- de80dc5: Adds `<lyra-pptx-viewer>` using the optional `@aiden0z/pptx-renderer` peer for best-effort client-side
+  PPTX rendering with a persistent fidelity notice.
+- 0b6f412: Add SheetJS-backed spreadsheet and PapaParse-backed CSV document viewers with virtualized rows.
+
 ## 3.0.0
 
 ### Major Changes
