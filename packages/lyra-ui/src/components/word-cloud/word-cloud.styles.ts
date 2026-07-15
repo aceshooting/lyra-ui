@@ -19,10 +19,10 @@ export const styles = css`
   }
   @media (prefers-color-scheme: dark) {
     :host {
-      --lyra-word-cloud-color-1: var(--wa-color-brand-fill-loud, var(--lyra-color-brand));
-      --lyra-word-cloud-color-2: var(--wa-color-success-fill-loud, var(--lyra-color-success));
-      --lyra-word-cloud-color-3: var(--wa-color-warning-fill-loud, var(--lyra-color-warning));
-      --lyra-word-cloud-color-4: var(--wa-color-danger-fill-loud, var(--lyra-color-danger));
+      --lyra-word-cloud-color-1: var(--lyra-theme-color-brand-fill-loud, var(--lyra-color-brand));
+      --lyra-word-cloud-color-2: var(--lyra-theme-color-success-fill-loud, var(--lyra-color-success));
+      --lyra-word-cloud-color-3: var(--lyra-theme-color-warning-fill-loud, var(--lyra-color-warning));
+      --lyra-word-cloud-color-4: var(--lyra-theme-color-danger-fill-loud, var(--lyra-color-danger));
       --lyra-word-cloud-color-5: var(--lyra-color-chart-5);
       --lyra-word-cloud-color-6: var(--lyra-color-chart-6);
       --lyra-word-cloud-color-7: var(--lyra-color-chart-7);

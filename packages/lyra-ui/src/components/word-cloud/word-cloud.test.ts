@@ -331,7 +331,7 @@ it('announces the count of words actually rendered, not the raw input count', as
 it('defines a dark-mode palette with readable fallback colors', () => {
   expect(styles.cssText).to.match(/prefers-color-scheme:\s*dark/);
   expect(styles.cssText).to.match(
-    /--lyra-word-cloud-color-1:\s*var\(--wa-color-brand-fill-loud,\s*var\(--lyra-color-brand\)\)/,
+    /--lyra-word-cloud-color-1:\s*var\(--lyra-theme-color-brand-fill-loud,\s*var\(--lyra-color-brand\)\)/,
   );
   expect(styles.cssText).to.match(/--lyra-word-cloud-color-8:\s*var\(--lyra-color-chart-8\)/);
 });
