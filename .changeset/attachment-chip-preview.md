@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+"@aceshooting/lyra-ui": minor
 ---
 
 `lyra-attachment-chip` gains a preview action: a new `previewSrc` property (used when `file` is
