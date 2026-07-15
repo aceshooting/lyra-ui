@@ -73,14 +73,29 @@ it('reflects effect onto the host attribute', async () => {
 it('gives pulse and sheen distinct keyframe animations, disabled under reduced motion', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(
-    "[part='base'] { animation: lyra-skeleton-pulse 1.5s ease-in-out infinite; }",
+    "[part='base'] { animation: lyra-skeleton-pulse var(--lyra-transition-ambient) infinite; }",
   );
   expect(css).to.include('background-image: linear-gradient(');
-  expect(css).to.include('animation: lyra-skeleton-sheen 1.5s ease-in-out infinite;');
+  expect(css).to.include(
+    'animation: lyra-skeleton-sheen var(--lyra-transition-ambient) infinite;',
+  );
   expect(css).to.include(
     "@media (prefers-reduced-motion: reduce) { [part='base'] { animation: none !important; } " +
       ":host([effect='sheen']) [part='base'] { background-image: none; } }",
   );
+});
+
+it('allows the shared ambient-motion token to retime the animation', async () => {
+  const el = (await fixture(
+    html`<lyra-skeleton
+      effect="sheen"
+      style="--lyra-transition-ambient: 3s linear"
+    ></lyra-skeleton>`,
+  )) as LyraSkeleton;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+
+  expect(getComputedStyle(base).animationDuration).to.equal('3s');
+  expect(getComputedStyle(base).animationTimingFunction).to.equal('linear');
 });
 
 it('defaults the accessible name to "Loading…" and reflects a custom label', async () => {
@@ -98,6 +113,26 @@ it('localizes the default accessible name via this.localize() when .strings over
     html`<lyra-skeleton .strings=${{ loading: 'Chargement…' }}></lyra-skeleton>`,
   )) as LyraSkeleton;
   expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Chargement…');
+});
+
+it('can render as an unannounced decorative placeholder', async () => {
+  const el = (await fixture(
+    html`<lyra-skeleton .announce=${false}></lyra-skeleton>`,
+  )) as LyraSkeleton;
+
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
+});
+
+it('removes status semantics when announce is disabled after rendering', async () => {
+  const el = (await fixture(html`<lyra-skeleton></lyra-skeleton>`)) as LyraSkeleton;
+  expect(el.getAttribute('role')).to.equal('status');
+
+  el.announce = false;
+  await el.updateComplete;
+
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('.sr-only')).to.equal(null);
 });
 
 it('is accessible', async () => {

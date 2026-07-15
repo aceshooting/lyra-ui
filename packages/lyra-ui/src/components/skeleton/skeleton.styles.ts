@@ -20,7 +20,7 @@ export const styles = css`
     border-radius: 50%;
   }
   :host([effect='pulse']) [part='base'] {
-    animation: lyra-skeleton-pulse 1.5s ease-in-out infinite;
+    animation: lyra-skeleton-pulse var(--lyra-transition-ambient) infinite;
   }
   :host([effect='sheen']) [part='base'] {
     background-image: linear-gradient(
@@ -30,7 +30,7 @@ export const styles = css`
       var(--lyra-color-border) 100%
     );
     background-size: 200% 100%;
-    animation: lyra-skeleton-sheen 1.5s ease-in-out infinite;
+    animation: lyra-skeleton-sheen var(--lyra-transition-ambient) infinite;
   }
   @keyframes lyra-skeleton-pulse {
     0%,

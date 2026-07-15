@@ -13,6 +13,8 @@ export type SkeletonEffect = 'pulse' | 'sheen';
  *
  * @customElement lyra-skeleton
  * @csspart base - The placeholder shape.
+ * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
+ *   shared by the pulse and sheen effects.
  */
 export class LyraSkeleton extends LyraElement {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -22,12 +24,20 @@ export class LyraSkeleton extends LyraElement {
   @property() width?: string;
   @property() height?: string;
 
+  /** Whether this placeholder exposes a localized status announcement. Disable for decorative
+   *  members of a group whose loading state is announced once by a parent or sibling. */
+  @property({ type: Boolean, reflect: true }) announce = true;
+
   /** Accessible name announced via `role="status"`. Override with a
    *  description of what is actually loading (e.g. "Loading chart"). */
   @property() label = 'Loading…';
 
   protected willUpdate(): void {
-    this.setAttribute('role', 'status');
+    if (this.announce) {
+      this.setAttribute('role', 'status');
+    } else {
+      this.removeAttribute('role');
+    }
   }
 
   protected updated(changed: PropertyValues): void {
@@ -47,7 +57,9 @@ export class LyraSkeleton extends LyraElement {
 
   render(): TemplateResult {
     const label = this.localize('loading', this.label === 'Loading…' ? undefined : this.label);
-    return html`<span part="base"><span class="sr-only">${label}</span></span>`;
+    return html`<span part="base"
+      >${this.announce ? html`<span class="sr-only">${label}</span>` : ''}</span
+    >`;
   }
 }
 
@@ -57,4 +69,3 @@ declare global {
     'lyra-skeleton': LyraSkeleton;
   }
 }
-
