@@ -30,6 +30,10 @@ export const styles = css`
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
+  [part='step']:hover:not([aria-disabled='true']) {
+    background: var(--lyra-color-brand-quiet);
+    color: var(--lyra-color-text);
+  }
   [part='step']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);

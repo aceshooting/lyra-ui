@@ -1035,4 +1035,9 @@ describe('blur/focus bubbling', () => {
     expect(ev.bubbles).to.be.true;
     expect(ev.composed).to.be.true;
   });
+
+  it('gives the clear/expand buttons a :hover treatment', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='clear-button'\]:hover,\s*\[part='expand-button'\]:hover\s*\{[^}]+\}/);
+  });
 });

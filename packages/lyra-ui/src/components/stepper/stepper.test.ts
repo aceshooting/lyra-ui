@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './stepper.js';
 import type { LyraStepper } from './stepper.js';
+import { styles } from './stepper.styles.js';
 
 const steps = () => [
   { id: 'basics', label: 'Basics', state: 'completed' as const },
@@ -79,5 +80,10 @@ describe('lyra-stepper', () => {
   it('is accessible', async () => {
     const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
     await expect(el).to.be.accessible();
+  });
+
+  it('gives a non-disabled step a :hover treatment, matching the click-to-jump affordance', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='step'\]:hover:not\(\[aria-disabled='true'\]\)\s*\{[^}]+\}/);
   });
 });

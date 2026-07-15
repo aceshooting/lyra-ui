@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './button.js';
 import type { LyraButton } from './button.class.js';
+import { styles } from './button.styles.js';
 
 describe('lyra-button', () => {
   it('defaults to neutral/filled/m/button with a slotted label', async () => {
@@ -104,5 +105,40 @@ describe('lyra-button', () => {
   it('is accessible while loading', async () => {
     const el = await fixture(html`<lyra-button .loading=${true}>Save</lyra-button>`);
     await expect(el).to.be.accessible();
+  });
+
+  it('ships a default :hover/:active treatment on [part="base"], disabled under reduced motion', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='base'\]:not\(:disabled\):hover\s*\{[^}]*filter:/);
+    expect(css).to.match(/\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*scale\(/);
+    expect(css).to.match(
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='base'\]:not\(:disabled\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/,
+    );
+  });
+
+  it('is form-associated, participating in an ancestor form.elements the same way wa-button does', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lyra-button type="submit">Save</lyra-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lyra-button') as LyraButton;
+    expect(Array.from(form.elements)).to.include(el);
+  });
+
+  it('supports appearance="accent" as a loud filled tier distinct from "filled" for variant="neutral"', async () => {
+    const filledEl = (await fixture(
+      html`<lyra-button appearance="filled" variant="neutral">Save</lyra-button>`,
+    )) as LyraButton;
+    const accentEl = (await fixture(
+      html`<lyra-button appearance="accent" variant="neutral">Save</lyra-button>`,
+    )) as LyraButton;
+    expect(accentEl.appearance).to.equal('accent');
+    expect(accentEl.getAttribute('appearance')).to.equal('accent');
+    const filledBase = filledEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const accentBase = accentEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(accentBase).backgroundColor).to.not.equal(
+      getComputedStyle(filledBase).backgroundColor,
+    );
   });
 });

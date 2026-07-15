@@ -36,9 +36,20 @@ export const Variants: Story = {
 export const Appearances: Story = {
   render: () => html`
     <div style="display: flex; gap: 0.5rem;">
+      <lyra-button variant="brand" appearance="accent">Accent</lyra-button>
       <lyra-button variant="brand" appearance="filled">Filled</lyra-button>
       <lyra-button variant="brand" appearance="outlined">Outlined</lyra-button>
       <lyra-button variant="brand" appearance="plain">Plain</lyra-button>
+    </div>
+  `,
+};
+
+export const NeutralAccentVsFilled: Story = {
+  name: 'Neutral: accent vs. filled',
+  render: () => html`
+    <div style="display: flex; gap: 0.5rem;">
+      <lyra-button variant="neutral" appearance="accent">Accent (loud fill)</lyra-button>
+      <lyra-button variant="neutral" appearance="filled">Filled (ambient surface)</lyra-button>
     </div>
   `,
 };

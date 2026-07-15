@@ -16,6 +16,11 @@ export const tokens = css`
     --lyra-color-warning-quiet: var(--wa-color-warning-fill-quiet, #fff8c5);
     --lyra-color-danger: var(--wa-color-danger-fill-loud, #cf222e);
     --lyra-color-danger-quiet: var(--wa-color-danger-fill-quiet, #ffebe9);
+    /* A solid, high-contrast neutral fill -- distinct from --lyra-color-surface (which is the
+       ambient page/panel background, not a "loud" accent) and from --lyra-color-text (used as a
+       plain-text/outline accent, not a fill). Backs lyra-button's appearance="accent" tier for
+       variant="neutral", the one variant whose other tokens all resolve to ambient/plain values. */
+    --lyra-color-neutral: var(--wa-color-neutral-fill-loud, #1a1a1a);
     /* Text/icon colors paired with each solid semantic fill. These are
        separate tokens because a theme can choose different foregrounds per
        tone, and the bright standalone dark fills require dark content. */
@@ -23,6 +28,7 @@ export const tokens = css`
     --lyra-color-on-success: var(--wa-color-success-on-loud, #fff);
     --lyra-color-on-warning: var(--wa-color-warning-on-loud, #fff);
     --lyra-color-on-danger: var(--wa-color-danger-on-loud, #fff);
+    --lyra-color-on-neutral: var(--wa-color-neutral-on-loud, #fff);
     --lyra-color-overlay: var(--wa-color-overlay, rgb(0 0 0 / 0.5));
     --lyra-color-no-data: var(--wa-color-no-data, rgb(128 128 128 / 25%));
     --lyra-font-mono: var(--wa-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
@@ -231,10 +237,12 @@ export const tokens = css`
       --lyra-color-warning-quiet: var(--wa-color-warning-fill-quiet, #3b2900);
       --lyra-color-danger: var(--wa-color-danger-fill-loud, #fa524a);
       --lyra-color-danger-quiet: var(--wa-color-danger-fill-quiet, #4c1210);
+      --lyra-color-neutral: var(--wa-color-neutral-fill-loud, #e5e7eb);
       --lyra-color-on-brand: var(--wa-color-brand-on-loud, #111827);
       --lyra-color-on-success: var(--wa-color-success-on-loud, #111827);
       --lyra-color-on-warning: var(--wa-color-warning-on-loud, #111827);
       --lyra-color-on-danger: var(--wa-color-danger-on-loud, #111827);
+      --lyra-color-on-neutral: var(--wa-color-neutral-on-loud, #111827);
       --lyra-color-chart-1: var(--wa-color-chart-1, #b58cff);
       --lyra-color-chart-2: var(--wa-color-chart-2, #ff7ab2);
       --lyra-color-chart-3: var(--wa-color-chart-3, #4fd1c5);
@@ -284,10 +292,12 @@ export const tokens = css`
       --lyra-color-warning-quiet: Canvas;
       --lyra-color-danger: LinkText;
       --lyra-color-danger-quiet: Canvas;
+      --lyra-color-neutral: ButtonText;
       --lyra-color-on-brand: Canvas;
       --lyra-color-on-success: Canvas;
       --lyra-color-on-warning: Canvas;
       --lyra-color-on-danger: Canvas;
+      --lyra-color-on-neutral: Canvas;
       --lyra-color-chart-1: Highlight;
       --lyra-color-chart-2: LinkText;
       --lyra-color-chart-3: CanvasText;

@@ -400,6 +400,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default) reproduces
    *  today's exact locale-derived output. */
   @property({ attribute: false }) weekdayLabelText?: (jsWeekday: number) => string | undefined;
+  /** Overrides the month-axis label text in calendar mode -- receives the real JS month index
+   *  (`0` January .. `11` December) and full year for a month boundary that would otherwise
+   *  render a label and, when it returns a string, uses it instead of the built-in
+   *  `Intl.DateTimeFormat`-derived short month name. Mirrors `weekdayLabelText`'s exact
+   *  override-with-fallback shape -- unset (the default) reproduces today's exact
+   *  `toLocaleString(undefined, ...)`-derived output. */
+  @property({ attribute: false }) monthLabelText?: (jsMonth: number, year: number) => string | undefined;
   /** A discrete array (≥2) of CSS colors used as exact ramp steps instead of linearly
    *  interpolating between the two `--lyra-heatmap-scale-lo`/`-hi` endpoints — lets a consumer
    *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
@@ -579,11 +586,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.hoverCell = null;
       this.liveText = '';
     }
-    // Calendar-mode grid layout depends only on `days`/`firstDayOfWeek` (not
+    // Calendar-mode grid layout depends only on `days`/`firstDayOfWeek`/`monthLabelText` (not
     // `mode`) — rebuilt here, once per cycle, instead of independently by
     // every call site (see `cachedCalendarGrid`'s doc comment).
-    if (changed.has('days') || changed.has('firstDayOfWeek') || !this.hasUpdated) {
-      this.cachedCalendarGrid = buildCalendarGrid(this.days, this.firstDayOfWeek);
+    if (changed.has('days') || changed.has('firstDayOfWeek') || changed.has('monthLabelText') || !this.hasUpdated) {
+      this.cachedCalendarGrid = buildCalendarGrid(this.days, this.firstDayOfWeek, this.monthLabelText);
       this.cachedCalendarSortedValues = this.cachedCalendarGrid.cells
         .map((cell) => cell.value)
         .filter((value) => Number.isFinite(value) && value >= 0)
@@ -708,6 +715,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'columnX',
         'rowY',
         'firstDayOfWeek',
+        'monthLabelText',
         'focusedCell',
         'colorSteps',
         'cellColor',

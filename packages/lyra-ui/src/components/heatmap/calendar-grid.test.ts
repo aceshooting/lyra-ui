@@ -132,6 +132,25 @@ describe('buildCalendarGrid', () => {
     });
     expect(monthLabels[0].label).to.equal(expected);
   });
+
+  it('calls monthLabelText with the real JS month index (0-based) and year, using its return value instead of the locale-derived label', () => {
+    const seen: Array<[number, number]> = [];
+    const { monthLabels } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }], 0, (jsMonth, year) => {
+      seen.push([jsMonth, year]);
+      return `M${jsMonth}-${year}`;
+    });
+    expect(seen).to.deep.equal([[2, 2026]]);
+    expect(monthLabels[0].label).to.equal('M2-2026');
+  });
+
+  it('falls back to the locale-derived label when monthLabelText returns undefined', () => {
+    const { monthLabels } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }], 0, () => undefined);
+    const expected = new Date(Date.UTC(2026, 2, 5)).toLocaleString(undefined, {
+      month: 'short',
+      timeZone: 'UTC',
+    });
+    expect(monthLabels[0].label).to.equal(expected);
+  });
 });
 
 describe('quartileBucket', () => {

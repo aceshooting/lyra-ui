@@ -5,7 +5,7 @@ import { spinnerIcon } from '../../internal/icons.js';
 import { styles } from './button.styles.js';
 
 export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export type ButtonAppearance = 'filled' | 'outlined' | 'plain';
+export type ButtonAppearance = 'accent' | 'filled' | 'outlined' | 'plain';
 export type ButtonSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type ButtonType = 'button' | 'submit' | 'reset';
 
@@ -34,11 +34,27 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  */
 export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];
+  // Participates in an ancestor `<form>.elements` the same way `wa-button` does today (via
+  // `WebAwesomeFormAssociatedElement`) -- without this, a sibling text field's own Enter-to-submit
+  // lookup (`form.elements` scanned for `el.type === 'submit'`) silently fails to find this button.
+  // No `FormAssociated` mixin here: that mixin's own `name`/`value`/`required` submission semantics
+  // don't apply to a plain action button, and would collide with this class's own `disabled`.
+  static formAssociated = true;
+
+  constructor() {
+    super();
+    this.attachInternals();
+  }
 
   /** Tone vocabulary shared with `<lyra-chip>`/`<lyra-avatar>`'s own `tone` property, named
    *  `variant` here (not `tone`) to mirror `wa-button`'s own attribute name for a mechanical
    *  migration off a plain `wa-button`. */
   @property({ reflect: true }) variant: ButtonVariant = 'neutral';
+  /** `'filled'` (the default) reads `--lyra-button-fill`, which for `variant="neutral"` is the
+   *  ambient `--lyra-color-surface` -- matching this component's own container, by design, for a
+   *  low-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime
+   *  default appearance (used whenever a `wa-button` call site sets only `variant`): a solid,
+   *  high-contrast fill for every variant, including `neutral` (`--wa-color-neutral-fill-loud`). */
   @property({ reflect: true }) appearance: ButtonAppearance = 'filled';
   @property({ reflect: true }) size: ButtonSize = 'm';
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above

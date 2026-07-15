@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './diff-view.js';
 import type { LyraDiffView } from './diff-view.js';
+import { styles } from './diff-view.styles.js';
 
 describe('lyra-diff-view', () => {
   it('renders interleaved add/remove/equal lines, not all-removed-then-all-added', async () => {
@@ -38,5 +39,10 @@ describe('lyra-diff-view', () => {
     )) as LyraDiffView;
     const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Copy diff');
+  });
+
+  it('gives the copy button a :hover treatment, matching every sibling copy button in the library', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='copy-button'\]:hover\s*\{[^}]+\}/);
   });
 });

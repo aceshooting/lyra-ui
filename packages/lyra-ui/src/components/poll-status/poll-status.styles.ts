@@ -52,6 +52,10 @@ export const styles = css`
     padding: var(--lyra-size-0-125rem);
     border-radius: var(--lyra-radius);
   }
+  [part='pause-button']:hover {
+    background: var(--lyra-color-brand-quiet);
+    color: var(--lyra-color-brand);
+  }
   [part='pause-button']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);

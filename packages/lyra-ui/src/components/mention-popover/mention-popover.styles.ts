@@ -51,6 +51,7 @@ export const styles = css`
     border-radius: var(--lyra-radius);
     cursor: pointer;
   }
+  [part='option']:hover,
   [part='option'][data-active] {
     background: var(--lyra-color-brand-quiet);
   }
@@ -90,6 +91,7 @@ export const styles = css`
      with row 0 pre-highlighted (see the activeIndex field's own doc), so the
      active/quiet-text combination is the default state, not an edge case --
      it must pass contrast on its own. */
+  [part='option']:hover [part='option-description'],
   [part='option'][data-active] [part='option-description'] {
     color: var(--lyra-color-text);
   }

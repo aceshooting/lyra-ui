@@ -1499,6 +1499,29 @@ describe('weekdayLabelText', () => {
   });
 });
 
+describe('monthLabelText', () => {
+  it('is undefined by default', async () => {
+    const el = (await fixture(html`<lyra-heatmap mode="calendar" .days=${[]}></lyra-heatmap>`)) as LyraHeatmap;
+    expect(el.monthLabelText).to.be.undefined;
+  });
+
+  it('is called with the real JS month index and year, and its return value replaces the built-in label', async () => {
+    const seen: Array<[number, number]> = [];
+    const el = (await fixture(html`
+      <lyra-heatmap
+        mode="calendar"
+        .days=${[{ date: '2026-03-05', value: 3 }]}
+        .monthLabelText=${(jsMonth: number, year: number) => {
+          seen.push([jsMonth, year]);
+          return `M${jsMonth}`;
+        }}
+      ></lyra-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(seen).to.deep.equal([[2, 2026]]);
+  });
+});
+
 describe('selectedCell', () => {
   it('draws no selection and adds no aria-label suffix by default', async () => {
     const el = (await fixture(html`

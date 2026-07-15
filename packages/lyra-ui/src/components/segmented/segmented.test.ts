@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { html as litHtml } from 'lit';
 import './segmented.js';
 import type { LyraSegmented } from './segmented.js';
+import { styles } from './segmented.styles.js';
 
 const items = () => [
   { value: 'day', label: 'Day' },
@@ -108,5 +109,12 @@ describe('item icon', () => {
     const children = Array.from(button.children);
     const labelIndex = children.findIndex((c) => c.getAttribute('part') === 'segment-label');
     expect(children.indexOf(icon as Element)).to.be.lessThan(labelIndex);
+  });
+
+  it('gives a non-disabled, non-checked segment a :hover treatment', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(
+      /\[part='segment'\]:hover:not\(\[aria-disabled='true'\]\):not\(\[aria-checked='true'\]\)\s*\{[^}]+\}/,
+    );
   });
 });

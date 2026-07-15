@@ -32,6 +32,9 @@ export const styles = css`
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
   }
+  [part='segment']:hover:not([aria-disabled='true']):not([aria-checked='true']) {
+    color: var(--lyra-color-text);
+  }
   [part='segment']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);

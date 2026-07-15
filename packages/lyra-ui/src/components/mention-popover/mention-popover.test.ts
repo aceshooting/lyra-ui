@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './mention-popover.js';
 import type { LyraMentionPopover, MentionItem, MentionSelectDetail } from './mention-popover.js';
+import { styles } from './mention-popover.styles.js';
 
 const ITEMS: MentionItem[] = [
   { id: 'alice', label: 'Alice Johansson', description: 'Product design' },
@@ -354,4 +355,9 @@ it('is accessible (empty/closed default state)', async () => {
 it('is accessible (populated, open state)', async () => {
   const el = await openWithItems();
   await expect(el).to.be.accessible();
+});
+
+it('gives an option a :hover treatment, matching lyra-select/lyra-combobox/lyra-model-select', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='option'\]:hover,\s*\[part='option'\]\[data-active\]\s*\{[^}]+\}/);
 });

@@ -88,6 +88,9 @@ export const styles = css`
     line-height: var(--lyra-line-height-none);
     font-size: var(--lyra-font-size-md);
   }
+  [part='password-toggle']:hover {
+    color: var(--lyra-color-text);
+  }
   [part='password-toggle']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);

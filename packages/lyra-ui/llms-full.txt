@@ -206,7 +206,13 @@ shared `FormAssociated` mixin — see gotchas).
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
-- `withClear: boolean = false` (attribute **`with-clear`** — not `clearable`, see gotchas)
+- `clearable: boolean = false` (reflected) — displays the clear button while a value is selected
+- `withClear: boolean = false` (attribute `with-clear`) — deprecated compatibility alias for
+  `clearable`; either property enables the same clear button
+- `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = true`,
+  `autocapitalize: string = ''`, and `autoCorrect: string = ''` (attribute `autocorrect`) — native
+  editing-assistance attributes forwarded to the internal filter input
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
   show before collapsing to `+N`)
 - `emptyText: string = 'No results'` (attribute `empty-text`)
@@ -229,6 +235,11 @@ shared `FormAssociated` mixin — see gotchas).
 - `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
   selection, including any opaque `data` payload supplied by an async source. Selected async rows
   remain available after the query changes or a later source result no longer contains them
+- `selectionStart`, `selectionEnd`, and `selectionDirection` — selection getters/setters forwarded
+  to the internal input
+
+**Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
+forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 
 `ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
@@ -245,6 +256,7 @@ one bubbling/composed, non-cancelable plain `input` `Event`, immediately followe
 of `change` `Event`. Re-picking the current single value and programmatic/default/reset/restore
 writes are silent. The clear button emits one `lyra-clear` after its `input`/`change` pair.
 `lyra-show` and `lyra-hide` report listbox visibility transitions.
+The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **Slots:** default (`<lyra-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided)
@@ -315,9 +327,8 @@ collection, while `form.reset()` still returns to the declarative selected defau
 synchronous and fires no `input`/`change` event.
 
 **Known gotchas:**
-- naming drift from Web Awesome parity: the shipped attribute is **`with-clear`**, not
-  `clearable` (which is what `<wa-combobox>` uses) — don't copy-paste WA docs assuming a 1:1
-  attribute name here.
+- `with-clear` remains supported for compatibility, but new code should use the mirrored
+  `clearable` property/attribute.
 - a host-level `aria-label` attribute on `<lyra-combobox>` now takes priority over `label`/
   `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
   previously it was silently ignored. Matches the same fallback on `<lyra-select>`.
@@ -716,7 +727,10 @@ shadow-internal native button doesn't participate in an ancestor form's submissi
 
 **Properties:**
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
-- `appearance: 'filled' | 'outlined' | 'plain' = 'filled'` (reflected)
+- `appearance: 'accent' | 'filled' | 'outlined' | 'plain' = 'filled'` (reflected) — `'accent'` is a
+  loud, high-contrast filled tier (equivalent to `wa-button`'s own runtime-default appearance),
+  distinct from `'filled'` for `variant="neutral"` specifically (`'filled'` reads the ambient
+  surface color there; `'accent'` reads a solid neutral fill)
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `type: 'button' | 'submit' | 'reset' = 'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
@@ -734,12 +748,18 @@ unmodified; disabled while `disabled` or `loading`).
 
 **Themeable custom properties:** `--lyra-button-accent`, `--lyra-button-fill`,
 `--lyra-button-on-fill`, `--lyra-button-border` (each swapped by the active `variant`, default
-`neutral` falls back to plain text/surface/border tokens).
+`neutral` falls back to plain text/surface/border tokens), `--lyra-button-accent-fill`,
+`--lyra-button-accent-on-fill` (the `appearance="accent"` fill/foreground pair; `neutral` falls
+back to `--wa-color-neutral-fill-loud`/`-on-loud`, every other variant reuses that variant's own
+loud fill token), `--lyra-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
+`--lyra-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
+`prefers-reduced-motion`).
 
 **Optional peer deps:** none.
 
 ```html
 <lyra-button variant="brand" appearance="filled">Save</lyra-button>
+<lyra-button variant="neutral" appearance="accent">Save</lyra-button>
 <lyra-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lyra-button>
 ```
 
@@ -747,6 +767,9 @@ unmodified; disabled while `disabled` or `loading`).
 - A host `aria-label` is forwarded to the internal button as a literal string (for an icon-only
   button); an external `aria-labelledby`/`aria-describedby` idref is not copied across the shadow
   boundary.
+- Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
+  an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
+  Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
 
 ---
 
@@ -851,8 +874,9 @@ interface PhoneNumberAdapter {
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
   visible form-field chrome; each has a matching named slot.
 - `placeholder: string = ''` — forwarded to the native telephone input.
-- host `aria-label` — forwarded to the internal telephone input. Name precedence is `phoneLabel`,
-  host `aria-label`, visible `label`, then `placeholder`.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded to the internal
+  telephone input. Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
+  `placeholder`.
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
 - `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
@@ -867,6 +891,8 @@ interface PhoneNumberAdapter {
 - readonly `input: HTMLInputElement | undefined` — the internal native telephone input.
 - readonly `inputValue: string` — editable formatted/partial text, which remains available even when
   canonical `value` is `''`.
+- `selectionStart`, `selectionEnd`, and `selectionDirection` — native selection getters/setters
+  forwarded to the telephone input
 - readonly `phoneStatus: PhoneNumberStatus` — current parse state. The host also reflects it through
   `data-phone-status`.
 - readonly `form`, `labels`, `validity`, `validationMessage`, `willValidate`, and
@@ -878,7 +904,9 @@ text remains in `inputValue`/the native input so validation never makes a number
 but its canonical submitted `value` is blank. Native validation feedback is anchored to the
 telephone input, not the adjacent country selector.
 
-**Methods:** `focus(options?)`, `blur()`, and `select()` forward to the native telephone input.
+**Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
+forward to the native telephone input. Range-text edits reparse the number and synchronize the
+canonical value, form value, and validity.
 `setFormValue(value)`, `checkValidity()`, and `reportValidity()` come from `FormAssociated`.
 `form.reset()` restores the original declarative `value` and the default country.
 
@@ -1061,6 +1089,8 @@ Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`).
 - `type: 'line' | 'bar' | 'area' = 'line'`
 - `min?: number` (defaults to data minimum)
 - `max?: number` (defaults to data maximum)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
+  generated summary on the internal SVG
 
 **Events:** none.
 
@@ -1081,9 +1111,9 @@ the reviewed family (pure CSS cascade, no JS/`getComputedStyle` bridging needed)
 ```
 
 **Known gotchas:**
-- Auto-sets `role="img"` + a descriptive `aria-label` ("Trend of N values, last X" / "No data" when
-  empty) — good default, but still just a single summary sentence with no tabular fallback; fine for
-  a glance-value sparkline, worth reconsidering if it's ever the *sole* representation of a metric.
+- The semantic `role="img"` and accessible name live on the SVG that owns the graphic. The generated
+  summary is localized, formats the last value with `effectiveLocale`, and can be replaced through
+  `accessibleLabel`/host `aria-label`. It remains a concise summary rather than a tabular fallback.
 - flat data (every value equal, so the auto-computed range spans zero) now renders a centered
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
   series renders a visible flat line (a zero-length path was previously invisible). **Every** `type`
@@ -1113,6 +1143,8 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
   alongside `src` since there's no `country`/`language` to derive a fallback `alt` from.)
 - `label?: string` (accessible name / `alt` text — **defaults to a localized, human-readable region
   name derived from the *resolved country* code via `Intl.DisplayNames` if omitted**, see gotchas)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — takes precedence over `label`
+  and the derived region name; an explicit empty value marks the image decorative
 - `round: boolean = false` (reflected — circular crop)
 - `variant?: 'compact' | 'standard' | 'detailed'` (attribute `variant`, not reflected — picks a
   fidelity tier for the ~65 codes whose source art embeds a coat of arms/seal/emblem; every other
@@ -1132,9 +1164,8 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 **CSS parts:** `image`
 
 **Themeable custom properties:** `--lyra-flag-radius` (default `calc(var(--lyra-radius) * 0.33)` —
-≈2px at the library's default `--lyra-radius` of `0.375rem`; scales with `--lyra-radius` unless
-overridden directly — non-`round` corner radius); also consumes `--lyra-color-border` (the inset
-ring around the flag image).
+non-`round` corner radius), `--lyra-flag-aspect-ratio` (default `4 / 3`), and
+`--lyra-flag-object-fit` (default `cover`); also consumes `--lyra-color-border` for the inset ring.
 
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
 image when `country` or `language` is used. Import `components/flag/flag-peer.js` once to opt into
@@ -1172,8 +1203,8 @@ import '@aceshooting/lyra-ui/components/flag/flag-peer.js';
 - Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
   resolver call, so there's a brief loading-skeleton window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.
-- if `label` is omitted, the accessible name (`alt`) falls back to a localized region name via
-  `Intl.DisplayNames([navigator.language], { type: 'region' })` (e.g. `"United Kingdom"`) instead of
+- if both `aria-label` and `label` are omitted, the accessible name (`alt`) falls back to a localized
+  region name via `Intl.DisplayNames([effectiveLocale], { type: 'region' })` (e.g. `"United Kingdom"`) instead of
   a bare code — for `language="en"` that's derived from `"GB"` (the mapped country), not `"EN"` (the
   language tag itself). Falls back further to the bare uppercase code if `Intl.DisplayNames` throws
   for an unrecognized region or isn't available. You can still pass an explicit `label` (e.g.
@@ -1265,6 +1296,9 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 - `label: string = 'Loading…'` — accessible name for this instance's own `role="status"` (rendered as
   visually-hidden text inside `[part="base"]`); override with a description of what's actually
   loading, e.g. `label="Loading chart"`
+- `announce: boolean = true` (reflected) — set false for decorative members of a skeleton group;
+  removes the status role, live-region state, and visually hidden announcement while preserving
+  the visual placeholder
 
 **Events:** none.
 
@@ -1273,7 +1307,8 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 **CSS parts:** `base`
 
 **Themeable custom properties:** `--lyra-skeleton-w`, `--lyra-skeleton-h` (set/cleared by the
-`width`/`height` properties; default `100%` / `1em`).
+`width`/`height` properties; default `100%` / `1em`) and shared `--lyra-transition-ambient` for
+the pulse/sheen timing.
 
 **Optional peer deps:** none.
 
@@ -1283,14 +1318,8 @@ Loading placeholder (`text`/`circle`/`rect` shapes, `pulse`/`sheen` effects).
 ```
 
 **Known gotchas:**
-- every instance is an independent, simultaneously-firing `role="status"` live region (set via
-  `willUpdate`) with its own visually-hidden `label` text (default `"Loading…"`). A realistic loading
-  state (e.g. a 10×5 skeleton table = 50 instances) mounts 50 separate live regions at nearly the same
-  tick — expect screen readers to announce the label dozens of times, not once, even if every
-  instance shares the same default `label`. A more specific per-instance `label` doesn't fix the
-  fan-out by itself; there's still no grouping primitive to dedupe it — if it matters, wrap your own
-  single `role="status"` region around the set of skeletons and mark the individual ones
-  `aria-hidden`.
+- Each instance announces by default. In a repeated skeleton layout, provide one parent status and
+  set `announce="false"` on the decorative child placeholders to avoid duplicate announcements.
 - no `lines`/`count` shorthand for "N lines of skeleton text" — stamp out N elements
   yourself.
 - Respects `prefers-reduced-motion` (both effects) — safe to leave as-is for that concern.
@@ -1375,14 +1404,15 @@ Presentational, sort/select-aware data table. **The host owns actual sorting/fil
 of `rows` — this component only renders and emits intents.
 
 **Properties:**
-- `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, sortable?, align?:
-  'start'|'end', priority?: 'medium'|'low', sticky?: boolean, cell: (row) => unknown }` —
+- `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
+  minWidth?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
+  'start' | 'end', footer?, cellStyle?, cell: (row) => unknown }` —
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
-  `[part='reveal-columns-button']`; `sticky` pins that column's header cell/cells to the inline-start
-  edge (`position: sticky`) while the table scrolls horizontally — multiple `sticky` columns stack
-  left-to-right (each measures every earlier sticky column's rendered width via
+  `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start
+  (`true`/`'start'`) or end edge while the table scrolls horizontally — multiple sticky columns stack
+  in logical order (each measures every earlier sticky column's rendered width via
   `--lyra-table-sticky-offset`) instead of overlapping at the same edge; `footer` renders a
   sticky-bottom footer cell for that column, computed from every currently-rendered row (post-sort,
   pre-pagination) — e.g. a column total — omit it for a column with no footer value, and a
@@ -1407,6 +1437,11 @@ of `rows` — this component only renders and emits intents.
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
   sorted/filtered/re-ordered across renders, or selection/click can silently attach to the wrong row
 - `selectedKey: string | number | null = null` (attribute: false) — **single**-selection only
+- `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
+  renders a full-width detail row beneath expanded records
+- `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
+- `expandedKeys: Set<string | number> = new Set()` (attribute: false) — consumer-controlled expanded
+  state; update it in response to `lyra-row-expand-toggle`
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
 - `moreLabel: string = 'Load more'` (attribute `more-label`)
 - `emptyHeading: string = 'No data'` (attribute `empty-heading`)
@@ -1417,17 +1452,22 @@ of `rows` — this component only renders and emits intents.
   reveal-button's label while `priority`-hidden columns are hidden)
 - `hideColumnsLabel: string = 'Show fewer columns'` (attribute `hide-columns-label` — the same
   button's label once they've been revealed)
+- `showAllColumns: boolean = false` (attribute `show-all-columns`, reflected) — forces responsive
+  priority columns visible and is updated by the built-in reveal button
 
 **Events:** `lyra-sort` (`detail: { key }`, fired on sortable-header activation), `lyra-row-click`
 (`detail: { row }`), `lyra-load-more` (fired on the "load more" button), `lyra-columns-hidden-change`
-(`detail: { hidden: boolean }`, fired only on a real `columnsHidden` transition)
+(`detail: { hidden: boolean }`, fired only on a real `columnsHidden` transition),
+`lyra-columns-revealed` (`detail: { revealed: boolean }`), and `lyra-row-expand-toggle`
+(`detail: { row, key }`; the table does not mutate `expandedKeys`)
 
 **Slots:** none — content comes entirely from `columns`/`rows`.
 
 **CSS parts:** `base`, `table`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon` (a
 chevron indicator shown on the active sortable header, rotated per `sortDir`), `reveal-columns-button`
 (shown only when `columnsHidden` is true), `foot` (the `<tfoot>`, only rendered when at least one
-column defines `footer`), `footer-row` (the single footer row), `footer-cell` (a single footer cell)
+column defines `footer`), `footer-row`, `footer-cell`, `expand-toggle-cell`, `row-expand-toggle`,
+`row-expand-icon`, `expanded-row`, `expanded-cell`
 
 **Themeable custom properties:** `--lyra-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`).
@@ -1510,6 +1550,9 @@ from its built-in default is treated as an explicit per-instance wording overrid
 **Events:** `lyra-page-change` (`detail: { page: number }`, bubbles and composes, non-cancelable) —
 emitted for a valid, different requested page. The host applies `event.detail.page` back to `page`
 after routing, fetching, or any other policy decision.
+The internal page input's `focus` and `blur` are also bridged as bubbling, composed host events.
+
+**Methods:** `focus(options?)` and `blur()` forward to the numeric page input.
 
 **Slots:** none.
 
@@ -1625,7 +1668,11 @@ immediately) or multi-format (click opens a small menu).
   not toggle it automatically
 - `label: string = 'Export'` — trigger button text; also feeds the format-choice menu's `aria-label`
   as `` `${label} format` `` so assistive tech gets an accessible name for the menu
+- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the trigger's accessible
+  name and feeds the localized format-menu name without changing the visible label
 - `open: boolean = false` (reflected)
+
+**Methods:** `focus(options?)` and `blur()` forward to the native trigger button.
 
 **Events:** `lyra-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one),
@@ -1684,6 +1731,9 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
   jump to the first/last item once open, Escape closes it and returns focus to the trigger button,
   and a completed export also returns focus to the trigger — not just Escape/click-outside as
   before.
+- the positioned menu is constrained to the inline/block space reported by the positioner, wraps
+  long localized format labels/descriptions, scrolls when necessary, and disables its transition
+  under reduced motion.
 
 ---
 
@@ -1697,6 +1747,13 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 
 **Properties:**
 - `value: string = ''` — the plain text to copy.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
+  Copy/Copied accessible name without changing the icon
+- `disabled: boolean = false` (reflected)
+- `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
+  copied checkmark returns to the copy icon; finite values are clamped at zero
+
+**Methods:** `focus(options?)` and `blur()` forward to the native button.
 
 **Events:** `lyra-copy` (`detail: { text: string }`) — fires on activation, always with the current
 `value`, regardless of whether the OS clipboard write actually succeeded (same convention as
@@ -2112,10 +2169,11 @@ Steps an index through `[0, length)` on a fixed interval — play/pause for time
   change-tracking sees it and auto-pauses on `hidden = true`)
 
 **Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`, `goTo(index: number)` — all
-idempotent/clamped; `length <= 1` is a no-op degenerate case.
+idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)` and `blur()` forward
+to the play button.
 
 **Events:** `lyra-play`, `lyra-pause` (no detail), `lyra-step` (`detail: { index }`, fired on every
-tick and manual step)
+tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed host events.
 
 **Slots:** none.
 
@@ -2242,6 +2300,14 @@ click, or Enter/Space on the focused cell, fires `lyra-cell-click`.
   `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it
   instead of the built-in `Intl.DateTimeFormat`-derived short weekday name. Unset (the default)
   reproduces today's exact locale-derived output.
+- `monthLabelText?: (jsMonth: number, year: number) => string | undefined` (attribute: false,
+  calendar mode only) — the month-axis analogue of `weekdayLabelText`: receives the real JS month
+  index (`0` January .. `11` December) and full year for a month boundary that would otherwise
+  render a label, and, when it returns a string, uses it instead of the built-in
+  `Intl.DateTimeFormat`-derived short month name. Unset (the default) reproduces today's exact
+  locale-derived output. Lets month labels track the same locale signal (e.g. an app's own i18n
+  store) as `weekdayLabelText` and the component's other localizable strings, instead of always
+  following the browser/OS-language default.
 - `colorSteps?: string[]` (attribute: false) — a discrete array (≥2 entries) of CSS colors used as
   exact ramp steps instead of linearly interpolating between `--lyra-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
@@ -2599,6 +2665,12 @@ Chart.js wrapper every other `lyra-*-chart` tag subclasses; supports both a simp
 - `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; a host
+  `aria-label` has highest precedence
+- `accessibleDescription: string = ''` (attribute `accessible-description`) — overrides the
+  localized data/trend summary
+- `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
+  accessible data table visible rather than screen-reader-only
 
 **Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`
 (forces a redraw so the `--lyra-chart-*` tokens below are re-read from the current computed style —
@@ -2642,9 +2714,8 @@ subset actually used.
 ```
 
 **Known gotchas:**
-- `type` at the `lyra-chart` (core) level is completely unchecked — `buildConfig()` passes it
-  straight to Chart.js as-is, so `<lyra-chart type="pie">` already works today with no subclass
-  needed. Each typed subclass below locks its *own* `type` via a real prototype accessor (see the
+- supported `type` values are normalized before reaching Chart.js; unknown runtime attribute or
+  property values fall back to `line`. Each typed subclass below locks its *own* `type` via a real prototype accessor (see the
   typed-subclasses section) — a genuine runtime lock, not just a compile-time default.
 - no global theme-broadcast event exists to auto-retheme an already-drawn chart on a theme switch —
   a consumer flipping something upstream (e.g. a `data-theme` attribute) that doesn't otherwise
@@ -2678,6 +2749,9 @@ subset actually used.
   changed since the last draw (e.g. an unrelated property/state update, or a bare `requestUpdate()`).
   `refreshTheme()` calls `draw()` directly and is unaffected by either gate — it always redraws, since
   a theme change isn't reflected in any tracked property.
+- Chart.js receives `effectiveLocale`; generated summary values use the same locale. Cartesian y/y2
+  axes swap logical sides under RTL, and host `aria-label` is forwarded to the canvas and data-table
+  caption.
 
 ---
 
@@ -2746,10 +2820,17 @@ passthrough). Not a subclass of `LyraChart`.
   column in a stacked chart. Empty (the default) reproduces the exact existing output: no bar
   carries `data-selected`. This component takes no opinion on what the highlight looks like, only
   which bars it applies to — style it via `::part(bar)[data-selected]`.
+- `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
+  small non-zero values
+- `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
+  `aria-label` wins
 
 **Events:** `lyra-point-click` — fired when a bar/point is activated (click, or Enter/Space while
 focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
 | null }` — same shape as `lyra-chart`'s `lyra-point-click`.
+
+The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
+are complete localized templates and format values with `effectiveLocale`.
 
 **Performance:** rendering is `IntersectionObserver`-gated and content-signature-memoized — `render()`
 skips recomputing the grid/marks (and reuses the previous `TemplateResult`) while the host is scrolled
@@ -2880,6 +2961,13 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `height: string = '280px'`
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; host
+  `aria-label` wins
+- `accessibleDescription: string = ''` (attribute `accessible-description`) — overrides the
+  localized five-number summary
+- `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
+
+**Methods:** `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme change.
 
 **Events:** none.
 
@@ -2903,9 +2991,11 @@ independently of the base `chart-loader.ts`).
 ```
 
 **Known gotchas:**
-- no raw `config` passthrough (unlike every other chart tag) — limited to
-  `labels`/`boxes`/`legend`/`height`/`yLabel`/`beginAtZero`; can't reach the underlying
+- no raw `config` passthrough — limited to the properties above; can't reach the underlying
   controller's own options (`itemRadius`, `outlierRadius`, `coef`).
+- Chart.js receives `effectiveLocale`; generated numeric summaries use it, the y axis moves to
+  logical start in RTL, canvas tooltip/axis colors are token-driven, and animation is disabled
+  under reduced motion.
 - The peer-dependency-missing failure path (`.catch()` → warn + resolve `null`) is untested —
   verify it manually if shipping without the peer installed.
 
@@ -3030,8 +3120,11 @@ parsing (that's left entirely to the host).
   **before** (and takes precedence over) `allowedMimeTypes`
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `label: string = 'Drop files here or click to browse'`
+- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
+  dropzone/button accessible name without changing visible copy
 
-**Methods:** `openPicker()` — programmatically opens the native file dialog.
+**Methods:** `openPicker()` programmatically opens the native file dialog; `focus(options?)`
+forwards to the interactive dropzone.
 
 **Events:** `lyra-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
 and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size'
@@ -3445,7 +3538,7 @@ keyboard.
 
 A boolean form control. `role="checkbox"` with an `aria-checked` that can also be `"mixed"`, and a
 visual box/checkmark. Structurally the same idea as `<lyra-switch>` (form-associated via
-`ElementInternals`, click and Space/Enter both toggle) but with checkbox semantics.
+`ElementInternals`, click and Space toggle) but with checkbox semantics.
 
 **Properties:**
 - `checked: boolean = false` (reflected)
@@ -3458,8 +3551,11 @@ visual box/checkmark. Structurally the same idea as `<lyra-switch>` (form-associ
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
 
-**Events:** `lyra-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
-Space/Enter); not fired for a programmatic `.checked` assignment.
+**Events:** user toggles emit bubbling/composed `input`, then `change`, then the compatibility
+`lyra-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
+silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
+
+**Methods:** `focus(options?)` and `blur()` forward to the internal checkbox control.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
@@ -3785,8 +3881,9 @@ produced HTML in a single pass (no second DOM walk after insertion).
   the page already finished loading); falls back to the normal async path (with its brief
   plain-text-fallback first paint) when the cache isn't warm yet. `false` (the default) is
   byte-identical to always taking the async path
-- `streaming: boolean = false` (reflected) — reserved hint for a host-provided streaming renderer;
-  setting it has no rendering effect, but lets a consumer target `lyra-markdown[streaming]` in CSS
+- `streaming: boolean = false` (reflected) — marks the host `aria-busy="true"` while partial Markdown
+  is still arriving and lets consumers target `lyra-markdown[streaming]`; busy state also remains
+  true while parser dependencies are loading
 
 **Events:** `lyra-link-click` (`detail: { href: string, internal: true }`, fired — with the click
 prevented — when a rendered link's `href` starts with `internal-link-prefix`; ordinary external
@@ -4030,7 +4127,7 @@ decorative; `label` is the entire accessible content, nothing narrates individua
 A compact inline pill representing one tool/function call an agent made mid-conversation, e.g.
 `web_search: Searching web…` with a `running` spinner. First-party invention (no Web Awesome
 equivalent). It owns no detail surface of its own — activating it (click or Enter/Space while
-focused) only fires `lyra-tool-chip-select`; a consumer wires that to opening a
+focused) fires `lyra-tool-call-chip-select`; a consumer wires that to opening a
 `<lyra-tool-result-dialog>` (or anything else) at the call site, keeping the chip reusable wherever
 a compact call summary is useful, with or without a detail surface behind it.
 
@@ -4047,10 +4144,11 @@ a compact call summary is useful, with or without a detail surface behind it.
 - `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `icon` slot is empty;
   ignored once anything is assigned to `slot="icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
-  in `lyra-tool-chip-select`'s detail so a listener can correlate the click with the call it fired for
+  in `lyra-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
-**Events:** `lyra-tool-chip-select` (`detail: { name: string; callId: string }`) — fired on click or
-Enter/Space activation of the pill.
+**Events:** `lyra-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
+click or Enter/Space activation of the pill. The deprecated `lyra-tool-chip-select` alias is fired
+alongside it for one minor compatibility cycle.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover/focus; nothing renders at all, no hover affordance, when this
@@ -4080,7 +4178,7 @@ rules, not part of the public theming API); shared tokens referenced: `--lyra-co
   summary="Searching web…"
   duration-ms="820"
   call-id="call_123"
-  @lyra-tool-chip-select=${(e) => openDetail(e.detail.callId)}
+  @lyra-tool-call-chip-select=${(e) => openDetail(e.detail.callId)}
 >
   <pre slot="icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
@@ -4271,6 +4369,8 @@ overlay stack.
 **Properties:**
 - `open: boolean = false` (reflected) — whether the dialog is open; set this (or call `close()`) —
   there is no separate `show()`/`hide()` pair
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — directly names the internal
+  dialog panel; otherwise the tool-name title supplies `aria-labelledby`
 - `toolName: string = ''` (attribute `tool-name`) — the tool's name, rendered prominently in the
   header
 - `status: 'pending'|'running'|'success'|'error'|'denied' = 'pending'` (reflected) — drives the
@@ -4280,12 +4380,12 @@ overlay stack.
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog
 
 **Methods:** `close(reason: ToolResultDialogCloseReason = 'api'): void` — closes the dialog (no-op if
-already closed), emits `lyra-dialog-close` with `reason`, and returns focus to whatever had it before
+already closed), emits `lyra-close` with `reason`, and returns focus to whatever had it before
 the dialog opened. Built-in triggers call this with `'escape'`/`'backdrop'`/`'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
 
-**Events:** `lyra-dialog-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
+**Events:** `lyra-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
 'close-button'|'api'|string`) fired exactly once per dismissal; `lyra-maximize-change` (`detail:
 boolean`, the new `maximized` state) fired when the header's maximize/restore toggle is clicked.
 
@@ -4300,7 +4400,8 @@ tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`,
 **Themeable custom properties:** `--lyra-tool-result-dialog-overlay-color` (default `rgb(0 0 0 /
 0.5)` — the backdrop scrim color; component-specific since no shared overlay token exists),
 `--lyra-tool-result-dialog-maximized-inset` (default `var(--lyra-space-l)` — inset applied to the
-panel while `[maximized]`, overridable e.g. to leave a persistent app rail visible), plus shared
+panel while `[maximized]`, overridable e.g. to leave a persistent app rail visible), and
+`--lyra-tool-result-dialog-spin` (default `1s linear`, stopped under reduced motion), plus shared
 tokens `--lyra-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/
 -danger/-danger-quiet/-warning/-warning-quiet`, `--lyra-space-*`, `--lyra-radius`, `--lyra-shadow`,
 `--lyra-icon-button-size`, `--lyra-focus-ring-*`, `--lyra-transition-base`.
@@ -4313,7 +4414,7 @@ tokens `--lyra-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-s
   status="success"
   duration-ms="1240"
   ?open=${dialogOpen}
-  @lyra-dialog-close=${(e) => (dialogOpen = false)}
+  @lyra-close=${(e) => (dialogOpen = false)}
   @lyra-maximize-change=${(e) => console.log('maximized:', e.detail)}
 >
   <lyra-tabs slot="body">
@@ -4344,7 +4445,7 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
   panel template so a slotted `<lyra-tabs>` (or any other light-DOM-scanning child) sees real
   projected content rather than a forwarding `<slot>`, while still sharing the overlay stack
 - `close()` is a no-op when `open` is already `false` — calling it twice in a row only fires
-  `lyra-dialog-close` once
+  `lyra-close` once
 - the `maximize`/`close` buttons are always the first elements in the Tab order while open,
   regardless of visual position, followed by `body` then `footer` content
 
@@ -4374,14 +4475,24 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   built-in button's icon/label (send vs. stop) and whether Enter still submits
 - `submitOnEnter: boolean = true` (reflected, attribute `submit-on-enter`) — when `false`, Enter
   always inserts a newline instead of submitting
+- `stoppable: boolean = true` (reflected) — when false, busy states keep a disabled Send button
+  instead of exposing a Stop action
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal textarea;
+  wins over placeholder and the localized composer label
 - `spellcheck: boolean = true` — forwarded to the internal `<textarea>`
 - `autocapitalize: string = ''` — forwarded to the internal `<textarea>`; empty omits the attribute
 - `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the internal `<textarea>`
   (Safari/WebKit-specific); empty omits the attribute. Named `autoCorrect`, not `autocorrect`, only
   to dodge a `lib.dom.d.ts` collision with `HTMLElement`'s own `boolean`-typed `autocorrect` IDL
   member; the host attribute is explicitly mapped to plain `autocorrect`.
+- `wrap: 'hard' | 'soft' | 'off' = 'soft'`, `autocomplete: string = ''`, `inputMode: string = ''`
+  (attribute `inputmode`), and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to
+  the native textarea
+- `selectionStart`, `selectionEnd`, and `selectionDirection` — native selection getters/setters
 
-**Methods (own):** none beyond the inherited `checkValidity()`/`reportValidity()`.
+**Methods (own):** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and
+`setRangeText()` forward to the textarea; `setRangeText()` synchronizes reactive/form value and
+auto-sizing. `checkValidity()`/`reportValidity()` remain inherited.
 
 **Events:**
 - `lyra-input` (`detail: { value }`) — fired on every user-driven edit of the textarea, not a
@@ -4496,12 +4607,12 @@ wins when both are present.
   attachment, leaving only the thumbnail. Has no effect for a non-image chip, or when `compact` is
   unset. `false` (the default) reproduces the chip's exact existing output.
 - `removeLabel: string = 'Remove'` (attribute `remove-label`) — verb used in the remove button's
-  `aria-label`, interpolated as `` `${removeLabel} ${displayName}` ``; override for i18n/locale
+  accessible name; the default routes through the complete localized `removeWithContext` template
 - `retryLabel: string = 'Retry'` (attribute `retry-label`) — verb used in the retry button's
-  `aria-label`, interpolated as `` `${retryLabel} ${displayName}` ``; override for i18n/locale
+  accessible name; the default routes through the complete localized attachment template
 - `uploadingLabel: string = 'Uploading'` (attribute `uploading-label`) — verb used in the visible
-  uploading status text, rendered as `` `${uploadingLabel} ${percent}%` `` once progress is a
-  meaningful number, else `` `${uploadingLabel}…` ``; override for i18n/locale
+  uploading status; the untouched default uses complete localized messages for progress,
+  indeterminate state, and filename context so translators can reorder every value
 - `uploadFailedLabel: string = 'Upload failed'` (attribute `upload-failed-label`) — visible status
   text shown for `status="error"`; override for i18n/locale
 
@@ -4526,7 +4637,8 @@ generated internal id is used as a last resort.
 `done` → success/success-quiet/transparent); `--lyra-attachment-chip-compact-thumbnail-size` (default
 `1.75rem`), `--lyra-attachment-chip-compact-font-size` (default `var(--lyra-font-size-xs)`),
 `--lyra-attachment-chip-compact-gap` (default `0.25rem`) — govern the chip's thumbnail size, text
-size, and internal gap while `compact` is set; plus shared tokens `--lyra-space-xs`, `--lyra-space-s`,
+size, and internal gap while `compact` is set; `--lyra-attachment-chip-spinner-duration` (default
+`0.8s`) controls the indeterminate rotation and stops under reduced motion; plus shared tokens `--lyra-space-xs`, `--lyra-space-s`,
 `--lyra-radius`, `--lyra-color-text`, `--lyra-color-danger`, `--lyra-icon-button-size`,
 `--lyra-transition-fast`, `--lyra-transition-base`, `--lyra-focus-ring-width`,
 `--lyra-focus-ring-color`, `--lyra-focus-ring-offset`.
@@ -5287,7 +5399,8 @@ anything about `<lyra-source-card>`, it only carries the id through its event de
   echoed back verbatim in both events; never read or validated by this component.
 - `href: string = ''` — optional direct link target for the citation's source, carried into
   `lyra-citation-open`'s detail as-is; this component never navigates.
-- `label: string = ''` — overrides the computed accessible name (`"Citation {index}[, {status}]"`).
+- `label: string = ''` — overrides the computed accessible name. The built-in citation/status
+  summary is a complete localized template; a host `aria-label` has highest precedence.
 
 **Events:**
 - `lyra-citation-activate` (`detail: { sourceId: string; index: number }`) — fires on click, or on
@@ -5301,6 +5414,8 @@ anything about `<lyra-source-card>`, it only carries the id through its event de
 **Slots:** default — rich preview/tooltip content (e.g. a filename + excerpt), shown in a floating
 popover on hover/focus. This is *not* the badge's visible content (the badge always renders
 `[index]`); nothing renders at all (no hover affordance) when this slot is empty.
+When populated, the button carries `aria-describedby` referencing the same-shadow-tree popover,
+which owns `role="tooltip"` whether currently shown or hidden.
 
 **CSS parts:** `base` (the clickable `<button>`), `bracket` (each of the two literal `[`/`]` glyphs),
 `index` (the citation number), `popover` (the floating preview panel, only meaningful while open).
@@ -5412,7 +5527,8 @@ while collapsed).
   expand/collapse, which only ever hides/shows the *set* of cards, never a single card's own content.
 - `lyra-open` (`detail: { sourceId: string; href?: string }`) — the title was activated. This
   component never navigates on its own (a controlled component, the same convention
-  `<lyra-tool-call-chip>`'s `lyra-tool-chip-select` follows); a listener decides what "open" means.
+  `<lyra-tool-call-chip>`'s `lyra-tool-call-chip-select` follows); a listener decides what "open"
+  means.
 
 **Slots:** `excerpt` (a short preview; when left empty, the `excerpt` part collapses away entirely —
 its wrapper is `hidden`, not just visually empty), `full` (the complete source text/chunk, hidden
@@ -6192,6 +6308,8 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   `"json"`); when unset, or when shiki doesn't recognize it, the code renders as plain unhighlighted
   text regardless of whether shiki itself is available
 - `filename: string = ''` — shown in the header, when set
+- `accessibleLabel: string = ''` (attribute `aria-label`) — names the internal focusable code-body
+  region; otherwise a localized filename/language description is generated
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
@@ -6302,6 +6420,8 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   key in `languages`, the code renders as plain unhighlighted text — this component has no
   default/full-table highlighter to fall back to.
 - `filename: string = ''` — shown in the header, when set.
+- `accessibleLabel: string = ''` (attribute `aria-label`) — names the internal focusable code-body
+  region; otherwise a localized filename/language description is generated.
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button.
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true.
@@ -6871,9 +6991,9 @@ children are the chips (the same shape `<lyra-split>`'s panels / `<lyra-source-l
 no `.items` array prop).
 
 **Properties:**
-- `maxVisible?: number` (attribute `max-visible`) — maximum number of direct children shown before
-  the rest collapse behind a "+N" indicator; unset (the default) means no limit, every child is
-  always shown
+- `maxVisible?: number` (attribute `max-visible`) — maximum number of assigned children shown before
+  the rest collapse behind a "+N" indicator; flattened slot-forwarded children count the same as
+  direct children. Unset means no limit
 
 **Events:** `lyra-overflow-toggle` (`detail: { expanded }` — the overflow indicator was activated,
 revealing or re-collapsing the excess children; fires only from that click, i.e. only when
@@ -7031,6 +7151,9 @@ used" summary.
 - `variant: 'ring' | 'bar' = 'bar'` (reflected)
 - `label: string = ''` — overall accessible caption, e.g. `"128K context window"`. Also rendered
   visually (`[part="label"]`) when set.
+
+Accessible summaries, segment tooltips, and ring titles format quantities using `effectiveLocale`.
+A host `aria-label` overrides the generated meter summary and is preserved across reactive updates.
 
 **Events:** none.
 
@@ -7228,6 +7351,8 @@ fallback simply omits `[part="download-link"]` entirely.
   `<img>`/the anchor.
 - `mimeType: string = ''` (attribute `mime-type`) — drives format dispatch (see above).
 - `filename: string = ''` — shown in the header and used as the download link's suggested filename.
+- `alt?: string` — image description. When omitted, the filename/localized image-preview fallback
+  is used; an explicit empty string keeps a decorative preview's `alt=""` intact.
 - `status: 'idle' | 'converting' | 'ready' | 'error' = 'idle'` (reflected) — host-owned lifecycle
   state. `"converting"` shows the spinner regardless of `mimeType`/`src`; `"error"` shows
   `errorMessage` regardless of either. `"idle"`/`"ready"` both resume normal format dispatch — a host
@@ -7262,8 +7387,8 @@ above; excludes `data:` even though the other two sinks allow it)
 **Themeable custom properties:** `--lyra-document-preview-max-height` (default `none`) — the
 consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` means the preview grows
 with its content until a caller opts in. `--lyra-document-preview-font` (default `ui-monospace,
-SFMono-Regular, Menlo, Consolas, monospace`) — no shared `--wa-*`/`--lyra-*` monospace token exists yet
-(the same gap `lyra-json-viewer`'s own `--lyra-json-viewer-font` documents). Plus shared tokens
+SFMono-Regular, Menlo, Consolas, monospace`) and `--lyra-document-preview-spin-duration` (default
+`0.8s`, stopped under reduced motion). Plus shared tokens
 `--lyra-color-border`, `--lyra-radius`, `--lyra-color-surface`, `--lyra-space-s/-m/-l/-xs`,
 `--lyra-color-text`, `--lyra-color-text-quiet`, `--lyra-color-danger`, `--lyra-color-brand`,
 `--lyra-color-on-brand`, `--lyra-focus-ring-width/-color/-offset`, `--lyra-transition-fast`.
@@ -7304,6 +7429,8 @@ available, the region becomes a standard `role="progressbar"` instead, self-desc
 - The component's own text/JSON `fetch(src)` is a *different* async operation from the host-driven
   `status="converting"` conversion. A failed fetch fires `lyra-render-error` and renders
   `[part="error"]` on its own; it never sets `status="error"` itself.
+- changing `src` aborts the superseded text fetch as well as ignoring any stale completion; removing
+  the component aborts its active request.
 - `progress` is only ever consulted for the host-driven `"converting"` state — this component's own
   in-flight text fetch always renders the indeterminate spinner, with no numeric-progress path.
 - The `unsupported` slot's initial presence is detected once, before the first render, by scanning
@@ -7340,6 +7467,8 @@ final.
   filename, and folded into the accessible name.
 - `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
   back to `filename`, then a generic per-kind description.
+- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized action name on
+  the actual button/link without replacing image alt text or the video control's own label
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lyra-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
@@ -7638,6 +7767,8 @@ user-menu affordance.
 - `src?: string` — image URL; takes priority over `initials` when set and loads successfully, falling
   back to `initials` on a load error.
 - `alt: string = ''` — image alt text; set alongside `src` for accessibility.
+- host `aria-label` — overrides `alt` as the image/fallback accessible name without changing the
+  visible initials or image
 - `size: 'sm' | 'md' | 'lg' = 'md'` (reflected).
 - `shape: 'circle' | 'square' = 'circle'` (reflected).
 - `tone: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) — recolors
@@ -7666,13 +7797,10 @@ var(--lyra-color-border))`, swapped per `tone`), `--lyra-avatar-color` (default
 ```
 
 **Known gotchas:**
-- an image load failure falls back to `initials` automatically (an `error` listener flips internal
-  state) — there's no manual reset/retry method; reassigning `src` (even to the same value)
-  re-attempts the load.
-- the initials fallback is `aria-hidden="true"` whenever `alt` is set, regardless of whether an image
-  is actually showing — so if `src`/`alt` are both set but the image fails to load, the rendered
-  initials text is still hidden from assistive tech, leaving the avatar with no accessible name of
-  its own unless the surrounding context supplies one.
+- an image load failure falls back to `initials` automatically. Changing `src` clears the failure
+  state so the replacement URL gets its own load attempt.
+- when `alt` or host `aria-label` supplies a name, the base preserves that name through the
+  initials fallback while hiding duplicate initials text from assistive technology.
 
 ---
 

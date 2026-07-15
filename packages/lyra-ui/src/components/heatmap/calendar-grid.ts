@@ -53,10 +53,17 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
  * calendar-invalid (e.g. `'2026-02-30'`, which `Date.UTC` silently rolls
  * over into March) is dropped rather than silently renormalized — see
  * `isCalendarValid()`.
+ *
+ * `monthLabelText`, when it returns a string for a given `(jsMonth, year)`, overrides that
+ * month's locale-derived label — mirrors `LyraHeatmap.weekdayLabelText`'s own override-with-
+ * fallback shape, letting month labels track the same locale signal (e.g. an app's own i18n
+ * store) as every other localizable string on the component instead of always following
+ * `toLocaleString(undefined, ...)`'s browser/OS-language default.
  */
 export function buildCalendarGrid(
   days: CalendarDay[],
   firstDayOfWeek = 0,
+  monthLabelText?: (jsMonth: number, year: number) => string | undefined,
 ): {
   cells: CalendarCell[];
   weekCount: number;
@@ -106,7 +113,9 @@ export function buildCalendarGrid(
     seenMonths.add(key);
     monthLabels.push({
       week: cell.week,
-      label: cellDate.toLocaleString(undefined, { month: 'short', timeZone: 'UTC' }),
+      label:
+        monthLabelText?.(cellDate.getUTCMonth(), cellDate.getUTCFullYear()) ??
+        cellDate.toLocaleString(undefined, { month: 'short', timeZone: 'UTC' }),
     });
   }
 

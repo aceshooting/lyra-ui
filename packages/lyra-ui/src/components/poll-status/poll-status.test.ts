@@ -3,6 +3,7 @@ import './poll-status.js';
 import '../live-region/live-region.js';
 import type { LyraPollStatus } from './poll-status.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
+import { styles } from './poll-status.styles.js';
 
 function liveRegionText(el: LyraPollStatus): string {
   const region = el.shadowRoot!.querySelector('lyra-live-region') as LyraLiveRegion;
@@ -125,5 +126,10 @@ describe('lyra-poll-status', () => {
     const el = (await fixture(html`<lyra-poll-status></lyra-poll-status>`)) as LyraPollStatus;
     const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
     expect(getComputedStyle(indicator).animationDuration).to.equal('1.8s');
+  });
+
+  it('gives the pause button a :hover treatment, matching lyra-widget\'s collapse/fullscreen buttons', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='pause-button'\]:hover\s*\{[^}]+\}/);
   });
 });

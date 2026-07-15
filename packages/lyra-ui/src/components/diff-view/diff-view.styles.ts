@@ -42,6 +42,9 @@ export const styles = css`
     padding: var(--lyra-size-0-125rem) var(--lyra-space-s);
     cursor: pointer;
   }
+  [part='copy-button']:hover {
+    border-color: var(--lyra-color-brand);
+  }
   [part='copy-button']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);

@@ -1391,8 +1391,15 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-attachment-chip>` — a compact chip representing one file queued for\n(or already part of) a chat message: a composer's pre-send attachment\ntray, or a sent message's `attachments` slot (see `<lyra-chat-message>`).\n\nTwo independent ways to populate it, matching the two points in a message's\nlifecycle this is used at:\n - Set `file` to a real `File` (fresh from a picker/drop) — `name`, `size`,\n   `mime-type` and the image thumbnail are all auto-derived from it.\n - Set the plain `name`/`size`/`mime-type`/`thumbnail-src` props instead,\n   for reconstructing a chip from server-persisted attachment metadata\n   (e.g. after a page reload, when no real `File` object exists any more).\n\n`file` always wins when both are present — see each accessor's own doc.\nThe image thumbnail for a real `File` is a cached `URL.createObjectURL()`\nblob URL, created in the update lifecycle immediately before the thumbnail\nrenders and revoked automatically once `file`\nchanges away from the object it was created for, and on disconnect — this\ncomponent never leaks a blob URL.\n\nIdentifying *which* attachment a `lyra-remove`/`lyra-retry` event is about:\nthis deliberately reuses the platform's own `id`/`id` attribute (every\nelement already has one; there's no need to shadow it with a second,\ndifferently-named Lit property, unlike e.g. `<lyra-tool-call-chip>`'s\n`call-id` which identifies a *call*, a concept distinct from the chip\nelement itself). Set `id=\"...\"` when you have a stable server-side\nattachment id. When `id` is left unset and `file` is set, a stable id is\nderived from `` `${file.name}:${file.size}:${file.lastModified}` `` — stable\nacross re-renders of the *same* `File` object without requiring the\nconsumer to invent one. When neither is available, a generated internal id\nis used as a last resort so the event always has *some* id.\n\ni18n/locale: every translatable word rendered by this component is\noverride-able via a dedicated property — `removeLabel`/`retryLabel`\n(the verb prefixed to the remove/retry buttons' `aria-label`, keeping the\n`displayName` interpolation), and `uploadingLabel`/`uploadFailedLabel` (the\nverb/phrase used in the visible `status-text`, keeping the live percentage\ninterpolation for `uploadingLabel`). All four default to today's exact\nhardcoded English text (`'Remove'`, `'Retry'`, `'Uploading'`, `'Upload\nfailed'`), so leaving them unset changes nothing. These are plain\nproperties, not slots — this component still exposes no slots.",
+          "description": "`<lyra-attachment-chip>` — a compact chip representing one file queued for\n(or already part of) a chat message: a composer's pre-send attachment\ntray, or a sent message's `attachments` slot (see `<lyra-chat-message>`).\n\nTwo independent ways to populate it, matching the two points in a message's\nlifecycle this is used at:\n - Set `file` to a real `File` (fresh from a picker/drop) — `name`, `size`,\n   `mime-type` and the image thumbnail are all auto-derived from it.\n - Set the plain `name`/`size`/`mime-type`/`thumbnail-src` props instead,\n   for reconstructing a chip from server-persisted attachment metadata\n   (e.g. after a page reload, when no real `File` object exists any more).\n\n`file` always wins when both are present — see each accessor's own doc.\nThe image thumbnail for a real `File` is a cached `URL.createObjectURL()`\nblob URL, created in the update lifecycle immediately before the thumbnail\nrenders and revoked automatically once `file`\nchanges away from the object it was created for, and on disconnect — this\ncomponent never leaks a blob URL.\n\nIdentifying *which* attachment a `lyra-remove`/`lyra-retry` event is about:\nthis deliberately reuses the platform's own `id`/`id` attribute (every\nelement already has one; there's no need to shadow it with a second,\ndifferently-named Lit property, unlike e.g. `<lyra-tool-call-chip>`'s\n`call-id` which identifies a *call*, a concept distinct from the chip\nelement itself). Set `id=\"...\"` when you have a stable server-side\nattachment id. When `id` is left unset and `file` is set, a stable id is\nderived from `` `${file.name}:${file.size}:${file.lastModified}` `` — stable\nacross re-renders of the *same* `File` object without requiring the\nconsumer to invent one. When neither is available, a generated internal id\nis used as a last resort so the event always has *some* id.\n\ni18n/locale: complete contextual messages (including filename/percentage\nplacement and punctuation) route through the shared localization registry.\n`removeLabel`/`retryLabel`/`uploadingLabel`/`uploadFailedLabel` remain as\nsimple per-instance copy overrides; use the component's `.strings` map or a\nregistered locale when a translation needs to reorder the interpolated\nvalues. These are plain properties, not slots — this component still\nexposes no slots.",
           "name": "LyraAttachmentChip",
+          "cssProperties": [
+            {
+              "description": "Duration of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion.",
+              "name": "--lyra-attachment-chip-spinner-duration",
+              "default": "0.8s"
+            }
+          ],
           "cssParts": [
             {
               "description": "The chip's root container.",
@@ -1627,7 +1634,7 @@
                 "text": "string"
               },
               "default": "'Remove'",
-              "description": "Verb used in the remove button's `aria-label`, interpolated as\n`` `${removeLabel} ${displayName}` `` -- override for i18n/locale.\nDefaults to `'Remove'`, reproducing today's exact `\"Remove ${displayName}\"`\ntext byte-for-byte.",
+              "description": "Verb used in the remove button's accessible name. For complete control over translated\nword order and punctuation, override the `removeWithContext` message instead.",
               "attribute": "remove-label"
             },
             {
@@ -1646,7 +1653,7 @@
                 "text": "string"
               },
               "default": "'Retry'",
-              "description": "Verb used in the retry button's `aria-label`, interpolated as\n`` `${retryLabel} ${displayName}` `` -- override for i18n/locale.\nDefaults to `'Retry'`, reproducing today's exact `\"Retry ${displayName}\"`\ntext byte-for-byte.",
+              "description": "Verb used in the retry button's accessible name. For complete control over translated word\norder and punctuation, override the `attachmentRetryWithContext` message instead.",
               "attribute": "retry-label"
             },
             {
@@ -1743,7 +1750,7 @@
                 "text": "string"
               },
               "default": "'Uploading'",
-              "description": "Verb used in the visible uploading status text -- rendered as\n`` `${uploadingLabel} ${percent}%` `` once progress is a meaningful\nnumber, else `` `${uploadingLabel}…` ``. Override for i18n/locale.\nDefaults to `'Uploading'`, reproducing today's exact `\"Uploading N%\"`/\n`\"Uploading…\"` text byte-for-byte.",
+              "description": "Verb used in uploading messages. For complete control over translated word order and\npunctuation, override the `attachmentUploadingWithContext`,\n`attachmentUploadingProgress`, and `attachmentUploadingIndeterminate` messages instead.",
               "attribute": "uploading-label"
             },
             {
@@ -2003,7 +2010,7 @@
                 "text": "string"
               },
               "default": "'Remove'",
-              "description": "Verb used in the remove button's `aria-label`, interpolated as\n`` `${removeLabel} ${displayName}` `` -- override for i18n/locale.\nDefaults to `'Remove'`, reproducing today's exact `\"Remove ${displayName}\"`\ntext byte-for-byte.",
+              "description": "Verb used in the remove button's accessible name. For complete control over translated\nword order and punctuation, override the `removeWithContext` message instead.",
               "fieldName": "removeLabel"
             },
             {
@@ -2012,7 +2019,7 @@
                 "text": "string"
               },
               "default": "'Retry'",
-              "description": "Verb used in the retry button's `aria-label`, interpolated as\n`` `${retryLabel} ${displayName}` `` -- override for i18n/locale.\nDefaults to `'Retry'`, reproducing today's exact `\"Retry ${displayName}\"`\ntext byte-for-byte.",
+              "description": "Verb used in the retry button's accessible name. For complete control over translated word\norder and punctuation, override the `attachmentRetryWithContext` message instead.",
               "fieldName": "retryLabel"
             },
             {
@@ -2075,7 +2082,7 @@
                 "text": "string"
               },
               "default": "'Uploading'",
-              "description": "Verb used in the visible uploading status text -- rendered as\n`` `${uploadingLabel} ${percent}%` `` once progress is a meaningful\nnumber, else `` `${uploadingLabel}…` ``. Override for i18n/locale.\nDefaults to `'Uploading'`, reproducing today's exact `\"Uploading N%\"`/\n`\"Uploading…\"` text byte-for-byte.",
+              "description": "Verb used in uploading messages. For complete control over translated word order and\npunctuation, override the `attachmentUploadingWithContext`,\n`attachmentUploadingProgress`, and `attachmentUploadingIndeterminate` messages instead.",
               "fieldName": "uploadingLabel"
             }
           ],
@@ -2735,7 +2742,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read.",
+              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
               "attribute": "alt"
             },
             {
@@ -3036,7 +3043,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read.",
+              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
               "fieldName": "alt"
             },
             {
@@ -3191,6 +3198,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime\ndefault appearance (used whenever a `wa-button` call site sets only `variant`): a solid,\nhigh-contrast fill for every variant, including `neutral` (`--wa-color-neutral-fill-loud`).",
               "attribute": "appearance",
               "reflects": true
             },
@@ -3239,6 +3247,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "formAssociated",
+              "type": {
+                "text": "boolean"
+              },
+              "static": true,
+              "default": "true"
             },
             {
               "kind": "field",
@@ -3504,6 +3521,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier equivalent to `wa-button`'s own runtime\ndefault appearance (used whenever a `wa-button` call site sets only `variant`): a solid,\nhigh-contrast fill for every variant, including `neutral` (`--wa-color-neutral-fill-loud`).",
               "fieldName": "appearance"
             },
             {
@@ -3611,7 +3629,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-card>` — a generic, styled bordered content container: the \"small bordered surface with\npadding\" idiom common to hero highlights, clickable grid tiles, and management-list items. A\ndirect `<lyra-*>` counterpart to `<wa-card>`'s contract, staying slot-compatible with\n`lyra-result-card` where they overlap.",
+          "description": "`<lyra-card>` — a generic, styled bordered content container: the \"small bordered surface with\npadding\" idiom common to hero highlights, clickable grid tiles, and management-list items. A\ndirect `<lyra-*>` counterpart to `<wa-card>`'s contract, staying slot-compatible with\n`lyra-result-card` where they overlap.\n\nThe header is allocation-responsive: long or translated header content can shrink and wrap,\nand the actions group moves onto another line when both no longer fit side by side.",
           "name": "LyraCard",
           "cssParts": [
             {
@@ -4073,7 +4091,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -4467,6 +4485,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -4620,6 +4660,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -4897,7 +4959,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -5169,7 +5231,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the box labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the box labels.",
               "attribute": "accessible-label"
             },
             {
@@ -5360,6 +5422,24 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -5516,6 +5596,16 @@
             },
             {
               "kind": "method",
+              "name": "refreshTheme",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Re-reads canvas theme custom properties after an out-of-band ancestor theme change."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -5586,7 +5676,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the box labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the box labels.",
               "fieldName": "accessibleLabel"
             },
             {
@@ -5716,7 +5806,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -6110,6 +6200,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -6263,6 +6375,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -6540,7 +6674,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -6907,7 +7041,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label"
             },
             {
@@ -7197,6 +7331,24 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -7331,6 +7483,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -7527,7 +7697,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel"
             },
             {
@@ -7747,7 +7917,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -8141,6 +8311,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -8294,6 +8486,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -8571,7 +8785,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -8905,7 +9119,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -9326,6 +9540,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -9479,6 +9715,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -9698,7 +9956,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -10050,7 +10308,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -10444,6 +10702,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -10597,6 +10877,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -10874,7 +11176,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -11161,7 +11463,7 @@
               "type": {
                 "text": "string | undefined"
               },
-              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly. Named `accessible-label` to\nmatch the same override on `lyra-chart`/`lyra-box-plot`.",
+              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`\ntakes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label\nexactly. Named `accessible-label` to match the same override on `lyra-chart`/`lyra-box-plot`.",
               "attribute": "accessible-label"
             },
             {
@@ -11348,7 +11650,7 @@
               "type": {
                 "text": "number | undefined"
               },
-              "description": "Overrides the internal `PAD_LEFT` (36px) plot-left-padding constant. Unset (the default) keeps\ntoday's fixed 36px.",
+              "description": "Overrides the internal `PAD_LEFT` (36px) axis-gutter constant. The gutter is on the left in\nLTR and the right in RTL, keeping the y axis at logical start. Unset keeps the 36px default.",
               "attribute": "pad-left"
             },
             {
@@ -12126,7 +12428,7 @@
               "type": {
                 "text": "string | undefined"
               },
-              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. Unset (the default)\nkeeps today's auto-derived (English-fallback) label exactly. Named `accessible-label` to\nmatch the same override on `lyra-chart`/`lyra-box-plot`.",
+              "description": "Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||\n'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`\ntakes precedence. Unset (the default) keeps today's auto-derived (English-fallback) label\nexactly. Named `accessible-label` to match the same override on `lyra-chart`/`lyra-box-plot`.",
               "fieldName": "accessibleLabel"
             },
             {
@@ -12222,7 +12524,7 @@
               "type": {
                 "text": "number | undefined"
               },
-              "description": "Overrides the internal `PAD_LEFT` (36px) plot-left-padding constant. Unset (the default) keeps\ntoday's fixed 36px.",
+              "description": "Overrides the internal `PAD_LEFT` (36px) axis-gutter constant. The gutter is on the left in\nLTR and the right in RTL, keeping the y axis at logical start. Unset keeps the 36px default.",
               "fieldName": "padLeft"
             },
             {
@@ -12358,7 +12660,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -12752,6 +13054,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -12905,6 +13229,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -13182,7 +13528,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -13434,7 +13780,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -13828,6 +14174,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -13981,6 +14349,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -14258,7 +14648,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -14510,7 +14900,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -14904,6 +15294,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -15057,6 +15469,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -15334,7 +15768,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -15586,7 +16020,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "attribute": "accessible-label",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -15980,6 +16414,28 @@
             },
             {
               "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "fallback",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "addEventListener",
               "return": {
                 "type": {
@@ -16133,6 +16589,28 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formatSummaryValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -16410,7 +16888,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name applied to the canvas. Falls back to the dataset labels.",
+              "description": "Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the dataset labels.",
               "fieldName": "accessibleLabel",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -16638,7 +17116,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-chat-composer>` — the message input for a chat/agent conversation\nsurface: an auto-resizing textarea plus a send/stop button. Form-\nassociated via the `FormAssociated` mixin (see `<lyra-date-input>` for the\nsame shape), so it participates in native `<form>` submission/validation/\nreset like any other text control — `name`/`value`/`disabled`/`required`/\n`checkValidity()`/`reportValidity()` all come from that mixin.\n\nAuto-resize reads the textarea's own *computed* line-height/padding/\nborder at runtime (`resizeTextarea()`) rather than assuming a fixed\npx-per-row constant, so it stays correct under a consumer's own font-size/\nline-height overrides. It grows between `min-rows` and `max-rows`, then\nswitches to internal scrolling. A `ResizeObserver` on the textarea itself\nre-runs the same fit whenever its *width* changes (a responsive\nbreakpoint, a sidebar toggling, a window resize, an orientation change)\neven though `value`/`min-rows`/`max-rows` never did -- a narrower box\nwraps the same text across more lines, so the previously-fitted height\nwould otherwise go stale and clip content with no scrollbar to reveal it.\n\nEnter-to-send (only active while `submit-on-enter` is true, the default):\nplain Enter submits and is prevented from inserting a newline; Shift+Enter\nalways inserts a newline no matter what; an IME composition step (checked\nvia `isComposing`, with `keyCode === 229` as a defense-in-depth fallback\nfor browsers that report `isComposing` inconsistently on the\ncompositionend-adjacent keydown) is never treated as a submit trigger;\nand while `status` isn't `\"idle\"` Enter is left alone to insert a newline\ntoo, rather than trying to submit again -- there is nothing meaningful to\nsubmit while a previous message is still sending/streaming, and the\ntextarea deliberately stays interactive (see `disabled` below) so a user\ncan keep composing their next message in the meantime.\n\nDeliberately no label/hint/error chrome -- a composite chat-input control, not a labeled form\nfield; wrap it in your own layout for that context.\n\n`lyra-submit`'s `detail.value` is always the exact, untrimmed current\nvalue (`detail.value === value` at the moment it fires) -- trimming is\nleft to the consumer so it never silently diverges from what `value`\nitself reports. Submitting does not clear `value`; the consumer clears it\nonce the submission has actually been accepted (so e.g. a failed send can\nleave the text in place for retry).",
+          "description": "`<lyra-chat-composer>` — the message input for a chat/agent conversation\nsurface: an auto-resizing textarea plus a send/stop button. Form-\nassociated via the `FormAssociated` mixin (see `<lyra-date-input>` for the\nsame shape), so it participates in native `<form>` submission/validation/\nreset like any other text control — `name`/`value`/`disabled`/`required`/\n`checkValidity()`/`reportValidity()` all come from that mixin.\n\nAuto-resize reads the textarea's own *computed* line-height/padding/\nborder at runtime (`resizeTextarea()`) rather than assuming a fixed\npx-per-row constant, so it stays correct under a consumer's own font-size/\nline-height overrides. It grows between `min-rows` and `max-rows`, then\nswitches to internal scrolling. A `ResizeObserver` on the textarea itself\nre-runs the same fit whenever its *width* changes (a responsive\nbreakpoint, a sidebar toggling, a window resize, an orientation change)\neven though `value`/`min-rows`/`max-rows` never did -- a narrower box\nwraps the same text across more lines, so the previously-fitted height\nwould otherwise go stale and clip content with no scrollbar to reveal it.\n\nEnter-to-send (only active while `submit-on-enter` is true, the default):\nplain Enter submits and is prevented from inserting a newline; Shift+Enter\nalways inserts a newline no matter what; an IME composition step (checked\nvia `isComposing`, with `keyCode === 229` as a defense-in-depth fallback\nfor browsers that report `isComposing` inconsistently on the\ncompositionend-adjacent keydown) is never treated as a submit trigger;\nand while `status` isn't `\"idle\"` Enter is left alone to insert a newline\ntoo, rather than trying to submit again -- there is nothing meaningful to\nsubmit while a previous message is still sending/streaming, and the\ntextarea deliberately stays interactive (see `disabled` below) so a user\ncan keep composing their next message in the meantime.\n\nDeliberately no label/hint/error chrome -- a composite chat-input control, not a labeled form\nfield; wrap it in your own layout for that context. A host `aria-label` is forwarded to the\ninternal textarea and takes precedence over the placeholder-derived name.\n\n`lyra-submit`'s `detail.value` is always the exact, untrimmed current\nvalue (`detail.value === value` at the moment it fires) -- trimming is\nleft to the consumer so it never silently diverges from what `value`\nitself reports. Submitting does not clear `value`; the consumer clears it\nonce the submission has actually been accepted (so e.g. a failed send can\nleave the text in place for retry).",
           "name": "LyraChatComposer",
           "cssParts": [
             {
@@ -16687,12 +17165,22 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name for the internal textarea. Takes precedence over the placeholder-derived name.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "autoCorrect",
               "type": {
                 "text": "string"
               },
               "default": "''",
-              "description": "Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default). No `wrap` property here -- the auto-resize\nlogic above already assumes unwrapped natural text flow.\n\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich a same-named `string`-typed reactive property here would override unsoundly from the\ntype checker's point of view (even though the browser itself would happily let this class's\nown accessor win at runtime). The explicit attribute mapping preserves the standard\nlowercase `autocorrect` wire name in both Lit and generated component metadata.",
+              "description": "Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default).\n\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich a same-named `string`-typed reactive property here would override unsoundly from the\ntype checker's point of view (even though the browser itself would happily let this class's\nown accessor win at runtime). The explicit attribute mapping preserves the standard\nlowercase `autocorrect` wire name in both Lit and generated component metadata.",
               "attribute": "autocorrect"
             },
             {
@@ -16704,6 +17192,15 @@
               "default": "''",
               "description": "Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
               "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "autocomplete"
             },
             {
               "kind": "field",
@@ -16735,6 +17232,15 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
               "name": "hasChipsSlot",
               "type": {
                 "text": "boolean"
@@ -16759,6 +17265,24 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "input",
+              "type": {
+                "text": "HTMLTextAreaElement | null"
+              },
+              "description": "The internal native textarea for integrations that require direct DOM access.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
             },
             {
               "kind": "field",
@@ -16841,6 +17365,27 @@
               },
               "default": "''",
               "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "selectionDirection",
+              "type": {
+                "text": "ChatComposerSelectionDirection | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionEnd",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionStart",
+              "type": {
+                "text": "number | null"
+              }
             },
             {
               "kind": "field",
@@ -16942,6 +17487,16 @@
               "default": "false"
             },
             {
+              "kind": "field",
+              "name": "wrap",
+              "type": {
+                "text": "ChatComposerWrap"
+              },
+              "default": "'soft'",
+              "description": "Native editing-assistance attributes forwarded to the internal textarea.",
+              "attribute": "wrap"
+            },
+            {
               "kind": "method",
               "name": "addEventListener",
               "return": {
@@ -16988,6 +17543,15 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -17022,6 +17586,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -17144,6 +17726,136 @@
             },
             {
               "kind": "method",
+              "name": "select",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setSelectionRange",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "direction",
+                  "optional": true,
+                  "type": {
+                    "text": "ChatComposerSelectionDirection"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "submit",
               "privacy": "private",
               "return": {
@@ -17154,6 +17866,14 @@
             }
           ],
           "events": [
+            {
+              "description": "Re-dispatched from the internal native textarea as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from the internal native textarea as a bubbling, composed event.",
+              "name": "focus"
+            },
             {
               "description": "Fired on every user-driven edit of the textarea (not a programmatic `.value` assignment). `detail: { value }`.",
               "name": "lyra-input"
@@ -17169,6 +17889,15 @@
           ],
           "attributes": [
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name for the internal textarea. Takes precedence over the placeholder-derived name.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "autocapitalize",
               "type": {
                 "text": "string"
@@ -17178,13 +17907,37 @@
               "fieldName": "autocapitalize"
             },
             {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "autocomplete"
+            },
+            {
               "name": "autocorrect",
               "type": {
                 "text": "string"
               },
               "default": "''",
-              "description": "Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default). No `wrap` property here -- the auto-resize\nlogic above already assumes unwrapped natural text flow.\n\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich a same-named `string`-typed reactive property here would override unsoundly from the\ntype checker's point of view (even though the browser itself would happily let this class's\nown accessor win at runtime). The explicit attribute mapping preserves the standard\nlowercase `autocorrect` wire name in both Lit and generated component metadata.",
+              "description": "Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute (browser default).\n\nNamed `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`\ncollision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,\nwhich a same-named `string`-typed reactive property here would override unsoundly from the\ntype checker's point of view (even though the browser itself would happily let this class's\nown accessor win at runtime). The explicit attribute mapping preserves the standard\nlowercase `autocorrect` wire name in both Lit and generated component metadata.",
               "fieldName": "autoCorrect"
+            },
+            {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
             },
             {
               "name": "locale",
@@ -17256,6 +18009,15 @@
               },
               "default": "true",
               "fieldName": "submitOnEnter"
+            },
+            {
+              "name": "wrap",
+              "type": {
+                "text": "ChatComposerWrap"
+              },
+              "default": "'soft'",
+              "description": "Native editing-assistance attributes forwarded to the internal textarea.",
+              "fieldName": "wrap"
             }
           ],
           "mixins": [
@@ -17314,6 +18076,18 @@
           "kind": "class",
           "description": "`<lyra-chat-message>` — a role-based message bubble *shell* for a chat/\nagent conversation surface. It renders none of the message content itself:\nthe default slot carries whatever a consumer wants to display (plain\ntext, a `<lyra-markdown>`, a custom template, anything at all) and this\ncomponent only supplies the surrounding chrome — alignment/coloring by\n`role`, an avatar/badges header row, an optional collapse toggle, an\nattachments strip, and a status-aware footer (a live-updating status dot +\ntext, the formatted `timestamp`, a built-in retry affordance for\n`status=\"failed\"`, and an `actions` slot for everything else).\n\nNo built-in copy button is rendered. Deciding what \"the copyable text\" of\nan arbitrary slotted message even means (plain text? the rendered\nmarkdown source? something else?) is exactly the kind of content\ninterpretation this shell deliberately stays out of — slot a copy control\ninto `actions` instead. Firing `lyra-copy` (`detail: { text }`) from that\ncontrol keeps the event name consistent with `<lyra-json-viewer>`'s own\ncopy affordance, for anything listening at the conversation-surface level.\n\nAccessibility of `status`: the current status is always available as\nplain visible text (`[part=\"status-text\"]`), never color alone. A\ntransition *to* `\"failed\"`, or *from* `\"streaming\"` to `\"sent\"` (a stream\nfinishing), is additionally announced through an internal\n`<lyra-live-region>` (see that component's header for the throttled-\nannouncement wiring this composes) so a screen-reader user who isn't\ncurrently focused on this message still learns about it. This differs\nfrom `<lyra-typing-indicator>`'s deliberately simpler `role=\"status\"`\napproach — that component only ever has one thing to announce (its own\nmount); this one has a `status` that can flip between several values\nacross a single element's lifetime, which is exactly the coalescing job\n`<lyra-live-region>` exists for.\n\n`role` is a message-author role (`user`/`assistant`/`system`, matching\nthe vocabulary of every chat/completion API), *not* a WAI-ARIA role, so\nit reflects to a `data-role` attribute rather than the bare `role`\nattribute — `role=\"user\"` would collide with `Element`'s own ARIA `role`\naccessor and is not a valid ARIA role token to begin with.",
           "name": "LyraChatMessage",
+          "cssProperties": [
+            {
+              "description": "Maximum inline size of the message bubble.",
+              "name": "--lyra-chat-message-max-width",
+              "default": "80%"
+            },
+            {
+              "description": "Streaming-indicator animation duration and timing function.",
+              "name": "--lyra-transition-ambient",
+              "default": "1.8s ease-in-out"
+            }
+          ],
           "cssParts": [
             {
               "description": "The wrapper around the `actions` slot.",
@@ -17960,7 +18734,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-checkbox>` — a boolean form control. Structurally the same idea as\n`<lyra-switch>` (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with checkbox semantics: `role=\"checkbox\"` +\nan `aria-checked` that can also be `\"mixed\"`, and a visual box/checkmark\ninstead of a track/thumb.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin — see `<lyra-combobox>` for the same\ndirect-`ElementInternals` shape with a non-string value.\n\nDeliberately no hint/error chrome of its own -- the default slot already carries real, visible\nlabel text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`\nprops has nothing to add here. A consumer needing hint/error messaging composes it in their own\nwrapper (e.g. `<lyra-tool-param-form>` folds a boolean field's validation error into adjacent\ndescription text / `aria-label` rather than a `<lyra-checkbox>`-owned slot), the same way a\nnative `<input type=\"checkbox\">` plus `<label>` pairs with an externally-owned error node.",
+          "description": "`<lyra-checkbox>` — a boolean form control. Structurally the same idea as\n`<lyra-switch>` (form-associated via `ElementInternals`, click and\nSpace both toggle) but with checkbox semantics: `role=\"checkbox\"` +\nan `aria-checked` that can also be `\"mixed\"`, and a visual box/checkmark\ninstead of a track/thumb.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin — see `<lyra-combobox>` for the same\ndirect-`ElementInternals` shape with a non-string value.\n\nDeliberately no hint/error chrome of its own -- the default slot already carries real, visible\nlabel text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`\nprops has nothing to add here. A consumer needing hint/error messaging composes it in their own\nwrapper (e.g. `<lyra-tool-param-form>` folds a boolean field's validation error into adjacent\ndescription text / `aria-label` rather than a `<lyra-checkbox>`-owned slot), the same way a\nnative `<input type=\"checkbox\">` plus `<label>` pairs with an externally-owned error node.",
           "name": "LyraCheckbox",
           "cssParts": [
             {
@@ -18223,6 +18997,11 @@
             },
             {
               "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onKeyDown",
               "privacy": "private"
             },
@@ -18353,6 +19132,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Removes focus from the internal checkbox control."
+            },
+            {
+              "kind": "method",
               "name": "checkValidity",
               "return": {
                 "type": {
@@ -18396,6 +19185,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Moves focus to the internal checkbox control."
             },
             {
               "kind": "method",
@@ -18580,7 +19388,23 @@
           ],
           "events": [
             {
-              "description": "The user toggled the checkbox (click or Space/Enter). `detail: { checked }`. Not fired for a programmatic `.checked` assignment.",
+              "description": "Re-dispatched from the internal control as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
+              "description": "Fired immediately after `input` for the same user toggle.",
+              "name": "change"
+            },
+            {
+              "description": "Re-dispatched from the internal control as a bubbling, composed event.",
+              "name": "focus"
+            },
+            {
+              "description": "The user toggled the checkbox; bubbling and composed like a native form event.",
+              "name": "input"
+            },
+            {
+              "description": "Compatibility alias fired after `input` and `change` (click or Space). `detail: { checked }`. Not fired for a programmatic `.checked` assignment.",
               "name": "lyra-change"
             }
           ],
@@ -18786,7 +19610,7 @@
               "type": {
                 "text": "number | undefined"
               },
-              "description": "Maximum number of direct children shown before the rest collapse behind\na \"+N\" indicator. Unset (the default) means no limit — every child is\nalways shown.",
+              "description": "Maximum number of assigned children shown before the rest collapse behind a \"+N\"\nindicator. Flattened slot-forwarded children count the same as direct light-DOM children.\nUnset (the default) means no limit — every child is always shown.",
               "attribute": "max-visible"
             },
             {
@@ -19002,7 +19826,7 @@
               "type": {
                 "text": "number | undefined"
               },
-              "description": "Maximum number of direct children shown before the rest collapse behind\na \"+N\" indicator. Unset (the default) means no limit — every child is\nalways shown.",
+              "description": "Maximum number of assigned children shown before the rest collapse behind a \"+N\"\nindicator. Flattened slot-forwarded children count the same as direct light-DOM children.\nUnset (the default) means no limit — every child is always shown.",
               "fieldName": "maxVisible"
             }
           ],
@@ -19520,7 +20344,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-citation-badge>` — an inline `[n]` citation marker with a hover/\nfocus preview popover and confidence/verification-status coloring. Used\nfor an agent response's inline citations, each carrying a `source-id`\nthat matches a corresponding `<lyra-source-card>` shown elsewhere on the\npage (a sibling component in this same family — this component doesn't\nimport or know anything about it, only carries the id through its\nevents).\n\nThe default slot is *not* the badge's visible content — the badge always\nrenders `[index]` — it's reserved for optional rich preview content (e.g.\na filename + short excerpt) shown in a floating popover on hover/focus,\npositioned with `internal/positioner.js`'s `place()` the same way\n`<lyra-tool-call-chip>` positions its own detail tooltip. No popover shows\nat all when the slot carries no content, and the popover never traps\nfocus — it's supplementary preview content, not a modal, so Tab continues\npast the badge normally even while it happens to be visible from a mouse\nhover.\n\nTwo distinct signals fire from the same badge: `lyra-citation-activate`\n(click, or Enter while focused — native `<button>` behavior, no listener\nneeded for the Enter case) is the lightweight \"jump to this source\"\nsignal a host wires to scrolling/highlighting the matching\n`<lyra-source-card>`. `lyra-citation-open` (dblclick, or Space while\nfocused) is a distinct \"full preview\" signal — `href` in its detail is\n`undefined` when the `href` prop isn't set; the consumer decides what\n\"open\" means (a new tab, a dialog, etc). A double-click still fires two\n`lyra-citation-activate` events (one per constituent click — standard\nbrowser `dblclick` behavior) in addition to the one `lyra-citation-open`;\na consumer that only cares about the richer signal on a double-click\nshould ignore the paired activate events in that case.\n\nStatus coloring: `verified`/`high` use the success tones (a claim that's\nbeen checked out, or the model is confident in). `medium`/`low` use\nwarning (progressively less certain, but still a real citation).\n`unverified` uses danger — deliberately distinct from `low`: \"hasn't been\nchecked at all\" is a different (arguably riskier) claim than \"checked but\nuncertain\". `default` renders as plain neutral text with no background\ntint, for citations that carry no confidence/verification signal at all.",
+          "description": "`<lyra-citation-badge>` — an inline `[n]` citation marker with a hover/\nfocus preview popover and confidence/verification-status coloring. Used\nfor an agent response's inline citations, each carrying a `source-id`\nthat matches a corresponding `<lyra-source-card>` shown elsewhere on the\npage (a sibling component in this same family — this component doesn't\nimport or know anything about it, only carries the id through its\nevents).\n\nThe default slot is *not* the badge's visible content — the badge always\nrenders `[index]` — it's reserved for optional rich preview content (e.g.\na filename + short excerpt) shown in a floating popover on hover/focus,\npositioned with `internal/positioner.js`'s `place()` the same way\n`<lyra-tool-call-chip>` positions its own detail tooltip. No popover shows\nat all when the slot carries no content, and the popover never traps\nfocus — it's supplementary preview content, not a modal, so Tab continues\npast the badge normally even while it happens to be visible from a mouse\nhover. When preview content exists, the button keeps a stable\n`aria-describedby` relationship to the `role=\"tooltip\"` panel while it is\nboth hidden and visible, so assistive technology can resolve the preview\nas soon as focus causes it to open.\n\nTwo distinct signals fire from the same badge: `lyra-citation-activate`\n(click, or Enter while focused — native `<button>` behavior, no listener\nneeded for the Enter case) is the lightweight \"jump to this source\"\nsignal a host wires to scrolling/highlighting the matching\n`<lyra-source-card>`. `lyra-citation-open` (dblclick, or Space while\nfocused) is a distinct \"full preview\" signal — `href` in its detail is\n`undefined` when the `href` prop isn't set; the consumer decides what\n\"open\" means (a new tab, a dialog, etc). A double-click still fires two\n`lyra-citation-activate` events (one per constituent click — standard\nbrowser `dblclick` behavior) in addition to the one `lyra-citation-open`;\na consumer that only cares about the richer signal on a double-click\nshould ignore the paired activate events in that case.\n\nStatus coloring: `verified`/`high` use the success tones (a claim that's\nbeen checked out, or the model is confident in). `medium`/`low` use\nwarning (progressively less certain, but still a real citation).\n`unverified` uses danger — deliberately distinct from `low`: \"hasn't been\nchecked at all\" is a different (arguably riskier) claim than \"checked but\nuncertain\". `default` renders as plain neutral text with no background\ntint, for citations that carry no confidence/verification signal at all.",
           "name": "LyraCitationBadge",
           "cssParts": [
             {
@@ -20090,7 +20914,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-code-block-core>` — a build-lean variant of `<lyra-code-block>` for\na consumer whose `languages` map already covers every language it will\never render. It only ever calls `loadShikiHighlighterCore(this.languages)`\n(see `code-loader.ts`) — never `loadShikiHighlighter()`, the default\n~200-language dynamic-import table loader `<lyra-code-block>` calls\nunconditionally unless its runtime `languagesOnly` flag is `true`. A\nruntime flag on that same module can't be proven always-`true` by a\nbundler, so the unconditional call (and everything shiki's main entry\npoint can reach from it) always stays in the build output regardless of\nhow that flag is used. This component's own module never textually\ncontains a call to (or import of) `loadShikiHighlighter` at all, so a\nconsumer importing this entry point instead of `code-block.js` gets a\ngenuinely shiki-full-table-free build.\n\nA `language` value absent from `languages` always renders the plain\n`<pre><code>` fallback — there is no default/full-table highlighter here\nto fall back to, unlike `<lyra-code-block>`'s dynamic-import path for an\nunmapped language. That fallback is the *default* rendering path, not a\ndegraded one, same as `<lyra-code-block>`'s own plain-text fallback.\n\nEverything else — `code`/`language`/`filename`/`copyable`/`collapsible`/\n`collapsed`/`maxHeight`, the copy button, the collapse header toggle, the\nloading-skeleton behavior while the fine-grained highlighter itself\nresolves — matches `<lyra-code-block>` exactly.",
+          "description": "`<lyra-code-block-core>` — a build-lean variant of `<lyra-code-block>` for\na consumer whose `languages` map already covers every language it will\never render. It only ever calls `loadShikiHighlighterCore(this.languages)`\n(see `code-loader.ts`) — never `loadShikiHighlighter()`, the default\n~200-language dynamic-import table loader `<lyra-code-block>` calls\nunconditionally unless its runtime `languagesOnly` flag is `true`. A\nruntime flag on that same module can't be proven always-`true` by a\nbundler, so the unconditional call (and everything shiki's main entry\npoint can reach from it) always stays in the build output regardless of\nhow that flag is used. This component's own module never textually\ncontains a call to (or import of) `loadShikiHighlighter` at all, so a\nconsumer importing this entry point instead of `code-block.js` gets a\ngenuinely shiki-full-table-free build.\n\nA `language` value absent from `languages` always renders the plain\n`<pre><code>` fallback — there is no default/full-table highlighter here\nto fall back to, unlike `<lyra-code-block>`'s dynamic-import path for an\nunmapped language. That fallback is the *default* rendering path, not a\ndegraded one, same as `<lyra-code-block>`'s own plain-text fallback.\n\nEverything else — `code`/`language`/`filename`/`copyable`/`collapsible`/\n`collapsed`/`maxHeight`, the copy button, the collapse header toggle, the\nloading-skeleton behavior while the fine-grained highlighter itself\nresolves — matches `<lyra-code-block>` exactly. A host `aria-label` (or\nthe matching `accessibleLabel` property) is forwarded to the internal\nfocusable element that owns the named `group` role.",
           "name": "LyraCodeBlockCore",
           "cssParts": [
             {
@@ -20131,6 +20955,16 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the internal focusable code region. Maps\nto the host's `aria-label` attribute and wins over `filename` and\n`language`-derived defaults.",
+              "attribute": "aria-label"
+            },
             {
               "kind": "field",
               "name": "bodyId",
@@ -20576,6 +21410,15 @@
           ],
           "attributes": [
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the internal focusable code region. Maps\nto the host's `aria-label` attribute and wins over `filename` and\n`language`-derived defaults.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "code",
               "type": {
                 "text": "string"
@@ -20810,7 +21653,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-code-block>` — fenced code display with optional lazy syntax\nhighlighting and a copy button. No highlighting grammar ships in this\ncomponent itself: it lazy-loads the optional peer dependency `shiki` (see\n`code-loader.ts`) for the actual tokenizing, and degrades to a plain\n`<pre><code>` when that peer isn't installed or `language` is unset/\nunrecognized — the exact same optional-peer shape `<lyra-markdown>` and\n`<lyra-chart>` already establish. That fallback is the *default* rendering\npath, not a degraded one: unhighlighted code is perfectly usable, and it's\nwhat every instance renders at zero extra bytes until shiki resolves.\n\nA `<lyra-skeleton>` placeholder stands in only while shiki itself is\nloading for the very first time on the page (cached — see\n`loadShikiHighlighter()`) and `language` is set. It's deliberately *not*\nshown again for a subsequent per-language grammar load (e.g. a second\n`<lyra-code-block>` requesting a language no earlier instance has used\nyet) — that grammar fetch is typically fast, and the plain-text fallback\nis already a perfectly readable placeholder for it, so a second\nloading-chrome state would add complexity for little practical benefit.\n\n`languages` is an additive, opt-in escape hatch from that default path for\na consumer whose language set is fixed and known ahead of time: a map of\nlanguage id to an already-imported shiki grammar module (e.g. `import bash\nfrom 'shiki/langs/bash.mjs'`). When `language` matches a key in `languages`,\nthis component seeds a fine-grained `createHighlighterCore()` highlighter\nwith *only* the pre-supplied grammars (see `code-loader.ts`'s\n`loadShikiHighlighterCore()`) instead of waiting on `loadShikiHighlighter()`\nand its dynamic per-language `loadLanguage()` import. The payoff isn't\nruntime cost — the default dynamic-import path is already well-optimized\nfor that — it's *build output*: shiki's main entry point bundles a dynamic\n`import()` per bundled language (~200 of them) because a bundler can't\nstatically narrow which of those a `loadLanguage(lang: string)` call might\nrequest at runtime, so it conservatively emits a build-output chunk for\nevery one of them. `shiki/core`'s fine-grained API has no such table — a\nbundler only ever sees the exact grammar modules `languages` itself\n`import`s, so a consumer who pins its full language set this way trades a\nhand-maintained list for a build output scoped to just those languages\ninstead of shiki's entire bundled set. A language requested but absent\nfrom `languages` still falls back to the ordinary dynamic-import path\nunchanged, so this is a partial opt-in, not a replacement for it.",
+          "description": "`<lyra-code-block>` — fenced code display with optional lazy syntax\nhighlighting and a copy button. No highlighting grammar ships in this\ncomponent itself: it lazy-loads the optional peer dependency `shiki` (see\n`code-loader.ts`) for the actual tokenizing, and degrades to a plain\n`<pre><code>` when that peer isn't installed or `language` is unset/\nunrecognized — the exact same optional-peer shape `<lyra-markdown>` and\n`<lyra-chart>` already establish. That fallback is the *default* rendering\npath, not a degraded one: unhighlighted code is perfectly usable, and it's\nwhat every instance renders at zero extra bytes until shiki resolves.\n\nA `<lyra-skeleton>` placeholder stands in only while shiki itself is\nloading for the very first time on the page (cached — see\n`loadShikiHighlighter()`) and `language` is set. It's deliberately *not*\nshown again for a subsequent per-language grammar load (e.g. a second\n`<lyra-code-block>` requesting a language no earlier instance has used\nyet) — that grammar fetch is typically fast, and the plain-text fallback\nis already a perfectly readable placeholder for it, so a second\nloading-chrome state would add complexity for little practical benefit.\n\nSet a host `aria-label` (or the matching `accessibleLabel` property) to\noverride the filename/language-derived name on the internal focusable code\nregion. The name is forwarded to the element that owns `role=\"group\"`, not\nleft only on the custom-element host across the shadow boundary.\n\n`languages` is an additive, opt-in escape hatch from that default path for\na consumer whose language set is fixed and known ahead of time: a map of\nlanguage id to an already-imported shiki grammar module (e.g. `import bash\nfrom 'shiki/langs/bash.mjs'`). When `language` matches a key in `languages`,\nthis component seeds a fine-grained `createHighlighterCore()` highlighter\nwith *only* the pre-supplied grammars (see `code-loader.ts`'s\n`loadShikiHighlighterCore()`) instead of waiting on `loadShikiHighlighter()`\nand its dynamic per-language `loadLanguage()` import. The payoff isn't\nruntime cost — the default dynamic-import path is already well-optimized\nfor that — it's *build output*: shiki's main entry point bundles a dynamic\n`import()` per bundled language (~200 of them) because a bundler can't\nstatically narrow which of those a `loadLanguage(lang: string)` call might\nrequest at runtime, so it conservatively emits a build-output chunk for\nevery one of them. `shiki/core`'s fine-grained API has no such table — a\nbundler only ever sees the exact grammar modules `languages` itself\n`import`s, so a consumer who pins its full language set this way trades a\nhand-maintained list for a build output scoped to just those languages\ninstead of shiki's entire bundled set. A language requested but absent\nfrom `languages` still falls back to the ordinary dynamic-import path\nunchanged, so this is a partial opt-in, not a replacement for it.",
           "name": "LyraCodeBlock",
           "cssParts": [
             {
@@ -20851,6 +21694,16 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the internal focusable code region. Maps\nto the host's `aria-label` attribute and wins over `filename` and\n`language`-derived defaults.",
+              "attribute": "aria-label"
+            },
             {
               "kind": "field",
               "name": "bodyId",
@@ -21305,6 +22158,15 @@
           ],
           "attributes": [
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the internal focusable code region. Maps\nto the host's `aria-label` attribute and wins over `filename` and\n`language`-derived defaults.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "code",
               "type": {
                 "text": "string"
@@ -21574,6 +22436,28 @@
           "kind": "class",
           "description": "`<lyra-combobox>` — a filterable single/multi select that combines a text\ninput with a listbox. Mirrors the core `<wa-combobox>` API under `lyra-`.\n\nOptions are `<lyra-option value>` children. Emits native-style `change`/`input`\n(like Web Awesome) plus `lyra-show`/`lyra-hide`/`lyra-clear`.",
           "name": "LyraCombobox",
+          "cssProperties": [
+            {
+              "description": "Padding inside the input container.",
+              "name": "--lyra-combobox-trigger-padding"
+            },
+            {
+              "description": "Minimum input-container block size.",
+              "name": "--lyra-combobox-trigger-min-height"
+            },
+            {
+              "description": "Input text size.",
+              "name": "--lyra-combobox-font-size"
+            },
+            {
+              "description": "Selected-tag padding.",
+              "name": "--lyra-combobox-tag-padding"
+            },
+            {
+              "description": "Selected-tag text size.",
+              "name": "--lyra-combobox-tag-font-size"
+            }
+          ],
           "cssParts": [
             {
               "description": "The clear button.",
@@ -21808,11 +22692,50 @@
             },
             {
               "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "description": "Native editing-assistance attributes forwarded to the wrapped input.",
+              "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
               "name": "cleanup",
               "type": {
                 "text": "() => void | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "clearable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Show a clear button while the combobox has a value. Mirrors `wa-combobox`'s public name.",
+              "attribute": "clearable",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -21897,6 +22820,15 @@
             },
             {
               "kind": "field",
+              "name": "enterKeyHint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "enterkeyhint"
+            },
+            {
+              "kind": "field",
               "name": "errorText",
               "type": {
                 "text": "string"
@@ -21976,8 +22908,34 @@
             },
             {
               "kind": "field",
+              "name": "input",
+              "type": {
+                "text": "HTMLInputElement | null"
+              },
+              "description": "The internal native filter input, for direct DOM access when needed.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inputEl",
+              "type": {
+                "text": "HTMLInputElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "inputId",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "inputMode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "attribute": "inputmode"
             },
             {
               "kind": "field",
@@ -22113,6 +23071,11 @@
             },
             {
               "kind": "field",
+              "name": "onInputFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onKeyDown",
               "privacy": "private"
             },
@@ -22214,6 +23177,27 @@
             },
             {
               "kind": "field",
+              "name": "selectionDirection",
+              "type": {
+                "text": "LyraComboboxSelectionDirection | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionEnd",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionStart",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
               "name": "size",
               "type": {
                 "text": "LyraComboboxSize"
@@ -22247,6 +23231,15 @@
               },
               "privacy": "private",
               "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -22332,6 +23325,7 @@
                 "text": "boolean"
               },
               "default": "false",
+              "deprecated": "Use `clearable`. Retained as a compatibility alias.",
               "attribute": "with-clear"
             },
             {
@@ -22366,6 +23360,15 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
               }
             },
             {
@@ -22434,6 +23437,24 @@
                 }
               },
               "description": "Dispatches the platform-style value-event pair used by non-text user\ninteractions. Text editing keeps and exposes the original InputEvent\nfrom the shadow input so its data/inputType metadata is not lost."
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -22684,6 +23705,136 @@
             },
             {
               "kind": "method",
+              "name": "select",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setSelectionRange",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "direction",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraComboboxSelectionDirection"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "show",
               "privacy": "private",
               "return": {
@@ -22715,11 +23866,19 @@
           ],
           "events": [
             {
+              "description": "Re-dispatched from the internal native input as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
               "name": "change",
               "type": {
                 "text": "Event"
               },
               "description": "The selection changed through user interaction. A bubbling, composed, non-cancelable Event."
+            },
+            {
+              "description": "Re-dispatched from the internal native input as a bubbling, composed event.",
+              "name": "focus"
             },
             {
               "name": "input",
@@ -22743,6 +23902,40 @@
           ],
           "attributes": [
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'off'",
+              "description": "Native editing-assistance attributes forwarded to the wrapped input.",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "autoCorrect"
+            },
+            {
+              "name": "clearable",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Show a clear button while the combobox has a value. Mirrors `wa-combobox`'s public name.",
+              "fieldName": "clearable"
+            },
+            {
               "name": "disabled",
               "type": {
                 "text": "boolean"
@@ -22759,6 +23952,14 @@
               "fieldName": "emptyText"
             },
             {
+              "name": "enterkeyhint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "enterKeyHint"
+            },
+            {
               "name": "error-text",
               "type": {
                 "text": "string"
@@ -22773,6 +23974,14 @@
               },
               "default": "''",
               "fieldName": "hint"
+            },
+            {
+              "name": "inputmode",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "fieldName": "inputMode"
             },
             {
               "name": "label",
@@ -22876,6 +24085,14 @@
               "fieldName": "size"
             },
             {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "fieldName": "spellcheck"
+            },
+            {
               "name": "value",
               "type": {
                 "text": "string | string[]"
@@ -22889,6 +24106,7 @@
                 "text": "boolean"
               },
               "default": "false",
+              "deprecated": "Use `clearable`. Retained as a compatibility alias.",
               "fieldName": "withClear"
             }
           ],
@@ -23391,6 +24609,15 @@
           "members": [
             {
               "kind": "field",
+              "name": "appliedAriaLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null"
+            },
+            {
+              "kind": "field",
               "name": "clampedUsedTotal",
               "type": {
                 "text": "{ used: number; total: number }"
@@ -23426,6 +24653,15 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "explicitAriaLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null"
             },
             {
               "kind": "field",
@@ -23930,7 +25166,7 @@
               "type": {
                 "text": "(date: Date) => string | undefined"
               },
-              "description": "Overrides the default absolute-time rendering of `timestamp` -- this\nlibrary has no i18n system of its own, so an overridable formatter is\nthe established way to hand locale-sensitive display back to the\nconsumer (mirrors `<lyra-chat-message>`'s identical `formatTimestamp`)."
+              "description": "Overrides the default absolute-time rendering of `timestamp` when an application\nneeds a different timestamp style (mirrors `<lyra-chat-message>`'s identical hook)."
             },
             {
               "kind": "field",
@@ -24260,6 +25496,14 @@
           ],
           "events": [
             {
+              "description": "Re-dispatched from the in-place rename input as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from the in-place rename input as a bubbling, composed event.",
+              "name": "focus"
+            },
+            {
               "description": "An in-place rename was committed (Enter, or blur while editing). `detail: { title }`. Does not mutate `title` itself -- this is a controlled component, the same convention `<lyra-chat-message>` follows by not clearing its own state on retry; the consumer applies the new title once it's actually persisted. Not fired when the trimmed draft is empty or unchanged from the original `title` (that's treated as an implicit cancel).",
               "name": "lyra-rename"
             },
@@ -24405,11 +25649,40 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded from the host to the internal button. When unset, the localized\nCopy/Copied state provides the name.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "buttonEl",
+              "type": {
+                "text": "HTMLButtonElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "copyTimeoutId",
               "type": {
                 "text": "ReturnType<typeof setTimeout> | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Prevent activation and remove the internal button from the tab order.",
+              "attribute": "disabled",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -24437,6 +25710,16 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "feedbackDuration",
+              "default": "1500",
+              "description": "How long, in milliseconds, the copied confirmation state remains visible.",
+              "attribute": "feedback-duration",
+              "type": {
+                "text": "number"
               }
             },
             {
@@ -24539,6 +25822,15 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -24573,6 +25865,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -24671,6 +25981,30 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded from the host to the internal button. When unset, the localized\nCopy/Copied state provides the name.",
+              "fieldName": "accessibleLabel"
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Prevent activation and remove the internal button from the tab order.",
+              "fieldName": "disabled"
+            },
+            {
+              "name": "feedback-duration",
+              "default": "DEFAULT_FEEDBACK_DURATION",
+              "description": "How long, in milliseconds, the copied confirmation state remains visible.",
+              "fieldName": "feedbackDuration"
+            },
             {
               "name": "locale",
               "type": {
@@ -29169,8 +30503,25 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-document-preview>` — a format-dispatching viewer for one document/\nattachment, plus the visual state machine for an async server-side\nconversion a host app runs in front of it.\n\nFormat dispatch is intentionally minimal (see this family's scope\nguidance): only `text/*`/`application/json` (plain, scrollable `<pre>` —\nno syntax highlighting; compose `<lyra-code-block>` yourself via the\n`unsupported` slot for that) and `image/*` (a contained `<img>`) render\ninline. Everything else — PDF, office documents, video, audio, or any\nunrecognized MIME type — falls back to a generic \"can't preview this\"\nstate: a file glyph, a short message, and (when `src` is set) a native\n`<a download>` link. This is a deliberate ceiling, not a gap: this\ncomponent ships a dispatch *shell*, not a format registry. The\n`unsupported` slot is the escape hatch for every format left out of the\nbuilt-in three — plug in a PDF.js viewer, an office-doc renderer, a\n`<lyra-code-block>`, or anything else keyed off `mime-type` yourself.\n\n`status=\"converting\"` is a second, independent axis from format dispatch.\nThis component does not know your backend's conversion API shape and\ntherefore owns none of the actual polling/fetch — a host that's converting\na non-natively-previewable format server-side (e.g. .docx → .pdf) polls\nits own backend and updates `status`/`progress`/`src` here as that\nproceeds. This component only *visualizes* that state: an indeterminate\nspinner, or a determinate one once `progress` is supplied. Once the host\nflips `status` to `\"ready\"` (typically alongside a new `src`/`mime-type`\npointing at the converted artifact), normal format dispatch resumes.\n\nThe one piece of async work this component *does* own is fetching a\n`text/*`/`application/json` `src` itself (there's no other way to get a\n`<pre>`'s text content from a URL) — gated behind the same generation-\ncounter guard `<lyra-tool-result-view>`'s `resolve()` uses, so a `src`\nreassigned mid-fetch can't have a stale response clobber a newer one. A\nfailure here (network error, non-2xx response) renders inline via\n`[part=\"error\"]` and fires `lyra-render-error`, independently of the\nhost-owned `status` prop — mirrors `<lyra-markdown>`'s identical stance\nthat a *rendering* failure and a host's own state machine are different\nconcerns.\n\nEvery `src` is validated for the DOM/API sink that consumes it. Text\nfetches and image sources allow relative URLs plus `http:`, `https:`,\n`blob:`, and `data:`. Download links deliberately exclude `data:` because\nfollowing a `data:text/html` URL can create an active document. Unsafe or\nmalformed URLs never reach `fetch()`, an image `src`, or an anchor `href`;\nthey render a non-interactive fallback/error instead.\n\nAccessibility: the `\"converting\"` state (no numeric `progress`) is a\n`role=\"status\"` region wrapping a visually-hidden \"Converting document…\"\nstring. This is a *plain* static region, not routed through\n`<lyra-live-region>`/`Announcer` — like `<lyra-typing-indicator>`'s\nidentical judgement call (see that component's class doc), this only ever\nhas one thing to announce (entering the state), not a rapidly-repeating\nstream of updates, so the coalescing machinery a high-frequency component\nneeds would be pure overhead here. Once real `progress` is available, the\nregion becomes a standard `role=\"progressbar\"` instead, which is\nself-describing via `aria-valuenow` with no extra live-region wiring\nneeded. `status=\"error\"` renders `[part=\"error\"]` as `role=\"alert\"` — an\nassertive, one-shot failure notice, the same native-role shortcut\n`<lyra-live-region>`'s own `mode=\"assertive\"` maps to, without requiring\nthe announcer machinery here either.",
+          "description": "`<lyra-document-preview>` — a format-dispatching viewer for one document/\nattachment, plus the visual state machine for an async server-side\nconversion a host app runs in front of it.\n\nFormat dispatch is intentionally minimal (see this family's scope\nguidance): only `text/*`/`application/json` (plain, scrollable `<pre>` —\nno syntax highlighting; compose `<lyra-code-block>` yourself via the\n`unsupported` slot for that) and `image/*` (a contained `<img>`) render\ninline. Everything else — PDF, office documents, video, audio, or any\nunrecognized MIME type — falls back to a generic \"can't preview this\"\nstate: a file glyph, a short message, and (when `src` is set) a native\n`<a download>` link. This is a deliberate ceiling, not a gap: this\ncomponent ships a dispatch *shell*, not a format registry. The\n`unsupported` slot is the escape hatch for every format left out of the\nbuilt-in three — plug in a PDF.js viewer, an office-doc renderer, a\n`<lyra-code-block>`, or anything else keyed off `mime-type` yourself.\n\n`status=\"converting\"` is a second, independent axis from format dispatch.\nThis component does not know your backend's conversion API shape and\ntherefore owns none of the actual polling/fetch — a host that's converting\na non-natively-previewable format server-side (e.g. .docx → .pdf) polls\nits own backend and updates `status`/`progress`/`src` here as that\nproceeds. This component only *visualizes* that state: an indeterminate\nspinner, or a determinate one once `progress` is supplied. Once the host\nflips `status` to `\"ready\"` (typically alongside a new `src`/`mime-type`\npointing at the converted artifact), normal format dispatch resumes.\n\nThe one piece of async work this component *does* own is fetching a\n`text/*`/`application/json` `src` itself (there's no other way to get a\n`<pre>`'s text content from a URL) — gated behind the same generation-\ncounter guard `<lyra-tool-result-view>`'s `resolve()` uses, plus an\n`AbortController`, so a `src` reassigned mid-fetch cancels the obsolete\nrequest and can't have a stale response clobber a newer one. A\nfailure here (network error, non-2xx response) renders inline via\n`[part=\"error\"]` and fires `lyra-render-error`, independently of the\nhost-owned `status` prop — mirrors `<lyra-markdown>`'s identical stance\nthat a *rendering* failure and a host's own state machine are different\nconcerns.\n\nEvery `src` is validated for the DOM/API sink that consumes it. Text\nfetches and image sources allow relative URLs plus `http:`, `https:`,\n`blob:`, and `data:`. Download links deliberately exclude `data:` because\nfollowing a `data:text/html` URL can create an active document. Unsafe or\nmalformed URLs never reach `fetch()`, an image `src`, or an anchor `href`;\nthey render a non-interactive fallback/error instead.\n\nAccessibility: the `\"converting\"` state (no numeric `progress`) is a\n`role=\"status\"` region wrapping a visually-hidden \"Converting document…\"\nstring. This is a *plain* static region, not routed through\n`<lyra-live-region>`/`Announcer` — like `<lyra-typing-indicator>`'s\nidentical judgement call (see that component's class doc), this only ever\nhas one thing to announce (entering the state), not a rapidly-repeating\nstream of updates, so the coalescing machinery a high-frequency component\nneeds would be pure overhead here. Once real `progress` is available, the\nregion becomes a standard `role=\"progressbar\"` instead, which is\nself-describing via `aria-valuenow` with no extra live-region wiring\nneeded. `status=\"error\"` renders `[part=\"error\"]` as `role=\"alert\"` — an\nassertive, one-shot failure notice, the same native-role shortcut\n`<lyra-live-region>`'s own `mode=\"assertive\"` maps to, without requiring\nthe announcer machinery here either.",
           "name": "LyraDocumentPreview",
+          "cssProperties": [
+            {
+              "description": "Maximum body block size before the preview scrolls internally.",
+              "name": "--lyra-document-preview-max-height",
+              "default": "none"
+            },
+            {
+              "description": "Font used for plain-text previews.",
+              "name": "--lyra-document-preview-font",
+              "default": "var(--lyra-font-mono)"
+            },
+            {
+              "description": "Duration of one indeterminate loading-indicator rotation.",
+              "name": "--lyra-document-preview-spin-duration",
+              "default": "0.8s"
+            }
+          ],
           "cssParts": [
             {
               "description": "The root container.",
@@ -29210,6 +30561,15 @@
           "members": [
             {
               "kind": "field",
+              "name": "alt",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Alternative text for an image preview. When omitted, `filename` (or a\nlocalized generic fallback) is used. Set this explicitly to an empty\nstring when the preview image is decorative.",
+              "attribute": "alt"
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -29245,6 +30605,14 @@
               "default": "''",
               "description": "Shown (via `[part=\"error\"]`) while `status=\"error\"`.",
               "attribute": "error-message"
+            },
+            {
+              "kind": "field",
+              "name": "fetchController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -29474,6 +30842,16 @@
             },
             {
               "kind": "method",
+              "name": "invalidateTextFetch",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "localize",
               "privacy": "protected",
               "return": {
@@ -29650,6 +31028,14 @@
             }
           ],
           "attributes": [
+            {
+              "name": "alt",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Alternative text for an image preview. When omitted, `filename` (or a\nlocalized generic fallback) is used. Set this explicitly to an empty\nstring when the preview image is decorative.",
+              "fieldName": "alt"
+            },
             {
               "name": "error-message",
               "type": {
@@ -30375,6 +31761,16 @@
             },
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name forwarded from the host to the native trigger button.\nWhen unset, the trigger's visible `label` provides its name.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "cleanup",
               "type": {
                 "text": "() => void | undefined"
@@ -30462,7 +31858,7 @@
                 "text": "string"
               },
               "default": "'Export'",
-              "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
+              "description": "Visible trigger button text. It also feeds the format menu's `aria-label`\nwhen no host `aria-label` supplies a more specific accessible name.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
               "attribute": "label"
             },
             {
@@ -30612,6 +32008,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Removes focus from the native trigger button."
+            },
+            {
+              "kind": "method",
               "name": "closeMenu",
               "privacy": "private",
               "return": {
@@ -30685,6 +32091,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focuses the native trigger button."
             },
             {
               "kind": "method",
@@ -30893,6 +32318,15 @@
           ],
           "attributes": [
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name forwarded from the host to the native trigger button.\nWhen unset, the trigger's visible `label` provides its name.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "disabled",
               "type": {
                 "text": "boolean"
@@ -30914,7 +32348,7 @@
                 "text": "string"
               },
               "default": "'Export'",
-              "description": "Trigger button text, also feeds the format menu's `aria-label` (as\n\"`${label} format`\") so assistive tech gets an accessible name for it.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
+              "description": "Visible trigger button text. It also feeds the format menu's `aria-label`\nwhen no host `aria-label` supplies a more specific accessible name.\nLeft at its default English `'Export'`, the rendered text instead\ncomes from `this.localize('exportButtonLabel', ...)` -- override-able\nvia `.strings`/`registerLyraLocale()` -- same convention as\n`lyra-attachment-chip`'s `removeLabel`/`retryLabel`. Set this\nattribute explicitly for a one-off override that always wins.",
               "fieldName": "label"
             },
             {
@@ -31058,7 +32492,7 @@
           ],
           "slots": [
             {
-              "description": "Custom drop-zone content, overrides the `label` attribute. The accessible name always comes from `label`, so icon-only slot content remains announced correctly.",
+              "description": "Custom drop-zone content, overrides the visible `label` text. The accessible name comes from a host `aria-label` when present, then falls back to `label`, so icon-only slot content remains announced correctly.",
               "name": ""
             }
           ],
@@ -31084,11 +32518,29 @@
             },
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name forwarded to the semantic dropzone and native file input.\nWhen unset, the effective `label` text is used.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "allowedMimeTypes",
               "type": {
                 "text": "string[]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "baseEl",
+              "type": {
+                "text": "HTMLElement | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -31402,6 +32854,25 @@
             },
             {
               "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focuses the semantic dropzone."
+            },
+            {
+              "kind": "method",
               "name": "isAllowed",
               "privacy": "private",
               "return": {
@@ -31557,6 +33028,15 @@
               "fieldName": "acceptedMessage"
             },
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name forwarded to the semantic dropzone and native file input.\nWhen unset, the effective `label` text is used.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "disabled",
               "type": {
                 "text": "boolean"
@@ -31687,6 +33167,22 @@
           "kind": "class",
           "description": "`<lyra-flag>` — a country/language flag.\n\nFlag images are shipped by the optional peer package `@aceshooting/lyra-flags`,\nnot bundled into lyra-ui itself, so importing the core library pulls zero flag\nweight. Give it a `country` (ISO 3166-1 alpha-2) or a `language` tag (mapped to\na representative country). While that peer package's `flagUrl()` resolves (or\nif it isn't installed), the host carries `aria-busy=\"true\"` and a skeleton\nplaceholder renders in its place.\n\n**Bundle-size note:** `country`/`language` resolve through the peer package's\n`flagUrl(code)`, which lazily fetches one requested flag at runtime. A\nbundler may still emit the complete reachable lazy-chunk graph; use a\nliteral asset subpath import when the deployment artifact must be pruned.\nIf you already\nhave a flag's URL at build time (e.g. from your own literal\n`import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`), pass it as\n`src` instead to skip the peer-package round trip (and its loading-skeleton\nflash) entirely.\n\nThe ~65 flags whose design includes a detailed coat of arms/seal/emblem (e.g. `es`, `pt`) ship\nthree fidelity tiers; choose one with `variant`: `\"compact\"` (a tiny WebP raster for icon-scale\nuse — menu items, language selectors, dense lists), the default `\"standard\"` (icon-optimized\nvector for card/row sizes), or `\"detailed\"` (the pristine full-detail vector for hero-scale\ndisplay). A no-op for every other code — all tiers resolve to the same file. See `variant`'s own\ndoc.",
           "name": "LyraFlag",
+          "cssProperties": [
+            {
+              "description": "Rectangular flag aspect ratio.",
+              "name": "--lyra-flag-aspect-ratio",
+              "default": "4 / 3"
+            },
+            {
+              "description": "How the image fits its flag frame.",
+              "name": "--lyra-flag-object-fit",
+              "default": "cover"
+            },
+            {
+              "description": "Rectangular flag corner radius.",
+              "name": "--lyra-flag-radius"
+            }
+          ],
           "cssParts": [
             {
               "description": "The underlying <img>.",
@@ -31694,6 +33190,16 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Host `aria-label` forwarded to the internal image. Takes precedence over `label` and the\nderived region name; an explicit empty string marks the image decorative.",
+              "attribute": "aria-label"
+            },
             {
               "kind": "field",
               "name": "code",
@@ -31767,7 +33273,7 @@
               "type": {
                 "text": "string | undefined"
               },
-              "description": "Accessible label / `alt` text. Defaults to a localized, human-readable\nregion name derived from the *resolved country code* via\n`Intl.DisplayNames` (e.g. `\"United Kingdom\"`) — for a `language`-only\nelement (e.g. `language=\"en\"`) that's the mapped country's display name,\nnot the language tag itself. Falls back to the bare uppercase code if\n`Intl.DisplayNames` can't resolve it. Has no default when only `src` is\ngiven (no country/language to derive one from).",
+              "description": "Accessible label / `alt` text used when `aria-label` is unset. Defaults to a localized, human-readable\nregion name derived from the *resolved country code* via\n`Intl.DisplayNames` (e.g. `\"United Kingdom\"`) — for a `language`-only\nelement (e.g. `language=\"en\"`) that's the mapped country's display name,\nnot the language tag itself. Falls back to the bare uppercase code if\n`Intl.DisplayNames` can't resolve it. Has no default when only `src` is\ngiven (no country/language to derive one from).",
               "attribute": "label"
             },
             {
@@ -32021,6 +33527,15 @@
           ],
           "attributes": [
             {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Host `aria-label` forwarded to the internal image. Takes precedence over `label` and the\nderived region name; an explicit empty string marks the image decorative.",
+              "fieldName": "accessibleLabel"
+            },
+            {
               "name": "country",
               "type": {
                 "text": "string | undefined"
@@ -32042,7 +33557,7 @@
               "type": {
                 "text": "string | undefined"
               },
-              "description": "Accessible label / `alt` text. Defaults to a localized, human-readable\nregion name derived from the *resolved country code* via\n`Intl.DisplayNames` (e.g. `\"United Kingdom\"`) — for a `language`-only\nelement (e.g. `language=\"en\"`) that's the mapped country's display name,\nnot the language tag itself. Falls back to the bare uppercase code if\n`Intl.DisplayNames` can't resolve it. Has no default when only `src` is\ngiven (no country/language to derive one from).",
+              "description": "Accessible label / `alt` text used when `aria-label` is unset. Defaults to a localized, human-readable\nregion name derived from the *resolved country code* via\n`Intl.DisplayNames` (e.g. `\"United Kingdom\"`) — for a `language`-only\nelement (e.g. `language=\"en\"`) that's the mapped country's display name,\nnot the language tag itself. Falls back to the bare uppercase code if\n`Intl.DisplayNames` can't resolve it. Has no default when only `src` is\ngiven (no country/language to derive one from).",
               "fieldName": "label"
             },
             {
@@ -33746,6 +35261,24 @@
             },
             {
               "kind": "method",
+              "name": "graphItemAnnouncement",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "graphItemCount",
               "privacy": "private",
               "return": {
@@ -34193,9 +35726,16 @@
             {
               "name": "firstDayOfWeek",
               "default": "0"
+            },
+            {
+              "name": "monthLabelText",
+              "optional": true,
+              "type": {
+                "text": "(jsMonth: number, year: number) => string | undefined"
+              }
             }
           ],
-          "description": "Lays `days` out onto a GitHub-style week grid, 7 rows deep. `days` need not\nbe sorted or contiguous; the grid spans from the earliest to the latest\ndate present, anchored at the `firstDayOfWeek`-weekday on/before the\nearliest date (`firstDayOfWeek` is 0–6, Sunday-first by default — same\nnumbering as `CalendarCell.weekday`). With the default `firstDayOfWeek` of\n0, this is the Sunday on/before the earliest date, exactly as before this\nparameter existed.\n\nAn entry whose `date` doesn't parse to a valid calendar date (e.g. `''` or\n`'2026-03'`) is dropped rather than included: `parseIsoDate` on a malformed\nstring yields an `Invalid Date` (`getTime()` is `NaN`), and letting that\nsingle `NaN` reach the min/max below would poison `firstWeekStart` (and\ntherefore every cell's `week`) for the whole grid instead of just the bad\nentry. Likewise, an entry whose `date` is numerically well-formed but\ncalendar-invalid (e.g. `'2026-02-30'`, which `Date.UTC` silently rolls\nover into March) is dropped rather than silently renormalized — see\n`isCalendarValid()`."
+          "description": "Lays `days` out onto a GitHub-style week grid, 7 rows deep. `days` need not\nbe sorted or contiguous; the grid spans from the earliest to the latest\ndate present, anchored at the `firstDayOfWeek`-weekday on/before the\nearliest date (`firstDayOfWeek` is 0–6, Sunday-first by default — same\nnumbering as `CalendarCell.weekday`). With the default `firstDayOfWeek` of\n0, this is the Sunday on/before the earliest date, exactly as before this\nparameter existed.\n\nAn entry whose `date` doesn't parse to a valid calendar date (e.g. `''` or\n`'2026-03'`) is dropped rather than included: `parseIsoDate` on a malformed\nstring yields an `Invalid Date` (`getTime()` is `NaN`), and letting that\nsingle `NaN` reach the min/max below would poison `firstWeekStart` (and\ntherefore every cell's `week`) for the whole grid instead of just the bad\nentry. Likewise, an entry whose `date` is numerically well-formed but\ncalendar-invalid (e.g. `'2026-02-30'`, which `Date.UTC` silently rolls\nover into March) is dropped rather than silently renormalized — see\n`isCalendarValid()`.\n\n`monthLabelText`, when it returns a string for a given `(jsMonth, year)`, overrides that\nmonth's locale-derived label — mirrors `LyraHeatmap.weekdayLabelText`'s own override-with-\nfallback shape, letting month labels track the same locale signal (e.g. an app's own i18n\nstore) as every other localizable string on the component instead of always following\n`toLocaleString(undefined, ...)`'s browser/OS-language default."
         },
         {
           "kind": "function",
@@ -34779,6 +36319,14 @@
             },
             {
               "kind": "field",
+              "name": "monthLabelText",
+              "type": {
+                "text": "(jsMonth: number, year: number) => string | undefined | undefined"
+              },
+              "description": "Overrides the month-axis label text in calendar mode -- receives the real JS month index\n(`0` January .. `11` December) and full year for a month boundary that would otherwise\nrender a label and, when it returns a string, uses it instead of the built-in\n`Intl.DateTimeFormat`-derived short month name. Mirrors `weekdayLabelText`'s exact\noverride-with-fallback shape -- unset (the default) reproduces today's exact\n`toLocaleString(undefined, ...)`-derived output."
+            },
+            {
+              "kind": "field",
               "name": "onCanvasClick",
               "privacy": "private"
             },
@@ -35267,6 +36815,24 @@
             },
             {
               "kind": "method",
+              "name": "formatNumericValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "hitTest",
               "privacy": "private",
               "return": {
@@ -35433,6 +36999,16 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localizedValueLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
               }
             },
             {
@@ -38478,7 +40054,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control. A plain\n`aria-label` attribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-slider>`/`<lyra-checkbox>`/`<lyra-switch>`. Empty (the default,\nwith no host `aria-label` either) falls back to the localized `'map'` message.",
+              "description": "Accessible name fallback for the map group. A host `aria-label` takes\nprecedence when both are set; when neither is present, the group uses\nthe localized `map` message.",
               "attribute": "label"
             },
             {
@@ -38788,7 +40364,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Accessible name for the map region, applied as `[part=\"base\"]`'s `aria-label` so\nscreen-reader users get a description of an otherwise purely visual control. A plain\n`aria-label` attribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-slider>`/`<lyra-checkbox>`/`<lyra-switch>`. Empty (the default,\nwith no host `aria-label` either) falls back to the localized `'map'` message.",
+              "description": "Accessible name fallback for the map group. A host `aria-label` takes\nprecedence when both are set; when neither is present, the group uses\nthe localized `map` message.",
               "fieldName": "label"
             },
             {
@@ -39148,7 +40724,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Forward-compatible hint for a dedicated streaming renderer expected to\nbuild on this component later (coalescing partial tokens as they\narrive) — setting it has no rendering effect yet. Reflects so a\nconsumer can already target `lyra-markdown[streaming]` in CSS ahead of\nthat behavior landing.",
+              "description": "Signals that `content` is still arriving incrementally. Content changes\ncontinue to render immediately; while this is `true`, the host remains\n`aria-busy=\"true\"` so assistive technology knows the rendered document\nis not final. Set it back to `false` with the final content update.\nReflects so a consumer can also target `lyra-markdown[streaming]`.",
               "attribute": "streaming",
               "reflects": true
             },
@@ -39456,7 +41032,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Forward-compatible hint for a dedicated streaming renderer expected to\nbuild on this component later (coalescing partial tokens as they\narrive) — setting it has no rendering effect yet. Reflects so a\nconsumer can already target `lyra-markdown[streaming]` in CSS ahead of\nthat behavior landing.",
+              "description": "Signals that `content` is still arriving incrementally. Content changes\ncontinue to render immediately; while this is `true`, the host remains\n`aria-busy=\"true\"` so assistive technology knows the rendered document\nis not final. Set it back to `false` with the final content update.\nReflects so a consumer can also target `lyra-markdown[streaming]`.",
               "fieldName": "streaming"
             }
           ],
@@ -39508,7 +41084,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-media-card>` — a lightweight inline preview for one already-sent,\nalready-available attachment inside a rendered chat message body (e.g.\nplugged into `<lyra-chat-message>`'s `attachments` slot, or embedded\ndirectly by a markdown/message renderer). Distinct from two other,\nsimilarly-named components in this family: `<lyra-document-preview>` is a\nfuller viewer with header chrome and an async server-side-conversion\nstate machine (`status=\"converting\"`), and `<lyra-attachment-chip>` is a\npre-send queued-file chip with upload progress. This component has\nneither concern — it only ever shows a `src` that's already final.\n\n**Format dispatch.** `kind` selects `'image'` (a plain `<img>`), `'video'`\n(a plain `<video controls>`), or `'file'` (an icon + filename chip with a\ndownload/open affordance). Leave `kind` unset to auto-detect from\n`mime-type` (`image/*` / `video/*` / anything else -> `'file'`);\nexplicitly setting `kind` always wins over detection.\n\n**Safe-URL checking.** `src` is validated before it's ever assigned to an\n`<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:`\n(plus `data:` for a *media* `src` only) or a scheme-relative/relative URL\nwith no scheme at all pass; anything else (`javascript:`, `vbscript:`,\nand similarly suspicious schemes) is rejected. `safeMediaSrc()` and\n`safeLinkHref()` share a platform-URL-based validator; their sink-specific\nallowlists explain why `data:` gets two different answers depending on\nwhere it is used. An `image`/`video` `kind` whose `src` fails the\nmedia-src check falls back to the generic file-chip rendering — this is\nthe \"plain preview unavailable state\" a dangerous URL degrades to, rather\nthan ever reaching a real media/anchor sink. That fallback also re-checks\n`src` against the stricter href allowlist for its own download affordance,\nbut since the href allowlist is a strict subset of the media-src allowlist,\nthat re-check can only ever change the outcome for a direct/auto-detected\n`kind=\"file\"` `src` — an `image`/`video` `src` that already failed the\nwider media-src check necessarily fails the narrower href check too, so\nthe fallback for those two kinds is always the plain, unclickable `span`.\n\n**The `video` case renders its open affordance separately from `base`.**\n`image`/`file` wrap their *entire* card in one native `<button>`/`<a>` —\nsafe because an `<img>` and a plain icon+text chip have no interactive\ncontent of their own to conflict with. A `<video controls>` element is\nitself interactive content (its own play/seek/volume controls), and HTML\nforbids nesting interactive content inside a `<button>`/`<a>` — doing so\nanyway would also make every click on the video's own controls bubble up\nand spuriously fire `lyra-open`. So for `kind=\"video\"`, `base` is a plain,\nnon-interactive wrapper around `[part=\"media\"]`, and a small separate\n`[part=\"open-button\"]` (not one of this component's originally-scoped\nparts, added as the \"explicit view/open affordance\" the class is free to\nprovide) is the thing that actually fires `lyra-open`.\n\n**Navigation.** This component never navigates on its own for `image`/\n`video` — activating the card only fires `lyra-open`; a host decides what\n\"open\" means (a lightbox, a new tab, whatever). The `file`-chip case is\nthe one exception: when `src` passes the (stricter) href safety check, the\nchip is a real `<a href download>` so a bare drop-in still does something\nuseful — but `lyra-open` fires first and is `cancelable`; a host that\ncalls `preventDefault()` on it suppresses that default download/open so it\ncan substitute its own handling instead.",
+          "description": "`<lyra-media-card>` — a lightweight inline preview for one already-sent,\nalready-available attachment inside a rendered chat message body (e.g.\nplugged into `<lyra-chat-message>`'s `attachments` slot, or embedded\ndirectly by a markdown/message renderer). Distinct from two other,\nsimilarly-named components in this family: `<lyra-document-preview>` is a\nfuller viewer with header chrome and an async server-side-conversion\nstate machine (`status=\"converting\"`), and `<lyra-attachment-chip>` is a\npre-send queued-file chip with upload progress. This component has\nneither concern — it only ever shows a `src` that's already final.\n\n**Format dispatch.** `kind` selects `'image'` (a plain `<img>`), `'video'`\n(a plain `<video controls>`), or `'file'` (an icon + filename chip with a\ndownload/open affordance). Leave `kind` unset to auto-detect from\n`mime-type` (`image/*` / `video/*` / anything else -> `'file'`);\nexplicitly setting `kind` always wins over detection.\n\n**Safe-URL checking.** `src` is validated before it's ever assigned to an\n`<img>`/`<video>` `src` or an `<a href>` — only `http:`/`https:`/`blob:`\n(plus `data:` for a *media* `src` only) or a scheme-relative/relative URL\nwith no scheme at all pass; anything else (`javascript:`, `vbscript:`,\nand similarly suspicious schemes) is rejected. `safeMediaSrc()` and\n`safeLinkHref()` share a platform-URL-based validator; their sink-specific\nallowlists explain why `data:` gets two different answers depending on\nwhere it is used. An `image`/`video` `kind` whose `src` fails the\nmedia-src check falls back to the generic file-chip rendering — this is\nthe \"plain preview unavailable state\" a dangerous URL degrades to, rather\nthan ever reaching a real media/anchor sink. That fallback also re-checks\n`src` against the stricter href allowlist for its own download affordance,\nbut since the href allowlist is a strict subset of the media-src allowlist,\nthat re-check can only ever change the outcome for a direct/auto-detected\n`kind=\"file\"` `src` — an `image`/`video` `src` that already failed the\nwider media-src check necessarily fails the narrower href check too, so\nthe fallback for those two kinds is always the plain, unclickable `span`.\n\n**The `video` case renders its open affordance separately from `base`.**\n`image`/`file` wrap their *entire* card in one native `<button>`/`<a>` —\nsafe because an `<img>` and a plain icon+text chip have no interactive\ncontent of their own to conflict with. A `<video controls>` element is\nitself interactive content (its own play/seek/volume controls), and HTML\nforbids nesting interactive content inside a `<button>`/`<a>` — doing so\nanyway would also make every click on the video's own controls bubble up\nand spuriously fire `lyra-open`. So for `kind=\"video\"`, `base` is a plain,\nnon-interactive wrapper around `[part=\"media\"]`, and a small separate\n`[part=\"open-button\"]` (not one of this component's originally-scoped\nparts, added as the \"explicit view/open affordance\" the class is free to\nprovide) is the thing that actually fires `lyra-open`.\n\n**Navigation.** This component never navigates on its own for `image`/\n`video` — activating the card only fires `lyra-open`; a host decides what\n\"open\" means (a lightbox, a new tab, whatever). The `file`-chip case is\nthe one exception: when `src` passes the (stricter) href safety check, the\nchip is a real `<a href download>` so a bare drop-in still does something\nuseful — but `lyra-open` fires first and is `cancelable`; a host that\ncalls `preventDefault()` on it suppresses that default download/open so it\ncan substitute its own handling instead.\n\n**Accessible action name.** The host `aria-label` maps to\n`accessibleLabel` and overrides the filename/alt/per-kind action name on\nwhichever internal element is actionable for the resolved kind. The name\nis therefore applied directly to the button or link across the shadow\nboundary; it does not replace the image alt text or the video control's\nown label.",
           "name": "LyraMediaCard",
           "cssParts": [
             {
@@ -39536,6 +41112,16 @@
             {
               "kind": "field",
               "name": "accessibleLabel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the card's actionable element. Maps to\nthe host's `aria-label` attribute and wins over names derived from\n`filename`, `alt`, or the resolved media kind.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "actionLabel",
               "type": {
                 "text": "string"
               },
@@ -39942,6 +41528,15 @@
               "default": "''",
               "description": "Alt text for the image case (and reused as a video label fallback).\nFalls back to `filename`, then a generic per-kind description.",
               "fieldName": "alt"
+            },
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible-name override for the card's actionable element. Maps to\nthe host's `aria-label` attribute and wins over names derived from\n`filename`, `alt`, or the resolved media kind.",
+              "fieldName": "accessibleLabel"
             },
             {
               "name": "filename",
@@ -43843,6 +45438,16 @@
             },
             {
               "kind": "field",
+              "name": "onControlBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onControlFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onPageInput",
               "privacy": "private"
             },
@@ -43870,6 +45475,14 @@
               },
               "description": "Total page count derived from `totalItems` and `pageSize`.",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "pageInput",
+              "type": {
+                "text": "HTMLInputElement | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -43980,6 +45593,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Blur the editable page-jump input."
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -44014,6 +45637,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focus the editable page-jump input."
             },
             {
               "kind": "method",
@@ -44182,6 +45824,14 @@
             }
           ],
           "events": [
+            {
+              "description": "Re-dispatched from an internal pagination control as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from an internal pagination control as a bubbling, composed event.",
+              "name": "focus"
+            },
             {
               "description": "Fired when a user requests a valid page. `detail: { page }`.",
               "name": "lyra-page-change"
@@ -44360,7 +46010,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction.",
+          "description": "`<lyra-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction. A host\n`aria-label` names the internal telephone input and wins over every derived\nor component-specific fallback.",
           "name": "LyraPhoneInput",
           "cssParts": [
             {
@@ -44425,8 +46075,8 @@
               "type": {
                 "text": "string | null"
               },
-              "privacy": "private",
               "default": "null",
+              "description": "Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder.",
               "attribute": "aria-label"
             },
             {
@@ -44826,6 +46476,27 @@
             },
             {
               "kind": "field",
+              "name": "selectionDirection",
+              "type": {
+                "text": "PhoneInputSelectionDirection | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionEnd",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "selectionStart",
+              "type": {
+                "text": "number | null"
+              }
+            },
+            {
+              "kind": "field",
               "name": "status",
               "type": {
                 "text": "PhoneNumberStatus"
@@ -45126,6 +46797,128 @@
             },
             {
               "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "optional": true,
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "selectMode",
+                  "optional": true,
+                  "type": {
+                    "text": "SelectionMode"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setRangeText",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "replacement",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setSelectionRange",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "start",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "end",
+                  "type": {
+                    "text": "number | null"
+                  }
+                },
+                {
+                  "name": "direction",
+                  "optional": true,
+                  "type": {
+                    "text": "PhoneInputSelectionDirection"
+                  }
+                }
+              ],
+              "description": "Set the selection range in the editable telephone text."
+            },
+            {
+              "kind": "method",
               "name": "updateValidity",
               "privacy": "protected",
               "return": {
@@ -45160,6 +46953,7 @@
                 "text": "string | null"
               },
               "default": "null",
+              "description": "Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder.",
               "fieldName": "accessibleLabel"
             },
             {
@@ -45497,6 +47291,24 @@
             },
             {
               "kind": "field",
+              "name": "onControlBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onControlFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "playButton",
+              "type": {
+                "text": "HTMLButtonElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "playing",
               "privacy": "public",
               "type": {
@@ -45574,6 +47386,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Blur the primary play/pause control."
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -45608,6 +47430,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focus the primary play/pause control."
             },
             {
               "kind": "method",
@@ -45788,6 +47629,14 @@
             }
           ],
           "events": [
+            {
+              "description": "Re-dispatched from an internal playback control as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from an internal playback control as a bubbling, composed event.",
+              "name": "focus"
+            },
             {
               "description": "Fired when playback stops (including auto-pause).",
               "name": "lyra-pause"
@@ -48519,6 +50368,11 @@
             },
             {
               "kind": "field",
+              "name": "onTriggerFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onlyOption",
               "type": {
                 "text": "LyraOption | undefined"
@@ -48609,6 +50463,14 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "triggerElement",
+              "type": {
+                "text": "HTMLButtonElement | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -48711,6 +50573,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Blur the internal select trigger."
+            },
+            {
+              "kind": "method",
               "name": "checkValidity",
               "return": {
                 "type": {
@@ -48754,6 +50626,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Focus the internal select trigger."
             },
             {
               "kind": "method",
@@ -49000,8 +50891,16 @@
           ],
           "events": [
             {
+              "description": "Re-dispatched from the trigger as a bubbling, composed event.",
+              "name": "blur"
+            },
+            {
               "description": "The selection changed. Deliberately unprefixed, mirroring native `<select>`'s own event name -- contrast `<lyra-slider>`, which uses `lyra-input`/`lyra-change` for its analogous value-change pair. Which form controls mirror native unprefixed DOM event names (this one, matching `<select>`) versus which use the `lyra-` prefix (`<lyra-slider>`, matching `<input type=\"range\">` via a custom name) is a deliberate per-control choice, not an incidental divergence.",
               "name": "change"
+            },
+            {
+              "description": "Re-dispatched from the trigger as a bubbling, composed event.",
+              "name": "focus"
             },
             {
               "description": "Fired alongside `change` on every selection change (native `<select>` doesn't meaningfully distinguish the two either).",
@@ -49168,6 +51067,13 @@
           "kind": "class",
           "description": "`<lyra-skeleton>` — a loading placeholder. First-party invention, standing\nin for the bespoke `animate-pulse` div most dashboards hand-roll.",
           "name": "LyraSkeleton",
+          "cssProperties": [
+            {
+              "description": "Animation duration and timing function shared by the pulse and sheen effects.",
+              "name": "--lyra-transition-ambient",
+              "default": "1.8s ease-in-out"
+            }
+          ],
           "cssParts": [
             {
               "description": "The placeholder shape.",
@@ -49175,6 +51081,17 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "announce",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Whether this placeholder exposes a localized status announcement. Disable for decorative\nmembers of a group whose loading state is announced once by a parent or sibling.",
+              "attribute": "announce",
+              "reflects": true
+            },
             {
               "kind": "field",
               "name": "effect",
@@ -49433,6 +51350,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "announce",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Whether this placeholder exposes a localized status announcement. Disable for decorative\nmembers of a group whose loading state is announced once by a parent or sibling.",
+              "fieldName": "announce"
+            },
             {
               "name": "effect",
               "type": {
@@ -51097,6 +53023,16 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded to the internal SVG.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -51200,6 +53136,16 @@
               "default": "[]",
               "description": "The data series to plot.",
               "attribute": "values"
+            },
+            {
+              "kind": "method",
+              "name": "accessibleName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              }
             },
             {
               "kind": "method",
@@ -51355,6 +53301,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded to the internal SVG.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "locale",
               "type": {
@@ -60174,6 +62129,18 @@
           "kind": "class",
           "description": "`<lyra-tool-call-chip>` — a compact inline pill representing one tool/\nfunction call an agent made mid-conversation, e.g.\n`web_search: Searching web…` with a `running` spinner. It owns no detail\nsurface of its own: clicking (or Enter/Space-activating) it only fires\n`lyra-tool-call-chip-select` (plus, for one minor cycle, the deprecated\n`lyra-tool-chip-select` alias) — a consumer wires that to opening a\n`<lyra-tool-result-dialog>` (or anything else) at the call site. Keeping\nthe two decoupled means a chip can be reused wherever a compact call\nsummary is useful, with or without a detail surface behind it.\n\nThe default slot is *not* the chip's visible content — the chip's own\nlabel is always built from `name`/`summary`/`status`/`duration-ms`. It's\nreserved for optional rich detail content (e.g. the tool's raw arguments,\na short preview) shown in a floating tooltip on hover/focus, positioned\nwith `internal/positioner.js`'s `place()` the same way `<lyra-combobox>`\npositions its listbox. No tooltip is shown at all when the slot carries no\ncontent — hovering an empty chip does nothing. Hover and keyboard focus are\ntracked as independent reasons to keep the tooltip open (mirrors\n`<lyra-citation-badge>`'s popover), so releasing one modality while the\nother is still active doesn't close it, and the trigger button's\n`aria-describedby` points at the tooltip's id whenever it's open and has\ncontent, so the association reaches assistive tech too.\n\nThe `icon` slot overrides the built-in per-status glyph entirely via the\nplatform's own slot-fallback-content mechanism (`<slot\nname=\"icon\">${fallback}</slot>` — the same pattern `<lyra-stat>`'s\n`caption` slot and `<lyra-file-input>`'s default slot already use):\nwhatever is assigned to `slot=\"icon\"` wins; otherwise the `icon` prop is\nrendered as a literal hint (e.g. an emoji); otherwise the built-in glyph\nfor the current `status` is used.",
           "name": "LyraToolCallChip",
+          "cssProperties": [
+            {
+              "description": "Running-icon animation duration and timing.",
+              "name": "--lyra-tool-call-chip-spin",
+              "default": "1s linear"
+            },
+            {
+              "description": "Pending-icon pulse duration and timing.",
+              "name": "--lyra-transition-ambient",
+              "default": "1.8s ease-in-out"
+            }
+          ],
           "cssParts": [
             {
               "description": "The clickable pill (`<button>`).",
@@ -60585,6 +62552,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "localizedDuration",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "ms",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -61760,6 +63745,22 @@
           "kind": "class",
           "description": "`<lyra-tool-result-dialog>` — a full tool-call detail overlay: a status/\nduration header plus a `body` slot where a consumer typically places a\n`<lyra-tabs>` with Input/Preview/JSON/Raw panels. This component knows\nnothing about what's inside that slot — it only supplies the modal chrome\naround it.\n\nThis is its own standalone overlay implementation (`role=\"dialog\"`,\nfocus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than\nnesting a `<lyra-dialog>` in its shadow template — see `<lyra-dialog>`'s\nown header comment for why a new overlay component in this library\nduplicates that pattern locally instead of composing the previous one:\nslot-forwarding into a nested `<lyra-dialog>` would put a forwarding\n`<slot>` where a light-DOM-scanning descendant (e.g. a slotted\n`<lyra-tabs>`'s own `Array.from(this.children)` scan) expects real\nprojected content.\n\n`maximized` toggles between a constrained modal size and a near-fullscreen\nsize within the same open dialog and open/close lifecycle — unlike\n`<lyra-widget>`'s fullscreen mode, there's no non-modal resting state to\nreturn to, so no separate scroll-lock/focus-trap bookkeeping is needed for\nthe transition itself.\n\nStacking: opening more than one of these dialogs at once is supported --\nEscape and the Tab focus trap only ever act on the topmost open instance,\nso instances beneath it stay open and untouched until the one on top closes.",
           "name": "LyraToolResultDialog",
+          "cssProperties": [
+            {
+              "description": "Backdrop color.",
+              "name": "--lyra-tool-result-dialog-overlay-color",
+              "default": "var(--lyra-color-overlay)"
+            },
+            {
+              "description": "Insets for the maximized panel.",
+              "name": "--lyra-tool-result-dialog-maximized-inset"
+            },
+            {
+              "description": "Running-status animation duration and timing.",
+              "name": "--lyra-tool-result-dialog-spin",
+              "default": "1s linear"
+            }
+          ],
           "cssParts": [
             {
               "description": "The full-viewport scrim behind the panel.",
@@ -61821,6 +63822,16 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded to the internal element that owns the dialog role. When omitted,\nthe visible tool name labels the dialog.",
+              "attribute": "aria-label"
+            },
             {
               "kind": "field",
               "name": "durationMs",
@@ -62141,6 +64152,24 @@
             },
             {
               "kind": "method",
+              "name": "localizedDuration",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "ms",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -62185,6 +64214,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Accessible name forwarded to the internal element that owns the dialog role. When omitted,\nthe visible tool name labels the dialog.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "duration-ms",
               "type": {

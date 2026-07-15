@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './input.js';
 import type { LyraInput } from './input.class.js';
+import { styles } from './input.styles.js';
 
 describe('lyra-input', () => {
   it('defaults to type="text" with an empty value', async () => {
@@ -155,5 +156,10 @@ describe('lyra-input', () => {
   it('is accessible as type="password"', async () => {
     const el = await fixture(html`<lyra-input type="password" label="Password"></lyra-input>`);
     await expect(el).to.be.accessible();
+  });
+
+  it('gives the password-toggle button a :hover treatment', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='password-toggle'\]:hover\s*\{[^}]+\}/);
   });
 });

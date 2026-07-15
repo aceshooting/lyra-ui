@@ -7,30 +7,45 @@ export const styles = css`
     --lyra-button-fill: var(--lyra-color-surface);
     --lyra-button-on-fill: var(--lyra-color-text);
     --lyra-button-border: var(--lyra-color-border);
+    /* appearance="accent"'s loud fill for the neutral variant -- every other variant's own
+       --lyra-button-fill/-on-fill (below) already reads a *-fill-loud WA token (see
+       tokens.styles.ts's --lyra-color-brand/-success/-warning/-danger), so those variants'
+       own accent-fill/-on-fill blocks just reuse it, making "accent" and "filled" coincide
+       there -- only the neutral variant needs a dedicated loud fill of its own. */
+    --lyra-button-accent-fill: var(--lyra-color-neutral);
+    --lyra-button-accent-on-fill: var(--lyra-color-on-neutral);
   }
   :host([variant='brand']) {
     --lyra-button-accent: var(--lyra-color-brand);
     --lyra-button-fill: var(--lyra-color-brand);
     --lyra-button-on-fill: var(--lyra-color-on-brand);
     --lyra-button-border: var(--lyra-color-brand);
+    --lyra-button-accent-fill: var(--lyra-color-brand);
+    --lyra-button-accent-on-fill: var(--lyra-color-on-brand);
   }
   :host([variant='success']) {
     --lyra-button-accent: var(--lyra-color-success);
     --lyra-button-fill: var(--lyra-color-success);
     --lyra-button-on-fill: var(--lyra-color-on-success);
     --lyra-button-border: var(--lyra-color-success);
+    --lyra-button-accent-fill: var(--lyra-color-success);
+    --lyra-button-accent-on-fill: var(--lyra-color-on-success);
   }
   :host([variant='warning']) {
     --lyra-button-accent: var(--lyra-color-warning);
     --lyra-button-fill: var(--lyra-color-warning);
     --lyra-button-on-fill: var(--lyra-color-on-warning);
     --lyra-button-border: var(--lyra-color-warning);
+    --lyra-button-accent-fill: var(--lyra-color-warning);
+    --lyra-button-accent-on-fill: var(--lyra-color-on-warning);
   }
   :host([variant='danger']) {
     --lyra-button-accent: var(--lyra-color-danger);
     --lyra-button-fill: var(--lyra-color-danger);
     --lyra-button-on-fill: var(--lyra-color-on-danger);
     --lyra-button-border: var(--lyra-color-danger);
+    --lyra-button-accent-fill: var(--lyra-color-danger);
+    --lyra-button-accent-on-fill: var(--lyra-color-on-danger);
   }
   [part='base'] {
     display: inline-flex;
@@ -47,6 +62,11 @@ export const styles = css`
     background: var(--lyra-button-fill);
     color: var(--lyra-button-on-fill);
   }
+  :host([appearance='accent']) [part='base'] {
+    background: var(--lyra-button-accent-fill);
+    color: var(--lyra-button-accent-on-fill);
+    border-color: var(--lyra-button-accent-fill);
+  }
   :host([appearance='outlined']) [part='base'] {
     background: transparent;
     color: var(--lyra-button-accent);
@@ -59,6 +79,20 @@ export const styles = css`
   [part='base']:disabled {
     opacity: var(--lyra-opacity-disabled);
     cursor: not-allowed;
+  }
+  [part='base']:not(:disabled) {
+    transition: filter var(--lyra-transition-fast), transform var(--lyra-transition-fast);
+  }
+  [part='base']:not(:disabled):hover {
+    filter: brightness(var(--lyra-button-hover-brightness, 1.08));
+  }
+  [part='base']:not(:disabled):active {
+    transform: scale(var(--lyra-button-active-scale, 0.9875));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part='base']:not(:disabled):active {
+      transform: none;
+    }
   }
   [part='base']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

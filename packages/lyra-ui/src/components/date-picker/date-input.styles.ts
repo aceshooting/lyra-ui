@@ -70,6 +70,10 @@ export const styles = css`
     line-height: var(--lyra-line-height-none);
     font-size: var(--lyra-font-size-md);
   }
+  [part='clear-button']:hover,
+  [part='expand-button']:hover {
+    color: var(--lyra-color-text);
+  }
   [part='clear-button']:focus-visible,
   [part='expand-button']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
