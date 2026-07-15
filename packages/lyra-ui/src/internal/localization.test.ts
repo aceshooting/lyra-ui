@@ -12,11 +12,11 @@ it('resolves registered locale messages and per-instance overrides', async () =>
 
   try {
     const el = (await fixture(html`<lyra-sparkline .values=${[]}></lyra-sparkline>`)) as LyraSparkline;
-    expect(el.getAttribute('aria-label')).to.equal('Keine Daten');
+    expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Keine Daten');
 
     el.strings = { noData: 'Aucune donnée' };
     await el.updateComplete;
-    expect(el.getAttribute('aria-label')).to.equal('Aucune donnée');
+    expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Aucune donnée');
   } finally {
     setLyraLocale('en');
   }
@@ -29,14 +29,20 @@ it('updates connected components when the active locale changes', async () => {
 
   setLyraLocale('x-first');
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('First');
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('First');
   setLyraLocale('x-second');
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('Second');
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Second');
   setLyraLocale('en');
 });
 
 it('includes openNavigation and resizeNavigation in the default English strings', () => {
   expect(LYRA_DEFAULT_STRINGS.openNavigation).to.equal('Open navigation');
   expect(LYRA_DEFAULT_STRINGS.resizeNavigation).to.equal('Resize navigation');
+});
+
+it('defines a complete localizable lite-chart mark summary', () => {
+  expect(LYRA_DEFAULT_STRINGS.liteChartMarkSummary).to.equal(
+    '{series}, {label}: {value} ({index} of {total})',
+  );
 });

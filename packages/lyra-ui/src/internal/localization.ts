@@ -167,6 +167,7 @@ export type LyraMessageKey =
   | 'boxPlot'
   | 'histogramFrequency'
   | 'liteChartMarkPosition'
+  | 'liteChartMarkSummary'
   | 'composerLabel'
   | 'textareaLabel'
   | 'citation'
@@ -477,6 +478,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   boxPlot: 'Box plot',
   histogramFrequency: 'Frequency',
   liteChartMarkPosition: '({index} of {total})',
+  liteChartMarkSummary: '{series}, {label}: {value} ({index} of {total})',
   composerLabel: 'Message',
   textareaLabel: 'Text',
   citation: 'Citation {index}',
