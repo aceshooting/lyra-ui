@@ -50,3 +50,7 @@ it('defines a complete localizable lite-chart mark summary', () => {
 it('defines a complete localizable citation status summary', () => {
   expect(LYRA_DEFAULT_STRINGS.citationWithStatus).to.equal('Citation {index}, {status}');
 });
+
+it('defines the default heatmap value label', () => {
+  expect(LYRA_DEFAULT_STRINGS.heatmapValueLabel).to.equal('value');
+});
