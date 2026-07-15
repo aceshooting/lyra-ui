@@ -82,7 +82,14 @@ export const styles = css`
   }
   [part='toggle'] .chevron {
     display: inline-flex;
+    transform: rotate(0deg);
     transition: transform var(--lyra-transition-fast);
+  }
+  [part='toggle'][aria-expanded='true'] .chevron {
+    transform: rotate(90deg);
+  }
+  :host(:dir(rtl)) [part='toggle'][aria-expanded='false'] .chevron {
+    transform: rotate(180deg);
   }
   [part='toggle']:not([hidden]):hover {
     background: var(--lyra-color-brand-quiet);

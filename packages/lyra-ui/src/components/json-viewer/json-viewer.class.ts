@@ -304,7 +304,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           }
           @click=${() => hasEntries && this.toggleNode(pathKey, expanded)}
         >
-          <span class="chevron" style=${`transform:rotate(${expanded ? '90deg' : '0deg'})`}>${chevronIcon()}</span>
+          <span class="chevron">${chevronIcon()}</span>
         </button>
         ${keyLabel !== undefined
           ? html`<span part="key" ?data-match=${search.keyMatches.has(pathKey)}>${keyLabel}</span

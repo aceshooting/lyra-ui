@@ -204,9 +204,10 @@ it('renders the legend panel once entries are set, and removes it again once cle
 });
 
 describe('aria-label forwarding', () => {
-  it('falls back to the localized default when neither label nor a host aria-label is set (today\'s exact behavior)', async () => {
+  it('falls back to the localized default when neither label nor a host aria-label is set', async () => {
     const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('group');
     expect(base.getAttribute('aria-label')).to.equal('Map');
   });
 
@@ -222,12 +223,12 @@ describe('aria-label forwarding', () => {
     expect(base.getAttribute('aria-label')).to.equal('Forwarded label');
   });
 
-  it('prefers the label prop over a forwarded host aria-label when both are set', async () => {
+  it('prefers the forwarded host aria-label over the label prop when both are set', async () => {
     const el = (await fixture(
       html`<lyra-map label="Delivery regions" aria-label="Forwarded label"></lyra-map>`,
     )) as LyraMap;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Delivery regions');
+    expect(base.getAttribute('aria-label')).to.equal('Forwarded label');
   });
 });
 

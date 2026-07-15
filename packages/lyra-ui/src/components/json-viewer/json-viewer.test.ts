@@ -414,6 +414,35 @@ it('respects max-height by setting the scoped custom property on the base part',
   expect(base.style.getPropertyValue('--lyra-json-viewer-max-height')).to.equal('10rem');
 });
 
+it('mirrors a collapsed directional chevron in RTL while expanded still points down', async () => {
+  const wrapper = await fixture(html`
+    <div dir="rtl">
+      <lyra-json-viewer
+        .data=${{ nested: true }}
+        collapsed-depth="0"
+        style="--lyra-transition-fast: 0s"
+      ></lyra-json-viewer>
+    </div>
+  `);
+  const el = wrapper.querySelector('lyra-json-viewer') as LyraJsonViewer;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  const chevron = toggle.querySelector('.chevron') as HTMLElement;
+
+  const collapsed = new DOMMatrixReadOnly(getComputedStyle(chevron).transform);
+  expect(collapsed.a).to.be.closeTo(-1, 0.001);
+  expect(collapsed.d).to.be.closeTo(-1, 0.001);
+
+  toggle.click();
+  await el.updateComplete;
+  const expandedToggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  expect(expandedToggle.getAttribute('aria-expanded')).to.equal('true');
+  const expandedChevron = expandedToggle.querySelector('.chevron') as HTMLElement;
+  const expanded = new DOMMatrixReadOnly(getComputedStyle(expandedChevron).transform);
+  expect(expanded.a).to.be.closeTo(0, 0.001);
+  expect(expanded.b).to.be.closeTo(1, 0.001);
+});
+
 it('is accessible with a populated, expanded tree', async () => {
   const el = await withData(sample);
   await expect(el).to.be.accessible();
