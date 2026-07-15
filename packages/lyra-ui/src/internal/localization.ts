@@ -360,7 +360,15 @@ export type LyraMessageKey =
   | 'kbdControlWord'
   | 'kbdOptionWord'
   | 'kbdAltWord'
-  | 'kbdShiftWord';
+  | 'kbdShiftWord'
+  | 'pdfViewerLabel'
+  | 'pdfViewerMissingLibrary'
+  | 'pdfViewerPageOf'
+  | 'pdfViewerZoomIn'
+  | 'pdfViewerZoomOut'
+  | 'pdfViewerCurrentZoom'
+  | 'pdfViewerPreviousPage'
+  | 'pdfViewerNextPage';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -721,6 +729,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdOptionWord: 'Option',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  pdfViewerLabel: 'PDF document',
+  pdfViewerMissingLibrary: 'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.',
+  pdfViewerPageOf: 'Page {page} of {total}',
+  pdfViewerZoomIn: 'Zoom in',
+  pdfViewerZoomOut: 'Zoom out',
+  pdfViewerCurrentZoom: '{percent}%',
+  pdfViewerPreviousPage: 'Previous page',
+  pdfViewerNextPage: 'Next page',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

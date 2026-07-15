@@ -1,0 +1,28 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Lyra constellation mark</title>
+  <desc id="desc">A stylized lyre formed from connected stars.</desc>
+  <defs>
+    <linearGradient id="lyra-glow" x1="16" y1="12" x2="82" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8DE7FF"/>
+      <stop offset="0.48" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M24 21L19 54C17.2 65.8 26.5 76 38.5 76H57.5C69.5 76 78.8 65.8 77 54L72 21" stroke="url(#lyra-glow)" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M29 53C35.8 46.2 43 42.5 48 42.5C53 42.5 60.2 46.2 67 53" stroke="url(#lyra-glow)" stroke-width="3" stroke-linecap="round" opacity=".78"/>
+  <path d="M34 54L38 72M43 48L45 75M53 48L51 75M62 54L58 72" stroke="url(#lyra-glow)" stroke-width="1.6" stroke-linecap="round" opacity=".65"/>
+  <g fill="url(#lyra-glow)" filter="url(#glow)">
+    <circle cx="24" cy="21" r="5.2"/>
+    <circle cx="72" cy="21" r="4.4"/>
+    <circle cx="48" cy="42.5" r="3.2"/>
+    <circle cx="19" cy="54" r="2.2"/>
+    <circle cx="77" cy="54" r="2.6"/>
+  </g>
+  <circle cx="48" cy="17" r="1.5" fill="#F8FAFC"/>
+  <circle cx="83" cy="38" r="1.15" fill="#F8FAFC" opacity=".8"/>
+  <circle cx="14" cy="35" r="1" fill="#F8FAFC" opacity=".72"/>
+</svg>

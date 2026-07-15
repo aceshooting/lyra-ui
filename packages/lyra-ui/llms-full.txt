@@ -7890,6 +7890,27 @@ Fetches a vCard document and renders one accessible card per contact. The docume
 **Exports:** `parseVCards()` and the `VCardName`, `VCardTypedValue`, `VCardAddress`, and `VCardContact`
 types.
 
+## `lyra-pdf-viewer`
+
+Fetches a PDF and renders its pages with the optional `pdfjs-dist` peer. Pages are virtualized through
+`lyra-virtual-list`, and PDF.js's selectable text layer is positioned over each rendered canvas.
+
+**Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
+`zoom: number = 1` is clamped to `0.25`–`4`.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching, parsing, or rendering fails;
+`lyra-page-change` with `{ page, pageCount }`; and `lyra-zoom-change` with `{ zoom }`.
+
+**Methods:** `nextPage()`, `previousPage()`, `zoomIn()`, and `zoomOut()` update the corresponding
+controlled state within its supported range.
+
+**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `text-layer`,
+`spinner`, and `error`.
+
+**Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
+a lazy `application/pdf` renderer with `<lyra-document-viewer>` so the PDF library is loaded only when
+a PDF is opened.
+
 ---
 
 ## `lyra-media-card`

@@ -23,6 +23,8 @@ const config = {
   // that resolves to a file (not a directory) is copied to exactly the `to` path, no directory
   // nesting.
   staticDirs: [
+    { from: './lyra-mark.svg', to: './lyra-mark.svg' },
+    { from: '../packages/lyra-ui/src/components/pdf-viewer/fixtures/sample.pdf', to: './fixtures/sample.pdf' },
     { from: '../packages/lyra-ui/llms.txt', to: './llms.txt' },
     { from: '../packages/lyra-ui/llms-full.txt', to: './llms-full.txt' },
     { from: './robots.txt', to: './robots.txt' },
@@ -58,6 +60,28 @@ const config = {
       }
     };
     return viteConfig;
+  },
+  // Keep the sidebar oriented around how people think about components, while allowing
+  // existing story titles to migrate incrementally instead of making the whole docs tree
+  // change shape in one release.
+  options: {
+    storySort: {
+      order: [
+        'Introduction',
+        'Foundations',
+        'Actions',
+        'Forms',
+        'Feedback',
+        'Disclosure',
+        'Overlays',
+        'Layout',
+        'Display',
+        'Charts & Visualization',
+        'Conversation & Agent UI',
+        'Utilities',
+      ],
+      method: 'alphabetical',
+    },
   },
 };
 

@@ -105,6 +105,7 @@
     "./dist/components/contact-viewer/contact-viewer.js",
     "./dist/components/dataset-viewer/dataset-viewer.js",
     "./dist/components/html-viewer/html-viewer.js",
+    "./dist/components/pdf-viewer/pdf-viewer.js",
     "./dist/components/svg-viewer/svg-viewer.js",
     "./dist/components/details/details.js",
     "./dist/components/details/accordion.js",
@@ -244,6 +245,7 @@
     "./src/components/contact-viewer/contact-viewer.ts",
     "./src/components/dataset-viewer/dataset-viewer.ts",
     "./src/components/html-viewer/html-viewer.ts",
+    "./src/components/pdf-viewer/pdf-viewer.ts",
     "./src/components/svg-viewer/svg-viewer.ts",
     "./src/components/details/details.ts",
     "./src/components/details/accordion.ts",
@@ -378,6 +380,7 @@
     "maplibre-gl": "^5.24.0",
     "marked": "^18.0.6",
     "papaparse": "^5.5.3",
+    "pdfjs-dist": "^6.1.200",
     "shiki": "^4.3.1"
   },
   "peerDependenciesMeta": {
@@ -420,6 +423,9 @@
     "papaparse": {
       "optional": true
     },
+    "pdfjs-dist": {
+      "optional": true
+    },
     "shiki": {
       "optional": true
     }
@@ -449,6 +455,7 @@
     "maplibre-gl": "^5.24.0",
     "marked": "^18.0.6",
     "papaparse": "^5.5.3",
+    "pdfjs-dist": "^6.1.200",
     "playwright": "^1.61.1",
     "shiki": "^4.3.1",
     "typescript": "^7.0.2"

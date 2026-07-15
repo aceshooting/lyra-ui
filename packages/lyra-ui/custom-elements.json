@@ -60679,6 +60679,753 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/pdf-viewer/pdf-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "loadPdfJs",
+          "return": {
+            "type": {
+              "text": "Promise<PdfJsApi | null>"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadPdfJsDeps",
+          "return": {
+            "type": {
+              "text": "Promise<PdfJsApi | null>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importPdfjs",
+              "default": "() => import('pdfjs-dist') as Promise<PdfJsApi>",
+              "type": {
+                "text": "() => Promise<PdfJsApi>"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "loadPdfJs",
+          "declaration": {
+            "name": "loadPdfJs",
+            "module": "src/components/pdf-viewer/pdf-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadPdfJsDeps",
+          "declaration": {
+            "name": "loadPdfJsDeps",
+            "module": "src/components/pdf-viewer/pdf-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pdf-viewer/pdf-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Fetches PDF bytes and renders their pages with the optional `pdfjs-dist`\npeer. Pages are composed through `lyra-virtual-list`, while a PDF.js text\nlayer keeps rendered text selectable and copyable.",
+          "name": "LyraPdfViewer",
+          "cssParts": [
+            {
+              "description": "The root viewer container.",
+              "name": "base"
+            },
+            {
+              "description": "The error message region.",
+              "name": "error"
+            },
+            {
+              "description": "One rendered page wrapper.",
+              "name": "page"
+            },
+            {
+              "description": "The current page text.",
+              "name": "page-indicator"
+            },
+            {
+              "description": "The virtualized page list.",
+              "name": "pages"
+            },
+            {
+              "description": "The loading status region.",
+              "name": "spinner"
+            },
+            {
+              "description": "Selectable text positioned over a page canvas.",
+              "name": "text-layer"
+            },
+            {
+              "description": "Pagination and zoom controls.",
+              "name": "toolbar"
+            },
+            {
+              "description": "The current zoom percentage.",
+              "name": "zoom-indicator"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "loadLibrary",
+              "type": {
+                "text": "() => Promise<PdfJsApi | null>"
+              },
+              "privacy": "private",
+              "default": "loadPdfJs"
+            },
+            {
+              "kind": "field",
+              "name": "loadState",
+              "type": {
+                "text": "PdfLoadState"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'idle' }"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name used as the document's accessible label fallback.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "onVisibleRangeChanged",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "page",
+              "type": {
+                "text": "number"
+              },
+              "default": "1",
+              "description": "One-based current page, clamped to the loaded document's page count.",
+              "attribute": "page",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "pageCanvasRefs",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<number, (canvas: Element | undefined) => void>()"
+            },
+            {
+              "kind": "field",
+              "name": "pageCanvases",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<number, HTMLCanvasElement>()"
+            },
+            {
+              "kind": "field",
+              "name": "pageRenderTasks",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<number, { cancel(): void }>()"
+            },
+            {
+              "kind": "field",
+              "name": "renderPageItem",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and render as a PDF document.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "textLayerContainerRefs",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<number, (element: Element | undefined) => void>()"
+            },
+            {
+              "kind": "field",
+              "name": "textLayerContainers",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<number, HTMLElement>()"
+            },
+            {
+              "kind": "field",
+              "name": "textLayers",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<number, { cancel(): void }>()"
+            },
+            {
+              "kind": "field",
+              "name": "zoom",
+              "type": {
+                "text": "number"
+              },
+              "default": "1",
+              "description": "Page zoom multiplier, clamped to the range 0.25–4.",
+              "attribute": "zoom",
+              "reflects": true
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "clampPage",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "number"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "nextPage",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "pageCanvasRef",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "(element: Element | undefined) => void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pageNumber",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "previousPage",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderPage",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pageNumber",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "canvas",
+                  "type": {
+                    "text": "HTMLCanvasElement"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "renderTextLayer",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pageNumber",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "page",
+                  "type": {
+                    "text": "PdfJsApi"
+                  }
+                },
+                {
+                  "name": "viewport",
+                  "type": {
+                    "text": "PdfJsApi"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "renderToolbar",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setPage",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "setZoom",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "textLayerContainerRef",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "(element: Element | undefined) => void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "pageNumber",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "zoomIn",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "zoomOut",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when the current page changes.",
+              "name": "lyra-page-change"
+            },
+            {
+              "description": "Fired when fetching, parsing, or rendering fails.",
+              "name": "lyra-render-error"
+            },
+            {
+              "description": "Fired when the zoom multiplier changes.",
+              "name": "lyra-zoom-change"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Display name used as the document's accessible label fallback.",
+              "fieldName": "name"
+            },
+            {
+              "name": "page",
+              "type": {
+                "text": "number"
+              },
+              "default": "1",
+              "description": "One-based current page, clamped to the loaded document's page count.",
+              "fieldName": "page"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and render as a PDF document.",
+              "fieldName": "src"
+            },
+            {
+              "name": "zoom",
+              "type": {
+                "text": "number"
+              },
+              "default": "1",
+              "description": "Page zoom multiplier, clamped to the range 0.25–4.",
+              "fieldName": "zoom"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-pdf-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPdfViewer",
+          "declaration": {
+            "name": "LyraPdfViewer",
+            "module": "src/components/pdf-viewer/pdf-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/pdf-viewer/pdf-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-pdf-viewer",
+          "declaration": {
+            "name": "LyraPdfViewer",
+            "module": "src/components/pdf-viewer/pdf-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/pdf-viewer/pdf-viewer.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/phone-input/phone-input.class.ts",
       "declarations": [
         {

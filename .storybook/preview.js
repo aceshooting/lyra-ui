@@ -155,8 +155,20 @@ function applyLyraTheme(themeName) {
   }
 }
 
+function applyLyraPresentation(globals) {
+  const direction = globals.direction === 'rtl' ? 'rtl' : 'ltr';
+  const density = globals.density === 'compact' ? 'compact' : 'comfortable';
+  const root = document.documentElement;
+
+  root.dir = direction;
+  root.dataset.lyraDirection = direction;
+  root.dataset.lyraDensity = density;
+  root.style.setProperty('--lyra-docs-density-gap', density === 'compact' ? '.625rem' : '1rem');
+}
+
 const withLyraTheme = (story, context) => {
   applyLyraTheme(context.globals.theme);
+  applyLyraPresentation(context.globals);
   return story();
 };
 
@@ -173,6 +185,30 @@ const preview = {
           { value: 'light', title: 'Light' },
           { value: 'dark', title: 'Dark' },
           { value: 'high-contrast', title: 'High contrast' },
+        ],
+      },
+    },
+    direction: {
+      name: 'Direction',
+      description: 'Preview the component in left-to-right or right-to-left layout.',
+      defaultValue: 'ltr',
+      toolbar: {
+        icon: 'transfer',
+        items: [
+          { value: 'ltr', title: 'LTR' },
+          { value: 'rtl', title: 'RTL' },
+        ],
+      },
+    },
+    density: {
+      name: 'Density',
+      description: 'Choose the amount of breathing room around story examples.',
+      defaultValue: 'comfortable',
+      toolbar: {
+        icon: 'expand',
+        items: [
+          { value: 'comfortable', title: 'Comfortable' },
+          { value: 'compact', title: 'Compact' },
         ],
       },
     },

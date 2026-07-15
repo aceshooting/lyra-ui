@@ -48,6 +48,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-contact-viewer',
   'lyra-dataset-viewer',
   'lyra-html-viewer',
+  'lyra-pdf-viewer',
   'lyra-svg-viewer',
   'lyra-empty',
   'lyra-export-button',

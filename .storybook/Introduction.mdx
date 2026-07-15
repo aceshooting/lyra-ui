@@ -1,52 +1,67 @@
 import { Meta } from '@storybook/addon-docs/blocks';
+import './landing.css';
 
 <Meta title="Introduction" />
 
-# Lyra UI
+<div className="lyra-landing">
+  <section className="lyra-landing__hero">
+    <div>
+      <p className="lyra-landing__eyebrow">A constellation of thoughtful components</p>
+      <h1>Build interfaces with a little more gravity.</h1>
+      <p className="lyra-landing__lede">
+        Lyra UI is a clean, accessible Lit component library for forms, dashboards, data
+        visualization, and conversation experiences. Every component is independent, themeable,
+        localization-ready, and designed to work together.
+      </p>
+      <div className="lyra-landing__actions">
+        <a className="lyra-landing__button lyra-landing__button--primary" href="?path=/docs/forms-input--docs">
+          Explore components <span aria-hidden="true">↗</span>
+        </a>
+        <a className="lyra-landing__button" href="https://github.com/aceshooting/lyra-ui">
+          View on GitHub <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </div>
+    <div className="lyra-landing__constellation" aria-label="Lyra constellation logo">
+      <img src="/lyra-mark.svg" alt="Lyra constellation mark" />
+    </div>
+  </section>
 
-Free, independent, MIT-licensed [Lit](https://lit.dev) web components — an open-source alternative
-to [Shoelace](https://shoelace.style/) and [Web Awesome](https://webawesome.com/). Lyra covers
-accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI. Every
-component is self-contained and retheme-able through its own `--lyra-*` design tokens, with no
-competitor theme or runtime dependency required.
+  <section className="lyra-landing__section">
+    <div className="lyra-landing__section-heading">
+      <h2>Find your bearings</h2>
+      <p>Start with a primitive, browse a complete interaction, or borrow a pattern for your next product surface.</p>
+    </div>
+    <div className="lyra-landing__cards">
+      <a className="lyra-landing__card" href="?path=/docs/forms-input--docs">
+        <strong>Forms & controls</strong>
+        <span>Inputs, selects, comboboxes, date pickers, validation, and native form behavior.</span>
+      </a>
+      <a className="lyra-landing__card" href="?path=/docs/conversation-chat-message--docs">
+        <strong>Conversation & agent UI</strong>
+        <span>Chat messages, streaming states, tool calls, approvals, citations, and model controls.</span>
+      </a>
+      <a className="lyra-landing__card" href="?path=/docs/charts-visualization-chart--docs">
+        <strong>Data & visualization</strong>
+        <span>Charts, tables, graphs, heatmaps, metrics, and empty states for information-rich products.</span>
+      </a>
+    </div>
+  </section>
 
-> **Independent implementation.** Lyra is not affiliated with or endorsed by Shoelace or Web Awesome.
-> Selected Web Awesome-compatible components retain documented public names under `lyra-` to ease
-> migration; Shoelace users can follow the component map in the package README. Every implementation
-> and design token is owned by Lyra.
+  <section className="lyra-landing__section">
+    <div className="lyra-landing__section-heading">
+      <h2>Designed for the edges</h2>
+      <p>Use the toolbar to preview light, dark, high-contrast, LTR, RTL, and compact layouts while you explore.</p>
+    </div>
+    <div className="lyra-landing__cards">
+      <div className="lyra-landing__card"><strong>Accessible by default</strong><span>Semantic descendants, keyboard behavior, focus management, and axe-tested stories.</span></div>
+      <div className="lyra-landing__card"><strong>Themeable by design</strong><span>Semantic Lyra tokens let a whole product change character from one ancestor.</span></div>
+      <div className="lyra-landing__card"><strong>Ready to compose</strong><span>Small primitives and ambitious surfaces share the same visual language.</span></div>
+    </div>
+  </section>
 
-## Install
-
-```bash
-npm install @aceshooting/lyra-ui
-```
-
-## Usage
-
-```js
-import '@aceshooting/lyra-ui/components/combobox/combobox.js';
-import '@aceshooting/lyra-ui/components/combobox/option.js';
-```
-
-```html
-<lyra-combobox label="Fruit" with-clear>
-  <lyra-option value="a">Apple</lyra-option>
-  <lyra-option value="b">Banana</lyra-option>
-</lyra-combobox>
-```
-
-## Links
-
-- [GitHub](https://github.com/aceshooting/lyra-ui)
-- [npm](https://www.npmjs.com/package/@aceshooting/lyra-ui)
-- [llms.txt](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms.txt) — API
-  reference index for coding assistants integrating this library.
-
-## Theming
-
-Components read this library's own `--lyra-*` design tokens, with sensible hardcoded
-defaults — override any `--lyra-*` custom property, at the component or an ancestor, to
-retheme. See the [package README](https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-ui#theming)
-for the full token list.
-
-Browse the sidebar for a live example and API reference of every component.
+  <footer className="lyra-landing__footer">
+    <span>MIT licensed · Lit 3 · Web components</span>
+    <span><a href="https://www.npmjs.com/package/@aceshooting/lyra-ui">npm</a> · <a href="/llms-full.txt">API reference</a></span>
+  </footer>
+</div>
