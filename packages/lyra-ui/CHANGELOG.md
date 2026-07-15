@@ -4,6 +4,13 @@
 
 ### Minor Changes
 
+- 42036af: `lyra-table` gains expandable rows: a table-level `expandedContent?: (row) => unknown` renders a
+  full-width panel beneath any row whose key is in the new consumer-owned `expandedKeys: Set<string |
+number>` property, toggled via a built-in leading chevron cell and the new `lyra-row-expand-toggle`
+  event (`detail: { row, key }`). An optional `canExpand?: (row) => boolean` gates which rows get an
+  interactive toggle at all. All three properties are additive and default to a no-op, so existing
+  tables are unaffected.
+
 - d612939: Make card headers wrap with their actions in narrow allocations, expose citation previews through
   a stable tooltip relationship, and localize the complete citation status announcement.
 
@@ -88,6 +95,8 @@
 - 18003e2: `lyra-tool-call-chip` now interpolates duration values through localized message templates and
   exposes coherent motion controls for its running spin and pending pulse. Its event map is also
   exported for typed listeners.
+- 140f9ea: Align `lyra-checkbox` with the native checkbox keyboard, focus, reset, ARIA-state, and `input`/`change` event contracts while retaining `lyra-change` as a compatibility alias.
+- d099ea7: Complete the combobox's native editing surface and clearable compatibility, align conversation-item event and story semantics, add accessible disabled and timing controls to copy-button, and localize and theme flag presentation.
 
 ## 2.11.0
 
