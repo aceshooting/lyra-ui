@@ -27,6 +27,18 @@ it('uses menu semantics for dropdowns', async () => {
   expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('menu');
 });
 
+it('does not let a closed popup/dropdown occupy a layout box in its host', async () => {
+  const el = await fixture(
+    html`<lyra-dropdown><button slot="trigger">Actions</button><div style="width:400px;height:400px;">Item</div></lyra-dropdown>`,
+  );
+  // Regression: [part='popup'] must be position:fixed even while closed -- if it were
+  // position:static (the default), its content-sized box would inflate the host's own
+  // inline-block box, spilling an invisible-but-hit-testable area over unrelated page content.
+  const hostRect = (el as HTMLElement).getBoundingClientRect();
+  expect(hostRect.width).to.be.lessThan(200);
+  expect(hostRect.height).to.be.lessThan(200);
+});
+
 it('shows a tooltip after focus and describes the trigger', async () => {
   const el = await fixture(html`<lyra-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lyra-tooltip>`);
   const trigger = el.querySelector('button') as HTMLButtonElement;
