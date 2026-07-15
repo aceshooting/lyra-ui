@@ -75,6 +75,71 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('forwards a host aria-label to the canvas and keeps the chart role on that semantic element only', async () => {
+  const el = (await fixture(html`
+    <lyra-box-plot aria-label="Latency distributions" accessible-label="Legacy box plot label"></lyra-box-plot>
+  `)) as LyraBoxPlot;
+  el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  expect(canvas.getAttribute('aria-label')).to.equal('Latency distributions');
+  expect(canvas.getAttribute('role')).to.equal('img');
+  expect(el.getAttribute('role')).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
+});
+
+it('formats generated median-summary values with the effective locale', async () => {
+  const el = (await fixture(html`<lyra-box-plot locale="de-DE"></lyra-box-plot>`)) as LyraBoxPlot;
+  el.boxes = [
+    {
+      label: 'Latency',
+      data: [
+        { min: 1000, q1: 1100, median: 1234.5, q3: 1300, max: 1400 },
+        { min: 2000, q1: 2100, median: 2345.75, q3: 2400, max: 2500 },
+      ],
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const description = el.shadowRoot!.querySelector('[part="description"]')!;
+  expect(description.textContent).to.contain('1.234,5');
+  expect(description.textContent).to.contain('2.345,75');
+});
+
+it('positions its y axis at logical start in RTL', async () => {
+  const wrapper = await fixture(html`<div dir="rtl"><lyra-box-plot></lyra-box-plot></div>`);
+  const el = wrapper.querySelector('lyra-box-plot') as LyraBoxPlot;
+  el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect((el as any).buildConfig().options.scales.y.position).to.equal('right');
+});
+
+it('can shrink to a 320px allocation with long chart content', async () => {
+  const wrapper = await fixture(html`
+    <div style="display: flex; inline-size: 320px;">
+      <lyra-box-plot></lyra-box-plot>
+    </div>
+  `);
+  const el = wrapper.querySelector('lyra-box-plot') as LyraBoxPlot;
+  el.labels = ['A category label that is intentionally very long'];
+  el.boxes = [
+    {
+      label: 'A deliberately long translated latency distribution label',
+      data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
+    },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  expect(getComputedStyle(el).minInlineSize).to.equal('0px');
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
+});
+
 it('exposes a customizable accessible description and box-plot data table', async () => {
   const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
   el.accessibleLabel = 'Loss distributions';
@@ -149,13 +214,53 @@ it('resolves grid/tick/legend colors from custom --lyra-chart-* values set on th
   el.style.setProperty('--lyra-chart-grid-color', 'rgb(1, 2, 3)');
   el.style.setProperty('--lyra-chart-tick-color', 'rgb(4, 5, 6)');
   el.style.setProperty('--lyra-chart-legend-color', 'rgb(7, 8, 9)');
+  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(10, 11, 12)');
+  el.style.setProperty('--lyra-chart-tooltip-text', 'rgb(13, 14, 15)');
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   const config = (el as any).buildConfig();
   expect(config.options.scales.y.grid.color).to.equal('rgb(1, 2, 3)');
   expect(config.options.scales.y.ticks.color).to.equal('rgb(4, 5, 6)');
+  expect(config.options.scales.y.title.color).to.equal('rgb(4, 5, 6)');
   expect(config.options.plugins.legend.labels.color).to.equal('rgb(7, 8, 9)');
+  expect(config.options.plugins.tooltip.backgroundColor).to.equal('rgb(10, 11, 12)');
+  expect(config.options.plugins.tooltip.titleColor).to.equal('rgb(13, 14, 15)');
+  expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
+});
+
+it('disables Chart.js animation when the user prefers reduced motion', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+  try {
+    expect((el as any).buildConfig().options.animation).to.equal(false);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', async () => {
+  const el = (await fixture(html`<lyra-box-plot></lyra-box-plot>`)) as LyraBoxPlot;
+  el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  el.style.setProperty('--lyra-chart-tooltip-bg', 'rgb(9, 9, 9)');
+  expect((el as any).chart.options.plugins.tooltip?.backgroundColor).to.not.equal('rgb(9, 9, 9)');
+
+  expect((el as any).refreshTheme).to.be.a('function');
+  (el as any).refreshTheme();
+  expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.equal('rgb(9, 9, 9)');
 });
 
 it('skips redrawing when scrolled off-screen', async () => {

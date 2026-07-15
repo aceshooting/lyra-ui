@@ -32,6 +32,10 @@ const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
 // Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lyra-chart-*` tokens)
 // even though `buildConfig()` below only threads `grid`/`tick`/`legend` into
 // Chart.js options today — `LyraBoxPlot` has no tooltip customization, but
@@ -92,7 +96,7 @@ export class LyraBoxPlot extends LyraElement {
   @property() height = '280px';
   @property({ attribute: 'y-label' }) yLabel = '';
   @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
-  /** Accessible name applied to the canvas. Falls back to the box labels. */
+  /** Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the box labels. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   /** Accessible description for the canvas. When unset, a five-number summary is generated. */
   @property({ attribute: 'accessible-description' }) accessibleDescription = '';
@@ -172,7 +176,7 @@ export class LyraBoxPlot extends LyraElement {
     }
     if (this.loading) return;
     if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
-    const contentChanged = ['labels', 'boxes', 'legend', 'height', 'yLabel', 'beginAtZero', 'loading'].some((name) =>
+    const contentChanged = ['labels', 'boxes', 'legend', 'height', 'yLabel', 'beginAtZero', 'locale', 'strings', 'loading'].some((name) =>
       changed.has(name),
     );
     if (!contentChanged) return;
@@ -213,13 +217,23 @@ export class LyraBoxPlot extends LyraElement {
         })),
       },
       options: {
+        locale: this.effectiveLocale,
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: this.legend, labels: { color: theme.legend } } },
+        animation: prefersReducedMotion() ? false : undefined,
+        plugins: {
+          legend: { display: this.legend, labels: { color: theme.legend } },
+          tooltip: {
+            backgroundColor: theme.tooltipBg,
+            titleColor: theme.tooltipText,
+            bodyColor: theme.tooltipText,
+          },
+        },
         scales: {
           y: {
+            position: this.effectiveDirection === 'rtl' ? 'right' : 'left',
             beginAtZero: this.beginAtZero,
-            title: { display: !!this.yLabel, text: this.yLabel },
+            title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
             ticks: { color: theme.tick },
             grid: { color: theme.grid },
           },
@@ -248,6 +262,11 @@ export class LyraBoxPlot extends LyraElement {
     this.chart = new this.chartJsModule.Chart(this.canvasEl, config);
   }
 
+  /** Re-reads canvas theme custom properties after an out-of-band ancestor theme change. */
+  refreshTheme(): void {
+    this.draw();
+  }
+
   private boxPlotDescription(): string {
     if (this.accessibleDescription) return this.accessibleDescription;
     const summaries = this.boxes.map((series) => {
@@ -264,8 +283,8 @@ export class LyraBoxPlot extends LyraElement {
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
         count: series.data.length,
-        min: Math.min(...medians),
-        max: Math.max(...medians),
+        min: new Intl.NumberFormat(this.effectiveLocale).format(Math.min(...medians)),
+        max: new Intl.NumberFormat(this.effectiveLocale).format(Math.max(...medians)),
         trend,
       });
     });
@@ -274,10 +293,14 @@ export class LyraBoxPlot extends LyraElement {
       : this.localize('boxPlotSummaryEmpty');
   }
 
+  private accessibleName(fallback: string): string {
+    return this.getAttribute('aria-label') || this.accessibleLabel || fallback;
+  }
+
   private renderDataTable(): TemplateResult {
     return html`
       <table class=${this.showDataTable ? '' : 'sr-only'}>
-        <caption>${this.accessibleLabel || this.localize('boxPlotData')}</caption>
+        <caption>${this.accessibleName(this.localize('boxPlotData'))}</caption>
         <thead>
           <tr>
             <th scope="col">${this.localize('chartCategory')}</th>
@@ -318,7 +341,7 @@ export class LyraBoxPlot extends LyraElement {
         </div>
       `;
     }
-    const label = this.accessibleLabel || this.boxes.map((b) => b.label).join(', ') || this.localize('boxPlot');
+    const label = this.accessibleName(this.boxes.map((b) => b.label).join(', ') || this.localize('boxPlot'));
     const description = this.boxPlotDescription();
     return html`
       <div part="base">
