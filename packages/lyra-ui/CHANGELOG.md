@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.0.0
+
+### Major Changes
+
+- a712749: **Breaking:** the outer, externally-overridable tier of the design-token chain no longer lives in
+  Web Awesome's `--wa-*` namespace — it moved to lyra's own `--lyra-theme-*` namespace (e.g.
+  `--wa-color-brand-fill-loud` → `--lyra-theme-color-brand-fill-loud`). Any consumer retheming
+  components by setting `--wa-*` custom properties at an ancestor element must rename those
+  properties to `--lyra-theme-*`; the two-tier override mechanism itself (set one property at any
+  ancestor to retheme every component) is unchanged. This removes lyra-ui's remaining live runtime
+  CSS coupling to Web Awesome.
+
+### Minor Changes
+
+- 66c8819: Adds an independent `--lyra-theme-*` shared token layer, aligns `<lyra-button>`'s medium size with
+  the standard Lyra font scale, exposes its host-width and size contracts, and adds opt-in native
+  per-cell semantics to `<lyra-heatmap>` through `accessible-cells`.
+
+### Patch Changes
+
+- 11e6a03: `lyra-details`/`lyra-accordion-item` no longer render the localized "Details" fallback text alongside rich content slotted into `summary` when the plain-string `summary` prop is left unset. The fallback previously always rendered whenever `summary` was empty, regardless of whether a `slot="summary"` child was present — visible only when a consumer needed markup (an icon, multiple spans) in the summary rather than a plain string.
+- 581f5f3: `installHappyDomFormAssociatedShims()` no longer throws a `ReferenceError` when `HTMLElement` isn't a global at all — e.g. a plain Node Vitest environment sharing one `setupFiles` entry with happy-dom/jsdom test files. It previously read `HTMLElement.prototype` unconditionally, contradicting its own documented "safe to call unconditionally from a shared setup file used across multiple test environments" contract.
+- b5de65c: `lyra-popover`/`lyra-dropdown`/`lyra-tooltip`'s `[part="popup"]` is now `position: fixed` from the start instead of only once the popup is first opened and JS positions it. Previously, while closed, the popup stayed `position: static` sized to its full slotted content, inflating the component's own inline-block host box to match -- an invisible-but-still-hit-testable area that could sit on top of unrelated page content and intercept pointer events until the trigger was first clicked.
+
 ## 2.13.0
 
 ### Minor Changes
