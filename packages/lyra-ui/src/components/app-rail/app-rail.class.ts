@@ -5,6 +5,7 @@ import { activateOverlay, type OverlayHandle } from '../../internal/overlay-mana
 import { lockScroll } from '../../internal/scroll-lock.js';
 import { nextId } from '../../internal/a11y.js';
 import { closeIcon } from '../../internal/icons.js';
+import { tag } from '../../internal/prefix.js';
 import { isRtl } from '../../internal/rtl.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
@@ -256,7 +257,7 @@ export class LyraAppRail extends LyraElement {
   private syncSlottedItems(): void {
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('[part="nav"] > slot');
     for (const item of slot?.assignedElements({ flatten: true }) ?? []) {
-      if (item.localName === 'lyra-app-rail-item') {
+      if (item.localName === tag('app-rail-item')) {
         item.toggleAttribute('icon-only', this._mode === 'icon-only');
       }
     }
