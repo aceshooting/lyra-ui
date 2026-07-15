@@ -171,6 +171,7 @@ export type LyraMessageKey =
   | 'composerLabel'
   | 'textareaLabel'
   | 'citation'
+  | 'citationWithStatus'
   | 'comboboxOverflow'
   | 'comboboxRequired'
   | 'comboboxLabel'
@@ -482,6 +483,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   composerLabel: 'Message',
   textareaLabel: 'Text',
   citation: 'Citation {index}',
+  citationWithStatus: 'Citation {index}, {status}',
   comboboxOverflow: '+{n} more — refine your search',
   comboboxRequired: 'Please select an option.',
   comboboxLabel: 'Combobox',

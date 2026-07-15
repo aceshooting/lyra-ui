@@ -46,3 +46,7 @@ it('defines a complete localizable lite-chart mark summary', () => {
     '{series}, {label}: {value} ({index} of {total})',
   );
 });
+
+it('defines a complete localizable citation status summary', () => {
+  expect(LYRA_DEFAULT_STRINGS.citationWithStatus).to.equal('Citation {index}, {status}');
+});
