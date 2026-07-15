@@ -5,7 +5,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 141 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 142 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -27,6 +27,8 @@ npm install @aceshooting/lyra-ui
 # optional peer: d3-force, d3-drag, d3-zoom, d3-selection, only needed for <lyra-graph>
 # optional peer: chart.js, chartjs-plugin-zoom, only needed for the <lyra-*-chart>/<lyra-histogram> family
 # optional peer: @sgratzl/chartjs-chart-boxplot, only needed for <lyra-box-plot>
+# optional peers: mammoth and dompurify, only needed for <lyra-docx-viewer>
+#   — Mammoth converts DOCX files to semantic HTML instead of pixel-exact Word page layout.
 # optional peer: maplibre-gl, only needed for <lyra-map> — also import
 #   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lyra-map only
 #   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet.
@@ -364,6 +366,7 @@ each one-liner below.
 | `<lyra-pdf-viewer>` | — (extra) | Optional-PDF.js renderer with pagination, zoom, selectable text, and virtualized page canvases |
 | `<lyra-spreadsheet-viewer>` | — (extra) | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows |
 | `<lyra-csv-viewer>` | — (extra) | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows |
+| `<lyra-docx-viewer>` | — (extra) | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML |
 | `<lyra-media-card>` | — (extra) | Lightweight inline preview for one already-sent image/video/file attachment inside a rendered chat message |
 | `<lyra-avatar>` | — (extra) | Small, fixed-size identity marker — image, or an initials fallback with `lyra-chip`-style tone recoloring |
 | `<lyra-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lyra-*>` counterpart to `wa-card` |

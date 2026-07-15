@@ -38006,6 +38006,539 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/docx-viewer/docx-loader.ts",
+      "declarations": [
+        {
+          "kind": "function",
+          "name": "clearDocxDepsCache",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "getDocxDepsIfLoaded",
+          "return": {
+            "type": {
+              "text": "DocxDeps | undefined"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadDocxDeps",
+          "return": {
+            "type": {
+              "text": "Promise<DocxDeps>"
+            }
+          }
+        },
+        {
+          "kind": "function",
+          "name": "loadMammothAndSanitizer",
+          "return": {
+            "type": {
+              "text": "Promise<DocxDeps>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "importMammoth",
+              "default": "() =>\n    import('mammoth/mammoth.browser.js') as Promise<OptionalPeerApi>",
+              "type": {
+                "text": "() => Promise<OptionalPeerApi>"
+              }
+            },
+            {
+              "name": "importDompurify",
+              "default": "() =>\n    import('dompurify') as Promise<OptionalPeerApi>",
+              "type": {
+                "text": "() => Promise<OptionalPeerApi>"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "clearDocxDepsCache",
+          "declaration": {
+            "name": "clearDocxDepsCache",
+            "module": "src/components/docx-viewer/docx-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "getDocxDepsIfLoaded",
+          "declaration": {
+            "name": "getDocxDepsIfLoaded",
+            "module": "src/components/docx-viewer/docx-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadDocxDeps",
+          "declaration": {
+            "name": "loadDocxDeps",
+            "module": "src/components/docx-viewer/docx-loader.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "loadMammothAndSanitizer",
+          "declaration": {
+            "name": "loadMammothAndSanitizer",
+            "module": "src/components/docx-viewer/docx-loader.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/docx-viewer/docx-viewer.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "Renders a DOCX document as sanitized semantic HTML using the optional\n`mammoth` converter and `dompurify` sanitizer peers. DOCX content is always\nsanitized; there is no unsanitized rendering mode for uploaded documents.",
+          "name": "LyraDocxViewer",
+          "cssParts": [
+            {
+              "description": "The root container.",
+              "name": "base"
+            },
+            {
+              "description": "The scrollable document body.",
+              "name": "body"
+            },
+            {
+              "description": "The semantic document content.",
+              "name": "content"
+            },
+            {
+              "description": "The error message region.",
+              "name": "error"
+            },
+            {
+              "description": "The loading status region.",
+              "name": "spinner"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "fetchState",
+              "type": {
+                "text": "FetchState"
+              },
+              "privacy": "private",
+              "default": "{ kind: 'idle' }"
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "loadLibrary",
+              "type": {
+                "text": "() => Promise<DocxDeps>"
+              },
+              "privacy": "private",
+              "default": "loadDocxDeps"
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "maxHeight",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "CSS length that caps the scrollable document body.",
+              "attribute": "max-height"
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name for the rendered document.",
+              "attribute": "name"
+            },
+            {
+              "kind": "field",
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and convert as a DOCX document.",
+              "attribute": "src"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Promise<void>"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderBody",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Fired when loading, conversion, sanitization, or a non-fatal Mammoth message occurs.",
+              "name": "lyra-render-error"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "max-height",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "CSS length that caps the scrollable document body.",
+              "fieldName": "maxHeight"
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Accessible name for the rendered document.",
+              "fieldName": "name"
+            },
+            {
+              "name": "src",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "URL to fetch and convert as a DOCX document.",
+              "fieldName": "src"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lyra-docx-viewer",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraDocxViewer",
+          "declaration": {
+            "name": "LyraDocxViewer",
+            "module": "src/components/docx-viewer/docx-viewer.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/docx-viewer/docx-viewer.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lyra-docx-viewer",
+          "declaration": {
+            "name": "LyraDocxViewer",
+            "module": "src/components/docx-viewer/docx-viewer.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/docx-viewer/docx-loader.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/docx-viewer/docx-viewer.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/docx-viewer/fixtures/minimal-docx-fixture.ts",
+      "declarations": [
+        {
+          "kind": "variable",
+          "name": "MINIMAL_DOCX_BASE64",
+          "type": {
+            "text": "string"
+          },
+          "default": "'UEsDBAoAAAAAAIqV71wxpqS4OgIAADoCAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbDw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9IlVURi04IiBzdGFuZGFsb25lPSJ5ZXMiPz4KPFR5cGVzIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2FnZS8yMDA2L2NvbnRlbnQtdHlwZXMiPgogIDxEZWZhdWx0IEV4dGVuc2lvbj0icmVscyIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1wYWNrYWdlLnJlbGF0aW9uc2hpcHMreG1sIi8+CiAgPERlZmF1bHQgRXh0ZW5zaW9uPSJ4bWwiIENvbnRlbnRUeXBlPSJhcHBsaWNhdGlvbi94bWwiLz4KICA8T3ZlcnJpZGUgUGFydE5hbWU9Ii93b3JkL2RvY3VtZW50LnhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1vZmZpY2Vkb2N1bWVudC53b3JkcHJvY2Vzc2luZ21sLmRvY3VtZW50Lm1haW4reG1sIi8+CiAgPE92ZXJyaWRlIFBhcnROYW1lPSIvd29yZC9zdHlsZXMueG1sIiBDb250ZW50VHlwZT0iYXBwbGljYXRpb24vdm5kLm9wZW54bWxmb3JtYXRzLW9mZmljZWRvY3VtZW50LndvcmRwcm9jZXNzaW5nbWwuc3R5bGVzK3htbCIvPgo8L1R5cGVzPlBLAwQKAAAAAACKle9cAAAAAAAAAAAAAAAABgAAAF9yZWxzL1BLAwQKAAAAAACKle9cIBuG6i4BAAAuAQAACwAAAF9yZWxzLy5yZWxzPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pgo8UmVsYXRpb25zaGlwcyB4bWxucz0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL3BhY2thZ2UvMjAwNi9yZWxhdGlvbnNoaXBzIj4KICA8UmVsYXRpb25zaGlwIElkPSJySWQxIiBUeXBlPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvb2ZmaWNlRG9jdW1lbnQvMjAwNi9yZWxhdGlvbnNoaXBzL29mZmljZURvY3VtZW50IiBUYXJnZXQ9IndvcmQvZG9jdW1lbnQueG1sIi8+CjwvUmVsYXRpb25zaGlwcz5QSwMECgAAAAAAipXvXAAAAAAAAAAAAAAAAAUAAAB3b3JkL1BLAwQKAAAAAACKle9cFAIcjIgBAACIAQAAEQAAAHdvcmQvZG9jdW1lbnQueG1sPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pgo8dzpkb2N1bWVudCB4bWxuczp3PSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvd29yZHByb2Nlc3NpbmdtbC8yMDA2L21haW4iPgogIDx3OmJvZHk+CiAgICA8dzpwPjx3OnBQcj48dzpwU3R5bGUgdzp2YWw9IkhlYWRpbmcxIi8+PC93OnBQcj48dzpyPjx3OnQ+THlyYSBVSSBUZXN0IEZpeHR1cmU8L3c6dD48L3c6cj48L3c6cD4KICAgIDx3OnA+PHc6cj48dzp0PlRoaXMgaXMgYSB0aW55IGZpeHR1cmUgZG9jdW1lbnQgdXNlZCBieSB0aGUgdGVzdCBzdWl0ZSBhbmQgU3Rvcnlib29rIHN0b3JpZXMuPC93OnQ+PC93OnI+PC93OnA+CiAgPC93OmJvZHk+Cjwvdzpkb2N1bWVudD5QSwMECgAAAAAAipXvXAAAAAAAAAAAAAAAAAsAAAB3b3JkL19yZWxzL1BLAwQKAAAAAACKle9cg0lQnx8BAAAfAQAAHAAAAHdvcmQvX3JlbHMvZG9jdW1lbnQueG1sLnJlbHM8P3htbCB2ZXJzaW9uPSIxLjAiIGVuY29kaW5nPSJVVEYtOCIgc3RhbmRhbG9uZT0ieWVzIj8+CjxSZWxhdGlvbnNoaXBzIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2FnZS8yMDA2L3JlbGF0aW9uc2hpcHMiPgogIDxSZWxhdGlvbnNoaXAgSWQ9InJJZDEiIFR5cGU9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMvc3R5bGVzIiBUYXJnZXQ9InN0eWxlcy54bWwiLz4KPC9SZWxhdGlvbnNoaXBzPlBLAwQKAAAAAACKle9c09qe1u4AAADuAAAADwAAAHdvcmQvc3R5bGVzLnhtbDw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9IlVURi04IiBzdGFuZGFsb25lPSJ5ZXMiPz4KPHc6c3R5bGVzIHhtbG5zOnc9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy93b3JkcHJvY2Vzc2luZ21sLzIwMDYvbWFpbiI+CiAgPHc6c3R5bGUgdzp0eXBlPSJwYXJhZ3JhcGgiIHc6c3R5bGVJZD0iSGVhZGluZzEiPjx3Om5hbWUgdzp2YWw9ImhlYWRpbmcgMSIvPjwvdzpzdHlsZT4KPC93OnN0eWxlcz5QSwECFAAKAAAAAACKle9cMaakuDoCAAA6AgAAEwAAAAAAAAAAAAAAAAAAAAAAW0NvbnRlbnRfVHlwZXNdLnhtbFBLAQIUAAoAAAAAAIqV71wAAAAAAAAAAAAAAAAGAAAAAAAAAAAAEAAAAGsCAABfcmVscy9QSwECFAAKAAAAAACKle9cIBuG6i4BAAAuAQAACwAAAAAAAAAAAAAAAACPAgAAX3JlbHMvLnJlbHNQSwECFAAKAAAAAACKle9cAAAAAAAAAAAAAAAABQAAAAAAAAAAABAAAADmAwAAd29yZC9QSwECFAAKAAAAAACKle9cFAIcjIgBAACIAQAAEQAAAAAAAAAAAAAAAAAJBAAAd29yZC9kb2N1bWVudC54bWxQSwECFAAKAAAAAACKle9cAAAAAAAAAAAAAAAACwAAAAAAAAAAABAAAADABQAAd29yZC9fcmVscy9QSwECFAAKAAAAAACKle9cg0lQnx8BAAAfAQAAHAAAAAAAAAAAAAAAAADpBQAAd29yZC9fcmVscy9kb2N1bWVudC54bWwucmVsc1BLAQIUAAoAAAAAAIqV71zT2p7W7gAAAO4AAAAPAAAAAAAAAAAAAAAAAEIHAAB3b3JkL3N0eWxlcy54bWxQSwUGAAAAAAgACADgAQAAXQgAAAAA'"
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "MINIMAL_DOCX_BASE64",
+          "declaration": {
+            "name": "MINIMAL_DOCX_BASE64",
+            "module": "src/components/docx-viewer/fixtures/minimal-docx-fixture.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/drawer/drawer.class.ts",
       "declarations": [
         {

@@ -148,6 +148,8 @@ export type LyraMessageKey =
   | 'documentPreviewGenericError'
   | 'documentViewerLabel'
   | 'documentViewerMissingSanitizer'
+  | 'docxViewerLabel'
+  | 'docxViewerMissingConverter'
   | 'svgViewerLabel'
   | 'htmlViewerLabel'
   | 'datasetViewerMissingParser'
@@ -519,6 +521,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewGenericError: 'Something went wrong.',
   documentViewerLabel: 'Document viewer',
   documentViewerMissingSanitizer: 'This viewer needs the optional "dompurify" package installed to render safely.',
+  docxViewerLabel: 'Word document',
+  docxViewerMissingConverter: 'This viewer needs the optional "mammoth" package installed to convert this document.',
   svgViewerLabel: 'SVG image',
   htmlViewerLabel: 'HTML document',
   datasetViewerMissingParser: 'This viewer needs the optional "papaparse" package installed to parse this file.',

@@ -80,6 +80,7 @@ import './components/contact-viewer/contact-viewer.js';
 import './components/pdf-viewer/pdf-viewer.js';
 import './components/spreadsheet-viewer/spreadsheet-viewer.js';
 import './components/csv-viewer/csv-viewer.js';
+import './components/docx-viewer/docx-viewer.js';
 import './components/media-card/media-card.js';
 import './components/attachment-trigger/attachment-trigger.js';
 import './components/kbd/kbd.js';
@@ -530,6 +531,7 @@ export type { LyraContactViewerEventMap } from './components/contact-viewer/cont
 export * from './components/pdf-viewer/pdf-viewer.js';
 export * from './components/spreadsheet-viewer/spreadsheet-viewer.js';
 export * from './components/csv-viewer/csv-viewer.js';
+export * from './components/docx-viewer/docx-viewer.js';
 export type { LyraExportButtonEventMap } from './components/export-button/export-button.js';
 export type { LyraFileInputEventMap } from './components/file-input/file-input.js';
 export type { LyraGenerationStatusEventMap } from './components/generation-status/generation-status.js';

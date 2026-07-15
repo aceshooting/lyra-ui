@@ -34,7 +34,7 @@ composition without registration; for example, `components/empty/empty.class.js`
   `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block`, `lyra-tool-approval-dialog`,
   `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`, `lyra-chip`/`lyra-chip-group`,
   `lyra-model-settings-panel`, `lyra-context-meter`, `lyra-dock-panel`, `lyra-document-preview`,
-  `lyra-document-viewer`,
+  `lyra-document-viewer`, `lyra-docx-viewer`,
   `lyra-media-card`, `lyra-attachment-trigger`, `lyra-kbd`, `lyra-result-card`/`lyra-result-field`,
   `lyra-avatar`, `lyra-card`, `lyra-stepper`, `lyra-segmented`, `lyra-diff-view`, `lyra-poll-status`,
   `lyra-code-block-core` (needs the optional peer `shiki`)
@@ -7833,6 +7833,30 @@ registerDocumentRenderer('application/x-example', {
 
 When no renderer matches, the viewer renders `<lyra-document-preview>`, which handles text and images
 inline and provides a safe generic fallback for other formats.
+
+## `lyra-docx-viewer`
+
+Fetches a `.docx` Word document as an `ArrayBuffer`, converts it to semantic HTML with the optional
+`mammoth` peer, sanitizes that HTML through the optional `dompurify` peer, and renders the result.
+Mammoth preserves document structure such as headings, paragraphs, lists, tables, and images; it is
+not intended to reproduce pixel-exact Word page layout. There is no unsanitized rendering escape
+hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
+the scrollable document body.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching, conversion, sanitization, or a
+non-fatal Mammoth conversion message occurs.
+
+**CSS parts:** `base`, `body`, `content`, `spinner`, and `error`.
+
+**Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
+The component registers a lazy `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+renderer with `<lyra-document-viewer>` and matches `.docx` filenames when the MIME type is generic.
+
+```html
+<lyra-docx-viewer src="/files/report.docx" name="report.docx" max-height="32rem"></lyra-docx-viewer>
+```
 
 ## `lyra-svg-viewer`
 

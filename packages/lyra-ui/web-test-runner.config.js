@@ -63,6 +63,20 @@ const papaparseEsmInteropPlugin = {
   },
 };
 
+/**
+ * `mammoth` exposes its browser bundle as a UMD file rather than native ESM.
+ * The browser test server does not add CJS/UMD interop, so export the global
+ * populated by mammoth's documented browser entry point.
+ */
+const mammothEsmInteropPlugin = {
+  name: 'mammoth-esm-interop',
+  transform(context) {
+    if (context.response.is('js') && context.path.endsWith('/mammoth/mammoth.browser.js')) {
+      return `${context.body}\nexport default window.mammoth;\n`;
+    }
+  },
+};
+
 const browserProduct = process.env.WTR_BROWSER ?? 'chromium';
 if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
   throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
@@ -104,6 +118,7 @@ export default {
     hammerEsmInteropPlugin,
     maplibreEsmInteropPlugin,
     papaparseEsmInteropPlugin,
+    mammothEsmInteropPlugin,
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait
