@@ -1,6 +1,7 @@
-import { html, css, type TemplateResult, type PropertyValues } from 'lit';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { styles } from './option.styles.js';
 
 /**
  * `<lyra-option>` — a selectable option for `<lyra-combobox>`.
@@ -15,14 +16,7 @@ export interface LyraOptionEventMap {
   'lyra-option-change': CustomEvent<undefined>;
 }
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
-  static styles = [
-    LyraElement.styles,
-    css`
-      :host {
-        display: none;
-      }
-    `,
-  ];
+  static styles = [LyraElement.styles, styles];
 
   /** The selection key submitted with the form. */
   @property() value = '';

@@ -12,7 +12,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`
-    <lyra-combobox label="Fruit" placeholder="Pick one…" with-clear style="max-width: 20rem">
+    <lyra-combobox label="Fruit" placeholder="Pick one…" clearable style="max-width: 20rem">
       <lyra-option value="a">Apple</lyra-option>
       <lyra-option value="b">Banana</lyra-option>
       <lyra-option value="c">Cherry</lyra-option>
@@ -23,7 +23,7 @@ export const Default: Story = {
 
 export const Multiple: Story = {
   render: () => html`
-    <lyra-combobox label="Fruit" multiple with-clear style="max-width: 20rem">
+    <lyra-combobox label="Fruit" multiple clearable style="max-width: 20rem">
       <lyra-option value="a">Apple</lyra-option>
       <lyra-option value="b">Banana</lyra-option>
       <lyra-option value="c">Cherry</lyra-option>
@@ -90,7 +90,7 @@ export const AsyncSource: Story = {
         .map((label) => ({ value: label.toLowerCase(), label }));
     };
     return html`
-      <lyra-combobox label="Fruit (async)" placeholder="Type to search…" with-clear
+      <lyra-combobox label="Fruit (async)" placeholder="Type to search…" clearable
         style="max-width: 22rem" .source=${source}
       ></lyra-combobox>
     `;

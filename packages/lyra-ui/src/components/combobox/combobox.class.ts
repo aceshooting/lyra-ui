@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { place } from '../../internal/positioner.js';
 import { nextId } from '../../internal/a11y.js';
@@ -30,11 +30,19 @@ export interface ComboboxSourceRow {
 }
 
 export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
+export type LyraComboboxSelectionDirection = 'forward' | 'backward' | 'none';
+
+const spellcheckConverter = {
+  fromAttribute: (value: string | null): boolean => value !== 'false',
+  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
+};
 
 export interface LyraComboboxEventMap {
   'lyra-show': CustomEvent<undefined>;
   'lyra-hide': CustomEvent<undefined>;
   'lyra-clear': CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-combobox>` — a filterable single/multi select that combines a text
@@ -56,6 +64,8 @@ export interface LyraComboboxEventMap {
  * @event lyra-show - The listbox opened.
  * @event lyra-hide - The listbox closed.
  * @event lyra-clear - The value was cleared.
+ * @event blur - Re-dispatched from the internal native input as a bubbling, composed event.
+ * @event focus - Re-dispatched from the internal native input as a bubbling, composed event.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element.
  * @csspart combobox - The input container (positioning anchor).
@@ -75,6 +85,11 @@ export interface LyraComboboxEventMap {
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - The error message.
  * @csspart hint - The hint message.
+ * @cssprop --lyra-combobox-trigger-padding - Padding inside the input container.
+ * @cssprop --lyra-combobox-trigger-min-height - Minimum input-container block size.
+ * @cssprop --lyra-combobox-font-size - Input text size.
+ * @cssprop --lyra-combobox-tag-padding - Selected-tag padding.
+ * @cssprop --lyra-combobox-tag-font-size - Selected-tag text size.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
@@ -95,7 +110,17 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ type: Boolean, reflect: true }) open = false;
   /** Visual size — same `xs`–`xl` scale as `lyra-select`'s `size`. */
   @property({ reflect: true }) size: LyraComboboxSize = 'm';
+  /** Show a clear button while the combobox has a value. Mirrors `wa-combobox`'s public name. */
+  @property({ type: Boolean, reflect: true }) clearable = false;
+  /** @deprecated Use `clearable`. Retained as a compatibility alias. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
+  /** Native editing-assistance attributes forwarded to the wrapped input. */
+  @property() autocomplete = 'off';
+  @property({ attribute: 'inputmode' }) inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property() autocapitalize = '';
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ attribute: 'max-options-visible', type: Number }) maxOptionsVisible = 3;
   /** Status copy shown in the listbox when no rows match. Empty string falls back to a localized message. */
   @property({ attribute: 'empty-text' }) emptyText = '';
@@ -125,6 +150,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @state() private hasLabelSlot = false;
   @state() private loading = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
+  @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
   private sourceTimer?: ReturnType<typeof setTimeout>;
   private sourceToken = 0;
   // Guards the proactive `asyncRows` warm-up in `willUpdate()` below so it
@@ -199,6 +225,70 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
   get willValidate(): boolean {
     return this.internals.willValidate;
+  }
+
+  /** The internal native filter input, for direct DOM access when needed. */
+  get input(): HTMLInputElement | null {
+    return this.inputEl ?? null;
+  }
+
+  get selectionStart(): number | null {
+    return this.inputEl?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.inputEl) this.inputEl.selectionStart = value;
+  }
+
+  get selectionEnd(): number | null {
+    return this.inputEl?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.inputEl) this.inputEl.selectionEnd = value;
+  }
+
+  get selectionDirection(): LyraComboboxSelectionDirection | null {
+    return this.inputEl?.selectionDirection as LyraComboboxSelectionDirection | null;
+  }
+
+  set selectionDirection(value: LyraComboboxSelectionDirection | null) {
+    if (this.inputEl) this.inputEl.selectionDirection = value;
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.inputEl?.focus(options);
+  }
+
+  override blur(): void {
+    this.inputEl?.blur();
+  }
+
+  select(): void {
+    this.inputEl?.select();
+  }
+
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: LyraComboboxSelectionDirection,
+  ): void {
+    this.inputEl?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const input = this.inputEl;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    this.query = input.value;
+    this.activeIndex = -1;
+    if (this.source) this.runSource(this.query);
   }
 
   /** @internal */
@@ -685,6 +775,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // input should close it too, the same as it would for a native
     // `<select>`'s popup.
     this.hide();
+    this.emit('blur');
+  };
+
+  private onInputFocus = (): void => {
+    this.show();
+    this.emit('focus');
   };
 
   private onHintSlotChange = (e: Event): void => {
@@ -855,16 +951,21 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
             aria-autocomplete="list"
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
-            autocomplete="off"
+            autocomplete=${this.autocomplete || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
+            spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
             .value=${this.displayValue}
             placeholder=${hasValue && !this.multiple ? '' : this.placeholder}
             ?disabled=${this.effectiveDisabled}
             @input=${this.onInput}
             @keydown=${this.onKeyDown}
-            @focus=${() => this.show()}
+            @focus=${this.onInputFocus}
             @blur=${this.onInputBlur}
           />
-          ${this.withClear && hasValue
+          ${(this.clearable || this.withClear) && hasValue
             ? html`<button
                 part="clear-button"
                 type="button"

@@ -1478,3 +1478,87 @@ describe('size', () => {
     );
   });
 });
+
+describe('native input surface', () => {
+  it('forwards native editing-assistance attributes to the internal input', async () => {
+    const el = (await fixture(html`
+      <lyra-combobox
+        autocomplete="one-time-code"
+        inputmode="search"
+        enterkeyhint="done"
+        spellcheck="false"
+        autocapitalize="off"
+        autocorrect="off"
+      ></lyra-combobox>
+    `)) as LyraCombobox;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+    expect(input.getAttribute('autocomplete')).to.equal('one-time-code');
+    expect(input.getAttribute('inputmode')).to.equal('search');
+    expect(input.getAttribute('enterkeyhint')).to.equal('done');
+    expect(input.spellcheck).to.be.false;
+    expect(input.getAttribute('autocapitalize')).to.equal('off');
+    expect(input.getAttribute('autocorrect')).to.equal('off');
+  });
+
+  it('supports clearable while retaining with-clear as a compatibility alias', async () => {
+    const clearable = (await fixture(html`
+      <lyra-combobox clearable>
+        <lyra-option value="a" selected>Apple</lyra-option>
+      </lyra-combobox>
+    `)) as LyraCombobox;
+    await clearable.updateComplete;
+    expect(clearable.shadowRoot!.querySelector('[part="clear-button"]')).to.exist;
+
+    const legacy = (await fixture(html`
+      <lyra-combobox with-clear>
+        <lyra-option value="a" selected>Apple</lyra-option>
+      </lyra-combobox>
+    `)) as LyraCombobox;
+    await legacy.updateComplete;
+    expect(legacy.shadowRoot!.querySelector('[part="clear-button"]')).to.exist;
+  });
+
+  it('forwards focus, blur, selection, and range editing to the internal input', async () => {
+    const el = (await fixture(html`<lyra-combobox multiple></lyra-combobox>`)) as LyraCombobox;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+    el.focus();
+    expect(el.shadowRoot!.activeElement === input).to.be.true;
+
+    input.value = 'hello world';
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    el.setSelectionRange(6, 11, 'forward');
+    expect(el.selectionStart).to.equal(6);
+    expect(el.selectionEnd).to.equal(11);
+    expect(el.selectionDirection).to.equal('forward');
+
+    el.setRangeText('there', 6, 11, 'select');
+    await el.updateComplete;
+    expect(el.input?.value).to.equal('hello there');
+
+    el.select();
+    expect(el.selectionStart).to.equal(0);
+    expect(el.selectionEnd).to.equal('hello there'.length);
+
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+  });
+
+  it('bridges native focus and blur as bubbling, composed host events', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+
+    const focusPromise = oneEvent(el, 'focus');
+    input.focus();
+    const focusEvent = await focusPromise;
+    expect(focusEvent.bubbles).to.be.true;
+    expect(focusEvent.composed).to.be.true;
+
+    const blurPromise = oneEvent(el, 'blur');
+    input.blur();
+    const blurEvent = await blurPromise;
+    expect(blurEvent.bubbles).to.be.true;
+    expect(blurEvent.composed).to.be.true;
+  });
+});
