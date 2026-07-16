@@ -22,6 +22,8 @@ export type LyraMessageKey =
   | 'zoomControls'
   | 'zoomOut'
   | 'zoomIn'
+  | 'lightboxLabel'
+  | 'lightboxImagePosition'
   | 'scrollerLabel'
   | 'scrollPrevious'
   | 'scrollNext'
@@ -47,6 +49,8 @@ export type LyraMessageKey =
   | 'retry'
   | 'remove'
   | 'removeWithContext'
+  | 'playWithContext'
+  | 'pauseWithContext'
   | 'loading'
   | 'loadingDocument'
   | 'noMatches'
@@ -301,6 +305,7 @@ export type LyraMessageKey =
   | 'popover'
   | 'details'
   | 'breadcrumb'
+  | 'timeline'
   | 'rating'
   | 'colorPicker'
   | 'mediaCardUntitledFile'
@@ -310,6 +315,7 @@ export type LyraMessageKey =
   | 'mediaCardOpenFileAttachment'
   | 'mediaCardImageAttachment'
   | 'mediaCardVideoAttachment'
+  | 'animatedImageDefaultAlt'
   | 'mentionSuggestions'
   | 'map'
   | 'model'
@@ -416,6 +422,8 @@ export type LyraMessageKey =
   | 'calendarViewerNoSummary'
   | 'pdfViewerLabel'
   | 'pdfViewerMissingLibrary'
+  | 'qrCodeMissingLibrary'
+  | 'qrCodeGenerationFailed'
   | 'pdfViewerPageOf'
   | 'pdfViewerZoomIn'
   | 'pdfViewerZoomOut'
@@ -425,7 +433,14 @@ export type LyraMessageKey =
   | 'spreadsheetViewerUnavailable'
   | 'csvViewerUnavailable'
   | 'csvViewerLabel'
-  | 'spreadsheetViewerLabel';
+  | 'spreadsheetViewerLabel'
+  | 'knownDateDay'
+  | 'knownDateMonth'
+  | 'knownDateYear'
+  | 'skipToContent'
+  | 'tourSkip'
+  | 'tourDone'
+  | 'tourStepOf';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -448,6 +463,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   zoomControls: 'Zoom controls',
   zoomOut: 'Zoom out',
   zoomIn: 'Zoom in',
+  lightboxLabel: 'Image viewer',
+  lightboxImagePosition: 'Image {index} of {total}',
   scrollerLabel: 'Scrollable content',
   scrollPrevious: 'Scroll backward',
   scrollNext: 'Scroll forward',
@@ -473,6 +490,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   retry: 'Retry',
   remove: 'Remove',
   removeWithContext: 'Remove {label}',
+  playWithContext: 'Play {name}',
+  pauseWithContext: 'Pause {name}',
   loading: 'Loading…',
   loadingDocument: 'Loading document…',
   noMatches: 'No matches',
@@ -699,6 +718,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   csvViewerUnavailable: 'CSV preview is unavailable.',
   csvViewerLabel: 'CSV document',
   spreadsheetViewerLabel: 'Spreadsheet',
+  knownDateDay: 'Day',
+  knownDateMonth: 'Month',
+  knownDateYear: 'Year',
   documentPreviewTypeDataset: 'dataset',
   documentPreviewTypeContact: 'contact',
   download: 'Download',
@@ -731,6 +753,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   popover: 'Popover',
   details: 'Details',
   breadcrumb: 'Breadcrumb',
+  timeline: 'Timeline',
   rating: 'Rating',
   colorPicker: 'Color picker',
   mediaCardUntitledFile: 'Untitled file',
@@ -740,6 +763,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   mediaCardOpenFileAttachment: 'Open file attachment',
   mediaCardImageAttachment: 'Image attachment',
   mediaCardVideoAttachment: 'Video attachment',
+  animatedImageDefaultAlt: 'Animated image',
   mentionSuggestions: 'Suggestions',
   map: 'Map',
   model: 'Model',
@@ -846,12 +870,18 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   calendarViewerNoSummary: '(no title)',
   pdfViewerLabel: 'PDF document',
   pdfViewerMissingLibrary: 'This viewer needs the optional "pdfjs-dist" package installed to render PDF files.',
+  qrCodeMissingLibrary: 'This component needs the optional "qrcode" package installed to render QR codes.',
+  qrCodeGenerationFailed: 'This value could not be encoded as a QR code.',
   pdfViewerPageOf: 'Page {page} of {total}',
   pdfViewerZoomIn: 'Zoom in',
   pdfViewerZoomOut: 'Zoom out',
   pdfViewerCurrentZoom: '{percent}%',
   pdfViewerPreviousPage: 'Previous page',
   pdfViewerNextPage: 'Next page',
+  skipToContent: 'Skip to content',
+  tourSkip: 'Skip',
+  tourDone: 'Done',
+  tourStepOf: 'Step {current} of {total}',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

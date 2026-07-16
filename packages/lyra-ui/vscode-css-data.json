@@ -1,0 +1,502 @@
+{
+  "version": 1.1,
+  "properties": [
+    {
+      "name": "--lyra-attachment-chip-spinner-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-attachment-chip>`** (default: `0.8s`) — Duration of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion."
+      }
+    },
+    {
+      "name": "--lyra-button-active-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-button>`** (default: `0.9875`) — `transform: scale()` factor applied while a non-disabled button is pressed."
+      }
+    },
+    {
+      "name": "--lyra-button-group-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-button-group>`** — Gap between grouped controls."
+      }
+    },
+    {
+      "name": "--lyra-button-hover-brightness",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-button>`** (default: `1.08`) — `filter: brightness()` multiplier applied while hovering a non-disabled button."
+      }
+    },
+    {
+      "name": "--lyra-button-spinner-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-button>`** (default: `1s`) — Rotation period of the `loading` spinner."
+      }
+    },
+    {
+      "name": "--lyra-button-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-button>`** (default: `100%`) — Inline size of the internal button. The host defaults it to `100%` so the native button follows the host's own width; override to `auto` (or any other value) for a compact inline composition."
+      }
+    },
+    {
+      "name": "--lyra-chat-message-max-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-chat-message>`** (default: `80%`) — Maximum inline size of the message bubble."
+      }
+    },
+    {
+      "name": "--lyra-chip-pressed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-chip>`** (default: `var(--lyra-chip-bg)`) — Background while a toggleable chip is selected, independently themeable from its resting background."
+      }
+    },
+    {
+      "name": "--lyra-combobox-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-combobox>`** — Input text size."
+      }
+    },
+    {
+      "name": "--lyra-combobox-tag-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-combobox>`** — Selected-tag text size."
+      }
+    },
+    {
+      "name": "--lyra-combobox-tag-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-combobox>`** — Selected-tag padding."
+      }
+    },
+    {
+      "name": "--lyra-combobox-trigger-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-combobox>`** — Minimum input-container block size."
+      }
+    },
+    {
+      "name": "--lyra-combobox-trigger-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-combobox>`** — Padding inside the input container."
+      }
+    },
+    {
+      "name": "--lyra-contact-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-contact-viewer>`** (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
+      "name": "--lyra-document-preview-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-document-preview>`** (default: `var(--lyra-font-mono)`) — Font used for plain-text previews."
+      }
+    },
+    {
+      "name": "--lyra-document-preview-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-document-preview>`** (default: `none`) — Maximum body block size before the preview scrolls internally."
+      }
+    },
+    {
+      "name": "--lyra-document-preview-spin-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-document-preview>`** (default: `0.8s`) — Duration of one indeterminate loading-indicator rotation."
+      }
+    },
+    {
+      "name": "--lyra-document-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-document-viewer>`** (default: `70vh`) — Maximum block size of the dialog body before it scrolls internally."
+      }
+    },
+    {
+      "name": "--lyra-docx-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-docx-viewer>`** (default: `none`) — Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
+      "name": "--lyra-drawer-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-drawer>`** — Block size for top/bottom drawers."
+      }
+    },
+    {
+      "name": "--lyra-drawer-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-drawer>`** — Inline size for start/end drawers."
+      }
+    },
+    {
+      "name": "--lyra-empty-compact-align",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-empty>`** — Cross-axis and text alignment used in compact mode; set to `center` for dense but centered empty states."
+      }
+    },
+    {
+      "name": "--lyra-empty-compact-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-empty>`** (default: `var(--lyra-space-xs)`) — Padding used in compact mode; accepts any padding shorthand (e.g. `8px 2px`)."
+      }
+    },
+    {
+      "name": "--lyra-flag-aspect-ratio",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flag>`** (default: `4 / 3`) — Rectangular flag aspect ratio."
+      }
+    },
+    {
+      "name": "--lyra-flag-object-fit",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flag>`** (default: `cover`) — How the image fits its flag frame."
+      }
+    },
+    {
+      "name": "--lyra-flag-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-flag>`** — Rectangular flag corner radius."
+      }
+    },
+    {
+      "name": "--lyra-gauge-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-gauge>`** (default: `var(--lyra-color-brand)`) — Fill stroke for radial, ring, and linear gauges."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-annotation-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-danger)`) — Border color for an annotated cell."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-focus-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-focus-ring-color)`) — Focus ring around a focused cell."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-label-font",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** — Font for axis/legend labels drawn on the canvas."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-no-data-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-no-data)`) — Fill for cells with no value."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-scale-hi",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-brand)`) — High endpoint of the sequential color ramp."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-scale-lo",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-brand-quiet)`) — Low endpoint of the sequential color ramp."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-success)`) — Border color for the selected cell."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-tooltip-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-surface)`) — Hover tooltip background."
+      }
+    },
+    {
+      "name": "--lyra-heatmap-tooltip-text",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-heatmap>`** (default: `var(--lyra-color-text)`) — Hover tooltip text color."
+      }
+    },
+    {
+      "name": "--lyra-link-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `var(--lyra-color-border)`) — Default link stroke, overridden per-link by a link's own `color`."
+      }
+    },
+    {
+      "name": "--lyra-lite-chart-selected-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-lite-chart>`** (default: `var(--lyra-color-brand)`) — Stroke for a bar/point whose category index is in `selectedIndex`."
+      }
+    },
+    {
+      "name": "--lyra-node-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `var(--lyra-color-brand)`) — Default node fill, overridden per-node by `GraphNode.color`."
+      }
+    },
+    {
+      "name": "--lyra-overlay-max-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-dropdown>`, `<lyra-popover>`** — Maximum inline size of the popup (default `--lyra-size-20rem`)."
+      }
+    },
+    {
+      "name": "--lyra-pagination-control-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-pagination>`** — Control inline/block size; defaults from the `size` variant."
+      }
+    },
+    {
+      "name": "--lyra-pagination-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-pagination>`** — Control font size; defaults from the `size` variant."
+      }
+    },
+    {
+      "name": "--lyra-pdf-viewer-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-pdf-viewer>`** (default: `var(--lyra-size-24rem)`) — Block size of the virtualized page list."
+      }
+    },
+    {
+      "name": "--lyra-rating-empty-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-rating>`** (default: `var(--lyra-color-border)`) — Unfilled-star color."
+      }
+    },
+    {
+      "name": "--lyra-rating-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-rating>`** (default: `var(--lyra-color-warning)`) — Filled-star color."
+      }
+    },
+    {
+      "name": "--lyra-rating-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-rating>`** (default: `var(--lyra-font-size-xl)`) — Star size."
+      }
+    },
+    {
+      "name": "--lyra-scroller-control-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-scroller>`** — Control size."
+      }
+    },
+    {
+      "name": "--lyra-scroller-min-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-scroller>`** — Minimum vertical scroller size."
+      }
+    },
+    {
+      "name": "--lyra-sparkline-area-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-sparkline>`** (default: `0.15`) — Fill opacity of the area under the line (type=\"area\")."
+      }
+    },
+    {
+      "name": "--lyra-sparkline-stroke-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-sparkline>`** (default: `1.5`) — Stroke width of the line/area path."
+      }
+    },
+    {
+      "name": "--lyra-svg-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-svg-viewer>`** (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
+      "name": "--lyra-textarea-max-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-textarea>`** (default: `none`) — Maximum auto-grown block size before the textarea scrolls."
+      }
+    },
+    {
+      "name": "--lyra-tool-call-chip-spin",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tool-call-chip>`** (default: `1s linear`) — Running-icon animation duration and timing."
+      }
+    },
+    {
+      "name": "--lyra-tool-result-dialog-maximized-inset",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tool-result-dialog>`** — Insets for the maximized panel."
+      }
+    },
+    {
+      "name": "--lyra-tool-result-dialog-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tool-result-dialog>`** (default: `var(--lyra-color-overlay)`) — Backdrop color."
+      }
+    },
+    {
+      "name": "--lyra-tool-result-dialog-spin",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tool-result-dialog>`** (default: `1s linear`) — Running-status animation duration and timing."
+      }
+    },
+    {
+      "name": "--lyra-tooltip-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tooltip>`** — Tooltip background color (default `--lyra-color-neutral`)."
+      }
+    },
+    {
+      "name": "--lyra-tooltip-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tooltip>`** — Tooltip text color (default `--lyra-color-on-neutral`)."
+      }
+    },
+    {
+      "name": "--lyra-tooltip-max-inline-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tooltip>`** — Maximum inline size of the tooltip (default `--lyra-size-20rem`)."
+      }
+    },
+    {
+      "name": "--lyra-transition-ambient",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-chat-message>`** (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function.\n\n**`<lyra-skeleton>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by the pulse and sheen effects.\n\n**`<lyra-tool-call-chip>`** (default: `1.8s ease-in-out`) — Pending-icon pulse duration and timing.\n\n**`<lyra-typing-indicator>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by all variants."
+      }
+    },
+    {
+      "name": "--lyra-typing-dot-stagger-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-typing-indicator>`** (default: `600ms`) — Delay for the second dot in the dots variant."
+      }
+    },
+    {
+      "name": "--lyra-typing-dot-stagger-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-typing-indicator>`** (default: `1200ms`) — Delay for the third dot in the dots variant."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-1",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-brand)`) — First entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-2",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-success)`) — Second entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-3",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-warning)`) — Third entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-4",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-danger)`) — Fourth entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-5",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-chart-1)`) — Fifth entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-6",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-chart-2)`) — Sixth entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-7",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-chart-3)`) — Seventh entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-word-cloud-color-8",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-chart-4)`) — Eighth entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-zoomable-frame-min-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-zoomable-frame>`** — Minimum viewport block size."
+      }
+    }
+  ]
+}

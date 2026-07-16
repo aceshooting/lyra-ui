@@ -8,3 +8,8 @@ coverage/
 *storybook.log
 storybook-static
 *.tgz
+
+# scripts/visual-regression.mjs scratch output (current captures + diffs + report); the
+# reviewed baselines it diffs against live in packages/lyra-ui/visual-baselines/ and ARE
+# committed, deliberately outside this pattern.
+.visual-diff-output/

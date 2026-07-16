@@ -49,7 +49,10 @@
     "dist",
     "custom-elements.json",
     "llms.txt",
-    "llms-full.txt"
+    "llms-full.txt",
+    "vscode-html-data.json",
+    "vscode-css-data.json",
+    "web-types.json"
   ],
   "exports": {
     ".": "./dist/lyra.js",
@@ -385,7 +388,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "wtr",
-    "test:platform": "wtr src/internal/form-associated.test.ts src/components/dialog/dialog.test.ts src/components/combobox/combobox.test.ts src/components/table/table.test.ts src/components/virtual-list/virtual-list.test.ts",
+    "test:visual": "node scripts/visual-regression.mjs",
+    "test:platform": "wtr src/internal/form-associated.test.ts src/components/input/input.test.ts src/components/textarea/textarea.test.ts src/components/checkbox/checkbox.test.ts src/components/radio/radio.test.ts src/components/slider/slider.test.ts src/components/phone-input/phone-input.test.ts src/components/token-input/token-input.test.ts src/components/combobox/combobox.test.ts src/components/select/select.test.ts src/components/date-picker/date-input.test.ts src/components/menu/menu.test.ts src/components/overlay/overlay.test.ts src/components/dialog/dialog.test.ts src/components/drawer/drawer.test.ts src/components/tool-approval-dialog/tool-approval-dialog.test.ts src/components/tabs/tabs.test.ts src/components/tree/tree.test.ts src/components/carousel/carousel.test.ts src/components/table/table.test.ts src/components/virtual-list/virtual-list.test.ts",
     "test:coverage": "WTR_COVERAGE=1 wtr $(find src -name '*.test.ts' -print)",
     "test:watch": "wtr --watch",
     "test:architecture": "node scripts/check-registration-architecture.mjs",
@@ -395,10 +399,13 @@
     "contract-checklist": "node scripts/check-contract-checklist.mjs",
     "manifest": "cem analyze --litelement --outdir .",
     "manifest:check": "node scripts/check-manifest.mjs",
+    "generate-editor-data": "node scripts/generate-editor-data.mjs",
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
+    "migrate-wa": "node scripts/migrate-wa.mjs",
+    "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
     "contract-policy": "pnpm run style-policy && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && pnpm run manifest:check && pnpm run llms-freshness && pnpm run test:architecture",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
-    "prepack": "pnpm run build && pnpm run manifest"
+    "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
@@ -529,7 +536,9 @@
     "marked": "^18.0.6",
     "papaparse": "^5.5.3",
     "pdfjs-dist": "^6.1.200",
+    "pixelmatch": "^7.2.0",
     "playwright": "^1.61.1",
+    "pngjs": "^7.0.0",
     "postal-mime": "^2.7.5",
     "shiki": "^4.3.1",
     "typescript": "^7.0.2",

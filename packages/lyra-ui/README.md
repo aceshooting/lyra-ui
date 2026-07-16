@@ -115,6 +115,26 @@ Lyra's combobox uses `with-clear`, while Web Awesome's equivalent uses `clearabl
 <wa-date-input value="2026-07-15">           →  <lyra-date-input value="2026-07-15">
 ```
 
+**Automating the rename.** This repo ships a small codemod that performs the mechanical part of
+either migration: [`scripts/migrate-wa.mjs`](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/migrate-wa.mjs)
+(run from a checkout of this repository — it isn't published as part of the npm package) rewrites
+`wa-*`/`sl-*` tag usages and `@shoelace-style/shoelace`/`@awesome.me/webawesome` import specifiers
+to their `lyra-*`/`@aceshooting/lyra-ui` equivalents across a target directory, file, or glob,
+reading the very tables on this page so the rename can't drift out of sync with them:
+
+```bash
+node packages/lyra-ui/scripts/migrate-wa.mjs --dry-run path/to/your/src   # preview only
+node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src             # apply
+```
+
+It only rewrites a tag or import that this page documents a `lyra-*`/`@aceshooting/lyra-ui`
+equivalent for — a component's `— (extra)` row (no Web Awesome/Shoelace counterpart) and any
+`wa-*`/`sl-*` text that isn't an actual tag usage (comments, unrelated identifiers) are left alone.
+It does not rewrite attribute-name differences (e.g. Web Awesome's `clearable` vs. Lyra's
+`with-clear`) or deep import subpaths (`.../dist/components/button/button.js`, since Lyra's own
+subpath layout doesn't mirror Shoelace's or Web Awesome's) — those are flagged instead, and still
+need the component notes below.
+
 Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
 familiar to many teams. Lyra provides a conceptual migration path rather than claiming a drop-in
 `sl-*` replacement:
@@ -218,6 +238,79 @@ properties and swaps directional keyboard navigation (e.g. the arrow keys in a d
 roving-tabindex list) to match. This covers Arabic, Hebrew, Persian, Urdu, and other RTL locales
 through inherited direction; no per-component RTL flag or opt-in is needed. Components do not force
 their own `dir`, so they remain composable inside mixed-direction layouts.
+
+## SSR & Declarative Shadow DOM
+
+Every Lyra component is a standard Lit 3 custom element (`extends LitElement` via the shared
+`LyraElement` base), so it follows Lit's own server-rendering story rather than needing anything
+library-specific: [`@lit-labs/ssr`](https://www.npmjs.com/package/@lit-labs/ssr) can render a Lyra
+component to a Declarative Shadow DOM (DSD) `<template shadowrootmode="open">` on the server, so the
+resulting markup paints before any JS runs. A spot check rendering `<lyra-button>` through
+`@lit-labs/ssr`'s `render()` confirms this in practice — the output is a well-formed DSD template
+containing the component's token CSS and internal `<button>` markup, and the constructor's
+`ElementInternals`-based `attachInternals()` call (used for native form association) does not throw
+under `@lit-labs/ssr-dom-shim`'s server DOM shim.
+
+That said, **lyra-ui has not been systematically tested or tuned for SSR** across its 156 components:
+no CI job renders the library under `@lit-labs/ssr`, no component has been verified to hydrate
+correctly on the client afterward, and components that reach for browser-only APIs early
+(`ResizeObserver`/`IntersectionObserver`, Floating UI positioning in the popover/tooltip/dropdown
+family, `matchMedia` listeners, canvas-based rendering in `<lyra-heatmap>`/the chart family) have not
+been checked for graceful server-side behavior. Treat SSR/DSD as "should work in principle, unverified
+at scale" rather than a tested, supported deployment target — a meta-framework's own web-component SSR
+integration (or a custom `@lit-labs/ssr` server) is still the right place to start, and an issue report
+with the specific component and framework is welcome if something breaks.
+
+## Framework integration (Vue, Angular, Svelte)
+
+Lyra ships plain custom elements with no framework-specific wrapper package, so the friction is the
+same friction any custom-element library has with a non-Lit framework, not anything Lyra-specific:
+
+- **Property vs. attribute binding.** A complex-typed property (an object, array, or function — e.g.
+  `.strings`, `.selectedRows`, `.markers`) must be bound as a JS *property*, not a stringified
+  attribute. Use Vue's `:prop` binding (or the `.prop` modifier), Angular's `[prop]="value"` template
+  binding, or a plain property assignment; Svelte's compiler binds to a matching element property
+  automatically when one exists, so `prop={value}` mostly just works. A bare `attr="value"` or string
+  interpolation only ever sets a string attribute — fine for `variant="brand"`, wrong for anything
+  non-string.
+- **Angular needs `CUSTOM_ELEMENTS_SCHEMA`.** Angular's template compiler rejects unknown elements
+  and properties by default. Add `schemas: [CUSTOM_ELEMENTS_SCHEMA]` to the module (or standalone
+  component) that uses any `<lyra-*>` tag so Angular stops trying to resolve it as an Angular
+  component.
+- **Custom events need the framework's DOM event-binding syntax, not its component-event
+  shorthand.** A framework's usual event shorthand (Vue's `@event` on a *Vue component*, Angular's
+  `(event)` output binding) is wired for that framework's own event system; a plain custom element's
+  events are native `CustomEvent`s and need the same binding path used for native DOM events —
+  `@lyra-change="handler"` in Vue, `(lyra-change)="handler()"` in Angular, `on:lyra-change` in Svelte,
+  or `element.addEventListener('lyra-change', handler)` directly when a template binding isn't
+  available. Lyra's own event names are consistently kebab-case (`lyra-change`, `lyra-cell-click`,
+  `lyra-selection-change`, …) rather than camelCase, specifically to stay friendly to this binding
+  path — some other custom-element libraries use camelCase event names, which can silently fail to
+  bind in an in-DOM (non-compiled) Vue template because HTML attribute/directive names are
+  case-insensitive there; `addEventListener` works regardless of case either way.
+
+## Editor autocomplete (VS Code, JetBrains)
+
+TypeScript consumers already get tag/attribute completion for free from the generated
+`HTMLElementTagNameMap`. Plain HTML, and in-DOM Vue or Angular templates, don't go through that type
+graph, so this package also ships small editor data files generated from `custom-elements.json`:
+`vscode-html-data.json` (tag names, attributes, and slots) and `vscode-css-data.json` (every
+`--lyra-*` custom property). Point VS Code's
+[`html.customData`](https://code.visualstudio.com/docs/languages/html#_html-custom-data) and
+[`css.customData`](https://code.visualstudio.com/docs/languages/css#_css-custom-data) settings at
+them — typically in a workspace `.vscode/settings.json` so the whole team picks it up:
+
+```json
+{
+  "html.customData": ["./node_modules/@aceshooting/lyra-ui/vscode-html-data.json"],
+  "css.customData": ["./node_modules/@aceshooting/lyra-ui/vscode-css-data.json"]
+}
+```
+
+Both settings accept an array, so add these alongside any other custom-data files the workspace
+already references. WebStorm/IntelliJ users get the same tag/attribute/slot/CSS-part/custom-property
+coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick up a dependency's
+`web-types.json` with no extra configuration once the package is installed.
 
 ## Components
 

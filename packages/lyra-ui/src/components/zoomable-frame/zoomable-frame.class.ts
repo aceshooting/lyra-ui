@@ -13,6 +13,12 @@ export interface LyraZoomableFrameEventMap {
  * image content at a bounded zoom level. Scrolling provides panning when the
  * content exceeds the frame; the controls and keyboard shortcuts change zoom.
  *
+ * Two public reset methods cover different needs: `resetZoom()` (also wired to the built-in
+ * reset button and the `0` keyboard shortcut) returns zoom to 1 while intentionally preserving
+ * the current pan/scroll position; `resetView()` additionally returns pan to the origin, for a
+ * caller (e.g. `<lyra-lightbox>`) that wants a fully clean view, such as when swapping to new
+ * content entirely.
+ *
  * @customElement lyra-zoomable-frame
  * @slot - Content to inspect; when `src` is set, an image is rendered instead.
  * @event lyra-zoom-change - Zoom changed. `detail: { zoom }`.
@@ -59,7 +65,19 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   zoomIn = (): void => this.setZoom(this.normalizedZoom() + this.normalizedBounds().step);
   zoomOut = (): void => this.setZoom(this.normalizedZoom() - this.normalizedBounds().step);
+  /** Resets zoom to 1 only -- deliberately leaves the viewport's native scroll offset
+   *  untouched, so a consumer relying on "reset zoom but keep my pan position" (a legitimate
+   *  photo-viewer pattern) doesn't regress. Backs the built-in reset button and the `0` keyboard
+   *  shortcut. See `resetView()` for a stronger reset that also returns to the origin. */
   resetZoom = (): void => this.setZoom(1);
+  /** Resets both zoom and pan/scroll position to their initial state -- distinct from
+   *  `resetZoom()` (called by the built-in reset button), which intentionally preserves pan.
+   *  Intended for a caller (e.g. `<lyra-lightbox>`, swapping to a new image) that wants every
+   *  view to start clean rather than carrying over the previous image's zoom/pan state. */
+  resetView = (): void => {
+    this.resetZoom();
+    this.renderRoot.querySelector<HTMLElement>('[part="viewport"]')?.scrollTo({ left: 0, top: 0 });
+  };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
     if (event.key === '+' || event.key === '=') {

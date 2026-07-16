@@ -71,3 +71,31 @@ export function place(
     visualViewport?.removeEventListener('scroll', updateFromVisualViewport);
   };
 }
+
+/**
+ * Calls `onUpdate` with `target`'s current viewport-relative rect whenever it changes (scroll,
+ * resize, layout mutation, or visual-viewport change) — the same auto-update machinery `place()`
+ * uses, minus the anchor/floating placement math, for a caller that needs to track a raw rect
+ * (e.g. a spotlight cutout sized to match an arbitrary target) rather than position a second
+ * element relative to one. `target` is passed as both the reference and floating element to
+ * Floating UI's `autoUpdate()` since only change notifications are needed, not independent
+ * positioning of a second element -- `autoUpdate()` does not require these to differ; any
+ * resulting double-invocation of `onUpdate` per tick (from ancestor-scroll listeners being
+ * attached once per role) is harmless, since `getBoundingClientRect()` reads are idempotent.
+ * Returns a cleanup function, same contract as `place()`. Calls `onUpdate` once synchronously
+ * before returning so the first paint doesn't wait for a scroll/resize tick.
+ */
+export function trackRect(target: HTMLElement, onUpdate: (rect: DOMRect) => void): () => void {
+  const update = () => onUpdate(target.getBoundingClientRect());
+  const stopAutoUpdate = autoUpdate(target, target, update);
+  const visualViewport = target.ownerDocument.defaultView?.visualViewport;
+  const onVisualViewportChange = () => update();
+  visualViewport?.addEventListener('resize', onVisualViewportChange);
+  visualViewport?.addEventListener('scroll', onVisualViewportChange);
+  update();
+  return () => {
+    stopAutoUpdate();
+    visualViewport?.removeEventListener('resize', onVisualViewportChange);
+    visualViewport?.removeEventListener('scroll', onVisualViewportChange);
+  };
+}

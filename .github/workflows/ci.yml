@@ -34,6 +34,22 @@ jobs:
       - run: pnpm docs:build
       - run: pnpm storybook:check
       - run: pnpm storybook:check-theme
+      # Informational/non-blocking on purpose: the baseline PNGs under
+      # packages/lyra-ui/visual-baselines/ were agent-generated and have not yet been confirmed
+      # correct by a human (see that directory's README). continue-on-error keeps a mismatch --
+      # real or just an unreviewed-baseline artifact -- from failing the build until someone
+      # promotes this to a blocking gate deliberately.
+      - name: Visual regression (informational, non-blocking)
+        continue-on-error: true
+        run: pnpm --filter @aceshooting/lyra-ui test:visual
+      - name: Upload visual regression diff artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v7.0.1
+        with:
+          name: visual-regression-diff
+          path: packages/lyra-ui/.visual-diff-output
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Verify published tarball contents
         run: |
           set -euo pipefail
@@ -50,6 +66,9 @@ jobs:
             echo "::error::one or more expected files missing from the published tarball -- check files/exports/sideEffects in packages/lyra-ui/package.json"
             exit 1
           fi
+      # Includes a single-component (<lyra-button>) gzip-size canary, gated far tighter than the
+      # core-bundle budget, to catch a PR that silently drags something heavy into the eager
+      # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.
       - run: pnpm check:packed-consumer
 
   platform-contracts:

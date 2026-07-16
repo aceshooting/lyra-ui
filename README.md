@@ -74,6 +74,19 @@ Every one of the 156 tags is built on the same three guarantees — not opt-in p
 See [`packages/lyra-ui/README.md#theming-internationalization--rtl`](./packages/lyra-ui/README.md#theming-internationalization--rtl)
 for the full usage details.
 
+## SSR, Declarative Shadow DOM & framework integration
+
+Lyra components are standard Lit 3 custom elements: they render through `@lit-labs/ssr` into
+Declarative Shadow DOM in principle, and a spot check of `<lyra-button>` confirms basic
+server-rendering works — but the library has not been systematically tested or tuned for SSR at
+scale. Vue, Angular, and Svelte can all consume Lyra directly with no wrapper package, subject to the
+usual custom-element property-vs-attribute and event-binding differences from a native framework
+component. See
+[`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom)
+and
+[`packages/lyra-ui/README.md#framework-integration-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-vue-angular-svelte)
+for details.
+
 ## Documentation
 
 - **Humans:** the [live docs site](https://aceshooting.github.io/lyra-ui/) (Storybook — every

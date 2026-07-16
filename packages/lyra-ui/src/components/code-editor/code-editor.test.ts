@@ -1,6 +1,13 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
+import { styles } from './code-editor.styles.js';
+
+it('keeps scrolling on the editor frame instead of creating a nested textarea scrollbar', () => {
+  expect(styles.cssText).to.contain('grid-template-columns: auto max-content');
+  expect(styles.cssText).to.contain('inline-size: max-content');
+  expect(styles.cssText).to.contain('overflow: visible');
+});
 
 it('renders line numbers and inserts spaces for Tab', async () => {
   const el = (await fixture(html`<lyra-code-editor value="one\ntwo" tab-size="2"></lyra-code-editor>`)) as LyraCodeEditor;

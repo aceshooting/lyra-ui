@@ -35,6 +35,22 @@ const bundleEntries = {
     // growth before the next bump is needed.
     maxRawBytes: 1_200_000,
   },
+  // Single-component regression canary: catches a PR silently dragging something heavy into the
+  // eager import graph (e.g. a `*-loader.ts`'s dynamic `import()` accidentally hoisted to a
+  // top-level static import, pulling an optional peer like chart.js/maplibre-gl/shiki/d3-* in
+  // eagerly) that the `core` budget above is too loose to notice -- `core` legitimately grows every
+  // time a component is added, so it carries deliberate headroom, while `<lyra-button>` alone
+  // should only ever pull in Lit, LyraElement's token layer, and its own small class/styles, so its
+  // footprint should stay essentially flat release over release. Gated on gzip rather than raw
+  // bytes because that's what a consumer's browser actually pays for over the wire, and gzip is
+  // more sensitive to a foreign dependency's low-entropy-relative-to-its-size bytes landing in an
+  // otherwise tiny, highly-compressible bundle. Measured ~18.0 KiB gzip as of this bump; budget
+  // leaves modest headroom for normal Lit/token growth while staying tight enough to catch an
+  // accidental heavy import.
+  button: {
+    fixture: 'core',
+    maxGzipBytes: 28_000,
+  },
   flag: {
     fixture: 'optional',
     maxRawBytes: 30_000,
@@ -244,6 +260,7 @@ export default defineConfig({
 
   const bundleSources = {
     core: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
+    button: `import '@aceshooting/lyra-ui/components/button/button.js';\nexport const loaded = true;\n`,
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
     codeBlock: `import '@aceshooting/lyra-ui/components/code-block/code-block.js';\nexport const loaded = true;\n`,
     chart: `import '@aceshooting/lyra-ui/components/chart/chart.js';\nexport const loaded = true;\n`,
@@ -283,7 +300,7 @@ function formatBytes(bytes) {
   return `${(bytes / 1024).toFixed(1)} KiB`;
 }
 
-async function runBundle(fixtureDir, entry, maxRawBytes, noOptionalPeers) {
+async function runBundle(fixtureDir, entry, config, noOptionalPeers) {
   const env = {
     ...process.env,
     CI: 'true',
@@ -303,10 +320,16 @@ async function runBundle(fixtureDir, entry, maxRawBytes, noOptionalPeers) {
     });
   });
   const output = await bundleSize(join(fixtureDir, 'bundle', entry));
-  if (output.rawBytes > maxRawBytes) {
+  const violations = [];
+  if (config.maxRawBytes != null && output.rawBytes > config.maxRawBytes) {
+    violations.push(`raw ${formatBytes(output.rawBytes)} exceeds budget ${formatBytes(config.maxRawBytes)}`);
+  }
+  if (config.maxGzipBytes != null && output.gzipBytes > config.maxGzipBytes) {
+    violations.push(`gzip ${formatBytes(output.gzipBytes)} exceeds budget ${formatBytes(config.maxGzipBytes)}`);
+  }
+  if (violations.length > 0) {
     throw new Error(
-      `${entry} bundle is ${formatBytes(output.rawBytes)} across ${output.files.length} files; ` +
-        `budget is ${formatBytes(maxRawBytes)}`,
+      `${entry} bundle is out of budget across ${output.files.length} files: ${violations.join('; ')}`,
     );
   }
   console.log(
@@ -366,7 +389,7 @@ async function main() {
       await runBundle(
         config.fixture === 'core' ? coreFixture : optionalFixture,
         entry,
-        config.maxRawBytes,
+        config,
         config.fixture === 'core',
       );
     }
