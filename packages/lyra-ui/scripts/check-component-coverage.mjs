@@ -13,6 +13,14 @@ function readFamilyFiles(family, suffix) {
   return fs.readdirSync(directory).filter((file) => file.endsWith(suffix)).map((file) => fs.readFileSync(path.join(directory, file), 'utf8'));
 }
 
+/**
+ * A tag counts as exercised when a test mounts it literally, or names it as a
+ * string a parameterized fixture builds the tag from (`fixture(`<${tag}>`)`).
+ */
+function exercisesTag(tests, tag) {
+  return new RegExp(`<${tag}(?:\\s|>)`).test(tests) || new RegExp(`['"\`]${tag}['"\`]`).test(tests);
+}
+
 for (const module of manifest.modules) {
   if (!module.path.startsWith('src/components/')) continue;
   const family = module.path.slice('src/components/'.length).split('/')[0];
@@ -22,7 +30,7 @@ for (const module of manifest.modules) {
     if (!declaration.customElement || !declaration.tagName) continue;
     const tag = declaration.tagName;
     if (!new RegExp(`<${tag}(?:\\s|>)`).test(stories)) errors.push(`${tag}: no story exercises the public tag`);
-    if (!new RegExp(`<${tag}(?:\\s|>)`).test(tests)) {
+    if (!exercisesTag(tests, tag)) {
       const shared = sharedCoverage[tag];
       const sharedTest = shared && path.join(packageDir, shared.test);
       const sharedSource = sharedTest && fs.existsSync(sharedTest) ? fs.readFileSync(sharedTest, 'utf8') : '';

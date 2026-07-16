@@ -52,6 +52,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "disabled",
               "type": {
                 "text": "boolean"
@@ -395,7 +407,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -588,6 +600,18 @@
                 "text": "HTMLElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -1214,7 +1238,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -1626,6 +1650,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -1963,7 +1999,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -2144,6 +2180,18 @@
               "description": "Renders a smaller, borderless pill presentation instead of the default bordered/chrome-heavy\nchip -- for a consumer that wants an icon-only-adjacent, compact attachment affordance (e.g.\na composer's pending-attachment tray) without hand-tuning several `::part()` custom\nproperties individually. `false` (the default) is visually identical to today.",
               "attribute": "compact",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -2718,7 +2766,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -3039,6 +3087,18 @@
               },
               "default": "['files']",
               "description": "Which attachment capabilities to offer, in display order. A single\nentry renders a plain button; more than one renders a menu."
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -3471,7 +3531,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -3629,6 +3689,18 @@
               "default": "''",
               "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
               "attribute": "alt"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -3977,7 +4049,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -4117,6 +4189,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -4392,7 +4476,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -4528,6 +4612,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -4807,7 +4903,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -4880,6 +4976,18 @@
               "default": "false",
               "attribute": "current",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -5157,7 +5265,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -5266,6 +5374,18 @@
               },
               "default": "''",
               "attribute": "accessible-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -5534,7 +5654,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -5633,6 +5753,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -5919,7 +6051,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -6062,6 +6194,18 @@
                 "text": "HTMLButtonElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -6433,7 +6577,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -6668,6 +6812,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -7039,7 +7195,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -7212,6 +7368,18 @@
               "kind": "field",
               "name": "close",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -7542,7 +7710,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -7728,6 +7896,18 @@
               "description": "Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)\nis a bordered surface -- the common \"small bordered surface with padding\" idiom.",
               "attribute": "appearance",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -8072,7 +8252,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -8183,6 +8363,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -8450,7 +8642,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -8590,6 +8782,18 @@
               },
               "default": "5000",
               "attribute": "autoplay-interval"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -9006,7 +9210,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -9293,6 +9497,18 @@
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -9982,7 +10198,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -10439,6 +10655,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "descriptionId",
               "privacy": "private"
             },
@@ -10867,7 +11095,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -11134,6 +11362,18 @@
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -11823,7 +12063,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -12400,6 +12640,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "descriptionId",
               "privacy": "private"
             },
@@ -12973,7 +13225,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -13371,6 +13623,18 @@
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -14060,7 +14324,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -14645,6 +14909,18 @@
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -15352,7 +15628,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -15888,6 +16164,18 @@
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -16577,7 +16865,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -17059,6 +17347,18 @@
                 "text": "LiteSeries[]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -18012,7 +18312,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -18366,6 +18666,18 @@
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -19055,7 +19367,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -19553,6 +19865,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "descriptionId",
               "privacy": "private",
               "inheritedFrom": {
@@ -20238,7 +20562,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -20736,6 +21060,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "descriptionId",
               "privacy": "private",
               "inheritedFrom": {
@@ -21421,7 +21757,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -21919,6 +22255,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "descriptionId",
               "privacy": "private",
               "inheritedFrom": {
@@ -22604,7 +22952,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -23056,6 +23404,18 @@
               },
               "default": "''",
               "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -23636,7 +23996,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -24140,6 +24500,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -24591,7 +24963,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -24832,6 +25204,18 @@
               },
               "attribute": "checked",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -25393,7 +25777,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -25585,6 +25969,18 @@
               },
               "privacy": "private",
               "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -25891,7 +26287,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -26031,6 +26427,18 @@
               },
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -26390,7 +26798,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -26565,6 +26973,18 @@
                 "text": "() => void | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -27002,7 +27422,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -27259,6 +27679,18 @@
               "description": "Shows a copy-to-clipboard button in the header.",
               "attribute": "copyable",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -27656,7 +28088,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -28094,6 +28526,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -28497,7 +28941,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -28946,6 +29390,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -29280,7 +29736,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -29701,6 +30157,18 @@
               "kind": "field",
               "name": "collectOptions",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -30720,7 +31188,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -31186,6 +31654,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "disabled",
               "type": {
                 "text": "boolean"
@@ -31539,7 +32019,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -31675,6 +32155,18 @@
           "description": "Fetches a vCard document and renders one accessible card per contact.",
           "name": "LyraContactViewer",
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -32046,7 +32538,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -32223,6 +32715,18 @@
               "privacy": "private",
               "description": "`usedTotal` and `total`, both clamped the same way ratios() clamps the\nvisual fill -- a segments array that sums past total must not report an\nimpossible \"160 of 100 used\"/aria-valuenow > aria-valuemax while the\nbar/ring visibly caps at 100%. Shared by `summary` and `willUpdate`'s\naria-value* trio so the announced text and the queryable numeric value\ncan never diverge.",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -32589,7 +33093,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -32762,6 +33266,18 @@
               "default": "''",
               "description": "Forwarded to the in-place rename `<input>`'s own `autocapitalize`. Empty string omits the\nattribute (browser default).",
               "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -33191,7 +33707,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -33396,6 +33912,18 @@
                 "text": "ReturnType<typeof setTimeout> | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -33736,7 +34264,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -33934,6 +34462,18 @@
           "description": "Fetches CSV text, parses quoted fields with PapaParse, and virtualizes its rows.",
           "name": "LyraCsvViewer",
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -34298,7 +34838,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -34474,6 +35014,18 @@
           "description": "Fetches delimited text and renders a typed, accessible data table.",
           "name": "LyraDatasetViewer",
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -34827,7 +35379,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -35554,6 +36106,18 @@
               "default": "''",
               "description": "Accessible label for the clear button. Override for a non-English `locale`.",
               "attribute": "clear-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -36348,7 +36912,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -36792,6 +37356,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "disableFuture",
@@ -37662,7 +38238,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -37998,6 +38574,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "disabled",
@@ -38346,7 +38934,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -38420,6 +39008,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -38717,7 +39317,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -38822,6 +39422,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "disabled",
@@ -39142,7 +39754,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -39343,6 +39955,18 @@
               "default": "false",
               "description": "Renders a built-in close (X) button in the header row (creating one,\nwith no heading text, if `heading` is unset), wired to the same\n`close()` path Escape/backdrop-dismiss already use, with reason\n`'close-button'`.",
               "attribute": "closable"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -39765,7 +40389,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -39968,6 +40592,18 @@
               "default": "false",
               "description": "Shows a copy-to-clipboard button for the full unified-diff text. `false` (the default)\nrenders no button.",
               "attribute": "copyable"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -40277,7 +40913,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -40371,6 +41007,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -40648,7 +41296,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -40796,6 +41444,18 @@
               "name": "contentId",
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -41260,7 +41920,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -41503,6 +42163,18 @@
               },
               "description": "Alternative text for an image preview. When omitted, `filename` (or a\nlocalized generic fallback) is used. Set this explicitly to an empty\nstring when the preview image is decorative.",
               "attribute": "alt"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -42009,7 +42681,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -42172,6 +42844,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -42578,7 +43262,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -42956,6 +43640,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -43298,7 +43994,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -43491,6 +44187,18 @@
               "inheritedFrom": {
                 "name": "LyraDialog",
                 "module": "src/components/dialog/dialog.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -43996,7 +44704,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -44346,6 +45054,18 @@
                 "text": "EpubBook | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -44699,7 +45419,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -45009,6 +45729,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -45398,7 +46130,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -45568,6 +46300,18 @@
               "description": "Compact rendering for use inside a constrained space (e.g. a widget body\nor table cell) rather than as a full-page state: left-aligned, tighter\npadding, and a lighter heading weight instead of the centered/spacious\ndefault.",
               "attribute": "compact",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -45936,7 +46680,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -46197,6 +46941,18 @@
               },
               "default": "[]",
               "description": "Column allow-list (and CSV header labels) for both export formats. Left\nat its default empty array, both formats fall back to the union of the\nrows' own keys instead (see `effectiveColumns()`), rather than CSV\ndegrading to a blank file while only JSON had a fallback."
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -46766,7 +47522,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -46932,6 +47688,18 @@
               "description": "Whether the badge is decorative and hidden from assistive technology.",
               "attribute": "decorative",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -47241,7 +48009,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -47545,6 +48313,18 @@
                 "text": "HTMLElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -48063,7 +48843,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -48294,6 +49074,18 @@
               },
               "description": "ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`.",
               "attribute": "country"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -48658,7 +49450,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -48923,6 +49715,18 @@
               },
               "default": "1",
               "attribute": "decimals"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -49209,7 +50013,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -49337,6 +50141,18 @@
               },
               "default": "'numeric'",
               "attribute": "day"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -49631,7 +50447,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -49764,6 +50580,18 @@
               },
               "default": "''",
               "attribute": "currency"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -50066,7 +50894,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -50185,6 +51013,18 @@
               },
               "default": "''",
               "attribute": "date"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -50508,7 +51348,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -50650,6 +51490,18 @@
               },
               "privacy": "private",
               "default": "null"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -51039,7 +51891,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -51184,6 +52036,18 @@
               "description": "Whether generation is currently in progress. The elapsed-time ticker\nruns only while this is `true` (see the class doc).",
               "attribute": "active",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -51548,7 +52412,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -51868,6 +52732,18 @@
               },
               "privacy": "private",
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -52592,7 +53468,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -53243,6 +54119,18 @@
                 "text": "CalendarDay[]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -54516,7 +55404,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -55022,6 +55910,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -55355,7 +56255,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -55513,6 +56413,18 @@
               },
               "default": "''",
               "attribute": "before-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -55825,7 +56737,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -56040,6 +56952,18 @@
               },
               "default": "''",
               "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -56546,7 +57470,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -56859,6 +57783,18 @@
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/input/input.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -57482,7 +58418,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -57973,6 +58909,18 @@
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/input/input.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -58596,7 +59544,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -59050,6 +59998,18 @@
           "members": [
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "disabled",
               "type": {
                 "text": "boolean"
@@ -59368,7 +60328,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -59524,6 +60484,18 @@
                 "text": "unknown"
               },
               "description": "The value to render. Any JSON-serializable value, plus `undefined`."
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -59984,7 +60956,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -60156,6 +61128,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -60447,7 +61431,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -60622,6 +61606,18 @@
               "privacy": "private",
               "readonly": true,
               "default": "new Announcer({ throttleMs: this.throttleMs, onFlush: (text) => this.write(text), })"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -60987,7 +61983,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -61225,6 +62221,18 @@
                 "text": "HTMLElement | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -61599,7 +62607,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -61847,6 +62855,18 @@
               "default": "''",
               "description": "The Markdown source to render.",
               "attribute": "content"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -62264,7 +63284,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -62489,6 +63509,18 @@
               "privacy": "private",
               "description": "Per-instance override for `--lyra-media-card-max-height`, applied\ninline on `[part=\"base\"]` -- the only mechanism that reliably wins\nover the `:host{}`-declared default from outside the shadow root.",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -62910,7 +63942,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -63186,6 +64218,18 @@
                 "text": "() => void | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -63693,7 +64737,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -63963,6 +65007,18 @@
               "inheritedFrom": {
                 "name": "LyraMenuItem",
                 "module": "src/components/menu/menu-item.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -64312,7 +65368,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -64434,6 +65490,18 @@
               "description": "Whether a `type=\"checkbox\"` item is checked. Meaningless (ignored) for `type=\"normal\"`.",
               "attribute": "checked",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -64758,7 +65826,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -64955,6 +66023,18 @@
               "default": "false",
               "description": "Extends the Escape-closes-and-refocuses-trigger behavior to keydown\nevents originating from slotted non-item content within `[part=\"list\"]`\n(e.g. a date input or a custom section slotted alongside\n`<lyra-menu-item>`s), not just from a real `<lyra-menu-item>`. Default\n`false` leaves Escape from slotted non-item content with full default\nkeyboard behavior, matching every existing consumer. Arrow/Home/End/\nEnter/Space stay scoped to real `<lyra-menu-item>` targets regardless of\nthis property — only Escape is affected.",
               "attribute": "close-on-escape-anywhere"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -65443,7 +66523,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -65826,6 +66906,18 @@
               "kind": "field",
               "name": "controlId",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -66679,7 +67771,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -67000,6 +68092,18 @@
                 "text": "LyraModelCatalog | undefined"
               },
               "description": "The model list, passed straight through to the internal `lyra-model-select`."
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -67402,7 +68506,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -67584,6 +68688,18 @@
               },
               "default": "true",
               "attribute": "child-list"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -67909,7 +69025,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -68069,6 +69185,18 @@
               "inheritedFrom": {
                 "name": "LyraPopover",
                 "module": "src/components/overlay/popover.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
               }
             },
             {
@@ -68487,7 +69615,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -68719,6 +69847,18 @@
                 "text": "() => void | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -69084,7 +70224,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -69263,6 +70403,18 @@
               },
               "default": "''",
               "attribute": "content"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -69625,7 +70777,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -69870,6 +71022,18 @@
               },
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -70442,7 +71606,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -70756,6 +71920,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -71282,7 +72458,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -71607,6 +72783,18 @@
               "default": "''",
               "description": "Country selected when no explicit `country` has been set.",
               "attribute": "default-country"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -72306,7 +73494,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -72711,6 +73899,18 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -73163,7 +74363,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -73385,6 +74585,18 @@
               "description": "Whether the poll cycle is running at all. `true` (the default).",
               "attribute": "active",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -73769,7 +74981,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -73995,6 +75207,18 @@
               },
               "privacy": "private",
               "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -74379,7 +75603,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -74535,6 +75759,18 @@
               },
               "default": "''",
               "attribute": "accessible-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -74859,7 +76095,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -75012,6 +76248,18 @@
               },
               "default": "''",
               "attribute": "accessible-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -75317,7 +76565,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -75466,6 +76714,18 @@
               },
               "default": "''",
               "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -75837,7 +77097,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -76069,6 +77329,18 @@
               },
               "attribute": "checked",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -76487,7 +77759,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -76657,6 +77929,18 @@
               },
               "default": "''",
               "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -76984,7 +78268,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -77150,6 +78434,18 @@
               "default": "'content-box'",
               "attribute": "box",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -77456,7 +78752,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -77599,6 +78895,18 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -78110,7 +79418,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -78312,6 +79620,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -78603,7 +79923,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -78705,6 +80025,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -79006,7 +80338,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -79162,6 +80494,18 @@
               "default": "false",
               "attribute": "controls",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -79499,7 +80843,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -79672,6 +81016,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -79991,7 +81347,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -80286,6 +81642,18 @@
               "kind": "field",
               "name": "collectOptions",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -81013,7 +82381,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -81289,6 +82657,18 @@
               "description": "Whether this placeholder exposes a localized status announcement. Disable for decorative\nmembers of a group whose loading state is announced once by a parent or sibling.",
               "attribute": "announce",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -81603,7 +82983,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -81784,6 +83164,18 @@
               "name": "changedPointers",
               "privacy": "private",
               "default": "new Set<number>()"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -82318,7 +83710,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -82502,6 +83894,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -82878,7 +84282,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -83019,6 +84423,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -83351,7 +84767,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -83480,6 +84896,18 @@
               "default": "null",
               "description": "Accessible name forwarded to the internal SVG.",
               "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -83806,7 +85234,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -83950,6 +85378,18 @@
               },
               "default": "''",
               "attribute": "accessible-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -84228,7 +85668,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -84421,6 +85861,18 @@
               },
               "privacy": "private",
               "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -85136,7 +86588,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -85397,6 +86849,18 @@
           "description": "Fetches and renders `.xlsx` and legacy `.xls` workbooks with virtualized rows and sheet tabs.",
           "name": "LyraSpreadsheetViewer",
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -85787,7 +87251,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -85999,6 +87463,18 @@
               "description": "Tighter padding for constrained spaces — same convention as `lyra-empty`'s `compact`.",
               "attribute": "compact",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -86449,7 +87925,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -86643,6 +88119,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -86953,7 +88441,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -87093,6 +88581,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -87515,7 +89015,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -87655,6 +89155,18 @@
               "default": "''",
               "description": "The full current text so far -- always the complete string, never a\ndelta to append.",
               "attribute": "content"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -87979,7 +89491,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -88178,6 +89690,18 @@
           "description": "Fetches and safely renders an inline SVG document.",
           "name": "LyraSvgViewer",
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -88513,7 +90037,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -88738,6 +90262,18 @@
               },
               "attribute": "checked",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -89261,7 +90797,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -89587,6 +91123,18 @@
               "description": "Whether a `priority` column is *actually* hidden right now by\ntable.styles.ts's `@container` rules, or `showAllColumns` force-visible\nmode is currently active — the same computed value that gates whether\n`[part='reveal-columns-button']` renders at all (see `render()`), kept\nin sync by `recomputeColumnsHidden()`. Computed/read-only by\nconvention: consumers may read it (and listen for\n`lyra-columns-hidden-change`), but setting it directly has no lasting\neffect, since it's recomputed on the very next render or\n`[part='base']` resize.",
               "attribute": "columns-hidden",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -90563,7 +92111,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -90960,6 +92508,18 @@
               "kind": "field",
               "name": "baseId",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -91382,7 +92942,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -91589,6 +93149,18 @@
               "default": "''",
               "description": "Native editing-assistance attributes forwarded to the wrapped textarea. Empty strings omit\nthe corresponding attribute and retain the browser default.",
               "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -92140,7 +93712,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -92544,6 +94116,18 @@
             },
             {
               "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "durationDisplay",
               "type": {
                 "text": "{ text: string; pending: boolean } | null"
@@ -92891,7 +94475,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -93062,6 +94646,18 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -93604,7 +95200,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -93838,6 +95434,18 @@
               },
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -94268,7 +95876,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -94436,6 +96044,18 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -94739,7 +96359,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -94946,6 +96566,18 @@
               },
               "default": "'off'",
               "attribute": "autocomplete"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -95404,7 +97036,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -95685,6 +97317,18 @@
                 "text": "() => void | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -96117,7 +97761,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -96387,6 +98031,18 @@
               "kind": "field",
               "name": "baseId",
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -97148,7 +98804,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -97412,6 +99068,18 @@
               "default": "null",
               "description": "Accessible name forwarded to the internal element that owns the dialog role. When omitted,\nthe visible tool name labels the dialog.",
               "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -97840,7 +99508,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -98131,6 +99799,18 @@
               "description": "Shows a copy-to-clipboard affordance alongside the fallback view (both `\"json\"` and `\"text\"` kinds) — forwarded to `<lyra-json-viewer>`'s own `copyable`, or renders a `<lyra-copy-button>` next to the text fallback.",
               "attribute": "copyable",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -98518,7 +100198,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -98758,6 +100438,18 @@
               "privacy": "private",
               "readonly": true,
               "default": "new Map<string, string>()"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -99318,7 +101010,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -99527,6 +101219,18 @@
               },
               "default": "null",
               "description": "The id of the tree's roving-tabindex-focused item, pushed down from `<lyra-tree>`."
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -99882,7 +101586,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -100023,6 +101727,18 @@
                 "text": "TreeItem[]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -100422,7 +102138,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -100614,6 +102330,18 @@
               "privacy": "private",
               "description": "The accessible name actually used, falling back to the localized\n`'thinking'` message (`\"Thinking…\"` in English) when `label` is left at\nits untouched default or set to an empty/whitespace-only string --\notherwise both the `aria-label` and the sr-only text node would go\nblank, leaving this purely-decorative component with no accessible name\nat all. A caller-customized `label` is used verbatim (not a translation\nconcern), same convention as `<lyra-date-picker>`'s `previousLabel`.",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -100924,7 +102652,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -101068,6 +102796,18 @@
               },
               "privacy": "private",
               "default": "0"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -101766,7 +103506,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -102075,6 +103815,18 @@
               "description": "Tighter header/body padding for constrained spaces.",
               "attribute": "compact",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -102525,7 +104277,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -102848,6 +104600,18 @@
               },
               "privacy": "private",
               "default": "{ placed: [], skipped: [], width: 0, height: 0 }"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -103333,7 +105097,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -103509,6 +105273,18 @@
               },
               "default": "''",
               "attribute": "alt"
+            },
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
             },
             {
               "kind": "field",
@@ -103860,7 +105636,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes.",
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped.",
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
@@ -104021,6 +105797,14 @@
           "description": "Shared base for every Lyra component. Supplies the design-token layer\n(`--lyra-theme-*` theme-input properties with hardcoded `--lyra-*` fallbacks).\nRTL is handled by components using CSS logical properties rather than a forced `dir`.",
           "name": "LyraElement",
           "members": [
+            {
+              "kind": "field",
+              "name": "deferredLoad",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private"
+            },
             {
               "kind": "field",
               "name": "effectiveDirection",
@@ -104360,7 +106144,7 @@
                   }
                 }
               ],
-              "description": "Runs one coalesced load callback after the current update completes."
+              "description": "Runs one coalesced load callback after the current update completes.\nLit still runs the update cycle while detached, so a load scheduled then is\nheld and replayed on reconnect rather than dropped."
             }
           ],
           "attributes": [
