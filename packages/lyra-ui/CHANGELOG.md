@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.4.0
+
+### Minor Changes
+
+- d0ee919: Add command-palette, checkbox-group, token-input, icon/icon-button, code-editor, data-grid, and
+  calendar components. Harden file-input with clipboard paste, native directory selection, and
+  dropped-folder rejection reporting.
+- 1293f48: Hardening pass across ~70 components: document the button/spinner interaction custom-property APIs
+  (`--lyra-button-width`, hover-brightness, active-scale, spinner-duration) and add missing cssparts;
+  `lyra-breadcrumb` now reads its accessible-name override from the standard `aria-label` attribute
+  (was `accessible-label`); phone-input preserves the caret through adapter reformats and ships a
+  libphonenumber-js-backed adapter path with a clearer incomplete-number message; prune unused
+  localization keys and size/line-height tokens; broaden test coverage across the library.
+
 ## Unreleased
 
 ### Minor Changes
