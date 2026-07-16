@@ -107,8 +107,8 @@ export const styles = css`
        Exactly one of these two is non-zero at a time, set together by <lyra-timeline>'s
        :host / :host([orientation='horizontal']) rules; both default to 0 when this item is used
        standalone (no <lyra-timeline> ancestor). */
-    padding-block-end: var(--lyra-timeline-item-gap-block-end, 0px);
-    padding-inline-end: var(--lyra-timeline-item-gap-inline-end, 0px);
+    padding-block-end: var(--lyra-timeline-item-gap-block-end, 0);
+    padding-inline-end: var(--lyra-timeline-item-gap-inline-end, 0);
   }
 
   [part='header'] {

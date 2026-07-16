@@ -62,6 +62,185 @@
       ]
     },
     {
+      "name": "lyra-animated-image",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-animated-image>` -- displays an animated GIF/APNG/WebP with a\nplay/pause control, defaulting to a frozen first frame both at rest and\nautomatically under `prefers-reduced-motion: reduce` (unless the page\nauthor explicitly opts back in via `respect-reduced-motion=\"false\"`), so\nmotion is never forced on a user who asked for less of it.\n\n**Freeze-frame mechanism.** The live `<img>`'s `load` event handler\nsynchronously draws the just-loaded image to `[part=\"canvas\"]` (a\nDPR-aware `drawImage()`, the same pattern `<lyra-heatmap>` uses for its own\ncanvas sizing) before any animation frames have had a chance to advance.\nThat captured frame is what pausing always reverts to -- it is not\nre-captured on every pause, only once per successful `src` load. Both\n`[part=\"image\"]` and `[part=\"canvas\"]` stay mounted at all times (never\n`display: none`/removed) so the browser's native decode loop keeps running\neven while visually covered by the frozen canvas; only opacity and\n`aria-hidden` swap between them, driven by the effective `playing` state.\n\n**`play` vs. `playing`.** `play` is the caller's intent (settable,\nreflects nothing on its own). `playing` is the read-only, reflected effect\nafter reduced-motion arbitration: `play && !(respectReducedMotion &&\n<OS prefers-reduced-motion: reduce>)`. A page can set `.play = true` while\nreduced motion still keeps the visual frozen -- `lyra-play`/`lyra-pause`\nonly fire on a real transition of the resolved `playing` value, never on a\n`play` assignment that reduced motion blocks from taking visible effect.\n\n**Safety.** `src` is re-validated through `safeMediaSrc()` (the same\nallowlist `<lyra-media-card>` uses) before it is ever assigned to the real\n`<img src>`. An empty `src` renders no `src` attribute and is not an\nerror; a non-empty `src` that fails the check is treated exactly like a\nnative image decode failure -- `lyra-error` fires and no request is ever\nattempted.\n\n**Decorative-only is not supported.** An explicit `alt=\"\"` still falls\nback to the localized `animatedImageDefaultAlt` string rather than staying\nempty/presentational -- the same deliberate tradeoff `<lyra-media-card>`'s\n`imgAlt` getter already makes for its own `alt`/`filename` fallback chain.\n\nDeliberately no label/hint/error chrome -- this is not a form-associated\ncontrol (nothing resembling a value the user submits).\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `pause-icon` | Custom icon shown on `[part=\"play-button\"]` while playing. Defaults to a pause glyph. |\n| `play-icon` | Custom icon shown on `[part=\"play-button\"]` while frozen/paused. Defaults to a play glyph. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | Root wrapper; positioning context for `control-box`. |\n| `canvas` | The frozen-frame `<canvas>`, shown in place of `image` while not playing. |\n| `control-box` | The container that surrounds and backgrounds the play/pause button. Only rendered once loaded and error-free. |\n| `image` | The live `<img>`. |\n| `play-button` | The `<button type=\"button\">` inside `control-box` that toggles `play`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-animated-image-control-box-size` — The size of `control-box`. Defaults to `var(--lyra-icon-button-size)`.\n- `--lyra-animated-image-icon-size` — The size of the play/pause icons. Defaults to `calc(var(--lyra-icon-button-size) * 0.35)`.\n- `--lyra-animated-image-max-height` — Caps the rendered media's block-size. Defaults to `var(--lyra-size-20rem)`."
+      },
+      "attributes": [
+        {
+          "name": "alt",
+          "description": {
+            "kind": "markdown",
+            "value": "A description of the image used by assistive devices. Falls back to\nthe localized `animatedImageDefaultAlt` when empty -- see the class doc.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible-name override for `[part=\"play-button\"]`. Maps to the\nhost's `aria-label` attribute and, once set, wins verbatim over the\ncomputed per-state Play/Pause label in both play and pause states --\nit does not itself vary by state. Never touches `[part=\"image\"]`'s\n`alt` / `[part=\"canvas\"]`'s `aria-label`, which stay independently\nsourced from `alt`. A consumer wanting state-sensitive custom wording\nwithout losing the Play/Pause distinction should override the\n`playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings\ninstead.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "play",
+          "description": {
+            "kind": "markdown",
+            "value": "Requests animated playback. Distinct from the read-only `playing`\neffect -- see the class doc's \"`play` vs. `playing`\" section.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "respect-reduced-motion",
+          "description": {
+            "kind": "markdown",
+            "value": "When `true` (default) and the platform reports\n`prefers-reduced-motion: reduce`, playback stays frozen and\n`[part=\"play-button\"]` is disabled regardless of `play`. Set to `false`\nto let `play` take effect even under a reduced-motion preference -- a\ndeliberate, page-author-level override.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "src",
+          "description": {
+            "kind": "markdown",
+            "value": "The path to the image to load. Always re-validated against a\nsafe-scheme allowlist before use -- see the class doc.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-animation",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-animation>` declaratively animates its single slotted child through the\nnative Web Animations API: a small curated preset catalog (`name`) or fully\ncustom `keyframes`, explicit WAAPI timing controls, an optional\n`playOnVisible` trigger, and a `lyra-start`/`lyra-finish`/`lyra-cancel` event\ncontract.\n\n`keyframes`, when set, always wins over `name`. The `iterations` default is\n`Infinity` (mirrors the upstream Web Awesome/Shoelace animation contract\nverbatim) -- a named preset plays forever unless the consumer sets\n`iterations=\"1\"`.\n\n`direction` is the Web Animations API's `PlaybackDirection`\n(`'normal' | 'reverse' | 'alternate' | 'alternate-reverse'`) and is entirely\nunrelated to text direction. Only the `slide-in-start`/`slide-in-end`/\n`slide-out-start`/`slide-out-end` presets read the inherited text direction\n(`effectiveDirection`) to resolve which physical edge \"start\"/\"end\" means,\nand they do so fresh every time the animation is (re)built -- an animation\nalready mid-flight is not retroactively re-mirrored if an ancestor `dir`\nflips while it plays; the next rebuild picks up the change.\n\n`respectReducedMotion` (default `true`) caps playback to one iteration and\ncalls `finish()` immediately instead of playing, whenever the OS/browser\nreports `prefers-reduced-motion: reduce` -- the target snaps straight to\nits resolved end state, and `lyra-start`/`lyra-finish` still fire in order\nso a consumer sequencing further UI off those events keeps working even\nthough nothing visibly interpolated. Set `respectReducedMotion=\"false\"`\nonly for genuine user-triggered feedback (e.g. a drag-confirm snap-back)\nwhere a silent jump would be more confusing than a fast real animation --\nambient/decorative animation should always leave this at its default.\n\n`timingPreset` (default `'custom'`) optionally derives `duration`/`easing`\nfrom the shared `--lyra-transition-fast`/`-base`/`-ambient` tokens instead\nof the raw `duration`/`easing` property values, so an app's global motion\nretiming reaches this component's animations too.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The element to animate. A second slotted element is accepted without error but ignored. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-animation-slide-distance` (default: `100%`) — Travel distance for the slide-in/slide-out/slide-in-up/slide-in-down presets.\n- `--lyra-animation-zoom-scale` (default: `0.5`) — Starting/ending scale factor for the zoom-in/zoom-out presets.\n- `--lyra-animation-bounce-height` (default: `25%`) — Peak lift height of the bounce preset.\n- `--lyra-animation-shake-distance` (default: `4%`) — Horizontal travel of the shake preset."
+      },
+      "attributes": [
+        {
+          "name": "delay",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `0`"
+          }
+        },
+        {
+          "name": "direction",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `PlaybackDirection`  \nDefault: `'normal'`"
+          }
+        },
+        {
+          "name": "duration",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `1000`"
+          }
+        },
+        {
+          "name": "easing",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `'linear'`"
+          }
+        },
+        {
+          "name": "end-delay",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `0`"
+          }
+        },
+        {
+          "name": "fill",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `FillMode`  \nDefault: `'auto'`"
+          }
+        },
+        {
+          "name": "iteration-start",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `0`"
+          }
+        },
+        {
+          "name": "iterations",
+          "description": {
+            "kind": "markdown",
+            "value": "Default: `Infinity`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `LyraAnimationPreset`  \nDefault: `'none'`"
+          }
+        },
+        {
+          "name": "play",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "play-on-visible",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "play-on-visible-repeat",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "playback-rate",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `number`  \nDefault: `1`"
+          }
+        },
+        {
+          "name": "respect-reduced-motion",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "root-margin",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `'0px'`"
+          }
+        },
+        {
+          "name": "timing-preset",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `LyraAnimationTimingPreset`  \nDefault: `'custom'`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-app-rail",
       "description": {
         "kind": "markdown",
@@ -490,6 +669,57 @@
           "description": {
             "kind": "markdown",
             "value": "Recolors the initials-fallback background/text, mirroring `lyra-chip`'s `tone` vocabulary.\n`'neutral'` (the default) reads as a plain, unaccented circle.\n\nType: `AvatarTone`  \nDefault: `'neutral'`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-avatar-group",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-avatar-group>` — stacks a set of slotted `<lyra-avatar>` children into a single\noverlapping row (negative-margin overlap, ring border so each circle reads as distinct) and,\npast a configurable `max` count, collapses the excess into a \"+N\" overflow badge. First-party\ninvention (no Web Awesome equivalent), composed over `<lyra-avatar>` rather than reimplementing\nit — plain light-DOM slotted content is the group's items, the same shape `<lyra-split>`'s\npanels / `<lyra-source-list>`'s cards / `<lyra-chip-group>`'s chips already use, not a\n`.items` array prop.\n\n**`size`/`shape`/`tone` do not cascade onto slotted avatars.** They drive only this\ncomponent's own ring, overlap amount, and the overflow badge's rendering — they cannot resize\nor reshape the `<lyra-avatar>` children themselves, since each avatar's own `--lyra-avatar-size`\nlives inside *its own* shadow-scoped `:host` block and unconditionally overrides anything of\nthe same custom-property name inherited from an ancestor. This mirrors every other group\ncomponent in this library (`button-group`, `checkbox-group`, `radio`): none of them cascade a\nsize/variant prop onto their children either. The consumer is responsible for setting a\nmatching `size`/`shape` on both the group and each `<lyra-avatar>` child for a visually coherent\nstack.\n\n**Deliberate divergence from `<lyra-chip-group>`'s overflow pattern.** Chip-group's overflow\nindicator is a disclosure toggle that reveals the excess children in place (`aria-expanded`,\na \"Show less\" relabel). This component's overflow badge does not do that — unstacking N more\ncircles back into the row would defeat the entire point of a compact identity stack. Instead,\n`lyra-overflow-click` is a pure notification hook: the component keeps rendering the same\ncollapsed stack + badge regardless of whether anyone listens, and a consumer typically wires\nthe event to open their own popover/dialog/tooltip listing the hidden members (out of scope for\nthis component — no popover dependency is introduced here). There is no `expanded` state, no\n`aria-expanded`, and the badge never changes its own text/label on click.\n\n**No roving-tabindex / arrow-key composite-widget behavior applies here, and this is\nintentional, not an oversight.** Avatars are non-interactive per `<lyra-avatar>`'s own\nestablished contract (purely presentational, no built-in interactivity), so this is not a\nlistbox/toolbar/grid needing `ArrowLeft`/`ArrowRight` roving focus — the overflow badge is the\nonly interactive element, and as a native `<button>` it's automatically part of the normal Tab\nsequence with no custom keyboard handling required.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lyra-avatar>` elements (or any content, though the avatar pairing is the intended usage). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer inline-flex container (holds the slot and the overflow badge). |\n| `overflow-badge` | The \"+N\" button. Only rendered while `max` is actively causing an overflow. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-avatar-group-avatar-size` (default: `var(--lyra-size-2rem)`) — Sizes the overflow badge to match the slotted avatars. Does not resize the avatars themselves (see class doc) — set a matching `size` on each `<lyra-avatar>` child directly for that.\n- `--lyra-avatar-group-overlap` (default: `var(--lyra-size-neg-6px)`) — Horizontal overlap between consecutive avatars (a logical `margin-inline-start`, so it auto-mirrors under `dir=\"rtl\"`). Setting this to `0` or a positive length is a supported escape hatch that turns the stack into normal, non-overlapping spacing.\n- `--lyra-avatar-group-ring-color` (default: `var(--lyra-color-surface)`) — The cutout-style ring drawn around every avatar and the overflow badge.\n- `--lyra-avatar-group-ring-width` (default: `var(--lyra-border-width-medium)`) — Ring thickness.\n- `--lyra-avatar-group-badge-bg` (default: `var(--lyra-color-border)`) — Overflow badge background. Tone-driven; see `tone`.\n- `--lyra-avatar-group-badge-color` (default: `var(--lyra-color-text)`) — Overflow badge text color. Tone-driven; see `tone`."
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "The group's own accessible name (`role=\"group\"`'s `aria-label`). A host-level `aria-label`\nwins if both are set. Unset (the default) renders no `aria-label` at all — a screen reader\nannounces \"group\" with no name, then reads each avatar's own accessible name in turn.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "max",
+          "description": {
+            "kind": "markdown",
+            "value": "Maximum number of assigned children shown before the rest collapse behind a \"+N\" badge.\nFlattened slot-forwarded children count the same as direct light-DOM children. Unset (the\ndefault) means no limit — every child is always shown.\n\nType: `number | undefined`"
+          }
+        },
+        {
+          "name": "shape",
+          "description": {
+            "kind": "markdown",
+            "value": "`'circle'` (the default) or `'square'`, reused verbatim from `<lyra-avatar>`'s own\n`AvatarShape` union. Drives the overflow badge's shape — does not reshape slotted avatars\n(see class doc); each avatar's own ring already adapts to that avatar's own `shape`\nattribute independently.\n\nType: `AvatarShape`  \nDefault: `'circle'`"
+          }
+        },
+        {
+          "name": "size",
+          "description": {
+            "kind": "markdown",
+            "value": "Visual size, reused verbatim from `<lyra-avatar>`'s own `AvatarSize` union. Drives the\noverflow badge's size and the overlap amount — does not resize slotted avatars (see class\ndoc).\n\nType: `AvatarSize`  \nDefault: `'md'`"
+          }
+        },
+        {
+          "name": "tone",
+          "description": {
+            "kind": "markdown",
+            "value": "Recolors the overflow badge, reused verbatim from `<lyra-avatar>`'s own `AvatarTone` union.\n`'neutral'` (the default) reads as a plain, unaccented badge.\n\nType: `AvatarTone`  \nDefault: `'neutral'`"
           }
         }
       ]
@@ -4979,6 +5209,185 @@
       ]
     },
     {
+      "name": "lyra-known-date",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-known-date>` — a date a user already knows (a birthdate, a passport\nissue/expiry date) collected as three plain, labeled day/month/year number\nfields in the locale's natural field order, rather than a calendar popup.\nForm-associated; the submitted form value is always canonical ISO 8601\n(`YYYY-MM-DD`), or `''` while any field is blank or the combination isn't a\nreal calendar date. Mirrors Web Awesome's `wa-known-date` API surface under\n`lyra-`, with `appearance`/`pill`/`form` dropped and `size` normalized to\nthis library's own `xs`–`xl` scale, matching every other lyra form control\nmirrored from a Web Awesome counterpart.\n\nA field's own `<input>` shows exactly what was typed (never reformatted or\nreverted) -- only the composite `value` is zero-padded. Auto-advance\n(typing a field's last digit moves focus to the next field) and\nbackspace-to-previous-field-when-empty are this library's own additions on\ntop of Web Awesome's bare typing model, which documents no auto-advance;\ndon't remove them to \"restore\" WA parity. Arrow-key field-to-field\nnavigation at a field's text boundary is RTL-aware: the *physical* key that\nmeans \"toward the next field\" flips under an inherited `dir=\"rtl\"`, while\nthe field order itself (locale-derived) does not. Non-digit keystrokes are\nrejected before they reach a field's state -- no locale-specific numeral\ninput (e.g. Arabic-Indic digits) is supported.\n\nNo resizable text-editing surface exists (three fixed-width digit fields),\nso resize forwarding doesn't apply, and `spellcheck`/`autocapitalize`/\n`autocorrect`/`wrap` don't meaningfully apply to 2–4-digit numeric fields\neither -- the same carve-out `lyra-input[type=\"number\"]` already documents.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content, alongside the `errorText` attribute. |\n| `hint` | Custom hint content, alongside the `hint` attribute. |\n| `label` | Custom label/legend content, alongside the `label` attribute. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | The validation message. |\n| `field` | Each field block (label + input), repeated three times; distinguished by `data-field=\"day\"\\|\"month\"\\|\"year\"`. |\n| `field-input` | The native per-field `<input type=\"text\" inputmode=\"numeric\">`, repeated three times; distinguished by `data-field=\"day\"\\|\"month\"\\|\"year\"`. |\n| `field-label` | The small visible per-field text label (\"Day\"/\"Month\"/\"Year\"). |\n| `fields` | The row wrapping the three field blocks. |\n| `fieldset` | The `<fieldset>` grouping the three fields. |\n| `form-control` | The outer wrapper around legend, fieldset, hint, and error. |\n| `hint` | The hint message. |\n| `legend` | The `<legend>` element. |"
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Overrides the fieldset's computed accessible name (normally the `<legend>`'s content). Applied\nas `aria-label` on the `part=\"fieldset\"` element, which owns the role -- not just the host.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "autocomplete",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded to the internal day field as-is when non-empty. The special value `'bday'`\nexpands into `'bday-day'`/`'bday-month'`/`'bday-year'` split across the three fields; any\nother non-empty value is forwarded verbatim to all three fields unmodified.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "day-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Visible + accessible per-field label for the day field. Routes through\n`this.localize('knownDateDay', ...)`.\n\nType: `string`  \nDefault: `'Day'`"
+          }
+        },
+        {
+          "name": "error-text",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "hint",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "BCP-47 override for field order and field-label localization sampling. Empty string falls\nback to `this.effectiveLocale` (inherited `lang`/ancestor), exactly like `lyra-date-input`'s\n`locale`. Redeclared (non-reflecting) over `LyraElement`'s own reflecting `locale` for the\nsame reason `lyra-date-input` does.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "max",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "min",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "month-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Visible + accessible per-field label for the month field. Routes through\n`this.localize('knownDateMonth', ...)`.\n\nType: `string`  \nDefault: `'Month'`"
+          }
+        },
+        {
+          "name": "readonly",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "size",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `LyraKnownDateSize`  \nDefault: `'m'`"
+          }
+        },
+        {
+          "name": "year-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Visible + accessible per-field label for the year field. Routes through\n`this.localize('knownDateYear', ...)`.\n\nType: `string`  \nDefault: `'Year'`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-lightbox",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-lightbox>` — a full-screen, modal, click-to-enlarge image viewer with prev/next\nnavigation across an ordered set of images. It has no Web Awesome/Shoelace counterpart, so\nits API follows this library's own conventions.\n\n**Not a form-associated control** -- no `label`/`hint`/`errorText` chrome; its\n`accessibleLabel` only overrides the dialog's own accessible name. The native-wrapper/\nediting-assistance-passthrough guarantees don't apply either (no internal `<input>`/\n`<textarea>`).\n\nThis renders its own dialog panel rather than nesting a `<lyra-dialog>` in its shadow\ntemplate -- shared overlay infrastructure (`src/internal/overlay-manager.ts`) coordinates\nstacking, focus trapping, Escape/backdrop dismissal, scroll lock, and focus return with every\nother overlay in the same document, the same way `<lyra-dialog>`/`<lyra-command-palette>`/\n`<lyra-widget>` (fullscreen mode)/`<lyra-app-rail>` (mobile mode)/`<lyra-responsive-panel>`\nalready do. Per-image pan/zoom is delegated to one stable embedded `<lyra-zoomable-frame>`\ninstance (its `src`/`alt` swapped per navigation) rather than reimplementing pan/zoom --\ncomposing a small sibling leaf component directly in the render template, the same way\n`<lyra-tool-select-dialog>` composes `<lyra-checkbox>`/`<lyra-switch>`.\n\nZoom/pan reset on navigation is imperative (`LyraZoomableFrame.resetView()`, called from\n`updated()`) rather than a Lit property binding -- a binding whose value never changes across\nrenders (e.g. `.zoom=${1}`) would only apply once, silently failing to reset on the *second*\nnavigation once the user has interactively zoomed. Recreating the frame element on every\nnavigation (e.g. via Lit's `keyed()` directive) was considered and rejected: it would also\nreset zoom/pan, but destroying/recreating the element would steal focus from a keyboard user\nwho had Tabbed into the frame's viewport mid-navigation.\n\n**Scope for v1 (deliberate, not oversights):** no default slot / no arbitrary slotted content\nper image (data-driven via `images` only); no dot-style indicators (a textual counter scales\nbetter to photo-set sizes); no open/close transition or animation (matches `<lyra-dialog>`'s\nown precedent of having none -- `prefers-reduced-motion` has nothing to branch on here); no\nclick-on-image-to-navigate (the image is already meaningfully interactive -- it focuses the\nzoomable frame's viewport and drives its native scroll-to-pan); no touch-swipe-to-navigate.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Optional extra toolbar buttons (e.g. download/share/delete), rendered in `part=\"toolbar\"` between the counter and the close button. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Wrapper around the `actions` slot; `hidden` when nothing is slotted. |\n| `backdrop` | The full-viewport scrim, positioned behind `panel`. |\n| `caption` | The current image's caption text. Only rendered when the current image's `caption` is non-empty. Its `id` is the `aria-describedby` target on `panel`. |\n| `close-button` | The close button. Always rendered -- unlike `<lyra-dialog>`'s opt-in `closable`, a full-screen lightbox has no other built-in chrome, so this is not optional. |\n| `counter` | Visible, localized \"Image N of Total\" text. Omitted entirely when `showCounter` is `false`. |\n| `frame` | The embedded `<lyra-zoomable-frame>` element itself. Its own internal parts are not re-exported via `exportparts` -- there is no precedent for `exportparts` anywhere in this codebase. |\n| `live-region` | Visually-hidden, `role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"` -- announces the current position on every `index` change while open, regardless of trigger (button, keyboard, or a consumer setting `index`/`images` directly), decoupled from the visible `counter` so an unrelated re-render never causes a spurious re-announcement. |\n| `next-button` | Symmetric to `previous-button`. |\n| `next-glyph` | Symmetric to `previous-glyph`. |\n| `panel` | `role=\"dialog\"` while open, `aria-modal=\"true\"`, `tabindex=\"-1\"`. Fills the padded safe area -- unlike `<lyra-dialog>`, it does not shrink-wrap to content, since maximizing image real estate is the point. |\n| `previous-button` | Floating, absolutely positioned inside `stage`. Rendered only when `images.length > 1`. |\n| `previous-glyph` | The `chevronIcon()` inside `previous-button`, mirrored under RTL. |\n| `stage` | Houses the embedded `<lyra-zoomable-frame>` plus the floating `previous-button`/`next-button`. |\n| `toolbar` | Top row: `counter` (start), the `actions` slot wrapper, `close-button` (end). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-lightbox-overlay-color` — The backdrop scrim color.\n- `--lyra-lightbox-control-bg` — Background for every floating/toolbar icon button.\n- `--lyra-lightbox-control-color` — Icon/text color paired with `--lyra-lightbox-control-bg`."
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Host-level `aria-label` override for the panel's accessible name -- wins over the\nlocalized `lightboxLabel` default. Exactly `<lyra-zoomable-frame>`'s own `accessibleLabel`\npattern (no other label source to arbitrate against here).\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "index",
+          "description": {
+            "kind": "markdown",
+            "value": "The currently displayed image. Clamped defensively for rendering (out-of-range/negative/\nnon-integer never throws) and silently re-synced onto this property (no event) when\n`images` shrinks -- mirrors `<lyra-carousel>`'s `normalizedIndex()`/`syncSlides()` split.\n\nType: `number`  \nDefault: `0`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "loop",
+          "description": {
+            "kind": "markdown",
+            "value": "Wraps prev/next past the ends. Mirrors `<lyra-carousel>`'s `loop` 1:1.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "max-zoom",
+          "description": {
+            "kind": "markdown",
+            "value": "Passed through to the embedded `<lyra-zoomable-frame>` as `.maxZoom`.\n\nType: `number`  \nDefault: `4`"
+          }
+        },
+        {
+          "name": "min-zoom",
+          "description": {
+            "kind": "markdown",
+            "value": "Passed through to the embedded `<lyra-zoomable-frame>` as `.minZoom`. Same default as\n`<lyra-zoomable-frame>` itself.\n\nType: `number`  \nDefault: `0.5`"
+          }
+        },
+        {
+          "name": "no-light-dismiss",
+          "description": {
+            "kind": "markdown",
+            "value": "Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lyra-dialog>`'s\n`noLightDismiss` exactly (name, default, no reflect).\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "open",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the lightbox is open. Set this (or call `close()`) -- there is no separate\n`show()`/`hide()` pair, exactly mirrors `<lyra-dialog>`.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "show-counter",
+          "description": {
+            "kind": "markdown",
+            "value": "Shows/hides `part=\"counter\"` (and its `part=\"live-region\"` announcement). Mirrors\n`<lyra-carousel>`'s `showIndicators` (name shape, no reflect).\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "zoom-step",
+          "description": {
+            "kind": "markdown",
+            "value": "Passed through to the embedded `<lyra-zoomable-frame>` as `.zoomStep`.\n\nType: `number`  \nDefault: `0.25`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-line-chart",
       "description": {
         "kind": "markdown",
@@ -6876,6 +7285,57 @@
       ]
     },
     {
+      "name": "lyra-qr-code",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-qr-code>` -- encodes `value` as a QR symbol with the optional\n`qrcode` peer dependency (Reed-Solomon error correction and every other\nalgorithmic step of the QR spec is delegated to that library, never\nhand-rolled) and draws the resulting module matrix onto a canvas itself,\none square (optionally rounded) cell per module, with a light quiet-zone\nmargin baked in around the symbol so it stays scannable out of the box\nwith zero consumer configuration. Extra host CSS `padding` around the\nelement adds further breathing room on top of that baked-in margin, but is\nnot required for baseline scannability.\n\nThe canvas -- not the host -- owns `role=\"img\"` and the accessible name,\nsince it is the one meaningful descendant here (mirrors\n`lyra-file-icon`'s single-image pattern rather than the composite-group\npattern used by `lyra-heatmap`/`lyra-word-cloud`). The accessible name\nresolves, in order: `label`, then a host `aria-label` attribute (forwarded\nonto the canvas), then `value` itself. An empty `value` renders\n`[part=\"empty\"]` instead of an `img`-role element -- there is nothing to\nencode or name.\n\n`--lyra-qr-code-fill`/`--lyra-qr-code-background` (dark/light modules)\ndefault to `--lyra-color-text`/`--lyra-color-surface`, which -- like every\nsemantic token in this library -- flip under a dark theme. That means the\n*default* rendering under a dark theme is a polarity-inverted QR code\n(light modules on a dark background) rather than the conventional\ndark-on-light. Contrast itself stays strong in both themes (these are the\napp's own high-contrast text/surface pair), so human legibility is\nunaffected -- only third-party barcode *scanner* robustness across\nless-tolerant scanning apps is the residual, consumer-overridable risk. A\nconsumer needing guaranteed cross-scanner compatibility regardless of page\ntheme should pin `--lyra-qr-code-fill: #000` / `--lyra-qr-code-background:\n#fff` explicitly at the point of use.\n\nDeliberately out of scope for this component, not oversights: logo/image\nembedding; a finder-pattern-corner accent color; auto-shrinking to fit a\nnarrow container (this component's `size` is a direct request for a\nspecific rendered pixel density, like `<img width height>` -- the consumer\npicks a size that fits their layout, this component never second-guesses\nit, though it still renders correctly at its default size inside a narrow\nallocation); form association (`value` is caller-supplied display data the\nuser doesn't edit through this component -- no `FormAssociated` mixin, no\nlabel/hint/error chrome, no `ElementInternals`); and any\nmotion/`prefers-reduced-motion` branch (nothing here animates). Keyboard\nfocus is likewise intentionally absent -- the canvas is a static image\nstanding in for `value`, structurally like `<img>`, not an interactive\ngrid.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer wrapper, sized to `size`×`size` CSS px in every state. |\n| `canvas` | The rendered QR code canvas. |\n| `empty` | Shown when `value` is empty. |\n| `error` | Shown when the peer is missing, or `value` failed to encode. |\n| `loading` | Shown while the optional `qrcode` peer is loading, the first time it's needed. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-qr-code-fill` (default: `var(--lyra-color-text)`) — Dark/foreground module color.\n- `--lyra-qr-code-background` (default: `var(--lyra-color-surface)`) — Light/background module color, including the quiet zone."
+      },
+      "attributes": [
+        {
+          "name": "error-correction",
+          "description": {
+            "kind": "markdown",
+            "value": "QR error-correction level. Normalized (upper-cased, validated against `L`/`M`/`Q`/`H`,\nfalling back to `H`) on every assignment, attribute or property, so it's never a transient\ngarbage value.\n\nType: `LyraQrCodeErrorCorrection`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible-name override. Falls back through `aria-label` then `value` -- see the class doc\ncomment for the full precedence order. Caller-supplied data, not routed through `localize()`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "radius",
+          "description": {
+            "kind": "markdown",
+            "value": "Per-module corner radius, as a fraction of one module's side length -- `0` (default) for\nsquare modules, `0.5` for fully round/pill modules. Clamped to `[0, 0.5]`.\n\nType: `number`"
+          }
+        },
+        {
+          "name": "size",
+          "description": {
+            "kind": "markdown",
+            "value": "CSS-px side length of the square canvas, clamped to `[1, 2048]`.\n\nType: `number`"
+          }
+        },
+        {
+          "name": "value",
+          "description": {
+            "kind": "markdown",
+            "value": "The data to encode. Empty renders `[part=\"empty\"]` -- no encode is attempted.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-radar-chart",
       "description": {
         "kind": "markdown",
@@ -7101,6 +7561,57 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-random-content",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-random-content>` — displays a randomly (or sequentially) chosen\nsubset of its slotted children and hides the rest, for A/B copy testing,\ntestimonial/quote rotation, or varying marketing copy on each render or\ninterval without any custom JS beyond slotting the candidates.\n\nNot a form-associated control and has no textual chrome of its own — a\npure content-rotation primitive over caller-supplied children, so the\nlabel/hint/error frame doesn't apply.\n\nThe host renders `display: block` by default, like the rest of this\nfamily. A consumer needing an inline text-fragment swap inside a sentence\ncan override `lyra-random-content { display: inline; }` from outside —\nthat isn't baked in here, since `display: contents` on the host risks\naccessibility-tree inconsistencies across engines.\n\nThere is no built-in trigger UI (no next/previous/shuffle button):\nselection is driven only by `autoplay`/`autoplayInterval` and the public\n`randomize()` method. Consequently there is no keyboard interaction and no\nRTL-aware arrow-key handling to implement here — that guarantee only\napplies to components with roving/arrow-key navigation, which this one\nstructurally lacks.\n\n`fade-left`/`fade-right` are physical-direction transforms (matching the\nupstream naming this component mirrors), not \"previous/next\" navigational\nsemantics like a carousel chevron, so they are deliberately **not**\nmirrored under `:host(:dir(rtl))`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The pool of candidate children. Only direct element children are eligible. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The wrapping element around the default slot. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-random-content-animation-duration` (default: `300ms`) — Duration of the entrance animation.\n- `--lyra-random-content-animation-easing` (default: `ease`) — Easing function for the entrance animation.\n- `--lyra-random-content-animation-translate` (default: `var(--lyra-size-0-5em)`) — Translation distance for directional animations."
+      },
+      "attributes": [
+        {
+          "name": "animation",
+          "description": {
+            "kind": "markdown",
+            "value": "Entrance effect applied to a child the instant it becomes shown.\n\nType: `LyraRandomContentAnimation`  \nDefault: `'none'`"
+          }
+        },
+        {
+          "name": "autoplay",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the displayed selection automatically re-rolls on an interval.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "autoplay-interval",
+          "description": {
+            "kind": "markdown",
+            "value": "Milliseconds between autoplay ticks. Clamped to a 1000ms floor.\n\nType: `number`  \nDefault: `3000`"
+          }
+        },
+        {
+          "name": "items",
+          "description": {
+            "kind": "markdown",
+            "value": "How many children are shown simultaneously. Clamped to at least 1 and at most the pool size.\n\nType: `number`  \nDefault: `1`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "mode",
+          "description": {
+            "kind": "markdown",
+            "value": "Selection algorithm — see `randomize()`.\n\nType: `LyraRandomContentMode`  \nDefault: `'unique'`"
           }
         }
       ]
@@ -8987,6 +9498,73 @@
       ]
     },
     {
+      "name": "lyra-timeline",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent\naction history, a changelog) composed from `<lyra-timeline-item>` light-DOM children, joined by a\ncontinuous connecting rail. First-party invention: no Web Awesome/Shoelace counterpart exists, so\nthis follows the library's own established conventions rather than mirroring an upstream API.\n\nA pure, read-only, declarative display component — same zero-event shape as `<lyra-badge>`/\n`<lyra-avatar>`/`<lyra-skeleton>`. It never mutates its own children and fires no events; a\nconsumer who needs to react to item count changes already owns the mutation (they're the one\nadding/removing `<lyra-timeline-item>` children) and can listen to the native `slotchange` event\ndirectly if truly needed.\n\nNo keyboard navigation, roving-tabindex, or selection model of any kind — a deliberate scope\ndecision, not an oversight. A timeline is a passive record display, not a navigable widget; see\n`<lyra-timeline-item>`'s class doc for the full reasoning behind dropping an earlier\n\"interactive row\" design. Not a form-associated control — no value to submit, no label/hint/error\nchrome.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lyra-timeline-item>` children, in display order. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. `role=\"list\"` lives here directly (a timeline isn't a navigation landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction: column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`) in `horizontal` orientation. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-timeline-gap` (default: `var(--lyra-space-l)`) — Spacing between consecutive items along the timeline's main axis; also the length each item's own rail visually bridges to reach the next item's marker. Declared here but actually consumed inside each `<lyra-timeline-item>`'s own stylesheet, via ordinary CSS custom-property inheritance across the slot boundary."
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Host-level `aria-label` override for the list's accessible name — wins over the localized\ndefault `\"Timeline\"`. Needed because the `role=\"list\"` element lives in the shadow root and\nnever inherits a host attribute automatically — same reasoning as `<lyra-breadcrumb>`'s\nidentical property.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "orientation",
+          "description": {
+            "kind": "markdown",
+            "value": "`'vertical'` (the default) lays items out in a column, the primary/most-common use case — an\naudit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.\nDeliberately differs from `<lyra-stepper>`'s `'horizontal'` default — don't copy that default by\nhabit.\n\nType: `TimelineOrientation`  \nDefault: `'vertical'`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lyra-timeline-item",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-timeline-item>` — one marker + title + optional timestamp + optional description row inside\n`<lyra-timeline>`'s default slot. See that component's class doc for the overall shape; this class\ndoc covers the rail-connecting mechanism this item's own `[part=\"track\"]`/`[part=\"rail\"]`\nimplement.\n\nEach item owns and renders *its own trailing rail segment*, not the whole connecting line — think\nof it as a linked list of line segments, one per item, each reaching toward the next item's marker.\n`[part=\"track\"]` (marker then rail) is a flex sibling of `[part=\"content\"]` inside `[part=\"base\"]`,\nwith `[part=\"base\"]`'s default `align-items: stretch` left alone — so `[part=\"track\"]`'s\ncross-axis size automatically equals `[part=\"content\"]`'s own size, including any content-driven\nheight from a long slotted description. `[part=\"rail\"]` is `flex: 1 1 auto` inside `[part=\"track\"]`,\nso once the marker (fixed size) takes its share, the rail fills the rest — no JS measurement, no\n`ResizeObserver`, no absolute positioning. `[part=\"content\"]` carries a trailing logical padding\n(block-end in vertical mode, inline-end in horizontal mode) equal to `<lyra-timeline>`'s\n`--lyra-timeline-gap`, so the stretched rail visually reaches *into* the gap before the next item's\nmarker with no seam. The last item's rail is suppressed by `<lyra-timeline>`'s own pure-CSS\n`::slotted(:last-child)` rule (see that component's stylesheet) — no JS coordination between the\ntwo components is needed anywhere in this mechanism.\n\nA pure display row: no events, no keyboard interaction, and no selection/expansion state of its\nown — a deliberate scope decision, not an oversight. An earlier \"interactive row\" design (mirroring\n`<lyra-conversation-item>`'s clickable `role=\"button\"` row) was considered and dropped: this\ncomponent's `title` and `description` are slots that routinely contain focusable content of their\nown (a link, a button) — wrapping them in an ancestor `role=\"button\"` would trip axe's\n`nested-interactive` rule the moment a consumer slots one in, unlike `<lyra-conversation-item>`,\nwhich keeps its own focusable content in a sibling `actions` slot specifically to avoid that. A\nconsumer who wants a clickable entry slots an actual interactive element inside `description`\nthemselves — `role=\"listitem\"` places no restriction on focusable descendants. Not a\nform-associated control — no value to submit, no label/hint/error chrome.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The item's primary heading/title content. Rich content allowed (inline code, a badge, a link) — nothing renders when this slot is empty, a valid if unusual usage. |\n| `description` | Secondary/body content below the title (explanatory text, a diff snippet, a \"view details\" affordance). `[part=\"description\"]` is hidden entirely when this slot is empty. |\n| `icon` | Leading marker/glyph override (e.g. a `<lyra-icon>`, an emoji, a small avatar-like element). Falls back to a plain color-coded dot (driven by `variant`) when empty. |\n| `timestamp` | Full override of the timestamp presentation (e.g. `<lyra-format-date slot=\"timestamp\">`, a custom string, a differently-configured `<lyra-relative-time>`). Wins over the `timestamp` property whenever it has assigned content, even if `timestamp` is also set. Falls back to an internally-rendered `<lyra-relative-time>` (driven by the `timestamp` property) wrapped in a `<time>`, or renders nothing at all (`[part=\"timestamp\"]` hidden) when neither the slot nor a valid `timestamp` is present. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. Flex container; `flex-direction` is driven by the `--lyra-timeline-item-direction` custom property inherited from `<lyra-timeline>`'s `:host` -- `row` in vertical-timeline mode (marker beside content), `column` in horizontal-timeline mode (marker above content). |\n| `content` | Wrapper around `header` and `description`. |\n| `description` | Wrapper around the `description` slot. Hidden entirely when the slot is empty. |\n| `header` | Flex row wrapping `title` and `timestamp`; wraps at narrow widths rather than truncating either. |\n| `marker` | The dot/icon circle. Always `aria-hidden=\"true\"` -- purely decorative, the item's accessible content is its title/timestamp/description text. |\n| `rail` | The connecting line segment extending from this item's marker toward the next item's marker. Hidden (`visibility: hidden`, not removed) for the last item in a `<lyra-timeline>` -- see the class doc. |\n| `timestamp` | Wrapper around the `timestamp` slot / the internally-rendered `<time>` fallback. Hidden entirely when there's nothing to show. |\n| `title` | Wrapper around the default (title) slot. |\n| `track` | Wrapper around the marker and rail (the \"spine\"). Always the opposite axis from `[part=\"base\"]` -- see the class doc's rail-mechanism note. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-timeline-marker-size` (default: `var(--lyra-size-1-25rem)`) — Diameter of the marker circle (both inline-size and block-size, so the default dot stays circular).\n- `--lyra-timeline-rail-width` (default: `var(--lyra-border-width-medium)`) — Thickness of the connecting rail line.\n- `--lyra-timeline-rail-color` (default: `var(--lyra-color-border)`) — Color of the connecting rail line. A component-scoped property (not just inlining `var(--lyra-color-border)` at every use site) so a consumer can retint just the rail without touching the library-wide border color elsewhere.\n- `--lyra-timeline-marker-color` (default: `var(--lyra-color-text-quiet)`) — Marker fill/accent color. Swapped per `variant` (see the class doc's variant table); a consumer overriding this directly on one item wins over the variant default via normal CSS cascade/specificity."
+      },
+      "attributes": [
+        {
+          "name": "active",
+          "description": {
+            "kind": "markdown",
+            "value": "Marks this as the current/in-progress item (e.g. \"the agent is executing this step right now\"),\nas opposed to a resolved past entry. Drives a pulsing marker (disabled under\n`prefers-reduced-motion: reduce`) and `aria-current=\"true\"` on the host -- omitted entirely\n(not `\"false\"`) while inactive, matching `<lyra-stepper>`'s identical `aria-current` handling.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "sync",
+          "description": {
+            "kind": "markdown",
+            "value": "Forwarded 1:1 onto the internally-rendered `<lyra-relative-time>`'s own `sync` property, so a\nlive feed (e.g. streaming agent actions) can opt this item into auto-refreshing relative text\n(\"just now\" ticking to \"1 minute ago\"). Named to match `<lyra-relative-time>`'s own `sync`\nproperty verbatim. Has no effect when the `timestamp` slot is populated -- there is no internal\n`<lyra-relative-time>` to forward onto in that case.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "variant",
+          "description": {
+            "kind": "markdown",
+            "value": "Tone of the marker. `'neutral'` (default) is a plain past event; `'brand'` is highlighted/\ninformational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs\nattention; `'danger'` is a failed/error event. Same five-value set as `BadgeVariant`/\n`CalloutVariant`.\n\nType: `TimelineItemVariant`  \nDefault: `'neutral'`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-toast",
       "description": {
         "kind": "markdown",
@@ -9574,6 +10152,78 @@
       ]
     },
     {
+      "name": "lyra-tour",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-tour>` -- a spotlight-and-step guided walkthrough for first-run onboarding. A sequence\nof steps, each anchored to a target element elsewhere in the page via the shared Floating UI\npositioner, shown against a dimmed full-viewport backdrop with a cutout/ring highlighting the\ncurrent target, with Next/Previous/Skip controls and a step-progress indicator. First-party\ninvention (no Web Awesome equivalent) -- nearest precedent in shape is `lyra-dialog` (overlay\nlifecycle/focus trap) + `lyra-carousel` (index-based navigation) + `lyra-stepper`\n(progress/RTL arrow-key nav).\n\n**Not a form-associated control.** A tour is a walkthrough, not a field -- it deliberately has\nno `label`/`hint`/`error` chrome and no `FormAssociated` mixin.\n\n**Controlled component.** `steps` is never mutated by this component (mirrors\n`lyra-stepper`'s `steps`); only `activeIndex` and `open` are self-managed, mirroring\n`lyra-carousel`'s `index`.\n\n**Target interactivity.** By default, the step's spotlighted target is non-interactive while\nits step is active: it stays visually revealed and perceivable/announceable by assistive tech\n(not `inert`, not `aria-hidden`) but cannot be clicked -- every pointer event over the full\nviewport, including directly over the visually-revealed target, is captured by the backdrop\n(CSS `mask` does not affect hit-testing, only `clip-path` does) -- and cannot be reached by Tab\n(the shared overlay focus trap confines Tab to the popover panel). Set `step.interactiveTarget`\nto opt a step's target out of this: the backdrop additionally clips itself (via `clip-path`,\nwhich *does* affect hit-testing) around the same rect, so pointer/click events fall through to\nthe live target underneath. This only restores pointer/click reachability, not Tab\nreachability -- the focus trap still confines keyboard focus to the step popover regardless of\n`interactiveTarget`. If the interaction a step demonstrates must also be keyboard-reachable,\ndon't rely on Tab to reach the live target -- have the app's own listener on the target call\n`tourEl.next()` to advance the tour programmatically.\n\n**Focus management.** Uses the shared overlay manager with `modal: false` -- a deliberate\nchoice, not an oversight. The default `modal: true` would mark the entire rest of the page\n(including the spotlighted target itself, since it lives outside `<lyra-tour>`'s own ancestor\nchain) `inert`, stripping it from the accessibility tree entirely -- stronger than the\n\"non-interactive but still perceivable\" default described above. `modal: false` skips that\nDOM-wide `inert` marking; the shared Tab-trap still confines keyboard Tab to the popover panel\nunconditionally regardless of `modal`, and the backdrop's own hit-testing handles\npointer/click reachability, so nothing is lost. `role=\"dialog\"` and `aria-modal=\"true\"` are\nstill rendered on the popover panel anyway: most screen readers restrict their own virtual-\ncursor/browse-mode navigation to an `aria-modal=\"true\"` element's subtree, giving assistive-\ntech users the same \"can perceive, can't wander into, the live target\" experience that the\nTab-trap and backdrop hit-testing already give sighted/mouse users.\n\nEach step transition mounts a genuinely new popover DOM node (keyed on the step's `id`) so\nfocus reliably re-enters the panel every time, even though the Previous/Next button that\ntriggered the transition lives inside that same persistent-looking region.\n\nNo `Home`/`End` jump-to-first/last-step shortcut and no click-to-jump progress dots, unlike\n`lyra-stepper` -- a tour's steps are tied to live DOM targets that may not exist until an\nearlier step's side effect (opening a menu, navigating a route) has run, so free jumping is\nunsafe by default. `goToStep()` remains available for a host that knows what it's doing (e.g.\na \"restart tour\" affordance elsewhere).\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Rich content overriding the currently active step's plain-text `content` for that step only. When real content is assigned, it's shown instead of `step.content`; when empty, `step.content` renders as plain text. Not scoped per step by this component itself -- a consumer that needs different rich content per step swaps the slotted children (or listens for `lyra-tour-step-change` and re-renders them) itself, the same \"consumer owns slotted content\" pattern `lyra-dialog`'s default slot already uses. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `backdrop` | The full-viewport dimmed scrim with the spotlight cutout, an inline `<svg>`. `aria-hidden=\"true\"`. |\n| `body` | Wrapper around the step's content (slotted or `step.content`). |\n| `footer` | Wrapper around the Previous/Skip/Next-or-Done control row. |\n| `heading` | The step's visible heading text element -- the `aria-labelledby` target. |\n| `next-button` | The Next/Done control (label switches on the last step). |\n| `popover` | The step panel itself. `role=\"dialog\"`. |\n| `previous-button` | The Previous control. |\n| `progress` | Wrapper around the built-in step-progress indicator (dots + text). |\n| `progress-dot` | An individual decorative dot within `progress`. `aria-hidden=\"true\"`. |\n| `progress-text` | The visible \"Step X of Y\" text -- one of the popover's `aria-describedby` targets. |\n| `skip-button` | The Skip control. |\n| `spotlight` | The decorative highlight ring drawn around the current target's (padded) rect. `pointer-events: none`, `aria-hidden=\"true\"`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-tour-backdrop-color` — Backdrop scrim fill. Defaults to `--lyra-color-overlay`.\n- `--lyra-tour-spotlight-radius` — Corner radius shared by the cutout and the ring. Defaults to `--lyra-radius`.\n- `--lyra-tour-spotlight-ring-color` — Spotlight ring color. Defaults to `--lyra-color-brand`.\n- `--lyra-tour-spotlight-ring-width` — Spotlight ring thickness. Defaults to `--lyra-border-width-medium`.\n- `--lyra-tour-popover-max-width` — Maximum popover inline size. Defaults to `--lyra-size-22rem`."
+      },
+      "attributes": [
+        {
+          "name": "active-index",
+          "description": {
+            "kind": "markdown",
+            "value": "Index of the currently active step, clamped to `[0, steps.length - 1]` by `goToStep()`.\n\nType: `number`  \nDefault: `0`"
+          }
+        },
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Host-level `aria-label` override for every step popover's accessible name -- wins over each\nstep's own `heading`, matching `lyra-dialog`'s `accessibleLabel` pattern. Most consumers\nwon't need this since each step already has a meaningful name via `heading`; setting it\nmakes the *same* string name every step's panel. Set as a plain `aria-label` attribute on\n`<lyra-tour>` itself, not a public JS property.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "distance",
+          "description": {
+            "kind": "markdown",
+            "value": "Distance (px) between the target and the popover, passed straight to Floating UI's\n`offset()` middleware -- a tour-level-only setting, mirroring `lyra-popover`'s `distance`\nprop exactly.\n\nType: `number`  \nDefault: `12`"
+          }
+        },
+        {
+          "name": "light-dismiss",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a\ndeliberate inversion of `lyra-dialog`'s `noLightDismiss` (opt-out, default\ndismiss-on-backdrop-click): a guided tour's backdrop click doing nothing by default avoids\nlosing onboarding progress to a stray click. Set this to restore dismiss-on-backdrop-click.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "open",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the tour is open. Set this (or call `start()`/`end()`) -- there is no separate\n`show()`/`hide()` pair.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "placement",
+          "description": {
+            "kind": "markdown",
+            "value": "Tour-level default Floating UI placement, overridable per step via `TourStep.placement`.\n\nType: `Placement`  \nDefault: `'bottom'`"
+          }
+        },
+        {
+          "name": "show-progress",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the built-in \"Step X of Y\" progress indicator (dots + text) renders in the footer.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "spotlight-padding",
+          "description": {
+            "kind": "markdown",
+            "value": "Tour-level default extra px between a target's own box and the spotlight cutout/ring,\noverridable per step via `TourStep.spotlightPadding`.\n\nType: `number`  \nDefault: `4`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-tree",
       "description": {
         "kind": "markdown",
@@ -9864,7 +10514,7 @@
       "name": "lyra-zoomable-frame",
       "description": {
         "kind": "markdown",
-        "value": "`<lyra-zoomable-frame>` — a scrollable frame for inspecting slotted or\nimage content at a bounded zoom level. Scrolling provides panning when the\ncontent exceeds the frame; the controls and keyboard shortcuts change zoom.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Content to inspect; when `src` is set, an image is rendered instead. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The frame wrapper. |\n| `content` | The transformed content wrapper. |\n| `controls` | Zoom controls. |\n| `reset` | Reset-to-100-percent button. |\n| `viewport` | The scrollable viewport. |\n| `zoom-in` | Zoom-in button. |\n| `zoom-out` | Zoom-out button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-zoomable-frame-min-block-size` — Minimum viewport block size."
+        "value": "`<lyra-zoomable-frame>` — a scrollable frame for inspecting slotted or\nimage content at a bounded zoom level. Scrolling provides panning when the\ncontent exceeds the frame; the controls and keyboard shortcuts change zoom.\n\nTwo public reset methods cover different needs: `resetZoom()` (also wired to the built-in\nreset button and the `0` keyboard shortcut) returns zoom to 1 while intentionally preserving\nthe current pan/scroll position; `resetView()` additionally returns pan to the origin, for a\ncaller (e.g. `<lyra-lightbox>`) that wants a fully clean view, such as when swapping to new\ncontent entirely.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Content to inspect; when `src` is set, an image is rendered instead. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The frame wrapper. |\n| `content` | The transformed content wrapper. |\n| `controls` | Zoom controls. |\n| `reset` | Reset-to-100-percent button. |\n| `viewport` | The scrollable viewport. |\n| `zoom-in` | Zoom-in button. |\n| `zoom-out` | Zoom-out button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-zoomable-frame-min-block-size` — Minimum viewport block size."
       },
       "attributes": [
         {

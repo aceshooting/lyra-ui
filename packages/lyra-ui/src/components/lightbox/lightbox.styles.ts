@@ -2,13 +2,7 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Component-specific, exactly like --lyra-dialog-overlay-color/--lyra-widget-overlay-color
-       (same rationale: no shared --lyra-*-overlay token exists to resolve through directly).
-       Bridges through the same --lyra-theme-color-overlay theme-input dialog/widget use, so a
-       consumer's one site-wide override still cascades here -- only the hardcoded literal
-       fallback differs (more opaque than the shared --lyra-color-overlay's 0.5, appropriate for
-       a full-bleed photo viewer rather than a small centered dialog scrim). */
-    --lyra-lightbox-overlay-color: var(--lyra-theme-color-overlay, rgb(0 0 0 / 0.92));
+    --lyra-lightbox-overlay-color: var(--lyra-color-overlay-strong);
     /* Background for every floating/toolbar icon button (close-button, previous-button,
        next-button). These buttons float directly over arbitrary image content, not the app's
        normal surface, so they reuse the "solid, high-contrast neutral fill" token rather than
@@ -138,7 +132,7 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     transform: translateY(-50%);
-    z-index: 1;
+    z-index: var(--lyra-layer-content);
   }
   [part='previous-button'] {
     inset-inline-start: var(--lyra-space-s);

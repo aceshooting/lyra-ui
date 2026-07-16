@@ -103,6 +103,7 @@ it('defines the shared typography, chart, layer, and overlay token surface', asy
   expect(await probeVar('--lyra-radius-pill')).to.equal('999px');
   expect(await probeVar('--lyra-layer-modal')).to.equal('1000');
   expect(await probeVar('--lyra-color-overlay')).to.equal('rgb(0 0 0 / 0.5)');
+  expect(await probeVar('--lyra-color-overlay-strong')).to.equal('rgb(0 0 0 / 0.92)');
 });
 
 it('provides central reduced-motion and forced-colors fallbacks', () => {

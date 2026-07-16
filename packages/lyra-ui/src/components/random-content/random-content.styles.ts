@@ -43,7 +43,7 @@ export const styles = css`
   @keyframes lyra-random-content-fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(var(--lyra-random-content-animation-translate, 0.5em));
+      transform: translateY(var(--lyra-random-content-animation-translate, var(--lyra-size-0-5em)));
     }
     to {
       opacity: 1;
@@ -53,7 +53,7 @@ export const styles = css`
   @keyframes lyra-random-content-fade-in-down {
     from {
       opacity: 0;
-      transform: translateY(calc(-1 * var(--lyra-random-content-animation-translate, 0.5em)));
+      transform: translateY(calc(-1 * var(--lyra-random-content-animation-translate, var(--lyra-size-0-5em))));
     }
     to {
       opacity: 1;
@@ -66,7 +66,7 @@ export const styles = css`
   @keyframes lyra-random-content-fade-in-left {
     from {
       opacity: 0;
-      transform: translateX(var(--lyra-random-content-animation-translate, 0.5em));
+      transform: translateX(var(--lyra-random-content-animation-translate, var(--lyra-size-0-5em)));
     }
     to {
       opacity: 1;
@@ -76,7 +76,7 @@ export const styles = css`
   @keyframes lyra-random-content-fade-in-right {
     from {
       opacity: 0;
-      transform: translateX(calc(-1 * var(--lyra-random-content-animation-translate, 0.5em)));
+      transform: translateX(calc(-1 * var(--lyra-random-content-animation-translate, var(--lyra-size-0-5em))));
     }
     to {
       opacity: 1;

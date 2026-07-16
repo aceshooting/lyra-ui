@@ -59,6 +59,9 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
 - **Map & file-input** — `lyra-map` (`maplibre-gl` wrapper with legend + choropleth layer + point
   markers, needs the optional peer `maplibre-gl`), `lyra-file-input` (drag-drop + click-to-browse
   dropzone, emits raw `File[]`).
+- **Media and interaction primitives** — `lyra-animated-image`, `lyra-animation`, `lyra-avatar-group`,
+  `lyra-include`, `lyra-known-date`, `lyra-lightbox`, `lyra-qr-code` (needs the optional peer `qrcode`),
+  `lyra-random-content`, `lyra-timeline`/`lyra-timeline-item`, and `lyra-tour`.
 - **Conversation & Agent UI** — chat/tool-call/agent-config building blocks for streaming AI
   interfaces: `lyra-dialog`/`confirm()`, `lyra-tabs`, `lyra-checkbox`, `lyra-switch`,
   `lyra-radio`/`lyra-radio-group`, `lyra-input`, `lyra-textarea`, `lyra-callout`, `lyra-spinner`,

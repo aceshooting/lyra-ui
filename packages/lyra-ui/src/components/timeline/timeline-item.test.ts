@@ -15,7 +15,9 @@ it('sets role="listitem" on the host in connectedCallback, before first render',
 it('renders default-slot content as the title; an item with no default-slot content does not error', async () => {
   const el = (await fixture(html`<lyra-timeline-item>Build started</lyra-timeline-item>`)) as LyraTimelineItem;
   const title = el.shadowRoot!.querySelector('[part="title"]')!;
-  expect(title.textContent!.trim()).to.equal('Build started');
+  expect((title.querySelector('slot') as HTMLSlotElement).assignedNodes({ flatten: true })[0]!.textContent).to.equal(
+    'Build started',
+  );
 
   const empty = await fixture(html`<lyra-timeline-item></lyra-timeline-item>`);
   expect(empty.shadowRoot!.querySelector('[part="title"]')).to.exist;
@@ -193,5 +195,6 @@ it('is accessible standalone with an icon, timestamp, title, and a description c
 
 it('renders correctly with no .strings/locale registered (this component introduces no new message keys of its own -- only <lyra-timeline>\'s "timeline" key exists in this family)', async () => {
   const el = (await fixture(html`<lyra-timeline-item>Plain English render</lyra-timeline-item>`)) as LyraTimelineItem;
-  expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('Plain English render');
+  const slot = el.shadowRoot!.querySelector('[part="title"] slot') as HTMLSlotElement;
+  expect(slot.assignedNodes({ flatten: true })[0]!.textContent).to.equal('Plain English render');
 });

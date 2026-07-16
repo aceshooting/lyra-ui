@@ -369,7 +369,7 @@ it('exposes the documented animation custom properties with WA-matching defaults
   const css = styles.cssText;
   expect(css).to.include('var(--lyra-random-content-animation-duration, 300ms)');
   expect(css).to.include('var(--lyra-random-content-animation-easing, ease)');
-  expect(css).to.include('var(--lyra-random-content-animation-translate, 0.5em)');
+  expect(css).to.include('var(--lyra-random-content-animation-translate, var(--lyra-size-0-5em))');
 });
 
 it('forwards a host aria-label to the internal role="status" element, and omits it when absent', async () => {

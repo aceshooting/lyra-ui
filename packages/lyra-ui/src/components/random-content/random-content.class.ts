@@ -46,7 +46,7 @@ export interface LyraRandomContentEventMap {
  * @csspart base - The wrapping element around the default slot.
  * @cssprop [--lyra-random-content-animation-duration=300ms] - Duration of the entrance animation.
  * @cssprop [--lyra-random-content-animation-easing=ease] - Easing function for the entrance animation.
- * @cssprop [--lyra-random-content-animation-translate=0.5em] - Translation distance for directional animations.
+ * @cssprop [--lyra-random-content-animation-translate=var(--lyra-size-0-5em)] - Translation distance for directional animations.
  */
 export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   static styles = [LyraElement.styles, styles];

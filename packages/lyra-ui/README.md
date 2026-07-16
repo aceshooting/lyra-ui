@@ -5,7 +5,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 156 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 167 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -251,7 +251,7 @@ containing the component's token CSS and internal `<button>` markup, and the con
 `ElementInternals`-based `attachInternals()` call (used for native form association) does not throw
 under `@lit-labs/ssr-dom-shim`'s server DOM shim.
 
-That said, **lyra-ui has not been systematically tested or tuned for SSR** across its 156 components:
+That said, **lyra-ui has not been systematically tested or tuned for SSR** across its 167 components:
 no CI job renders the library under `@lit-labs/ssr`, no component has been verified to hydrate
 correctly on the client afterward, and components that reach for browser-only APIs early
 (`ResizeObserver`/`IntersectionObserver`, Floating UI positioning in the popover/tooltip/dropdown
@@ -314,7 +314,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 156 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 167 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -341,6 +341,21 @@ API details.
 | `<lyra-spinner>` | `wa-spinner` | Localized indeterminate busy indicator with reduced-motion support |
 | `<lyra-progress-bar>` + `<lyra-progress-ring>` | `wa-progress-bar` / `wa-progress-ring` | Determinate or indeterminate progress indicators |
 | `<lyra-flag>` | — (extra) | Country/language flags for i18n pickers — needs the optional peer `@aceshooting/lyra-flags` |
+
+**Additional media and interaction primitives**
+
+| Component | Mirrors | Notes |
+|-----------|---------|-------|
+| `<lyra-animated-image>` | — (extra) | Animated image playback with a captured still frame and reduced-motion support |
+| `<lyra-animation>` | — (extra) | Web Animations API wrapper for declarative preset or custom animations |
+| `<lyra-avatar-group>` | — (extra) | Responsive avatar grouping with a localized overflow indicator |
+| `<lyra-include>` | — (extra) | Loads sanitized HTML or text content from a URL |
+| `<lyra-known-date>` | — (extra) | Form-associated date entry control with separate day, month, and year fields |
+| `<lyra-lightbox>` | — (extra) | Full-screen modal image viewer with navigation and pan/zoom |
+| `<lyra-qr-code>` | — (extra) | Canvas QR renderer; needs the optional peer `qrcode` |
+| `<lyra-random-content>` | — (extra) | Random, unique, or sequential slotted-content selection with autoplay |
+| `<lyra-timeline>` + `<lyra-timeline-item>` | — (extra) | Vertical or horizontal chronological event layout |
+| `<lyra-tour>` | — (extra) | Anchored onboarding tour with spotlight, keyboard navigation, and focus management |
 
 **Dashboard atoms**
 

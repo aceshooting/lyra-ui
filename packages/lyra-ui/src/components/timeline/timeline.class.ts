@@ -41,7 +41,7 @@ export class LyraTimeline extends LyraElement {
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
    *  Deliberately differs from `<lyra-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
-  @property({ reflect: true }) orientation: TimelineOrientation = 'vertical';
+  @property() orientation: TimelineOrientation = 'vertical';
 
   /** Host-level `aria-label` override for the list's accessible name — wins over the localized
    *  default `"Timeline"`. Needed because the `role="list"` element lives in the shadow root and

@@ -143,6 +143,17 @@ import './components/command-palette/command-palette.js';
 import './components/code-editor/code-editor.js';
 import './components/data-grid/data-grid.js';
 import './components/calendar/calendar.js';
+import './components/animated-image/animated-image.js';
+import './components/animation/animation.js';
+import './components/avatar-group/avatar-group.js';
+import './components/include/include.js';
+import './components/known-date/known-date.js';
+import './components/lightbox/lightbox.js';
+import './components/qr-code/qr-code.js';
+import './components/random-content/random-content.js';
+import './components/timeline/timeline-item.js';
+import './components/timeline/timeline.js';
+import './components/tour/tour.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -164,6 +175,41 @@ export type { LyraSelectSize } from './components/select/select.js';
 export { LyraDatePicker } from './components/date-picker/date-picker.js';
 export type { DateRange } from './components/date-picker/date-picker.js';
 export { LyraDateInput } from './components/date-picker/date-input.js';
+export { LyraAnimatedImage } from './components/animated-image/animated-image.js';
+export type { LyraAnimatedImageEventMap } from './components/animated-image/animated-image.js';
+export { LyraAnimation } from './components/animation/animation.js';
+export type {
+  LyraAnimationPreset,
+  LyraAnimationTimingPreset,
+  LyraAnimationEventMap,
+} from './components/animation/animation.js';
+export { LyraAvatarGroup } from './components/avatar-group/avatar-group.js';
+export type { AvatarGroupOverflowClickDetail, LyraAvatarGroupEventMap } from './components/avatar-group/avatar-group.js';
+export { LyraInclude } from './components/include/include.js';
+export type { LyraIncludeMode, LyraIncludeErrorReason, LyraIncludeEventMap } from './components/include/include.js';
+export { LyraKnownDate } from './components/known-date/known-date.js';
+export type {
+  LyraKnownDateSize,
+  LyraKnownDateField,
+  LyraKnownDateEventDetail,
+  LyraKnownDateEventMap,
+} from './components/known-date/known-date.js';
+export { LyraLightbox } from './components/lightbox/lightbox.js';
+export type { LyraLightboxImage, LyraLightboxCloseReason, LyraLightboxEventMap } from './components/lightbox/lightbox.js';
+export { LyraQrCode } from './components/qr-code/qr-code.js';
+export type { LyraQrCodeErrorCorrection } from './components/qr-code/qr-code.js';
+export { LyraRandomContent } from './components/random-content/random-content.js';
+export type {
+  LyraRandomContentAnimation,
+  LyraRandomContentMode,
+  LyraRandomContentEventMap,
+} from './components/random-content/random-content.js';
+export { LyraTimeline } from './components/timeline/timeline.js';
+export { LyraTimelineItem } from './components/timeline/timeline-item.js';
+export type { TimelineOrientation } from './components/timeline/timeline.js';
+export type { TimelineItemVariant } from './components/timeline/timeline-item.js';
+export { LyraTour } from './components/tour/tour.js';
+export type { TourTarget, TourStep, TourEndReason, LyraTourEventMap } from './components/tour/tour.js';
 export { LyraFlag } from './components/flag/flag.js';
 export type { FlagUrlResolver, FlagVariant } from './components/flag/flag.js';
 export { LANGUAGE_TO_COUNTRY, languageToCountry } from './components/flag/language-map.js';

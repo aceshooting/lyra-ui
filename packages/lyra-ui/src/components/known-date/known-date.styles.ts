@@ -7,9 +7,9 @@ export const styles = css`
     --lyra-known-date-field-padding-inline: var(--lyra-space-s);
     --lyra-known-date-field-font-size: var(--lyra-font-size-md-sm);
     --lyra-known-date-field-gap: var(--lyra-space-s);
-    --lyra-known-date-year-field-width: 5em;
-    --lyra-known-date-day-field-width: 3.5em;
-    --lyra-known-date-month-field-width: 3.5em;
+    --lyra-known-date-year-field-width: var(--lyra-size-5em);
+    --lyra-known-date-day-field-width: var(--lyra-size-3-5em);
+    --lyra-known-date-month-field-width: var(--lyra-size-3-5em);
   }
   :host([size='xs']) {
     --lyra-known-date-field-padding-block: var(--lyra-size-0-125rem);

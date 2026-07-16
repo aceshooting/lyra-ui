@@ -92,7 +92,12 @@ describe('lyra-qr-code', () => {
   });
 
   it('renders a canvas sized to `size` CSS px with a DPR-scaled backing store', async () => {
-    const el = (await fixture(html`<lyra-qr-code size="90"></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`
+      <lyra-qr-code
+        size="90"
+        style="--lyra-qr-code-fill: #000; --lyra-qr-code-background: #fff;"
+      ></lyra-qr-code>
+    `)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),
@@ -237,7 +242,12 @@ describe('lyra-qr-code', () => {
   });
 
   it('paints the resolved fill/background colors correctly when both are valid', async () => {
-    const el = (await fixture(html`<lyra-qr-code size="90"></lyra-qr-code>`)) as LyraQrCode;
+    const el = (await fixture(html`
+      <lyra-qr-code
+        size="90"
+        style="--lyra-qr-code-fill: #000; --lyra-qr-code-background: #fff;"
+      ></lyra-qr-code>
+    `)) as LyraQrCode;
     installFakeLoader(
       el,
       fakeApi(() => ({ modules: fakeModules(true) })),

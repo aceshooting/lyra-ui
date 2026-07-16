@@ -33,6 +33,7 @@ export const tokens = css`
     --lyra-color-on-danger: var(--lyra-theme-color-danger-on-loud, #fff);
     --lyra-color-on-neutral: var(--lyra-theme-color-neutral-on-loud, #fff);
     --lyra-color-overlay: var(--lyra-theme-color-overlay, rgb(0 0 0 / 0.5));
+    --lyra-color-overlay-strong: var(--lyra-theme-color-overlay, rgb(0 0 0 / 0.92));
     --lyra-color-no-data: var(--lyra-theme-color-no-data, rgb(128 128 128 / 25%));
     --lyra-font-mono: var(--lyra-theme-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
     --lyra-space-xs: var(--lyra-theme-space-xs, 0.25rem);
@@ -112,6 +113,7 @@ export const tokens = css`
     --lyra-size-0-4375rem: var(--lyra-theme-size-0-4375rem, 0.4375rem);
     --lyra-size-0-4em: var(--lyra-theme-size-0-4em, 0.4em);
     --lyra-size-0-4rem: var(--lyra-theme-size-0-4rem, 0.4rem);
+    --lyra-size-0-5em: var(--lyra-theme-size-0-5em, 0.5em);
     --lyra-size-0-5rem: var(--lyra-theme-size-0-5rem, 0.5rem);
     --lyra-size-0-625rem: var(--lyra-theme-size-0-625rem, 0.625rem);
     --lyra-size-0-6875rem: var(--lyra-theme-size-0-6875rem, 0.6875rem);
@@ -162,10 +164,12 @@ export const tokens = css`
     --lyra-size-3px: var(--lyra-theme-size-3px, 3px);
     --lyra-size-3rem: var(--lyra-theme-size-3rem, 3rem);
     --lyra-size-3ch: var(--lyra-theme-size-3ch, 3ch);
+    --lyra-size-3-5em: var(--lyra-theme-size-3-5em, 3.5em);
     --lyra-size-48rem: var(--lyra-theme-size-48rem, 48rem);
     --lyra-size-4px: var(--lyra-theme-size-4px, 4px);
     --lyra-size-4rem: var(--lyra-theme-size-4rem, 4rem);
     --lyra-size-4ch: var(--lyra-theme-size-4ch, 4ch);
+    --lyra-size-5em: var(--lyra-theme-size-5em, 5em);
     --lyra-size-6em: var(--lyra-theme-size-6em, 6em);
     --lyra-size-6px: var(--lyra-theme-size-6px, 6px);
     --lyra-size-6rem: var(--lyra-theme-size-6rem, 6rem);

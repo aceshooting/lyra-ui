@@ -2,10 +2,101 @@
   "version": 1.1,
   "properties": [
     {
+      "name": "--lyra-animated-image-control-box-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animated-image>`** — The size of `control-box`. Defaults to `var(--lyra-icon-button-size)`."
+      }
+    },
+    {
+      "name": "--lyra-animated-image-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animated-image>`** — The size of the play/pause icons. Defaults to `calc(var(--lyra-icon-button-size) * 0.35)`."
+      }
+    },
+    {
+      "name": "--lyra-animated-image-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animated-image>`** — Caps the rendered media's block-size. Defaults to `var(--lyra-size-20rem)`."
+      }
+    },
+    {
+      "name": "--lyra-animation-bounce-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animation>`** (default: `25%`) — Peak lift height of the bounce preset."
+      }
+    },
+    {
+      "name": "--lyra-animation-shake-distance",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animation>`** (default: `4%`) — Horizontal travel of the shake preset."
+      }
+    },
+    {
+      "name": "--lyra-animation-slide-distance",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animation>`** (default: `100%`) — Travel distance for the slide-in/slide-out/slide-in-up/slide-in-down presets."
+      }
+    },
+    {
+      "name": "--lyra-animation-zoom-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-animation>`** (default: `0.5`) — Starting/ending scale factor for the zoom-in/zoom-out presets."
+      }
+    },
+    {
       "name": "--lyra-attachment-chip-spinner-duration",
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-attachment-chip>`** (default: `0.8s`) — Duration of one indeterminate upload-spinner rotation. The ambient loop stops under reduced motion."
+      }
+    },
+    {
+      "name": "--lyra-avatar-group-avatar-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-size-2rem)`) — Sizes the overflow badge to match the slotted avatars. Does not resize the avatars themselves (see class doc) — set a matching `size` on each `<lyra-avatar>` child directly for that."
+      }
+    },
+    {
+      "name": "--lyra-avatar-group-badge-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-color-border)`) — Overflow badge background. Tone-driven; see `tone`."
+      }
+    },
+    {
+      "name": "--lyra-avatar-group-badge-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-color-text)`) — Overflow badge text color. Tone-driven; see `tone`."
+      }
+    },
+    {
+      "name": "--lyra-avatar-group-overlap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-size-neg-6px)`) — Horizontal overlap between consecutive avatars (a logical `margin-inline-start`, so it auto-mirrors under `dir=\"rtl\"`). Setting this to `0` or a positive length is a supported escape hatch that turns the stack into normal, non-overlapping spacing."
+      }
+    },
+    {
+      "name": "--lyra-avatar-group-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-color-surface)`) — The cutout-style ring drawn around every avatar and the overflow badge."
+      }
+    },
+    {
+      "name": "--lyra-avatar-group-ring-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-border-width-medium)`) — Ring thickness."
       }
     },
     {
@@ -254,6 +345,27 @@
       }
     },
     {
+      "name": "--lyra-lightbox-control-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-lightbox>`** — Background for every floating/toolbar icon button."
+      }
+    },
+    {
+      "name": "--lyra-lightbox-control-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-lightbox>`** — Icon/text color paired with `--lyra-lightbox-control-bg`."
+      }
+    },
+    {
+      "name": "--lyra-lightbox-overlay-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-lightbox>`** — The backdrop scrim color."
+      }
+    },
+    {
       "name": "--lyra-link-color",
       "description": {
         "kind": "markdown",
@@ -300,6 +412,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-pdf-viewer>`** (default: `var(--lyra-size-24rem)`) — Block size of the virtualized page list."
+      }
+    },
+    {
+      "name": "--lyra-qr-code-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-qr-code>`** (default: `var(--lyra-color-surface)`) — Light/background module color, including the quiet zone."
+      }
+    },
+    {
+      "name": "--lyra-qr-code-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-qr-code>`** (default: `var(--lyra-color-text)`) — Dark/foreground module color."
+      }
+    },
+    {
+      "name": "--lyra-random-content-animation-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-random-content>`** (default: `300ms`) — Duration of the entrance animation."
+      }
+    },
+    {
+      "name": "--lyra-random-content-animation-easing",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-random-content>`** (default: `ease`) — Easing function for the entrance animation."
+      }
+    },
+    {
+      "name": "--lyra-random-content-animation-translate",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-random-content>`** (default: `var(--lyra-size-0-5em)`) — Translation distance for directional animations."
       }
     },
     {
@@ -366,6 +513,41 @@
       }
     },
     {
+      "name": "--lyra-timeline-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-timeline>`** (default: `var(--lyra-space-l)`) — Spacing between consecutive items along the timeline's main axis; also the length each item's own rail visually bridges to reach the next item's marker. Declared here but actually consumed inside each `<lyra-timeline-item>`'s own stylesheet, via ordinary CSS custom-property inheritance across the slot boundary."
+      }
+    },
+    {
+      "name": "--lyra-timeline-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-timeline-item>`** (default: `var(--lyra-color-text-quiet)`) — Marker fill/accent color. Swapped per `variant` (see the class doc's variant table); a consumer overriding this directly on one item wins over the variant default via normal CSS cascade/specificity."
+      }
+    },
+    {
+      "name": "--lyra-timeline-marker-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-timeline-item>`** (default: `var(--lyra-size-1-25rem)`) — Diameter of the marker circle (both inline-size and block-size, so the default dot stays circular)."
+      }
+    },
+    {
+      "name": "--lyra-timeline-rail-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-timeline-item>`** (default: `var(--lyra-color-border)`) — Color of the connecting rail line. A component-scoped property (not just inlining `var(--lyra-color-border)` at every use site) so a consumer can retint just the rail without touching the library-wide border color elsewhere."
+      }
+    },
+    {
+      "name": "--lyra-timeline-rail-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-timeline-item>`** (default: `var(--lyra-border-width-medium)`) — Thickness of the connecting rail line."
+      }
+    },
+    {
       "name": "--lyra-tool-call-chip-spin",
       "description": {
         "kind": "markdown",
@@ -412,6 +594,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-tooltip>`** — Maximum inline size of the tooltip (default `--lyra-size-20rem`)."
+      }
+    },
+    {
+      "name": "--lyra-tour-backdrop-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tour>`** — Backdrop scrim fill. Defaults to `--lyra-color-overlay`."
+      }
+    },
+    {
+      "name": "--lyra-tour-popover-max-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tour>`** — Maximum popover inline size. Defaults to `--lyra-size-22rem`."
+      }
+    },
+    {
+      "name": "--lyra-tour-spotlight-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tour>`** — Corner radius shared by the cutout and the ring. Defaults to `--lyra-radius`."
+      }
+    },
+    {
+      "name": "--lyra-tour-spotlight-ring-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tour>`** — Spotlight ring color. Defaults to `--lyra-color-brand`."
+      }
+    },
+    {
+      "name": "--lyra-tour-spotlight-ring-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-tour>`** — Spotlight ring thickness. Defaults to `--lyra-border-width-medium`."
       }
     },
     {

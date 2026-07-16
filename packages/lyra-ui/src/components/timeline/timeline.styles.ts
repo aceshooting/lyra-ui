@@ -19,12 +19,12 @@ export const styles = css`
     --lyra-timeline-item-direction: row; /* vertical (default): marker beside content */
     --lyra-timeline-item-track-direction: column; /* opposite axis, for [part='track'] */
     --lyra-timeline-item-gap-block-end: var(--lyra-timeline-gap, var(--lyra-space-l));
-    --lyra-timeline-item-gap-inline-end: 0px;
+    --lyra-timeline-item-gap-inline-end: 0;
   }
   :host([orientation='horizontal']) {
     --lyra-timeline-item-direction: column; /* marker above content */
     --lyra-timeline-item-track-direction: row;
-    --lyra-timeline-item-gap-block-end: 0px;
+    --lyra-timeline-item-gap-block-end: 0;
     --lyra-timeline-item-gap-inline-end: var(--lyra-timeline-gap, var(--lyra-space-l));
   }
 

@@ -494,15 +494,19 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   };
 
   private onFieldBlur = (e: FocusEvent): void => {
-    // eslint-disable-next-line no-console
-    console.log('DEBUG onFieldBlur called, target=', (e.target as HTMLElement)?.dataset?.field, 'currentTarget=', (e.currentTarget as HTMLElement)?.dataset?.field, 'isTrusted=', e.isTrusted, 'eventPhase=', e.eventPhase);
+    // Native blur can be observed at the shadow host in some engines even though it does not
+    // bubble. Suppress that private field event so the public bridge below emits exactly one host
+    // event when focus leaves the composite control.
+    e.stopPropagation();
     this.commitChangeIfNeeded();
     const related = e.relatedTarget as Node | null;
-    const staysInsideControl = related != null && this.renderRoot.contains(related);
+    const active = this.shadowRoot?.activeElement;
+    const staysInsideControl =
+      e.isTrusted &&
+      ((related instanceof HTMLInputElement && related.dataset.field !== undefined) ||
+        (active instanceof HTMLInputElement && active !== e.target && active.dataset.field !== undefined));
     if (staysInsideControl) return;
     this.touched = true;
-    // eslint-disable-next-line no-console
-    console.log('DEBUG about to emit blur STACK:', new Error().stack);
     this.emit('blur');
   };
 

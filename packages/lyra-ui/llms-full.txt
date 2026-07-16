@@ -8858,6 +8858,96 @@ the internal `<input>`'s own `focus`/`blur`, bubbling and composed unlike the na
 parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for back-compat),
 `input`, `hint`, `error`.
 
+## `lyra-animated-image`
+
+Displays an animated image with a captured still frame, optional playback control, and reduced-motion support.
+**Properties:** `src`, `alt`, `play`, readonly `playing`, `respectReducedMotion`, and `accessibleLabel`
+(`aria-label`). **Events:** `lyra-load`, `lyra-error`, `lyra-play`, and `lyra-pause`. **CSS parts:**
+`base`, `image`, `canvas`, `control-box`, and `play-button`. **Methods:** `focus()` and `blur()` forward
+to the playback button.
+
+## `lyra-animation`
+
+Declaratively animates one slotted element with the Web Animations API. **Properties:** `name`, `keyframes`,
+`play`, `delay`, `direction`, `duration`, `easing`, `endDelay`, `fill`, `iterations`, `iterationStart`,
+`playbackRate`, `timingPreset`, `respectReducedMotion`, `playOnVisible`, `playOnVisibleRepeat`, `root`,
+`rootMargin`, `threshold`, and readonly `currentTime`. **Methods:** `start()`, `pause()`, `finish()`, and
+`cancel()`. **Events:** `lyra-start`, `lyra-finish`, and `lyra-cancel`. The default slot is the target.
+
+## `lyra-avatar-group`
+
+Groups avatars and collapses excess members into a localized overflow indicator. **Properties:** `label`,
+`max`, `shape`, `size`, and `tone`. The default slot accepts avatar elements. **CSS parts:** `base`,
+`avatars`, and `overflow`.
+
+## `lyra-include`
+
+Loads HTML or text from `src` into the component. **Properties:** `src` and `mode` (`html` or `text`).
+**Events:** `lyra-load` and `lyra-error`. **CSS parts:** `base`, `content`, and `error`.
+
+## `lyra-known-date`
+
+A form-associated date control for entering a date through separate day, month, and year fields.
+**Properties:** `value`, `min`, `max`, `label`, `hint`, `errorText` (`error-text`), `size`, `readonly`,
+`autocomplete`, `dayLabel` (`day-label`), `monthLabel` (`month-label`), `yearLabel` (`year-label`), and
+`accessibleLabel` (`aria-label`). **Properties/methods:** readonly `valueAsDate`, `focus()`, and `blur()`;
+`formResetCallback()` restores the initial value. **Slots:** `label`, `hint`, and `error`. **CSS parts:**
+`form-control`, `form-control-label`, `day`, `month`, `year`, `hint`, and `error`. Emits native-style
+`input` and `change` events for user edits.
+
+## `lyra-lightbox`
+
+A modal full-screen image viewer with navigation, captions, and delegated pan/zoom. **Properties:**
+`open`, `images`, `index`, `loop`, `noLightDismiss` (`no-light-dismiss`), `showCounter` (`show-counter`),
+`minZoom` (`min-zoom`), `maxZoom` (`max-zoom`), `zoomStep` (`zoom-step`), and `accessibleLabel`
+(`aria-label`). **Methods:** `next()`, `previous()`, `goTo(index)`, and `close(reason?)`. **Events:**
+cancelable `lyra-lightbox-close`, `lyra-index-change` with `{ index }`, and bubbling `lyra-zoom-change` with
+`{ zoom }`. **Slots:** `actions`. **CSS parts:** `backdrop`, `panel`, `toolbar`, `counter`, `live-region`,
+`actions`, `close-button`, `stage`, `frame`, `previous-button`, `previous-glyph`, `next-button`,
+`next-glyph`, and `caption`.
+
+## `lyra-qr-code`
+
+Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`, `label`,
+`size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas owns `role="img"`;
+its accessible name uses `label`, host `aria-label`, then `value`. Empty values render an empty state.
+**CSS parts:** `base`, `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
+`--lyra-qr-code-fill` and `--lyra-qr-code-background`. Call `refreshTheme()` after external theme changes
+when the computed QR colors need to be redrawn immediately.
+
+## `lyra-random-content`
+
+Chooses content from its slotted items, either randomly or in sequence, with optional autoplay.
+**Properties:** `items`, `mode`, `randomize`, `autoplay`, `autoplayInterval`, and `animation`.
+The default slot supplies the candidate content. **CSS parts:** `base` and `content`.
+
+## `lyra-timeline` and `lyra-timeline-item`
+
+Timeline layout primitives for chronological events. `lyra-timeline` has `orientation` (`vertical` or
+`horizontal`), accessible `accessibleLabel` (`aria-label`), and readonly `itemCount`; its default slot
+contains `lyra-timeline-item` elements. Each item has `timestamp`, `sync`, `variant`, and `active`.
+**Slots:** item `icon`, `title`, `description`, and `timestamp`, plus the default content fallback.
+**CSS parts:** timeline `base` and `list`; item `base`, `marker`, `line`, `content`, `title`,
+`description`, and `timestamp`.
+
+## `lyra-tour`
+
+Guides a user through anchored steps with a spotlight, popover, keyboard navigation, and focus management.
+**Properties:** `steps`, `open`, `activeIndex` (`active-index`), `placement`, `distance`,
+`spotlightPadding` (`spotlight-padding`), `lightDismiss` (`light-dismiss`), and
+`showProgress` (`show-progress`). **Methods:** `start(index?)`, `next()`, `back()`, `goToStep(index)`,
+`skip()`, and `end(reason?)`. **Events:** `lyra-tour-start`, cancelable `lyra-tour-step-change`,
+`lyra-tour-end`, and `lyra-tour-target-missing`. **CSS parts:** `backdrop`, `spotlight`, `popover`,
+`heading`, `body`, `progress`, `previous`, `next`, and `skip`.
+
+## `lyra-zoomable-frame`
+
+Displays an image with keyboard-accessible zoom controls and pan support. **Properties:** `src`, `alt`,
+`zoom`, `minZoom`, `maxZoom`, `zoomStep`, and `accessibleLabel` (`aria-label`). **Methods:** `zoomIn()`,
+`zoomOut()`, `resetZoom()`, and `resetView()` (resets zoom and scroll position). **Events:**
+`lyra-zoom-change` with `{ zoom }`. **CSS parts:** `base`, `viewport`, `content`, `zoom-out`, `reset`,
+and `zoom-in`.
+
 ## Cross-cutting notes
 
 These apply across the whole library rather than to any one component:
