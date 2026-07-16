@@ -1,19 +1,40 @@
 # Lyra UI (monorepo)
 
-[![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/aceshooting/lyra-ui/actions/workflows/codeql.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/aceshooting/lyra-ui/badge)](https://scorecard.dev/viewer/?uri=github.com/aceshooting/lyra-ui)
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
 [![npm downloads](https://img.shields.io/npm/dm/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/%40aceshooting%2Flyra-ui)](https://bundlephobia.com/package/@aceshooting/lyra-ui)
 [![types](https://img.shields.io/npm/types/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
 [![license](https://img.shields.io/npm/l/%40aceshooting%2Flyra-ui)](./LICENSE)
+[![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/aceshooting/lyra-ui/actions/workflows/codeql.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/aceshooting/lyra-ui/badge)](https://scorecard.dev/viewer/?uri=github.com/aceshooting/lyra-ui)
 [![docs](https://img.shields.io/badge/docs-storybook-ff4785)](https://aceshooting.github.io/lyra-ui/)
 
 A pnpm workspace hosting `lyra-ui` and its optional companion packages.
 
 **[Browse the live docs site →](https://aceshooting.github.io/lyra-ui/)** — every component with
 a live example, source code, and API reference.
+
+<p align="center">
+  <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chat.png" width="32%" alt="Lyra UI Conversation & Agent UI example: a chat message thread" /></a>
+  <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
+  <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
+</p>
+<p align="center"><sub>A few of 167 components — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Principles & Guidelines](#principles--guidelines)
+- [Components](#components)
+- [Theming, internationalization & RTL](#theming-internationalization--rtl)
+- [Framework integration](#framework-integration-react-vue-angular-svelte)
+- [SSR & Declarative Shadow DOM](#ssr--declarative-shadow-dom)
+- [Browser & Node support](#browser--node-support)
+- [Built with](#built-with)
+- [Documentation](#documentation)
+- [Status](#status)
+- [License](#license)
 
 **Lyra UI is a free, independent alternative to Shoelace and Web Awesome.** It is a MIT-licensed,
 framework-agnostic Lit web-component library for production interfaces: accessible form controls,
@@ -33,12 +54,37 @@ The result is one open library for everyday UI, dashboards and charts, and AI ch
 with the broad component coverage of a general-purpose design system and original building blocks
 for data-heavy and streaming applications.
 
-| Package | Description |
-|---|---|
-| [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent Lit web components — an alternative to Shoelace and Web Awesome. |
-| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. |
+| Package | Description | Version | Size |
+|---|---|---|---|
+| [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent Lit web components — an alternative to Shoelace and Web Awesome. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![size](https://img.shields.io/bundlephobia/minzip/%40aceshooting%2Flyra-ui)](https://bundlephobia.com/package/@aceshooting/lyra-ui) |
+| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | [![size](https://img.shields.io/bundlephobia/minzip/%40aceshooting%2Flyra-flags)](https://bundlephobia.com/package/@aceshooting/lyra-flags) |
 
-See each package's own README for install/usage. For local development:
+See each package's own README for full install/usage details.
+
+## Quick Start
+
+```bash
+npm install @aceshooting/lyra-ui
+```
+
+```js
+import '@aceshooting/lyra-ui/components/combobox/combobox.js';
+import '@aceshooting/lyra-ui/components/combobox/option.js';
+```
+
+```html
+<lyra-combobox label="Fruit" with-clear>
+  <lyra-option value="a">Apple</lyra-option>
+  <lyra-option value="b">Banana</lyra-option>
+</lyra-combobox>
+```
+
+Per-component optional peers and the tree-shakeable import patterns:
+[`packages/lyra-ui/README.md#install`](./packages/lyra-ui/README.md#install).
+
+🔗 **[Open in StackBlitz](https://stackblitz.com/github/aceshooting/lyra-ui)** — try it in-browser, no local install.
+
+For local development of this monorepo:
 
 ```bash
 pnpm install
@@ -49,6 +95,23 @@ pnpm docs         # Storybook docs site demoing every component
 ```
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
+
+## Principles & Guidelines
+
+| Principle | Why it matters | Summary |
+|---|---|---|
+| 🆓 Free & Open Source | Free to use, nothing hidden inside | MIT-licensed, clean-room implementation |
+| 🪶 Lightweight & Tree-Shakeable | Only ship what you use | Granular, side-effect-free per-component exports |
+| ⚡ Performance-First | Fast by design | Native custom elements, no virtual DOM, minimal deps |
+| 🤖 AI & Agentic-AI Ready | AI agents can use it correctly | `llms.txt`/`llms-full.txt`, `custom-elements.json`, built-in chat/agent UI family |
+| 🧩 Consistent Architecture | Learn one component, know them all | Shared base class, event, tagging, and styling conventions |
+| 🎨 Design Tokens Only | Restyle everything from one place | No raw hex/px — all values flow through `--lyra-*` tokens |
+| 🌍 i18n & RTL by Default | Works in any language, any direction | Every string translatable, every layout RTL-mirrored |
+| ♿ Accessibility First | Usable by everyone | Correct ARIA in shadow DOM, automated a11y checks |
+| 📐 Responsive by Allocation | Adapts to its container, not just the viewport | Container queries drive layout, not page media queries |
+| 🎬 Motion-Aware | Respects motion sensitivity | Themeable timing, honors `prefers-reduced-motion` |
+| 🔗 Synchronized Public API | Docs never drift from code | JSDoc, tests, stories, and manifest must all agree |
+| 🔒 Responsible Disclosure | Security issues handled safely | Private reporting, 90-day coordinated disclosure |
 
 ## Components
 
@@ -80,18 +143,62 @@ Every one of the 167 tags is built on the same three guarantees — not opt-in p
 See [`packages/lyra-ui/README.md#theming-internationalization--rtl`](./packages/lyra-ui/README.md#theming-internationalization--rtl)
 for the full usage details.
 
-## SSR, Declarative Shadow DOM & framework integration
+## Framework integration (React, Vue, Angular, Svelte)
+
+Lyra ships plain custom elements — no framework-specific wrapper package needed.
+
+```jsx
+// React 19+
+import '@aceshooting/lyra-ui/components/combobox/combobox.js';
+
+<lyra-combobox label="Fruit" with-clear>
+  <lyra-option value="a">Apple</lyra-option>
+</lyra-combobox>
+```
+
+```vue
+<!-- Vue -->
+<lyra-combobox label="Fruit" @lyra-change="onChange" />
+```
+
+```html
+<!-- Angular — module/component needs schemas: [CUSTOM_ELEMENTS_SCHEMA] -->
+<lyra-combobox label="Fruit" (lyra-change)="onChange($event)"></lyra-combobox>
+```
+
+```svelte
+<!-- Svelte -->
+<lyra-combobox label="Fruit" on:lyra-change={onChange} />
+```
+
+Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and event-name casing notes:
+[`packages/lyra-ui/README.md#framework-integration-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-vue-angular-svelte).
+
+## SSR & Declarative Shadow DOM
 
 Lyra components are standard Lit 3 custom elements: they render through `@lit-labs/ssr` into
 Declarative Shadow DOM in principle, and a spot check of `<lyra-button>` confirms basic
 server-rendering works — but the library has not been systematically tested or tuned for SSR at
-scale. Vue, Angular, and Svelte can all consume Lyra directly with no wrapper package, subject to the
-usual custom-element property-vs-attribute and event-binding differences from a native framework
-component. See
+scale. See
 [`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom)
-and
-[`packages/lyra-ui/README.md#framework-integration-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-vue-angular-svelte)
 for details.
+
+## Browser & Node support
+
+- **Node** ≥ 20 to build/test this repo (`engines.node`); the published packages have no Node
+  runtime dependency — they run in the browser.
+- **Browsers** — any evergreen browser with Custom Elements v1 + Shadow DOM support (Chrome, Edge,
+  Firefox, Safari). CI runs the full test suite against Chromium plus a separate platform-contract
+  suite against Firefox and WebKit, on Node 20 and 22.
+- Not tested against Internet Explorer or other browsers without native custom-element support.
+
+## Built with
+
+- [Lit 3](https://lit.dev) — the web-component base every Lyra element extends
+- [Floating UI](https://floating-ui.com) — positioning engine for popovers, tooltips, dropdowns, and the combobox menu
+- [Chart.js](https://www.chartjs.org) & [D3](https://d3js.org) — optional peers powering the Chart.js chart family and `<lyra-graph>`
+- [Storybook](https://storybook.js.org) — the live docs site and component workshop
+- [Noto Emoji](https://github.com/googlefonts/noto-emoji) flag artwork — vendored into `@aceshooting/lyra-flags` (Public Domain)
 
 ## Documentation
 
