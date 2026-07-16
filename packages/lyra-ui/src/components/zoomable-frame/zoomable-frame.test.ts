@@ -36,3 +36,21 @@ it('is accessible and resets with the keyboard shortcut', async () => {
   expect(el.zoom).to.equal(1);
   await expect(el).to.be.accessible();
 });
+
+it('renders a safe image src as-is', async () => {
+  const el = (await fixture(
+    html`<lyra-zoomable-frame src="https://example.test/a.png" alt="A map"></lyra-zoomable-frame>`,
+  )) as LyraZoomableFrame;
+  await el.updateComplete;
+  const img = el.shadowRoot!.querySelector('[part="content"] img') as HTMLImageElement;
+  expect(img.getAttribute('src')).to.equal('https://example.test/a.png');
+});
+
+it('rejects an unsafe image src instead of passing it straight to the DOM', async () => {
+  const el = (await fixture(
+    html`<lyra-zoomable-frame src="javascript:alert(1)" alt="A map"></lyra-zoomable-frame>`,
+  )) as LyraZoomableFrame;
+  await el.updateComplete;
+  const img = el.shadowRoot!.querySelector('[part="content"] img') as HTMLImageElement;
+  expect(img.getAttribute('src')).to.equal('');
+});

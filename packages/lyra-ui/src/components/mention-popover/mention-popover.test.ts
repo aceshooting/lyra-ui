@@ -228,6 +228,23 @@ it('fires lyra-mention-close when a host directly sets open = false (no Escape i
   expect(el.open).to.be.false;
 });
 
+it('resets `open` to false on disconnect so a reconnect never resumes half-open with stale positioning', async () => {
+  // The actual fix behavior: `disconnectedCallback()` sets `open = false`
+  // rather than leaving it `true` across the disconnect -- without this a
+  // reconnect while still "open" never re-triggers updated()'s open-driven
+  // reposition() branch (nothing else changes `open`/`anchor`/`query` on
+  // reconnect), leaving the popup positioned incorrectly with no live
+  // scroll/resize tracking. Mirrors lyra-combobox's identical regression test.
+  const el = await openWithItems();
+  expect(el.open).to.be.true;
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.appendChild(el);
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
 it('does not fire lyra-mention-close for markup that mounts already open="false"', async () => {
   const el = (await fixture(html`<lyra-mention-popover></lyra-mention-popover>`)) as LyraMentionPopover;
   let closeFired = false;

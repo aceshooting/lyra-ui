@@ -101,9 +101,6 @@ importers:
       '@types/geojson':
         specifier: ^7946.0.16
         version: 7946.0.16
-      libphonenumber-js:
-        specifier: '>=1.11.0 <2'
-        version: 1.13.8
       lit:
         specifier: ^3.3.3
         version: 3.3.3
@@ -183,6 +180,9 @@ importers:
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
+      libphonenumber-js:
+        specifier: ^1.13.8
+        version: 1.13.8
       mammoth:
         specifier: ^1.12.0
         version: 1.12.0

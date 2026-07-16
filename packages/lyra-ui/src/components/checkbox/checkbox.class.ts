@@ -6,8 +6,10 @@ import { styles } from './checkbox.styles.js';
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without importing
-// that module — it's off limits here — so the glyph still reads as part of
-// the same visual language as the rest of the library's inline icons.
+// that module -- internal/icons.ts is kept a small, closed set of glyphs
+// reused across many components, and this checkmark is specific to this
+// control's own box -- so the glyph still reads as part of the same visual
+// language as the rest of the library's inline icons.
 const GLYPH_VIEW_BOX = '0 0 24 24';
 const GLYPH_STROKE_WIDTH = '1.75';
 

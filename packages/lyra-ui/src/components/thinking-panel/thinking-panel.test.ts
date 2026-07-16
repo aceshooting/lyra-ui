@@ -323,6 +323,42 @@ describe('body scroll containment', () => {
   });
 });
 
+describe('RTL', () => {
+  it('mirrors the collapsed-state toggle chevron under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lyra-thinking-panel></lyra-thinking-panel>
+      </div>
+    `);
+    const el = wrapper.querySelector('lyra-thinking-panel') as LyraThinkingPanel;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    expect(getComputedStyle(toggle).transform).to.equal('matrix(-1, 0, 0, 1, 0, 0)');
+  });
+
+  it('does not mirror the expanded-state (already-rotated) toggle chevron under dir="rtl"', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lyra-thinking-panel expanded></lyra-thinking-panel>
+      </div>
+    `);
+    const el = wrapper.querySelector('lyra-thinking-panel') as LyraThinkingPanel;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    // rotate(90deg): cos(90)=0, sin(90)=1 -> matrix(0, 1, -1, 0, 0, 0)
+    expect(getComputedStyle(toggle).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+});
+
+describe('motion', () => {
+  it('uses the ambient (slow, breathing) transition token for the pending-duration pulse dot, not the fast discrete-transition token', async () => {
+    const el = (await fixture(
+      html`<lyra-thinking-panel mode="live" expanded></lyra-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    const dot = el.shadowRoot!.querySelector('.pending-dot') as HTMLElement;
+    expect(dot).to.exist;
+    expect(getComputedStyle(dot).animationDuration).to.equal('1.8s');
+  });
+});
+
 it('is accessible with no content and collapsed', async () => {
   const el = (await fixture(html`<lyra-thinking-panel></lyra-thinking-panel>`)) as LyraThinkingPanel;
   await expect(el).to.be.accessible();

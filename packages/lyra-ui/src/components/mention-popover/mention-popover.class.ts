@@ -339,6 +339,15 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.cleanup?.();
     this.cleanup = undefined;
     this.virtualAnchor?.remove();
+    // Reset so a reconnect (e.g. a drag-drop reparent of the composer, or a
+    // virtualized/reordering message list moving this element) re-triggers
+    // updated()'s open-driven branch -- without this, `open` stays `true`
+    // across the disconnect/reconnect and changed.has('open') never fires
+    // again, leaving the popup rendered open with no positioning and no live
+    // scroll/resize tracking until the host happens to change `query`/
+    // `anchor` on the next keystroke. Mirrors lyra-select's/lyra-combobox's
+    // identical fix.
+    this.open = false;
   }
 
   /** The current candidate set: `items` filtered by `query` via `filter`

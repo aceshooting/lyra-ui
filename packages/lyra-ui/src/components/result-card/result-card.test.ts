@@ -100,6 +100,19 @@ it('exposes the full title text on the truncating [part="title"] span via its ow
   expect(title.getAttribute('title')).to.equal(longTitle);
 });
 
+it('strips the redundant host-level title attribute so only the truncating span shows a native tooltip', async () => {
+  const el = (await fixture(html`<lyra-result-card title="HTTP request">body</lyra-result-card>`)) as LyraResultCard;
+  expect(el.hasAttribute('title')).to.be.false;
+  expect(el.title).to.equal('HTTP request');
+  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  expect(title.getAttribute('title')).to.equal('HTTP request');
+
+  el.title = 'Renamed result';
+  await el.updateComplete;
+  expect(el.hasAttribute('title'), 'stays stripped after a later property assignment').to.be.false;
+  expect(el.title).to.equal('Renamed result');
+});
+
 it('always renders the body wrapper around the default slot', async () => {
   const el = (await fixture(html`<lyra-result-card>plain body text</lyra-result-card>`)) as LyraResultCard;
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;

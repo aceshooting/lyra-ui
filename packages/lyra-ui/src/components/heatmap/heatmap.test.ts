@@ -4,7 +4,6 @@ import type { LyraHeatmap } from './heatmap.js';
 import {
   MAX_BUCKET_COUNT,
   hexToRgb,
-  mixColor,
   normalizeBucketCount,
   resolveRgb,
 } from './heatmap.js';
@@ -584,22 +583,6 @@ describe('resolveRgb', () => {
   });
 });
 
-describe('mixColor', () => {
-  it('interpolates between two hex colors', () => {
-    expect(mixColor('#000000', '#ffffff', 0)).to.equal('rgb(0, 0, 0)');
-    expect(mixColor('#000000', '#ffffff', 1)).to.equal('rgb(255, 255, 255)');
-    expect(mixColor('#000000', '#ffffff', 0.5)).to.equal('rgb(128, 128, 128)');
-  });
-
-  it('interpolates between two non-hex CSS colors', () => {
-    expect(mixColor('rgb(0, 0, 0)', 'rgb(255, 255, 255)', 0.5)).to.equal('rgb(128, 128, 128)');
-  });
-
-  it('interpolates alpha and emits rgba() when either endpoint is translucent (gap #65)', () => {
-    expect(mixColor('rgba(0, 0, 0, 0)', 'rgba(255, 255, 255, 1)', 0.5)).to.equal('rgba(128, 128, 128, 0.5)');
-    expect(mixColor('#0969da', 'rgba(9, 105, 218, 0.5)', 1)).to.equal('rgba(9, 105, 218, 0.5)');
-  });
-});
 
 it('retheming --lyra-heatmap-no-data-fill changes the rendered no-data cell color', async () => {
   const el = (await fixture(html`

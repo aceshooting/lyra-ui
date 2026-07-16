@@ -741,6 +741,34 @@ it('formats the displayed value using the locale property', async () => {
   expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString('fr-FR'));
 });
 
+it('derives the displayed value, the day/month/year parse order, and the nested picker locale from an inherited lang ancestor with no locale attribute set', async () => {
+  // Regression test: displayText's formatter, localeDateOrder() (which
+  // decides how an ambiguous typed date like "03/04/2026" is parsed), and the
+  // `.locale=` binding forwarded to the nested <lyra-date-picker> all used to
+  // read the raw `locale` prop (default '') directly instead of
+  // `effectiveLocale`, which also walks lang/locale ancestors -- so an
+  // inherited <div lang="en-GB"> was silently ignored, both for display and
+  // for day-first vs month-first parsing.
+  const wrapper = await fixture(html`
+    <div lang="en-GB"><lyra-date-input value="2026-07-15"></lyra-date-input></div>
+  `);
+  const el = wrapper.querySelector('lyra-date-input') as LyraDateInput;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  expect(input.value).to.equal(new Date(2026, 6, 15).toLocaleDateString('en-GB'));
+
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  expect(picker.locale).to.equal('en-GB');
+
+  // en-GB reads day/month/year, so "03/04/2026" is April 3rd, not March 4th.
+  input.value = '03/04/2026';
+  setTimeout(() => input.dispatchEvent(new Event('change')));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('2026-04-03');
+});
+
 it('applies the shared focus-ring tokens to the clear and expand buttons', () => {
   const css = styles.cssText;
   const focusBlock = /\[part=['"]?clear-button['"]?]:focus-visible,\s*\[part=['"]?expand-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
@@ -1050,4 +1078,73 @@ describe('blur/focus bubbling', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='clear-button'\]:hover,\s*\[part='expand-button'\]:hover\s*\{[^}]+\}/);
   });
+});
+
+describe('native-wrapper focus/selection/editing surface', () => {
+  it('exposes the internal date text input via a public getter', async () => {
+    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    expect(el.input).to.equal(el.shadowRoot!.querySelector('[part="input"]'));
+  });
+
+  it('focus()/blur() delegate to the internal input instead of the host', async () => {
+    const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    el.focus();
+    expect(el.shadowRoot!.activeElement).to.equal(el.input);
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+  });
+
+  it('select() and the selectionStart/selectionEnd accessors operate on the internal input', async () => {
+    const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    el.focus();
+    el.select();
+    expect(el.selectionStart).to.equal(0);
+    expect(el.selectionEnd).to.equal(el.input!.value.length);
+
+    el.setSelectionRange(1, 3);
+    expect(el.selectionStart).to.equal(1);
+    expect(el.selectionEnd).to.equal(3);
+  });
+
+  it('setRangeText() edits the field and re-parses it into a new value, keeping value/validity in sync', async () => {
+    const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const displayed = el.input!.value; // e.g. "7/15/2026" under en-US
+    const isoOfNext = new Date(2026, 6, 20);
+    const replacement = displayed.replace('15', '20');
+
+    el.setRangeText(replacement, 0, displayed.length);
+    expect(el.value, 'setRangeText should commit a parseable edit as the new value').to.equal('2026-07-20');
+    expect(el.input!.value).to.equal(isoOfNext.toLocaleDateString());
+  });
+
+  it('setRangeText() reverts to the last committed display text and flags badInput for an unparseable edit', async () => {
+    const el = (await fixture(html`<lyra-date-input value="2026-07-15"></lyra-date-input>`)) as LyraDateInput;
+    await el.updateComplete;
+    const committedDisplay = el.input!.value;
+
+    el.setRangeText('not a date', 0, committedDisplay.length);
+    expect(el.value, 'an unparseable programmatic edit must not overwrite the committed value').to.equal(
+      '2026-07-15',
+    );
+    expect(el.input!.value).to.equal(committedDisplay);
+    expect(el.internals.validity.badInput).to.be.true;
+  });
+});
+
+it('exposes accessibleLabel as a public property, not just the aria-label attribute', async () => {
+  const el = (await fixture(html`<lyra-date-input></lyra-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  expect(el.accessibleLabel).to.equal(null);
+
+  // A JS property assignment (no cast needed since the property is public)
+  // must reach the internal input's aria-label, the same as setting the
+  // aria-label attribute already did.
+  el.accessibleLabel = 'Departure date';
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  expect(input.getAttribute('aria-label')).to.equal('Departure date');
 });

@@ -201,6 +201,31 @@ describe('resize="auto"', () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     expect(ta.getBoundingClientRect().height).to.be.greaterThan(wideHeight);
   });
+
+  it('keeps auto-grow working after a reparent (disconnect + reconnect) with no property change in between', async () => {
+    const el = (await fixture(html`
+      <lyra-textarea
+        resize="auto"
+        rows="1"
+        style="inline-size: 24rem"
+        .value=${'wrapped content '.repeat(30)}
+      ></lyra-textarea>
+    `)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const wideHeight = ta.getBoundingClientRect().height;
+
+    // A drag-drop reparent (or a repeat() re-key, or a tab panel detach/reattach) fires
+    // disconnectedCallback then connectedCallback on this same element instance, with no Lit
+    // update in between -- exactly the sequence that used to leave the ResizeObserver disarmed.
+    const parent = el.parentElement!;
+    parent.removeChild(el);
+    parent.appendChild(el);
+
+    el.style.inlineSize = '8rem';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(ta.getBoundingClientRect().height).to.be.greaterThan(wideHeight);
+  });
 });
 
 describe('native editing-attribute passthrough', () => {

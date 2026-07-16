@@ -48,6 +48,49 @@ describe('lyra-pptx-viewer', () => {
     }
   });
 
+  it('remounts the presentation after a synchronous reparent while connected, instead of leaving stale-looking live controls over an empty container', async () => {
+    // Regression test: disconnectedCallback() used to tear the renderer down
+    // without resetting `phase`/`slideCount`/`currentSlideIndex` -- and
+    // nothing re-armed the mount on reconnect, since updated()'s
+    // `changed.has('src')` gate never fires again for a reparent that leaves
+    // `src` unchanged. The element re-rendered as an empty container with
+    // live-looking nav controls whose prev/next buttons silently no-op
+    // against a destroyed (undefined) viewer.
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lyra-pptx-viewer></lyra-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await aTimeout(30);
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+
+      const otherContainer = document.createElement('div');
+      document.body.appendChild(otherContainer);
+      otherContainer.appendChild(el); // disconnect + reconnect synchronously, same instance
+      await el.updateComplete;
+
+      // Right after the reparent, the previous renderer was torn down -- the
+      // viewer must fall back to an idle/empty state, not keep rendering nav
+      // controls against a destroyed viewer.
+      expect(fake.calls.destroy).to.equal(1);
+      expect(
+        el.shadowRoot!.querySelector('[part="container"]'),
+        'must not still render a container as if a presentation were mounted',
+      ).to.not.exist;
+
+      // The reconnect re-arms the mount, so the presentation comes back
+      // rather than the viewer staying permanently blank.
+      await aTimeout(30);
+      expect(el.shadowRoot!.querySelector('[part="container"]'), 'a reconnect must remount the presentation').to
+        .exist;
+
+      otherContainer.remove();
+    } finally {
+      restore();
+    }
+  });
+
   it('renders unsafe-url and missing-renderer errors', async () => {
     const unsafe = (await fixture(html`<lyra-pptx-viewer .src=${'javascript:alert(1)'}></lyra-pptx-viewer>`)) as LyraPptxViewer;
     await aTimeout(10);

@@ -6,7 +6,7 @@
  * SVGO pass. The `standard` tier is what `<lyra-flag>` renders by default and targets card/row
  * sizes (~28-96px); the pristine `flags/detailed/<code>.svg` backs `variant="detailed"` (hero
  * scale), and a separate WebP raster (`scripts/build-compact.mjs`) backs `variant="compact"`
- * (icon scale). See docs/superpowers/specs/2026-07-12-flag-icon-tiers-design.md.
+ * (icon scale).
  *
  * Why a size threshold rather than "optimize everything": 175 of 249 flags are already <= 10 KB
  * (median 2,572 bytes) — the package-wide problem is a minority of outliers whose source art

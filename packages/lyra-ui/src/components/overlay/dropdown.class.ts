@@ -1,4 +1,3 @@
-import type { TemplateResult } from 'lit';
 import { LyraPopover } from './popover.class.js';
 
 /**
@@ -9,12 +8,12 @@ import { LyraPopover } from './popover.class.js';
  * @customElement lyra-dropdown
  * @slot trigger - The interactive trigger.
  * @slot - Menu content.
+ * @cssprop --lyra-overlay-max-inline-size - Maximum inline size of the popup (default `--lyra-size-20rem`).
  */
 export class LyraDropdown extends LyraPopover {
   constructor() {
     super();
     this.popupRole = 'menu';
   }
-  override render(): TemplateResult { return super.render(); }
 }
 declare global { interface HTMLElementTagNameMap { 'lyra-dropdown': LyraDropdown; } }

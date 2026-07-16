@@ -100,8 +100,11 @@ export const styles = css`
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
+  /* Stands in for [part='toggle'] on the closing-bracket row, so it must match the toggle's
+     actual used inline-size -- min-inline-size wins over the toggle's own smaller inline-size,
+     so the real box is --lyra-icon-button-size, not --lyra-size-1-25rem. */
   .toggle-space {
-    inline-size: var(--lyra-size-1-25rem);
+    inline-size: var(--lyra-icon-button-size);
     flex: 0 0 auto;
   }
   [part='key'] {

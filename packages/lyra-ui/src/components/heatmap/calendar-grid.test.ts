@@ -151,6 +151,15 @@ describe('buildCalendarGrid', () => {
     });
     expect(monthLabels[0].label).to.equal(expected);
   });
+
+  it('formats month labels using an explicitly passed locale, overriding the runtime default', () => {
+    const { monthLabels } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }], 0, undefined, 'fr-FR');
+    const expected = new Date(Date.UTC(2026, 2, 5)).toLocaleString('fr-FR', {
+      month: 'short',
+      timeZone: 'UTC',
+    });
+    expect(monthLabels[0].label).to.equal(expected);
+  });
 });
 
 describe('quartileBucket', () => {

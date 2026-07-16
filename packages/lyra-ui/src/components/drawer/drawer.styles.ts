@@ -53,6 +53,18 @@ export const styles = css`
   :host([placement='end']) [part='panel'] {
     --lyra-drawer-enter-x: var(--lyra-size-1rem);
   }
+  /* translateX is a physical transform -- logical properties don't cover it -- so the
+     enter-from offset is flipped explicitly under RTL, the same way app-rail's offscreen
+     panel transform is. A 'start' drawer rests at the physical right edge under RTL and
+     must enter from further right (positive X); an 'end' drawer rests at the physical left
+     edge and must enter from further left (negative X) -- the mirror image of the LTR rules
+     above. */
+  :host(:dir(rtl)) [part='panel'] {
+    --lyra-drawer-enter-x: var(--lyra-size-1rem);
+  }
+  :host(:dir(rtl)[placement='end']) [part='panel'] {
+    --lyra-drawer-enter-x: calc(-1 * var(--lyra-size-1rem));
+  }
   :host([placement='top']) [part='panel'],
   :host([placement='bottom']) [part='panel'] {
     animation-name: lyra-drawer-in-block;

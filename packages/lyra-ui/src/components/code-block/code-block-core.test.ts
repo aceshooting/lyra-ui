@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block-core.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
@@ -34,6 +34,28 @@ describe('lyra-code-block-core', () => {
     // too tight for under load.
     await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
     expect(el.shadowRoot!.querySelector('.shiki')).to.exist;
+  });
+
+  it('does not set highlighter/shikiReady when the element disconnects before loadShikiHighlighterCore() resolves in connectedCallback()', async function () {
+    // `languages` must be non-empty *before* the element ever connects, so
+    // connectedCallback() itself takes the loadShikiHighlighterCore().then()
+    // branch under test (the other call site, inside syncHighlight(), is
+    // already guarded by its own highlightToken staleness check). A fresh
+    // object literal never hits the per-languages-object WeakMap cache, so
+    // this is a genuine, non-instant dynamic import -- give it real time to
+    // settle before asserting the disconnected instance was never mutated.
+    this.timeout(20_000);
+    const el = document.createElement('lyra-code-block-core') as LyraCodeBlockCore;
+    el.language = 'json';
+    el.languages = { json: jsonGrammar };
+    document.body.appendChild(el);
+    el.remove();
+    await aTimeout(8000);
+
+    type Internals = { highlighter?: unknown; shikiReady: boolean };
+    const internals = el as unknown as Internals;
+    expect(internals.shikiReady, 'must not become true on a disconnected instance').to.be.false;
+    expect(internals.highlighter, 'must not be set on a disconnected instance').to.equal(undefined);
   });
 
   it('renders the plain-text fallback for a language absent from the supplied languages map, never hanging waiting on a default highlighter', async () => {

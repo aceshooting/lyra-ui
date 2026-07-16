@@ -472,6 +472,35 @@ it('resolves an explicit left/right placement through rtlAwarePlacement, mirrori
   expect(rtlPopup.style.top).to.equal(ltrPopup.style.top);
 });
 
+it('repositions the popup when placement changes while already open, instead of keeping the stale computePosition subscription', async () => {
+  const wrap = await fixture(html`
+    <div style="position: relative;">
+      <lyra-menu placement="bottom-start">
+        <button slot="trigger" style="position:absolute; top:100px; left:100px;">⋮</button>
+        <lyra-menu-item value="a">A</lyra-menu-item>
+      </lyra-menu>
+    </div>
+  `);
+  const el = wrap.querySelector('lyra-menu') as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  await waitFor(
+    () => popup.style.top,
+    (top) => top !== '',
+  );
+  const bottomTop = popup.style.top;
+
+  el.placement = 'top-start';
+  await el.updateComplete;
+  await waitFor(
+    () => popup.style.top,
+    (top) => top !== '' && top !== bottomTop,
+  );
+
+  expect(popup.style.top).to.not.equal(bottomTop);
+});
+
 it('resets `open` to false on disconnect, so a reconnect (drag-drop reparent) starts closed rather than stuck open', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   trigger(el).click();

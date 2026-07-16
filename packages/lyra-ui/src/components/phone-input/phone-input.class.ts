@@ -140,6 +140,33 @@ function isDialLike(value: string): boolean {
   return DIAL_LIKE_RE.test(value.trim());
 }
 
+/** Digits (not the punctuation/spacing an adapter's formatting inserts) among
+ *  `value`'s first `index` characters -- the caret-preservation unit that
+ *  survives a reformat, since punctuation position moves but digit order
+ *  never does. */
+function digitsBefore(value: string, index: number): number {
+  let count = 0;
+  for (let i = 0; i < index && i < value.length; i++) {
+    if (/\d/.test(value[i]!)) count++;
+  }
+  return count;
+}
+
+/** Inverse of `digitsBefore()`: the index in `value` immediately after its
+ *  `digitCount`-th digit, or the string's end once `value` doesn't contain
+ *  that many digits (e.g. a reformat that removed a stray character). */
+function indexAfterDigits(value: string, digitCount: number): number {
+  if (digitCount <= 0) return 0;
+  let count = 0;
+  for (let i = 0; i < value.length; i++) {
+    if (/\d/.test(value[i]!)) {
+      count++;
+      if (count === digitCount) return i + 1;
+    }
+  }
+  return value.length;
+}
+
 function fallbackParse(input: string): PhoneNumberParseResult {
   const raw = input.trim();
   if (!raw) return { status: 'empty' };
@@ -204,7 +231,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Accessible-name override for the telephone input. */
   @property({ attribute: 'phone-label' }) phoneLabel = '';
   /** Validation message for a number that may still become valid with more digits. */
-  @property({ attribute: 'incomplete-text' }) incompleteText = 'The value is invalid.';
+  @property({ attribute: 'incomplete-text' }) incompleteText = 'This phone number is incomplete.';
   /** Validation message for a completed but invalid number. */
   @property({ attribute: 'invalid-text' }) invalidText = 'The value is invalid.';
   @property() autocomplete = 'tel';
@@ -291,10 +318,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.applyParsed(raw, parsed);
   }
 
-  private get selectedCountry(): string {
-    return this.country;
-  }
-
   private get availableCountries(): PhoneCountry[] {
     const source = this.countries.length ? this.countries : (this.adapter?.countries ?? []);
     const seen = new Set<string>();
@@ -305,8 +328,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       seen.add(code);
       rows.push({ ...item, code, callingCode: item.callingCode.replace(/^\+/, '') });
     }
-    if (rows.length === 0 && this.selectedCountry) {
-      rows.push({ code: this.selectedCountry, callingCode: '' });
+    if (rows.length === 0 && this.country) {
+      rows.push({ code: this.country, callingCode: '' });
     }
     return rows;
   }
@@ -314,7 +337,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   private parse(input: string): PhoneNumberParseResult {
     if (!this.adapter) return fallbackParse(input);
     try {
-      const parsed = this.adapter.parse(input, this.selectedCountry || undefined);
+      const parsed = this.adapter.parse(input, this.country || undefined);
       if (parsed.status === 'valid' && (!parsed.e164 || !E164_RE.test(parsed.e164))) {
         return { status: 'invalid', formatted: parsed.formatted ?? input, country: parsed.country };
       }
@@ -332,11 +355,26 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.setAttribute('data-phone-status', parsed.status);
   }
 
+  /** Reassigns `input.value` to the just-reformatted `editableValue`, restoring the caret to the
+   *  same *digit* offset it held before reformatting -- assigning `.value` unconditionally moves
+   *  the caret to the end (native `<input>` behavior), which makes mid-string edits impossible
+   *  once an adapter reformats the text differently from what was typed. A no-op (no reassignment,
+   *  no selection change) when the reformat didn't actually change the string, which keeps the
+   *  no-adapter path exactly as before. */
+  private syncFormattedValue(input: HTMLInputElement, digitsBeforeCaret: number | null): void {
+    if (input.value === this.editableValue) return;
+    input.value = this.editableValue;
+    if (digitsBeforeCaret != null) {
+      const position = indexAfterDigits(this.editableValue, digitsBeforeCaret);
+      input.setSelectionRange(position, position);
+    }
+  }
+
   private get eventDetail(): LyraPhoneInputEventDetail {
     return {
       value: super.value,
       inputValue: this.editableValue,
-      country: this.selectedCountry,
+      country: this.country,
       valid: this.internals.validity.valid,
       status: this.status,
     };
@@ -352,8 +390,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   private get incompleteMessage(): string {
     return this.localize(
-      'valueInvalid',
-      this.incompleteText === 'The value is invalid.' ? undefined : this.incompleteText,
+      'phoneInputIncomplete',
+      this.incompleteText === 'This phone number is incomplete.' ? undefined : this.incompleteText,
     );
   }
 
@@ -424,8 +462,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   private onInput = (event: Event): void => {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
+    const caret = input.selectionStart;
+    const digitsBeforeCaret = caret == null ? null : digitsBefore(input.value, caret);
     this.applyParsed(input.value, this.parse(input.value));
-    input.value = this.editableValue;
+    this.syncFormattedValue(input, digitsBeforeCaret);
     this.emit('input', this.eventDetail);
   };
 
@@ -505,8 +545,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     } else {
       input.setRangeText(replacement, start, end, selectMode);
     }
+    const caret = input.selectionStart;
+    const digitsBeforeCaret = caret == null ? null : digitsBefore(input.value, caret);
     this.applyParsed(input.value, this.parse(input.value));
-    input.value = this.editableValue;
+    this.syncFormattedValue(input, digitsBeforeCaret);
   }
 
   formResetCallback(): void {
@@ -523,7 +565,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     const hasError = Boolean(renderedError || this.hasErrorSlot);
     const describedBy = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ');
     const rows = this.availableCountries;
-    const current = rows.find((row) => row.code === this.selectedCountry);
+    const current = rows.find((row) => row.code === this.country);
 
     return html`
       <div part="form-control">
@@ -537,7 +579,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
           <select
             part="country-select"
             aria-label=${this.effectiveCountryLabel}
-            .value=${this.selectedCountry}
+            .value=${this.country}
             ?disabled=${this.effectiveDisabled || rows.length === 0}
             @change=${this.onCountryChange}
           >
@@ -545,7 +587,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
               ? html`<option value="">${this.effectiveCountryLabel}</option>`
               : rows.map((row) => html`<option
                     value=${row.code}
-                    ?selected=${row.code === this.selectedCountry}
+                    ?selected=${row.code === this.country}
                   >${this.countryName(row)}${row.callingCode ? ` (+${row.callingCode})` : ''}</option>`)}
           </select>
           ${current?.callingCode

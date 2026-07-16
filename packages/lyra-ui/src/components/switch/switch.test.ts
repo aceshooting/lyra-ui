@@ -102,6 +102,31 @@ it('sets aria-required when required', async () => {
   expect(base.getAttribute('aria-required')).to.equal('true');
 });
 
+it('forwards focus() and blur() to the internal switch control', async () => {
+  const el = (await fixture(html`<lyra-switch>Label</lyra-switch>`)) as LyraSwitch;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement === base).to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('reflects aria-invalid on the inner switch only after the field has been interacted with once', async () => {
+  const el = (await fixture(html`<lyra-switch required>Label</lyra-switch>`)) as LyraSwitch;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+
+  base.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+
+  el.checked = true;
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+});
+
 it('hides the label part when the default slot has no real content', async () => {
   const el = (await fixture(html`<lyra-switch></lyra-switch>`)) as LyraSwitch;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;

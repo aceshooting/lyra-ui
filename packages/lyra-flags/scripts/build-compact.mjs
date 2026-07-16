@@ -3,8 +3,7 @@
  * Maintenance job: renders each pristine `flags/detailed/<code>.svg` original to a small WebP
  * raster at `flags/compact/<code>.webp` — the `compact` tier `<lyra-flag variant="compact">` and
  * `flagUrl(code, { variant: 'compact' })` serve for icon-scale use (menu items, language
- * selectors, dense lists; ~12-28px). See
- * docs/superpowers/specs/2026-07-12-flag-icon-tiers-design.md.
+ * selectors, dense lists; ~12-28px).
  *
  * Why a raster, not more vector optimization: the ~65 flags with a detailed original embed a
  * national coat of arms / seal / emblem drawn as hundreds of tiny paths (e.g. `es` is 615 paths).

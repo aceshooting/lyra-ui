@@ -26,6 +26,19 @@ export const styles = css`
   [part='base'][data-orientation='vertical'] [part='before'] {
     clip-path: inset(0 0 calc(100% - var(--lyra-comparer-position, 50%)) 0);
   }
+  /* clip-path's inset() only accepts physical top/right/bottom/left offsets -- no logical
+     equivalent exists -- while [part='divider'] below is positioned with the logical
+     inset-inline-start, which the browser already mirrors under RTL on its own. Without this
+     override the clipped 'before' region stays pinned to the physical-left portion regardless of
+     direction, while the divider (and native range-input handle) move to the right under RTL,
+     visibly desyncing the boundary from the line the user is dragging. Vertical orientation is a
+     block-axis split, unaffected by inline direction, so it's excluded and keeps its own rule above. */
+  :host(:dir(rtl)) [part='before'] {
+    clip-path: inset(0 0 0 calc(100% - var(--lyra-comparer-position, 50%)));
+  }
+  :host(:dir(rtl)) [part='base'][data-orientation='vertical'] [part='before'] {
+    clip-path: inset(0 0 calc(100% - var(--lyra-comparer-position, 50%)) 0);
+  }
   [part='before'] ::slotted(*),
   [part='after'] ::slotted(*) {
     display: block;
@@ -51,7 +64,11 @@ export const styles = css`
   }
   [part='handle'] {
     position: absolute;
-    z-index: var(--lyra-layer-tooltip);
+    /* --lyra-layer-tooltip does not exist (no fallback -> z-index: auto, stacking the handle BELOW
+       [part='before']'s clipped pointer-events-enabled region and intercepting its own drag/click
+       input). Matching [part='divider']'s own --lyra-layer-popover is sufficient: the handle renders
+       after the divider in the template, so an equal z-index still wins the paint-order stacking tie. */
+    z-index: var(--lyra-layer-popover);
     inset: 0;
     inline-size: 100%;
     block-size: 100%;

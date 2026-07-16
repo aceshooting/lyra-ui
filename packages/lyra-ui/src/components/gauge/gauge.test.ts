@@ -265,3 +265,28 @@ it('is accessible in linear mode', async () => {
   )) as LyraGauge;
   await expect(el).to.be.accessible();
 });
+
+it('keeps the linear label/value text inside the 0..100 x range under RTL instead of double-flipping text-anchor', async () => {
+  const wrapper = (await fixture(html`
+    <div dir="rtl"><lyra-gauge type="linear" label="Battery" value="50" max="100"></lyra-gauge></div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lyra-gauge') as LyraGauge;
+  await el.updateComplete;
+  const labelEl = el.shadowRoot!.querySelector('[part="label"]') as unknown as SVGTextElement;
+  const valueEl = el.shadowRoot!.querySelector('[part="value"]') as unknown as SVGTextElement;
+
+  // The stylesheet's text-anchor already mirrors via the inherited `direction` --
+  // an inline style here would double-flip it and push the text outside the viewBox.
+  expect(labelEl.getAttribute('style')).to.be.null;
+  expect(valueEl.getAttribute('style')).to.be.null;
+
+  const labelBox = labelEl.getBBox();
+  const valueBox = valueEl.getBBox();
+  // A double-flipped text-anchor pushes the whole string (tens of units wide) off
+  // the 0..100 viewBox; a 1-unit margin only tolerates ordinary glyph-metrics
+  // overshoot (side bearings/anti-aliasing) at the anchor point itself.
+  expect(labelBox.x).to.be.at.least(-1);
+  expect(labelBox.x + labelBox.width).to.be.at.most(101);
+  expect(valueBox.x).to.be.at.least(-1);
+  expect(valueBox.x + valueBox.width).to.be.at.most(101);
+});

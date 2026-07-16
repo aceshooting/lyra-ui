@@ -53,7 +53,11 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   connectedCallback(): void {
     super.connectedCallback();
-    if (this.active && !this.paused) this.armTicker();
+    // A mount/reconnect with no scheduled deadline yet (nextInMs never set,
+    // so targetAt is still its 0 default) must not start a ticker -- it
+    // would immediately see targetAt - Date.now() <= 0 on its very first
+    // tick and fire a spurious lyra-poll-due for a countdown that never ran.
+    if (this.active && !this.paused && this.nextInMs != null) this.armTicker();
   }
 
   disconnectedCallback(): void {
@@ -62,23 +66,34 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('nextInMs') && this.nextInMs != null) {
-      this.targetAt = Date.now() + this.nextInMs;
-      this.due = false;
-      this.remainingMs = this.nextInMs;
-      if (this.active && !this.paused) this.armTicker();
+    if (changed.has('nextInMs')) {
+      if (this.nextInMs != null) {
+        this.targetAt = Date.now() + this.nextInMs;
+        this.due = false;
+        this.remainingMs = this.nextInMs;
+        if (this.active && !this.paused) this.armTicker();
+      } else {
+        // Clearing next-in-ms (e.g. between poll cycles) must stop the
+        // ticker armed for the previous deadline -- otherwise it keeps
+        // running against a now-stale targetAt and eventually fires a
+        // lyra-poll-due for a countdown the host no longer considers active,
+        // while [part='countdown'] already renders nothing.
+        this.disarmTicker();
+        this.due = false;
+        this.remainingMs = 0;
+      }
     }
     if (changed.has('paused')) {
       if (this.paused) {
         this.disarmTicker();
         this.announce(this.localize('pollPausedAnnounce'));
       } else {
-        if (this.active) this.armTicker();
+        if (this.active && this.nextInMs != null) this.armTicker();
         this.announce(this.localize('pollResumedAnnounce'));
       }
     }
     if (changed.has('active')) {
-      if (this.active && !this.paused) this.armTicker();
+      if (this.active && !this.paused && this.nextInMs != null) this.armTicker();
       else this.disarmTicker();
     }
   }

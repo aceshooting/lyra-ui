@@ -491,6 +491,38 @@ it('falls back to a generic aria-label for the fullscreen dialog when no label i
   expect(base.getAttribute('aria-label')).to.equal('Fullscreen panel');
 });
 
+it('names the fullscreen dialog from a slotted label, not just the label attribute', async () => {
+  const el = (await fixture(html`
+    <lyra-widget expandable><span slot="label">Energy production</span>content</lyra-widget>
+  `)) as LyraWidget;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  expect(base.getAttribute('aria-label')).to.equal('Energy production');
+});
+
+it('lets a host aria-label override both label and a slotted label for the fullscreen dialog name', async () => {
+  const el = (await fixture(html`
+    <lyra-widget expandable aria-label="Override" label="attr"><span slot="label">rich</span>content</lyra-widget>
+  `)) as LyraWidget;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  (el.shadowRoot!.querySelector('[part="fullscreen-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  expect(base.getAttribute('aria-label')).to.equal('Override');
+});
+
+it('mirrors the collapsed collapse-button chevron under RTL', async () => {
+  const el = (await fixture(html`
+    <lyra-widget dir="rtl" collapsible collapsed>content</lyra-widget>
+  `)) as LyraWidget;
+  const button = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
+  expect(getComputedStyle(button).transform).to.contain('matrix(-1');
+});
+
 it('traps Tab focus inside the fullscreen panel, wrapping last->first and first->last', async () => {
   const el = (await fixture(
     html`<lyra-widget label="x" collapsible expandable>content</lyra-widget>`,

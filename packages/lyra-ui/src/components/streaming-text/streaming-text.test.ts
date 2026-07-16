@@ -297,9 +297,18 @@ describe('cursor', () => {
     expect(cursor!.getAttribute('aria-hidden')).to.equal('true');
   });
 
-  it('gives the cursor a looping blink animation that is disabled under reduced motion', () => {
+  it('gives the cursor a looping blink animation, using the ambient (not discrete-flip) transition token, disabled under reduced motion', async () => {
+    // Regression test: this used to assert --lyra-transition-base (a 180ms
+    // discrete-state-flip token), which made the cursor strobe roughly every
+    // 90ms instead of the calm, ambient blink lyra-typing-indicator's own
+    // cursor variant produces via --lyra-transition-ambient.
+    const el = (await fixture(html`<lyra-streaming-text streaming .content=${'hi'}></lyra-streaming-text>`)) as LyraStreamingText;
+    const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
+    expect(getComputedStyle(cursor).animationDuration).to.equal('1.8s');
+
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('animation: lyra-streaming-text-cursor-blink var(--lyra-transition-base) infinite;');
+    expect(css).to.include('animation: lyra-streaming-text-cursor-blink var(--lyra-transition-ambient) infinite;');
+    expect(css).to.not.include('animation: lyra-streaming-text-cursor-blink var(--lyra-transition-base) infinite;');
     expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
   });
 

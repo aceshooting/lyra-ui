@@ -39,7 +39,13 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('disabled') || changed.has('box')) queueMicrotask(this.observeTargets);
+    // Routed through the base class's connection-aware scheduler rather than
+    // a bare queueMicrotask: Lit still runs a scheduled update (and this
+    // method) even for an element that disconnects before that update's own
+    // microtask fires, and a plain queueMicrotask has no way to notice that
+    // and would still spin up a new, now-unreachable ResizeObserver that
+    // disconnectedCallback has already run and won't run again to clean up.
+    if (changed.has('disabled') || changed.has('box')) this.scheduleAfterUpdate(this.observeTargets);
   }
 
   private onSlotChange = (): void => this.observeTargets();
@@ -53,7 +59,7 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     this.disconnect();
     if (this.disabled) return;
     const slot = this.renderRoot.querySelector('slot');
-    const targets = slot?.assignedElements({ flatten: true }).filter((element): element is Element => element instanceof Element) ?? [];
+    const targets = slot?.assignedElements({ flatten: true }) ?? [];
     if (targets.length === 0 || typeof ResizeObserver === 'undefined') return;
     this.observer = new ResizeObserver((entries) => this.emit('lyra-resize', { entries: [...entries] }));
     for (const target of targets) {

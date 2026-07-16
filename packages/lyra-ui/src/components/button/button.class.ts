@@ -29,6 +29,14 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * @csspart start - The `start` slot wrapper.
  * @csspart end - The `end` slot wrapper.
  * @csspart spinner - The loading spinner, present only while `loading` is `true`.
+ * @cssprop [--lyra-button-width=100%] - Inline size of the internal button. The host
+ * defaults it to `100%` so the native button follows the host's own width; override to
+ * `auto` (or any other value) for a compact inline composition.
+ * @cssprop [--lyra-button-hover-brightness=1.08] - `filter: brightness()` multiplier applied
+ * while hovering a non-disabled button.
+ * @cssprop [--lyra-button-active-scale=0.9875] - `transform: scale()` factor applied while a
+ * non-disabled button is pressed.
+ * @cssprop [--lyra-button-spinner-duration=1s] - Rotation period of the `loading` spinner.
  */
 export class LyraButton extends LyraElement {
   static styles = [LyraElement.styles, styles];

@@ -70,8 +70,32 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
+    // children, a virtualized list moving this same element instance) fires
+    // disconnectedCallback then connectedCallback synchronously with no
+    // update in between, so updated()'s `changed.has('src')` gate never
+    // fires again to remount the presentation. disconnectedCallback already
+    // reset `phase` to idle and tore the renderer down, so re-arm the mount
+    // here whenever there's a `src` to load and this isn't the very first
+    // connect (that case is already covered by updated()'s initial-render
+    // gate).
+    if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.mount(); });
+  }
+
   disconnectedCallback(): void {
     this.teardown();
+    // Reset rather than leaving stale "mounted" state behind: without this,
+    // a reconnect that isn't followed by a fresh mount (src unset, or the
+    // reconnect races ahead of connectedCallback's remount) would keep
+    // rendering the nav/slide controls as if a presentation were still
+    // loaded, against a destroyed renderer -- an empty container with
+    // live-looking prev/next buttons that silently no-op every click,
+    // instead of an empty/idle state.
+    this.phase = 'idle';
+    this.slideCount = 0;
+    this.currentSlideIndex = 0;
     super.disconnectedCallback();
   }
 

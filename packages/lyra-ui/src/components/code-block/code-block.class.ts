@@ -216,6 +216,13 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     super.connectedCallback();
     if (this.languagesOnly) return;
     void loadShikiHighlighter().then((hl) => {
+      // loadShikiHighlighter() is a page-lifetime singleton promise -- it can
+      // resolve well after this element has disconnected (or been torn down
+      // for good). Bail out rather than mutate @state on a dead instance and
+      // kick off syncHighlight()'s own further async grammar load for
+      // nothing. Mirrors chart.ts's/markdown.ts's identical
+      // connectedCallback() guard for the same race.
+      if (!this.isConnected) return;
       this.highlighter = hl;
       this.shikiReady = true;
       this.syncHighlight();

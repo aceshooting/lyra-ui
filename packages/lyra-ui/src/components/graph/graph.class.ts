@@ -153,6 +153,8 @@ export interface LyraGraphEventMap {
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
+ * @cssprop [--lyra-node-fill=var(--lyra-color-brand)] - Default node fill, overridden per-node by `GraphNode.color`.
+ * @cssprop [--lyra-link-color=var(--lyra-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -216,6 +218,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private nodeEls: SVGCircleElement[] = [];
   private nodeLabelEls: (SVGTextElement | null)[] = [];
   private linkEls: SVGLineElement[] = [];
+  /** Dangling-stub `<line>`s, index-aligned with `danglingLinks` -- cached separately from
+   *  `linkEls` (real, simulated links only) so onTick() can write their positions too; see
+   *  onTick()'s own comment for why a stub needs this at all. */
+  private danglingLinkEls: SVGLineElement[] = [];
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -349,7 +355,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.nodeLabelEls = nodeEls.map(
       (el) => (el.parentElement?.querySelector('[part="label"]') as SVGTextElement | null) ?? null,
     );
-    this.linkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"]')) as SVGLineElement[];
+    // Dangling stubs also carry part="link" (so they inherit the same themeable styling as a
+    // real edge) -- excluded here explicitly so `linkEls` stays index-aligned with `simLinks`
+    // rather than relying on stubs always sorting after real links in template/DOM order.
+    this.linkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"]:not([data-dangling])')) as SVGLineElement[];
+    this.danglingLinkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"][data-dangling]')) as SVGLineElement[];
 
     nodeEls.forEach((el, i) => {
       if (this.boundNodeEls.has(el)) return;
@@ -411,6 +421,21 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     });
     this.simLinks.forEach((l, i) => {
       const line = this.linkEls[i];
+      if (!line) return;
+      const coordinates = this.linkCoordinates(l);
+      line.setAttribute('x1', String(coordinates.x1));
+      line.setAttribute('y1', String(coordinates.y1));
+      line.setAttribute('x2', String(coordinates.x2));
+      line.setAttribute('y2', String(coordinates.y2));
+    });
+    // Dangling stubs are excluded from d3-force's own simulation input (see
+    // rebuildSimulation()'s "stubs never enter d3-force's own simulation input"), so the
+    // synthetic target position the danglingLinks loop at the top of this method just
+    // recomputed is never picked up by the simLinks loop above -- write it here the same way,
+    // or a stub stays frozen at its pre-settle position while the source node it hangs off
+    // keeps moving.
+    this.danglingLinks.forEach((l, i) => {
+      const line = this.danglingLinkEls[i];
       if (!line) return;
       const coordinates = this.linkCoordinates(l);
       line.setAttribute('x1', String(coordinates.x1));

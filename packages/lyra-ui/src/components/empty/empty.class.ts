@@ -19,6 +19,8 @@ import { styles } from './empty.styles.js';
  * @csspart actions - The wrapper around the `actions`-slotted content.
  * @cssprop --lyra-empty-compact-align - Cross-axis and text alignment used in compact mode;
  * set to `center` for dense but centered empty states.
+ * @cssprop [--lyra-empty-compact-padding=var(--lyra-space-xs)] - Padding used in compact mode;
+ * accepts any padding shorthand (e.g. `8px 2px`).
  */
 export class LyraEmpty extends LyraElement {
   static styles = [LyraElement.styles, styles];

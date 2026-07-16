@@ -2,7 +2,7 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './date-picker.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-picker.styles.js';
-import { weekdayLabels, monthTitle } from './calendar-core.js';
+import { weekdayLabels, monthTitle, resolveFirstDayOfWeek } from './calendar-core.js';
 
 it('selects a day and emits change with an ISO value', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
@@ -141,6 +141,33 @@ it('moves the roving focus into the newly visible month after navigation', async
   expect(focusable.length).to.equal(1);
   expect((focusable[0] as HTMLButtonElement).dataset.date).to.equal('2026-08-01');
   expect((focusable[0] as HTMLButtonElement).disabled).to.be.false;
+});
+
+it('does not steal DOM focus off the next/previous button when navigating months', async () => {
+  // Regression test: willUpdate() used to unconditionally call
+  // normalizeFocusedDate() on every update, including one caused purely by
+  // nav() moving viewDate -- since the previously-focused/selected anchor is
+  // no longer inside the newly-visible month, that armed focusPending and
+  // updated() yanked real DOM focus onto a day cell, off whatever the
+  // keyboard user was actually operating (the nav button itself).
+  const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLButtonElement;
+  next.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(next);
+
+  next.click();
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!.activeElement,
+    'DOM focus should stay on the next button, not jump to a day cell',
+  ).to.equal(next);
+  // The roving tabindex should still have re-anchored into the new month.
+  const focusable = el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]');
+  expect(focusable.length).to.equal(1);
+  expect((focusable[0] as HTMLButtonElement).dataset.date).to.equal('2026-08-01');
 });
 
 it('renders two months when requested', async () => {
@@ -548,6 +575,34 @@ it('formats each day cell aria-label with the full localized weekday/month/day/y
   expect(cell.getAttribute('aria-label')).to.equal(expected);
 });
 
+it('derives month/weekday labels and first-day-of-week from an inherited lang ancestor when no locale attribute is set', async () => {
+  // Regression test: every Intl call used to read the raw `locale` prop
+  // directly (default '', resolved by Intl as the browser's own locale)
+  // instead of `effectiveLocale`, which also walks lang/locale ancestors --
+  // so an inherited <div lang="fr"> was silently ignored.
+  const wrapper = await fixture(html`
+    <div lang="fr"><lyra-date-picker value="2026-07-15"></lyra-date-picker></div>
+  `);
+  const el = wrapper.querySelector('lyra-date-picker') as LyraDatePicker;
+  await el.updateComplete;
+
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim();
+  expect(title).to.equal(monthTitle(2026, 6, 'fr'));
+
+  const fdow = resolveFirstDayOfWeek('auto', 'fr');
+  const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="weekday"]')).map((w) => w.textContent!.trim());
+  expect(labels).to.deep.equal(weekdayLabels(fdow, 'short', 'fr'));
+
+  const cell = el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLButtonElement;
+  const expected = new Intl.DateTimeFormat('fr', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(2026, 6, 15));
+  expect(cell.getAttribute('aria-label')).to.equal(expected);
+});
+
 it('gives an outside-month day inside a selected range normal text contrast, not the quiet outside color', async () => {
   const el = (await fixture(
     html`<lyra-date-picker
@@ -603,6 +658,13 @@ it('goToToday() navigates the view to the current month and focuses today', asyn
   expect(cell, 'expected today to be rendered after goToToday()').to.exist;
   expect(cell.getAttribute('tabindex')).to.equal('0');
   expect(el.shadowRoot!.activeElement).to.equal(cell);
+});
+
+it('wraps the two-month layout instead of overflowing a narrow allocation', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const baseBlock = /\[part=['"]?base['"]?]\s*{([^}]*)}/.exec(css);
+  expect(baseBlock, "expected a [part='base'] rule").to.not.equal(null);
+  expect(baseBlock![1]).to.include('flex-wrap: wrap;');
 });
 
 it('uses the shared --lyra-opacity-disabled token instead of a literal 0.35 for the disabled day state', () => {

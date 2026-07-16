@@ -17,6 +17,23 @@ export const Range: Story = {
   render: () => html`<lyra-date-picker mode="range" months="2"></lyra-date-picker>`,
 };
 
+export const RangeNarrowAllocation: Story = {
+  name: 'Two months at a 320px allocation',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'At a 320px allocation -- narrower than the two fixed-width month grids side by side -- the second month wraps onto its own line instead of overflowing the panel.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%;">
+      <lyra-date-picker mode="range" months="2"></lyra-date-picker>
+    </div>
+  `,
+};
+
 export const MinMax: Story = {
   render: () => html`<lyra-date-picker min="2026-07-10" max="2026-07-20" value="2026-07-15"></lyra-date-picker>`,
 };

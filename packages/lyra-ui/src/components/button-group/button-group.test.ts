@@ -20,4 +20,42 @@ describe('<lyra-button-group>', () => {
     const el = await fixture<LyraButtonGroup>(html`<lyra-button-group label="Actions"><lyra-button>Open</lyra-button></lyra-button-group>`);
     await expect(el).to.be.accessible();
   });
+
+  it('honors an overridden --lyra-button-group-gap custom property', async () => {
+    const el = await fixture<LyraButtonGroup>(html`
+      <lyra-button-group style="--lyra-button-group-gap: 24px;">
+        <lyra-button>Open</lyra-button>
+        <lyra-button>Save</lyra-button>
+      </lyra-button-group>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).gap).to.equal('24px');
+  });
+
+  it('goes full-width when its own allocation is narrow, via a container query rather than a viewport media query', async () => {
+    const narrow = await fixture<LyraButtonGroup>(html`
+      <lyra-button-group style="inline-size: 120px;">
+        <lyra-button>Open</lyra-button>
+        <lyra-button>Save</lyra-button>
+      </lyra-button-group>
+    `);
+    const narrowBase = narrow.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const narrowHostWidth = narrow.getBoundingClientRect().width;
+    const narrowBaseWidth = narrowBase.getBoundingClientRect().width;
+    expect(narrowBaseWidth).to.be.closeTo(narrowHostWidth, 2);
+
+    const wide = await fixture<LyraButtonGroup>(html`
+      <lyra-button-group style="inline-size: 500px;">
+        <lyra-button>Open</lyra-button>
+        <lyra-button>Save</lyra-button>
+      </lyra-button-group>
+    `);
+    const wideBase = wide.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const wideHostWidth = wide.getBoundingClientRect().width;
+    const wideBaseWidth = wideBase.getBoundingClientRect().width;
+    // Under the old viewport media query this would also have gone full-width
+    // whenever the *test runner's* viewport happened to be <= 20rem; pinning the
+    // host's own allocated width instead proves the query reacts to allocation.
+    expect(wideBaseWidth).to.be.lessThan(wideHostWidth - 20);
+  });
 });

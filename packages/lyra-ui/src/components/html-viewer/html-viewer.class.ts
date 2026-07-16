@@ -18,7 +18,17 @@ export interface LyraHtmlViewerEventMap {
   'lyra-render-error': CustomEvent<{ error: unknown }>;
 }
 
-/** Fetches and safely renders an inline HTML document. */
+/**
+ * Fetches and safely renders an inline HTML document.
+ *
+ * @customElement lyra-html-viewer
+ * @event lyra-render-error - Fired when fetching or sanitizing the document fails.
+ * @csspart base - The root container.
+ * @csspart body - The wrapper around the fetched-state content.
+ * @csspart html - The sanitized HTML document, once loaded.
+ * @csspart spinner - The loading region.
+ * @csspart error - The error region.
+ */
 export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

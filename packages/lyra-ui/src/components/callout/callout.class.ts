@@ -21,6 +21,7 @@ export interface LyraCalloutEventMap { 'lyra-close': CustomEvent<undefined>; }
  * @csspart icon - The icon wrapper.
  * @csspart content - The message content.
  * @csspart heading - The heading wrapper.
+ * @csspart message - The message content wrapper.
  * @csspart close-button - The close button.
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {

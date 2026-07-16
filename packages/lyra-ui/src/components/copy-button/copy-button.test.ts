@@ -123,4 +123,14 @@ describe('lyra-copy-button', () => {
     const el = await fixture(html`<lyra-copy-button value="hello"></lyra-copy-button>`);
     await expect(el).to.be.accessible();
   });
+
+  it('dims the disabled button via the shared --lyra-opacity-disabled token', async () => {
+    const el = (await fixture(html`<lyra-copy-button disabled value="hello"></lyra-copy-button>`)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    // Regression: the rule previously referenced the non-existent
+    // --lyra-disabled-opacity (reversed word order), which left the
+    // invalid opacity declaration at its initial value (1) instead of the
+    // shared 0.5 dimming used by every other disabled control.
+    expect(getComputedStyle(button).opacity).to.equal('0.5');
+  });
 });

@@ -753,6 +753,20 @@ it('is accessible in the empty-schema default state', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('shows a generic empty message for a schema with no properties, not table-scoped column copy', async () => {
+  const el = (await fixture(html`<lyra-tool-param-form></lyra-tool-param-form>`)) as LyraToolParamForm;
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
+  expect(empty.textContent).to.equal('No data');
+});
+
+it('renders a .strings override for the empty-schema message', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-param-form .strings=${{ noData: 'Rien à configurer' }}></lyra-tool-param-form>`,
+  )) as LyraToolParamForm;
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
+  expect(empty.textContent).to.equal('Rien à configurer');
+});
+
 it('is accessible in a populated state with a required, unfilled field revealed', async () => {
   const el = (await fixture(html`<lyra-tool-param-form .schema=${basicSchema}></lyra-tool-param-form>`)) as LyraToolParamForm;
   el.reportValidity();

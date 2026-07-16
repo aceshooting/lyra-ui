@@ -786,6 +786,37 @@ it('renders a dangling-target link as a stub off the source instead of dropping 
   expect(stub.getAttribute('aria-hidden')).to.equal('true');
 });
 
+it('keeps a dangling stub synced to its source node across ticks, instead of freezing at its initial position', async () => {
+  const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes; // ids: a, b
+  el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const sourceCircle = [...el.shadowRoot!.querySelectorAll('[part="node"]')].find(
+    (c) => c.getAttribute('aria-label') === 'A',
+  ) as SVGCircleElement;
+  const stub = el.shadowRoot!.querySelector('[part="link"][data-dangling]') as SVGLineElement;
+
+  await aTimeout(50);
+  const firstSourceX = sourceCircle.getAttribute('cx');
+  expect(stub.getAttribute('x1')).to.equal(firstSourceX);
+  expect(stub.getAttribute('y1')).to.equal(sourceCircle.getAttribute('cy'));
+
+  await aTimeout(200); // let the settle continue moving the source node
+  const laterSourceX = sourceCircle.getAttribute('cx');
+  expect(laterSourceX, 'sanity check: the source node keeps moving while the simulation settles').to.not.equal(
+    firstSourceX,
+  );
+  // Before the fix, onTick() recomputed the stub's synthetic target but never wrote x1/y1/x2/y2
+  // to its <line> element, so the stub stayed rendered at its very first tick's position while
+  // the source node it hangs off kept animating away from it.
+  expect(stub.getAttribute('x1')).to.equal(laterSourceX);
+  expect(stub.getAttribute('y1')).to.equal(sourceCircle.getAttribute('cy'));
+});
+
 it('silently drops a link whose source id has no matching node, without throwing, and still renders the valid links', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes; // ids: a, b

@@ -156,6 +156,13 @@ it('uses themeable motion values for running and pending statuses', async () => 
   expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
 });
 
+it('disables the infinite running/pending glyph animations under prefers-reduced-motion: reduce', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  // The media block also resets [part='base']'s hover/focus transition first, so the match must
+  // span across that nested rule's own closing brace rather than stopping at the first `}`.
+  expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none !important;/);
+});
+
 it('emits lyra-tool-call-chip-select with { name, callId } on click', async () => {
   const el = (await fixture(
     html`<lyra-tool-call-chip name="web_search" call-id="call-42"></lyra-tool-call-chip>`,

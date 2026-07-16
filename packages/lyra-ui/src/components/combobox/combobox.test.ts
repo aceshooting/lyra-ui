@@ -1437,6 +1437,113 @@ it('skips a trailing disabled option so End lands on the last navigable row', as
   expect(activeRow?.textContent).to.contain('Banana');
 });
 
+it('scrolls the keyboard-active option into view in a scrolling listbox', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  for (let i = 0; i < 20; i++) {
+    const opt = document.createElement('lyra-option');
+    opt.value = `${i}`;
+    opt.textContent = `Item ${i}`;
+    el.appendChild(opt);
+  }
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.focus();
+  el.open = true;
+  await el.updateComplete;
+  const box = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+
+  // The listbox is height-capped (max-block-size: 18rem) and scrollable --
+  // 20 rows overflow it, so arrowing this far down would otherwise leave the
+  // active row scrolled out of view (same fix/test shape as
+  // lyra-mention-popover's identical listbox).
+  for (let i = 0; i < 15; i++) {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+  }
+
+  const activeRow = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+  expect(activeRow).to.exist;
+  const rowRect = activeRow.getBoundingClientRect();
+  const boxRect = box.getBoundingClientRect();
+  expect(rowRect.top >= boxRect.top - 1, 'active row top must be within the scrolled listbox viewport').to.be.true;
+  expect(rowRect.bottom <= boxRect.bottom + 1, 'active row bottom must be within the scrolled listbox viewport').to
+    .be.true;
+});
+
+it('prunes _selectedLabelCache back to the live selection instead of growing unboundedly', async () => {
+  const el = (await fixture(html`<lyra-combobox></lyra-combobox>`)) as LyraCombobox;
+  el.source = async () => [{ value: 'lux', label: 'Luxembourg' }];
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(250);
+  await el.updateComplete;
+
+  // pickRow() -- driven here via a real row click, not a direct `value`
+  // assignment -- is the only place that ever writes into
+  // `_selectedLabelCache`.
+  const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  row.click();
+  await el.updateComplete;
+  const labelCache = (el as unknown as { _selectedLabelCache: Map<string, string> })._selectedLabelCache;
+  expect(labelCache.has('lux')).to.be.true;
+
+  // Deselecting -- the same `value` setter that already prunes
+  // `_selectedRowCache` back to the live selection -- must prune the label
+  // cache the same way instead of leaving a permanent orphaned entry.
+  el.value = '';
+  await el.updateComplete;
+  expect(labelCache.has('lux')).to.be.false;
+});
+
+it('registers the outside-click pointerdown listener on this.ownerDocument, not the bare global document', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const fakeDoc = document.implementation.createHTMLDocument('fake');
+  let addCalls = 0;
+  let removeCalls = 0;
+  const originalAdd = fakeDoc.addEventListener.bind(fakeDoc);
+  const originalRemove = fakeDoc.removeEventListener.bind(fakeDoc);
+  fakeDoc.addEventListener = ((...args: Parameters<typeof originalAdd>) => {
+    addCalls++;
+    return originalAdd(...args);
+  }) as typeof fakeDoc.addEventListener;
+  fakeDoc.removeEventListener = ((...args: Parameters<typeof originalRemove>) => {
+    removeCalls++;
+    return originalRemove(...args);
+  }) as typeof fakeDoc.removeEventListener;
+  // Swaps what `this.ownerDocument` resolves to for this instance only --
+  // proves the listener is registered against the *instance's own*
+  // document rather than the bare global `document` the module closure
+  // captured at evaluation time (the bug this regression guards against
+  // only manifests when those two differ, e.g. a same-origin iframe).
+  Object.defineProperty(el, 'ownerDocument', { value: fakeDoc, configurable: true });
+
+  el.open = true;
+  await el.updateComplete;
+  expect(addCalls).to.equal(1);
+
+  el.open = false;
+  await el.updateComplete;
+  expect(removeCalls).to.equal(1);
+});
+
+it('folds the filter query and option labels through locale-aware toLocaleLowerCase, not the invariant toLowerCase', async () => {
+  // Under a Turkish/Azeri locale, invariant `toLowerCase()` maps capital
+  // dotted İ (U+0130) to 'i' + a combining dot above (U+0069 U+0307), not
+  // plain 'i' -- so `'İstanbul'.toLowerCase()` never contains the substring
+  // 'istanbul' a user actually types. `toLocaleLowerCase('tr')` folds it
+  // correctly to plain 'istanbul'.
+  const el = (await fixture(html`
+    <lyra-combobox locale="tr">
+      <lyra-option value="ist">İstanbul</lyra-option>
+    </lyra-combobox>
+  `)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+
+  await typeQuery(el, 'istanbul');
+  const rows = el.shadowRoot!.querySelectorAll('[part="option"]');
+  expect(rows.length).to.equal(1);
+});
+
 describe('size', () => {
   it('defaults to size="m" and reflects the attribute', async () => {
     const el = (await fixture(basic())) as LyraCombobox;

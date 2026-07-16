@@ -75,6 +75,10 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   // the `hidden` attribute.
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  // Set on the control's first `blur`; gates the `aria-invalid` reflection
+  // below so validity styling never flashes on first render, mirroring
+  // `<lyra-checkbox>`'s/`<lyra-combobox>`'s identical `touched` field.
+  @state() private touched = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -185,6 +189,16 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     return this.renderRoot?.querySelector('[part="base"]') ?? null;
   }
 
+  /** Moves focus to the internal switch control. */
+  override focus(options?: FocusOptions): void {
+    this[VALIDITY_ANCHOR]()?.focus(options);
+  }
+
+  /** Removes focus from the internal switch control. */
+  override blur(): void {
+    this[VALIDITY_ANCHOR]()?.blur();
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     if (!this._defaultCaptured) {
@@ -258,6 +272,10 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.toggle();
   };
 
+  private onBlur = (): void => {
+    this.touched = true;
+  };
+
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
     // Space/Enter both activate, matching `<lyra-table>`'s sortable
@@ -297,11 +315,13 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
           aria-checked=${this.checked ? 'true' : 'false'}
           aria-required=${this.required ? 'true' : nothing}
+          aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
           aria-disabled=${this.effectiveDisabled ? 'true' : nothing}
           aria-label=${this.getAttribute('aria-label') || nothing}
           aria-describedby=${describedBy || nothing}
           @click=${this.onClick}
           @keydown=${this.onKeyDown}
+          @blur=${this.onBlur}
         >
           <span part="track">
             <span part="thumb"></span>

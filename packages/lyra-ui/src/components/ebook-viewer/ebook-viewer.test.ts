@@ -59,6 +59,37 @@ describe('lyra-ebook-viewer', () => {
     }
   });
 
+  it('reloads the book after a synchronous reparent while connected, instead of leaving stale-looking enabled controls', async () => {
+    const fake = fakeBook();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lyra-ebook-viewer src="https://example.test/book.epub"></lyra-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      const next = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+      expect(next.disabled).to.be.false;
+
+      const otherContainer = document.createElement('div');
+      document.body.appendChild(otherContainer);
+      otherContainer.appendChild(el); // disconnect + reconnect synchronously, same instance
+      await el.updateComplete;
+
+      // Right after the reparent, the previous rendition was torn down -- the
+      // controls must not still look live against a destroyed rendition.
+      expect(fake.calls.destroy).to.equal(1);
+      expect(next.disabled, 'controls must not stay enabled against a destroyed rendition').to.be.true;
+
+      // The reconnect re-arms the load, so the book comes back rather than the
+      // viewer staying permanently blank.
+      await aTimeout(20);
+      expect(next.disabled, 'a reconnect must reload the book').to.be.false;
+
+      otherContainer.remove();
+    } finally {
+      restore();
+    }
+  });
+
   it('renders safe-url, fetch, and missing-peer errors', async () => {
     const restore = stubFetch();
     try {

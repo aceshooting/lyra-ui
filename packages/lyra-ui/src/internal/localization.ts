@@ -63,8 +63,6 @@ export type LyraMessageKey =
   | 'circularReference'
   | 'items'
   | 'item'
-  | 'keys'
-  | 'key'
   | 'trendOf'
   | 'wordCloud'
   | 'notInCatalog'
@@ -196,8 +194,6 @@ export type LyraMessageKey =
   | 'contactViewerAddressLabel'
   | 'contactViewerOrganizationLabel'
   | 'exportButtonLabel'
-  | 'generationStatusToken'
-  | 'generationStatusTokens'
   | 'generationStatusElapsedSeconds'
   | 'generationStatusTokenCount'
   | 'generationStatusTokensCount'
@@ -205,7 +201,6 @@ export type LyraMessageKey =
   | 'graphDataList'
   | 'graphItemAnnouncement'
   | 'navigation'
-  | 'attachmentUploading'
   | 'attachmentRetryWithContext'
   | 'attachmentUploadingWithContext'
   | 'attachmentUploadingProgress'
@@ -278,16 +273,12 @@ export type LyraMessageKey =
   | 'download'
   | 'exportFormatMenuLabel'
   | 'fileInputDefaultLabel'
-  | 'fileInputAccepted'
-  | 'fileInputRejected'
   | 'fileInputAcceptedOne'
   | 'fileInputAcceptedMany'
   | 'fileInputRejectedOne'
   | 'fileInputRejectedMany'
   | 'fileInputFolderRejected'
-  | 'elapsedSecondsUnit'
   | 'elapsedMinutesSecondsTemplate'
-  | 'tokensPerSecondUnit'
   | 'graphNode'
   | 'graphLink'
   | 'graphDiagram'
@@ -316,7 +307,6 @@ export type LyraMessageKey =
   | 'mediaCardOpenImageAttachment'
   | 'mediaCardOpenVideoAttachment'
   | 'mediaCardOpenFileAttachment'
-  | 'mediaCardOpenAttachment'
   | 'mediaCardImageAttachment'
   | 'mediaCardVideoAttachment'
   | 'mentionSuggestions'
@@ -366,8 +356,7 @@ export type LyraMessageKey =
   | 'schemaPropertiesMustBeFlat'
   | 'valueMustBeSerializable'
   | 'valueInvalid'
-  | 'durationUnitMs'
-  | 'durationUnitS'
+  | 'phoneInputIncomplete'
   | 'durationMilliseconds'
   | 'durationSeconds'
   | 'selectTools'
@@ -413,7 +402,6 @@ export type LyraMessageKey =
   | 'kbdAltWord'
   | 'kbdShiftWord'
   | 'emailViewerMissingParser'
-  | 'emailViewerEmpty'
   | 'emailViewerFrom'
   | 'emailViewerTo'
   | 'emailViewerSubject'
@@ -498,8 +486,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   circularReference: 'Circular reference',
   items: 'items',
   item: 'item',
-  keys: 'keys',
-  key: 'key',
   trendOf: 'Trend of {count} values, last {value}',
   wordCloud: 'Word cloud of {count} {word}',
   notInCatalog: 'not in catalog',
@@ -629,10 +615,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   contactViewerPhoneLabel: 'Phone',
   contactViewerEmailLabel: 'Email',
   contactViewerAddressLabel: 'Address',
-  contactViewerOrganizationLabel: 'Organization',
+  contactViewerOrganizationLabel: 'Organization:',
   exportButtonLabel: 'Export',
-  generationStatusToken: 'token',
-  generationStatusTokens: 'tokens',
   generationStatusElapsedSeconds: '{seconds}s',
   generationStatusTokenCount: '{count} token',
   generationStatusTokensCount: '{count} tokens',
@@ -640,7 +624,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphDataList: 'Graph data',
   graphItemAnnouncement: '{item} ({index} of {total})',
   navigation: 'Navigation',
-  attachmentUploading: 'Uploading',
   attachmentRetryWithContext: 'Retry {label}',
   attachmentUploadingWithContext: 'Uploading {label}',
   attachmentUploadingProgress: 'Uploading {percent}%',
@@ -717,16 +700,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   download: 'Download',
   exportFormatMenuLabel: '{label} format',
   fileInputDefaultLabel: 'Drop files here or click to browse',
-  fileInputAccepted: '{count} file(s) added.',
-  fileInputRejected: '{count} file(s) rejected.',
   fileInputAcceptedOne: '{count} file added.',
   fileInputAcceptedMany: '{count} files added.',
   fileInputRejectedOne: '{count} file rejected.',
   fileInputRejectedMany: '{count} files rejected.',
   fileInputFolderRejected: 'Folders are not accepted here.',
-  elapsedSecondsUnit: 's',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
-  tokensPerSecondUnit: 'tok/s',
   graphNode: 'Node {label}',
   graphLink: 'Link from {source} to {target}',
   graphDiagram: 'Node-link diagram with {nodeCount} nodes and {linkCount} links',
@@ -755,7 +734,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   mediaCardOpenImageAttachment: 'Open image attachment',
   mediaCardOpenVideoAttachment: 'Open video attachment',
   mediaCardOpenFileAttachment: 'Open file attachment',
-  mediaCardOpenAttachment: 'Open {kind} attachment',
   mediaCardImageAttachment: 'Image attachment',
   mediaCardVideoAttachment: 'Video attachment',
   mentionSuggestions: 'Suggestions',
@@ -805,8 +783,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   schemaPropertiesMustBeFlat: 'Schema properties must be a flat object.',
   valueMustBeSerializable: 'Value must be JSON-serializable.',
   valueInvalid: 'The value is invalid.',
-  durationUnitMs: 'ms',
-  durationUnitS: 's',
+  phoneInputIncomplete: 'This phone number is incomplete.',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   selectTools: 'Select tools',
@@ -852,7 +829,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
   emailViewerMissingParser: 'This viewer needs the optional "postal-mime" package installed to parse this message.',
-  emailViewerEmpty: 'No message to display.',
   emailViewerFrom: 'From',
   emailViewerTo: 'To',
   emailViewerSubject: 'Subject',

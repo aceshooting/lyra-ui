@@ -30,6 +30,7 @@ export interface LyraDocxViewerEventMap {
  * @csspart content - The semantic document content.
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
+ * @cssprop [--lyra-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraDocxViewer extends LyraElement<LyraDocxViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -100,7 +101,7 @@ export class LyraDocxViewer extends LyraElement<LyraDocxViewerEventMap> {
     switch (this.fetchState.kind) {
       case 'loaded':
         return html`
-          <div part="content" role="document" aria-label=${this.name || this.localize('docxViewerLabel')}>
+          <div part="content" role="document" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('docxViewerLabel')}>
             ${unsafeHTML(this.fetchState.markup)}
           </div>
         `;

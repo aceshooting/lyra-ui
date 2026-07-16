@@ -119,6 +119,16 @@ describe('lyra-button', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('exposes the loading spinner rotation period as an overridable custom property, defaulting to 1s', async () => {
+    const el = (await fixture(html`<lyra-button .loading=${true}>Save</lyra-button>`)) as LyraButton;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+    expect(getComputedStyle(spinner).animationDuration).to.equal('1s');
+
+    el.style.setProperty('--lyra-button-spinner-duration', '2.4s');
+    await el.updateComplete;
+    expect(getComputedStyle(spinner).animationDuration).to.equal('2.4s');
+  });
+
   it('keeps the label space while loading and centers the spinner', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/:host\(\[loading\]\) \[part='label'\][^}]*opacity: 0/);

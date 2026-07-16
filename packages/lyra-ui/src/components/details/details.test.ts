@@ -3,6 +3,8 @@ import './details.js';
 import './accordion.js';
 import './accordion-item.js';
 import type { LyraDetails } from './details.js';
+import { styles as detailsStyles } from './details.styles.js';
+import { styles as accordionStyles } from './accordion.styles.js';
 
 it('renders a disclosure panel and reports its state', async () => {
   const el = (await fixture(html`<lyra-details summary="More">Content</lyra-details>`)) as LyraDetails;
@@ -37,4 +39,44 @@ it('suppresses the localized "Details" fallback once rich content is slotted int
   // slot="summary" child exists, or the fallback renders ahead of the real label.
   expect(summary.textContent?.trim()).to.equal('');
   expect(el.textContent?.trim()).to.equal('Custom LabelContent');
+});
+
+it('exposes disabled to assistive tech via aria-disabled on the summary, rendered in both states', async () => {
+  const el = (await fixture(html`<lyra-details summary="More" disabled>Content</lyra-details>`)) as LyraDetails;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+  expect(summary.getAttribute('aria-disabled')).to.equal('true');
+
+  el.disabled = false;
+  await el.updateComplete;
+  expect(summary.getAttribute('aria-disabled')).to.equal('false');
+});
+
+it('blocks both pointer and synthesized keyboard activation while disabled', async () => {
+  const el = (await fixture(html`<lyra-details summary="More" disabled>Content</lyra-details>`)) as LyraDetails;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLDetailsElement;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+
+  // A native <summary> synthesizes a click for Enter/Space activation, so exercising the click
+  // path (which onClick guards with event.preventDefault()) covers the keyboard path too.
+  summary.click();
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(base.open).to.be.false;
+});
+
+it('mirrors the disclosure marker rotation under RTL so it still points down/up instead of sideways', () => {
+  const css = detailsStyles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(":host(:dir(rtl)) [part='summary']::after { transform: rotate(-45deg); }");
+  expect(css).to.include(":host([open]:dir(rtl)) [part='summary']::after { transform: rotate(-225deg); }");
+});
+
+it('gives lyra-accordion its own stylesheet instead of reusing details.styles.ts wholesale', () => {
+  const css = accordionStyles.cssText.replace(/\s+/g, ' ');
+  // details.styles.ts's [part='base'] rule paints a border-block-end meant for <lyra-details>'s
+  // own root; the accordion's [part='base'] is a plain wrapper div, so inheriting that rule
+  // doubled up with the last panel's own border. None of details.styles.ts's <details>-shaped
+  // selectors (summary/content/disabled/reduced-motion) apply to the accordion's shadow root.
+  expect(css).to.not.include('border-block-end');
+  expect(css).to.not.include("[part='summary']");
+  expect(css).to.not.include("[part='content']");
 });

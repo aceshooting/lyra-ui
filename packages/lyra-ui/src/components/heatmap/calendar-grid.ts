@@ -57,13 +57,16 @@ function isCalendarValid(iso: string, parsed: Date): boolean {
  * `monthLabelText`, when it returns a string for a given `(jsMonth, year)`, overrides that
  * month's locale-derived label — mirrors `LyraHeatmap.weekdayLabelText`'s own override-with-
  * fallback shape, letting month labels track the same locale signal (e.g. an app's own i18n
- * store) as every other localizable string on the component instead of always following
- * `toLocaleString(undefined, ...)`'s browser/OS-language default.
+ * store) as every other localizable string on the component. Absent that override, `locale`
+ * (typically the host's `effectiveLocale`) drives the default label the same way it drives
+ * every other locale-derived string on the same canvas (weekday labels, formatted values) —
+ * so a calendar's month and weekday labels never disagree on language.
  */
 export function buildCalendarGrid(
   days: CalendarDay[],
   firstDayOfWeek = 0,
   monthLabelText?: (jsMonth: number, year: number) => string | undefined,
+  locale?: string,
 ): {
   cells: CalendarCell[];
   weekCount: number;
@@ -115,7 +118,7 @@ export function buildCalendarGrid(
       week: cell.week,
       label:
         monthLabelText?.(cellDate.getUTCMonth(), cellDate.getUTCFullYear()) ??
-        cellDate.toLocaleString(undefined, { month: 'short', timeZone: 'UTC' }),
+        cellDate.toLocaleString(locale || undefined, { month: 'short', timeZone: 'UTC' }),
     });
   }
 

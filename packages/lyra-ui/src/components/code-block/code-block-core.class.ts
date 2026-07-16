@@ -180,6 +180,13 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     super.connectedCallback();
     if (Object.keys(this.languages).length === 0) return; // no languages supplied -- stays in the plain-text-fallback state permanently, same as languagesOnly + no matching grammar already behaves in lyra-code-block today
     void loadShikiHighlighterCore(this.languages).then((hl) => {
+      // loadShikiHighlighterCore() is a shared, cached-by-languages promise --
+      // it can resolve well after this element has disconnected (or been torn
+      // down for good). Bail out rather than mutate @state on a dead instance
+      // and kick off syncHighlight()'s own further async grammar load for
+      // nothing. Mirrors chart.ts's/markdown.ts's/lyra-code-block's identical
+      // connectedCallback() guard for the same race.
+      if (!this.isConnected) return;
       this.highlighter = hl;
       this.shikiReady = true;
       this.syncHighlight();
@@ -253,6 +260,14 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     this.highlightedHtml = null;
     void loadShikiHighlighterCore(languages).then((hl) => {
       if (token !== this.highlightToken) return; // superseded by a newer code/language/languages change
+      // Lit's first update cycle (which is what calls syncHighlight() via
+      // willUpdate() for an element that had `language`/`languages` set
+      // before it ever connected) still runs even if the element disconnects
+      // in the same synchronous tick as connectedCallback(), before that
+      // first update's microtask fires -- so this needs its own isConnected
+      // guard alongside connectedCallback()'s, not just the staleness check
+      // above, to avoid mutating @state on a dead instance.
+      if (!this.isConnected) return;
       this.highlighter = hl;
       this.shikiReady = true;
       this.highlightedHtml = hl ? this.tokenize(hl, lang) : null;

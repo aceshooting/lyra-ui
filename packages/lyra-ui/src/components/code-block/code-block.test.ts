@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, oneEvent, aTimeout } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block.js';
 import type { LyraCodeBlock } from './code-block.js';
@@ -107,6 +107,24 @@ describe('shiki highlighting (real peer)', () => {
     // partTransformer strips shiki's own tabindex="0" -- [part="body"] is
     // the single scrollable/focusable region instead.
     expect(pre.hasAttribute('tabindex')).to.be.false;
+  });
+
+  it('does not set highlighter/shikiReady when the element disconnects before loadShikiHighlighter() resolves', async () => {
+    // Runs after the previous test, so the module-cached loadShikiHighlighter()
+    // singleton is already resolved -- connectedCallback()'s .then() callback
+    // is still always deferred to a microtask (even against an already-settled
+    // promise), so disconnecting synchronously, in the same tick as connect,
+    // reliably lands before it fires. Mirrors markdown.test.ts's and
+    // chart.test.ts's identical disconnect-before-load-settles regression test.
+    const el = document.createElement('lyra-code-block') as LyraCodeBlock;
+    el.language = 'javascript';
+    el.code = jsSample;
+    document.body.appendChild(el);
+    el.remove();
+    await aTimeout(50);
+
+    expect(internalsOf(el).shikiReady, 'must not become true on a disconnected instance').to.be.false;
+    expect(internalsOf(el).highlighter, 'must not be set on a disconnected instance').to.equal(undefined);
   });
 
   it('re-highlights when code changes for an already-loaded language', async () => {

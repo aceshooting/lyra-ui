@@ -179,6 +179,19 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-drop reparent, a repeat() re-key, or a tab panel detaching and
+    // reattaching its content) leaves resizeObserver undefined from disconnectedCallback's own
+    // teardown below -- Lit's connectedCallback doesn't schedule a re-render on its own, so
+    // without this, auto-grow would only come back once some unrelated reactive property
+    // happened to change, and a pure container-width resize landing before that would be missed.
+    if (this.resize === 'auto' && this.hasUpdated) {
+      this.armResizeObserver();
+      this.fitToContent();
+    }
+  }
+
   disconnectedCallback(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;

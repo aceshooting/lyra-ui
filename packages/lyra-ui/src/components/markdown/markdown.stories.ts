@@ -26,7 +26,8 @@ const sample = `# Release notes
 - Fenced code blocks
 - [Docs](https://example.com/docs)
 
-> Disable sanitization via \`sanitize="false"\` only for markdown you already trust.
+> Disable sanitization by setting the \`sanitize\` property (not attribute) to \`false\` --
+> \`.sanitize=\${false}\` -- only for markdown you already trust.
 `;
 
 export const Default: Story = {

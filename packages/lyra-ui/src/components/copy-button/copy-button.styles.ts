@@ -32,7 +32,7 @@ export const styles = css`
   }
   [part='base']:disabled {
     cursor: not-allowed;
-    opacity: var(--lyra-disabled-opacity);
+    opacity: var(--lyra-opacity-disabled);
   }
   [part='base']:focus-visible {
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);

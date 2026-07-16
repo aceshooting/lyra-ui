@@ -157,6 +157,7 @@ export interface LyraLiteChartEventMap {
  * @csspart legend-swatch - Each legend entry's color swatch.
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden list of all plotted data points.
+ * @cssprop [--lyra-lite-chart-selected-outline-color=var(--lyra-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

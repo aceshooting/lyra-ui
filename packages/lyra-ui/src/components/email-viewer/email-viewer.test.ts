@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './email-viewer.js';
 import type { LyraEmailViewer } from './email-viewer.js';
+import { __setEmailDepsForTesting } from './email-loader.js';
 
 const SAMPLE_EML = [
   'From: Ada Lovelace <ada@example.test>', 'To: Grace Hopper <grace@example.test>', 'Subject: Quarterly report',
@@ -27,6 +28,8 @@ async function loaded(body: string): Promise<{ el: LyraEmailViewer; restore: () 
 }
 
 describe('lyra-email-viewer', () => {
+  afterEach(() => __setEmailDepsForTesting(undefined));
+
   it('renders a localized empty state by default', async () => {
     const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer></lyra-email-viewer>`);
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No email to display.');
@@ -55,6 +58,37 @@ describe('lyra-email-viewer', () => {
     try {
       expect(el.shadowRoot!.querySelector('[part="body-html"]')).to.not.exist;
       expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain('See you at noon.');
+    } finally { restore(); }
+  });
+
+  it('shows an error instead of a silently empty body when an HTML-only message has no sanitizer available', async () => {
+    __setEmailDepsForTesting({
+      PostalMime: { parse: () => Promise.resolve({ html: '<p>Totals are up 12%.</p>', attachments: [] }) },
+      DOMPurify: undefined,
+    });
+    const restore = stubFetch(SAMPLE_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer src="https://example.test/message.eml"></lyra-email-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+        'This viewer needs the optional "dompurify" package installed to render safely.',
+      );
+      expect(el.shadowRoot!.querySelector('[part="body-html"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part="body-text"]')).to.not.exist;
+    } finally { restore(); }
+  });
+
+  it('still falls back to plain text when DOMPurify is unavailable but the message has a text alternative', async () => {
+    __setEmailDepsForTesting({
+      PostalMime: { parse: () => Promise.resolve({ html: '<p>Ignored</p>', text: 'See you at noon.', attachments: [] }) },
+      DOMPurify: undefined,
+    });
+    const restore = stubFetch(SAMPLE_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer src="https://example.test/message.eml"></lyra-email-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain('See you at noon.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
     } finally { restore(); }
   });
 

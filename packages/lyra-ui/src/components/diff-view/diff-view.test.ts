@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './diff-view.js';
 import type { LyraDiffView } from './diff-view.js';
+import type { DiffOp } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
 
 describe('lyra-diff-view', () => {
@@ -44,5 +45,24 @@ describe('lyra-diff-view', () => {
   it('gives the copy button a :hover treatment, matching every sibling copy button in the library', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='copy-button'\]:hover\s*\{[^}]+\}/);
+  });
+
+  it('does not recompute the diff when only the copy-confirmation state toggles, only when oldText/newText change', async () => {
+    const el = (await fixture(html`
+      <lyra-diff-view copyable .oldText=${'a\nb'} .newText=${'a\nX'}></lyra-diff-view>
+    `)) as LyraDiffView;
+    await el.updateComplete;
+    const opsBefore = (el as unknown as { diffOps: DiffOp[] }).diffOps;
+
+    // Clicking the copy button only flips the `justCopied` @state field -- a render triggered
+    // purely by that must reuse the same cached diff array instead of a freshly recomputed one.
+    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect((el as unknown as { diffOps: DiffOp[] }).diffOps).to.equal(opsBefore);
+
+    // Changing the actual compared text must still produce a fresh diff.
+    el.newText = 'a\nY';
+    await el.updateComplete;
+    expect((el as unknown as { diffOps: DiffOp[] }).diffOps).to.not.equal(opsBefore);
   });
 });

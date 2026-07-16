@@ -96,19 +96,27 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
   render(): TemplateResult {
     const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
+    // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
+    // That's normally the checked item, but a fresh/cleared radiogroup has no
+    // checked item at all -- falling back to `item.value === this.value` alone
+    // would then match nothing and drop every button out of the tab order, so
+    // fall back to the first non-disabled item when nothing is selected (or the
+    // selected value doesn't match a current, non-disabled item).
+    const selectedIndex = this.items.findIndex((item) => item.value === this.value && !item.disabled);
+    const tabbableIndex = selectedIndex !== -1 ? selectedIndex : this.items.findIndex((item) => !item.disabled);
     return html`
       <div part="base" role="radiogroup" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${repeat(
           this.items,
           (item) => item.value,
-          (item) => html`<button
+          (item, index) => html`<button
             type="button"
             part="segment"
             data-value=${item.value}
             role="radio"
             aria-checked=${item.value === this.value ? 'true' : 'false'}
             aria-disabled=${item.disabled ? 'true' : 'false'}
-            tabindex=${item.value === this.value ? '0' : '-1'}
+            tabindex=${index === tabbableIndex ? '0' : '-1'}
             @click=${() => this.select(item)}
           >${item.icon ? html`<span part="segment-icon" aria-hidden="true">${item.icon}</span>` : nothing}<span part="segment-label">${item.label}</span></button>`,
         )}

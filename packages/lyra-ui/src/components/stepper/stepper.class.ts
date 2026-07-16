@@ -123,6 +123,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   };
 
   render(): TemplateResult {
+    // Roving tabindex needs exactly one stop in the tab order at all times -- the `current` step
+    // when there is one, otherwise the first step a keyboard user could actually land on. Without
+    // this fallback, an all-`completed`/all-`pending`/no-`current` `steps` array would leave every
+    // button at tabindex="-1" and drop the whole stepper out of the tab order.
+    const rovingId = this.steps.find((s) => s.state === 'current')?.id ?? this.steps.find((s) => s.state !== 'disabled')?.id;
     return html`
       <div part="base" role="tablist" aria-orientation=${this.orientation} @keydown=${this.onKeyDown}>
         ${repeat(
@@ -134,9 +139,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
             data-id=${step.id}
             data-state=${step.state}
             role="tab"
+            aria-selected=${step.state === 'current' ? 'true' : 'false'}
             aria-current=${step.state === 'current' ? 'step' : nothing}
             aria-disabled=${step.state === 'disabled' ? 'true' : 'false'}
-            tabindex=${step.state === 'current' ? '0' : '-1'}
+            tabindex=${step.id === rovingId ? '0' : '-1'}
             title=${step.title ?? nothing}
             @click=${() => this.selectStep(step, index)}
           >

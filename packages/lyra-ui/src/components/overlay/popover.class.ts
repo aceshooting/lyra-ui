@@ -23,6 +23,7 @@ export interface LyraPopoverEventMap {
  * @csspart trigger - The trigger wrapper.
  * @csspart popup - The positioned popup.
  * @csspart content - The content wrapper.
+ * @cssprop --lyra-overlay-max-inline-size - Maximum inline size of the popup (default `--lyra-size-20rem`).
  */
 export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -41,17 +42,35 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     if (changed.has('open') || changed.has('placement') || changed.has('distance')) {
       this.cleanup?.();
       this.cleanup = undefined;
-      if (this.open) {
-        document.addEventListener('pointerdown', this.onDocumentPointer);
-        if (!this.firstUpdate) this.emit('lyra-show');
-        this.position();
-      } else {
-        document.removeEventListener('pointerdown', this.onDocumentPointer);
-        if (!this.firstUpdate) this.emit('lyra-hide');
+      if (this.open) this.position();
+      // Scoped to a real open/close transition -- a placement/distance-only
+      // change re-runs this whole block to reposition, but must not re-emit
+      // lyra-show/lyra-hide or toggle the document listener when `open`
+      // itself didn't change.
+      if (changed.has('open')) {
+        if (this.open) {
+          document.addEventListener('pointerdown', this.onDocumentPointer);
+          if (!this.firstUpdate) this.emit('lyra-show');
+        } else {
+          document.removeEventListener('pointerdown', this.onDocumentPointer);
+          if (!this.firstUpdate) this.emit('lyra-hide');
+        }
       }
       this.syncTriggerA11y();
     }
     this.firstUpdate = false;
+  }
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-and-drop reparent keeping this same element
+    // instance) fires disconnectedCallback then connectedCallback
+    // synchronously with no update in between, so updated() never reruns to
+    // notice `open` is still true -- restore the light-dismiss listener and
+    // the Floating UI positioner subscription it dropped.
+    if (this.hasUpdated && this.open) {
+      document.addEventListener('pointerdown', this.onDocumentPointer);
+      this.position();
+    }
   }
   disconnectedCallback(): void {
     this.cleanup?.();
@@ -86,7 +105,14 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     if (!event.composedPath().includes(this)) this.open = false;
   };
   render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.accessibleLabel || this.localize('popover');
+    // The accessible-name fallback follows the popup's actual semantic role --
+    // a `popupRole="menu"` popup (e.g. <lyra-dropdown>) is announced as a menu,
+    // not as a generic "Popover", so its translation is looked up under the
+    // same key <lyra-menu> uses for its own default name.
+    const label =
+      this.getAttribute('aria-label') ||
+      this.accessibleLabel ||
+      this.localize(this.popupRole === 'menu' ? 'menuLabel' : 'popover');
     return html`
       <span part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>

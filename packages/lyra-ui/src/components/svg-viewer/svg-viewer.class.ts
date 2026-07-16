@@ -18,7 +18,18 @@ export interface LyraSvgViewerEventMap {
   'lyra-render-error': CustomEvent<{ error: unknown }>;
 }
 
-/** Fetches and safely renders an inline SVG document. */
+/**
+ * Fetches and safely renders an inline SVG document.
+ *
+ * @customElement lyra-svg-viewer
+ * @event lyra-render-error - Fired when fetching or sanitizing the document fails.
+ * @csspart base - The root container.
+ * @csspart body - The wrapper around the fetched-state content.
+ * @csspart svg - The sanitized SVG document, once loaded.
+ * @csspart spinner - The loading region.
+ * @csspart error - The error region.
+ * @cssprop [--lyra-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
+ */
 export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 

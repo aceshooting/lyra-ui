@@ -10,7 +10,23 @@ import { styles } from './contact-viewer.styles.js';
 type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'error'; message: string };
 export interface LyraContactViewerEventMap { 'lyra-render-error': CustomEvent<{ error: unknown }>; }
 
-/** Fetches a vCard document and renders one accessible card per contact. */
+/**
+ * Fetches a vCard document and renders one accessible card per contact.
+ *
+ * @customElement lyra-contact-viewer
+ * @event lyra-render-error - Fired when fetching or parsing the document fails.
+ * @csspart base - The root container.
+ * @csspart body - The wrapper around the fetched-state content.
+ * @csspart contact - One rendered contact card.
+ * @csspart contact-name - A contact's name heading.
+ * @csspart contact-org - A contact's organization line, when present.
+ * @csspart contact-tel - A contact's phone number list, when present.
+ * @csspart contact-email - A contact's email list, when present.
+ * @csspart contact-adr - A contact's address list, when present.
+ * @csspart spinner - The loading region.
+ * @csspart error - The error region.
+ * @cssprop [--lyra-contact-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
+ */
 export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as vCard text. */
@@ -51,7 +67,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
   private renderContact(contact: VCardContact): TemplateResult {
     return html`<article part="contact">
       <h3 part="contact-name">${contact.fn || this.localize('contactViewerUnnamedContact')}</h3>
-      ${contact.org.length ? html`<p part="contact-org"><span class="field-label">${this.localize('contactViewerOrganizationLabel')}: </span>${contact.org.join(', ')}</p>` : nothing}
+      ${contact.org.length ? html`<p part="contact-org"><span class="field-label">${this.localize('contactViewerOrganizationLabel')} </span>${contact.org.join(', ')}</p>` : nothing}
       ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${tel.value}${tel.types.length ? html` <span class="type">(${tel.types.join(', ')})</span>` : nothing}</li>`)}</ul>` : nothing}
       ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${email.value}${email.types.length ? html` <span class="type">(${email.types.join(', ')})</span>` : nothing}</li>`)}</ul>` : nothing}
       ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${this.formatAddress(address)}</li>`)}</ul>` : nothing}

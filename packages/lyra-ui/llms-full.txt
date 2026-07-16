@@ -531,6 +531,10 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 **Properties (own, continued):**
 - `errorText: string = ''` (attribute `error-text` — static error copy; overridden by slotted
   `error` content when provided)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the internal
+  `<input>`'s computed accessible name; wins over `label`/`placeholder`/the localized `date`
+  fallback in that order. Attribute-reflects from a host-level `aria-label` so a plain-markup
+  consumer gets ARIA-name forwarding without setting a JS property.
 - `clearLabel: string = 'Clear'` (attribute `clear-label` — accessible label for the clear button)
 - `openLabel: string = 'Open calendar'` (attribute `open-label` — accessible label for the
   calendar-toggle button)
@@ -547,7 +551,15 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `autocomplete: string = ''`, `inputMode: string = ''` (`inputmode`), and `enterKeyHint: string = ''`
   (`enterkeyhint`) — forwarded to the internal `<input>`.
 
-**Methods:** `show()`, `hide()`, `clear()`
+**Methods:** `show()`, `hide()`, `clear()`, `focus(options?)`, `blur()`, `select()`,
+`setSelectionRange()`, `setRangeText()` (all of the focus/selection methods forward to the internal
+native date `<input>`).
+
+**Getters:** `input: HTMLInputElement | undefined` — the internal native `<input>`, for direct DOM
+access.
+
+**Selection properties:** `selectionStart`, `selectionEnd`, and `selectionDirection` mirror the
+internal native date input.
 
 **Events:** `input`, `change`, `lyra-show`, `lyra-hide`, `lyra-clear`, `blur` (re-dispatched from
 the internal `<input>`'s own `blur`, bubbling and composed unlike the native event), `focus`
@@ -787,7 +799,7 @@ form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships th
 `size` scale as `lyra-select`/`lyra-combobox`.
 
 **Properties:**
-- `type: 'text' | 'password' | 'email' | 'number' = 'text'`
+- `type: 'text' | 'password' | 'email' | 'number' | 'time' = 'text'`
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
@@ -799,9 +811,13 @@ form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships th
 - `spellcheck: boolean = true` — forwarded to the native input, including `spellcheck="false"`
 - `autocapitalize: string = ''` / `autoCorrect: string = ''`
 - `inputMode: string = ''` / `enterKeyHint: string = ''`
-- `min?: number` / `max?: number` / `step?: number` (attribute: false — `type="number"` only)
+- `min?: number` / `max?: number` (attributes `min`/`max`) / `step?: number | 'any'` (attribute
+  `step`, accepts the native `'any'` value alongside a number) — `type="number"` only
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
+
+**Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
+access), `focus(options?: FocusOptions)`, `blur()`, `select()`.
 
 **Events:** native-style composed `input` and `change`, plus `lyra-input` (`detail: { value }`,
 fired on every user-driven edit) and `lyra-change` (`detail: { value }`, fired on the native
@@ -1120,8 +1136,10 @@ Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`).
 
 **CSS parts:** `line`, `area`, `bar`
 
-**Themeable custom properties:** `--lyra-color-brand` only — the single cleanest theming story in
-the reviewed family (pure CSS cascade, no JS/`getComputedStyle` bridging needed).
+**Themeable custom properties:** `--lyra-color-brand` (pure CSS cascade, no JS/`getComputedStyle`
+bridging needed), `--lyra-sparkline-stroke-width` (default `1.5` — stroke width of the line/area
+path), and `--lyra-sparkline-area-opacity` (default `0.15` — fill opacity of the area under the
+line, `type="area"` only).
 
 **Optional peer deps:** none.
 
@@ -1282,7 +1300,8 @@ attribute), `description` (rich description content, overrides the `description`
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
 **Themeable custom properties:** `--lyra-empty-compact-align` (compact mode only; defaults preserve
-the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both), plus
+the existing `flex-start` cross-axis and `start` text alignment, and `center` centers both),
+`--lyra-empty-compact-padding` (default `--lyra-space-xs` — padding used in compact mode), plus
 shared tokens (`--lyra-space-xs/-s/-l`, `--lyra-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
@@ -1978,6 +1997,8 @@ position) survives the transition.
 - `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
+- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the label-derived fullscreen
+  dialog name.
 
 **Events:** `lyra-collapse-change` (`detail: boolean`, the new `collapsed` state),
 `lyra-fullscreen-change` (`detail: boolean`, the new `fullscreen` state — also fired when fullscreen
@@ -2753,9 +2774,9 @@ the escape hatch for a consumer's own theme-toggle handler to call when it flips
 a data point/segment, for any chart type, not just bar; `detail: { datasetIndex: number, index:
 number, label: string | undefined, value: unknown }`)
 
-**Slots:** none.
+**Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`
 
 **Themeable custom properties:** `--lyra-chart-height` (set programmatically on the host from the
 `height` property — must be read from the host, not a shadow-tree descendant, since custom
@@ -2912,7 +2933,8 @@ fresh, small SVG render is cheaper and more correct than a lossy cache.
 
 **CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` (each bar rect; carries
 `data-selected` when its category index is in `selectedIndex`), `line`, `point`, `legend`,
-`legend-item`, `legend-swatch`.
+`legend-item`, `legend-swatch`, `live-region` (the current mark announcement for keyboard users),
+`data-list` (a visually hidden list of all plotted data points).
 
 **Themeable custom properties:** `--lyra-chart-height` (same host-level property as `lyra-chart`);
 `--lyra-chart-grid-color`, `--lyra-chart-tick-color`, `--lyra-chart-legend-color` — same token
@@ -3038,12 +3060,12 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
 **Events:** none.
 
-**Slots:** none.
+**Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
-**CSS parts:** `base`, `canvas`
+**CSS parts:** `base`, `canvas`, `description`, `data-table`
 
-**Themeable custom properties:** `--lyra-chart-height` (same mechanism as `lyra-chart`; styles file
-is a re-export of `chart.styles.ts`).
+**Themeable custom properties:** `--lyra-chart-height` — same host-level mechanism and token name
+as `lyra-chart`, but its own stylesheet (not a re-export).
 
 **Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` (plus `chart.js` transitively, loaded
 independently of the base `chart-loader.ts`).
@@ -3063,8 +3085,8 @@ independently of the base `chart-loader.ts`).
 - Chart.js receives `effectiveLocale`; generated numeric summaries use it, the y axis moves to
   logical start in RTL, canvas tooltip/axis colors are token-driven, and animation is disabled
   under reduced motion.
-- The peer-dependency-missing failure path (`.catch()` → warn + resolve `null`) is untested —
-  verify it manually if shipping without the peer installed.
+- If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
+  resolves to no chart rather than throwing.
 
 ---
 
@@ -3413,7 +3435,8 @@ detail object.
 
 **Slots:** default scrollable content.
 
-**CSS parts:** `base`, `viewport`, `content`, `previous`, and `next`.
+**CSS parts:** `base`, `viewport`, `content`, `previous`, `next`, `control` (shared by `previous` and
+`next`), and `previous-glyph`/`next-glyph` (the chevron inside each, mirrored under RTL).
 
 ```html
 <lyra-scroller controls label="Project cards">
@@ -3719,7 +3742,9 @@ convention).
 
 **Properties:**
 - `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
-  'pending' | 'current' | 'completed' | 'disabled' | 'error' }`; never mutated by this component.
+  'pending' | 'current' | 'completed' | 'disabled' | 'error'; title?: string }`; `title` is an
+  optional native tooltip for the step's button (e.g. explaining why a `disabled` step is locked) —
+  omit it for no `title` attribute at all, not an empty string. Never mutated by this component.
   Empty (the default) renders nothing.
 - `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — `'horizontal'` (the default)
   lays steps out in a row (Left/Right, RTL-aware, navigate); `'vertical'` stacks them (Up/Down
@@ -3915,6 +3940,8 @@ control's visible, clickable label (same as `<lyra-checkbox>`).
 **Events:** `lyra-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
 Space/Enter); not fired for a programmatic `.checked` assignment.
 
+**Methods:** `focus(options?)` and `blur()` forward to the internal switch control.
+
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
   clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the
@@ -3985,7 +4012,9 @@ stack overflow on cyclic `data`.
 **Events:** `lyra-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
 per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
 (a rejected `writeText()` is swallowed), so a consumer can still observe copy *intent* — the event
-is not a confirmation that the OS clipboard was actually reached.
+is not a confirmation that the OS clipboard was actually reached. Copying a circular `data` value
+serializes safely, substituting the same `Circular reference` marker the tree view renders, instead
+of throwing.
 
 **Slots:** none — the tree is rendered entirely from `data`.
 
@@ -4452,13 +4481,15 @@ the built-in glyph for the current `status` is used)
 `summary`), `category`, `name`, `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
-**Themeable custom properties:** no component-specific custom properties (per-status accent/
-background/border are internal `--lyra-tool-call-chip-*` variables swapped by `:host([status])`
-rules, not part of the public theming API); shared tokens referenced: `--lyra-color-text-quiet`,
-`--lyra-color-surface`, `--lyra-color-border`, `--lyra-color-brand`/`-brand-quiet`,
-`--lyra-color-success`/`-success-quiet`, `--lyra-color-danger`/`-danger-quiet`,
-`--lyra-color-warning`/`-warning-quiet`, `--lyra-color-text`, `--lyra-space-xs/-s/-m`, `--lyra-radius`,
-`--lyra-shadow`, `--lyra-focus-ring-*`, `--lyra-transition-fast`.
+**Themeable custom properties:** `--lyra-tool-call-chip-spin` (default `1s linear` — running-icon
+animation duration/timing) and `--lyra-transition-ambient` (default `1.8s ease-in-out` — pending-icon
+pulse duration/timing); the per-status accent/background/border are internal `--lyra-tool-call-chip-*`
+variables swapped by `:host([status])` rules, not part of the public theming API. Shared tokens
+referenced: `--lyra-color-text-quiet`, `--lyra-color-surface`, `--lyra-color-border`,
+`--lyra-color-brand`/`-brand-quiet`, `--lyra-color-success`/`-success-quiet`,
+`--lyra-color-danger`/`-danger-quiet`, `--lyra-color-warning`/`-warning-quiet`, `--lyra-color-text`,
+`--lyra-space-xs/-s/-m`, `--lyra-radius`, `--lyra-shadow`, `--lyra-focus-ring-*`,
+`--lyra-transition-fast`.
 
 **Optional peer deps:** none.
 
@@ -5186,8 +5217,10 @@ invention (no Web Awesome equivalent).
   which is only a safe identity while `items` never reorders/inserts/removes — provide this whenever
   possible, or scroll position and per-row DOM state (e.g. an `<audio>` element's playback position)
   can attach to the wrong row across a mutation.
-- `groups?: VirtualListGroup[]` (attribute: false) — accepted for compatibility but **not currently
-  read or rendered** — every row still renders flat, in `items` order.
+- `groups?: VirtualListGroup[]` (attribute: false) — renders a labeled `role="heading"` marker at each
+  group's `startIndex`, positioned independently of the row window (so it stays in place as its rows
+  scroll past). Groups are sorted by `startIndex`; a `startIndex` that's non-integer, out of range, or
+  a duplicate of an earlier group's is silently dropped rather than rendered wrong.
 - `rowHeight: string = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real height via
   `ResizeObserver`; a numeric string (e.g. `"56"`) fixes every row to that many pixels. Anything else
   (non-numeric, zero, negative, non-finite) silently falls back to `'auto'` rather than throwing.
@@ -5195,16 +5228,17 @@ invention (no Web Awesome equivalent).
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
 - `activeId: string = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
-  result (compared as a string), that row is smoothly scrolled into view whenever this changes, and
-  rendered with `aria-current="true"`.
+  result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
+  assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
+  this changes, and rendered with `aria-current="true"`.
 - `loading: boolean = false` (reflected) — sets `aria-busy` on the scroll container and a `cursor:
   progress` style; does not by itself gate `lyra-load-more` (see below).
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — when true, scrolling near the bottom
   fires `lyra-load-more` (gated by `loading`).
 
 **Exported types:** `VirtualListRange { start: number; end: number }` (the `lyra-visible-range-changed`
-detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — an
-accepted grouping shape that the list does not currently render.
+detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
+shape consumed by `groups` above.
 The package root also exports `groupByRecency(items, options?)`, a DOM-free helper that returns
 non-empty Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket,
 and accepts a timestamp extractor, reference date, and label overrides.
@@ -5219,7 +5253,8 @@ current visible, non-overscanned item index range — fired only when it actuall
 
 **CSS parts:** `base` (the scrollable container, `role="list"`, `tabindex="0"`), `spacer` (the
 full-content-height inner element establishing true scroll extent), `row` (one rendered row's
-absolutely-positioned wrapper, `role="listitem"`)
+absolutely-positioned wrapper, `role="listitem"`), `group` (a `groups` entry's positioned
+`role="heading"` marker)
 
 **Themeable custom properties:** `--lyra-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
@@ -7037,7 +7072,7 @@ set `valid: false` while `formError`, rather than a fabricated field key, carrie
 
 **Slots:** none.
 
-**CSS parts:** `base`, `field`, `label`, `description`, `error`
+**CSS parts:** `base`, `field`, `label`, `description`, `error`, `unsupported`, `empty`
 
 **Themeable custom properties:** no component-specific custom properties; shared tokens only —
 `--lyra-space-l/-xs/-s`, `--lyra-color-border`, `--lyra-radius`, `--lyra-color-surface`,
@@ -7295,7 +7330,14 @@ already follow.
   since the remove button already nests inside `[part='base']` — a focusable descendant of a
   `role="button"` ancestor isn't allowed there, and this component's two real use cases (a
   chart-series visibility toggle, a category filter chip) never need both at once. `false` (the
-  default) reproduces the exact passive-label-pill output.
+  default, with `toggleable` also left at its default) reproduces the exact passive-label-pill
+  output.
+- `toggleable: boolean = false` (reflected) — explicit opt-in into `selected`'s toggle/pressed
+  interactive mode, independent of `selected`'s own current value. Setting `selected` to `true` at
+  any point opts in automatically and keeps `toggleable` `true` from then on (enough for a chip that
+  starts already pressed) — set `toggleable` directly instead for a chip that must be clickable from
+  the outset while starting **unselected**, e.g. an initially-inactive category filter chip, since
+  `selected`'s own default (`false`) can't otherwise be distinguished from "never opted in".
 - `value?: string` — opaque consumer bookkeeping value, never read, validated, or rendered by this
   component itself, only ever echoed back verbatim (including `undefined` if never set) in
   `lyra-remove`'s detail
@@ -7936,12 +7978,13 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 ## `lyra-archive-viewer`
 
 Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
-`jszip` peer. It is listing-only: entry content is never rendered or previewed. Files are measured
-through JSZip's public async API, so every file is decompressed once up front to obtain its size;
-there is no cheaper public uncompressed-size API. The list composes `<lyra-virtual-list>` for large
-archives.
+`jszip` peer. It is listing-only: entry content is never rendered or previewed. Each entry's size is
+read straight from JSZip's local file header (`uncompressedSize`) when available, falling back to
+fully decompressing only the rare entry missing that header field. The list composes
+`<lyra-virtual-list>` for large archives.
 
-**Properties:** `src` and `name` are strings.
+**Properties:** `src` and `name` are strings — `name` (or a host-level `aria-label`) names the
+listing region as `role="region"`; with neither set, the region is unnamed.
 
 **Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
 
@@ -8575,6 +8618,8 @@ A form-associated single-choice control. Use it alone or inside `lyra-radio-grou
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
+`effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`
+and `blur()` forward to the internal radio control.
 
 **Events:** native-style composed `input` and `change`, plus `lyra-change` with
 `{ checked, value }`.
@@ -8593,7 +8638,8 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
 **Events:** `lyra-show`, `lyra-hide`. **Slots:** `trigger`, default content. **CSS parts:** `trigger`,
-`popup`, `content`.
+`popup`, `content`. **Themeable custom properties:** `--lyra-overlay-max-inline-size` (default
+`--lyra-size-20rem` — maximum inline size of the popup).
 
 ## `lyra-tooltip`
 
@@ -8601,7 +8647,9 @@ A hover/focus tooltip positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `manual`, `delay`, `placement`, `distance`, `content`, and
 `accessibleLabel` (`aria-label`). **Slots:** `trigger`, default content. **CSS parts:**
-`trigger`, `popup`.
+`trigger`, `popup`. **Themeable custom properties:** `--lyra-tooltip-max-inline-size` (default
+`--lyra-size-20rem`), `--lyra-tooltip-background` (default `--lyra-color-neutral`), and
+`--lyra-tooltip-color` (default `--lyra-color-on-neutral`).
 
 ## `lyra-dropdown`
 
@@ -8610,6 +8658,8 @@ menu-item behavior is needed.
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
 **Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`.
+**Themeable custom properties:** `--lyra-overlay-max-inline-size` (default `--lyra-size-20rem` —
+maximum inline size of the popup).
 
 ## `lyra-radio-group`
 
@@ -8730,7 +8780,7 @@ errors without panel chrome.
 `preventDefault()`.
 
 **Slots:** default message, `heading`, `icon`. **CSS parts:** `base`, `icon`, `content`, `heading`,
-`close-button`.
+`message` (wrapper around the default slot), `close-button`.
 
 ## `lyra-details`, `lyra-accordion`, and `lyra-accordion-item`
 
@@ -8778,14 +8828,21 @@ When `sync` is true the displayed value refreshes periodically.
 
 A keyboard-accessible star rating control with slider semantics. **Properties:** `value`, `max`,
 `precision`, `readonly`, `disabled`, and `accessibleLabel` (`aria-label`). **Events:**
-`lyra-change` with `{ value }`. **CSS parts:** `base`, `star`.
+`lyra-change` with `{ value }`. **CSS parts:** `base`, `star`, `star-fill` (the filled overlay
+inside each star, clipped to the fractional `precision` value). **Themeable custom properties:**
+`--lyra-rating-fill` (default `--lyra-color-warning` — filled-star color), `--lyra-rating-empty-color`
+(default `--lyra-color-border` — unfilled-star color), and `--lyra-rating-size` (default
+`--lyra-font-size-xl` — star size).
 
 ## `lyra-color-picker`
 
-A form-associated native color picker with label and hint chrome. **Properties:** the shared form
-properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, and `accessibleLabel`
-(`aria-label`). **Slots:** `label`, `hint`. **Events:** composed `input` and `change`, plus
-`lyra-change` with `{ value }`. **CSS parts:** `form-control`, `label`, `input`, `hint`.
+A form-associated native color picker with label, hint, and error chrome. **Properties:** the shared
+form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
+(`error-text`), and `accessibleLabel` (`aria-label`). **Slots:** `label`, `hint`, `error`. **Events:**
+composed `input` and `change`, `lyra-change` with `{ value }`, and `focus`/`blur` (re-dispatched from
+the internal `<input>`'s own `focus`/`blur`, bubbling and composed unlike the native events). **CSS
+parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for back-compat),
+`input`, `hint`, `error`.
 
 ## Cross-cutting notes
 

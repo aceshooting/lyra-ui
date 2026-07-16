@@ -27,6 +27,9 @@ export interface LyraScrollerEventMap {
  * @csspart content - The slotted content wrapper.
  * @csspart previous - The previous/start control.
  * @csspart next - The next/end control.
+ * @csspart control - Shared part on both `previous` and `next`.
+ * @csspart previous-glyph - The chevron glyph inside `previous`, mirrored under RTL.
+ * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
  * @cssprop --lyra-scroller-control-size - Control size.
  * @cssprop --lyra-scroller-min-block-size - Minimum vertical scroller size.
  */
@@ -44,9 +47,19 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   @query('[part="viewport"]') private viewport?: HTMLElement;
   private resizeObserver?: ResizeObserver;
 
-  firstUpdated(): void {
+  connectedCallback(): void {
+    super.connectedCallback();
     this.resizeObserver = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(this.updateEdges);
     this.resizeObserver?.observe(this);
+    // A reconnect (move in the DOM) re-creates the observer above but the shadow-root content
+    // survives across disconnect/reconnect (Lit doesn't tear it down) -- re-observe the viewport
+    // here too when it already exists. `firstUpdated()` only ever runs once, on the very first
+    // render, so it can't be relied on for a reconnect; on the very first connect `this.viewport`
+    // (a `@query`) isn't resolved yet, so `firstUpdated()` below still does that initial observe.
+    if (this.viewport) this.resizeObserver?.observe(this.viewport);
+  }
+
+  firstUpdated(): void {
     this.resizeObserver?.observe(this.viewport!);
     queueMicrotask(this.updateEdges);
   }
@@ -68,7 +81,11 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     const max = horizontal ? Math.max(0, viewport.scrollWidth - viewport.clientWidth) : Math.max(0, viewport.scrollHeight - viewport.clientHeight);
     const position = horizontal ? viewport.scrollLeft : viewport.scrollTop;
     const rtl = horizontal && this.effectiveDirection === 'rtl';
-    const startPosition = rtl ? max - position : position;
+    // Per the CSSOM View spec (what every browser this library targets actually implements),
+    // scrollLeft in RTL runs 0 (inline-start) down to -max (inline-end) -- not the legacy WebKit
+    // convention of max down to 0. Negating (rather than `max - position`) normalizes it back to the
+    // same "distance from inline-start" the LTR branch already computes.
+    const startPosition = rtl ? -position : position;
     return {
       scrollStart: startPosition <= 1,
       scrollEnd: startPosition >= max - 1,
@@ -105,7 +122,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     if (horizontal) {
       const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
       const rtl = this.effectiveDirection === 'rtl';
-      viewport.scrollTo({ left: edge === 'start' ? (rtl ? max : 0) : (rtl ? 0 : max) });
+      viewport.scrollTo({ left: edge === 'start' ? 0 : (rtl ? -max : max) });
     } else {
       viewport.scrollTo({ top: edge === 'start' ? 0 : viewport.scrollHeight });
     }

@@ -162,7 +162,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   }
 
   private get fdow(): number {
-    return resolveFirstDayOfWeek(this.firstDayOfWeek, this.locale);
+    return resolveFirstDayOfWeek(this.firstDayOfWeek, this.effectiveLocale);
   }
 
   private isDisabled(d: Date, min: Date | null, max: Date | null, today: Date): boolean {
@@ -217,7 +217,14 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
     this.focusedDate = next;
     this.viewDate = this.viewDateForFocus(next);
-    this.focusPending = true;
+    // Only take real DOM focus when a live constraint change genuinely
+    // invalidated a cell that already had it -- e.g. min/max tightening out
+    // from under the focused day. Re-anchoring the roving tabindex because the
+    // anchor merely scrolled out of view (nav() moving viewDate) must not
+    // steal focus off whatever the user is actually operating (a nav button,
+    // or nothing at all); onGridKey and goToDate already arm focusPending
+    // explicitly for the keyboard-driven paths that should take focus.
+    if (disabled) this.focusPending = true;
   }
 
   /** The first enabled day at/after the first visible month's start, scanning
@@ -509,7 +516,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
               ${chevronIcon()}
             </button>`
           : html`<span></span>`}
-        <div part="title" id=${titleId}>${monthTitle(year, month, this.locale)}</div>
+        <div part="title" id=${titleId}>${monthTitle(year, month, this.effectiveLocale)}</div>
         ${isLast
           ? html`<button
               part="next"
@@ -544,12 +551,12 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const fdow = this.fdow;
-    const labels = weekdayLabels(fdow, this.effectiveWeekdayFormat, this.locale);
+    const labels = weekdayLabels(fdow, this.effectiveWeekdayFormat, this.effectiveLocale);
     // Hoisted once per render and reused across every day cell, rather than
     // each cell constructing its own Intl.DateTimeFormat via
     // toLocaleDateString() -- mirrors how the weekday-header and month-title
     // labels already share a single formatter instead of one per cell.
-    const dayLabelFmt = dateTimeFormat(this.locale, {
+    const dayLabelFmt = dateTimeFormat(this.effectiveLocale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

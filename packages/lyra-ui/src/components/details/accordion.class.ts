@@ -2,7 +2,7 @@ import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { tag } from '../../internal/prefix.js';
-import { styles } from './details.styles.js';
+import { styles } from './accordion.styles.js';
 import type { LyraDetails } from './details.class.js';
 
 /**

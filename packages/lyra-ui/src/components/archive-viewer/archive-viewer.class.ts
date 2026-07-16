@@ -34,7 +34,7 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
-  /** Display name associated with the archive. */
+  /** Display name used as the archive listing's accessible label. */
   @property() name = '';
   @state() private fetchState: ArchiveState = { kind: 'idle' };
   private generation = 0;
@@ -59,17 +59,21 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
       if (!library) { this.fetchState = { kind: 'error', message: this.localize('archiveViewerUnavailable') }; return; }
       const zip = await library.loadAsync(await readResponseArrayBuffer(response));
       const entries: ArchiveEntry[] = [];
+      // Only fall back to decompressing an entry when its header didn't declare a size; JSZip
+      // always populates `_data.uncompressedSize` from the local file header, so listing normally
+      // never has to pay the cost of inflating every entry just to measure it.
       const sizes: Promise<void>[] = [];
       let declaredUncompressed = 0;
       zip.forEach((_path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => {
         if (entries.length >= MAX_ARCHIVE_ENTRIES) throw new LyraResourceLimitError();
         const declaredSize = file._data?.uncompressedSize;
-        if (Number.isFinite(declaredSize) && declaredSize! > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
+        const hasDeclaredSize = Number.isFinite(declaredSize);
+        if (hasDeclaredSize && declaredSize! > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
         declaredUncompressed += declaredSize ?? 0;
         if (declaredUncompressed > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
-        const entry = { name: file.name, dir: file.dir, size: 0 };
+        const entry = { name: file.name, dir: file.dir, size: hasDeclaredSize ? declaredSize! : 0 };
         entries.push(entry);
-        if (!file.dir) sizes.push(file.async('uint8array').then((bytes) => { entry.size = bytes.length; }));
+        if (!file.dir && !hasDeclaredSize) sizes.push(file.async('uint8array').then((bytes) => { entry.size = bytes.length; }));
       });
       await Promise.all(sizes);
       if (generation === this.generation) this.fetchState = { kind: 'loaded', entries };
@@ -95,7 +99,14 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base">${this.renderBody()}</div>`; }
+  render(): TemplateResult {
+    // `name` (or a host-level aria-label) names the archive listing region; with neither set
+    // there is nothing meaningful to announce, so the region role is only added once a name exists.
+    const label = this.name || this.getAttribute('aria-label');
+    return label
+      ? html`<div part="base" role="region" aria-label=${label}>${this.renderBody()}</div>`
+      : html`<div part="base">${this.renderBody()}</div>`;
+  }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lyra-archive-viewer': LyraArchiveViewer; } }

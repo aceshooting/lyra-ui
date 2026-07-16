@@ -191,6 +191,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (!this._isFirstUpdate) this.emit('lyra-hide');
       }
       this.syncTriggerA11y();
+    } else if (this.open && changed.has('placement')) {
+      // A placement change while already open must move the popup immediately --
+      // otherwise the Floating UI subscription established at open time keeps
+      // running with the stale placement baked into its computePosition options,
+      // and the new value only takes effect on the *next* open. reposition()
+      // tears down and re-subscribes, so re-invoking it here is safe.
+      this.reposition();
     }
   }
 

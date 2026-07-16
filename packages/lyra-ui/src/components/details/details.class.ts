@@ -52,7 +52,12 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   };
   render(): TemplateResult {
     return html`<details part="base" .open=${this.open} @toggle=${this.onToggle}>
-      <summary part="summary" aria-expanded=${this.open ? 'true' : 'false'} @click=${this.onClick}>
+      <summary
+        part="summary"
+        aria-expanded=${this.open ? 'true' : 'false'}
+        aria-disabled=${this.disabled ? 'true' : 'false'}
+        @click=${this.onClick}
+      >
         ${this.hasSummarySlot || this.summary ? '' : this.localize('details')}<slot name="summary" @slotchange=${this.onSummarySlotChange}>${this.summary}</slot>
       </summary>
       <div part="content"><slot></slot></div>

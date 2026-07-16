@@ -55,11 +55,19 @@ pnpm manifest               # --filter @aceshooting/lyra-ui: cem analyze -> cust
 pnpm docs                   # Storybook (.storybook/), demos every component live at localhost:6006
 ```
 
-Package-local equivalents (from `packages/lyra-ui/`): `pnpm test:watch` also exists. CI
-(`.github/workflows/ci.yml`) runs, in order: install --frozen-lockfile, Playwright Chromium
-install, lint, test, build, manifest, then a `pnpm --filter @aceshooting/lyra-ui pack --dry-run`
-check that the published tarball still contains `custom-elements.json`/`llms.txt`/`llms-full.txt`
-— reproduce failures locally with the same sequence.
+Package-local equivalents (from `packages/lyra-ui/`): `pnpm test:watch` also exists. The `build-test`
+job in `.github/workflows/ci.yml` is the authoritative gate list and reproduction sequence — it
+currently runs install --frozen-lockfile, Playwright Chromium install, lint, **build, then test**
+(build must precede test: `src/package-entrypoints.test.ts` dynamically imports the published
+`./dist/lyra.js` entry points, which only exist after a build), `test:coverage`, `manifest`,
+`manifest:check`, a `git diff --exit-code` check on `custom-elements.json`, `readme:check`,
+`docs:build`, `storybook:check`, `storybook:check-theme`, a `pnpm --filter @aceshooting/lyra-ui pack
+--dry-run` check that the published tarball still contains
+`custom-elements.json`/`llms.txt`/`llms-full.txt`, then `check:packed-consumer`. A separate
+`platform-contracts` matrix job runs the platform contract suite (`test:platform`) against
+Firefox/WebKit on Node 20/22. Read the workflow file directly rather than trusting a restated list
+here, which will drift as steps are added — reproduce a CI failure locally by running the same
+commands in the same order.
 
 ## Coding conventions (every component follows these — deviating needs a strong reason)
 
@@ -155,7 +163,10 @@ opt-in per component — so treat a gap in any of them as a bug, not a missing f
   the unmodified case still resolves through the registry:
   `this.localize('previousMonth', this.previousLabel === 'Previous month' ? undefined : this.previousLabel)`.
   Passing `this.someProp` unconditionally has the same bug as a literal — it always short-circuits
-  the registry unless the prop happens to be empty/`undefined`.
+  the registry unless the prop happens to be empty/`undefined`. This is the single easiest-to-introduce
+  regression in the library and nothing in `scripts/` catches it — no policy script greps for
+  `this.localize('key', 'literal'` — so it is enforced by code review only. Watch for it explicitly
+  when reviewing a `localize()` call site, don't assume a CI gate already exists.
 - Interpolate via the 3rd `values` argument with `{placeholder}` syntax matching the
   `DEFAULT_STRINGS` template, e.g. `this.localize('showMoreCount', undefined, { count })` for
   `'Show {count} more'` — never string-concatenate translated text with data.

@@ -3,15 +3,23 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
+    /* Lets the host shrink below its row's max-content width when it's a flex/grid
+       item in a consumer's own narrow layout -- the default min-width:auto for flex
+       items would otherwise force the row wide regardless of [part='base']'s
+       flex-wrap below. */
+    min-inline-size: 0;
   }
   [part='base'] {
     display: inline-flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     padding: var(--lyra-size-0-125rem);
     gap: var(--lyra-size-0-125rem);
   }
   [part='segment'] {
+    min-inline-size: 0;
     border: none;
     border-radius: calc(var(--lyra-radius) * 0.7);
     background: transparent;

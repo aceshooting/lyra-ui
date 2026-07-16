@@ -98,6 +98,27 @@ export const AccessibleName: Story = {
   `,
 };
 
+/** Narrow-allocation evidence: a five-item row (and long, translated-style labels) reflowing
+ *  inside a 320px panel/dialog/split-pane rather than overflowing it. */
+export const NarrowLongContent: Story = {
+  name: 'Narrow (320px) with long content',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lyra-segmented
+        label="Filter"
+        .items=${[
+          { value: 'all', label: 'Alle Elemente' },
+          { value: 'active', label: 'Aktive Elemente' },
+          { value: 'pending', label: 'Ausstehende Elemente' },
+          { value: 'archived', label: 'Archivierte Elemente' },
+          { value: 'deleted', label: 'Gelöschte Elemente' },
+        ]}
+        value="active"
+      ></lyra-segmented>
+    </div>
+  `,
+};
+
 export const RightToLeft: Story = {
   name: 'Right-to-left',
   render: () => html`

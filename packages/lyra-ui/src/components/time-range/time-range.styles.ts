@@ -135,7 +135,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='preset'],
+    [part='preset-button'],
     [part^='handle'],
     [part='range'] {
       transition: none !important;

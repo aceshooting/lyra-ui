@@ -56,7 +56,8 @@
     "./components/*": "./dist/components/*",
     "./internal/*": "./dist/internal/*",
     "./theme.css": "./dist/theme.css",
-    "./testing": "./dist/testing/happy-dom-shims.js"
+    "./testing": "./dist/testing/happy-dom-shims.js",
+    "./package.json": "./package.json"
   },
   "sideEffects": [
     "./dist/components/app-rail/app-rail-item.js",
@@ -522,6 +523,7 @@
     "epubjs": "^0.3.93",
     "ical.js": "^2.2.1",
     "jszip": "^3.10.1",
+    "libphonenumber-js": "^1.13.8",
     "mammoth": "^1.12.0",
     "maplibre-gl": "^5.24.0",
     "marked": "^18.0.6",
@@ -533,6 +535,6 @@
     "typescript": "^7.0.2",
     "xlsx": "^0.18.5"
   },
-  "packageManager": "pnpm@11.10.0",
+  "packageManager": "pnpm@11.13.0",
   "customElements": "custom-elements.json"
 }

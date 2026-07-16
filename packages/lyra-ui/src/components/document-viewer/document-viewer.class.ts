@@ -32,6 +32,7 @@ export interface LyraDocumentViewerEventMap {
  *   activated. The browser download itself is handled by the native link.
  * @csspart body - Wrapper around the active renderer or fallback preview.
  * @csspart download-link - The native download action shown when `src` is safe.
+ * @cssprop [--lyra-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
   static styles = [LyraElement.styles, styles];

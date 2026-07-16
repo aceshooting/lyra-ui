@@ -90,6 +90,15 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
     if (!PostalMime) throw new LyraUserFacingError(this.localize('emailViewerMissingParser'));
     const parsed = await PostalMime.parse(buffer);
     const bodyHtml = parsed.html && DOMPurify ? (DOMPurify.sanitize(parsed.html) as string) : null;
+    if (parsed.html && !bodyHtml && !parsed.text) {
+      // An HTML-only message (no text/plain alternative) with the optional
+      // `dompurify` peer unavailable would otherwise fall through to an empty
+      // body with no diagnostic -- surface the same "install the optional
+      // peer" message the other sanitizer-dependent viewers already show
+      // (`<lyra-html-viewer>`, `<lyra-svg-viewer>`) instead of silently
+      // dropping the only content the message has.
+      throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
+    }
     const content = parsed.attachments ?? [];
     return {
       from: formatAddress(parsed.from),

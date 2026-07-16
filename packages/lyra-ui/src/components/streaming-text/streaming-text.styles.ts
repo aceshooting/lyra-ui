@@ -36,7 +36,10 @@ export const styles = css`
     margin-inline-start: var(--lyra-space-xs);
     background: currentColor;
     border-radius: var(--lyra-streaming-text-cursor-width);
-    animation: lyra-streaming-text-cursor-blink var(--lyra-transition-base) infinite;
+    /* Ambient, infinite "still alive" indicator, not a discrete state flip --
+       same reasoning as lyra-typing-indicator's own cursor variant, which
+       uses this same token for the identical blink pattern. */
+    animation: lyra-streaming-text-cursor-blink var(--lyra-transition-ambient) infinite;
   }
 
   /* Two adjacent keyframe stops (49% / 50%) either side of an instant flip,

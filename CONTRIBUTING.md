@@ -22,9 +22,11 @@ pnpm docs         # Storybook docs site at localhost:6006, demos every component
 ```
 
 Reproduce CI locally with the same sequence CI runs: install --frozen-lockfile, Playwright
-Chromium install, lint, test, build, manifest, then a dry-run pack check that the published
-tarball still contains `custom-elements.json`/`llms.txt`/`llms-full.txt` (see
-`.github/workflows/ci.yml`).
+Chromium install, lint, **build, then test** (build must precede test — a package-entrypoints test
+imports the built `dist/` output), manifest and its consistency checks, docs/storybook checks, then a
+dry-run pack check that the published tarball still contains
+`custom-elements.json`/`llms.txt`/`llms-full.txt`. `.github/workflows/ci.yml` is the authoritative,
+up-to-date step list — read it directly rather than trusting a restated summary here.
 
 ## Making a change
 
@@ -47,7 +49,7 @@ tarball still contains `custom-elements.json`/`llms.txt`/`llms-full.txt` (see
 ## Pull requests
 
 - Keep PRs scoped to one change; large unrelated diffs are harder to review.
-- CI must pass (lint, test, build, manifest) before merge.
+- CI must pass (lint, build, test, manifest, docs/storybook checks, packed-tarball check) before merge.
 - Use the PR template's checklist.
 
 ## Reporting bugs / requesting features

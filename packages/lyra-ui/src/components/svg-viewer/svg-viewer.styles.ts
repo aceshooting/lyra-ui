@@ -3,6 +3,12 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* Lets the host shrink below its rendered SVG's intrinsic inline size
+       inside a narrower flex/grid track (a split pane, dialog, etc.) instead
+       of forcing the track to overflow -- [part='body']'s own overflow:auto
+       then takes over scrolling within whatever allocation it actually gets. */
+    min-inline-size: 0;
+    max-inline-size: 100%;
     --lyra-svg-viewer-max-height: none;
   }
   [part='base'] {

@@ -49,9 +49,29 @@ export class LyraEbookViewer extends LyraElement<LyraEbookViewerEventMap> {
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
+    // children, a virtualized list moving this same element instance) fires
+    // disconnectedCallback then connectedCallback synchronously with no
+    // update in between, so updated()'s `changed.has('src')` gate never
+    // fires again to reload the book. disconnectedCallback already reset
+    // `ebookState` to idle and tore epub.js down, so re-arm the load here
+    // whenever there's a `src` to load and this isn't the very first connect
+    // (that case is already covered by updated()'s initial-render gate).
+    if (this.hasUpdated && this.src.trim()) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
+
   disconnectedCallback(): void {
     this.generation++;
     this.teardown();
+    // Reset rather than leaving a stale "ready" state: without this, a
+    // reconnect that isn't followed by a fresh load (src unset, or the
+    // reconnect races ahead of connectedCallback's reload) would keep
+    // rendering the toolbar's previous/next controls as enabled and
+    // live-looking against a destroyed rendition, which silently no-ops
+    // every click instead of surfacing an empty/idle state.
+    this.ebookState = { kind: 'idle' };
     super.disconnectedCallback();
   }
 

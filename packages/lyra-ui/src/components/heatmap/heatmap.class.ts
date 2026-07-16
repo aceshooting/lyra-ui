@@ -204,11 +204,6 @@ function mixRgb(from: [number, number, number, number], to: [number, number, num
   return formatRgb([r, g, b, a]);
 }
 
-/** Linearly interpolates between two CSS colors (any valid syntax) at `t` in `[0, 1]`. */
-export function mixColor(fromColor: string, toColor: string, t: number): string {
-  return mixRgb(resolveRgb(fromColor, FALLBACK_SCALE_LO), resolveRgb(toColor, FALLBACK_SCALE_HI), t);
-}
-
 export type LyraHeatmapCellClickDetail =
   | { date: string; value: number }
   | { row: number; col: number; value: number };
@@ -294,6 +289,15 @@ export interface LyraHeatmapEventMap {
  * @csspart legend-lo - The low legend endpoint.
  * @csspart legend-hi - The high legend endpoint.
  * @csspart legend-annotation - An annotation label.
+ * @cssprop [--lyra-heatmap-scale-lo=var(--lyra-color-brand-quiet)] - Low endpoint of the sequential color ramp.
+ * @cssprop [--lyra-heatmap-scale-hi=var(--lyra-color-brand)] - High endpoint of the sequential color ramp.
+ * @cssprop [--lyra-heatmap-no-data-fill=var(--lyra-color-no-data)] - Fill for cells with no value.
+ * @cssprop [--lyra-heatmap-label-font] - Font for axis/legend labels drawn on the canvas.
+ * @cssprop [--lyra-heatmap-tooltip-bg=var(--lyra-color-surface)] - Hover tooltip background.
+ * @cssprop [--lyra-heatmap-tooltip-text=var(--lyra-color-text)] - Hover tooltip text color.
+ * @cssprop [--lyra-heatmap-focus-ring-color=var(--lyra-focus-ring-color)] - Focus ring around a focused cell.
+ * @cssprop [--lyra-heatmap-annotation-color=var(--lyra-color-danger)] - Border color for an annotated cell.
+ * @cssprop [--lyra-heatmap-selected-color=var(--lyra-color-success)] - Border color for the selected cell.
  */
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -602,11 +606,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.hoverCell = null;
       this.liveText = '';
     }
-    // Calendar-mode grid layout depends only on `days`/`firstDayOfWeek`/`monthLabelText` (not
-    // `mode`) — rebuilt here, once per cycle, instead of independently by
-    // every call site (see `cachedCalendarGrid`'s doc comment).
-    if (changed.has('days') || changed.has('firstDayOfWeek') || changed.has('monthLabelText') || !this.hasUpdated) {
-      this.cachedCalendarGrid = buildCalendarGrid(this.days, this.firstDayOfWeek, this.monthLabelText);
+    // Calendar-mode grid layout depends only on `days`/`firstDayOfWeek`/`monthLabelText`/`locale`
+    // (not `mode`) — rebuilt here, once per cycle, instead of independently by
+    // every call site (see `cachedCalendarGrid`'s doc comment). `locale` is included so the
+    // default month label (like every other locale-derived string on this canvas) re-resolves
+    // when the component's locale changes, rather than staying pinned to whatever locale was
+    // in effect the first time a calendar grid was built.
+    if (
+      changed.has('days') ||
+      changed.has('firstDayOfWeek') ||
+      changed.has('monthLabelText') ||
+      changed.has('locale') ||
+      !this.hasUpdated
+    ) {
+      this.cachedCalendarGrid = buildCalendarGrid(this.days, this.firstDayOfWeek, this.monthLabelText, this.effectiveLocale);
       this.cachedCalendarSortedValues = this.cachedCalendarGrid.cells
         .map((cell) => cell.value)
         .filter((value) => Number.isFinite(value) && value >= 0)

@@ -50,6 +50,16 @@ export const styles = css`
   :host([expanded]) [part='toggle'] {
     transform: rotate(90deg);
   }
+  /* RTL: the resting (collapsed) chevron mirrors to point left, the
+     conventional mirrored disclosure-triangle direction for RTL. Scoped to
+     the collapsed state specifically (rather than a plain :dir(rtl) rule) so
+     it never has to compete with the rule above for the expanded state, which
+     needs no mirroring: rotating this left-right-asymmetric glyph 90deg
+     already produces a left-right-symmetric down chevron. Mirrors
+     lyra-source-list's and lyra-code-block's identical toggle chevron. */
+  :host(:not([expanded]):dir(rtl)) [part='toggle'] {
+    transform: scaleX(-1);
+  }
   [part='label'] {
     flex: 1 1 auto;
     min-inline-size: 0;
@@ -80,7 +90,7 @@ export const styles = css`
     block-size: var(--lyra-size-0-375rem);
     border-radius: 50%;
     background: currentColor;
-    animation: lyra-thinking-panel-pulse var(--lyra-transition-base) infinite;
+    animation: lyra-thinking-panel-pulse var(--lyra-transition-ambient) infinite;
   }
   @keyframes lyra-thinking-panel-pulse {
     0%,

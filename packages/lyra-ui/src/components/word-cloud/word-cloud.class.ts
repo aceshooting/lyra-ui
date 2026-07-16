@@ -71,6 +71,14 @@ export interface LyraWordCloudEventMap {
  * @csspart focus-ring - The keyboard focus ring.
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message.
+ * @cssprop [--lyra-word-cloud-color-1=var(--lyra-color-brand)] - First entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-2=var(--lyra-color-success)] - Second entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-3=var(--lyra-color-warning)] - Third entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-4=var(--lyra-color-danger)] - Fourth entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-5=var(--lyra-color-chart-1)] - Fifth entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-6=var(--lyra-color-chart-2)] - Sixth entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-7=var(--lyra-color-chart-3)] - Seventh entry of the default categorical palette.
+ * @cssprop [--lyra-word-cloud-color-8=var(--lyra-color-chart-4)] - Eighth entry of the default categorical palette.
  */
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -115,13 +123,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
    */
   private authorSuppliedRole = false;
   private authorSuppliedAriaLabel = false;
-
-  private measureText = (text: string, fontSize: number): number => {
-    const ctx = getScratchCtx();
-    if (!ctx) return text.length * fontSize * 0.6;
-    ctx.font = `${this.fontWeight()} ${fontSize}px ${this.fontFamily()}`;
-    return ctx.measureText(text).width;
-  };
 
   private fontFamily(): string {
     return getComputedStyle(this).getPropertyValue('--lyra-font').trim() || 'sans-serif';
@@ -183,12 +184,26 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private relayout(): void {
+    // The font family/weight tokens are invariant for the whole layout pass --
+    // read them once here rather than inside the per-word `measureText`
+    // callback below, which `layoutWordCloud()` calls once per eligible word
+    // (up to `MAX_WORDS`). Each `getComputedStyle()` call can force a style
+    // recalculation, so resolving both tokens up front turns what would be
+    // two reads per word into two reads per relayout.
+    const fontWeight = this.fontWeight();
+    const fontFamily = this.fontFamily();
+    const measureText = (text: string, fontSize: number): number => {
+      const ctx = getScratchCtx();
+      if (!ctx) return text.length * fontSize * 0.6;
+      ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+      return ctx.measureText(text).width;
+    };
     this.cachedLayout = layoutWordCloud(this.words, {
       minFontSize: this.minFontSize,
       maxFontSize: this.maxFontSize,
       scale: this.scale,
       orientations: this.orientations,
-      measureText: this.measureText,
+      measureText,
     });
     if (this.cachedLayout.skipped.length > 0) warnSkippedWords(this.cachedLayout.skipped.length);
     // The previous focus cursor may no longer address a real word once the

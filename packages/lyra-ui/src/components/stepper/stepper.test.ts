@@ -24,6 +24,60 @@ describe('lyra-stepper', () => {
     expect(buttons[2]!.getAttribute('data-state')).to.equal('pending');
   });
 
+  it('renders aria-selected true only on the current step, explicit false on every other step', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons[0]!.getAttribute('aria-selected')).to.equal('false');
+    expect(buttons[1]!.getAttribute('aria-selected')).to.equal('true');
+    expect(buttons[2]!.getAttribute('aria-selected')).to.equal('false');
+  });
+
+  it('gives exactly one step tabindex="0" when a step is current, and it is the current one', async () => {
+    const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
+  });
+
+  it('falls back roving tabindex to the first non-disabled step when no step is current (all-completed)', async () => {
+    const el = (await fixture(
+      html`<lyra-stepper
+        .steps=${[
+          { id: 'basics', label: 'Basics', state: 'completed' as const },
+          { id: 'inputs', label: 'Inputs', state: 'completed' as const },
+          { id: 'review', label: 'Review', state: 'completed' as const },
+        ]}
+      ></lyra-stepper>`,
+    )) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['0', '-1', '-1']);
+  });
+
+  it('falls back roving tabindex to the first non-disabled step when no step is current (all-pending)', async () => {
+    const el = (await fixture(
+      html`<lyra-stepper
+        .steps=${[
+          { id: 'basics', label: 'Basics', state: 'pending' as const },
+          { id: 'inputs', label: 'Inputs', state: 'pending' as const },
+        ]}
+      ></lyra-stepper>`,
+    )) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['0', '-1']);
+  });
+
+  it('skips a leading disabled step when falling back roving tabindex', async () => {
+    const el = (await fixture(
+      html`<lyra-stepper
+        .steps=${[
+          { id: 'basics', label: 'Basics', state: 'disabled' as const },
+          { id: 'inputs', label: 'Inputs', state: 'pending' as const },
+        ]}
+      ></lyra-stepper>`,
+    )) as LyraStepper;
+    const buttons = stepButtons(el);
+    expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
+  });
+
   it('fires a cancelable lyra-step-select on click, without mutating steps itself', async () => {
     const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
     const buttons = stepButtons(el);

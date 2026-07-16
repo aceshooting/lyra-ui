@@ -154,7 +154,7 @@ export const styles = css`
     inset: 0;
     align-items: center;
     justify-content: center;
-    animation: lyra-button-spin 1s linear infinite;
+    animation: lyra-button-spin var(--lyra-button-spinner-duration, 1s) linear infinite;
   }
   :host([loading]) [part='start'],
   :host([loading]) [part='label'],

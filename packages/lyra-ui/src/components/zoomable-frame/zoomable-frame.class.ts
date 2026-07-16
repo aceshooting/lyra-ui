@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { safeMediaSrc } from '../../internal/safe-url.js';
 import { styles } from './zoomable-frame.styles.js';
 
 export interface LyraZoomableFrameEventMap {
@@ -80,7 +81,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     return html`<div part="base" role="region" aria-label=${label}>
       <div part="viewport" tabindex="0" @keydown=${this.onViewportKeyDown}>
         <div part="content" data-zoom=${String(zoom)} style="--lyra-zoomable-frame-zoom: ${zoom}">
-          ${this.src ? html`<img src=${this.src} alt=${this.alt} />` : html`<slot></slot>`}
+          ${this.src ? html`<img src=${safeMediaSrc(this.src) ?? ''} alt=${this.alt} />` : html`<slot></slot>`}
         </div>
       </div>
       <div part="controls" aria-label=${this.localize('zoomControls')}>

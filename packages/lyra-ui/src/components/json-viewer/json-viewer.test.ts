@@ -300,6 +300,43 @@ it('copies a bigint value without throwing, downgrading it to a plain string', a
   expect(event.detail.text).to.equal(JSON.stringify({ count: '10' }, null, 2));
 });
 
+it('copies a self-referencing value without throwing, substituting the localized circular marker', async () => {
+  const o: Record<string, unknown> = { name: 'root' };
+  o.self = o;
+  const el = await withData(o);
+  el.copyable = true;
+  await el.updateComplete;
+
+  const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+  setTimeout(() => toolbarButton.click());
+  const event = await oneEvent(el, 'lyra-copy');
+  expect(event.detail.text).to.equal(JSON.stringify({ name: 'root', self: 'Circular reference' }, null, 2));
+});
+
+it('copies a value with the same object reachable via two non-cyclic paths without flagging it circular', async () => {
+  const shared = { id: 1 };
+  const el = await withData({ a: shared, b: shared });
+  el.copyable = true;
+  await el.updateComplete;
+
+  const toolbarButton = el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement;
+  setTimeout(() => toolbarButton.click());
+  const event = await oneEvent(el, 'lyra-copy');
+  expect(event.detail.text).to.equal(JSON.stringify({ a: { id: 1 }, b: { id: 1 } }, null, 2));
+});
+
+it('sizes the closing-bracket spacer to the toggle\'s real (min-inline-size-driven) width, keeping brackets aligned', async () => {
+  const el = await withData({ nested: { a: 1 } });
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector('[part="toggle"]:not([hidden])') as HTMLElement;
+  const spacer = el.shadowRoot!.querySelector('.toggle-space') as HTMLElement;
+  expect(toggle, 'the nested object should render expanded with a real toggle').to.exist;
+  expect(spacer, 'the closing-bracket row should render its alignment spacer').to.exist;
+  expect(getComputedStyle(spacer).getPropertyValue('inline-size')).to.equal(
+    getComputedStyle(toggle).getPropertyValue('inline-size'),
+  );
+});
+
 it('does not re-walk the data tree to recompute search state on a toggle-only re-render', async () => {
   let accesses = 0;
   const trackedChild = new Proxy(

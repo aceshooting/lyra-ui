@@ -15,6 +15,9 @@ import { tooltipStyles } from './overlay.styles.js';
  * @slot - Tooltip content.
  * @csspart trigger - The trigger wrapper.
  * @csspart popup - The tooltip popup.
+ * @cssprop --lyra-tooltip-max-inline-size - Maximum inline size of the tooltip (default `--lyra-size-20rem`).
+ * @cssprop --lyra-tooltip-background - Tooltip background color (default `--lyra-color-neutral`).
+ * @cssprop --lyra-tooltip-color - Tooltip text color (default `--lyra-color-on-neutral`).
  */
 export class LyraTooltip extends LyraElement {
   static styles = [LyraElement.styles, tooltipStyles];
@@ -38,6 +41,17 @@ export class LyraTooltip extends LyraElement {
       this.syncTriggerA11y();
     }
   }
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-and-drop reparent keeping this same element
+    // instance) fires disconnectedCallback then connectedCallback
+    // synchronously with no update in between, so updated() never reruns to
+    // notice `open` is still true -- restore the Floating UI positioner
+    // subscription it dropped. The trigger's own listeners are untouched by
+    // (dis)connect since they live on a light-DOM element the reconnect
+    // doesn't move independently of this host.
+    if (this.hasUpdated && this.open) this.position();
+  }
   disconnectedCallback(): void {
     clearTimeout(this.timer);
     this.cleanup?.();
@@ -58,17 +72,46 @@ export class LyraTooltip extends LyraElement {
     if (next && this.delay > 0) this.timer = setTimeout(() => { this.open = true; }, this.delay);
     else this.open = next;
   }
+  private bindTrigger(trigger: HTMLElement): void {
+    trigger.addEventListener('mouseenter', this.onEnter);
+    trigger.addEventListener('mouseleave', this.onLeave);
+    trigger.addEventListener('focus', this.onEnter);
+    trigger.addEventListener('blur', this.onLeave);
+    trigger.addEventListener('keydown', this.onTriggerKeyDown);
+  }
+  private unbindTrigger(trigger: HTMLElement): void {
+    trigger.removeEventListener('mouseenter', this.onEnter);
+    trigger.removeEventListener('mouseleave', this.onLeave);
+    trigger.removeEventListener('focus', this.onEnter);
+    trigger.removeEventListener('blur', this.onLeave);
+    trigger.removeEventListener('keydown', this.onTriggerKeyDown);
+    trigger.removeAttribute('aria-describedby');
+  }
   private onTriggerSlotChange = (event: Event): void => {
-    this.trigger = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    const next = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    if (next === this.trigger) return;
+    // Swapping the slotted trigger (a conditional template, a repeat() re-key)
+    // must strip the outgoing element's listeners and stale aria-describedby
+    // before adopting the new one -- otherwise the old node keeps driving this
+    // tooltip's open state and keeps pointing assistive tech at it.
+    if (this.trigger) this.unbindTrigger(this.trigger);
+    this.trigger = next;
     if (!this.trigger) return;
-    this.trigger.addEventListener('mouseenter', this.onEnter);
-    this.trigger.addEventListener('mouseleave', this.onLeave);
-    this.trigger.addEventListener('focus', this.onEnter);
-    this.trigger.addEventListener('blur', this.onLeave);
+    this.bindTrigger(this.trigger);
     this.syncTriggerA11y();
   };
   private onEnter = (): void => { if (!this.manual) this.setOpen(true); };
   private onLeave = (): void => { if (!this.manual) this.setOpen(false); };
+  private onTriggerKeyDown = (event: KeyboardEvent): void => {
+    // WCAG 1.4.13: content shown on hover/focus must be dismissable without
+    // moving pointer hover or keyboard focus -- Escape hides the tooltip while
+    // leaving focus on the trigger (unlike the popover's Escape handling, the
+    // trigger already has focus here, so there's nothing to refocus).
+    if (this.manual || !this.open || event.key !== 'Escape') return;
+    event.preventDefault();
+    clearTimeout(this.timer);
+    this.open = false;
+  };
   render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.accessibleLabel || nothing;
     return html`

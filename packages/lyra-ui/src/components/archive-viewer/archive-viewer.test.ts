@@ -27,4 +27,63 @@ describe('lyra-archive-viewer', () => {
     let called = false; const original = window.fetch; window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch; try { const unsafe = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer .src=${'java\tscript:alert(1)'}></lyra-archive-viewer>`); await unsafe.updateComplete; expect(called).to.be.false; expect(unsafe.shadowRoot!.querySelector('[part="error"]')).to.exist; } finally { window.fetch = original; }
   });
   it('applies localized empty strings and is accessible', async () => { const el = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.' }}></lyra-archive-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun document à afficher.'); await expect(el).to.be.accessible(); });
+
+  it('uses declared entry sizes without decompressing each entry', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer></lyra-archive-viewer>`);
+    let decompressCalls = 0;
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
+          cb('README.txt', { name: 'README.txt', dir: false, _data: { uncompressedSize: 11 }, async: () => { decompressCalls++; return Promise.resolve(new Uint8Array(11)); } });
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: { name: string; size: number }[] };
+      await waitUntil(() => list.items?.length === 1);
+      expect(list.items[0].size).to.equal(11);
+      expect(decompressCalls).to.equal(0);
+    } finally { restore(); }
+  });
+
+  it('falls back to decompressing an entry whose header omits the declared size', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer></lyra-archive-viewer>`);
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
+          cb('README.txt', { name: 'README.txt', dir: false, async: () => Promise.resolve(new Uint8Array(11)) });
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: { name: string; size: number }[] };
+      await waitUntil(() => list.items?.length === 1 && list.items[0].size === 11);
+      expect(list.items[0].size).to.equal(11);
+    } finally { restore(); }
+  });
+
+  it('names the listing region from `name`, forwards a host aria-label, and omits the role when neither is set', async () => {
+    const unnamed = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer></lyra-archive-viewer>`);
+    const base = unnamed.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.be.null;
+    expect(base.getAttribute('aria-label')).to.be.null;
+
+    const named = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer name="backup.zip"></lyra-archive-viewer>`);
+    const namedBase = named.shadowRoot!.querySelector('[part="base"]')!;
+    expect(namedBase.getAttribute('role')).to.equal('region');
+    expect(namedBase.getAttribute('aria-label')).to.equal('backup.zip');
+
+    const hostLabeled = await fixture<LyraArchiveViewer>(html`<lyra-archive-viewer aria-label="Backup contents"></lyra-archive-viewer>`);
+    const hostLabeledBase = hostLabeled.shadowRoot!.querySelector('[part="base"]')!;
+    expect(hostLabeledBase.getAttribute('role')).to.equal('region');
+    expect(hostLabeledBase.getAttribute('aria-label')).to.equal('Backup contents');
+  });
 });

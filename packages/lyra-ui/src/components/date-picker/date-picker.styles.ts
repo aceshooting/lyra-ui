@@ -11,6 +11,11 @@ export const styles = css`
   }
   [part='base'] {
     display: flex;
+    /* months="2" renders two fixed-width month grids side by side (~520px
+       total) -- in a panel/dialog/viewport narrower than that, wrapping the
+       second month onto its own line keeps every day cell reachable instead
+       of the row overflowing its allocation. */
+    flex-wrap: wrap;
     gap: var(--lyra-space-l);
     padding: var(--lyra-space-s);
     background: var(--lyra-color-surface);

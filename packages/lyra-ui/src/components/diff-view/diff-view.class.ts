@@ -1,7 +1,7 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { computeLineDiff } from './diff-line-diff.js';
+import { computeLineDiff, type DiffOp } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
@@ -43,13 +43,24 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
 
+  // The O(n*m) LCS table only actually needs recomputing when the two compared texts change --
+  // caching it here means a render triggered purely by `justCopied` toggling (the copy-button
+  // label swap) reuses the same result instead of re-running the diff from scratch.
+  private diffOps: DiffOp[] = [];
+
+  protected willUpdate(changed: PropertyValues): void {
+    if (changed.has('oldText') || changed.has('newText')) {
+      this.diffOps = computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'));
+    }
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
   }
 
   private get unifiedText(): string {
-    return computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'))
+    return this.diffOps
       .map((op) => `${op.type === 'add' ? '+' : op.type === 'remove' ? '-' : ' '} ${op.text}`)
       .join('\n');
   }
@@ -68,7 +79,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   };
 
   render(): TemplateResult {
-    const ops = computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'));
+    const ops = this.diffOps;
     return html`
       <div part="base">
         ${this.copyable

@@ -1,4 +1,4 @@
-import { html, nothing, svg, type TemplateResult } from 'lit';
+import { html, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteNumber } from '../../internal/numbers.js';
@@ -170,9 +170,9 @@ export class LyraGauge extends LyraElement {
         stroke-dashoffset=${dashoffset}
       ></line>
       ${this.label
-        ? svg`<text part="label" x=${startX} y=${LINEAR_TEXT_Y} style=${rtl ? 'text-anchor:end' : nothing} aria-hidden="true">${this.label}</text>`
+        ? svg`<text part="label" x=${startX} y=${LINEAR_TEXT_Y} aria-hidden="true">${this.label}</text>`
         : ''}
-      <text part="value" x=${endX} y=${LINEAR_TEXT_Y} style=${rtl ? 'text-anchor:start' : nothing} aria-hidden="true">${text}</text>
+      <text part="value" x=${endX} y=${LINEAR_TEXT_Y} aria-hidden="true">${text}</text>
     </svg>`;
   }
 

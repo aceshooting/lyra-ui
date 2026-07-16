@@ -390,6 +390,13 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     for (const value of this._selectedRowCache.keys()) {
       if (!selected.has(value)) this._selectedRowCache.delete(value);
     }
+    // `_selectedLabelCache` gets the identical treatment -- otherwise it
+    // grows by one permanent entry per distinct value ever selected over the
+    // element's lifetime, unlike `_selectedRowCache` above which is already
+    // pruned back to the live selection on every write.
+    for (const value of this._selectedLabelCache.keys()) {
+      if (!selected.has(value)) this._selectedLabelCache.delete(value);
+    }
     this.syncFormValue();
     this.reflectSelected();
     this.updateValidity();
@@ -487,7 +494,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     clearTimeout(this.sourceTimer);
-    document.removeEventListener('pointerdown', this.onDocPointer);
+    this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -606,13 +613,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   private get filtered(): LyraOption[] {
-    const q = this.query.trim().toLowerCase();
+    // `toLocaleLowerCase()` (not the invariant-Unicode `toLowerCase()`) so a
+    // `tr`/`az` locale's dotted/dotless I case-folds the way that locale
+    // actually expects -- matches `<lyra-table>`'s identical filter fold.
+    const locale = this.effectiveLocale;
+    const q = this.query.trim().toLocaleLowerCase(locale);
     const selectedLabel = !this.multiple ? (this.labelFor(this._selected[0] ?? '') ?? '') : '';
-    const effective = q && q === selectedLabel.toLowerCase() ? '' : q;
+    const effective = q && q === selectedLabel.toLocaleLowerCase(locale) ? '' : q;
     if (!effective) return this.options;
     const fn: OptionFilter =
       this.filter ??
-      ((o, query) => o.label.toLowerCase().includes(query) || o.searchText.toLowerCase().includes(query));
+      ((o, query) =>
+        o.label.toLocaleLowerCase(locale).includes(query) || o.searchText.toLocaleLowerCase(locale).includes(query));
     return this.options.filter((o) => fn(o, effective));
   }
 
@@ -652,7 +664,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       // show()/hide()'s own user-interaction paths, or a consumer/test
       // setting `el.open` directly, which bypasses both entirely.
       if (this.open) {
-        document.addEventListener('pointerdown', this.onDocPointer);
+        this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
         // Don't announce a "show" transition for markup that's simply
         // rendering open for the first time (e.g. `<lyra-combobox open>`) --
         // only for an actual closed-to-open transition.
@@ -662,13 +674,23 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         if (anchor && listbox) this.cleanup = place(anchor, listbox);
         if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
       } else {
-        document.removeEventListener('pointerdown', this.onDocPointer);
+        this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
         if (!this._isFirstUpdate) this.emit('lyra-hide');
       }
     }
     if (changed.has('name')) this.syncFormValue();
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    }
+    // The listbox is a fixed-height, scrollable box (see combobox.styles.ts's
+    // `max-block-size`/`overflow-y`) -- without this, arrowing/Home/End past
+    // its visible rows moves `activeIndex` and `aria-activedescendant`
+    // correctly but leaves the highlighted row scrolled out of view for a
+    // sighted keyboard user. `block: 'nearest'` is a no-op whenever the
+    // active row is already fully visible. Mirrors lyra-mention-popover's
+    // identical fix for the same shape of listbox.
+    if (changed.has('activeIndex')) {
+      this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.scrollIntoView({ block: 'nearest' });
     }
   }
 

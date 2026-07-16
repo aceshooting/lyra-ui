@@ -271,6 +271,14 @@ it('fallback="text" renders a plain string result as preformatted text, not lyra
   expect(base(el).querySelector('lyra-json-viewer')).to.not.exist;
 });
 
+it('chains the fallback-text font through the shared --lyra-font-mono token, honoring a --lyra-theme-font-family-mono override', async () => {
+  const el = (await fixture(html`
+    <lyra-tool-result-view tool-name="unregistered" fallback="text" style="--lyra-theme-font-family-mono: 'Custom Mono';" .result=${'line one'}></lyra-tool-result-view>
+  `)) as LyraToolResultView;
+  const pre = base(el).querySelector('[part="fallback-text"]') as HTMLElement;
+  expect(getComputedStyle(pre).fontFamily).to.contain('Custom Mono');
+});
+
 it('fallback="text" still falls back to lyra-json-viewer when the result is not a string', async () => {
   const el = (await fixture(html`
     <lyra-tool-result-view tool-name="unregistered" fallback="text" .result=${{ ok: true }}></lyra-tool-result-view>

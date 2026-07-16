@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './svg-viewer.js';
 import type { LyraSvgViewer } from './svg-viewer.js';
+import { styles } from './svg-viewer.styles.js';
 
 function response(body: string, ok = true): Response {
   return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response;
@@ -47,5 +48,13 @@ describe('lyra-svg-viewer', () => {
   it('is accessible', async () => {
     const el = await fixture(html`<lyra-svg-viewer></lyra-svg-viewer>`);
     await expect(el).to.be.accessible();
+  });
+
+  it('lets the host shrink below its content in a narrow flex/grid track instead of overflowing it', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    const hostBlock = /:host\s*{([^}]*)}/.exec(css);
+    expect(hostBlock, 'expected a :host rule').to.not.equal(null);
+    expect(hostBlock![1]).to.include('min-inline-size: 0;');
+    expect(hostBlock![1]).to.include('max-inline-size: 100%;');
   });
 });

@@ -27,7 +27,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   @property({ type: Boolean }) subtree = true;
   @property({ attribute: false }) attributeFilter: string[] = [];
 
-  private observers: MutationObserver[] = [];
+  private observer?: MutationObserver;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -49,8 +49,8 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   private onSlotChange = (): void => this.observeTargets();
 
   private disconnect(): void {
-    this.observers.forEach((observer) => observer.disconnect());
-    this.observers = [];
+    this.observer?.disconnect();
+    this.observer = undefined;
   }
 
   private observeTargets = (): void => {
@@ -66,11 +66,14 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
       subtree: this.subtree,
     };
     if (this.attributeFilter.length > 0) options.attributeFilter = this.attributeFilter;
-    for (const target of targets) {
-      const observer = new MutationObserver((records) => this.emit('lyra-mutation', { records: [...records] }));
-      observer.observe(target, options);
-      this.observers.push(observer);
-    }
+    // One shared observer across every slotted target (mirrors <lyra-intersection-observer>'s and
+    // <lyra-resize-observer>'s identical single-instance pattern) rather than one instance per
+    // target -- MutationObserver natively supports observing multiple nodes and batches every
+    // mutation queued in the same microtask into a single callback invocation, so two targets
+    // mutated synchronously in the same script produce one coalesced `lyra-mutation` event instead
+    // of one per target.
+    this.observer = new MutationObserver((records) => this.emit('lyra-mutation', { records: [...records] }));
+    for (const target of targets) this.observer.observe(target, options);
   };
 
   render(): TemplateResult {

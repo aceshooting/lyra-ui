@@ -49,6 +49,7 @@ export interface LyraPdfViewerEventMap {
  * @csspart text-layer - Selectable text positioned over a page canvas.
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
+ * @cssprop [--lyra-pdf-viewer-height=var(--lyra-size-24rem)] - Block size of the virtualized page list.
  */
 export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

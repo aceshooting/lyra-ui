@@ -31,6 +31,29 @@ describe('lyra-segmented', () => {
     expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
   });
 
+  it('makes the first item tabbable when no item is selected, so the radiogroup stays keyboard-reachable', async () => {
+    const el = (await fixture(html`<lyra-segmented .items=${items()}></lyra-segmented>`)) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    expect(el.value).to.equal('');
+    expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['0', '-1', '-1']);
+  });
+
+  it('falls back to the first non-disabled item when nothing is selected', async () => {
+    const withDisabled = [{ ...items()[0]!, disabled: true }, items()[1]!, items()[2]!];
+    const el = (await fixture(html`<lyra-segmented .items=${withDisabled}></lyra-segmented>`)) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    expect(buttons.map((b) => b.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
+  });
+
+  it('ArrowRight from the unselected, first-tabbable state selects the first item', async () => {
+    const el = (await fixture(html`<lyra-segmented .items=${items()}></lyra-segmented>`)) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('day');
+  });
+
   it('selects on click and emits lyra-change', async () => {
     const el = (await fixture(html`<lyra-segmented .items=${items()} value="day"></lyra-segmented>`)) as LyraSegmented;
     const buttons = segmentButtons(el);
@@ -116,5 +139,35 @@ describe('item icon', () => {
     expect(css).to.match(
       /\[part='segment'\]:hover:not\(\[aria-disabled='true'\]\):not\(\[aria-checked='true'\]\)\s*\{[^}]+\}/,
     );
+  });
+});
+
+describe('narrow allocation', () => {
+  it('wraps the button row onto multiple lines rather than overflowing a 320px container', async () => {
+    // `parentNode` is an open-wc fixture option -- the fixture wrapper appends it under
+    // `document.body` itself and the global afterEach fixtureCleanup removes it, so this
+    // test must not append/remove it manually (that would double-remove the node).
+    const container = document.createElement('div');
+    container.style.inlineSize = '320px';
+    const el = (await fixture(
+      html`<lyra-segmented
+        .items=${[
+          { value: 'all', label: 'Alle Elemente' },
+          { value: 'active', label: 'Aktive Elemente' },
+          { value: 'pending', label: 'Ausstehende Elemente' },
+          { value: 'archived', label: 'Archivierte Elemente' },
+          { value: 'deleted', label: 'Gelöschte Elemente' },
+        ]}
+        value="active"
+      ></lyra-segmented>`,
+      { parentNode: container },
+    )) as LyraSegmented;
+    await el.updateComplete;
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).flexWrap).to.equal('wrap');
+    // The host's own box must not overflow the 320px allocation -- it can only
+    // stay within it if the row actually wraps instead of forcing one long line.
+    expect((el as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
   });
 });

@@ -441,6 +441,35 @@ it('re-fits the textarea height when the host narrows, with no value/min-rows/ma
   expect(narrowHeight).to.be.greaterThan(wideHeight);
 });
 
+it('re-arms the width-triggered auto-resize after a disconnect/reconnect (e.g. a drag-drop reparent)', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-composer style="display: block; width: 600px" min-rows="1" max-rows="10"></lyra-chat-composer>`,
+  )) as LyraChatComposer;
+  const ta = textareaOf(el);
+  const longValue =
+    'This message is long enough to wrap across several lines once the composer gets a lot narrower than it started.';
+  el.value = longValue;
+  await el.updateComplete;
+
+  // Simulate a reparent: physically move the same element node out of and
+  // back into the document, running disconnectedCallback() then
+  // connectedCallback() -- not a fresh fixture(), which would only prove a
+  // brand-new instance works.
+  const parent = el.parentElement!;
+  parent.removeChild(el);
+  parent.appendChild(el);
+  await el.updateComplete;
+
+  const wideHeight = parseFloat(ta.style.height);
+  el.style.width = '140px';
+  await waitUntil(
+    () => parseFloat(ta.style.height) > wideHeight,
+    'textarea height must still grow on width changes after a reconnect -- the ResizeObserver must have been re-armed, not left permanently dead',
+    { timeout: 2000 },
+  );
+  expect(parseFloat(ta.style.height)).to.be.greaterThan(wideHeight);
+});
+
 it('participates in a form: submits its value under name', async () => {
   const form = (await fixture(html`
     <form><lyra-chat-composer name="message" value="hello world"></lyra-chat-composer></form>

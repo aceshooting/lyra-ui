@@ -47,6 +47,29 @@ it('sizes the heaviest word larger than the lightest', async () => {
   expect(Number(alpha.getAttribute('font-size'))).to.be.greaterThan(Number(gamma.getAttribute('font-size')));
 });
 
+it('reads the font-family/font-weight tokens once per relayout, not once per word', async () => {
+  const el = (await fixture(html`<lyra-word-cloud></lyra-word-cloud>`)) as LyraWordCloud;
+  const words = Array.from({ length: 20 }, (_, i) => ({ text: `word${i}`, weight: i + 1 }));
+
+  const original = window.getComputedStyle;
+  let calls = 0;
+  window.getComputedStyle = ((...args: Parameters<typeof original>) => {
+    calls++;
+    return original(...args);
+  }) as typeof window.getComputedStyle;
+  try {
+    el.words = words;
+    await el.updateComplete;
+  } finally {
+    window.getComputedStyle = original;
+  }
+
+  // Regression: before caching, measureText() re-read both tokens per word
+  // (up to 2 * 20 = 40 calls here); a fixed per-relayout cost stays a small
+  // constant regardless of word count.
+  expect(calls).to.be.lessThan(words.length);
+});
+
 it('bounds huge finite font-size attributes before rendering', async () => {
   const el = (await fixture(
     html`<lyra-word-cloud
@@ -330,10 +353,23 @@ it('announces the count of words actually rendered, not the raw input count', as
 
 it('defines a dark-mode palette with readable fallback colors', () => {
   expect(styles.cssText).to.match(/prefers-color-scheme:\s*dark/);
-  expect(styles.cssText).to.match(
-    /--lyra-word-cloud-color-1:\s*var\(--lyra-theme-color-brand-fill-loud,\s*var\(--lyra-color-brand\)\)/,
-  );
   expect(styles.cssText).to.match(/--lyra-word-cloud-color-8:\s*var\(--lyra-color-chart-8\)/);
+});
+
+it('does not redeclare colors 1-4 under dark mode -- they already flip via the token layer', () => {
+  // --lyra-color-brand/-success/-warning/-danger (which colors 1-4 alias in
+  // the light-mode block) are themselves redefined for dark mode in
+  // tokens.styles.ts, so a second override here would just repeat the same
+  // resolved value rather than add a variant. Only the chart-ramp colors
+  // (5-8) need an explicit dark swap.
+  const darkBlockMatch = styles.cssText.match(/prefers-color-scheme:\s*dark\)\s*{\s*:host\s*{([\s\S]*?)}\s*}/);
+  expect(darkBlockMatch, 'expected a dark-mode :host block').to.exist;
+  const darkBlock = darkBlockMatch![1]!;
+  expect(darkBlock).to.not.match(/--lyra-word-cloud-color-1:/);
+  expect(darkBlock).to.not.match(/--lyra-word-cloud-color-2:/);
+  expect(darkBlock).to.not.match(/--lyra-word-cloud-color-3:/);
+  expect(darkBlock).to.not.match(/--lyra-word-cloud-color-4:/);
+  expect(darkBlock).to.match(/--lyra-word-cloud-color-5:\s*var\(--lyra-color-chart-5\)/);
 });
 
 it("localizes the wordCloud aria-label's pluralized noun via this.localize()", async () => {

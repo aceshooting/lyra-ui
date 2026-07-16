@@ -282,9 +282,27 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.armTextareaResizeObserver();
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    // A reconnect (e.g. a drag-drop reparent, a repeat() re-key, or a tab
+    // panel detaching and reattaching its content) leaves
+    // textareaResizeObserver undefined from disconnectedCallback()'s own
+    // teardown below -- Lit's connectedCallback doesn't schedule a re-render
+    // on its own, so without this, the width-triggered auto-resize would stay
+    // permanently dead until some unrelated reactive property happened to
+    // change. `hasUpdated` guards the very first connect, where
+    // firstUpdated() above already arms it once the textarea actually
+    // exists. Mirrors `<lyra-textarea>`'s identical connectedCallback() guard.
+    if (this.hasUpdated) {
+      this.armTextareaResizeObserver();
+      this.resizeTextarea();
+    }
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.textareaResizeObserver?.disconnect();
+    this.textareaResizeObserver = undefined;
     if (this.textareaResizeRaf !== undefined) cancelAnimationFrame(this.textareaResizeRaf);
     this.textareaResizeRaf = undefined;
   }

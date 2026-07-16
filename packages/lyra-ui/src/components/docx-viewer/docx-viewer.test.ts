@@ -131,6 +131,32 @@ describe('lyra-docx-viewer', () => {
       restore();
     }
   });
+
+  it('forwards a host aria-label to the role="document" content region, winning over the localized default', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer aria-label="Q3 report"></lyra-docx-viewer>`);
+    useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Q3 report');
+    } finally {
+      restore();
+    }
+  });
+
+  it('prefers the name property over a host aria-label, which in turn wins over the localized default', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer name="Named report" aria-label="Q3 report"></lyra-docx-viewer>`);
+    useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Named report');
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('DOCX registry', () => {

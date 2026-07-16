@@ -685,7 +685,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const keys = Object.keys(props);
     return html`<div part="base">
       ${keys.length === 0
-        ? html`<p part="empty">${this.localize('noColumns')}</p>`
+        ? html`<p part="empty">${this.localize('noData')}</p>`
         : keys.map((key, i) => this.renderField(key, props[key], i))}
       ${this.showFormError && this._formError
         ? html`<p part="error" class="form-error" role="alert">${this._formError}</p>`

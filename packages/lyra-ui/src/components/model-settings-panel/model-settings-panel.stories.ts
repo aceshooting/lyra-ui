@@ -41,6 +41,24 @@ export const Compact: Story = {
   `,
 };
 
+/** Narrow-allocation evidence for the compact toolbar layout: the model/temperature rows
+ *  (`flex: 1 1 12rem; min-inline-size: 10rem` each) must wrap onto separate lines rather
+ *  than clipping or overflowing once the panel is placed in a 320px sidebar/toolbar. */
+export const CompactNarrow: Story = {
+  name: 'Compact, narrow (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lyra-model-settings-panel
+        layout="compact"
+        provider="openai"
+        model-value="gpt-4.1"
+        .catalog=${OPENAI_CATALOG}
+        temperature="1"
+      ></lyra-model-settings-panel>
+    </div>
+  `,
+};
+
 /** `allow-custom` keeps the catalog's suggestions but still lets a value outside it be typed and committed. */
 export const AllowCustomModel: Story = {
   render: () => html`

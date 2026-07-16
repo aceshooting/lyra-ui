@@ -24,8 +24,7 @@ export const styles = css`
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lyra-size-neg-0-25rem)); }
   [part='popup'] { opacity: 1; transform: translateY(0); transition: opacity var(--lyra-transition-fast), transform var(--lyra-transition-fast), visibility var(--lyra-transition-fast); }
   [part='content'] { padding: var(--lyra-space-m); }
-  [part='close-button'] { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lyra-icon-button-size); min-block-size: var(--lyra-icon-button-size); border: 0; background: transparent; color: var(--lyra-color-text-quiet); cursor: pointer; }
-  [part='close-button']:focus-visible, [part='trigger']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: var(--lyra-focus-ring-offset); }
+  [part='trigger']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: var(--lyra-focus-ring-offset); }
   @media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }
 `;
 

@@ -160,16 +160,39 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   private copy(value: unknown): void {
-    const text =
-      value === undefined
-        ? 'undefined'
-        : // A BigInt anywhere inside `value` (not just at the root) throws a
-          // TypeError from the default JSON.stringify() serializer the same
-          // way formatPrimitive()'s unguarded call used to -- the replacer
-          // downgrades it to its decimal string form instead.
-          JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? v.toString() : v), 2);
+    const text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
     this.writeClipboard(text);
     this.emit('lyra-copy', { text });
+  }
+
+  /**
+   * `JSON.stringify()` throws on a value reachable from itself through a cycle -- data this
+   * component explicitly supports rendering (`renderNode()`'s own ancestors-stack leaf marker).
+   * The replacer below tracks the same "is this value already one of the containers I'm
+   * currently nested inside" check via `this`, which `JSON.stringify` binds to the holder
+   * object/array currently being serialized on every replacer call: truncating `stack` back to
+   * the holder's depth before testing membership means only a genuine ancestor collapses to the
+   * localized circular-reference marker, not an unrelated value that merely appears twice (a
+   * "diamond" reference is not a cycle). A BigInt anywhere inside `value` (not just at the root)
+   * throws the same way formatPrimitive()'s unguarded call used to -- downgraded to its decimal
+   * string form instead.
+   */
+  private stringifyForClipboard(value: unknown): string {
+    const circularMarker = this.localize('circularReference');
+    const stack: unknown[] = [];
+    return JSON.stringify(
+      value,
+      function (this: unknown, _key: string, v: unknown) {
+        if (typeof v === 'bigint') return v.toString();
+        if (typeof v !== 'object' || v === null) return v;
+        const holderIndex = stack.indexOf(this);
+        stack.length = holderIndex + 1;
+        if (stack.includes(v)) return circularMarker;
+        stack.push(v);
+        return v;
+      },
+      2,
+    );
   }
 
   /**

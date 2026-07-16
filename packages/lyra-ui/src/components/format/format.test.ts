@@ -3,6 +3,7 @@ import './format-number.js';
 import './format-date.js';
 import './format-bytes.js';
 import './relative-time.js';
+import type { LyraFormatBytes } from './format-bytes.class.js';
 
 it('formats numbers and bytes through Intl', async () => {
   const el = await fixture(html`<div><lyra-format-number value="1234.5"></lyra-format-number><lyra-format-bytes value="1024"></lyra-format-bytes></div>`);
@@ -32,4 +33,19 @@ it('inherits locale from an ancestor when no explicit locale is set', async () =
 it('is accessible', async () => {
   const el = await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`);
   await expect(el).to.be.accessible();
+});
+
+it('falls back to slotted content instead of throwing when value is non-finite', async () => {
+  const el = await fixture(html`<lyra-format-bytes value="abc">Unknown size</lyra-format-bytes>`);
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('');
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  expect(slot).to.exist;
+  expect(el.textContent?.trim()).to.equal('Unknown size');
+});
+
+it('falls back gracefully when value is programmatically set to NaN', async () => {
+  const el = (await fixture(html`<lyra-format-bytes></lyra-format-bytes>`)) as LyraFormatBytes;
+  el.value = NaN;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('');
 });

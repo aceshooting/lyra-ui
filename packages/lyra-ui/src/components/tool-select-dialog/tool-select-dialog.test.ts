@@ -79,6 +79,18 @@ it('forwards native editing properties to the search input', async () => {
   expect(search.getAttribute('enterkeyhint')).to.equal('search');
 });
 
+it('parses a literal spellcheck="false" HTML attribute as false, not the presence-based Boolean default', async () => {
+  // Deliberately a plain attribute string (not a `.spellcheck=${false}` property binding) --
+  // Lit's default `type: Boolean` converter is presence-based, so without a dedicated converter
+  // any non-empty attribute string (including the literal "false") would coerce to `true`.
+  const el = (await fixture(
+    html`<lyra-tool-select-dialog spellcheck="false"></lyra-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  expect(el.spellcheck).to.be.false;
+  const search = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  expect(search.spellcheck).to.be.false;
+});
+
 it('reflects open as an attribute and sets dialog semantics once open', async () => {
   const el = (await fixture(html`<lyra-tool-select-dialog></lyra-tool-select-dialog>`)) as LyraToolSelectDialog;
   el.open = true;

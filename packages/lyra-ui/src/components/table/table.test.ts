@@ -1367,3 +1367,143 @@ describe('expandable rows', () => {
     expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('4');
   });
 });
+
+// Proves each localize()-routed key actually reaches its rendered DOM node under a
+// `.strings` override -- a key existing in DEFAULT_STRINGS doesn't by itself prove the
+// call site is wired up correctly (see AGENTS.md's i18n testing convention).
+describe('localization', () => {
+  it('localizes the no-columns empty-state heading', async () => {
+    const el = (await fixture(
+      html`<lyra-table .strings=${{ noColumns: 'Aucune colonne' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lyra-empty')!.getAttribute('heading')).to.equal('Aucune colonne');
+  });
+
+  it('localizes the loading spinner label', async () => {
+    const el = (await fixture(
+      html`<lyra-table loading .strings=${{ tableLoading: 'Chargement des lignes' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const spinner = el.shadowRoot!.querySelector('[part="loading"] lyra-spinner')!;
+    expect(spinner.getAttribute('accessible-label')).to.equal('Chargement des lignes');
+    expect(spinner.textContent).to.contain('Chargement des lignes');
+  });
+
+  it('localizes the no-data empty-state heading (both the whole-table and filtered-to-empty variants)', async () => {
+    const whole = (await fixture(
+      html`<lyra-table .strings=${{ noData: 'Aucune donnée' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    whole.columns = columns; // rows left empty -- exercises the whole-table (not no-columns) empty state
+    await whole.updateComplete;
+    expect(whole.shadowRoot!.querySelector('lyra-empty')!.getAttribute('heading')).to.equal('Aucune donnée');
+
+    const filtered = (await fixture(
+      html`<lyra-table filterable .strings=${{ noData: 'Aucune correspondance' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    filtered.columns = columns;
+    filtered.rows = rows;
+    filtered.rowKey = (r) => r.id;
+    await filtered.updateComplete;
+    filtered.filterText = 'nonexistent-xyz';
+    await filtered.updateComplete;
+    expect(filtered.shadowRoot!.querySelector('lyra-empty')!.getAttribute('heading')).to.equal(
+      'Aucune correspondance',
+    );
+  });
+
+  it('localizes the filter label and placeholder', async () => {
+    const el = (await fixture(
+      html`<lyra-table
+        filterable
+        .strings=${{ tableFilterLabel: 'Filtrer', tableFilterPlaceholder: 'Rechercher…' }}
+      ></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const label = el.shadowRoot!.querySelector('[part="filter-label"]')!;
+    const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+    expect(label.textContent).to.contain('Filtrer');
+    expect(input.getAttribute('aria-label')).to.equal('Filtrer');
+    expect(input.getAttribute('placeholder')).to.equal('Rechercher…');
+  });
+
+  it('localizes the row expand/collapse toggle aria-label', async () => {
+    const expandableColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+    ];
+    const el = (await fixture(
+      html`<lyra-table .strings=${{ expand: 'Développer', collapse: 'Réduire' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = expandableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    await el.updateComplete;
+
+    const toggle = el.shadowRoot!.querySelector('[part="row-expand-toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-label')).to.equal('Développer');
+
+    // `expandedKeys` is a controlled prop -- the toggle button only emits
+    // lyra-row-expand-toggle, it doesn't mutate state itself (see the
+    // `emits lyra-row-expand-toggle` test above).
+    el.expandedKeys = new Set(['a']);
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal('Réduire');
+  });
+
+  it('localizes the inline cell editor aria-label, interpolating the column label', async () => {
+    const el = (await fixture(
+      html`<lyra-table .strings=${{ tableEditCell: 'Modifier {column}' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = editableColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const cell = el.shadowRoot!.querySelector('[part="row"] [part="cell"]') as HTMLElement;
+    cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const input = cell.querySelector('[part="cell-editor"]') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).to.equal('Modifier Name');
+  });
+
+  it('localizes the reveal/hide-columns button label', async () => {
+    const priorityColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      { key: 'score', label: 'Score', align: 'end', priority: 'medium', cell: (r) => r.score },
+      { key: 'id', label: 'Id', priority: 'low', cell: (r) => r.id },
+    ];
+    const el = (await fixture(
+      html`<lyra-table
+        style="display: block; width: 300px;"
+        .strings=${{ showAllColumns: 'Tout afficher', showFewerColumns: 'Afficher moins' }}
+      ></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = priorityColumns;
+    el.rows = rows;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null);
+
+    const button = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement;
+    expect(button.textContent).to.contain('Tout afficher');
+    button.click();
+    await el.updateComplete;
+    expect(button.textContent).to.contain('Afficher moins');
+  });
+
+  it('localizes the load-more button label', async () => {
+    const el = (await fixture(
+      html`<lyra-table .strings=${{ loadMore: 'Charger plus' }}></lyra-table>`,
+    )) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.hasMore = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="more-button"]')!.textContent).to.contain('Charger plus');
+  });
+});

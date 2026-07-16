@@ -5,7 +5,7 @@ import {
   type TemplateResult,
   type PropertyValues,
 } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../internal/anchored-validity.js';
@@ -80,6 +80,8 @@ const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
   fromAttribute: normalizeWeekdayFormat,
   toAttribute: normalizeWeekdayFormat,
 };
+
+export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
 
 export interface LyraDateInputEventMap {
   'lyra-show': CustomEvent<undefined>;
@@ -164,7 +166,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property() autocomplete = '';
   @property({ attribute: 'inputmode' }) inputMode = '';
   @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+  /** Overrides the internal `<input>`'s computed accessible name. Wins over
+   *  `label`/`placeholder`/the localized `date` fallback in that order --
+   *  see the `aria-label` binding in `render()`. Attribute-reflects from a
+   *  host-level `aria-label` so a plain-markup consumer gets ARIA-name
+   *  forwarding without setting a JS property. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() locale = '';
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
@@ -178,6 +185,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  routes through `this.localize()` so a locale/`.strings` override applies without
    *  requiring this to be set; an explicit override wins verbatim. */
   @property({ attribute: 'dialog-label' }) dialogLabel = 'Choose date';
+
+  @query('input[part="input"]') private inputElement?: HTMLInputElement;
 
   private cleanupFn?: () => void;
   private popupTrigger?: HTMLElement;
@@ -281,6 +290,35 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this._disableFuture = Boolean(next);
     this.updateValidity();
     this.requestUpdate('disableFuture', old);
+  }
+
+  /** The underlying date text input for platform-specific integrations. */
+  get input(): HTMLInputElement | undefined {
+    return this.inputElement;
+  }
+
+  get selectionStart(): number | null {
+    return this.inputElement?.selectionStart ?? null;
+  }
+
+  set selectionStart(value: number | null) {
+    if (this.inputElement) this.inputElement.selectionStart = value ?? 0;
+  }
+
+  get selectionEnd(): number | null {
+    return this.inputElement?.selectionEnd ?? null;
+  }
+
+  set selectionEnd(value: number | null) {
+    if (this.inputElement) this.inputElement.selectionEnd = value ?? 0;
+  }
+
+  get selectionDirection(): LyraDateInputSelectionDirection | null {
+    return this.inputElement?.selectionDirection as LyraDateInputSelectionDirection | null;
+  }
+
+  set selectionDirection(value: LyraDateInputSelectionDirection | null) {
+    if (this.inputElement) this.inputElement.selectionDirection = value ?? 'none';
   }
 
   get value(): string {
@@ -390,7 +428,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const from = parseISO(parts[0] ?? '');
     const to = parseISO(parts[1] ?? '');
     if (!from) return '';
-    const formatter = dateTimeFormat(this.locale, {});
+    const formatter = dateTimeFormat(this.effectiveLocale, {});
     const fmt = (d: Date) => formatter.format(d);
     return this.mode === 'range' && to ? `${fmt(from)} – ${fmt(to)}` : fmt(from);
   }
@@ -500,30 +538,43 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     }
   }
 
-  private onInputChange = (e: Event): void => {
-    const target = e.target as HTMLInputElement;
-    const raw = target.value.trim();
-    if (!raw) {
+  /** Parses raw typed text and, if it resolves to a real date (or range),
+   *  commits it as the new value; otherwise reverts the field to the last
+   *  committed display text and flags bad input. Either branch keeps `value`,
+   *  form value, and validity in sync, which is what lets this double as both
+   *  the native `<input>`'s `change` handler and the implementation of the
+   *  public `setRangeText()` editing method -- a programmatic edit of the same
+   *  underlying text needs the identical parse-or-revert contract. Returns
+   *  whether the text actually committed, so callers can decide whether to
+   *  emit `input`/`change` (only a real, user-driven edit does). */
+  private applyTypedText(raw: string): boolean {
+    const trimmed = raw.trim();
+    if (!trimmed) {
       // The mixin's value setter recomputes validity (updateValidity()),
       // which clears any stale badInput state along the way.
       this.value = '';
-      this.emit('input');
-      this.emit('change');
-      return;
+      return true;
     }
-    const parsed = this.mode === 'range' ? this.parseRangeText(raw) : this.parseSingleText(raw);
+    const parsed = this.mode === 'range' ? this.parseRangeText(trimmed) : this.parseSingleText(trimmed);
     if (parsed) {
       this.value = parsed;
+      return true;
+    }
+    // Unparseable text: don't silently keep the committed value while the
+    // field still shows garbage -- revert the display to the last commit
+    // and flag bad input. Parseable dates outside an active bound instead
+    // commit above and expose their precise range validity state.
+    if (this.inputElement) this.inputElement.value = this.displayText;
+    this.setTypedBadInput(true);
+    this.updateValidity();
+    return false;
+  }
+
+  private onInputChange = (e: Event): void => {
+    const committed = this.applyTypedText((e.target as HTMLInputElement).value);
+    if (committed) {
       this.emit('input');
       this.emit('change');
-    } else {
-      // Unparseable text: don't silently keep the committed value while the
-      // field still shows garbage -- revert the display to the last commit
-      // and flag bad input. Parseable dates outside an active bound instead
-      // commit above and expose their precise range validity state.
-      target.value = this.displayText;
-      this.setTypedBadInput(true);
-      this.updateValidity();
     }
   };
 
@@ -551,7 +602,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       if (g1.length === 4) {
         return parseISO(`${g1}-${g2.padStart(2, '0')}-${g3.padStart(2, '0')}`);
       }
-      const order = localeDateOrder(this.locale);
+      const order = localeDateOrder(this.effectiveLocale);
       const values = [Number(g1), Number(g2), Number(g3)];
       const fields: Partial<Record<'day' | 'month' | 'year', number>> = {};
       order.forEach((type, i) => {
@@ -622,6 +673,46 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private onInputFocus = (): void => {
     this.emit('focus');
   };
+
+  /** Focus the internal date text input. */
+  override focus(options?: FocusOptions): void {
+    this.inputElement?.focus(options);
+  }
+
+  /** Blur the internal date text input. */
+  override blur(): void {
+    this.inputElement?.blur();
+  }
+
+  /** Select all editable date text. */
+  select(): void {
+    this.inputElement?.select();
+  }
+
+  /** Set the selection range in the editable date text. */
+  setSelectionRange(
+    start: number | null,
+    end: number | null,
+    direction?: LyraDateInputSelectionDirection,
+  ): void {
+    this.inputElement?.setSelectionRange(start, end, direction);
+  }
+
+  setRangeText(replacement: string): void;
+  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
+  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
+    const input = this.inputElement;
+    if (!input) return;
+    if (start === undefined || end === undefined) {
+      input.setRangeText(replacement);
+    } else {
+      input.setRangeText(replacement, start, end, selectMode);
+    }
+    // Mirrors onInputChange's parse-or-revert contract for a programmatic
+    // edit of the same underlying text -- keeps value/validity in sync
+    // without emitting input/change (programmatic assignments stay silent).
+    this.applyTypedText(input.value);
+  }
 
   formStateRestoreCallback(
     state: string | File | FormData | null,
@@ -748,7 +839,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             .min=${this.min}
             .max=${this.max}
             .months=${normalizeCalendarMonths(this.months)}
-            .locale=${this.locale}
+            .locale=${this.effectiveLocale}
             .disabled=${this.effectiveDisabled}
             .readonly=${this.readonly}
             .disablePast=${this.disablePast}

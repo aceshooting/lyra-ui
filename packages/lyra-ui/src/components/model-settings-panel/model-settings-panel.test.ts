@@ -104,6 +104,34 @@ it('reflects an explicit compact layout', async () => {
   expect(el.getAttribute('layout')).to.equal('compact');
 });
 
+it('wraps the compact layout rows onto separate lines rather than overflowing a 320px sidebar', async () => {
+  // `parentNode` is an open-wc fixture option -- the fixture wrapper appends it under
+  // `document.body` itself and the global afterEach fixtureCleanup removes it, so this
+  // test must not append/remove it manually.
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lyra-model-settings-panel layout="compact" .catalog=${CATALOG} model-value="mistral"></lyra-model-settings-panel>`,
+    { parentNode: container },
+  )) as LyraModelSettingsPanel;
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).flexWrap).to.equal('wrap');
+
+  // The row parts' combined min-inline-size (2 * 10rem + gap) exceeds 320px, so they can
+  // only both fit without clipping if they actually wrap onto separate lines rather than
+  // staying side by side on one row.
+  const modelRow = el.shadowRoot!.querySelector('[part="model-row"]') as HTMLElement;
+  const temperatureRow = el.shadowRoot!.querySelector('[part="temperature-row"]') as HTMLElement;
+  expect(temperatureRow.getBoundingClientRect().top, 'rows must stack, not sit side by side').to.be.greaterThan(
+    modelRow.getBoundingClientRect().top,
+  );
+  const containerRight = container.getBoundingClientRect().right;
+  expect(modelRow.getBoundingClientRect().right).to.be.at.most(containerRight + 1);
+  expect(temperatureRow.getBoundingClientRect().right).to.be.at.most(containerRight + 1);
+});
+
 // -- Live temperature mirroring ------------------------------------------
 
 it('mirrors a live lyra-input from the slider into temperature and the rendered readout, without emitting lyra-change', async () => {

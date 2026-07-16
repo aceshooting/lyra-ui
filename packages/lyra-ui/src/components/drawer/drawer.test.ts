@@ -40,3 +40,25 @@ it('is accessible while open', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('flips the enter-animation offset under RTL to match the mirrored resting edge', async () => {
+  const rtlStartWrapper = (await fixture(html`
+    <div dir="rtl"><lyra-drawer open heading="Filters"><p>Filter controls</p></lyra-drawer></div>
+  `)) as HTMLElement;
+  const startDrawer = rtlStartWrapper.querySelector('lyra-drawer') as LyraDrawer;
+  await startDrawer.updateComplete;
+  const startPanel = startDrawer.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  // A 'start' drawer rests at the physical right edge under RTL, so it must enter
+  // from further right -- the same positive offset an LTR 'end' drawer uses.
+  expect(getComputedStyle(startPanel).getPropertyValue('--lyra-drawer-enter-x').trim()).to.equal('1rem');
+
+  const rtlEndWrapper = (await fixture(html`
+    <div dir="rtl"><lyra-drawer open placement="end" heading="Filters"><p>Filter controls</p></lyra-drawer></div>
+  `)) as HTMLElement;
+  const endDrawer = rtlEndWrapper.querySelector('lyra-drawer') as LyraDrawer;
+  await endDrawer.updateComplete;
+  const endPanel = endDrawer.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  // An 'end' drawer rests at the physical left edge under RTL -- the mirror image,
+  // so it must enter from further left, same as an LTR 'start' (default) drawer.
+  expect(getComputedStyle(endPanel).getPropertyValue('--lyra-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
+});

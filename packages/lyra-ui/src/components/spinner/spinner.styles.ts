@@ -11,7 +11,11 @@ export const styles = css`
     border-radius: var(--lyra-radius-pill);
     animation: lyra-spin var(--lyra-spinner-duration, 800ms) linear infinite;
   }
-  [part='label'] { position: absolute; inline-size: var(--lyra-size-1px); block-size: var(--lyra-size-1px); overflow: hidden; clip-path: inset(50%); }
+  /* 'after' renders the slotted label in flow next to the spinner; 'none' keeps it sr-only
+     (still hit by the [hidden] attribute set in spinner.class.ts, but scoping the clip here too
+     keeps this rule self-consistent if that attribute is ever dropped). */
+  :host([label-placement='after']) [part='label'] { display: inline-flex; align-items: center; margin-inline-start: var(--lyra-space-2xs); color: var(--lyra-color-text); font-size: var(--lyra-font-size-sm); }
+  :host([label-placement='none']) [part='label'] { position: absolute; inline-size: var(--lyra-size-1px); block-size: var(--lyra-size-1px); overflow: hidden; clip-path: inset(50%); }
   @keyframes lyra-spin { to { transform: rotate(1turn); } }
   @media (prefers-reduced-motion: reduce) { [part='spinner'] { animation: none; } }
 `;

@@ -381,6 +381,26 @@ it('references the shared focus-ring tokens on the handle focus-visible outline 
   expect(styles.cssText).to.include('outline-offset: var(--lyra-focus-ring-offset)');
 });
 
+it('targets the real preset-button part in the reduced-motion override, not a nonexistent "preset" part', async () => {
+  const el = (await fixture(
+    html`<lyra-time-range
+      min="0"
+      max="100"
+      start="20"
+      end="80"
+      .presets=${[{ label: 'Last hour', start: 0, end: 10 }]}
+    ></lyra-time-range>`,
+  )) as LyraTimeRange;
+  const presetButton = el.shadowRoot!.querySelector('[part="preset-button"]');
+  expect(presetButton, 'the rendered preset button must actually carry part="preset-button"').to.exist;
+
+  const reducedMotionBlock = styles.cssText.match(/@media \(prefers-reduced-motion: reduce\)[\s\S]*/)?.[0] ?? '';
+  expect(reducedMotionBlock).to.include("[part='preset-button']");
+  // The pre-fix selector was `[part='preset']`, which never matches the button's real
+  // `preset-button` part -- assert the exact broken selector string is gone.
+  expect(reducedMotionBlock).to.not.include("[part='preset']");
+});
+
 it('renders handles/fill in the correct left-to-right order when min > max (inverted domain)', async () => {
   const el = (await fixture(
     html`<lyra-time-range min="100" max="0" start="20" end="80" step="5"></lyra-time-range>`,

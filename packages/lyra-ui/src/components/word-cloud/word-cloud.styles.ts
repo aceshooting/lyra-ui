@@ -19,10 +19,13 @@ export const styles = css`
   }
   @media (prefers-color-scheme: dark) {
     :host {
-      --lyra-word-cloud-color-1: var(--lyra-theme-color-brand-fill-loud, var(--lyra-color-brand));
-      --lyra-word-cloud-color-2: var(--lyra-theme-color-success-fill-loud, var(--lyra-color-success));
-      --lyra-word-cloud-color-3: var(--lyra-theme-color-warning-fill-loud, var(--lyra-color-warning));
-      --lyra-word-cloud-color-4: var(--lyra-theme-color-danger-fill-loud, var(--lyra-color-danger));
+      /* Colors 1-4 alias the semantic tokens (--lyra-color-brand/-success/-warning/-danger),
+         which already flip to their dark-mode fill in tokens.styles.ts -- redeclaring them
+         here would just repeat the same resolved value, not add a variant. Only the
+         chart-ramp colors (5-8) need an explicit dark swap: they draw from a fixed 4-color
+         segment of the categorical --lyra-color-chart-* ramp, and the ramp's *next* segment
+         (5-8) is the one tuned for dark backgrounds, so the swap is a deliberate palette
+         change rather than a token-layer duplicate. */
       --lyra-word-cloud-color-5: var(--lyra-color-chart-5);
       --lyra-word-cloud-color-6: var(--lyra-color-chart-6);
       --lyra-word-cloud-color-7: var(--lyra-color-chart-7);

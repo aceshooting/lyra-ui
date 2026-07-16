@@ -105,6 +105,24 @@ it('distinguishes incomplete and invalid committed numbers in validity state', a
   expect(el.internals.validity.typeMismatch).to.be.true;
 });
 
+it('gives incomplete and invalid numbers distinct validation messages', async () => {
+  const el = (await fixture(html`
+    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.input!;
+
+  input.value = '123';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.internals.validationMessage).to.equal('This phone number is incomplete.');
+
+  input.value = '000000';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(el.internals.validationMessage).to.equal('The value is invalid.');
+});
+
 it('supports international E.164 values without an adapter as a graceful fallback', async () => {
   const el = (await fixture(html`
     <lyra-phone-input label="Phone number" value="+352 621 123 456"></lyra-phone-input>
@@ -223,6 +241,51 @@ it('exposes selection and range-editing APIs while keeping editable and form val
   expect(el.selectionEnd).to.equal(el.inputValue.length);
 });
 
+it('keeps the caret at the same digit offset across a mid-string edit instead of jumping to the end', async () => {
+  const el = (await fixture(html`
+    <lyra-phone-input label="Phone number" default-country="LU" .adapter=${adapter}></lyra-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.input!;
+
+  input.value = '621123456';
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  await el.updateComplete;
+  expect(input.value).to.equal('621 123 456');
+
+  // Insert a digit between the 4th and 5th characters of "123" ("621 1|23 456"),
+  // exactly as the browser would after a real keystroke: the new character is
+  // already present in `.value` and the caret already sits right after it.
+  input.value = '621 1' + '9' + '23 456';
+  input.setSelectionRange(6, 6);
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  await el.updateComplete;
+
+  // Reformatted around the new digit ("6211923456" grouped in 3s) rather than
+  // left as the raw un-formatted string.
+  expect(input.value).to.equal('621 192 345 6');
+  // The 5th digit typed so far was the inserted "9" -- the caret must land
+  // right after it in the reformatted string, not at the string's end.
+  expect(input.selectionStart).to.equal(6);
+  expect(input.selectionEnd).to.equal(6);
+});
+
+it('leaves a same-string reformat (the no-adapter fallback path) untouched, including the caret', async () => {
+  const el = (await fixture(html`
+    <lyra-phone-input label="Phone number"></lyra-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.input!;
+
+  input.value = '+352 621 123';
+  input.setSelectionRange(6, 6);
+  input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  await el.updateComplete;
+
+  expect(input.value).to.equal('+352 621 123');
+  expect(input.selectionStart).to.equal(6);
+});
+
 it('bridges focus and blur from the shadow input to host-observable events', async () => {
   const el = (await fixture(html`
     <lyra-phone-input label="Phone number" .adapter=${adapter}></lyra-phone-input>
@@ -317,6 +380,19 @@ it('loads a libphonenumber-compatible module only when explicitly requested', as
     e164: '+352621123456',
     country: 'LU',
   });
+});
+
+it('adapts the real libphonenumber-js package, not just a hand-written fake shape', async () => {
+  const loaded = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
+
+  expect(loaded.countries.length).to.be.greaterThan(100);
+  expect(loaded.countries).to.deep.include({ code: 'LU', callingCode: '352' });
+  expect(loaded.parse('621123456', 'LU')).to.deep.include({
+    status: 'valid',
+    e164: '+352621123456',
+    country: 'LU',
+  });
+  expect(loaded.parse('123', 'LU').status).to.equal('incomplete');
 });
 
 it('is accessible', async () => {
