@@ -1,5 +1,7 @@
 packages:
   - 'packages/*'
+overrides:
+  '@xmldom/xmldom': ^0.8.13
 minimumReleaseAgeExclude:
   - '@aceshooting/lyra-flags@0.1.0'
 allowBuilds:

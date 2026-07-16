@@ -435,7 +435,7 @@
     "postal-mime": "^2.7.5",
     "qrcode": "^1.5.4",
     "shiki": "^4.3.1",
-    "xlsx": "^0.18.5"
+    "xlsx": ">=0.18.5 <0.21.0"
   },
   "peerDependenciesMeta": {
     "@aceshooting/lyra-flags": {
@@ -548,7 +548,7 @@
     "qrcode": "^1.5.4",
     "shiki": "^4.3.1",
     "typescript": "^7.0.2",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
   },
   "packageManager": "pnpm@11.13.0",
   "customElements": "custom-elements.json"
