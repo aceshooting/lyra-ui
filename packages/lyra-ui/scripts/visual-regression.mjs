@@ -180,6 +180,17 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   return page.screenshot({ type: 'png' });
 }
 
+// Escapes a value for safe placement inside a single markdown table cell. Order matters:
+// backslashes first (so the following escapes aren't themselves un-escaped), then pipes (which
+// would otherwise split the cell), then newlines (which would otherwise break out of the row --
+// this table's content ends up in GITHUB_STEP_SUMMARY, which renders as markdown/HTML).
+function escapeMarkdownCell(value) {
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/\r?\n/g, ' ');
+}
+
 function comparePngs(baselineBuffer, currentBuffer) {
   let baseline;
   let current;
@@ -344,7 +355,7 @@ async function main() {
     summaryLines.push('## Findings', '', '| story | axis | status | detail |', '| --- | --- | --- | --- |');
     for (const r of mismatches) {
       const detail = r.reason ?? r.message ?? (r.ratio != null ? `${(r.ratio * 100).toFixed(3)}% pixels changed` : '');
-      summaryLines.push(`| ${r.id} | ${r.axis} | ${r.status} | ${detail.replace(/\|/g, '\\|')} |`);
+      summaryLines.push(`| ${escapeMarkdownCell(r.id)} | ${escapeMarkdownCell(r.axis)} | ${escapeMarkdownCell(r.status)} | ${escapeMarkdownCell(detail)} |`);
     }
     summaryLines.push('');
   }
