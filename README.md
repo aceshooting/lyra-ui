@@ -57,7 +57,7 @@ for data-heavy and streaming applications.
 | Package | Description | Version | Size |
 |---|---|---|---|
 | [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent Lit web components — an alternative to Shoelace and Web Awesome. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![size](https://img.shields.io/bundlephobia/minzip/%40aceshooting%2Flyra-ui)](https://bundlephobia.com/package/@aceshooting/lyra-ui) |
-| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | [![size](https://img.shields.io/bundlephobia/minzip/%40aceshooting%2Flyra-flags)](https://bundlephobia.com/package/@aceshooting/lyra-flags) |
+| [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lyra-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | *n/a — SVG assets, not a JS bundle* |
 
 See each package's own README for full install/usage details.
 
@@ -98,20 +98,20 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Principles & Guidelines
 
-| Principle | Why it matters | Summary |
-|---|---|---|
-| 🆓 Free & Open Source | Free to use, nothing hidden inside | MIT-licensed, clean-room implementation |
-| 🪶 Lightweight & Tree-Shakeable | Only ship what you use | Granular, side-effect-free per-component exports |
-| ⚡ Performance-First | Fast by design | Native custom elements, no virtual DOM, minimal deps |
-| 🤖 AI & Agentic-AI Ready | AI agents can use it correctly | `llms.txt`/`llms-full.txt`, `custom-elements.json`, built-in chat/agent UI family |
-| 🧩 Consistent Architecture | Learn one component, know them all | Shared base class, event, tagging, and styling conventions |
-| 🎨 Design Tokens Only | Restyle everything from one place | No raw hex/px — all values flow through `--lyra-*` tokens |
-| 🌍 i18n & RTL by Default | Works in any language, any direction | Every string translatable, every layout RTL-mirrored |
-| ♿ Accessibility First | Usable by everyone | Correct ARIA in shadow DOM, automated a11y checks |
-| 📐 Responsive by Allocation | Adapts to its container, not just the viewport | Container queries drive layout, not page media queries |
-| 🎬 Motion-Aware | Respects motion sensitivity | Themeable timing, honors `prefers-reduced-motion` |
-| 🔗 Synchronized Public API | Docs never drift from code | JSDoc, tests, stories, and manifest must all agree |
-| 🔒 Responsible Disclosure | Security issues handled safely | Private reporting, 90-day coordinated disclosure |
+| Principle | Description |
+|---|---|
+| 🆓 Free & Open Source | MIT-licensed and free — nothing hidden inside |
+| 🪶 Lightweight & Tree-Shakeable | Import only what you use — no dead weight |
+| ⚡ Performance-First | Native custom elements, no virtual DOM, minimal deps |
+| 🤖 AI & Agentic-AI Ready | Machine-readable docs and manifests AI agents use correctly |
+| 🧩 Consistent Architecture | One shared base — learn one component, know them all |
+| 🎨 Design Tokens Only | Every value is a `--lyra-*` token — restyle from one place |
+| 🌍 i18n & RTL by Default | Every string translatable, every layout mirrors RTL |
+| ♿ Accessibility First | Correct ARIA in shadow DOM, automated a11y checks |
+| 📐 Responsive by Allocation | Adapts to its container, not just the viewport |
+| 🎬 Motion-Aware | Themeable timing, honors `prefers-reduced-motion` |
+| 🔗 Synchronized Public API | Docs, tests, and manifest always match the code |
+| 🔒 Responsible Disclosure | Private reporting, 90-day coordinated disclosure |
 
 ## Components
 
@@ -224,3 +224,7 @@ are under active development, with new components and fixes shipping regularly.
 from Google's Noto Emoji project (Public Domain / copyright-exempt) — see
 [its README](./packages/lyra-flags/README.md#asset-provenance--license) for the sourcing
 details and upstream license text.
+
+---
+
+<p align="center">Built with ❤️ by AI, for AI</p>
