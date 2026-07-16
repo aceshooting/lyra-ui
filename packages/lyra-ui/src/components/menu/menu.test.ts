@@ -217,6 +217,137 @@ it('moves roving focus when the active item becomes disabled or hidden', async (
   expect(c.tabIndex).to.equal(0);
 });
 
+// Dynamic *membership* changes (items added/removed/reordered while the menu
+// is open), as distinct from the dynamic *attribute* state (disabled/hidden)
+// the MutationObserver above covers. `activeIndex` is a positional index into
+// an array rebuilt from scratch on every `slotchange`, so it must be
+// re-resolved by *identity* -- a bounds check alone silently repoints it at a
+// different item (or drops it entirely) whenever the list shifts underneath.
+const abc = () => html`
+  <lyra-menu>
+    <button slot="trigger" aria-label="Actions">⋮</button>
+    <lyra-menu-item value="a">A</lyra-menu-item>
+    <lyra-menu-item value="b">B</lyra-menu-item>
+    <lyra-menu-item value="c">C</lyra-menu-item>
+  </lyra-menu>
+`;
+
+// slotchange is queued as a microtask, so it lands after `updateComplete`'s
+// own microtask -- mirrors the `hidden` half of the disabled/hidden test above.
+async function afterSlotChange(el: LyraMenu): Promise<void> {
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+}
+
+/**
+ * The `expect(document.activeElement).to.equal(item)` idiom used everywhere
+ * above is unusable for the tests below. Every one of them asserts against a
+ * *focus-loss* bug, so the failing actual value is `<body>` -- and chai
+ * stringifies the actual value to build its message, serializing the entire
+ * test page (mocha's own reporter DOM included) into one string. That wedges
+ * the test runner into a timeout instead of producing a failure. Comparing a
+ * short stable identity keeps the failure readable ("expected 'body' to equal
+ * 'item:a'") and is strictly more informative than an element-identity diff.
+ */
+function activeItemValue(): string {
+  const active = document.activeElement as (HTMLElement & { value?: string }) | null;
+  if (!active) return 'none';
+  return active.tagName === 'LYRA-MENU-ITEM' ? `item:${active.value}` : active.tagName.toLowerCase();
+}
+
+it('keeps the roving focus on the active item when it is reordered while the menu is open', async () => {
+  const el = (await fixture(abc())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a, b] = items(el);
+  expect(activeItemValue()).to.equal('item:a');
+
+  // Moving the node re-inserts it (blurring it in the process) at the end.
+  el.appendChild(a);
+  await afterSlotChange(el);
+
+  // `a` is still the user's position and still exists -- only its index moved.
+  // Without identity re-resolution activeIndex stays 0 (which is now `b`), so
+  // the `activeIndex === -1` catch-up never fires and nothing restores the
+  // focus the move dropped: focus is left on <body> and the menu is
+  // keyboard-dead -- ArrowDown can't even reach the list's keydown handler.
+  expect(activeItemValue()).to.equal('item:a');
+  expect(a.tabIndex).to.equal(0);
+  expect(b.tabIndex).to.equal(-1);
+
+  // Order is now B, C, A -- so ArrowDown from the last item wraps to B.
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(activeItemValue()).to.equal('item:b');
+});
+
+it('keeps the roving tabindex and Arrow nav aligned when an item is prepended above the active one while open', async () => {
+  const el = (await fixture(abc())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a] = items(el);
+  expect(activeItemValue()).to.equal('item:a');
+
+  const fresh = document.createElement('lyra-menu-item');
+  fresh.value = 'fresh';
+  fresh.textContent = 'Fresh';
+  el.insertBefore(fresh, a);
+  await afterSlotChange(el);
+
+  // Focus legitimately stays on `a` here (nothing moved it), but activeIndex
+  // still reads 0 -- which is now `fresh`. That desyncs two things at once:
+  // Tab would enter the menu at `fresh` rather than at the focused row...
+  expect(activeItemValue()).to.equal('item:a');
+  expect(a.tabIndex).to.equal(0);
+  expect(fresh.tabIndex).to.equal(-1);
+
+  // ...and ArrowDown computes its next item from `fresh`, landing back on `a`
+  // and swallowing the keypress instead of advancing to `b`.
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(activeItemValue()).to.equal('item:b');
+});
+
+it('keeps the roving focus put when an item above the active one is removed while open', async () => {
+  const el = (await fixture(abc())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a, b, c] = items(el);
+
+  (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(activeItemValue()).to.equal('item:c');
+
+  a.remove();
+  await afterSlotChange(el);
+
+  // `c` still exists and is still where the user was. The bounds check alone
+  // resets activeIndex to -1 (2 >= 2), which then re-runs the open-from-start
+  // catch-up and yanks focus backward to the first item.
+  expect(activeItemValue()).to.equal('item:c');
+  expect(c.tabIndex).to.equal(0);
+  expect(b.tabIndex).to.equal(-1);
+});
+
+it('falls back to the first item when the active item itself is removed while open', async () => {
+  const el = (await fixture(abc())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+  const [a, b] = items(el);
+  expect(activeItemValue()).to.equal('item:a');
+
+  a.remove();
+  await afterSlotChange(el);
+
+  // The mirror image of the three cases above: identity re-resolution finds
+  // nothing, so the existing focusRoving() fallback must still apply. Today
+  // the bounds check misses this too -- activeIndex 0 is still in range, so it
+  // silently repoints at `b` without ever restoring the focus removal dropped,
+  // leaving the menu just as keyboard-dead as the reorder case.
+  expect(activeItemValue()).to.equal('item:b');
+  expect(b.tabIndex).to.equal(0);
+});
+
 it('closes on Escape and returns focus to the trigger', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   const btn = trigger(el);

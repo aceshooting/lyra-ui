@@ -297,6 +297,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   private onItemsSlotChange = (e: Event): void => {
     this.itemStateObserver?.disconnect();
+    // A bounds check can't survive membership changes: adding, removing or
+    // reordering items while open shifts survivors to new indices, so an
+    // in-range activeIndex starts pointing at a different item. Re-resolve by
+    // identity instead.
+    const previouslyActive = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     this.items = (e.target as HTMLSlotElement)
       .assignedElements({ flatten: true })
       .filter((el): el is LyraMenuItem => el instanceof LyraMenuItem);
@@ -309,14 +314,22 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         });
       }
     }
-    if (this.activeIndex >= this.items.length) this.activeIndex = -1;
+    this.activeIndex = previouslyActive ? this.items.indexOf(previouslyActive) : -1;
     this.applyRovingTabIndex();
-    // Covers the same "open from the start" race as onTriggerSlotChange's
-    // reposition() call -- activeIndex === -1 means nothing has claimed the
-    // roving focus yet (never true once a user has actually navigated),
-    // so this only ever fires for that initial catch-up, not on every later
-    // items mutation while open.
-    if (this.open && this.activeIndex === -1) this.focusRoving(this.pendingFocus);
+    if (this.open) {
+      if (this.activeIndex === -1) {
+        // Nothing left to preserve: the active item is gone, or nothing had
+        // claimed the roving focus yet (the "open from the start" race that
+        // onTriggerSlotChange's reposition() call also covers).
+        this.focusRoving(this.pendingFocus);
+      } else if (!this.contains(document.activeElement)) {
+        // Reordering an item moves the node, which blurs it and drops focus out
+        // to <body> -- beyond reach of the list keydown handler, leaving an open
+        // menu keyboard-dead. The guard keeps this from stealing focus a user
+        // parked on slotted non-item content, which stays within this element.
+        this.items[this.activeIndex]!.focus();
+      }
+    }
   };
 
   private isNavigable(item: LyraMenuItem): boolean {
