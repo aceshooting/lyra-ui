@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+"@aceshooting/lyra-ui": minor
 ---
 
 Hardening pass across ~70 components: document the button/spinner interaction custom-property APIs

@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': minor
+"@aceshooting/lyra-ui": minor
 ---
 
 Add command-palette, checkbox-group, token-input, icon/icon-button, code-editor, data-grid, and
