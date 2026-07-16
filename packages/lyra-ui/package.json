@@ -408,7 +408,7 @@
     "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.7.6",
+    "@floating-ui/dom": "^1.8.0",
     "@types/geojson": "^7946.0.16",
     "lit": "^3.3.3"
   },
