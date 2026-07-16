@@ -227,4 +227,4 @@ details and upstream license text.
 
 ---
 
-<p align="center">Built with ❤️ by AI, for AI</p>
+<p align="center">A UI library built with ❤️ by AI, for AI.</p>

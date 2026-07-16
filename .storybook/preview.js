@@ -215,7 +215,13 @@ const preview = {
   },
   decorators: [withLyraTheme],
   parameters: {
-    controls: { matchers: { color: /(background|color)$/i, date: /Date$/i } },
+    controls: {
+      expanded: true,
+      matchers: { color: /(background|color)$/i, date: /Date$/i },
+    },
+    docs: {
+      toc: { headingSelector: 'h2, h3' },
+    },
     // @storybook/addon-a11y's afterEach hook otherwise auto-runs axe-core on
     // every story render, racing with scripts/check-storybook.mjs's own
     // manual axe.run() calls on the same document ("Axe is already running").
