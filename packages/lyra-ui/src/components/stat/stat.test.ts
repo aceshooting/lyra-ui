@@ -253,6 +253,25 @@ it('announces trend direction and good/bad polarity as sr-only text, since the i
   expect(trend.querySelector('.sr-only')!.textContent).to.equal('unchanged');
 });
 
+it('interpolates the trend value into a locale override instead of concatenating raw text, so word order can differ from English', async () => {
+  // Regression test: trendIncreased/trendDecreased used to be JS-concatenated
+  // with a raw number ("increased" + " " + "12" + "%"), which silently broke
+  // for any locale whose word order differs from English. A `.strings`
+  // override with the `{value}` placeholder moved to the front proves the
+  // number is actually interpolated via the localize() `values` argument,
+  // not just appended after a fixed English word.
+  const el = (await fixture(
+    html`<lyra-stat
+      label="x"
+      value="1"
+      trend="12"
+      .strings=${{ trendIncreased: '{value}% de plus', trendGoodSuffix: '' }}
+    ></lyra-stat>`,
+  )) as LyraStat;
+  const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  expect(trend.querySelector('.sr-only')!.textContent).to.equal('12% de plus');
+});
+
 it('collapses the spark part when no spark content is slotted', async () => {
   const el = (await fixture(html`<lyra-stat label="x" value="1"></lyra-stat>`)) as LyraStat;
   const spark = el.shadowRoot!.querySelector('[part="spark"]') as HTMLElement;

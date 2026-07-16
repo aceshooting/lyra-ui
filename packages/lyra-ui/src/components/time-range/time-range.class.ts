@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { isRtl } from '../../internal/rtl.js';
-import { finiteNumber, finiteRange } from '../../internal/numbers.js';
+import { finiteNumber, finiteRange, isSliderKey, decimalPlaces } from '../../internal/numbers.js';
 import { styles } from './time-range.styles.js';
 
 type Handle = 'start' | 'end';
@@ -15,32 +15,10 @@ interface DragState {
   base: HTMLElement;
 }
 
-function isArrowKey(key: string): boolean {
-  return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';
-}
-
-/** Keys that onKeyDown acts on and onKeyUp commits after — arrow keys plus
- *  the WAI-ARIA APG slider pattern's Home/End/PageUp/PageDown shortcuts. */
-function isSliderKey(key: string): boolean {
-  return isArrowKey(key) || key === 'Home' || key === 'End' || key === 'PageUp' || key === 'PageDown';
-}
-
 /** PageUp/PageDown move by a larger increment than a single ArrowUp/Down
  *  step, matching the WAI-ARIA APG slider pattern's expected keyboard
  *  interactions (and native `<input type=range>`). */
 const PAGE_STEP_MULTIPLIER = 10;
-
-/** Number of decimal places implied by `n`, including exponent notation.
- *  `0.1` -> 1, `5` -> 0, and `1e-7` -> 7. Used to round a stepped value back
- *  to the precision the caller's `step` itself implies, instead of leaving
- *  it at whatever binary floating-point noise `value / step` happened to
- *  produce. */
-function decimalPlaces(n: number): number {
-  if (!Number.isFinite(n) || n === 0) return 0;
-  const [mantissa, exponentText] = n.toExponential().split('e');
-  const mantissaPlaces = mantissa.includes('.') ? mantissa.length - mantissa.indexOf('.') - 1 : 0;
-  return Math.max(0, mantissaPlaces - Number(exponentText));
-}
 
 /** A single discrete-preset option for the `presets` property. */
 export interface TimeRangePreset {

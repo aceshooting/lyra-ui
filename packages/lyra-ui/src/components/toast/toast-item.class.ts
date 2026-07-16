@@ -2,14 +2,11 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { closeIcon } from '../../internal/icons.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import { styles } from './toast-item.styles.js';
 
 export type ToastVariant = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
 export type ToastSize = 'xs' | 's' | 'm' | 'l' | 'xl';
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
 
 function parseTime(value: string): number {
   const trimmed = value.trim();

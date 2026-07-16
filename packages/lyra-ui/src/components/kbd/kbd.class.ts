@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { hasRealContent } from '../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
 
 /** A single rendered key token: the compact glyph shown in the key cap, and
@@ -149,19 +150,6 @@ function detectIsMac(): boolean {
 // little cost, however small) from re-detecting it on every <lyra-kbd>
 // instance or every re-render.
 const IS_MAC = detectIsMac();
-
-// The one "is there real content" predicate shared by both the initial
-// synchronous seed (willUpdate, reading light-DOM childNodes) and the
-// runtime slotchange handler (reading assignedNodes) — using two different
-// predicates for the same question let them disagree: a text-only check
-// would seed correctly for whitespace-only text but (wrongly) treat a
-// content-less icon element as empty, and a node-count-only check would
-// treat *any* assigned node — including a whitespace-only text node — as
-// real content. Counting every element node as real content (regardless of
-// its own text) while requiring non-whitespace text from text nodes gets
-// both cases right in one place.
-const hasRealContent = (nodes: Iterable<Node>): boolean =>
-  Array.from(nodes).some((n) => n.nodeType === Node.ELEMENT_NODE || (n.textContent ?? '').trim().length > 0);
 
 /**
  * `<lyra-kbd>` — a small chip representing a keyboard shortcut, rendering

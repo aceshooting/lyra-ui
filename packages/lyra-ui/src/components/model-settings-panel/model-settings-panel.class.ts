@@ -1,7 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { finiteNumber, finiteRange } from '../../internal/numbers.js';
+import { finiteNumber, finiteRange, decimalPlaces } from '../../internal/numbers.js';
 import { styles } from './model-settings-panel.styles.js';
 import type { LyraModelCatalog } from '../model-select/model-select.class.js';
 import '../model-select/model-select.class.js';
@@ -28,16 +28,6 @@ const DEFAULT_TEMPERATURE_STEP = 0.1;
 // starting point. Reassign `temperature` yourself if your provider's own
 // default differs (OpenAI and Anthropic both default to 1, which this matches).
 const DEFAULT_TEMPERATURE = 1;
-
-/** Number of decimal digits in `n`'s shortest string representation, e.g.
- *  `0.1` -> 1, `5` -> 0. Mirrors lyra-slider's identical helper so the
- *  panel's own re-clamping of `temperature` lands on the exact same
- *  step-grid values the nested slider itself would compute. */
-function decimalPlaces(n: number): number {
-  const str = n.toString();
-  const dot = str.indexOf('.');
-  return dot === -1 ? 0 : str.length - dot - 1;
-}
 
 /**
  * `<lyra-model-settings-panel>` — a fixed composition of `<lyra-model-select>`

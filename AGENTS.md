@@ -58,11 +58,15 @@ pnpm docs                   # Storybook (.storybook/), demos every component liv
 Package-local equivalents (from `packages/lyra-ui/`): `pnpm test:watch` also exists. The `build-test`
 job in `.github/workflows/ci.yml` is the authoritative gate list and reproduction sequence — it
 currently runs install --frozen-lockfile, Playwright Chromium install, lint, **build, then test**
-(build must precede test: `src/package-entrypoints.test.ts` dynamically imports the published
-`./dist/lyra.js` entry points, which only exist after a build), `test:coverage`, `manifest`,
-`manifest:check`, a `git diff --exit-code` check on `custom-elements.json`, `readme:check`,
-`docs:build`, `storybook:check`, `storybook:check-theme`, a `pnpm --filter @aceshooting/lyra-ui pack
---dry-run` check that the published tarball still contains
+(a `pnpm --filter '!@aceshooting/lyra-ui' -r test` step, which covers every other workspace package,
+e.g. lyra-flags's own test script), then `test:coverage` — the one time lyra-ui's own Chromium suite
+actually runs, since a separate `pnpm test` step would just re-run the identical file set a second
+time with coverage instrumentation off (build must precede `test:coverage`:
+`src/package-entrypoints.test.ts` dynamically imports the published `./dist/lyra.js` entry points,
+which only exist after a build), `manifest`, a `git diff --exit-code` check on
+`custom-elements.json` (the freshness check — a standalone `manifest:check` step would be redundant
+with this), `readme:check`, `docs:build`, `storybook:check`, `storybook:check-theme`, a `pnpm
+--filter @aceshooting/lyra-ui pack --dry-run` check that the published tarball still contains
 `custom-elements.json`/`llms.txt`/`llms-full.txt`, then `check:packed-consumer`. A separate
 `platform-contracts` matrix job runs the platform contract suite (`test:platform`) against
 Firefox/WebKit on Node 20/22. Read the workflow file directly rather than trusting a restated list

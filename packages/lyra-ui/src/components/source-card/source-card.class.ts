@@ -1,7 +1,8 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
+import { StripHostTitleAttribute } from '../../internal/strip-host-title.js';
 import { styles } from './source-card.styles.js';
 
 export interface SourceCardExpandDetail {
@@ -18,6 +19,8 @@ export interface LyraSourceCardEventMap {
   'lyra-expand': CustomEvent<SourceCardExpandDetail>;
   'lyra-open': CustomEvent<SourceCardOpenDetail>;
 }
+
+class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
 
 /**
  * `<lyra-source-card>` — one citation/source entry, meant to be a direct
@@ -76,7 +79,7 @@ export interface LyraSourceCardEventMap {
  * });
  * ```
  */
-export class LyraSourceCard extends LyraElement<LyraSourceCardEventMap> {
+export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) {
   static styles = [LyraElement.styles, styles];
 
   /** Stable identifier matching a `<lyra-citation-badge>` elsewhere on the page. */
@@ -86,8 +89,8 @@ export class LyraSourceCard extends LyraElement<LyraSourceCardEventMap> {
    *  title button's own text -- a bare host-level `title` attribute (the
    *  browser's global tooltip attribute) is actively stripped once Lit has
    *  synced it into this property, so the card never grows an unsolicited
-   *  native tooltip repeating the same text. See `attributeChangedCallback`
-   *  and `updated` below. */
+   *  native tooltip repeating the same text. See `StripHostTitleAttribute`
+   *  (`internal/strip-host-title.ts`). */
   @property() title = '';
 
   /** Optional page reference, e.g. `12` or `"iv"` — rendered as-is (never
@@ -107,13 +110,6 @@ export class LyraSourceCard extends LyraElement<LyraSourceCardEventMap> {
 
   private readonly fullId = nextId('source-card-full');
 
-  // Guards the `removeAttribute('title')` call in `updated()` below: removing
-  // an observed attribute fires `attributeChangedCallback` synchronously just
-  // like setting one does, and without this flag Lit would treat the removal
-  // as a fresh (empty) attribute value and reset the `title` property right
-  // back to `null`, losing the value it just finished syncing in.
-  private stripHostTitleAttr = false;
-
   protected willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasFullSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'full');
@@ -129,23 +125,6 @@ export class LyraSourceCard extends LyraElement<LyraSourceCardEventMap> {
 
     const excerptSlot = this.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
     this.hasExcerptSlot = excerptSlot.assignedElements({ flatten: true }).length > 0;
-  }
-
-  attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    if (name === 'title' && this.stripHostTitleAttr) return;
-    super.attributeChangedCallback(name, old, value);
-  }
-
-  protected updated(changed: PropertyValues<this>): void {
-    if (changed.has('title') && this.hasAttribute('title')) {
-      // The attribute has already been converted into the `title` property
-      // by this point (that's how it got here), so the DOM attribute itself
-      // is now redundant -- and, left in place, would make the whole card
-      // show a native tooltip repeating the title text on hover.
-      this.stripHostTitleAttr = true;
-      this.removeAttribute('title');
-      this.stripHostTitleAttr = false;
-    }
   }
 
   private onFullSlotChange = (e: Event): void => {

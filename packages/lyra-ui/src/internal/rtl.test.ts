@@ -1,5 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { isRtl, rtlAwareSide, rtlAwarePlacement } from './rtl.js';
+import { isRtl, rtlAwarePlacement } from './rtl.js';
 
 it('reads the resolved direction off the element, not a fixed default', async () => {
   const ltr = await fixture(html`<div dir="ltr"></div>`);
@@ -12,20 +12,6 @@ it('inherits direction from an ancestor when not set directly on the element', a
   const wrapper = await fixture(html`<div dir="rtl"><span></span></div>`);
   const child = wrapper.querySelector('span')!;
   expect(isRtl(child)).to.be.true;
-});
-
-describe('rtlAwareSide', () => {
-  it('passes the side through unchanged under LTR', async () => {
-    const ltr = await fixture(html`<div dir="ltr"></div>`);
-    expect(rtlAwareSide('left', ltr)).to.equal('left');
-    expect(rtlAwareSide('right', ltr)).to.equal('right');
-  });
-
-  it('swaps the side under RTL', async () => {
-    const rtl = await fixture(html`<div dir="rtl"></div>`);
-    expect(rtlAwareSide('left', rtl)).to.equal('right');
-    expect(rtlAwareSide('right', rtl)).to.equal('left');
-  });
 });
 
 describe('rtlAwarePlacement', () => {

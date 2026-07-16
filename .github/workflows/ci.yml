@@ -22,10 +22,13 @@ jobs:
       # the package's published entry points (./dist/lyra.js etc., per
       # package.json's "exports"), which only exist after a build.
       - run: pnpm build
-      - run: pnpm test
+      # lyra-ui's own Chromium suite runs once, below, via test:coverage
+      # (identical file set, same browser, just with coverage instrumentation
+      # on) -- this step only needs to cover the other workspace package(s),
+      # e.g. lyra-flags's own test script.
+      - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
       - run: pnpm --filter @aceshooting/lyra-ui test:coverage
       - run: pnpm manifest
-      - run: pnpm manifest:check
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm readme:check
       - run: pnpm docs:build

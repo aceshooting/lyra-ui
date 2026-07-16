@@ -1,19 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { hasRealContent } from '../../internal/a11y.js';
 import { styles } from './result-field.styles.js';
-
-// An element always counts as real slot content, even one with no text of
-// its own (e.g. a `<lyra-chip>` status badge whose label comes from an
-// attribute, not slotted text) -- assignedElements()-only checks (as
-// lyra-widget's hasActionsSlot/lyra-source-card's hasFullSlot use) would
-// miss that case. A bare text node only counts once trimmed of whitespace,
-// matching lyra-checkbox's hasLabelSlot. Together this catches both a
-// plain-text value override (`<lyra-result-field label="Status">200 OK`)
-// and a rich slotted badge.
-function hasRealContent(nodes: Node[]): boolean {
-  return nodes.some((n) => n.nodeType === Node.ELEMENT_NODE || (n.textContent ?? '').trim().length > 0);
-}
 
 /**
  * `<lyra-result-field>` — a single label/value row, meant for use inside a

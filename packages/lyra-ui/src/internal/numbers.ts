@@ -44,3 +44,26 @@ export function finiteDuration(
 ): number {
   return finiteRange(value, fallback, min, Math.min(max, MAX_TIMEOUT_MS));
 }
+
+/** Whether `key` is one of the four arrow keys. */
+export function isArrowKey(key: string): boolean {
+  return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';
+}
+
+/** Keys a slider-style control's onKeyDown acts on and onKeyUp commits after
+ *  — arrow keys plus the WAI-ARIA APG slider pattern's Home/End/PageUp/
+ *  PageDown shortcuts. */
+export function isSliderKey(key: string): boolean {
+  return isArrowKey(key) || key === 'Home' || key === 'End' || key === 'PageUp' || key === 'PageDown';
+}
+
+/** Number of decimal places implied by `n`, including exponent notation.
+ *  `0.1` -> 1, `5` -> 0, and `1e-7` -> 7. Used to round a stepped value back
+ *  to the precision `n` itself implies, instead of leaving binary
+ *  floating-point noise in place. */
+export function decimalPlaces(n: number): number {
+  if (!Number.isFinite(n) || n === 0) return 0;
+  const [mantissa, exponentText] = n.toExponential().split('e');
+  const mantissaPlaces = mantissa.includes('.') ? mantissa.length - mantissa.indexOf('.') - 1 : 0;
+  return Math.max(0, mantissaPlaces - Number(exponentText));
+}

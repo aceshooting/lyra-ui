@@ -187,6 +187,7 @@ export type LyraMessageKey =
   | 'datasetViewerEmpty'
   | 'datasetViewerCaption'
   | 'datasetViewerCaptionNamed'
+  | 'contactViewerLabel'
   | 'contactViewerNoContacts'
   | 'contactViewerUnnamedContact'
   | 'contactViewerPhoneLabel'
@@ -401,6 +402,7 @@ export type LyraMessageKey =
   | 'kbdOptionWord'
   | 'kbdAltWord'
   | 'kbdShiftWord'
+  | 'emailViewerLabel'
   | 'emailViewerMissingParser'
   | 'emailViewerFrom'
   | 'emailViewerTo'
@@ -408,6 +410,7 @@ export type LyraMessageKey =
   | 'emailViewerDate'
   | 'emailViewerAttachments'
   | 'emailViewerNoSubject'
+  | 'calendarViewerLabel'
   | 'calendarViewerMissingParser'
   | 'calendarViewerEmpty'
   | 'calendarViewerNoSummary'
@@ -610,6 +613,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   datasetViewerEmpty: 'This dataset has no rows.',
   datasetViewerCaption: '{count} rows',
   datasetViewerCaptionNamed: '{name}: {count} rows',
+  contactViewerLabel: 'Contact viewer',
   contactViewerNoContacts: 'No contacts found in this file.',
   contactViewerUnnamedContact: 'Unnamed contact',
   contactViewerPhoneLabel: 'Phone',
@@ -750,8 +754,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   sourceListDefaultLabel: 'Sources',
   resizeDivider: 'Resize divider between panel {a} and panel {b}',
   trendUnchanged: 'unchanged',
-  trendIncreased: 'increased',
-  trendDecreased: 'decreased',
+  trendIncreased: 'increased {value}%',
+  trendDecreased: 'decreased {value}%',
   trendGoodSuffix: ', good',
   trendBadSuffix: ', bad',
   streamStalled: 'Taking longer than usual…',
@@ -828,6 +832,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   kbdOptionWord: 'Option',
   kbdAltWord: 'Alt',
   kbdShiftWord: 'Shift',
+  emailViewerLabel: 'Email viewer',
   emailViewerMissingParser: 'This viewer needs the optional "postal-mime" package installed to parse this message.',
   emailViewerFrom: 'From',
   emailViewerTo: 'To',
@@ -835,6 +840,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   emailViewerDate: 'Date',
   emailViewerAttachments: 'Attachments',
   emailViewerNoSubject: '(no subject)',
+  calendarViewerLabel: 'Calendar viewer',
   calendarViewerMissingParser: 'This viewer needs the optional "ical.js" package installed to parse this calendar.',
   calendarViewerEmpty: 'This calendar has no events.',
   calendarViewerNoSummary: '(no title)',

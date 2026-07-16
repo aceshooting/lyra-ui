@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import { isRtl } from '../../internal/rtl.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { styles } from './graph.styles.js';
@@ -64,9 +65,6 @@ type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNod
 
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
 
 /**
  * Tiny deterministic PRNG (mulberry32, public-domain) used only when `seed`

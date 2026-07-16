@@ -40,12 +40,11 @@ first failure (report it, don't try to auto-fix silently — the user should see
 ```bash
 pnpm install --frozen-lockfile
 pnpm lint
-pnpm test
-pnpm --filter @aceshooting/lyra-ui test:coverage
 pnpm build
+pnpm --filter '!@aceshooting/lyra-ui' -r test   # every other workspace package, e.g. lyra-flags's own test script
+pnpm --filter @aceshooting/lyra-ui test:coverage   # the one time lyra-ui's own Chromium suite runs -- a separate `pnpm test` step would just re-run the identical file set with coverage instrumentation off
 pnpm manifest
-pnpm manifest:check
-git diff --exit-code -- packages/lyra-ui/custom-elements.json   # manifest must already be committed/fresh
+git diff --exit-code -- packages/lyra-ui/custom-elements.json   # manifest must already be committed/fresh -- this is the freshness check; a standalone `manifest:check` step would be redundant with it
 pnpm readme:check
 pnpm docs:build
 pnpm storybook:check

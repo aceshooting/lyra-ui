@@ -3,26 +3,12 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { formatISO, monthMatrix, weekdayLabels } from '../date-picker/calendar-core.js';
+import { sanitizeSwatchColor } from '../../internal/safe-css.js';
 import { styles } from './calendar.styles.js';
 
 export interface CalendarEvent { id?: string; date: string; title: string; start?: string; end?: string; color?: string; data?: unknown; }
 export interface LyraCalendarEventMap { 'lyra-date-select': CustomEvent<{ date: string }>; 'lyra-event-select': CustomEvent<{ event: CalendarEvent }>; 'lyra-view-change': CustomEvent<{ viewDate: string }>; }
 const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
-
-/**
- * Matches only actual CSS color syntax: hex (`#fff`/`#ffffff`/`#ffffffff`),
- * bare keywords (named colors, `transparent`, `currentColor`), the standard
- * color functions, and `var(--custom-property)` references. Anything else --
- * notably `url(...)`, which is otherwise valid `background` syntax -- is
- * rejected. Guards `CalendarEvent.color`, which is caller-supplied data that
- * would otherwise interpolate straight into a `style` declaration.
- */
-const SAFE_SWATCH_COLOR =
-  /^(?:#[0-9a-fA-F]{3,8}|[a-zA-Z]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch)\([-+0-9.%,/\s]+\)|var\(--[\w-]+\))$/;
-
-function sanitizeSwatchColor(color: string): string | undefined {
-  return SAFE_SWATCH_COLOR.test(color.trim()) ? color : undefined;
-}
 
 /** `<lyra-calendar>` — responsive month calendar with event markers and agenda mode.
  *

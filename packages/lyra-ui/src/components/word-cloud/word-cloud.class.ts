@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { isRtl } from '../../internal/rtl.js';
+import { getScratchCtx } from '../../internal/canvas.js';
 import { layoutWordCloud, MAX_WORDS, type PlacedWord, type WordCloudLayoutResult, type WordCloudWord } from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
 
@@ -20,15 +21,6 @@ const NAV_KEYS = new Set(['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Ho
 /** Padding, in px, between a focused word's glyph box and its drawn focus ring. */
 const FOCUS_RING_PAD = 2;
 
-let scratchCtx: CanvasRenderingContext2D | null | undefined;
-
-/** A detached canvas used solely to measure rendered text width for layout. */
-function getScratchCtx(): CanvasRenderingContext2D | null {
-  if (scratchCtx === undefined) {
-    scratchCtx = document.createElement('canvas').getContext('2d');
-  }
-  return scratchCtx;
-}
 
 const warnedSkipCounts = new Set<number>();
 

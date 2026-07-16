@@ -10,22 +10,6 @@ export function isRtl(el: Element): boolean {
   return getComputedStyle(el).direction === 'rtl';
 }
 
-/** A physical (not logical) horizontal side. */
-export type PhysicalSide = 'left' | 'right';
-
-/**
- * Swaps `side` under RTL, passes it through unchanged under LTR -- for
- * reasoning about a physical side (e.g. which edge an icon should point at,
- * or which edge of a track a dock panel resizes from) that logical CSS
- * properties alone can't express, since the caller needs the resolved
- * physical value itself (to rotate a glyph, to pick a Floating UI
- * `Placement`), not just a layout that flips for free.
- */
-export function rtlAwareSide(side: PhysicalSide, el: Element): PhysicalSide {
-  if (!isRtl(el)) return side;
-  return side === 'left' ? 'right' : 'left';
-}
-
 /**
  * Swaps the `left`/`right` component of a Floating UI `Placement` under RTL
  * (`'right-start'` <-> `'left-start'`, etc.) -- `'top'`/`'bottom'`-based

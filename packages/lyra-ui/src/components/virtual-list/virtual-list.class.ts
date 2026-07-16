@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import { styles } from './virtual-list.styles.js';
 
 /** Fallback per-row height (px) used for any row that hasn't been measured
@@ -27,10 +28,6 @@ const overscanConverter = {
     return normalizeOverscan(value);
   },
 };
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
 
 /** `lyra-visible-range-changed` detail -- the current visible (non-overscanned) item index range. */
 export interface VirtualListRange {

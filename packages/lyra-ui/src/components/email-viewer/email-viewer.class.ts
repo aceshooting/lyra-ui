@@ -55,7 +55,10 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an RFC 822 message. */
   @property() src = '';
-  /** Display name associated with the message. */
+  /** Display name associated with the message. Used as the accessible name
+   *  of `[part='base']`, falling back to a host `aria-label` and then the
+   *  localized `emailViewerLabel` default, matching the `csvViewerLabel`-
+   *  style sibling document viewers. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -140,7 +143,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-email-viewer-max-height:${this.maxHeight}` : nothing}>${this.renderBody()}</div>`; }
+  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('emailViewerLabel')}>${this.renderBody()}</div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lyra-email-viewer': LyraEmailViewer; } }

@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import { loadChartJs } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../skeleton/skeleton.class.js';
@@ -32,9 +33,6 @@ const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
 
 // Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lyra-chart-*` tokens)
 // so scales, legends, and tooltips share the same canvas theme contract.

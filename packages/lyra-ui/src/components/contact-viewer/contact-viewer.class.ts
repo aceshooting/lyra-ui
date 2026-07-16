@@ -31,7 +31,10 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
-  /** Optional display name for the source document. */
+  /** Optional display name for the source document. Used as the accessible
+   *  name of `[part='base']`, falling back to a host `aria-label` and then
+   *  the localized `contactViewerLabel` default, matching the
+   *  `csvViewerLabel`-style sibling document viewers. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -84,7 +87,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-contact-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div></div>`; }
+  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lyra-contact-viewer': LyraContactViewer; } }

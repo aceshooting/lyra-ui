@@ -36,3 +36,8 @@ it('reflects sub and dot-color attributes onto their properties', async () => {
   expect(el.sub).to.equal('Running');
   expect(el.dotColor).to.equal('green');
 });
+
+it('is accessible', async () => {
+  const el = await fixture<LyraOption>(html`<lyra-option value="a">A</lyra-option>`);
+  await expect(el).to.be.accessible();
+});

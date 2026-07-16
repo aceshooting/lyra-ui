@@ -1,3 +1,10 @@
+// Manual, occasional regeneration tool -- not wired into any package.json
+// script or CI step. Run it directly with `node scripts/generate-docx-fixture.mjs`
+// (from `packages/lyra-ui/`) whenever `docx-viewer/fixtures/minimal-docx-fixture.ts`
+// needs to be regenerated (e.g. its tiny hand-built DOCX structure needs a new
+// field/style for a test). `jszip` is already a devDependency of this package,
+// so no extra install is normally needed; if it's ever removed from
+// devDependencies, reinstall it temporarily (`pnpm add -D jszip`) to run this.
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

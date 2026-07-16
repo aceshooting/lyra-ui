@@ -113,7 +113,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   /**
    * Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself
-   * defaults to. A `left`/`right` side is resolved through `rtlAwareSide` semantics (see
+   * defaults to. A `left`/`right` side is resolved through `rtlAwarePlacement` semantics (see
    * `internal/rtl.ts`) so e.g. `placement="left-start"` still anchors to the menu's trailing edge
    * under RTL rather than pinning to the physical left.
    */

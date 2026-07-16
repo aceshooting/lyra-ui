@@ -1,7 +1,10 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { StripHostTitleAttribute } from '../../internal/strip-host-title.js';
 import { styles } from './result-card.styles.js';
+
+class LyraResultCardBase extends LyraElement {}
 
 /**
  * `<lyra-result-card>` — a small bordered card shell for a custom tool-result
@@ -30,13 +33,13 @@ import { styles } from './result-card.styles.js';
  * hovering the truncated text reveals it via the browser's default tooltip,
  * scoped to just this element rather than the whole card. The host's own
  * `title` attribute is stripped once Lit has synced it into the `title`
- * property (see `attributeChangedCallback`/`updated` below), so the native
- * tooltip never also covers the rest of the card.
+ * property (see `StripHostTitleAttribute` in `internal/strip-host-title.ts`),
+ * so the native tooltip never also covers the rest of the card.
  * @csspart actions - The wrapper around the `actions` slot. `hidden`
  * whenever the slot has no assigned content.
  * @csspart body - The wrapper around the default slot.
  */
-export class LyraResultCard extends LyraElement {
+export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) {
   static styles = [LyraElement.styles, styles];
 
   /** Small heading for the card. Leave unset for an untitled card (e.g. a
@@ -47,7 +50,7 @@ export class LyraResultCard extends LyraElement {
    *  `title` attribute (the browser's global tooltip attribute) is actively
    *  stripped once Lit has synced it into this property, so the card never
    *  grows an unsolicited native tooltip repeating the same text. See
-   *  `attributeChangedCallback` and `updated` below. */
+   *  `StripHostTitleAttribute` (`internal/strip-host-title.ts`). */
   @property() title = '';
 
   // See `<lyra-widget>`'s identical `hasActionsSlot` -- a `[part]` wrapper
@@ -57,33 +60,9 @@ export class LyraResultCard extends LyraElement {
   // whether the header row itself has anything to show.
   @state() private hasActionsSlot = false;
 
-  // Guards the `removeAttribute('title')` call in `updated()` below: removing
-  // an observed attribute fires `attributeChangedCallback` synchronously just
-  // like setting one does, and without this flag Lit would treat the removal
-  // as a fresh (empty) attribute value and reset the `title` property right
-  // back to `null`, losing the value it just finished syncing in.
-  private stripHostTitleAttr = false;
-
   protected willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
-    }
-  }
-
-  attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    if (name === 'title' && this.stripHostTitleAttr) return;
-    super.attributeChangedCallback(name, old, value);
-  }
-
-  protected updated(changed: PropertyValues<this>): void {
-    if (changed.has('title') && this.hasAttribute('title')) {
-      // The attribute has already been converted into the `title` property
-      // by this point (that's how it got here), so the DOM attribute itself
-      // is now redundant -- and, left in place, would make the whole card
-      // show a native tooltip repeating the title text on hover.
-      this.stripHostTitleAttr = true;
-      this.removeAttribute('title');
-      this.stripHostTitleAttr = false;
     }
   }
 

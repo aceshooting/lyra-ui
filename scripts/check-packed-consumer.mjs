@@ -29,10 +29,11 @@ const optionalPeers = [
 const bundleEntries = {
   core: {
     fixture: 'core',
-    // Bumped from 1_000_000: the document-viewer phase 4/5 additions registered
-    // <lyra-archive-viewer>, <lyra-ebook-viewer>, <lyra-pptx-viewer>, and <lyra-file-icon> in the
-    // root barrel alongside the existing document viewers, growing the core bundle to ~1010.5 KiB.
-    maxRawBytes: 1_100_000,
+    // Bumped from 1_000_000, then from 1_100_000: the root barrel's registered-tag count has
+    // continued to grow across component hardening passes (156 tags as of this bump), growing the
+    // core bundle to ~1082.6 KiB. Budget leaves headroom over that measured size for incremental
+    // growth before the next bump is needed.
+    maxRawBytes: 1_200_000,
   },
   flag: {
     fixture: 'optional',

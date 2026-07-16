@@ -31,4 +31,16 @@ describe('lyra-contact-viewer', () => {
     try { const el = (await fixture(html`<lyra-contact-viewer src="https://example.test/a.vcf"></lyra-contact-viewer>`)) as LyraContactViewer; await aTimeout(20); await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null); await el.updateComplete; expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('No contacts found in this file.'); } finally { window.fetch = original; }
   });
   it('is accessible', async () => { const el = await fixture(html`<lyra-contact-viewer></lyra-contact-viewer>`); await expect(el).to.be.accessible(); });
+  it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
+    const named = (await fixture(html`<lyra-contact-viewer name="contacts.vcf"></lyra-contact-viewer>`)) as LyraContactViewer;
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('contacts.vcf');
+    const labeled = (await fixture(html`<lyra-contact-viewer aria-label="Team contacts"></lyra-contact-viewer>`)) as LyraContactViewer;
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Team contacts');
+    const unnamed = (await fixture(html`<lyra-contact-viewer></lyra-contact-viewer>`)) as LyraContactViewer;
+    expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Contact viewer');
+  });
+  it('supports a .strings override for the contactViewerLabel fallback', async () => {
+    const el = (await fixture(html`<lyra-contact-viewer .strings=${{ contactViewerLabel: 'Visionneuse de contacts' }}></lyra-contact-viewer>`)) as LyraContactViewer;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de contacts');
+  });
 });

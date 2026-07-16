@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { finiteInteger } from '../../internal/numbers.js';
+import { getScratchCtx } from '../../internal/canvas.js';
 import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
@@ -113,15 +114,6 @@ function formatRgb([r, g, b, a]: [number, number, number, number]): string {
   return alpha >= 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
 }
 
-let scratchCtx: CanvasRenderingContext2D | null | undefined;
-
-/** A detached 1x1 canvas used solely to normalize CSS color strings. */
-function getScratchCtx(): CanvasRenderingContext2D | null {
-  if (scratchCtx === undefined) {
-    scratchCtx = document.createElement('canvas').getContext('2d');
-  }
-  return scratchCtx;
-}
 
 const warnedInvalidColors = new Set<string>();
 

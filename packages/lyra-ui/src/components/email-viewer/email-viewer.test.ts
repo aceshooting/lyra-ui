@@ -115,4 +115,18 @@ describe('lyra-email-viewer', () => {
     const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer></lyra-email-viewer>`);
     await expect(el).to.be.accessible();
   });
+
+  it('uses name as the accessible name, falling back to a host aria-label and then a localized default', async () => {
+    const named = await fixture<LyraEmailViewer>(html`<lyra-email-viewer name="message.eml"></lyra-email-viewer>`);
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('message.eml');
+    const labeled = await fixture<LyraEmailViewer>(html`<lyra-email-viewer aria-label="Inbox message"></lyra-email-viewer>`);
+    expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Inbox message');
+    const unnamed = await fixture<LyraEmailViewer>(html`<lyra-email-viewer></lyra-email-viewer>`);
+    expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Email viewer');
+  });
+
+  it('supports a .strings override for the emailViewerLabel fallback', async () => {
+    const el = await fixture<LyraEmailViewer>(html`<lyra-email-viewer .strings=${{ emailViewerLabel: 'Visionneuse de courriels' }}></lyra-email-viewer>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de courriels');
+  });
 });

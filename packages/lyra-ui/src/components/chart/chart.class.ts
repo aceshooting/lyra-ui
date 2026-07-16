@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import type { LyraMessageKey } from '../../internal/localization.js';
 import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
@@ -70,9 +71,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 // skipped unconditionally regardless of `base`'s own shape.
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-}
 
 // Defensive JS-side fallbacks for themeColors() below, mirroring the
 // light-mode default of each `--lyra-chart-*` token's own fallback chain
