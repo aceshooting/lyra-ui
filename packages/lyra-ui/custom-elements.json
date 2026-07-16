@@ -8736,8 +8736,16 @@
               "name": "next-button"
             },
             {
+              "description": "The chevron glyph inside `next-button`, mirrored under RTL.",
+              "name": "next-glyph"
+            },
+            {
               "description": "Previous slide button.",
               "name": "previous-button"
+            },
+            {
+              "description": "The chevron glyph inside `previous-button`, mirrored under RTL.",
+              "name": "previous-glyph"
             },
             {
               "description": "The slotted slide wrapper.",
@@ -10103,6 +10111,21 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -11972,6 +11995,21 @@
             },
             {
               "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "refreshTheme",
               "return": {
                 "type": {
@@ -13146,6 +13184,17 @@
             },
             {
               "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label."
+            },
+            {
+              "kind": "method",
               "name": "refreshTheme",
               "return": {
                 "type": {
@@ -14229,6 +14278,21 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -15537,6 +15601,21 @@
             },
             {
               "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "refreshTheme",
               "return": {
                 "type": {
@@ -16774,6 +16853,21 @@
             },
             {
               "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "refreshTheme",
               "return": {
                 "type": {
@@ -17409,14 +17503,6 @@
             },
             {
               "kind": "field",
-              "name": "intersectionObserver",
-              "type": {
-                "text": "IntersectionObserver | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "labels",
               "type": {
                 "text": "string[]"
@@ -17650,15 +17736,6 @@
               },
               "default": "'bar'",
               "attribute": "type"
-            },
-            {
-              "kind": "field",
-              "name": "visible",
-              "type": {
-                "text": "boolean"
-              },
-              "privacy": "private",
-              "default": "true"
             },
             {
               "kind": "field",
@@ -19276,6 +19353,21 @@
             },
             {
               "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "refreshTheme",
               "return": {
                 "type": {
@@ -20467,6 +20559,21 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -21666,6 +21773,21 @@
             },
             {
               "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "refreshTheme",
               "return": {
                 "type": {
@@ -22857,6 +22979,21 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localizedChartType",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "description": "Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can\nreturn a raw Chart.js type string a consumer set through the `config` passthrough (including a\ncustom registered controller name beyond this library's own `LyraChartType` union) -- that's\ncaller-supplied data, not library copy, so it passes through untranslated rather than through\n`localize()`, matching every other known type's localized label.",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/chart/chart.class.ts"
               }
             },
             {
@@ -34387,74 +34524,6 @@
     },
     {
       "kind": "javascript-module",
-      "path": "src/components/csv-viewer/csv-loader.ts",
-      "declarations": [
-        {
-          "kind": "function",
-          "name": "clearPapaParseCache",
-          "return": {
-            "type": {
-              "text": "void"
-            }
-          }
-        },
-        {
-          "kind": "function",
-          "name": "loadPapaParse",
-          "return": {
-            "type": {
-              "text": "Promise<PapaParseApi | null>"
-            }
-          },
-          "parameters": [
-            {
-              "name": "importPapaParse",
-              "default": "() => import('papaparse')",
-              "type": {
-                "text": "() => Promise<PapaParseApi | { default: PapaParseApi }>"
-              }
-            }
-          ]
-        },
-        {
-          "kind": "function",
-          "name": "loadPapaParseCached",
-          "return": {
-            "type": {
-              "text": "Promise<PapaParseApi | null>"
-            }
-          }
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "clearPapaParseCache",
-          "declaration": {
-            "name": "clearPapaParseCache",
-            "module": "src/components/csv-viewer/csv-loader.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "loadPapaParse",
-          "declaration": {
-            "name": "loadPapaParse",
-            "module": "src/components/csv-viewer/csv-loader.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "loadPapaParseCached",
-          "declaration": {
-            "name": "loadPapaParseCached",
-            "module": "src/components/csv-viewer/csv-loader.ts"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
       "path": "src/components/csv-viewer/csv-viewer.class.ts",
       "declarations": [
         {
@@ -34574,7 +34643,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Source filename or display name.",
+              "description": "Source filename or display name, used as the viewer's accessible name.",
               "attribute": "name"
             },
             {
@@ -34874,7 +34943,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Source filename or display name.",
+              "description": "Source filename or display name, used as the viewer's accessible name.",
               "fieldName": "name"
             },
             {
@@ -34924,83 +34993,7 @@
           "name": "*",
           "declaration": {
             "name": "*",
-            "module": "src/components/csv-viewer/csv-loader.js"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "*",
-          "declaration": {
-            "name": "*",
             "module": "src/components/csv-viewer/csv-viewer.class.js"
-          }
-        }
-      ]
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/dataset-viewer/dataset-loader.ts",
-      "declarations": [
-        {
-          "kind": "function",
-          "name": "clearPapaParseCache",
-          "return": {
-            "type": {
-              "text": "void"
-            }
-          }
-        },
-        {
-          "kind": "function",
-          "name": "loadPapaParse",
-          "return": {
-            "type": {
-              "text": "Promise<OptionalPeerApi | null>"
-            }
-          }
-        },
-        {
-          "kind": "function",
-          "name": "loadPapaParseDeps",
-          "return": {
-            "type": {
-              "text": "Promise<OptionalPeerApi | null>"
-            }
-          },
-          "parameters": [
-            {
-              "name": "importPapaparse",
-              "default": "() =>\n    import('papaparse') as Promise<{ default: OptionalPeerApi }>",
-              "type": {
-                "text": "() => Promise<{ default: OptionalPeerApi }>"
-              }
-            }
-          ]
-        }
-      ],
-      "exports": [
-        {
-          "kind": "js",
-          "name": "clearPapaParseCache",
-          "declaration": {
-            "name": "clearPapaParseCache",
-            "module": "src/components/dataset-viewer/dataset-loader.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "loadPapaParse",
-          "declaration": {
-            "name": "loadPapaParse",
-            "module": "src/components/dataset-viewer/dataset-loader.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "loadPapaParseDeps",
-          "declaration": {
-            "name": "loadPapaParseDeps",
-            "module": "src/components/dataset-viewer/dataset-loader.ts"
           }
         }
       ]
@@ -35458,14 +35451,6 @@
           "declaration": {
             "name": "LyraDatasetViewer",
             "module": "src/components/dataset-viewer/dataset-viewer.class.ts"
-          }
-        },
-        {
-          "kind": "js",
-          "name": "*",
-          "declaration": {
-            "name": "*",
-            "module": "src/components/dataset-viewer/dataset-loader.js"
           }
         },
         {
@@ -57222,8 +57207,9 @@
               "kind": "field",
               "name": "step",
               "type": {
-                "text": "number | undefined"
+                "text": "number | 'any' | undefined"
               },
+              "description": "Accepts `'any'` (the native way to disable step validation) in addition to a numeric step.",
               "attribute": "step"
             },
             {
@@ -57381,6 +57367,15 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
             },
             {
               "kind": "method",
@@ -57662,8 +57657,9 @@
             {
               "name": "step",
               "type": {
-                "text": "number | undefined"
+                "text": "number | 'any' | undefined"
               },
+              "description": "Accepts `'any'` (the native way to disable step validation) in addition to a numeric step.",
               "fieldName": "step"
             },
             {
@@ -58150,8 +58146,9 @@
               "kind": "field",
               "name": "step",
               "type": {
-                "text": "number | undefined"
+                "text": "number | 'any' | undefined"
               },
+              "description": "Accepts `'any'` (the native way to disable step validation) in addition to a numeric step.",
               "attribute": "step",
               "inheritedFrom": {
                 "name": "LyraInput",
@@ -58325,6 +58322,19 @@
                   }
                 }
               ],
+              "inheritedFrom": {
+                "name": "LyraInput",
+                "module": "src/components/input/input.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/input/input.class.ts"
@@ -58742,8 +58752,9 @@
             {
               "name": "step",
               "type": {
-                "text": "number | undefined"
+                "text": "number | 'any' | undefined"
               },
+              "description": "Accepts `'any'` (the native way to disable step validation) in addition to a numeric step.",
               "fieldName": "step",
               "inheritedFrom": {
                 "name": "LyraInput",
@@ -59276,8 +59287,9 @@
               "kind": "field",
               "name": "step",
               "type": {
-                "text": "number | undefined"
+                "text": "number | 'any' | undefined"
               },
+              "description": "Accepts `'any'` (the native way to disable step validation) in addition to a numeric step.",
               "attribute": "step",
               "inheritedFrom": {
                 "name": "LyraInput",
@@ -59451,6 +59463,19 @@
                   }
                 }
               ],
+              "inheritedFrom": {
+                "name": "LyraInput",
+                "module": "src/components/input/input.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
               "inheritedFrom": {
                 "name": "LyraInput",
                 "module": "src/components/input/input.class.ts"
@@ -59868,8 +59893,9 @@
             {
               "name": "step",
               "type": {
-                "text": "number | undefined"
+                "text": "number | 'any' | undefined"
               },
+              "description": "Accepts `'any'` (the native way to disable step validation) in addition to a numeric step.",
               "fieldName": "step",
               "inheritedFrom": {
                 "name": "LyraInput",
@@ -72081,6 +72107,16 @@
             },
             {
               "kind": "field",
+              "name": "scrollDrivenPage",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "True while `page` was last set by the user scrolling the page list rather than by\n`nextPage()`/`previousPage()`/an explicit `page` assignment. `renderBody()` withholds\n`activeId` in that case so `<lyra-virtual-list>` doesn't `scrollActiveIntoView()` back to a\npage boundary on every scroll-driven page crossing, fighting the user's own scroll."
+            },
+            {
+              "kind": "field",
               "name": "src",
               "type": {
                 "text": "string"
@@ -72212,6 +72248,17 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "destroyLoadedDoc",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Releases the current PDF.js document's worker and buffered pages before replacing or dropping\n`loadState` — `PDFDocumentProxy` is not garbage-collected on its own; every `src` change and\nevery disconnect must explicitly `destroy()` the previous document or it (and its worker) leaks."
             },
             {
               "kind": "method",
@@ -76821,6 +76868,12 @@
             },
             {
               "kind": "field",
+              "name": "labelId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "loadSchedulePending",
               "type": {
                 "text": "boolean"
@@ -77295,6 +77348,24 @@
             },
             {
               "kind": "field",
+              "name": "_groupDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "_groupRequired",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "_name",
               "type": {
                 "text": "string"
@@ -77310,6 +77381,15 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "_tabbable",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "true"
             },
             {
               "kind": "field",
@@ -77387,6 +77467,14 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveRequired",
+              "type": {
+                "text": "boolean"
+              },
+              "readonly": true
             },
             {
               "kind": "field",
@@ -77626,6 +77714,15 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -77660,6 +77757,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -86951,7 +87066,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Source filename or display name.",
+              "description": "Source filename or display name, used as the viewer's accessible name.",
               "attribute": "name"
             },
             {
@@ -87278,7 +87393,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Source filename or display name.",
+              "description": "Source filename or display name, used as the viewer's accessible name.",
               "fieldName": "name"
             },
             {
@@ -90989,6 +91104,10 @@
               "name": "filter"
             },
             {
+              "description": "The `<label>` wrapping the filter input.",
+              "name": "filter-label"
+            },
+            {
               "description": "The `<tfoot>`, only rendered when at least one column defines `footer`.",
               "name": "foot"
             },
@@ -91003,14 +91122,6 @@
             {
               "description": "The full-width group header cell.",
               "name": "group-cell"
-            },
-            {
-              "description": "The group header cell.",
-              "name": "group-cell"
-            },
-            {
-              "description": "A non-focusable group header row.",
-              "name": "group-row"
             },
             {
               "description": "A non-focusable group header row.",
@@ -91090,6 +91201,16 @@
               },
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "cachedMatchingEntries",
+              "type": {
+                "text": "Array<{ row: T; index: number }> | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "description": "Memoized for the duration of a single update cycle — `willUpdate()` invalidates the cache, but\nthis method itself is read (directly or transitively, via `matchingTotalItems`/`pageCount`/\n`appliedPage`/`renderedEntries()`) around a dozen times across one `willUpdate()` + `render()`\npass. Recomputing from scratch each time re-runs the `JSON.stringify()`-per-row default filter\nthat many times over; memoizing collapses that to a single pass per update."
             },
             {
               "kind": "field",
@@ -92165,6 +92286,14 @@
             }
           ],
           "events": [
+            {
+              "description": "Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for the same reason as `focus`.",
+              "name": "blur"
+            },
+            {
+              "description": "Re-dispatched from the internal filter/cell-editor native inputs' own `focus` — bubbling and composed (unlike the native event, which is neither).",
+              "name": "focus"
+            },
             {
               "description": "An inline editor committed a value. `detail: { row, key, value }`.",
               "name": "lyra-cell-edit"
@@ -103762,6 +103891,16 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a\nslotted `label`. Fed only by a host `aria-label`, matching `lyra-scroller`'s/`lyra-carousel`'s\nown host-override pattern.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "activeView",
               "type": {
                 "text": "string"
@@ -103943,6 +104082,15 @@
               },
               "default": "''",
               "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "labelSlotText",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
+              "description": "Text content of a slotted `label`, so the fullscreen dialog's accessible name can see rich\nslotted label content the same way it already sees the plain `label` property."
             },
             {
               "kind": "field",
@@ -104299,6 +104447,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a\nslotted `label`. Fed only by a host `aria-label`, matching `lyra-scroller`'s/`lyra-carousel`'s\nown host-override pattern.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "backdrop-inset",
               "type": {
