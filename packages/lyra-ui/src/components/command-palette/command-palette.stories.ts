@@ -1,0 +1,3 @@
+import type { Meta, StoryObj } from '@storybook/web-components-vite'; import { html } from 'lit'; import './command-palette.js'; import type { LyraCommandPalette } from './command-palette.js';
+const meta: Meta = { title: 'Command Palette', component: 'lyra-command-palette', tags: ['autodocs'] }; export default meta; type Story = StoryObj;
+export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lyra-command-palette .commands=${[{ id: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { id: 'search', label: 'Search workspace', group: 'Navigation' }]}></lyra-command-palette>` };

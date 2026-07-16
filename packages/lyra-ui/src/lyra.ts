@@ -135,6 +135,14 @@ import './components/format/format-bytes.js';
 import './components/format/relative-time.js';
 import './components/rating/rating.js';
 import './components/color-picker/color-picker.js';
+import './components/checkbox-group/checkbox-group.js';
+import './components/token-input/token-input.js';
+import './components/icon/icon.js';
+import './components/icon-button/icon-button.js';
+import './components/command-palette/command-palette.js';
+import './components/code-editor/code-editor.js';
+import './components/data-grid/data-grid.js';
+import './components/calendar/calendar.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -543,6 +551,20 @@ export { LyraRating } from './components/rating/rating.js';
 export type { LyraRatingEventMap } from './components/rating/rating.js';
 export { LyraColorPicker } from './components/color-picker/color-picker.js';
 export type { LyraColorPickerEventMap } from './components/color-picker/color-picker.js';
+export { LyraCheckboxGroup } from './components/checkbox-group/checkbox-group.js';
+export type { LyraCheckboxGroupEventMap } from './components/checkbox-group/checkbox-group.js';
+export { LyraTokenInput } from './components/token-input/token-input.js';
+export type { LyraTokenInputEventMap } from './components/token-input/token-input.js';
+export { LyraIcon } from './components/icon/icon.js';
+export { LyraIconButton } from './components/icon-button/icon-button.js';
+export { LyraCommandPalette } from './components/command-palette/command-palette.js';
+export type { LyraCommand, LyraCommandPaletteEventMap } from './components/command-palette/command-palette.js';
+export { LyraCodeEditor } from './components/code-editor/code-editor.js';
+export type { LyraCodeEditorEventMap } from './components/code-editor/code-editor.js';
+export { LyraDataGrid } from './components/data-grid/data-grid.js';
+export type { DataGridColumn, LyraDataGridEventMap } from './components/data-grid/data-grid.js';
+export { LyraCalendar } from './components/calendar/calendar.js';
+export type { CalendarEvent, LyraCalendarEventMap } from './components/calendar/calendar.js';
 
 export type { LyraAppRailEventMap } from './components/app-rail/app-rail.js';
 export type { LyraAttachmentChipEventMap } from './components/attachment-chip/attachment-chip.js';

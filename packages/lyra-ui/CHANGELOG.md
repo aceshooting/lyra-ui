@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Minor Changes
+
+- Added `<lyra-command-palette>` with searchable command registration, groups, keyboard navigation,
+  Escape dismissal, and a configurable `mod+k` shortcut.
+- Added `<lyra-checkbox-group>` and `<lyra-token-input>` as form-associated composite controls with
+  array values, native reset/validity behavior, localized chrome, and accessible focus/editing APIs.
+- Added `<lyra-icon>` and `<lyra-icon-button>` as dependency-free SVG and icon-only action primitives.
+- Added `<lyra-code-editor>` with line numbers, tab insertion, native textarea selection APIs, and
+  editing-assistance passthrough.
+- Added `<lyra-data-grid>` with sortable headers, roving cell focus, row selection events, loading/
+  empty states, and responsive overflow.
+- Added `<lyra-calendar>` with responsive month and agenda views, event markers, date navigation,
+  RTL-aware keyboard navigation, and date/event selection events.
+- Hardened `<lyra-file-input>` with clipboard paste support, optional native directory selection, and
+  explicit dropped-folder rejection reporting.
+- Updated the component catalog, consumer API reference, custom-elements manifest, stories, and
+  accessibility/behavior coverage for the new public surface.
+
 ## 3.3.0
 
 ### Minor Changes

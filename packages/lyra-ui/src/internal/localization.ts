@@ -130,6 +130,17 @@ export type LyraMessageKey =
   | 'attachmentMenuImage'
   | 'attachmentMenuCamera'
   | 'checkboxRequired'
+  | 'checkboxGroupRequired'
+  | 'tokenInputRequired'
+  | 'commandPaletteLabel'
+  | 'commandPalettePlaceholder'
+  | 'commandPaletteEmpty'
+  | 'commandPaletteResults'
+  | 'iconButtonLabel'
+  | 'codeEditorLabel'
+  | 'dataGridLabel'
+  | 'calendarLabel'
+  | 'calendarEmpty'
   | 'switchRequired'
   | 'citationHighConfidence'
   | 'citationMediumConfidence'
@@ -273,6 +284,7 @@ export type LyraMessageKey =
   | 'fileInputAcceptedMany'
   | 'fileInputRejectedOne'
   | 'fileInputRejectedMany'
+  | 'fileInputFolderRejected'
   | 'elapsedSecondsUnit'
   | 'elapsedMinutesSecondsTemplate'
   | 'tokensPerSecondUnit'
@@ -553,6 +565,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   attachmentMenuImage: 'Upload a photo',
   attachmentMenuCamera: 'Take a photo',
   checkboxRequired: 'Please check this box if you want to continue.',
+  checkboxGroupRequired: 'Select at least one option.',
+  tokenInputRequired: 'Enter at least one value.',
+  commandPaletteLabel: 'Command palette',
+  commandPalettePlaceholder: 'Search commands…',
+  commandPaletteEmpty: 'No matching commands.',
+  commandPaletteResults: 'Commands',
+  iconButtonLabel: 'Button',
+  codeEditorLabel: 'Code editor',
+  dataGridLabel: 'Data grid',
+  calendarLabel: 'Calendar',
+  calendarEmpty: 'No events this month.',
   switchRequired: 'Please turn this on.',
   citationHighConfidence: 'High confidence',
   citationMediumConfidence: 'Medium confidence',
@@ -700,6 +723,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   fileInputAcceptedMany: '{count} files added.',
   fileInputRejectedOne: '{count} file rejected.',
   fileInputRejectedMany: '{count} files rejected.',
+  fileInputFolderRejected: 'Folders are not accepted here.',
   elapsedSecondsUnit: 's',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   tokensPerSecondUnit: 'tok/s',

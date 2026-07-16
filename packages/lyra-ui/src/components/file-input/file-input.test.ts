@@ -203,6 +203,22 @@ it('openPicker() clicks the hidden native input', async () => {
   expect(clicked).to.be.true;
 });
 
+it('accepts pasted files when paste support is enabled', async () => {
+  const el = (await fixture(html`<lyra-file-input paste></lyra-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', { value: { files: [makeFile('clip.txt', 'text/plain')] } });
+  const result = oneEvent(el, 'lyra-files');
+  base.dispatchEvent(event);
+  expect((await result).detail.files[0].name).to.equal('clip.txt');
+  expect(event.defaultPrevented).to.be.true;
+});
+
+it('enables native directory selection when requested', async () => {
+  const el = (await fixture(html`<lyra-file-input directory></lyra-file-input>`)) as LyraFileInput;
+  expect(el.shadowRoot!.querySelector('input[type="file"]')!.hasAttribute('webkitdirectory')).to.be.true;
+});
+
 it('openPicker() does not fire a click on the native input while disabled', async () => {
   const el = (await fixture(html`<lyra-file-input disabled></lyra-file-input>`)) as LyraFileInput;
   const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
@@ -266,6 +282,26 @@ it('focus() delegates to the semantic dropzone', async () => {
   const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('bridges focus and blur from the dropzone a user actually tabs to, not the hidden native input', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const focusPromise = oneEvent(el, 'focus');
+  base.dispatchEvent(new FocusEvent('focus'));
+  await focusPromise;
+
+  const blurPromise = oneEvent(el, 'blur');
+  base.dispatchEvent(new FocusEvent('blur'));
+  await blurPromise;
+});
+
+it('never focuses the hidden native input (aria-hidden, tabindex=-1), so it cannot be the focus/blur source', async () => {
+  const el = (await fixture(html`<lyra-file-input></lyra-file-input>`)) as LyraFileInput;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  expect(input.getAttribute('tabindex')).to.equal('-1');
+  expect(input.getAttribute('aria-hidden')).to.equal('true');
 });
 
 it('keeps the accessible name sourced from `label` even when slot content overrides the visible text', async () => {

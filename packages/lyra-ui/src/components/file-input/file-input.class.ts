@@ -9,7 +9,7 @@ type DragState = 'default' | 'accept' | 'reject';
 
 export interface RejectedFile {
   file: File;
-  reason: 'type' | 'count' | 'size';
+  reason: 'type' | 'count' | 'size' | 'directory';
 }
 
 export interface LyraFileInputEventMap {
@@ -27,6 +27,8 @@ export interface LyraFileInputEventMap {
  * accessible name comes from a host `aria-label` when present, then falls
  * back to `label`, so icon-only slot content remains announced correctly.
  * @event lyra-files - `detail: { files, rejected }`, fired on drop and manual selection.
+ * @event focus - Fired when the semantic dropzone receives focus.
+ * @event blur - Fired when the semantic dropzone loses focus.
  * @csspart base - The dropzone's root, clickable/focusable container.
  * @csspart input - The visually-hidden native `<input type="file">`.
  * @csspart status - The visually-hidden live region announcing drag accept/reject state.
@@ -40,6 +42,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property({ attribute: false }) allowedMimeTypes: string[] = [];
   @property({ attribute: false }) forbiddenMimeTypes: string[] = [];
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
+  /** Enables directory selection through the browser's native picker. */
+  @property({ type: Boolean, reflect: true }) directory = false;
+  /** Enables files pasted from the clipboard into the dropzone. */
+  @property({ type: Boolean, reflect: true }) paste = true;
   @property() label = 'Drop files here or click to browse';
   /** Accessible name forwarded to the semantic dropzone and native file input.
    * When unset, the effective `label` text is used. */
@@ -89,8 +95,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return { files, rejected };
   }
 
-  private emitFiles(fileList: File[]): void {
+  private emitFiles(fileList: File[], additionalRejected: RejectedFile[] = []): void {
     const { files, rejected } = this.classify(fileList);
+    rejected.push(...additionalRejected);
     const messages: string[] = [];
     if (files.length) {
       messages.push(
@@ -161,7 +168,17 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.dragCounter = 0;
     this.dragState = 'default';
     const files = [...(e.dataTransfer?.files ?? [])];
-    if (files.length) this.emitFiles(files);
+    const folders = [...(e.dataTransfer?.items ?? [])]
+      .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.())
+      .filter((entry): entry is FileSystemEntry => !!entry && entry.isDirectory);
+    const rejectedFolders = folders.map((folder) => ({ file: new File([], folder.name), reason: 'directory' as const }));
+    if (files.length || rejectedFolders.length) this.emitFiles(files, rejectedFolders);
+  };
+
+  private onPaste = (e: ClipboardEvent): void => {
+    if (!this.paste || this.disabled) return;
+    const files = [...(e.clipboardData?.files ?? [])];
+    if (files.length) { e.preventDefault(); this.emitFiles(files); }
   };
 
   private onInputChange = (e: Event): void => {
@@ -169,8 +186,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     (e.target as HTMLInputElement).value = '';
     if (files.length) this.emitFiles(files);
   };
-  private onNativeFocus = (): void => { this.emit('focus'); };
-  private onNativeBlur = (): void => { this.emit('blur'); };
+  // Bridged off [part="base"] (the actual keyboard-focusable dropzone), not the visually-hidden,
+  // tabindex="-1", aria-hidden native `<input type="file">` — that input is never focused by a
+  // user, only `.click()`ed by `openPicker()`, so binding here is what makes a host-level
+  // `addEventListener('focus' | 'blur', ...)` observe real focus/blur at all; native focus/blur
+  // neither bubble nor cross the shadow boundary on their own.
+  private onFocus = (): void => { this.emit('focus'); };
+  private onBlur = (): void => { this.emit('blur'); };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.disabled) return;
@@ -213,8 +235,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         @dragover=${this.onDragOver}
         @dragleave=${this.onDragLeave}
         @drop=${this.onDrop}
+        @paste=${this.onPaste}
         @click=${() => !this.disabled && this.openPicker()}
         @keydown=${this.onKeyDown}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
       >
         <slot>${label}</slot>
       </div>
@@ -228,10 +253,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         aria-label=${accessibleLabel}
         accept=${this.accept}
         ?multiple=${this.multiple}
+        ?webkitdirectory=${this.directory}
         ?disabled=${this.disabled}
         @change=${this.onInputChange}
-        @focus=${this.onNativeFocus}
-        @blur=${this.onNativeBlur}
       />
     `;
   }

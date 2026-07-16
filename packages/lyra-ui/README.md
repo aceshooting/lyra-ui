@@ -221,7 +221,7 @@ their own `dir`, so they remain composable inside mixed-direction layouts.
 
 ## Components
 
-The catalog below lists all 148 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 156 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -240,6 +240,9 @@ API details.
 | `<lyra-input>` | `wa-input` | Form-associated single-line field (`text`/`password`/`email`/`number`) with label/hint/error chrome and a built-in password-visibility toggle |
 | `<lyra-number-input>` + `<lyra-time-input>` | `wa-number-input` / `wa-time-input` | Native number/time aliases retaining Lyra form and event contracts |
 | `<lyra-color-picker>` | `wa-color-picker` | Form-associated native color picker with label/hint chrome |
+| `<lyra-checkbox-group>` | — (extra) | Form-associated group of checkboxes with array values and group validation |
+| `<lyra-token-input>` | — (extra) | Editable, removable form-associated token list |
+| `<lyra-icon>` + `<lyra-icon-button>` | — (extra) | Dependency-free SVG icons and accessible icon-only actions |
 | `<lyra-button>` | `wa-button` | Generic action-button primitive (`variant`/`appearance`/`size`/`loading`), owns `type="submit"`/`"reset"` via the closest ancestor `<form>` |
 | `<lyra-radio>` + `<lyra-radio-group>` | `wa-radio` / `wa-radio-group` | Form-associated single-choice controls with roving arrow-key navigation and group validation |
 | `<lyra-spinner>` | `wa-spinner` | Localized indeterminate busy indicator with reduced-motion support |
@@ -258,6 +261,7 @@ API details.
 | `<lyra-mutation-observer>` | `wa-mutation-observer` | Lifecycle-managed MutationObserver for slotted elements |
 | `<lyra-stat>` | — (extra) | KPI/stat card with trend pill and an optional breakdown row list; either can carry an `exactValue` shown as a hover/focus tooltip alongside the rounded/formatted display value |
 | `<lyra-table>` | — (extra) | Sort/select-aware data table with optional controlled filtering, client/server-friendly pagination, loading state, consumer-owned inline editing, expandable rows, sticky columns, and responsive `priority` columns |
+| `<lyra-data-grid>` | — (extra) | Keyboard-navigable sortable grid with roving cell focus and responsive overflow |
 | `<lyra-pagination>` | — (extra) | Controlled previous/next and validated page-jump navigation with a localized range summary, loading/empty states, RTL icons, and container-responsive stacking |
 | `<lyra-gauge>` | — (extra) | Radial, full-circle ring, or linear meter with a per-instance fill token |
 | `<lyra-export-button>` | — (extra) | Injection-safe CSV/JSON downloads plus event-handled custom format descriptors and controlled busy state |
@@ -331,6 +335,7 @@ each one-liner below.
 | `<lyra-tool-approval-dialog>` | — (extra) | Human-in-the-loop approve/deny gate for one proposed tool call, with an optional inline JSON argument editor before approving |
 | `<lyra-tool-param-form>` | — (extra) | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing |
 | `<lyra-tool-select-dialog>` | — (extra) | Category-grouped, filterable, searchable dialog for picking which agent tools are enabled in a conversation |
+| `<lyra-command-palette>` | — (extra) | Searchable command menu with groups, keyboard navigation, async-friendly registration, and `mod+k` opening |
 | `<lyra-json-viewer>` | — (extra) | Collapsible, copyable tree view for an arbitrary JSON value; path-keyed expand state survives a streamed in-place `data` patch |
 | `<lyra-citation-badge>` | — (extra) | Inline `[n]` citation marker with a hover/focus preview popover and confidence/verification-status coloring |
 | `<lyra-source-list>` + `<lyra-source-card>` | — (extra) | Collapsible "Sources" panel for one chat message, grouping per-source cards with an excerpt + "Show more" full-text toggle |
@@ -382,6 +387,8 @@ each one-liner below.
 | `<lyra-diff-view>` | — (extra) | Real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output |
 | `<lyra-poll-status>` | — (extra) | "Next scheduled refresh" countdown with a built-in pause control and live-region announcements |
 | `<lyra-code-block-core>` | — (extra) | Build-lean `lyra-code-block` variant for a consumer whose `languages` map already covers every language it renders — never references shiki's full ~200-language table |
+| `<lyra-code-editor>` | — (extra) | Dependency-free form-associated multiline code editor with line numbers and selection APIs |
+| `<lyra-calendar>` | — (extra) | Responsive month calendar with event markers and agenda mode |
 | `<lyra-details>` + `<lyra-accordion>` + `<lyra-accordion-item>` | `wa-details` / `wa-accordion` | Native disclosure and coordinated accordion panels |
 | `<lyra-breadcrumb>` + `<lyra-breadcrumb-item>` | `wa-breadcrumb` | Responsive navigation trail |
 | `<lyra-format-number>` + `<lyra-format-date>` + `<lyra-format-bytes>` + `<lyra-relative-time>` | `wa-format-*` / `wa-relative-time` | Locale-aware formatting primitives |

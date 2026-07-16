@@ -3186,6 +3186,8 @@ parsing (that's left entirely to the host).
 - `forbiddenMimeTypes: string[] = []` (attribute: false) — exact MIME-string denylist, checked
   **before** (and takes precedence over) `allowedMimeTypes`
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
+- `directory: boolean = false` (reflected) — enables native directory selection where supported
+- `paste: boolean = true` (reflected) — accepts files pasted into the dropzone
 - `label: string = 'Drop files here or click to browse'`
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides `label` as the internal
   dropzone/button accessible name without changing visible copy
@@ -3198,10 +3200,12 @@ parsing (that's left entirely to the host).
 forwards to the interactive dropzone.
 
 **Events:** `lyra-files` (`detail: { files: File[], rejected: RejectedFile[] }`, fired on both drop
-and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size'
+and manual file-picker selection) — `RejectedFile = { file: File; reason: 'type' | 'count' | 'size' | 'directory'
 }`: `'type'` from `accept`/`allowedMimeTypes`/`forbiddenMimeTypes`, `'count'` when a single-file
 input (`multiple` unset) receives more than one file (in which case *all* files are rejected, none
-accepted), `'size'` from `maxFileSize`.
+accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `focus`/`blur` fire
+when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
+gains/loses focus.
 
 **Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
 provided. The accessible name always comes from `label` regardless, so icon-only slot content still
@@ -8620,6 +8624,64 @@ focus; arrow navigation selects the next enabled radio.
 **Slots:** default radios, `label`, `hint`, `error`.
 
 **CSS parts:** `base`, `label`, `hint`, `error`.
+
+## `lyra-checkbox-group`
+
+A form-associated collection of `<lyra-checkbox>` children. Its `value` is a `string[]`; each
+selected value is submitted under `name` and `required` requires at least one selection.
+
+**Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`, and
+`accessibleLabel` (`aria-label`). **Slots:** default checkboxes, `label`, `hint`, `error`.
+**Events:** `input`, `change`, and `lyra-change` with `{ value: string[] }`.
+**CSS parts:** `form-control`, `form-control-label`, `options`, `hint`, `error`.
+
+## `lyra-token-input`
+
+An editable form-associated token list. Enter, comma, or blur commits a token; Backspace removes
+the last token. `value` is a `string[]` and repeated values are submitted under `name`.
+
+**Properties:** `value`, `label`, `hint`, `errorText`, `placeholder`, `name`, `required`,
+`disabled`, `accessibleLabel`, `allowDuplicates`, and `delimiter`.
+**Events:** `input`, `change`, `lyra-add`, and `lyra-remove`.
+**CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `remove`, `input`,
+`hint`, `error`. `focus()` and `blur()` forward to the internal text input.
+
+## `lyra-icon` / `lyra-icon-button`
+
+`lyra-icon` is a dependency-free SVG path icon with named common glyphs and a custom `path`
+property. `lyra-icon-button` provides an accessible icon-only native button with `icon`, `label`,
+`aria-label`, `type`, and `disabled` properties. Its `accessibleLabel` property is the typed
+`aria-label` override, and `focus()`/`blur()` forward to the native button.
+
+## `lyra-command-palette`
+
+Searchable application command menu with a `commands` property, fuzzy substring matching, command
+groups, keyboard navigation, Escape dismissal, and a configurable `mod+k` shortcut.
+`openPalette()`, `close()`, and `registerCommand()` provide imperative control. `accessibleLabel`
+(`aria-label`) overrides the dialog name. **Events:** `lyra-open`, `lyra-close`, and `lyra-select`
+with `{ command }`.
+
+## `lyra-code-editor`
+
+Dependency-free, form-associated multiline code editor built around a native textarea. Supports
+line numbers, language metadata, tab insertion, readonly mode, resize, selection getters/methods,
+and editing-assistance passthrough attributes. Properties include `label`, `hint`, `errorText`,
+`placeholder`, `lineNumbers`, `tabSize`, `wrap`, `spellcheck`, `autocapitalize`, `autoCorrect`,
+and `accessibleLabel`; `selectionStart`/`selectionEnd`, `setSelectionRange()`, `setRangeText()`,
+`focus()`, and `blur()` are public editing APIs.
+
+## `lyra-data-grid`
+
+Keyboard-navigable data grid with typed `columns` and `rows`, sortable headers, roving cell focus,
+selection events, loading/empty states, and responsive horizontal overflow. Properties include
+`rowKey`, `selectedKey`, `sortKey`, `sortDirection`, `emptyText`, and `accessibleLabel`.
+
+## `lyra-calendar`
+
+Responsive month calendar with event markers and agenda mode. `events` accepts `{ date, title,
+start?, end?, color?, data? }` records. `value` controls the selected date and `viewDate` controls
+the visible month. `firstDayOfWeek` controls week layout and `accessibleLabel` names the calendar.
+**Events:** `lyra-date-select`, `lyra-event-select`, and `lyra-view-change`.
 
 ## `lyra-spinner`
 
