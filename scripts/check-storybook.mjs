@@ -128,9 +128,16 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   const browserErrors = [];
-  page.on('pageerror', (error) => browserErrors.push(String(error)));
+  // map--default fetches live tiles from tile.openstreetmap.org; a CI runner without egress to
+  // that host (or a transient hiccup) shouldn't fail this otherwise-passing smoke/a11y check --
+  // MapLibre logs the failed fetch as a console error rather than leaving the story unrendered.
+  const isIgnorableNetworkError = (text) => /tile\.openstreetmap\.org/.test(text);
+  page.on('pageerror', (error) => {
+    const text = String(error);
+    if (!isIgnorableNetworkError(text)) browserErrors.push(text);
+  });
   page.on('console', (message) => {
-    if (message.type() === 'error') browserErrors.push(message.text());
+    if (message.type() === 'error' && !isIgnorableNetworkError(message.text())) browserErrors.push(message.text());
   });
 
   try {
