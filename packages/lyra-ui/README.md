@@ -395,10 +395,19 @@ A non-exhaustive list of gaps a new consumer should know about before adopting:
   bulk/production traffic and non-compliant clients are rate-limited or IP-blocked (see
   https://operations.osmfoundation.org/policies/tiles/). Always pass your own `mapStyle` in
   production (a hosted vector/raster style from a tile provider you have a plan with).
-- `<lyra-split>` has no feasibility check on `min` vs. panel count (e.g. 3 panels with `min=40` is
-  unsatisfiable) — the result is a silently frozen splitter with no warning.
 - `<lyra-file-input>` has no paste-from-clipboard support and doesn't specially detect a dragged
   folder (surfaces as a phantom zero-byte file rather than a clear rejection).
+- The document viewers that fetch a remote resource (`<lyra-archive-viewer>`, `<lyra-calendar-viewer>`,
+  `<lyra-contact-viewer>`, `<lyra-csv-viewer>`, `<lyra-dataset-viewer>`, `<lyra-docx-viewer>`,
+  `<lyra-document-preview>`, `<lyra-ebook-viewer>`, `<lyra-email-viewer>`, `<lyra-html-viewer>`,
+  `<lyra-pdf-viewer>`, `<lyra-pptx-viewer>`, `<lyra-spreadsheet-viewer>`, `<lyra-svg-viewer>`) cap
+  what they will read: 25 MB per resource (enforced while streaming, so it holds even when the server
+  omits `Content-Length`), and — for `<lyra-csv-viewer>`, `<lyra-dataset-viewer>` and
+  `<lyra-spreadsheet-viewer>`, which parse tabular data — 10,000 rows and 1,000 columns. Exceeding a
+  cap surfaces the localized `documentPreviewResourceTooLarge` message instead of the document. These
+  caps are **not** currently overridable per component. One path is exempt because it never fetches the
+  bytes itself: `<lyra-document-preview>` caps only its text/JSON fetch, leaving the `image` path
+  (which hands `src` straight to an `<img>`) uncapped.
 
 ## Development
 

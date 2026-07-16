@@ -3983,8 +3983,9 @@ stack overflow on cyclic `data`.
   highlighted and their ancestors auto-expanded
 
 **Events:** `lyra-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
-per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still
-observe copy *intent*.
+per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
+(a rejected `writeText()` is swallowed), so a consumer can still observe copy *intent* — the event
+is not a confirmation that the OS clipboard was actually reached.
 
 **Slots:** none — the tree is rendered entirely from `data`.
 
@@ -7692,8 +7693,9 @@ allow relative URLs plus `http:`, `https:`, `blob:`, and `data:`; the download `
 excludes `data:` (following a `data:text/html` URL can create an active document, unlike using it as
 inert media/fetch data). A `src` that fails its sink's check never reaches `fetch()`/`<img>`/the
 anchor: the text preview renders `[part="error"]` with `"Document URL is not allowed."`, the image
-preview silently falls back to the generic download-or-`unsupported`-slot fallback, and the generic
-fallback simply omits `[part="download-link"]` entirely.
+preview silently falls back to the download fallback **directly** — not the generic
+download-or-`unsupported`-slot one, so `<slot name="unsupported">` content is *not* consulted on the
+image path — and the generic fallback simply omits `[part="download-link"]` entirely.
 
 **Properties:**
 - `src: string = ''` — URL to fetch (for `text`/`application/json`) or display (`image`, or as the
@@ -7785,6 +7787,10 @@ available, the region becomes a standard `role="progressbar"` instead, self-desc
   the component aborts its active request.
 - `progress` is only ever consulted for the host-driven `"converting"` state — this component's own
   in-flight text fetch always renders the indeterminate spinner, with no numeric-progress path.
+- the text/JSON fetch is capped at 25 MB, enforced while streaming so it holds even when the server
+  omits `Content-Length`; going over renders `[part="error"]` with the localized
+  `documentPreviewResourceTooLarge` message. The cap is not overridable per component. The `image`
+  preview is unaffected — it hands `src` to an `<img>` rather than reading it.
 - The `unsupported` slot's initial presence is detected once, before the first render, by scanning
   light-DOM children directly (not the slot's `assignedElements()`); every later slot-content change
   is instead picked up via the slot's own `slotchange` listener. Both paths keep detection correct,
@@ -7797,7 +7803,8 @@ available, the region becomes a standard `role="progressbar"` instead, self-desc
 - A `src` that fails its sink's URL-safety check does **not** raise `lyra-render-error` — that event is
   reserved for a `fetch()` that was actually attempted and failed at the network layer; an unsafe/
   malformed `src` is silently treated as unusable instead (a rendered `[part="error"]` message for
-  text, a silent fallback for image/download).
+  text, a silent fallback for image/download — and on the image path that fallback is the download
+  fallback directly, so an `unsupported` slot the host supplied is bypassed).
 
 ---
 
@@ -7874,8 +7881,13 @@ non-fatal Mammoth conversion message occurs.
 **CSS parts:** `base`, `body`, `content`, `spinner`, and `error`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
-The component registers a lazy `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
-renderer with `<lyra-document-viewer>` and matches `.docx` filenames when the MIME type is generic.
+The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+renderer with `<lyra-document-viewer>` (a plain `render`, no `load()` hook — importing this module
+defines `<lyra-docx-viewer>` immediately; only `mammoth`/`dompurify` themselves are loaded on demand)
+and matches `.docx` filenames when the MIME type is generic.
+
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the document.
 
 ```html
 <lyra-docx-viewer src="/files/report.docx" name="report.docx" max-height="32rem"></lyra-docx-viewer>
@@ -7885,8 +7897,11 @@ renderer with `<lyra-document-viewer>` and matches `.docx` filenames when the MI
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
-remain available without DOMPurify. Attachments are listed as filename/type/size metadata and their
-content is never rendered by this component.
+remain available without DOMPurify. Attachments are listed as filename and size only (the parsed
+`mimeType` never reaches the DOM) and their content is never rendered by this component.
+
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the message.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
 
@@ -7915,6 +7930,9 @@ plain text, including its title, start/end time, location, and description. No H
 **Optional peer dependency:** install `ical.js` with `pnpm add ical.js`. The component registers
 `text/calendar` and falls back to matching `.ics` filenames in `<lyra-document-viewer>`.
 
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the calendar.
+
 ## `lyra-archive-viewer`
 
 Lists entry names and human-readable uncompressed sizes inside a `.zip` archive using the optional
@@ -7936,6 +7954,9 @@ archives.
 the viewer only when a matching archive is opened. `.tar`, `.rar`, and other archive formats fall
 through to `<lyra-document-preview>`'s generic download fallback.
 
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the entry listing.
+
 ## `lyra-ebook-viewer`
 
 Renders EPUB ebooks through the optional `epubjs` peer. `src` is fetched as an `ArrayBuffer`, and
@@ -7952,6 +7973,9 @@ the reading region's accessible name.
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
 matches `application/epub+zip` and `.epub` filenames.
+
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the ebook.
 
 ## `lyra-pptx-viewer`
 
@@ -7973,6 +7997,9 @@ and `lyra-render-error` with `detail.error`.
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
 filenames.
+
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the presentation.
 
 ## `lyra-file-icon`
 
@@ -8007,6 +8034,9 @@ the scrollable body.
 
 **Optional peer dependency:** `dompurify`.
 
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the graphic.
+
 ## `lyra-html-viewer`
 
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
@@ -8019,6 +8049,9 @@ inside a bounded, scrollable body.
 **CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
 
 **Optional peer dependency:** `dompurify`.
+
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the document.
 
 ## `lyra-dataset-viewer`
 
@@ -8035,10 +8068,19 @@ Fetches tab-, pipe-, or delimiter-separated text and renders an accessible table
 
 **Optional peer dependency:** `papaparse`.
 
+Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns;
+exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
+the table.
+
 ## `lyra-contact-viewer`
 
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
-`.vcf` filenames and common `FN`, `N`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed.
+`.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
+but never rendered — the card's heading uses `FN` (falling back to a localized "unnamed contact"
+label when `FN` is absent).
+
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the contacts.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
 
@@ -8071,6 +8113,9 @@ controlled state within its supported range.
 a lazy `application/pdf` renderer with `<lyra-document-viewer>` so the PDF library is loaded only when
 a PDF is opened.
 
+Remote resources are capped at 25 MB; exceeding it surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the PDF.
+
 ## `lyra-spreadsheet-viewer`
 
 Fetches and renders `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer. Multiple
@@ -8086,6 +8131,10 @@ worksheets render through a `<lyra-tabs>` switcher, and body rows use `<lyra-vir
 **Optional peer dependency:** install `xlsx` with `pnpm add xlsx`. The registry matches the official
 `.xlsx` and `.xls` MIME types and filename extensions.
 
+Remote resources are capped at 25 MB, and each parsed sheet at 10,000 rows and 1,000 columns;
+exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
+the workbook.
+
 ## `lyra-csv-viewer`
 
 Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and virtualizes body rows.
@@ -8099,6 +8148,10 @@ Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and v
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
+
+Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns;
+exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
+the table.
 
 ---
 
