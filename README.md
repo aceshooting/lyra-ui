@@ -46,22 +46,22 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-148 custom elements across five component families. Every tag has a live, interactive example on the
+156 custom elements across five component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
 
 | Family | Highlights |
 |---|---|
-| Form controls and input workflows | combobox, select, date picker/input, textarea, input, button, phone input, file input, color/radio/checkbox/switch/slider controls, toast, and sparkline |
-| Dashboard and data visualization | stat card, sortable table, pagination, gauge, export/copy actions, split panes, widgets, word cloud, time range, playback, heatmap, tree, graph, and Chart.js or dependency-free charts |
-| Layout, navigation, and overlays | tabs, menus, breadcrumbs, details/accordion, dialog, drawer, carousel, popover, tooltip, dropdown, scroller, resize/observer utilities, and responsive panels |
+| Form controls and input workflows | combobox, select, date picker/input, calendar, textarea, input, button, phone input, file input, token input, color/radio/checkbox/switch/slider controls and checkbox group, toast, and sparkline |
+| Dashboard and data visualization | stat card, sortable table, data grid, pagination, gauge, export/copy actions, split panes, widgets, word cloud, time range, playback, heatmap, tree, graph, and Chart.js or dependency-free charts |
+| Layout, navigation, and overlays | tabs, menus, command palette, breadcrumbs, details/accordion, dialog, drawer, carousel, popover, tooltip, dropdown, scroller, resize/observer utilities, and responsive panels |
 | Conversation and Agent UI | chat messages and composer, streaming text, citations, sources, tool-call/result/approval flows, model selection, document/media previews, and more |
-| Display and utility primitives | badges, tags, callouts, cards, avatars, skeletons, progress, spinners, rating, formatting, markdown, code, JSON, and live-region helpers |
+| Display and utility primitives | badges, tags, icons and icon buttons, callouts, cards, avatars, skeletons, progress, spinners, rating, formatting, markdown, code blocks and a code editor, JSON, and live-region helpers |
 
 ## Theming, internationalization & RTL
 
-Every one of the 148 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 156 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lyra-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.
