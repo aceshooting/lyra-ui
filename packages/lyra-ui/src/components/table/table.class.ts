@@ -103,6 +103,8 @@ function closestInteractive(target: HTMLElement, boundary: HTMLElement): Element
 }
 
 export interface LyraTableEventMap<T = unknown> {
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
   'lyra-columns-hidden-change': CustomEvent<{ hidden: boolean }>;
   'lyra-columns-revealed': CustomEvent<{ revealed: boolean }>;
   'lyra-sort': CustomEvent<{ key: string }>;

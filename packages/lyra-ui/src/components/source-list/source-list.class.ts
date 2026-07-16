@@ -9,6 +9,10 @@ export interface SourceListToggleDetail {
   expanded: boolean;
 }
 
+export interface LyraSourceListEventMap {
+  'lyra-toggle': CustomEvent<SourceListToggleDetail>;
+}
+
 /**
  * `<lyra-source-list>` — a collapsible "Sources" panel for one chat message,
  * grouping a set of `<lyra-source-card>` children (its default-slot light-DOM
@@ -39,7 +43,7 @@ export interface SourceListToggleDetail {
  * @csspart toggle - The chevron indicator inside the header.
  * @csspart list - The wrapper around the default slot, `hidden` while collapsed.
  */
-export class LyraSourceList extends LyraElement {
+export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Whether the card list is currently shown. Starts collapsed by default

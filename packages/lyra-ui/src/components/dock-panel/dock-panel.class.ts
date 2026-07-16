@@ -18,6 +18,11 @@ export interface DockPanelCollapseChangeDetail {
   collapsed: boolean;
 }
 
+export interface LyraDockPanelEventMap {
+  'lyra-resize': CustomEvent<DockPanelResizeDetail>;
+  'lyra-collapse-change': CustomEvent<DockPanelCollapseChangeDetail>;
+}
+
 /** Arrow-key step, in px, per keydown on the resize handle. */
 const KEYBOARD_STEP_PX = 16;
 
@@ -114,7 +119,7 @@ interface DragState {
  *   `resizable` and not `collapsed`.
  * @csspart collapse-toggle - The collapse/expand toggle button. Only rendered when `collapsible`.
  */
-export class LyraDockPanel extends LyraElement {
+export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   static styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) edge: DockPanelEdge = 'end';

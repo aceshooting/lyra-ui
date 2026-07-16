@@ -145,7 +145,11 @@ export type { ToastVariant, ToastSize } from './components/toast/toast-item.js';
 export { toast } from './components/toast/toaster.js';
 export type { ToastOptions, ToastHandle } from './components/toast/toaster.js';
 export { LyraCombobox } from './components/combobox/combobox.js';
-export type { OptionFilter, LyraComboboxSize } from './components/combobox/combobox.js';
+export type {
+  OptionFilter,
+  LyraComboboxSize,
+  LyraComboboxSelectionDirection,
+} from './components/combobox/combobox.js';
 export { LyraOption } from './components/combobox/option.js';
 export { LyraSelect } from './components/select/select.js';
 export type { LyraSelectSize } from './components/select/select.js';
@@ -194,6 +198,7 @@ export type {
   MatrixCellPos,
   CalendarCellPos,
   HeatmapAnnotation,
+  HeatmapSelectedCell,
   LyraHeatmapCellClickDetail,
 } from './components/heatmap/heatmap.js';
 export { linearAlpha, sqrtStep } from './components/heatmap/heatmap-scale.js';
@@ -208,6 +213,10 @@ export type {
 } from './components/chart/lite-chart.js';
 export { binValues } from './components/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/chart/histogram-bin.js';
+export type { Series, LyraChartType } from './components/chart/chart.js';
+export type { BoxPlotSeries, BoxPlotPoint } from './components/chart/box-plot.js';
+export type { GraphNode, GraphLink } from './components/graph/graph.js';
+export type { LegendEntry, ChoroplethLayer, MapMarker } from './components/map/map.js';
 export { LyraFileInput } from './components/file-input/file-input.js';
 export type { RejectedFile } from './components/file-input/file-input.js';
 export { LyraPhoneInput, loadLibphonenumberAdapter } from './components/phone-input/phone-input.js';
@@ -221,6 +230,7 @@ export type {
   PhoneInputSelectionDirection,
 } from './components/phone-input/phone-input.js';
 export { LyraWidget } from './components/widget/widget.js';
+export type { WidgetView } from './components/widget/widget.js';
 export { LyraWordCloud } from './components/word-cloud/word-cloud.js';
 export type { WordCloudWord } from './components/word-cloud/word-cloud.js';
 export type { ComboboxSource, ComboboxSourceRow } from './components/combobox/combobox.js';
@@ -334,6 +344,7 @@ export type {
   AppRailModeInput,
   AppRailModeChangeDetail,
   AppRailToggleDetail,
+  AppRailResizeDetail,
 } from './components/app-rail/app-rail.js';
 export {
   LyraResponsivePanel,
@@ -361,7 +372,10 @@ export type {
 export { LyraGenerationStatus } from './components/generation-status/generation-status.js';
 export { LyraCodeBlock } from './components/code-block/code-block.js';
 export { LyraToolApprovalDialog } from './components/tool-approval-dialog/tool-approval-dialog.js';
-export type { ToolApprovalDialogCloseReason } from './components/tool-approval-dialog/tool-approval-dialog.js';
+export type {
+  ToolApprovalDialogWrap,
+  ToolApprovalDialogCloseReason,
+} from './components/tool-approval-dialog/tool-approval-dialog.js';
 export { LyraToolParamForm } from './components/tool-param-form/tool-param-form.js';
 export type {
   ToolParamFormPropertyType,
@@ -372,13 +386,14 @@ export type {
 export { LyraMenu } from './components/menu/menu.js';
 export type { MenuSelectDetail } from './components/menu/menu.js';
 export { LyraMenuItem } from './components/menu/menu-item.js';
+export type { MenuItemType, MenuItemChangeDetail } from './components/menu/menu-item.js';
 export { LyraDropdownItem } from './components/menu/dropdown-item.js';
 export { LyraPopover } from './components/overlay/popover.js';
 export type { LyraPopoverEventMap } from './components/overlay/popover.js';
 export { LyraTooltip } from './components/overlay/tooltip.js';
 export { LyraDropdown } from './components/overlay/dropdown.js';
 export { LyraChip } from './components/chip/chip.js';
-export type { ChipTone, ChipRemoveDetail } from './components/chip/chip.js';
+export type { ChipTone, ChipRemoveDetail, ChipSelectDetail } from './components/chip/chip.js';
 export { LyraChipGroup } from './components/chip/chip-group.js';
 export type { ChipGroupOverflowToggleDetail } from './components/chip/chip-group.js';
 export { LyraModelSettingsPanel } from './components/model-settings-panel/model-settings-panel.js';
@@ -443,7 +458,7 @@ export type {
   AttachmentPickDetail,
 } from './components/attachment-trigger/attachment-trigger.js';
 export { LyraKbd, shortcutTokenLabel, parseShortcut } from './components/kbd/kbd.js';
-export type { KbdKeyLabel } from './components/kbd/kbd.js';
+export type { KbdKeyLabel, KbdLocalize } from './components/kbd/kbd.js';
 export { LyraResultCard } from './components/result-card/result-card.js';
 export { LyraResultField } from './components/result-card/result-field.js';
 export { groupByRecency } from './internal/group-by-recency.js';
@@ -529,6 +544,8 @@ export type { LyraRatingEventMap } from './components/rating/rating.js';
 export { LyraColorPicker } from './components/color-picker/color-picker.js';
 export type { LyraColorPickerEventMap } from './components/color-picker/color-picker.js';
 
+export type { LyraAppRailEventMap } from './components/app-rail/app-rail.js';
+export type { LyraAttachmentChipEventMap } from './components/attachment-chip/attachment-chip.js';
 export type { LyraAttachmentTriggerEventMap } from './components/attachment-trigger/attachment-trigger.js';
 export type { LyraChartEventMap } from './components/chart/chart.js';
 export type { LyraChatComposerEventMap } from './components/chat-composer/chat-composer.js';
@@ -545,7 +562,9 @@ export type { LyraConversationItemEventMap } from './components/conversation-ite
 export type { LyraCopyButtonEventMap } from './components/copy-button/copy-button.js';
 export type { LyraDateInputEventMap } from './components/date-picker/date-input.js';
 export type { LyraDatePickerEventMap } from './components/date-picker/date-picker.js';
+export type { LyraDialogEventMap } from './components/dialog/dialog.js';
 export type { LyraDiffViewEventMap } from './components/diff-view/diff-view.js';
+export type { LyraDockPanelEventMap } from './components/dock-panel/dock-panel.js';
 export type { LyraDocumentPreviewEventMap } from './components/document-preview/document-preview.js';
 export type { LyraDocumentViewerEventMap } from './components/document-viewer/document-viewer.js';
 export type { LyraSvgViewerEventMap } from './components/svg-viewer/svg-viewer.js';
@@ -576,14 +595,17 @@ export type { LyraMentionPopoverEventMap } from './components/mention-popover/me
 export type { LyraMenuItemEventMap } from './components/menu/menu-item.js';
 export type { LyraMenuEventMap } from './components/menu/menu.js';
 export type { LyraModelSelectEventMap } from './components/model-select/model-select.js';
+export type { LyraModelSettingsPanelEventMap } from './components/model-settings-panel/model-settings-panel.js';
 export type { LyraPlaybackEventMap } from './components/playback/playback.js';
 export type { LyraPaginationEventMap } from './components/pagination/pagination.js';
 export type { LyraPollStatusEventMap } from './components/poll-status/poll-status.js';
 export type { LyraPhoneInputEventMap } from './components/phone-input/phone-input.js';
+export type { LyraResponsivePanelEventMap } from './components/responsive-panel/responsive-panel.js';
 export type { LyraSegmentedEventMap } from './components/segmented/segmented.js';
 export type { LyraSelectEventMap } from './components/select/select.js';
 export type { LyraSliderEventMap } from './components/slider/slider.js';
 export type { LyraSourceCardEventMap } from './components/source-card/source-card.js';
+export type { LyraSourceListEventMap } from './components/source-list/source-list.js';
 export type { LyraSplitEventMap } from './components/split/split.js';
 export type { LyraStepperEventMap } from './components/stepper/stepper.js';
 export type { LyraStreamStatusEventMap } from './components/stream-status/stream-status.js';
@@ -591,11 +613,13 @@ export type { LyraSwitchEventMap } from './components/switch/switch.js';
 export type { LyraTableEventMap } from './components/table/table.js';
 export type { LyraTabsEventMap } from './components/tabs/tabs.js';
 export type { LyraTextareaEventMap } from './components/textarea/textarea.js';
+export type { LyraThinkingPanelEventMap } from './components/thinking-panel/thinking-panel.js';
 export type { LyraTimeRangeEventMap } from './components/time-range/time-range.js';
 export type { LyraToastItemEventMap } from './components/toast/toast-item.js';
 export type { LyraToolApprovalDialogEventMap } from './components/tool-approval-dialog/tool-approval-dialog.js';
 export type { LyraToolParamFormEventMap } from './components/tool-param-form/tool-param-form.js';
 export type { LyraToolResultViewEventMap } from './components/tool-result-view/tool-result-view.js';
+export type { LyraToolSelectDialogEventMap } from './components/tool-select-dialog/tool-select-dialog.js';
 export type { LyraTreeNodeEventMap } from './components/tree/tree-node.js';
 export type { LyraVirtualListEventMap } from './components/virtual-list/virtual-list.js';
 export type { LyraWidgetEventMap } from './components/widget/widget.js';

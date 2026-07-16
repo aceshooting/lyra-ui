@@ -11,6 +11,10 @@ export interface ThinkingPanelToggleDetail {
   expanded: boolean;
 }
 
+export interface LyraThinkingPanelEventMap {
+  'lyra-toggle': CustomEvent<ThinkingPanelToggleDetail>;
+}
+
 /** "Close enough to the body's own max scroll position to count as anchored
  *  there" -- comfortably larger than one line of streamed text, so a user
  *  who has barely nudged the scrollbar while reading the latest line isn't
@@ -108,7 +112,7 @@ function formatDuration(ms: number): string {
  * collapsed. Independently keyboard-focusable (`tabindex="0"`, `role="group"`
  * named from `label`) since it's its own capped-height scrollable region.
  */
-export class LyraThinkingPanel extends LyraElement {
+export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Header text. Localized (`thinkingPanelLabel`) when left at its default

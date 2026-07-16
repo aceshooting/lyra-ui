@@ -75,6 +75,8 @@ export interface SplitResizeDetail {
 
 export interface LyraSplitEventMap {
   'lyra-resize': CustomEvent<SplitResizeDetail>;
+  'lyra-split-collapse-change': CustomEvent<SplitCollapseChangeDetail>;
+  'lyra-split-constraints-invalid': CustomEvent<SplitConstraintIssueDetail>;
 }
 /**
  * `<lyra-split>` — resizable panels for dashboard layouts. Direct light-DOM

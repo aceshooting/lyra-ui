@@ -73,6 +73,11 @@ export function computeAppRailMode(
   return 'full';
 }
 
+export interface LyraAppRailEventMap {
+  'lyra-mode-change': CustomEvent<AppRailModeChangeDetail>;
+  'lyra-toggle': CustomEvent<AppRailToggleDetail>;
+  'lyra-rail-resize': CustomEvent<AppRailResizeDetail>;
+}
 /**
  * `<lyra-app-rail>` — a responsive navigation rail that adapts across three
  * presentations as the *viewport* narrows (not this element's own inline
@@ -144,7 +149,7 @@ export function computeAppRailMode(
  * </lyra-app-rail>
  * ```
  */
-export class LyraAppRail extends LyraElement {
+export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   static styles = [LyraElement.styles, styles];
 
   // `mode` needs a custom accessor (force/auto semantics below) rather than

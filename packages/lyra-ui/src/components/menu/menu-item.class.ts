@@ -41,6 +41,7 @@ function checkmarkGlyph(): SVGTemplateResult {
 export interface LyraMenuItemEventMap {
   'lyra-menu-item-state-change': CustomEvent<{ disabled: boolean; hidden: boolean }>;
   'lyra-menu-item-select': CustomEvent<undefined>;
+  'lyra-menu-item-change': CustomEvent<MenuItemChangeDetail>;
 }
 /**
  * `<lyra-menu-item>` — a single action row inside `<lyra-menu>`'s default

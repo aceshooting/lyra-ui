@@ -7,6 +7,8 @@ import { styles } from './color-picker.styles.js';
 export interface LyraColorPickerEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
   'lyra-change': CustomEvent<{ value: string }>;
 }
 class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}

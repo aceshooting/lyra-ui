@@ -17,6 +17,10 @@ export interface ModelSettingsChangeDetail {
   temperature: number;
 }
 
+export interface LyraModelSettingsPanelEventMap {
+  'lyra-change': CustomEvent<ModelSettingsChangeDetail>;
+}
+
 const DEFAULT_TEMPERATURE_MIN = 0;
 const DEFAULT_TEMPERATURE_MAX = 2;
 const DEFAULT_TEMPERATURE_STEP = 0.1;
@@ -62,7 +66,7 @@ function decimalPlaces(n: number): number {
  * @csspart temperature-label - The visible "Temperature" caption.
  * @csspart temperature-value - The visible current temperature readout.
  */
-export class LyraModelSettingsPanel extends LyraElement {
+export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Informational provider badge, passed straight through to the internal `lyra-model-select`. */

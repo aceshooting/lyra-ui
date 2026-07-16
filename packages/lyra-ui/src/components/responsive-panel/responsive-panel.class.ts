@@ -30,6 +30,11 @@ export interface ResponsivePanelModeChangeDetail {
   mode: ResponsivePanelEffectiveMode;
 }
 
+export interface LyraResponsivePanelEventMap {
+  'lyra-close': CustomEvent<ResponsivePanelCloseReason>;
+  'lyra-mode-change': CustomEvent<ResponsivePanelModeChangeDetail>;
+}
+
 /**
  * Pure resolution of the `mode` prop + current viewport into the actual
  * presentation. Kept separate from the `matchMedia` listener wiring below so
@@ -106,7 +111,7 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
  */
-export class LyraResponsivePanel extends LyraElement {
+export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in

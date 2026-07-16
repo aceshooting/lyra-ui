@@ -44,6 +44,13 @@ export interface ToolSelectionChangeDetail {
  */
 export type ToolSelectDialogCloseReason = 'escape' | 'backdrop' | 'api' | (string & Record<never, never>);
 
+export interface LyraToolSelectDialogEventMap {
+  'lyra-change': CustomEvent<ToolSelectionChangeDetail>;
+  'lyra-close': CustomEvent<ToolSelectDialogCloseReason>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
+}
+
 const OTHER_CATEGORY = 'Other';
 
 /** Default `filter`: case-insensitive substring match against the tool's name and description. */
@@ -115,7 +122,7 @@ interface ToolGroup {
  * checkbox's accessible name/description instead of going unannounced.
  * @csspart footer - The wrapper around the `footer` slot.
  */
-export class LyraToolSelectDialog extends LyraElement {
+export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */

@@ -27,6 +27,9 @@ export type DialogCloseReason =
   | 'unmount'
   | (string & Record<never, never>);
 
+export interface LyraDialogEventMap {
+  'lyra-dialog-close': CustomEvent<DialogCloseReason>;
+}
 /**
  * `<lyra-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
  * focus-trapped while open, dismissible via Escape or a backdrop click, and
@@ -102,7 +105,7 @@ export type DialogCloseReason =
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
  */
-export class LyraDialog extends LyraElement {
+export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   static styles = [LyraElement.styles, srOnly, styles];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */

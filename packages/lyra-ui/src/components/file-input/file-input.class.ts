@@ -13,6 +13,8 @@ export interface RejectedFile {
 }
 
 export interface LyraFileInputEventMap {
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
   'lyra-files': CustomEvent<{ files: File[]; rejected: RejectedFile[] }>;
 }
 /**

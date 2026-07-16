@@ -88,6 +88,9 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
 
 export interface LyraAttachmentTriggerEventMap {
   'lyra-camera-request': CustomEvent<undefined>;
+  'lyra-pick': CustomEvent<AttachmentPickDetail>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-attachment-trigger>` — a compact attach affordance designed for a

@@ -36,7 +36,11 @@ export type ToolApprovalDialogCloseReason =
   | (string & Record<never, never>);
 
 export interface LyraToolApprovalDialogEventMap {
+  'lyra-approve': CustomEvent<{ args: unknown }>;
   'lyra-deny': CustomEvent<undefined>;
+  'lyra-close': CustomEvent<ToolApprovalDialogCloseReason>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 /**
  * `<lyra-tool-approval-dialog>` — a human-in-the-loop gate: presents one

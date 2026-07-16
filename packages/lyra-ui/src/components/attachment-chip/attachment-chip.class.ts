@@ -91,6 +91,11 @@ function statusText(
   return '';
 }
 
+export interface LyraAttachmentChipEventMap {
+  'lyra-remove': CustomEvent<AttachmentChipIdDetail>;
+  'lyra-retry': CustomEvent<AttachmentChipIdDetail>;
+  'lyra-preview': CustomEvent<AttachmentChipPreviewDetail>;
+}
 /**
  * `<lyra-attachment-chip>` — a compact chip representing one file queued for
  * (or already part of) a chat message: a composer's pre-send attachment
@@ -150,7 +155,7 @@ function statusText(
  * @cssprop [--lyra-attachment-chip-spinner-duration=0.8s] - Duration of one indeterminate
  * upload-spinner rotation. The ambient loop stops under reduced motion.
  */
-export class LyraAttachmentChip extends LyraElement {
+export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
   static styles = [LyraElement.styles, styles];
 
   /** A real `File`, e.g. fresh from `<lyra-file-input>`'s `lyra-files` event.
