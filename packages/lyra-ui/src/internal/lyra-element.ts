@@ -31,6 +31,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   @property({ attribute: false }) strings: LyraLocaleStrings = {};
 
   private stopLocaleSubscription?: () => void;
+  private pendingLoadController?: AbortController;
+  private loadSchedulePending = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -38,9 +40,29 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   disconnectedCallback(): void {
+    this.pendingLoadController?.abort();
+    this.pendingLoadController = undefined;
     this.stopLocaleSubscription?.();
     this.stopLocaleSubscription = undefined;
     super.disconnectedCallback();
+  }
+
+  /** Starts a component-owned cancellable load and aborts the previous one. */
+  protected beginAbortableLoad(): AbortSignal | undefined {
+    this.pendingLoadController?.abort();
+    if (typeof AbortController === 'undefined') return undefined;
+    this.pendingLoadController = new AbortController();
+    return this.pendingLoadController.signal;
+  }
+
+  /** Runs one coalesced load callback after the current update completes. */
+  protected scheduleAfterUpdate(callback: () => void): void {
+    if (this.loadSchedulePending) return;
+    this.loadSchedulePending = true;
+    queueMicrotask(() => {
+      this.loadSchedulePending = false;
+      if (this.isConnected) callback();
+    });
   }
 
   /** Resolve a localized message using this component's overrides and locale. */

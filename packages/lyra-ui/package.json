@@ -369,7 +369,7 @@
     "build": "node scripts/build.mjs",
     "test": "wtr",
     "test:platform": "wtr src/internal/form-associated.test.ts src/components/dialog/dialog.test.ts src/components/combobox/combobox.test.ts src/components/table/table.test.ts src/components/virtual-list/virtual-list.test.ts",
-    "test:coverage": "WTR_COVERAGE=1 wtr src/internal/form-associated.test.ts src/components/dialog/dialog.test.ts src/components/combobox/combobox.test.ts src/components/table/table.test.ts src/components/virtual-list/virtual-list.test.ts",
+    "test:coverage": "WTR_COVERAGE=1 wtr $(find src -name '*.test.ts' -print)",
     "test:watch": "wtr --watch",
     "test:architecture": "node scripts/check-registration-architecture.mjs",
     "test:types": "tsc --noEmit -p tsconfig.type-tests.json",
@@ -379,7 +379,7 @@
     "manifest": "cem analyze --litelement --outdir .",
     "manifest:check": "node scripts/check-manifest.mjs",
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
-    "contract-policy": "pnpm run style-policy && pnpm run provenance-policy && pnpm run contract-checklist && pnpm run manifest:check && pnpm run llms-freshness && pnpm run test:architecture",
+    "contract-policy": "pnpm run style-policy && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && pnpm run manifest:check && pnpm run llms-freshness && pnpm run test:architecture",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run build && pnpm run manifest"
   },

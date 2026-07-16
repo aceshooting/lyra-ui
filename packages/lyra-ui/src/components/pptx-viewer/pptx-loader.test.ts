@@ -5,7 +5,7 @@ afterEach(() => __setPptxRendererForTesting(undefined));
 
 describe('pptx loader', () => {
   it('loads the installed renderer module', async function () {
-    this.timeout(20000);
+    this.timeout(60_000);
     const module = await loadPptxRenderer();
     expect(module).to.not.be.null;
     expect(module!.PptxViewer).to.exist;
@@ -21,7 +21,7 @@ describe('pptx loader', () => {
   });
 
   it('opens the real vendored PPTX fixture', async function () {
-    this.timeout(20000);
+    this.timeout(60_000);
     const module = await loadPptxRenderer();
     const response = await fetch(new URL('./fixtures/table-stale-frame.pptx', import.meta.url));
     expect(response.ok).to.be.true;

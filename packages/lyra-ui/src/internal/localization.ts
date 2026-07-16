@@ -145,6 +145,7 @@ export type LyraMessageKey =
   | 'documentPreviewAlt'
   | 'documentPreviewUrlNotAllowed'
   | 'documentPreviewFailedToLoad'
+  | 'documentPreviewResourceTooLarge'
   | 'documentPreviewGenericError'
   | 'ebookViewerLoadError'
   | 'ebookViewerRegionLabel'
@@ -288,7 +289,6 @@ export type LyraMessageKey =
   | 'breadcrumb'
   | 'rating'
   | 'colorPicker'
-  | 'hidePassword'
   | 'mediaCardUntitledFile'
   | 'mediaCardOpenName'
   | 'mediaCardOpenImageAttachment'
@@ -556,6 +556,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewAlt: 'Document preview',
   documentPreviewUrlNotAllowed: 'Document URL is not allowed.',
   documentPreviewFailedToLoad: 'Failed to load document.',
+  documentPreviewResourceTooLarge: 'This document is too large to preview.',
   documentPreviewGenericError: 'Something went wrong.',
   ebookViewerLoadError: 'Failed to load the ebook.',
   ebookViewerRegionLabel: 'Ebook content',

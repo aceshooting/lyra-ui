@@ -18,3 +18,18 @@ it('formats dates and relative time', async () => {
   expect(el.querySelector('lyra-format-date')?.shadowRoot?.textContent).to.contain('January');
   expect(el.querySelector('lyra-relative-time')?.shadowRoot?.textContent).to.contain('in');
 });
+
+it('supports style-based date formatting without mixing Intl option families', async () => {
+  const el = await fixture(html`<lyra-format-date date="2024-01-01T00:00:00Z" date-style="full"></lyra-format-date>`);
+  expect(el.shadowRoot?.textContent).to.contain('Monday');
+});
+
+it('inherits locale from an ancestor when no explicit locale is set', async () => {
+  const el = await fixture(html`<div lang="de-DE"><lyra-format-number value="1234.5"></lyra-format-number></div>`);
+  expect(el.querySelector('lyra-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');
+});
+
+it('is accessible', async () => {
+  const el = await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`);
+  await expect(el).to.be.accessible();
+});

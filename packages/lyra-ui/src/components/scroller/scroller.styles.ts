@@ -78,6 +78,11 @@ export const styles = css`
     outline-offset: var(--lyra-focus-ring-offset);
   }
 
+  :host(:dir(rtl)) [part='previous-glyph'],
+  :host(:dir(rtl)) [part='next-glyph'] {
+    transform: scaleX(-1);
+  }
+
   :host([orientation='vertical']) [part='previous'] {
     grid-row: 1;
   }

@@ -32,8 +32,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (target) this.setValue(Number(target.dataset.value));
   };
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') { event.preventDefault(); this.setValue(this.value + this.precision); }
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') { event.preventDefault(); this.setValue(this.value - this.precision); }
+    const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    if (event.key === forwardKey || event.key === 'ArrowUp') { event.preventDefault(); this.setValue(this.value + this.precision); }
+    if (event.key === backwardKey || event.key === 'ArrowDown') { event.preventDefault(); this.setValue(this.value - this.precision); }
     if (event.key === 'Home') { event.preventDefault(); this.setValue(0); }
     if (event.key === 'End') { event.preventDefault(); this.setValue(this.max); }
   };

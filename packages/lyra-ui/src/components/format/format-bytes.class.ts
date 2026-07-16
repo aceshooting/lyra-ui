@@ -19,7 +19,7 @@ export class LyraFormatBytes extends LyraElement {
     const safeStep = this.unitStep > 1 ? this.unitStep : 1024;
     const index = this.value === 0 ? 0 : Math.min(units.length - 1, Math.floor(Math.log(Math.abs(this.value)) / Math.log(safeStep)));
     const amount = this.value / safeStep ** index;
-    const text = new Intl.NumberFormat(this.locale || undefined, { style: 'unit', unit: units[index], unitDisplay: 'short', maximumFractionDigits: this.decimals }).format(amount);
+    const text = new Intl.NumberFormat(this.effectiveLocale || undefined, { style: 'unit', unit: units[index], unitDisplay: 'short', maximumFractionDigits: this.decimals }).format(amount);
     return html`${text}`;
   }
 }

@@ -954,7 +954,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * (see `calendarCellText()`'s tooltip text for the same pattern).
    */
   private weekdayLabels(firstWeekStart: Date): string[] {
-    const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' });
+    const formatter = new Intl.DateTimeFormat(this.effectiveLocale || undefined, { weekday: 'short', timeZone: 'UTC' });
     const labels = ['', '', '', '', '', '', ''];
     for (const weekday of [1, 3, 5]) {
       const row = (weekday - this.firstDayOfWeek + 7) % 7;

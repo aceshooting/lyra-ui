@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { createRef, ref, type Ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { getEpubJs, type EpubBook, type EpubRendition } from './ebook-loader.js';
 import { styles } from './ebook-viewer.styles.js';
@@ -44,10 +45,8 @@ export class LyraEbookViewer extends LyraElement<LyraEbookViewerEventMap> {
   private rendition?: EpubRendition;
   private generation = 0;
 
-  protected firstUpdated(): void { void this.load(); }
-
-  protected willUpdate(changed: PropertyValues): void {
-    if (this.hasUpdated && changed.has('src')) void this.load();
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   disconnectedCallback(): void {
@@ -64,6 +63,7 @@ export class LyraEbookViewer extends LyraElement<LyraEbookViewerEventMap> {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     this.teardown();
     if (!this.src.trim()) {
       this.ebookState = { kind: 'idle' };
@@ -79,19 +79,19 @@ export class LyraEbookViewer extends LyraElement<LyraEbookViewerEventMap> {
     let factory: ((data: ArrayBuffer) => EpubBook) | null;
     try {
       [data, factory] = await Promise.all([
-        fetch(url).then((response) => {
+        fetch(url, signal ? { signal } : undefined).then((response) => {
           if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-          return response.arrayBuffer();
+          return readResponseArrayBuffer(response);
         }),
         getEpubJs(),
       ]);
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.ebookState = { kind: 'error', message: this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.ebookState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'ebookViewerLoadError') };
       this.emit('lyra-render-error', { error });
       return;
     }
-    if (generation !== this.generation) return;
+    if (!this.isConnected || generation !== this.generation) return;
     if (!factory) {
       this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
       return;
@@ -114,7 +114,7 @@ export class LyraEbookViewer extends LyraElement<LyraEbookViewerEventMap> {
       this.rendition = rendition;
       this.ebookState = { kind: 'ready' };
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
       this.emit('lyra-render-error', { error });
     }

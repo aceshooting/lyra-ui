@@ -2,7 +2,7 @@ import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
-import { closeIcon, expandIcon } from '../../internal/icons.js';
+import { closeIcon, expandIcon, fileIcon } from '../../internal/icons.js';
 import { styles } from './attachment-chip.styles.js';
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
@@ -17,33 +17,8 @@ export interface AttachmentChipPreviewDetail extends AttachmentChipIdDetail {
   src: string;
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
-// generic-file glyph to that module -- it's off limits here -- so this one-off
-// icon still reads as part of the same visual language as the rest of the
-// library's inline icons. `closeIcon()` itself already exists there and is
-// imported directly rather than duplicated (see `<lyra-toast-item>`'s /
-// `<lyra-widget>`'s identical import for the same remove/dismiss glyph).
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
-
-/** A generic "document" glyph, used as the thumbnail for any non-image file. */
-function fileGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-  `;
-}
 
 // Same shape as `<lyra-chat-message>`'s local `retryIcon()` -- duplicated
 // rather than imported (these are two independent, separately-consumable
@@ -354,13 +329,13 @@ export class LyraAttachmentChip extends LyraElement {
     if (this.file) {
       return this.effectiveMimeType.startsWith('image/')
         ? html`<img src=${this.objectUrl ?? ''} alt="" />`
-        : html`${fileGlyph()}`;
+        : html`${fileIcon()}`;
     }
     // No `file`: `thumbnail-src` is used whenever present, regardless of
     // `mime-type` -- a server-generated preview thumbnail (e.g. a rendered
     // first page of a PDF) is itself always an image, independent of the
     // *source* file's own MIME type.
-    return this.thumbnailSrc ? html`<img src=${this.thumbnailSrc} alt="" />` : html`${fileGlyph()}`;
+    return this.thumbnailSrc ? html`<img src=${this.thumbnailSrc} alt="" />` : html`${fileIcon()}`;
   }
 
   render(): TemplateResult {

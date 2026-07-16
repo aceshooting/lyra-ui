@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { assertTableSize, isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import { loadPapaParse } from './dataset-loader.js';
 import { styles } from './dataset-viewer.styles.js';
@@ -23,22 +24,25 @@ export class LyraDatasetViewer extends LyraElement<LyraDatasetViewerEventMap> {
   @state() private fetchState: DatasetFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected willUpdate(changed: PropertyValues): void { if (!this.hasUpdated || changed.has('src')) void this.load(); }
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
     if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const table = await this.parse(await response.text());
-      if (generation === this.generation) this.fetchState = { kind: 'loaded', table };
+      const table = await this.parse(await readResponseText(response));
+      if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', table };
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }
@@ -49,6 +53,7 @@ export class LyraDatasetViewer extends LyraElement<LyraDatasetViewerEventMap> {
     const result = papa.parse(text, { delimiter: '', header: true, skipEmptyLines: true }) as { data: Record<string, string>[]; meta: { fields?: string[] } };
     const fields = result.meta.fields ?? [];
     if (!fields.length || !result.data.length) throw new Error(this.localize('datasetViewerEmpty'));
+    assertTableSize([fields, ...result.data.map((row) => fields.map((field) => row[field]))]);
     return { fields, rows: result.data };
   }
 

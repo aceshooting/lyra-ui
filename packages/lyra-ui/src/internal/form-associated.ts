@@ -1,4 +1,5 @@
 import type { LitElement } from 'lit';
+import { resolveLyraString } from './localization.js';
 import {
   AnchoredValidityController,
   SET_ANCHORED_VALIDITY,
@@ -208,7 +209,9 @@ export function FormAssociated<T extends Constructor<LitElement>>(
      */
     protected updateValidity(): void {
       if (this.required && this._value === '') {
-        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, 'Please fill out this field.');
+        const localize = (this as unknown as { localize?: (key: string) => string }).localize;
+        const message = localize?.call(this, 'fieldRequired') ?? resolveLyraString(this, 'fieldRequired');
+        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, message);
       } else {
         this[SET_ANCHORED_VALIDITY]({});
       }

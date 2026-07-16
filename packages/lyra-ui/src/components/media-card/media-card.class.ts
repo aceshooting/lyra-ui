@@ -1,7 +1,7 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { expandIcon } from '../../internal/icons.js';
+import { expandIcon, fileIcon } from '../../internal/icons.js';
 import {
   safeLinkHref as validateLinkHref,
   safeMediaSrc as validateMediaSrc,
@@ -38,32 +38,6 @@ function detectKind(mimeType: string): MediaCardKind {
   return 'file';
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.), and is visually
-// identical to `<lyra-attachment-chip>`'s and `<lyra-document-preview>`'s
-// own local `fileGlyph()` -- duplicated rather than imported (these are
-// three independently consumable components, and icons.ts is off limits
-// here) but kept pixel-identical so a "generic file" affordance reads the
-// same wherever it shows up in the library.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function fileGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-  `;
-}
 
 /**
  * `<lyra-media-card>` — a lightweight inline preview for one already-sent,
@@ -255,7 +229,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     const href = safeLinkHref(this.src);
     const name = this.displayFilename;
     const content = html`
-      <span part="file-icon" aria-hidden="true">${fileGlyph()}</span>
+      <span part="file-icon" aria-hidden="true">${fileIcon()}</span>
       <span part="filename" title=${name}>${name}</span>
     `;
     if (href) {

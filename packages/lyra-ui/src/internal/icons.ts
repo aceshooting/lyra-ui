@@ -71,6 +71,16 @@ export function calendarIcon(): SVGTemplateResult {
   `);
 }
 
+/** A generic file/document glyph. */
+export function fileIcon(): SVGTemplateResult {
+  return icon(svg`<path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><polyline points="14 2 14 8 20 8"></polyline>`);
+}
+
+/** A folder glyph. */
+export function folderIcon(): SVGTemplateResult {
+  return icon(svg`<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path>`);
+}
+
 /** A four-corner "expand to fullscreen" glyph. */
 export function expandIcon(): SVGTemplateResult {
   return icon(svg`

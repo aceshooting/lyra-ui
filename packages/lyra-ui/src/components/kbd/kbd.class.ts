@@ -68,15 +68,9 @@ const NAMED_KEY_LABELS: Record<string, NamedKeyLabel> = {
  * Resolves one `+`-separated token of a `keys` string to its rendered glyph
  * and spelled-out word, given whether the shortcut is being shown on macOS.
  *
- * Exported as a pure function (parameterized on `isMac` rather than reading
- * the module-scope platform constant directly) so both the macOS and
- * non-macOS branches are directly unit-testable without having to spoof
- * `navigator` in a browser test environment that only ever runs as one
- * platform. `localize`, likewise, is an optional parameter (rather than this
- * function reaching for a component instance's `this.localize()` itself) for
- * the same reason -- every existing 2-arg call keeps returning the literal
- * built-in English defaults unchanged; only `<lyra-kbd>`'s own `render()`
- * passes one, bound to `this.localize()`.
+ * The platform and localization inputs are explicit so the function remains
+ * deterministic for callers and preserves the built-in English defaults when
+ * no localization function is supplied.
  */
 export function shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel {
   const token = rawToken.trim();
@@ -290,4 +284,3 @@ declare global {
     'lyra-kbd': LyraKbd;
   }
 }
-

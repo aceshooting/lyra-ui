@@ -235,6 +235,8 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     // event next time, matching <lyra-file-input>'s identical reset.
     input.value = '';
   };
+  private onNativeFocus = (): void => { this.emit('focus'); };
+  private onNativeBlur = (): void => { this.emit('blur'); };
 
   private renderHiddenInput(): TemplateResult {
     return html`
@@ -246,6 +248,8 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         ?multiple=${this.multiple}
         ?disabled=${this.disabled}
         @change=${this.onInputChange}
+        @focus=${this.onNativeFocus}
+        @blur=${this.onNativeBlur}
       />
     `;
   }

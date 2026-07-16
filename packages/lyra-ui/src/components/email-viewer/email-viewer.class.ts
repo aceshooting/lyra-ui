@@ -4,6 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { srOnly } from '../../internal/a11y.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { formatFileSize } from '../attachment-chip/attachment-chip.class.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
@@ -61,22 +62,25 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   @state() private fetchState: EmailFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected willUpdate(changed: PropertyValues): void { if (!this.hasUpdated || changed.has('src')) void this.load(); }
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
     if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const email = await this.parse(await response.arrayBuffer());
+      const email = await this.parse(await readResponseArrayBuffer(response));
       if (generation === this.generation) this.fetchState = { kind: 'loaded', email };
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }

@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import '../virtual-list/virtual-list.js';
 import { loadPdfJs, type PdfJsApi } from './pdf-loader.js';
@@ -71,7 +72,6 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
   private readonly textLayers = new Map<number, { cancel(): void }>();
 
   protected willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('src')) void this.load();
     if (changed.has('page')) this.page = this.clampPage(this.page);
     if (changed.has('zoom')) {
       this.zoom = clampZoom(this.zoom);
@@ -81,6 +81,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
 
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('page') && this.loadState.kind === 'ready') {
       this.emit('lyra-page-change', { page: this.page, pageCount: this.loadState.pageCount });
     }
@@ -105,6 +106,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) {
       this.loadState = { kind: 'idle' };
       return;
@@ -116,22 +118,22 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     }
     this.loadState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const data = await response.arrayBuffer();
+      const data = await readResponseArrayBuffer(response);
       const pdfjsLib = await this.loadLibrary();
-      if (generation !== this.generation) return;
+      if (!this.isConnected || generation !== this.generation) return;
       if (!pdfjsLib) {
         this.loadState = { kind: 'error', message: this.localize('pdfViewerMissingLibrary') };
         return;
       }
       const doc = await pdfjsLib.getDocument({ data }).promise;
-      if (generation !== this.generation) return;
+      if (!this.isConnected || generation !== this.generation) return;
       this.page = 1;
       this.loadState = { kind: 'ready', doc, pageCount: doc.numPages };
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.loadState = { kind: 'error', message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.loadState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }
@@ -193,7 +195,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     try {
       await renderTask.promise;
     } catch (error) {
-      if (this.pageRenderTasks.get(pageNumber) === renderTask) this.emit('lyra-render-error', { error });
+      if (!isAbortError(error) && this.isConnected && this.pageRenderTasks.get(pageNumber) === renderTask) this.emit('lyra-render-error', { error });
     } finally {
       if (this.pageRenderTasks.get(pageNumber) === renderTask) this.pageRenderTasks.delete(pageNumber);
     }
@@ -210,7 +212,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     try {
       await textLayer.render();
     } catch (error) {
-      if (this.textLayers.get(pageNumber) === textLayer) this.emit('lyra-render-error', { error });
+      if (!isAbortError(error) && this.isConnected && this.textLayers.get(pageNumber) === textLayer) this.emit('lyra-render-error', { error });
     }
   }
 

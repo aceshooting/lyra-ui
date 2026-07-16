@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { safeLinkHref } from '../../internal/safe-url.js';
 
 /**
  * `<lyra-breadcrumb-item>` — one link or current-page label in a breadcrumb.
@@ -18,8 +19,9 @@ export class LyraBreadcrumbItem extends LyraElement {
     this.setAttribute('role', 'listitem');
   }
   render(): TemplateResult {
-    return this.href && !this.current
-      ? html`<a part="base" href=${this.href}><slot></slot></a>`
+    const href = safeLinkHref(this.href);
+    return href && !this.current
+      ? html`<a part="base" href=${href}><slot></slot></a>`
       : html`<span part="base" aria-current=${this.current ? 'page' : nothing}><slot></slot></span>`;
   }
 }

@@ -40,6 +40,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.emit('lyra-change', { value: this.value });
   };
   private onChange = (): void => { this.emit('change'); };
+  private onNativeFocus = (): void => { this.emit('focus'); };
+  private onNativeBlur = (): void => { this.emit('blur'); };
   private onSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
     if (slot.name === 'label') this.hasLabel = slot.assignedElements({ flatten: true }).length > 0;
@@ -50,7 +52,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const name = this.accessibleLabel || (hasLabel ? nothing : this.localize('colorPicker'));
     return html`<div part="form-control">
       <label part="label" for="color" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></label>
-      <input id="color" part="input" type="color" .value=${this.value || '#000000'} aria-label=${name} @input=${this.onInput} @change=${this.onChange} ?disabled=${this.effectiveDisabled} />
+      <input id="color" part="input" type="color" .value=${this.value || '#000000'} aria-label=${name} @input=${this.onInput} @change=${this.onChange} @focus=${this.onNativeFocus} @blur=${this.onNativeBlur} ?disabled=${this.effectiveDisabled} />
       <div part="hint" ?hidden=${!this.hint && !this.hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
     </div>`;
   }

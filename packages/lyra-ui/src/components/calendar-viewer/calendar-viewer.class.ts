@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { srOnly } from '../../internal/a11y.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../internal/resource-loader.js';
 import { loadIcal } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
 
@@ -10,9 +11,9 @@ export interface ParsedCalendarEvent { uid: string; summary: string; start: Date
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
 export interface LyraCalendarViewerEventMap { 'lyra-render-error': CustomEvent<{ error: unknown }>; }
 
-function formatEventTime(start: Date | null, end: Date | null): string {
+function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
   if (!start) return '';
-  const formatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const formatter = new Intl.DateTimeFormat(locale || undefined, { dateStyle: 'medium', timeStyle: 'short' });
   return end ? `${formatter.format(start)} – ${formatter.format(end)}` : formatter.format(start);
 }
 
@@ -44,29 +45,32 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected willUpdate(changed: PropertyValues): void { if (!this.hasUpdated || changed.has('src')) void this.load(); }
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
     if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const events = await this.parse(await response.text());
+      const events = await this.parse(await readResponseText(response));
       if (generation === this.generation) this.fetchState = { kind: 'loaded', events };
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }
 
   private async parse(source: string): Promise<ParsedCalendarEvent[]> {
     const ical = await loadIcal();
-    if (!ical) throw new Error(this.localize('calendarViewerMissingParser'));
+    if (!ical) throw new LyraUserFacingError(this.localize('calendarViewerMissingParser'));
     const component = new ical.Component(ical.parse(source));
     const events = (component.getAllSubcomponents('vevent') as unknown[]).map((subcomponent) => {
       const event = new ical.Event(subcomponent);
@@ -77,12 +81,12 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
         location: event.location ?? '', description: event.description ?? '',
       } as ParsedCalendarEvent;
     });
-    if (!events.length) throw new Error(this.localize('calendarViewerEmpty'));
+    if (!events.length) throw new LyraUserFacingError(this.localize('calendarViewerEmpty'));
     return events;
   }
 
   private renderEvent(event: ParsedCalendarEvent): TemplateResult {
-    return html`<li part="event"><span part="event-summary">${event.summary || this.localize('calendarViewerNoSummary')}</span><span part="event-time">${formatEventTime(event.start, event.end)}</span>${event.location ? html`<span part="event-location">${event.location}</span>` : nothing}${event.description ? html`<p part="event-description">${event.description}</p>` : nothing}</li>`;
+    return html`<li part="event"><span part="event-summary">${event.summary || this.localize('calendarViewerNoSummary')}</span><span part="event-time">${formatEventTime(event.start, event.end, this.effectiveLocale)}</span>${event.location ? html`<span part="event-location">${event.location}</span>` : nothing}${event.description ? html`<p part="event-description">${event.description}</p>` : nothing}</li>`;
   }
 
   private renderBody(): TemplateResult {

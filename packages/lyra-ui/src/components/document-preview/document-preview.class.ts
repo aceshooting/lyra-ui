@@ -1,8 +1,10 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { fileIcon } from '../../internal/icons.js';
 import { srOnly } from '../../internal/a11y.js';
 import { safeFetchUrl, safeLinkHref, safeMediaSrc } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { styles } from './document-preview.styles.js';
 
 export type DocumentPreviewStatus = 'idle' | 'converting' | 'ready' | 'error';
@@ -33,35 +35,8 @@ function classifyFormat(mimeType: string): PreviewFormat {
   return 'generic';
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
-// document/download glyphs to that module -- it's off limits here -- so
-// these one-off icons still read as part of the same visual language as the
-// rest of the library's inline icons.
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
-
-/** A generic "document" glyph for the can't-preview-this fallback. Same
- *  shape as `<lyra-attachment-chip>`'s local `fileGlyph()` -- duplicated
- *  rather than imported (these are two independently consumable components)
- *  but kept visually identical so an unpreviewable-file affordance reads the
- *  same wherever it shows up in the library. */
-function fileGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-  `;
-}
 
 /** A downward arrow into a tray -- the conventional "download" glyph. */
 function downloadIcon(): SVGTemplateResult {
@@ -296,12 +271,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     try {
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const text = await response.text();
+      const text = await readResponseText(response);
       if (generation !== this.fetchGeneration) return;
       this.textFetch = { kind: 'loaded', text };
     } catch (error) {
-      if (generation !== this.fetchGeneration) return;
-      const message = error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad');
+      if (isAbortError(error) || !this.isConnected || generation !== this.fetchGeneration) return;
+      const message = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.textFetch = { kind: 'error', message };
       this.emit('lyra-render-error', { error });
     } finally {
@@ -386,7 +361,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     const href = safeLinkHref(this.src);
     return html`
       <div class="fallback">
-        <span class="fallback-icon" aria-hidden="true">${fileGlyph()}</span>
+        <span class="fallback-icon" aria-hidden="true">${fileIcon()}</span>
         <p class="fallback-text">${this.localize('documentPreviewNotAvailable', undefined, { label })}</p>
         ${href !== null
           ? html`

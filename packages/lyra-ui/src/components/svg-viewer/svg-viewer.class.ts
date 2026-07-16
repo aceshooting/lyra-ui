@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
@@ -33,12 +34,13 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   @state() private fetchState: SvgFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('src')) void this.load();
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) {
       this.fetchState = { kind: 'idle' };
       return;
@@ -50,15 +52,15 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadSvgSanitizer();
       if (!sanitizer) throw new Error(this.localize('documentViewerMissingSanitizer'));
-      const markup = sanitizer.sanitize(await response.text(), { USE_PROFILES: { svg: true, svgFilters: true } });
-      if (generation === this.generation) this.fetchState = { kind: 'loaded', markup };
+      const markup = sanitizer.sanitize(await readResponseText(response), { USE_PROFILES: { svg: true, svgFilters: true } });
+      if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', markup };
     } catch (error) {
-      if (generation !== this.generation) return;
-      const message = error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad');
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      const message = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.fetchState = { kind: 'error', message };
       this.emit('lyra-render-error', { error });
     }

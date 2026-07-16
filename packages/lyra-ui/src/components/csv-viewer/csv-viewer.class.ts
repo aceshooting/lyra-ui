@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { assertTableSize, isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import '../virtual-list/virtual-list.js';
 import { loadPapaParseCached, type PapaParseApi } from './csv-loader.js';
@@ -26,27 +27,31 @@ export class LyraCsvViewer extends LyraElement<LyraCsvViewerEventMap> {
   private generation = 0;
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
 
-  protected willUpdate(changed: PropertyValues): void { if (!this.hasUpdated || changed.has('src')) void this.load(); }
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
     if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const library = await this.loadLibrary();
-      if (generation !== this.generation) return;
+      if (!this.isConnected || generation !== this.generation) return;
       if (!library) { this.fetchState = { kind: 'error', message: this.localize('csvViewerUnavailable') }; return; }
-      const result = library.parse(await response.text(), { skipEmptyLines: true }) as { data: unknown[][]; errors: unknown[] };
-      if (generation !== this.generation) return;
+      const result = library.parse(await readResponseText(response), { skipEmptyLines: true }) as { data: unknown[][]; errors: unknown[] };
+      assertTableSize(result.data);
+      if (!this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'loaded', rows: result.data };
       if (result.errors.length) this.emit('lyra-render-error', { error: result.errors });
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }

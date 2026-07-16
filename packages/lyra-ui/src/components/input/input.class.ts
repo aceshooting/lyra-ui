@@ -128,7 +128,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     const native = this.inputEl;
     if (!native) {
       if (this.required && this.value === '') {
-        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, 'Please fill out this field.');
+        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
       } else {
         this[SET_ANCHORED_VALIDITY]({});
       }

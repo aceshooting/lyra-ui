@@ -137,7 +137,7 @@ describe('text/* and application/json dispatch', () => {
       const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
       expect(error).to.exist;
       expect(error.getAttribute('role')).to.equal('alert');
-      expect(error.textContent).to.contain('404');
+      expect(error.textContent).to.equal('Failed to load document.');
       // A fetch failure is this component's own rendering concern, not the
       // host-owned status prop -- it stays whatever the host set it to.
       expect(el.status).to.equal('idle');

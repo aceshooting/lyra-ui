@@ -286,6 +286,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.draftError = err instanceof Error ? err.message : this.localize('invalidJson');
     }
   };
+  private onEditorFocus = (): void => { this.emit('focus'); };
+  private onEditorBlur = (): void => { this.emit('blur'); };
 
   private onApprove = (): void => {
     let currentArgs: unknown = this.args;
@@ -344,6 +346,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   aria-describedby=${hasError ? this.errorId : nothing}
                   .value=${this.draftText}
                   @input=${this.onDraftInput}
+                  @focus=${this.onEditorFocus}
+                  @blur=${this.onEditorBlur}
                 ></textarea>
                 <p part="error" id=${this.errorId} role="alert" ?hidden=${!hasError}>${this.draftError}</p>
               `

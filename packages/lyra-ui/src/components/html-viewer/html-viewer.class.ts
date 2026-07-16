@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
@@ -31,26 +32,27 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   @state() private fetchState: HtmlFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('src')) void this.load();
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
     if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadHtmlSanitizer();
       if (!sanitizer) throw new Error(this.localize('documentViewerMissingSanitizer'));
-      const markup = sanitizer.sanitize(await response.text());
+      const markup = sanitizer.sanitize(await readResponseText(response));
       if (generation === this.generation) this.fetchState = { kind: 'loaded', markup };
     } catch (error) {
-      if (generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad') };
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }

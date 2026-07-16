@@ -21,6 +21,11 @@ it('renders a disabled button when no href is available', async () => {
   expect(button.disabled).to.be.true;
 });
 
+it('hardens links opened in a new browsing context', async () => {
+  const el = (await fixture(html`<lyra-app-rail-item href="https://example.test" target="_blank">Open</lyra-app-rail-item>`)) as LyraAppRailItem;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('rel')).to.equal('noopener noreferrer');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-app-rail-item href="/home" aria-label="Home">Home</lyra-app-rail-item>`)) as LyraAppRailItem;
   await expect(el).to.be.accessible();

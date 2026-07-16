@@ -3983,9 +3983,8 @@ stack overflow on cyclic `data`.
   highlighted and their ancestors auto-expanded
 
 **Events:** `lyra-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
-per-node one. Fires even when `navigator.clipboard` silently failed or is unavailable (insecure
-context, older browser, a stubbed-out test environment), so a consumer can still observe copy
-*intent*.
+per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still
+observe copy *intent*.
 
 **Slots:** none — the tree is rendered entirely from `data`.
 

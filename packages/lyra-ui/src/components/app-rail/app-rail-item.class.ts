@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { safeLinkHref } from '../../internal/safe-url.js';
 import { place } from '../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../internal/rtl.js';
 import { styles } from './app-rail-item.styles.js';
@@ -84,16 +85,18 @@ export class LyraAppRailItem extends LyraElement {
 
   render(): TemplateResult {
     const label = this.getAttribute('aria-label');
+    const href = safeLinkHref(this.href);
     const content = html`
       <span part="icon" aria-hidden=${label ? 'true' : nothing}><slot name="icon"></slot></span>
       <span part="label"><slot></slot></span>
       ${this.showTooltip ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>` : nothing}
     `;
-    if (this.href && !this.disabled) {
+    if (href && !this.disabled) {
       return html`<a
         part="base"
-        href=${this.href}
+        href=${href}
         target=${this.target || nothing}
+        rel=${this.target ? 'noopener noreferrer' : nothing}
         aria-label=${label || nothing}
         aria-current=${this.active ? 'page' : nothing}
         @mouseenter=${this.onFocusShow}
@@ -123,4 +126,3 @@ declare global {
     'lyra-app-rail-item': LyraAppRailItem;
   }
 }
-

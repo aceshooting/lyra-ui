@@ -85,7 +85,7 @@ export interface LyraJsonViewerEventMap {
  * streaming tool result being patched in place.
  *
  * @customElement lyra-json-viewer
- * @event lyra-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` silently failed or is unavailable (insecure context, older browser, stubbed-out test environment), so a consumer can still observe copy *intent*.
+ * @event lyra-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still observe copy *intent*.
  * @csspart base - The root scroll container; respects `max-height`.
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.

@@ -1,0 +1,42 @@
+{
+  "lyra-bar-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-bubble-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-doughnut-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-line-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-pie-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-polar-area-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-radar-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  },
+  "lyra-scatter-chart": {
+    "test": "src/components/chart/chart.test.ts",
+    "marker": "<lyra-chart",
+    "reason": "Typed chart aliases inherit the base chart's rendering, accessibility, locale, RTL, and interaction contract."
+  }
+}

@@ -4,6 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { styles } from './docx-viewer.styles.js';
 
@@ -47,12 +48,13 @@ export class LyraDocxViewer extends LyraElement<LyraDocxViewerEventMap> {
   private generation = 0;
   private loadLibrary: () => Promise<DocxDeps> = loadDocxDeps;
 
-  protected willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('src')) void this.load();
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     if (!this.src) {
       this.fetchState = { kind: 'idle' };
       return;
@@ -66,11 +68,11 @@ export class LyraDocxViewer extends LyraElement<LyraDocxViewerEventMap> {
 
     this.fetchState = { kind: 'loading' };
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const arrayBuffer = await response.arrayBuffer();
+      const arrayBuffer = await readResponseArrayBuffer(response);
       const { mammoth, DOMPurify } = await this.loadLibrary();
-      if (generation !== this.generation) return;
+      if (!this.isConnected || generation !== this.generation) return;
       if (!mammoth) {
         this.fetchState = { kind: 'error', message: this.localize('docxViewerMissingConverter') };
         return;
@@ -81,14 +83,14 @@ export class LyraDocxViewer extends LyraElement<LyraDocxViewerEventMap> {
       }
 
       const converted = (await mammoth.convertToHtml({ arrayBuffer })) as { value: string; messages: unknown[] };
-      if (generation !== this.generation) return;
+      if (!this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'loaded', markup: DOMPurify.sanitize(converted.value) };
       if (converted.messages.length > 0) this.emit('lyra-render-error', { error: converted.messages });
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = {
         kind: 'error',
-        message: error instanceof Error ? error.message : this.localize('documentPreviewFailedToLoad'),
+        message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
       };
       this.emit('lyra-render-error', { error });
     }

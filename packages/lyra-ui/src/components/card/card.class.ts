@@ -1,6 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { safeLinkHref } from '../../internal/safe-url.js';
 import { styles } from './card.styles.js';
 
 export type CardAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
@@ -89,8 +90,9 @@ export class LyraCard extends LyraElement {
         <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
       </div>
     `;
-    return this.href
-      ? html`<a part="base" href=${this.href}>${body}</a>`
+    const href = safeLinkHref(this.href);
+    return href
+      ? html`<a part="base" href=${href}>${body}</a>`
       : html`<div part="base">${body}</div>`;
   }
 }

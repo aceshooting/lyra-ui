@@ -101,7 +101,7 @@ describe('lyra-docx-viewer', () => {
     window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch;
     try {
       el.src = 'java\tscript:alert(1)';
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       expect(called).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
     } finally {

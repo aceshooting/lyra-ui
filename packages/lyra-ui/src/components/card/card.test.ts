@@ -21,6 +21,11 @@ describe('lyra-card', () => {
     expect(el.hasAttribute('interactive')).to.be.false;
   });
 
+  it('rejects executable navigation schemes', async () => {
+    const el = (await fixture(html`<lyra-card href="java\tscript:alert(1)">body</lyra-card>`)) as LyraCard;
+    expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
+  });
+
   it('renders header/media/footer/actions slots only when populated', async () => {
     const el = (await fixture(html`
       <lyra-card>

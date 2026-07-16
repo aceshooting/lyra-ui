@@ -248,6 +248,8 @@ export class LyraToolSelectDialog extends LyraElement {
   private onSearchInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
   };
+  private onSearchFocus = (): void => { this.emit('focus'); };
+  private onSearchBlur = (): void => { this.emit('blur'); };
 
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
     this.useDefaults = e.detail.checked;
@@ -383,6 +385,8 @@ export class LyraToolSelectDialog extends LyraElement {
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
             @input=${this.onSearchInput}
+            @focus=${this.onSearchFocus}
+            @blur=${this.onSearchBlur}
           />
         </div>
         <div part="defaults-row">

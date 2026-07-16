@@ -162,7 +162,7 @@ it('exposes native-like form ownership, label, and constraint-validation state',
   expect(ctl.labels.length).to.equal(1);
   expect((ctl.labels.item(0) as HTMLElement | null)?.id).to.equal('caption');
   expect(ctl.validity.valueMissing).to.be.true;
-  expect(ctl.validationMessage).to.equal('Please fill out this field.');
+  expect(ctl.validationMessage).to.equal('This field is required.');
   expect(ctl.willValidate).to.be.true;
 
   ctl.disabled = true;

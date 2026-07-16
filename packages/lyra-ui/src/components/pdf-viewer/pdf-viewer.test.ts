@@ -80,7 +80,7 @@ describe('lyra-pdf-viewer', () => {
       const event = await eventPromise;
       expect(event.detail.error).to.exist;
       await waitFor(el, '[part="error"]');
-      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('404');
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Failed to load document.');
     } finally { window.fetch = original; }
   });
 

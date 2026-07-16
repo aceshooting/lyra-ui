@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
+import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { chevronIcon } from '../../internal/icons.js';
 import { getPptxRenderer, type PptxRendererModule } from './pptx-loader.js';
 import { styles } from './pptx-viewer.styles.js';
@@ -65,8 +66,8 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
     this.emit('lyra-slide-change', { index: event.detail.index, count: this.slideCount });
   };
 
-  protected willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('src')) void this.mount();
+  protected updated(changed: PropertyValues): void {
+    if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 
   disconnectedCallback(): void {
@@ -85,6 +86,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
 
   private async mount(): Promise<void> {
     this.teardown();
+    const signal = this.beginAbortableLoad();
     const generation = this.generation;
     if (!this.src) { this.phase = 'idle'; return; }
     const url = safeFetchUrl(this.src);
@@ -97,30 +99,30 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
     let module: PptxRendererModule | null;
     let response: Response;
     try {
-      [module, response] = await Promise.all([this.loadRenderer(), fetch(url)]);
+      [module, response] = await Promise.all([this.loadRenderer(), fetch(url, signal ? { signal } : undefined)]);
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
-      this.errorMessage = this.localize('documentPreviewFailedToLoad');
+      this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.emit('lyra-render-error', { error });
       return;
     }
-    if (generation !== this.generation) return;
+    if (!this.isConnected || generation !== this.generation) return;
     if (!module || !response.ok) {
       this.phase = 'error';
       this.errorMessage = this.localize(module ? 'documentPreviewFailedToLoad' : 'pptxViewerRenderError');
       return;
     }
     let buffer: ArrayBuffer;
-    try { buffer = await response.arrayBuffer(); }
+    try { buffer = await readResponseArrayBuffer(response); }
     catch (error) {
-      if (generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
-      this.errorMessage = this.localize('documentPreviewFailedToLoad');
+      this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.emit('lyra-render-error', { error });
       return;
     }
-    if (generation !== this.generation) return;
+    if (!this.isConnected || generation !== this.generation) return;
     this.phase = 'mounted';
     await this.updateComplete;
     if (generation !== this.generation || !this.containerEl) return;
@@ -136,7 +138,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
       this.currentSlideIndex = viewer.currentSlideIndex;
       this.emit('lyra-load', { slideCount: viewer.slideCount });
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize('pptxViewerRenderError');
       this.emit('lyra-render-error', { error });

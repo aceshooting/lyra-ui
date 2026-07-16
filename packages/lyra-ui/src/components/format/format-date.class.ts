@@ -20,10 +20,10 @@ export class LyraFormatDate extends LyraElement {
   @property({ attribute: 'time-style' }) timeStyle?: Intl.DateTimeFormatOptions['timeStyle'];
   render(): TemplateResult {
     const value = this.date instanceof Date ? this.date : new Date(this.date);
-    const options: Intl.DateTimeFormatOptions = { year: this.year, month: this.month, day: this.day };
-    if (this.dateStyle) options.dateStyle = this.dateStyle;
-    if (this.timeStyle) options.timeStyle = this.timeStyle;
-    const text = Number.isNaN(value.getTime()) ? '' : new Intl.DateTimeFormat(this.locale || undefined, options).format(value);
+    const options: Intl.DateTimeFormatOptions = this.dateStyle || this.timeStyle
+      ? { dateStyle: this.dateStyle, timeStyle: this.timeStyle }
+      : { year: this.year, month: this.month, day: this.day };
+    const text = Number.isNaN(value.getTime()) ? '' : new Intl.DateTimeFormat(this.effectiveLocale || undefined, options).format(value);
     return html`${text || html`<slot></slot>`}`;
   }
 }

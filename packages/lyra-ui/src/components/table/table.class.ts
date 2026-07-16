@@ -470,6 +470,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.filterText = input.value;
     this.emit('lyra-filter-change', { text: this.filterText });
   };
+  private onNativeFocus = (): void => { this.emit('focus'); };
+  private onNativeBlur = (): void => { this.emit('blur'); };
 
   private onPaginationChange = (event: Event): void => {
     event.stopPropagation();
@@ -985,6 +987,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                                   .value=${this.editorValue(row, col)}
                                   aria-label=${this.localize('tableEditCell', undefined, { column: col.label })}
                                   @change=${(event: Event) => this.commitEdit(event, encodeKey(key), col.key)}
+                                  @focus=${this.onNativeFocus}
+                                  @blur=${this.onNativeBlur}
                                   @keydown=${(event: KeyboardEvent) =>
                                     this.onEditorKeyDown(event, encodeKey(key), col.key)}
                                 />`
@@ -1031,6 +1035,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                 placeholder=${filterPlaceholder}
                 aria-label=${filterLabel}
                 @input=${this.onFilterInput}
+                @focus=${this.onNativeFocus}
+                @blur=${this.onNativeBlur}
               />
             </label>`
           : nothing}

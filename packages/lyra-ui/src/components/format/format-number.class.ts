@@ -22,7 +22,7 @@ export class LyraFormatNumber extends LyraElement {
     if (this.currency) { options.style = 'currency'; options.currency = this.currency; }
     if (this.minimumFractionDigits !== undefined) options.minimumFractionDigits = this.minimumFractionDigits;
     if (this.maximumFractionDigits !== undefined) options.maximumFractionDigits = this.maximumFractionDigits;
-    const text = Number.isFinite(this.value) ? new Intl.NumberFormat(this.locale || undefined, options).format(this.value) : '';
+    const text = Number.isFinite(this.value) ? new Intl.NumberFormat(this.effectiveLocale || undefined, options).format(this.value) : '';
     return html`${text || html`<slot></slot>`}`;
   }
 }

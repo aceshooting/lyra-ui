@@ -50,14 +50,14 @@ function pencilIcon(): SVGTemplateResult {
  *  "Last 7 days" sections) belongs to the list level, not this single row's
  *  job. `formatTimestamp` overrides this
  *  entirely, mirroring `<lyra-chat-message>`'s identical override hook. */
-function defaultFormatTimestamp(date: Date, now: Date = new Date()): string {
+function defaultFormatTimestamp(date: Date, locale: string, now: Date = new Date()): string {
   const sameDay = date.toDateString() === now.toDateString();
   if (sameDay) {
-    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+    return new Intl.DateTimeFormat(locale || undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
   }
   const sameYear = date.getFullYear() === now.getFullYear();
   return new Intl.DateTimeFormat(
-    undefined,
+    locale || undefined,
     sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' },
   ).format(date);
 }
@@ -308,7 +308,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   render(): TemplateResult {
     const ts = this.normalizedTimestamp;
-    const formatter = this.formatTimestamp ?? defaultFormatTimestamp;
+    const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
     const displayTitle = this.title || this.localize('untitledConversation');
     const showRenameButton = this.editable && !this.renaming;
     // Shared between the rename button and the input it opens: the input is

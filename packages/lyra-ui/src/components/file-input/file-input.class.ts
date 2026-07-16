@@ -167,6 +167,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     (e.target as HTMLInputElement).value = '';
     if (files.length) this.emitFiles(files);
   };
+  private onNativeFocus = (): void => { this.emit('focus'); };
+  private onNativeBlur = (): void => { this.emit('blur'); };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.disabled) return;
@@ -226,6 +228,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         ?multiple=${this.multiple}
         ?disabled=${this.disabled}
         @change=${this.onInputChange}
+        @focus=${this.onNativeFocus}
+        @blur=${this.onNativeBlur}
       />
     `;
   }
