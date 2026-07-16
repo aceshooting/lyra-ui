@@ -1,5 +1,4 @@
 export * from './csv-viewer.class.js';
-export * from './csv-loader.js';
 import { html } from 'lit';
 import { defineElement } from '../../internal/prefix.js';
 import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';

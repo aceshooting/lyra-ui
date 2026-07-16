@@ -78,6 +78,29 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
   expect(chart.isDatasetVisible(1)).to.be.false;
 });
 
+it('keeps a newly-added series visible instead of inheriting a stale hidden default', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+
+  // Adding a series is the exact regression this covers: mapping the "preserve prior visibility"
+  // snapshot over the *new* (longer) dataset list, instead of the chart's own prior dataset count,
+  // read isDatasetVisible() for the not-yet-existing series' index, got back its unset default, and
+  // then enforced that default via setDatasetVisibility(i, false) -- permanently hiding it.
+  el.datasets = [
+    { label: 'x', data: [1, 2] },
+    { label: 'y', data: [3, 4] },
+  ];
+  await el.updateComplete;
+
+  expect(chart.isDatasetVisible(0)).to.be.true;
+  expect(chart.isDatasetVisible(1)).to.be.true;
+});
+
 it('rebuilds (new Chart instance) when type changes', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'line';
@@ -125,6 +148,18 @@ it('formats generated summary values with the effective locale', async () => {
   const description = el.shadowRoot!.querySelector('[part="description"]')!;
   expect(description.textContent).to.contain('1.234,5');
   expect(description.textContent).to.contain('2.345,75');
+});
+
+it('localizes the chart-type name in the generated summary instead of the raw Chart.js identifier', async () => {
+  const el = (await fixture(html`<lyra-chart type="polarArea"></lyra-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const description = el.shadowRoot!.querySelector('[part="description"]')!;
+  expect(description.textContent).to.contain('Polar area chart');
+  expect(description.textContent).to.not.contain('polarArea');
 });
 
 it('exposes a customizable accessible description and a data-table alternative', async () => {
@@ -228,6 +263,23 @@ it('does not serialize circular or BigInt config values while building the Chart
   }).to.not.throw();
   expect(config.self).to.equal(config);
   expect(config.count).to.equal(1n);
+});
+
+it('deep-merges the same reused override object independently at each config position', () => {
+  const el = document.createElement('lyra-chart') as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A'];
+  el.datasets = [{ label: 'x', data: [1] }];
+  // The exact same object reference set at two different config positions -- x and y scales get
+  // different Chart.js-generated base configs (categorical vs. linear), so each merge must produce
+  // its own independent result rather than the second position reusing the first's cached result.
+  const sharedOverride = { grid: { color: 'red' } };
+  el.config = { options: { scales: { x: sharedOverride, y: sharedOverride } } } as never;
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.x).to.not.equal(config.options.scales.y);
+  expect(config.options.scales.x.grid.color).to.equal('red');
+  expect(config.options.scales.y.grid.color).to.equal('red');
 });
 
 it('rebuilds when `config.type` overrides the effective type even though the `type` prop is unchanged', async () => {

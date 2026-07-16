@@ -120,6 +120,18 @@ export const styles = css`
     outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
     outline-offset: var(--lyra-focus-ring-offset);
   }
+  /* Chevron points at the content: rotated (pointing down) while expanded, resting (pointing right)
+     while collapsed -- same convention as lyra-code-block's/lyra-json-viewer's own toggles. */
+  :host(:not([collapsed])) [part='collapse-button'] {
+    transform: rotate(90deg);
+  }
+  /* RTL: the resting (collapsed) chevron mirrors to point left -- the conventional mirrored
+     disclosure-triangle direction for RTL. Scoped to [collapsed] specifically (rather than a plain
+     :dir(rtl) rule) so it never competes with the rule above for the expanded state, which needs no
+     mirroring: rotating this left-right-asymmetric glyph 90deg already produces a symmetric chevron. */
+  :host([collapsed]:dir(rtl)) [part='collapse-button'] {
+    transform: scaleX(-1);
+  }
   [part='body'] {
     padding: var(--lyra-space-m);
     flex: 1 1 auto;

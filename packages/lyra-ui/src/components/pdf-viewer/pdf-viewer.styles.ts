@@ -11,7 +11,31 @@ export const styles = css`
   [part='pages'] { --lyra-virtual-list-height: var(--lyra-pdf-viewer-height); }
   [part='page'] { position: relative; display: flex; justify-content: center; padding-block: var(--lyra-space-m); min-inline-size: 0; }
   [part='page'] canvas { box-shadow: 0 0 0 var(--lyra-border-width-thin) var(--lyra-color-border); }
-  [part='text-layer'] { position: absolute; inset-block-start: var(--lyra-space-m); inset-inline-start: 50%; overflow: hidden; line-height: 1; opacity: 1; pointer-events: none; }
+  [part='text-layer'] {
+    position: absolute;
+    inset-block-start: var(--lyra-space-m);
+    inset-inline-start: 50%;
+    transform: translateX(-50%);
+    overflow: hidden;
+    line-height: 1;
+    opacity: 1;
+  }
+  :host(:dir(rtl)) [part='text-layer'] { transform: translateX(50%); }
+  /* PDF.js's TextLayer only sets inline left/top percentages and CSS custom properties on each
+     generated span -- everything else (making the run invisible-but-selectable over the already-
+     painted canvas glyphs, and sizing/rotating/skewing each run to match the page) is expected to
+     come from the surrounding stylesheet, normally web/pdf_viewer.css's .textLayer rules. Ported
+     here since that stylesheet isn't shipped with the pdfjs-dist peer. */
+  [part='text-layer'] :is(span, br) {
+    position: absolute;
+    color: transparent;
+    white-space: pre;
+    cursor: text;
+    user-select: text;
+    transform-origin: 0 0;
+    font-size: calc(var(--total-scale-factor, 1) * var(--font-height));
+    transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1));
+  }
   [part='text-layer'] ::selection { background: var(--lyra-color-brand-quiet); }
   .empty-note, [part='error'] { margin: 0; padding: var(--lyra-space-l); color: var(--lyra-color-text-quiet); font-size: var(--lyra-font-size-md-sm); text-align: center; }
   [part='error'] { color: var(--lyra-color-danger); }

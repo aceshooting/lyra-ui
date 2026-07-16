@@ -244,14 +244,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   @state() private plotWidth = 0;
   @state() private plotHeight = 0;
-  @state() private visible = true;
   /** One roving tab stop across all bar/point marks. */
   @state() private activeMarkIndex = 0;
 
   @query('svg') private svgEl?: SVGSVGElement;
   @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
-  private intersectionObserver?: IntersectionObserver;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -268,12 +266,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
       }
     });
-    if (typeof IntersectionObserver !== 'undefined') {
-      this.intersectionObserver = new IntersectionObserver((entries) => {
-        this.visible = entries[0]?.isIntersecting ?? true;
-      });
-      this.intersectionObserver.observe(this);
-    }
     // A reconnect re-creates the observer above but the `<svg>` render root
     // content survives across disconnect/reconnect (Lit doesn't tear down the
     // shadow root) — re-observe it here (firstUpdated() only ever runs once,
@@ -284,7 +276,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
-    this.intersectionObserver?.disconnect();
   }
 
   // The first draw is queued because connectedCallback() fires *before* Lit's
@@ -441,7 +432,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         let neg = 0;
         for (const s of this.datasets) {
           const v = s.data[i];
-          if (v == null) continue;
+          if (v == null || !Number.isFinite(v)) continue;
           if (v >= 0) pos += v;
           else neg += v;
         }
@@ -451,7 +442,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     } else {
       for (const s of this.datasets) {
         for (const v of s.data) {
-          if (v == null) continue;
+          if (v == null || !Number.isFinite(v)) continue;
           lo = Math.min(lo, v);
           hi = Math.max(hi, v);
         }
@@ -507,7 +498,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           part="axis-label"
           x=${rtl ? plotX + plotW + 6 : plotX - 6}
           y=${y}
-          text-anchor=${rtl ? 'start' : 'end'}
+          text-anchor="end"
           dominant-baseline="middle"
         >${this.tickFormat ? this.tickFormat(t) : formatTick(t)}</text>
       `;
@@ -616,14 +607,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             y2 = posPixelTop;
             y1 = posPixelTop - segH;
             posPixelTop = y1;
-            stackPos += v;
           } else {
             const naturalH = Math.max(0, this.barValueToY(v, plotY, plotH, lo, hi) - zeroY);
             const segH = this.minBarHeight != null && v !== 0 && naturalH < this.minBarHeight ? this.minBarHeight : naturalH;
             y1 = negPixelBottom;
             y2 = negPixelBottom + segH;
             negPixelBottom = y2;
-            stackNeg += v;
           }
         } else {
           rectX = slotStart + di * (barW + BAR_GAP * slot);
@@ -635,8 +624,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
         const label = this.labels[i];
         const custom = this.resolvePointText(label, v, di);
-        const ariaLabel = custom ?? `${s.label}, ${label}: ${v}`;
-        const titleText = custom ?? `${s.label} — ${label}: ${v}`;
+        const barText =
+          custom ??
+          this.localize('liteChartBarLabel', undefined, {
+            series: s.label,
+            label,
+            value: new Intl.NumberFormat(this.effectiveLocale).format(v),
+          });
+        const ariaLabel = barText;
+        const titleText = barText;
         const w = Math.max(0, barW);
         let h = Math.max(0, y2 - y1);
         // A nonzero value's segment can round to sub-pixel and become
@@ -719,8 +715,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         if (v == null || !Number.isFinite(v)) return nothing;
         const label = this.labels[i];
         const custom = this.resolvePointText(label, v, di);
-        const ariaLabel = custom ?? `${s.label}, ${label}: ${v}`;
-        const titleText = custom ?? `${s.label} — ${label}: ${v}`;
+        const barText =
+          custom ??
+          this.localize('liteChartBarLabel', undefined, {
+            series: s.label,
+            label,
+            value: new Intl.NumberFormat(this.effectiveLocale).format(v),
+          });
+        const ariaLabel = barText;
+        const titleText = barText;
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         return svg`
           <circle

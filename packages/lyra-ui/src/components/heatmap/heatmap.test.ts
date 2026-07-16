@@ -137,12 +137,15 @@ it('renders an opt-in native button overlay with persistent per-cell semantics',
   expect(cells[2]!.getAttribute('aria-pressed')).to.equal('true');
   expect(cells[0]!.getAttribute('tabindex')).to.equal('0');
   expect(cells[1]!.getAttribute('tabindex')).to.equal('-1');
-  expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-hidden')).to.equal('');
+  expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-hidden')).to.equal('true');
   expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('tabindex')).to.equal('-1');
   await expect(el).to.be.accessible();
 });
 
-it('moves focus through accessible cells with RTL-aware arrow keys and emits the same click event', async () => {
+it('moves focus through accessible cells with physical (non-mirrored) arrow keys even under dir="rtl" and emits the same click event', async () => {
+  // The canvas grid is deliberately non-mirrored under RTL (column 0 always paints at the physical
+  // left), so arrow keys must stay physical too -- ArrowRight still moves from column 0 to column 1
+  // even with dir="rtl" set, rather than swapping for a layout that never actually flips.
   const el = (await fixture(html`
     <lyra-heatmap
       accessible-cells
@@ -155,7 +158,7 @@ it('moves focus through accessible cells with RTL-aware arrow keys and emits the
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
   cells[0]!.focus();
-  cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+  cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
   await aTimeout(0);
   expect((el.shadowRoot!.activeElement as HTMLElement).dataset.cellKey).to.equal('matrix-0-1');

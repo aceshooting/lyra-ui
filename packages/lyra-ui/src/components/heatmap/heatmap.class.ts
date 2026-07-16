@@ -1,4 +1,4 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
@@ -732,6 +732,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'rowY',
         'firstDayOfWeek',
         'monthLabelText',
+        'weekdayLabelText',
         'focusedCell',
         'colorSteps',
         'cellColor',
@@ -1321,8 +1322,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * sentinel uses in matrix mode), instead of being unresolvable.
    */
   private calendarCellAt(pos: CalendarCellPos): { date: string; value: number } {
-    const { cells, firstWeekStart } = this.cachedCalendarGrid;
-    const match = cells.find((c) => c.week === pos.week && c.weekday === pos.weekday);
+    const { firstWeekStart } = this.cachedCalendarGrid;
+    const match = this.cachedCalendarCellsByPos.get(`${pos.week}:${pos.weekday}`);
     if (match) return { date: match.date, value: match.value };
     const date = new Date(firstWeekStart.getTime() + (pos.week * 7 + pos.weekday) * MS_PER_DAY);
     return { date: date.toISOString().slice(0, 10), value: -1 };
@@ -1488,13 +1489,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       return;
     }
     const { row, col } = this.focusedCell;
-    const rtl = this.effectiveDirection === 'rtl';
+    // The canvas grid is deliberately non-mirrored (drawMatrix()/cellRect() always place column 0
+    // at the physical left, and [part='cells'] is pinned `direction: ltr` to match) -- so arrow keys
+    // stay physical too, rather than swapping under RTL for a layout that never actually flips.
     let dRow = 0;
     let dCol = 0;
     if (e.key === 'ArrowUp') dRow = -1;
     else if (e.key === 'ArrowDown') dRow = 1;
-    else if (e.key === 'ArrowLeft') dCol = rtl ? 1 : -1;
-    else if (e.key === 'ArrowRight') dCol = rtl ? -1 : 1;
+    else if (e.key === 'ArrowLeft') dCol = -1;
+    else if (e.key === 'ArrowRight') dCol = 1;
     const next = this.nextInteractiveMatrixCell(row, col, dRow, dCol, rows, cols);
     this.focusedCell = next;
     this.announce(next);
@@ -1518,13 +1521,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       return;
     }
     const { week, weekday } = this.focusedCell;
-    const rtl = this.effectiveDirection === 'rtl';
+    // Same reasoning as onMatrixKeyDown: columnXFor() always places week 0 at the physical left, so
+    // arrow keys stay physical rather than swapping under RTL for a calendar grid that never mirrors.
     let dWeek = 0;
     let dWeekday = 0;
     if (e.key === 'ArrowUp') dWeekday = -1;
     else if (e.key === 'ArrowDown') dWeekday = 1;
-    else if (e.key === 'ArrowLeft') dWeek = rtl ? 1 : -1;
-    else if (e.key === 'ArrowRight') dWeek = rtl ? -1 : 1;
+    else if (e.key === 'ArrowLeft') dWeek = -1;
+    else if (e.key === 'ArrowRight') dWeek = 1;
     const next = this.nextInteractiveCalendarCell(week, weekday, dWeek, dWeekday, weekCount);
     this.focusedCell = next;
     this.announce(next);
@@ -1675,7 +1679,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         <canvas
           part="canvas"
           tabindex=${this.accessibleCells ? '-1' : '0'}
-          ?aria-hidden=${this.accessibleCells}
+          aria-hidden=${this.accessibleCells ? 'true' : nothing}
           @pointermove=${this.onPointerMove}
           @pointerleave=${this.onPointerLeave}
           @click=${this.onCanvasClick}

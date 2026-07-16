@@ -1,5 +1,4 @@
 export * from './dataset-viewer.class.js';
-export * from './dataset-loader.js';
 import { LyraDatasetViewer } from './dataset-viewer.class.js';
 import { defineElement } from '../../internal/prefix.js';
 import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';

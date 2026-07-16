@@ -22,7 +22,7 @@ export class LyraSpreadsheetViewer extends LyraElement<LyraSpreadsheetViewerEven
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
-  /** Source filename or display name. */
+  /** Source filename or display name, used as the viewer's accessible name. */
   @property() name = '';
   @state() private fetchState: SpreadsheetState = { kind: 'idle' };
   private generation = 0;
@@ -78,7 +78,7 @@ export class LyraSpreadsheetViewer extends LyraElement<LyraSpreadsheetViewerEven
 
   render(): TemplateResult {
     const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error" role="alert">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
-    return html`<div part="base">${body}</div>`;
+    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('spreadsheetViewerLabel')}>${body}</div>`;
   }
 }
 

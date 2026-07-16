@@ -82,7 +82,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  and consulted by that same native input's constraint validation (see `updateValidity()`). */
   @property({ type: Number }) min?: number;
   @property({ type: Number }) max?: number;
-  @property({ type: Number }) step?: number;
+  /** Accepts `'any'` (the native way to disable step validation) in addition to a numeric step. */
+  @property() step?: number | 'any';
   /** `type="password"` only — whether the field currently reveals its raw text. Toggled by the
    *  built-in `password-toggle` button; also settable by a consumer up front. */
   @property({ type: Boolean, attribute: 'password-visible' }) passwordVisible = false;
@@ -93,6 +94,16 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @state() private touched = false;
 
   @query('input') private inputEl?: HTMLInputElement;
+
+  constructor() {
+    super();
+    this.addEventListener('invalid', () => { this.touched = true; });
+  }
+
+  formResetCallback(): void {
+    super.formResetCallback();
+    this.touched = false;
+  }
 
   /** The internal native `<input>` element, for direct DOM access — mirrors `<lyra-textarea>`'s own `input` getter. */
   get input(): HTMLInputElement | null {
@@ -134,7 +145,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
       }
       return;
     }
-    native.value = this.value;
+    if (native.value !== this.value) native.value = this.value;
     const sanitizedAway = this.value !== '' && native.value === '';
     const v = native.validity;
     if (v.valid) {

@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { nextId } from '../../internal/a11y.js';
 import { tag } from '../../internal/prefix.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
@@ -35,6 +36,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
+  private readonly labelId = nextId('radio-group-label');
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -45,15 +47,20 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     return [...this.querySelectorAll(tag('radio'))] as LyraRadio[];
   }
   private syncRadios(): void {
-    for (const radio of this.radios()) {
-      if (this.name && !radio.name) radio.name = this.name;
-      if (this.required) radio.required = true;
-      if (this.disabled) radio.disabled = true;
+    const radios = this.radios();
+    const enabled = radios.filter((radio) => !radio.disabled && !this.disabled);
+    const checkedRadio = radios.find((radio) => radio.checked);
+    for (const radio of radios) {
+      if (this.name) radio.name = this.name;
+      radio.setGroupRequired(this.required);
+      radio.setGroupDisabled(this.disabled);
+      radio.setGroupTabbable(checkedRadio ? radio === checkedRadio : radio === enabled[0]);
     }
   }
   /** @internal */
   selectRadio(radio: LyraRadio): void {
     for (const candidate of this.radios()) candidate.checked = candidate === radio;
+    this.syncRadios();
     this.emit('lyra-change', { value: radio.value, radio });
   }
   private onKeyDown = (event: KeyboardEvent): void => {
@@ -84,8 +91,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const hasHint = this.hasHintSlot || Boolean(this.hint);
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     return html`
-      <div part="base" role="radiogroup" aria-label=${this.accessibleLabel || nothing} @keydown=${this.onKeyDown}>
-        <div part="label" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
+      <div part="base" role="radiogroup"
+        aria-label=${this.accessibleLabel || nothing}
+        aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
+        @keydown=${this.onKeyDown}>
+        <div part="label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
         <slot></slot>
         <div part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
         <div part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>

@@ -23,6 +23,20 @@ it('exposes one visible slide and localized navigation controls', async () => {
   expect(slides[0].getAttribute('role')).to.equal('group');
   expect(slides[0].getAttribute('aria-roledescription')).to.equal('slide');
   expect(el.shadowRoot!.querySelectorAll('[part="indicator"]').length).to.equal(3);
+  // The indicators are a plain labelled button group, not a tablist -- there is no tabpanel for
+  // them to control, so role="tab"/aria-selected would announce a broken relationship to AT.
+  expect(el.shadowRoot!.querySelector('[part="indicators"]')!.getAttribute('role')).to.equal('group');
+  expect(el.shadowRoot!.querySelector('[part="indicator"]')!.getAttribute('role')).to.be.null;
+});
+
+it('omits the indicator group entirely when showIndicators is false', async () => {
+  const el = await carousel(html`
+    <lyra-carousel .showIndicators=${false}>
+      <div>One</div>
+      <div>Two</div>
+    </lyra-carousel>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="indicators"]')).to.be.null;
 });
 
 it('emits slide changes and supports keyboard navigation', async () => {
@@ -39,6 +53,39 @@ it('emits slide changes and supports keyboard navigation', async () => {
   viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
   await el.updateComplete;
   expect(el.index).to.equal(0);
+});
+
+it('swaps ArrowLeft/ArrowRight under RTL so a key still moves toward the visually adjacent slide', async () => {
+  const el = await carousel(html`
+    <lyra-carousel dir="rtl">
+      <div>One</div>
+      <div>Two</div>
+      <div>Three</div>
+    </lyra-carousel>
+  `);
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+
+  // Under RTL, ArrowLeft is "forward" (matches the physically-mirrored next-button position).
+  viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  expect(el.index).to.equal(1);
+
+  // ArrowRight is "backward" under RTL -- must NOT also advance (the bug this regresses had both
+  // arrows calling next(), leaving no keyboard way to go back).
+  viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(el.index).to.equal(0);
+});
+
+it('mirrors the previous/next chevron glyphs under RTL', async () => {
+  const el = await carousel(html`
+    <lyra-carousel dir="rtl">
+      <div>One</div>
+      <div>Two</div>
+    </lyra-carousel>
+  `);
+  const glyph = el.shadowRoot!.querySelector('[part="previous-glyph"]') as HTMLElement;
+  expect(getComputedStyle(glyph).transform).to.contain('matrix(-1');
 });
 
 it('is accessible and supports a consumer supplied accessible label', async () => {

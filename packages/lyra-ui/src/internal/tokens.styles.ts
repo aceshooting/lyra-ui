@@ -6,6 +6,7 @@ import { css } from 'lit';
 export const tokens = css`
   :host {
     --lyra-color-surface: var(--lyra-theme-color-surface-default, #fff);
+    --lyra-color-surface-raised: var(--lyra-theme-color-surface-raised, #f6f8fa);
     --lyra-color-text: var(--lyra-theme-color-text-normal, #1a1a1a);
     --lyra-color-text-quiet: var(--lyra-theme-color-text-quiet, #6b7280);
     --lyra-color-border: var(--lyra-theme-color-surface-border, #8a8a90);
@@ -229,6 +230,7 @@ export const tokens = css`
   @media (prefers-color-scheme: dark) {
     :host {
       --lyra-color-surface: var(--lyra-theme-color-surface-default, #1a1a1a);
+      --lyra-color-surface-raised: var(--lyra-theme-color-surface-raised, #22272e);
       --lyra-color-text: var(--lyra-theme-color-text-normal, #f2f2f2);
       --lyra-color-text-quiet: var(--lyra-theme-color-text-quiet, #9aa1ac);
       --lyra-color-border: var(--lyra-theme-color-surface-border, #6b6b74);
@@ -285,6 +287,7 @@ export const tokens = css`
   @media (forced-colors: active) {
     :host {
       --lyra-color-surface: Canvas;
+      --lyra-color-surface-raised: Canvas;
       --lyra-color-text: CanvasText;
       --lyra-color-text-quiet: CanvasText;
       --lyra-color-border: ButtonText;

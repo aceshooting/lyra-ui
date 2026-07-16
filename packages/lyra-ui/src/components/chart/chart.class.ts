@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
+import type { LyraMessageKey } from '../../internal/localization.js';
 import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../skeleton/skeleton.class.js';
@@ -43,21 +44,23 @@ const CHART_TYPES = new Set<LyraChartType>([
   'bubble',
 ]);
 
+const CHART_TYPE_MESSAGE_KEYS: Record<LyraChartType, LyraMessageKey> = {
+  line: 'chartTypeLine',
+  bar: 'chartTypeBar',
+  scatter: 'chartTypeScatter',
+  pie: 'chartTypePie',
+  doughnut: 'chartTypeDoughnut',
+  radar: 'chartTypeRadar',
+  polarArea: 'chartTypePolarArea',
+  bubble: 'chartTypeBubble',
+};
+
 function normalizeChartType(value: unknown): LyraChartType {
   return typeof value === 'string' && CHART_TYPES.has(value as LyraChartType)
     ? (value as LyraChartType)
     : 'line';
 }
 
-/**
- * Recursively merges `override` onto `base`, matching JSON-merge semantics:
- * plain objects are merged key-by-key at every depth; arrays, functions, and
- * any other value type are replaced wholesale by `override`'s value. Used to
- * deep-merge the raw `config` passthrough over the `Series`-generated config
- * in `buildConfig()` so a nested key (e.g. `config.options.scales.y`) only
- * overrides the keys it sets, rather than clobbering the whole generated
- * sibling object (e.g. the rest of the generated `y` axis config).
- */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -89,6 +92,22 @@ interface ThemeColors {
   tooltipText: string;
 }
 
+/**
+ * Recursively merges `override` onto `base`, matching JSON-merge semantics:
+ * plain objects are merged key-by-key at every depth; arrays, functions, and
+ * any other value type are replaced wholesale by `override`'s value. Used to
+ * deep-merge the raw `config` passthrough over the `Series`-generated config
+ * in `buildConfig()` so a nested key (e.g. `config.options.scales.y`) only
+ * overrides the keys it sets, rather than clobbering the whole generated
+ * sibling object (e.g. the rest of the generated `y` axis config).
+ */
+// `seen` guards against a circular `override` (e.g. `override.self = override`) recursing forever --
+// it must only cover the *active* recursion stack, not every override object ever merged. Entries
+// are removed once a call's own subtree finishes (see the `finally` below), so the guard only fires
+// while `override` is genuinely an ancestor of itself in the current call. Without that removal, the
+// same override object legitimately reused at two unrelated, already-finished config positions (e.g.
+// a shared axis-options object applied to both the x and y scale) would incorrectly reuse the first
+// position's merged result for the second, even though each was merged against a different base.
 function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unknown>()): T {
   if (typeof override === 'object' && override !== null) {
     const previous = seen.get(override);
@@ -99,9 +118,13 @@ function deepMerge<T>(base: T, override: unknown, seen = new WeakMap<object, unk
   }
   const result: Record<string, unknown> = { ...base };
   seen.set(override, result);
-  for (const key of Object.keys(override)) {
-    if (UNSAFE_KEYS.has(key)) continue;
-    result[key] = deepMerge((base as Record<string, unknown>)[key], override[key], seen);
+  try {
+    for (const key of Object.keys(override)) {
+      if (UNSAFE_KEYS.has(key)) continue;
+      result[key] = deepMerge((base as Record<string, unknown>)[key], override[key], seen);
+    }
+  } finally {
+    seen.delete(override);
   }
   return result as T;
 }
@@ -486,6 +509,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     );
   }
 
+  /** Localized chart-type name for `chartDescription()`'s sr-only summary. `effectiveType()` can
+   *  return a raw Chart.js type string a consumer set through the `config` passthrough (including a
+   *  custom registered controller name beyond this library's own `LyraChartType` union) -- that's
+   *  caller-supplied data, not library copy, so it passes through untranslated rather than through
+   *  `localize()`, matching every other known type's localized label. */
+  private localizedChartType(): string {
+    const type = this.effectiveType();
+    const key = CHART_TYPE_MESSAGE_KEYS[type as LyraChartType];
+    return key ? this.localize(key) : String(type);
+  }
+
   private buildConfig(): OptionalPeerApi {
     const theme = this.themeColors();
     // Resolve the effective type up front: `config.type` (if set) overrides
@@ -569,7 +603,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // internal metadata, separate from `chart.data.datasets` itself -- a full reassignment of
       // `chart.data` on every reactive update (as every live-polling consumer's parent naturally
       // produces) would otherwise silently reset every hidden series back to visible.
-      const priorVisibility = this.datasets.map((_, i) => this.chart!.isDatasetVisible(i));
+      // Only snapshot indices the chart already has metadata for -- `this.datasets` reflects the
+      // *new* series count, so mapping over it (instead of the chart's own prior dataset count)
+      // would query isDatasetVisible() for a not-yet-existing index, get back its "not explicitly
+      // visible" default, and then setDatasetVisibility(i, false) below would enforce that default
+      // as a real hidden state -- permanently hiding a series the moment it's added.
+      const priorDatasetCount = this.chart.data.datasets?.length ?? 0;
+      const priorVisibility = Array.from({ length: priorDatasetCount }, (_, i) => this.chart!.isDatasetVisible(i));
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');
@@ -650,10 +690,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     });
     return summaries.length
       ? this.localize('chartSummaryWithData', undefined, {
-          type: this.effectiveType(),
+          type: this.localizedChartType(),
           summaries: summaries.join('. '),
         })
-      : this.localize('chartSummaryEmpty', undefined, { type: this.effectiveType() });
+      : this.localize('chartSummaryEmpty', undefined, { type: this.localizedChartType() });
   }
 
   private renderDataTable(): TemplateResult {

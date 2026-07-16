@@ -31,4 +31,10 @@ describe('lyra-csv-viewer', () => {
     try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('lyra-virtual-list') !== null); expect(el.shadowRoot!.querySelector('[part="header-row"]')).to.not.exist; expect((el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[][] }).items).to.have.lengthOf(3); } finally { restore(); }
   });
   it('is accessible', async () => { const el = await fixture(html`<lyra-csv-viewer></lyra-csv-viewer>`); await expect(el).to.be.accessible(); });
+  it('uses name as the accessible name, falling back to a localized default', async () => {
+    const named = (await fixture(html`<lyra-csv-viewer name="quarterly.csv"></lyra-csv-viewer>`)) as LyraCsvViewer;
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('quarterly.csv');
+    const unnamed = (await fixture(html`<lyra-csv-viewer></lyra-csv-viewer>`)) as LyraCsvViewer;
+    expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('CSV document');
+  });
 });

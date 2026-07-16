@@ -165,6 +165,52 @@ describe('lyra-input', () => {
       await el.updateComplete;
       expect(el.checkValidity()).to.be.false;
     });
+
+    it('does not reassign native.value (and reset the caret) when it already agrees with the reactive value', async () => {
+      // Regression test for an unconditional `native.value = this.value` write on every keystroke:
+      // even when the two already agree, reassigning `.value` moves the caret to the end in every
+      // browser, so a user editing in the middle of a number got bounced to the end on every keypress.
+      const el = (await fixture(html`<lyra-input value="12345"></lyra-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      native.setSelectionRange(2, 2);
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+      expect(native.selectionStart).to.equal(2);
+    });
+
+    it('accepts step="any" instead of coercing to NaN and blocking decimals', async () => {
+      const el = (await fixture(
+        html`<lyra-input type="number" step="any" value="1.5"></lyra-input>`,
+      )) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(native.getAttribute('step')).to.equal('any');
+      expect(el.checkValidity()).to.be.true;
+    });
+  });
+
+  describe('touched state', () => {
+    it('reportValidity() on an untouched required input marks it invalid', async () => {
+      const el = (await fixture(html`<lyra-input required></lyra-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(native.getAttribute('aria-invalid')).to.equal('false');
+      el.reportValidity();
+      await el.updateComplete;
+      expect(native.getAttribute('aria-invalid')).to.equal('true');
+    });
+
+    it('clears touched (and aria-invalid) on form reset', async () => {
+      const form = (await fixture(html`
+        <form><lyra-input name="x" required></lyra-input></form>
+      `)) as HTMLFormElement;
+      const el = form.querySelector('lyra-input') as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      native.dispatchEvent(new Event('blur', { bubbles: true }));
+      await el.updateComplete;
+      expect(native.getAttribute('aria-invalid')).to.equal('true');
+      form.reset();
+      await el.updateComplete;
+      expect(native.getAttribute('aria-invalid')).to.equal('false');
+    });
   });
 
   it('is accessible', async () => {

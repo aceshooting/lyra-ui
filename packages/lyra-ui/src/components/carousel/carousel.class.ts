@@ -21,7 +21,9 @@ export interface LyraCarouselEventMap {
  * @csspart track - The slotted slide wrapper.
  * @csspart controls - Previous/next control row.
  * @csspart previous-button - Previous slide button.
+ * @csspart previous-glyph - The chevron glyph inside `previous-button`, mirrored under RTL.
  * @csspart next-button - Next slide button.
+ * @csspart next-glyph - The chevron glyph inside `next-button`, mirrored under RTL.
  * @csspart indicators - Indicator button group.
  * @csspart indicator - An individual slide indicator.
  */
@@ -137,10 +139,13 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowRight' || (event.key === 'ArrowLeft' && this.effectiveDirection === 'rtl')) {
+    const rtl = this.effectiveDirection === 'rtl';
+    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    if (event.key === forwardKey) {
       event.preventDefault();
       this.next();
-    } else if (event.key === 'ArrowLeft' || (event.key === 'ArrowRight' && this.effectiveDirection === 'rtl')) {
+    } else if (event.key === backwardKey) {
       event.preventDefault();
       this.previous();
     } else if (event.key === 'Home') {
@@ -175,15 +180,13 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
               aria-label=${previousLabel}
               ?disabled=${!this.loop && current === 0}
               @click=${this.previous}
-            >‹</button>
+            ><span part="previous-glyph" aria-hidden="true">‹</span></button>
             ${this.showIndicators
-              ? html`<div part="indicators" role="tablist" aria-label=${this.localize('carouselIndicators')}>
+              ? html`<div part="indicators" role="group" aria-label=${this.localize('carouselIndicators')}>
                   ${Array.from({ length: count }, (_, slideIndex) => html`<button
                     part="indicator"
                     type="button"
-                    role="tab"
                     aria-label=${this.localize('carouselGoTo', undefined, { index: slideIndex + 1 })}
-                    aria-selected=${slideIndex === current ? 'true' : 'false'}
                     aria-current=${slideIndex === current ? 'true' : 'false'}
                     @click=${() => this.goTo(slideIndex)}
                   ></button>`)}
@@ -195,7 +198,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
               aria-label=${nextLabel}
               ?disabled=${!this.loop && current === count - 1}
               @click=${this.next}
-            >›</button>
+            ><span part="next-glyph" aria-hidden="true">›</span></button>
           </div>`
         : nothing}
     </section>`;

@@ -2903,14 +2903,10 @@ focused). `detail: { datasetIndex: number, index: number, label: string | undefi
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.
 
-**Performance:** rendering is `IntersectionObserver`-gated and content-signature-memoized — `render()`
-skips recomputing the grid/marks (and reuses the previous `TemplateResult`) while the host is scrolled
-off-screen, or when none of the content-affecting properties (`type`, `labels`, `datasets`, `legend`,
-`xLabel`, `yLabel`, `beginAtZero`, `stacked`, `layout`, `barWidth`, `maxLabels`, or the measured plot
-size) have changed since the last render. A `tickFormat`/`barX` identity change alone (with everything
-else unchanged) does not force a redraw — in practice both are stable across a component's lifetime,
-and any data change that would make a different output visible already changes `datasets`/`labels`
-too.
+**Performance:** `render()` recomputes the grid/marks on every update rather than memoizing against a
+content signature — `datasets`/`labels` can hold callbacks (`tickFormat`, `barX`) or arbitrary,
+possibly circular or BigInt-bearing application data that a fingerprint can't serialize safely, so a
+fresh, small SVG render is cheaper and more correct than a lossy cache.
 
 **Slots:** none.
 
@@ -8068,9 +8064,10 @@ Fetches tab-, pipe-, or delimiter-separated text and renders an accessible table
 
 **Optional peer dependency:** `papaparse`.
 
-Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns;
-exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
-the table.
+Remote resources are capped at 25 MB, and the parsed table at 1,000 rows and 1,000 columns (lower
+than `lyra-csv-viewer`/`lyra-spreadsheet-viewer`'s shared 10,000-row cap, since this component renders
+every row into a real, non-virtualized `<table>` in one synchronous pass); exceeding any of these
+surfaces the localized `documentPreviewResourceTooLarge` message instead of the table.
 
 ## `lyra-contact-viewer`
 

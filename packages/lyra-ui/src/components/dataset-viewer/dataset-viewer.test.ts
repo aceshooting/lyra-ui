@@ -21,6 +21,16 @@ describe('lyra-dataset-viewer', () => {
       await el.updateComplete;
       expect(Array.from(el.shadowRoot!.querySelectorAll('thead th')).map((th) => th.textContent)).to.deep.equal(['name', 'age', 'city']);
       expect(el.shadowRoot!.querySelectorAll('tbody tr')).to.have.length(2);
+      expect(el.shadowRoot!.querySelector('caption')!.textContent).to.equal('Data: 2 rows');
+    } finally { window.fetch = original; }
+  });
+  it('falls back to the count-only caption when name is unset', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(TAB_DATA))) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/a.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      await aTimeout(20);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
       expect(el.shadowRoot!.querySelector('caption')!.textContent).to.equal('2 rows');
     } finally { window.fetch = original; }
   });
@@ -31,6 +41,21 @@ describe('lyra-dataset-viewer', () => {
       const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/empty.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
       await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
       expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This dataset has no rows.');
+    } finally { window.fetch = original; }
+  });
+  it('enforces a row cap well below the shared 10,000-row default, since it renders unvirtualized', async () => {
+    // This component renders every row into a real <table> in one synchronous pass rather than
+    // through <lyra-virtual-list> like csv-viewer/spreadsheet-viewer, so it enforces a much lower
+    // cap than the shared default -- 1,000 rows here should already be rejected.
+    const original = window.fetch;
+    const header = 'a\tb\n';
+    const body = Array.from({ length: 1_001 }, () => '1\t2').join('\n');
+    window.fetch = (() => Promise.resolve(response(header + body))) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/big.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
+      expect(el.shadowRoot!.querySelector('[role="alert"]')).to.exist;
+      expect(el.shadowRoot!.querySelector('[part="table"]')).to.not.exist;
     } finally { window.fetch = original; }
   });
   it('rejects unsafe URLs', async () => {

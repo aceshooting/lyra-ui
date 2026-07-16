@@ -48,6 +48,9 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private _name = '';
   private _value = 'on';
   private _fieldsetDisabled = false;
+  private _groupDisabled = false;
+  private _groupRequired = false;
+  private _tabbable = true;
 
   get checked(): boolean { return this._checked; }
   set checked(value: boolean) {
@@ -88,7 +91,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.syncFormState();
     this.requestUpdate('value', old);
   }
-  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
+  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled || this._groupDisabled; }
+  get effectiveRequired(): boolean { return this.required || this._groupRequired; }
   get form(): HTMLFormElement | null { return this.internals.form; }
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
@@ -114,9 +118,34 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   private updateValidity(): void {
     this.validityController.setValidity(
-      this.required && !this.checked ? { valueMissing: true } : {},
+      this.effectiveRequired && !this.checked ? { valueMissing: true } : {},
       this.localize('radioRequired'),
     );
+  }
+  /** @internal Driven by an owning `<lyra-radio-group>`; released when the radio leaves the group's control. */
+  setGroupDisabled(value: boolean): void {
+    if (this._groupDisabled === value) return;
+    this._groupDisabled = value;
+    this.requestUpdate();
+  }
+  /** @internal Driven by an owning `<lyra-radio-group>`; released when the radio leaves the group's control. */
+  setGroupRequired(value: boolean): void {
+    if (this._groupRequired === value) return;
+    this._groupRequired = value;
+    this.updateValidity();
+    this.requestUpdate();
+  }
+  /** @internal Roving-tabindex state driven by an owning `<lyra-radio-group>`. */
+  setGroupTabbable(value: boolean): void {
+    if (this._tabbable === value) return;
+    this._tabbable = value;
+    this.requestUpdate();
+  }
+  override focus(options?: FocusOptions): void {
+    this[VALIDITY_ANCHOR]()?.focus(options);
+  }
+  override blur(): void {
+    this[VALIDITY_ANCHOR]()?.blur();
   }
   private syncFormState(): void {
     this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
@@ -151,10 +180,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   render(): TemplateResult {
     return html`
-      <span part="base" role="radio" tabindex=${this.effectiveDisabled ? '-1' : '0'}
+      <span part="base" role="radio" tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
         aria-checked=${this.checked ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-        aria-required=${this.required ? 'true' : 'false'}
+        aria-required=${this.effectiveRequired ? 'true' : 'false'}
         aria-label=${this.getAttribute('aria-label') || nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         <span part="circle">${this.checked ? html`<span part="dot"></span>` : nothing}</span>

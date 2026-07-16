@@ -728,8 +728,20 @@ it('falls back to the built-in raw-value tooltip/aria-label text when pointText 
     .datasets=${[{ label: 'S', data: [42] }]}
   ></lyra-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
-  expect(rect.querySelector('title')!.textContent).to.equal('S — a: 42');
+  expect(rect.querySelector('title')!.textContent).to.equal('S, a: 42');
   expect(rect.getAttribute('aria-label')).to.equal('S, a: 42');
+});
+
+it('formats the built-in bar/point label through localize() and Intl instead of a hard-coded template', async () => {
+  const el = await mount(html`<lyra-lite-chart
+    type="bar"
+    .labels=${['a']}
+    .datasets=${[{ label: 'S', data: [1234.5] }]}
+  ></lyra-lite-chart>`);
+  const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  const expected = `S, a: ${new Intl.NumberFormat(el.effectiveLocale).format(1234.5)}`;
+  expect(rect.getAttribute('aria-label')).to.equal(expected);
+  expect(rect.querySelector('title')!.textContent).to.equal(expected);
 });
 
 // --- roundedBars ----------------------------------------------------------------
@@ -1142,7 +1154,14 @@ it('positions y-axis labels and title at logical start in RTL', async () => {
   const tick = el.shadowRoot!.querySelector('[part="axis-label"]')!;
   const title = el.shadowRoot!.querySelector('[part="axis-title"]')!;
   expect(Number(tick.getAttribute('x'))).to.be.greaterThan(Number(gridLine.getAttribute('x2')));
-  expect(tick.getAttribute('text-anchor')).to.equal('start');
+  // `text-anchor="end"` in both directions -- SVG's start/end keywords already mirror with the
+  // inherited `direction: rtl`, so a conditional here would double-mirror and paint the label back
+  // across the gridlines instead of out into the gutter. Assert the actual rendered geometry (not
+  // just the attribute) so a regression that flips this again is caught even if some future anchor
+  // value happens to still read as a string.
+  expect(tick.getAttribute('text-anchor')).to.equal('end');
+  const tickBox = (tick as SVGTextElement).getBBox();
+  expect(tickBox.x).to.be.greaterThanOrEqual(Number(gridLine.getAttribute('x2')));
   expect(Number(title.getAttribute('x'))).to.be.greaterThan(160);
   expect(title.getAttribute('transform')).to.contain('rotate(90');
 });

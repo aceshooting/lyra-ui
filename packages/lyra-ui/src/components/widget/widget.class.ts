@@ -81,6 +81,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   static styles = [LyraElement.styles, styles];
 
   @property() label = '';
+  /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
+   *  slotted `label`. Fed only by a host `aria-label`, matching `lyra-scroller`'s/`lyra-carousel`'s
+   *  own host-override pattern. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() sublabel = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
   @property({ type: Boolean, reflect: true }) collapsed = false;
@@ -111,6 +115,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @state() private hasActionsSlot = false;
   @state() private hasIconSlot = false;
   @state() private hasLabelSlot = false;
+  /** Text content of a slotted `label`, so the fullscreen dialog's accessible name can see rich
+   *  slotted label content the same way it already sees the plain `label` property. */
+  @state() private labelSlotText?: string;
   @state() private hasSublabelSlot = false;
 
   private releaseScrollLock?: () => void;
@@ -122,7 +129,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
       this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
-      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      const labelChildren = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'label');
+      this.hasLabelSlot = labelChildren.length > 0;
+      this.labelSlotText = labelChildren.map((el) => el.textContent?.trim()).filter(Boolean).join(' ') || undefined;
       this.hasSublabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sublabel');
     }
     if (changed.has('fullscreen')) {
@@ -216,7 +225,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
 
   private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    this.hasLabelSlot = assigned.length > 0;
+    this.labelSlotText = assigned.map((el) => el.textContent?.trim()).filter(Boolean).join(' ') || undefined;
   };
 
   private onSublabelSlotChange = (e: Event): void => {
@@ -276,7 +287,9 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         part="base"
         role=${this.fullscreen ? 'dialog' : nothing}
         aria-modal=${this.fullscreen ? 'true' : nothing}
-        aria-label=${this.fullscreen ? (hasLabel ? this.label : this.localize('widgetFullscreenPanel')) : nothing}
+        aria-label=${this.fullscreen
+          ? this.accessibleLabel || this.label || this.labelSlotText || this.localize('widgetFullscreenPanel')
+          : nothing}
         tabindex=${this.fullscreen ? '-1' : nothing}
         style=${this.fullscreenInset ? `--lyra-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
       >
@@ -322,7 +335,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
                 aria-label=${this.collapsed ? this.localize('dockPanelExpand') : this.localize('dockPanelCollapse')}
                 aria-controls=${this.bodyId}
-                style="transform:rotate(${this.collapsed ? '0deg' : '90deg'})"
                 @click=${this.toggleCollapsed}
               >
                 <slot name="collapse-icon">${chevronIcon()}</slot>

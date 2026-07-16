@@ -6,6 +6,7 @@ import { safeFetchUrl } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import '../virtual-list/virtual-list.js';
+import '../skeleton/skeleton.js';
 import { loadPdfJs, type PdfJsApi } from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
 
@@ -62,6 +63,11 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
   @property({ type: Number, reflect: true }) zoom = 1;
 
   @state() private loadState: PdfLoadState = { kind: 'idle' };
+  /** True while `page` was last set by the user scrolling the page list rather than by
+   *  `nextPage()`/`previousPage()`/an explicit `page` assignment. `renderBody()` withholds
+   *  `activeId` in that case so `<lyra-virtual-list>` doesn't `scrollActiveIntoView()` back to a
+   *  page boundary on every scroll-driven page crossing, fighting the user's own scroll. */
+  @state() private scrollDrivenPage = false;
   private loadLibrary: () => Promise<PdfJsApi | null> = loadPdfJs;
   private generation = 0;
   private readonly pageCanvases = new Map<number, HTMLCanvasElement>();
@@ -73,6 +79,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
 
   protected willUpdate(changed: PropertyValues): void {
     if (changed.has('page')) this.page = this.clampPage(this.page);
+    if (changed.has('page') && !changed.has('scrollDrivenPage')) this.scrollDrivenPage = false;
     if (changed.has('zoom')) {
       this.zoom = clampZoom(this.zoom);
       for (const [pageNumber, canvas] of this.pageCanvases) void this.renderPage(pageNumber, canvas);
@@ -85,7 +92,9 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     if (changed.has('page') && this.loadState.kind === 'ready') {
       this.emit('lyra-page-change', { page: this.page, pageCount: this.loadState.pageCount });
     }
-    if (changed.has('zoom')) this.emit('lyra-zoom-change', { zoom: this.zoom });
+    // `changed.get('zoom')` is `undefined` on the very first update (there was no prior value to
+    // diff against), so this only fires for a real, user- or API-driven zoom change, not on mount.
+    if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lyra-zoom-change', { zoom: this.zoom });
   }
 
   disconnectedCallback(): void {
@@ -96,6 +105,14 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     this.textLayers.clear();
     this.pageCanvases.clear();
     this.textLayerContainers.clear();
+    this.destroyLoadedDoc();
+  }
+
+  /** Releases the current PDF.js document's worker and buffered pages before replacing or dropping
+   *  `loadState` — `PDFDocumentProxy` is not garbage-collected on its own; every `src` change and
+   *  every disconnect must explicitly `destroy()` the previous document or it (and its worker) leaks. */
+  private destroyLoadedDoc(): void {
+    if (this.loadState.kind === 'ready') void this.loadState.doc.destroy?.();
   }
 
   private clampPage(value: number): number {
@@ -107,6 +124,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
   private async load(): Promise<void> {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
+    this.destroyLoadedDoc();
     if (!this.src) {
       this.loadState = { kind: 'idle' };
       return;
@@ -138,8 +156,8 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     }
   }
 
-  nextPage(): void { this.setPage(this.page + 1); }
-  previousPage(): void { this.setPage(this.page - 1); }
+  nextPage(): void { this.scrollDrivenPage = false; this.setPage(this.page + 1); }
+  previousPage(): void { this.scrollDrivenPage = false; this.setPage(this.page - 1); }
   zoomIn(): void { this.setZoom(this.zoom + ZOOM_STEP); }
   zoomOut(): void { this.setZoom(this.zoom - ZOOM_STEP); }
 
@@ -184,7 +202,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
     if (container) {
       container.style.width = `${viewport.width}px`;
       container.style.height = `${viewport.height}px`;
-      container.style.transform = `translateX(-50%)`;
+      container.style.setProperty('--total-scale-factor', String(this.zoom));
     }
     const canvasContext = canvas.getContext('2d');
     if (!canvasContext) return;
@@ -203,7 +221,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
 
   private async renderTextLayer(pageNumber: number, page: PdfJsApi, viewport: PdfJsApi): Promise<void> {
     const container = this.textLayerContainers.get(pageNumber);
-    if (!container || !page.streamTextContent || !this.loadState.kind) return;
+    if (!container || !page.streamTextContent || this.loadState.kind !== 'ready') return;
     const pdfjsLib = await this.loadLibrary();
     if (!pdfjsLib || !pdfjsLib.TextLayer || this.textLayerContainers.get(pageNumber) !== container) return;
     container.replaceChildren();
@@ -257,23 +275,27 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
   };
 
   private onVisibleRangeChanged = (event: CustomEvent<{ start: number }>): void => {
-    if (this.loadState.kind === 'ready') this.setPage(event.detail.start + 1);
+    if (this.loadState.kind !== 'ready') return;
+    const next = this.clampPage(event.detail.start + 1);
+    if (next === this.page) return;
+    this.scrollDrivenPage = true;
+    this.page = next;
   };
 
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'ready': {
         const items = Array.from({ length: this.loadState.pageCount }, (_unused, index) => index + 1);
-        return html`${this.renderToolbar()}<lyra-virtual-list part="pages" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.page} @lyra-visible-range-changed=${this.onVisibleRangeChanged}></lyra-virtual-list>`;
+        return html`${this.renderToolbar()}<lyra-virtual-list part="pages" .items=${items} .renderItem=${this.renderPageItem} .keyFunction=${(item: unknown) => item as number} .activeId=${this.scrollDrivenPage ? '' : this.page} @lyra-visible-range-changed=${this.onVisibleRangeChanged}></lyra-virtual-list>`;
       }
-      case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
+      case 'loading': return html`<div part="spinner"><lyra-skeleton variant="rect" label=${this.localize('loadingDocument')}></lyra-skeleton></div>`;
       case 'error': return html`<div part="error" role="alert">${this.loadState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
   }
 
   render(): TemplateResult {
-    return html`<div part="base" aria-label=${this.name || this.localize('pdfViewerLabel')}>${this.renderBody()}</div>`;
+    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('pdfViewerLabel')}>${this.renderBody()}</div>`;
   }
 }
 

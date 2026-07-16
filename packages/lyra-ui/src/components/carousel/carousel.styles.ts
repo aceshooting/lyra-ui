@@ -78,4 +78,8 @@ export const styles = css`
     block-size: var(--lyra-size-0-5rem);
     padding: 0;
   }
+  :host(:dir(rtl)) [part='previous-glyph'],
+  :host(:dir(rtl)) [part='next-glyph'] {
+    transform: scaleX(-1);
+  }
 `;

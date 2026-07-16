@@ -95,6 +95,24 @@ it('filters rows through the built-in filter field and emits the requested text'
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
 });
 
+it('filters without throwing over rows containing a circular reference or a BigInt', async () => {
+  const cyclic: Record<string, unknown> = { id: 'c', name: 'Circular', score: 5n as unknown as number };
+  cyclic.self = cyclic;
+  const el = (await fixture(html`<lyra-table filterable></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = [...rows, cyclic as unknown as Row];
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  input.value = 'beta';
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
+});
+
 it('paginates client-side rows and emits controlled page requests', async () => {
   const el = (await fixture(html`<lyra-table page-size="1"></lyra-table>`)) as LyraTable<Row>;
   el.columns = columns;

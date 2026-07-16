@@ -82,6 +82,28 @@ function encodeKey(key: string | number): string {
   return `${typeof key}:${key}`;
 }
 
+/** The default (no `filter` prop) row-matching haystack. A bare `JSON.stringify(row)` throws on a
+ *  circular reference (a parent pointer, a graph node -- ordinary shapes for this library's target
+ *  data) or a BigInt field, which would otherwise escape from `willUpdate()`/`render()` and stop the
+ *  table from rendering entirely. The replacer downgrades BigInt to its decimal string and a repeat
+ *  visit to an already-seen container to `'[Circular]'`; a row that still can't be serialized (a
+ *  hostile `toJSON()`, for instance) simply falls back to never matching rather than throwing. */
+function safeStringifyForFilter(row: unknown): string {
+  const seen = new WeakSet<object>();
+  try {
+    return JSON.stringify(row, (_key, value) => {
+      if (typeof value === 'bigint') return value.toString();
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) return '[Circular]';
+        seen.add(value);
+      }
+      return value;
+    }) ?? '';
+  } catch {
+    return '';
+  }
+}
+
 /** Whether `target` (or an ancestor up to the delegated listener's own
  *  `<table>`, exclusive) is a custom element — i.e. any tag containing a
  *  hyphen, the one universal rule every custom element name must follow —
@@ -203,6 +225,10 @@ export interface LyraTableEventMap<T = unknown> {
  * @event lyra-filter-change - The filter field changed. `detail: { text }`.
  * @event lyra-page-change - A pagination control requested a page. `detail: { page }`.
  * @event lyra-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
+ * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
+ *   bubbling and composed (unlike the native event, which is neither).
+ * @event blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
+ *   the same reason as `focus`.
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
  * @csspart head - The `<thead>` element.
@@ -213,8 +239,6 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
  * @csspart cell-editor - The native inline cell editor, shown after a double-click on an editable cell.
- * @csspart group-row - A non-focusable group header row.
- * @csspart group-cell - The group header cell.
  * @csspart more-button - The "load more" control, shown when `hasMore` is true.
  * @csspart sort-icon - The chevron shown in the active sortable column's header cell.
  * @csspart reveal-columns-button - The button that toggles `priority`-hidden columns back into view.
@@ -230,6 +254,7 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart group-row - A non-focusable group header row.
  * @csspart group-cell - The full-width group header cell.
  * @csspart filter - The optional row-filter input.
+ * @csspart filter-label - The `<label>` wrapping the filter input.
  * @csspart loading - The loading-state wrapper.
  * @csspart pagination - The optional pagination component.
  */
@@ -428,16 +453,27 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return this.rowKey ? this.rowKey(row) : index;
   }
 
+  /** Memoized for the duration of a single update cycle — `willUpdate()` invalidates the cache, but
+   *  this method itself is read (directly or transitively, via `matchingTotalItems`/`pageCount`/
+   *  `appliedPage`/`renderedEntries()`) around a dozen times across one `willUpdate()` + `render()`
+   *  pass. Recomputing from scratch each time re-runs the `JSON.stringify()`-per-row default filter
+   *  that many times over; memoizing collapses that to a single pass per update. */
+  private cachedMatchingEntries: Array<{ row: T; index: number }> | null = null;
   private matchingEntries(): Array<{ row: T; index: number }> {
+    if (this.cachedMatchingEntries) return this.cachedMatchingEntries;
     const text = this.filterText.trim();
-    if (text === '') return this.rows.map((row, index) => ({ row, index }));
+    if (text === '') {
+      this.cachedMatchingEntries = this.rows.map((row, index) => ({ row, index }));
+      return this.cachedMatchingEntries;
+    }
     const normalized = text.toLocaleLowerCase(this.effectiveLocale);
-    return this.rows.flatMap((row, index) => {
+    this.cachedMatchingEntries = this.rows.flatMap((row, index) => {
       const matches = this.filter
         ? this.filter(row, text)
-        : JSON.stringify(row).toLocaleLowerCase(this.effectiveLocale).includes(normalized);
+        : safeStringifyForFilter(row).toLocaleLowerCase(this.effectiveLocale).includes(normalized);
       return matches ? [{ row, index }] : [];
     });
+    return this.cachedMatchingEntries;
   }
 
   private get normalizedPageSize(): number {
@@ -506,6 +542,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   protected willUpdate(changed: PropertyValues): void {
+    this.cachedMatchingEntries = null;
     if (
       changed.has('rows') ||
       changed.has('rowKey') ||
@@ -873,13 +910,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             part="table"
             role="grid"
             aria-label=${this.getAttribute('aria-label') || nothing}
+            aria-multiselectable=${this.selectionMode === 'multiple' ? 'true' : nothing}
             ?data-has-column-widths=${hasColumnWidths}
             @click=${this.onTableClick}
             @keydown=${this.onTableKeyDown}
             @dblclick=${this.onTableDoubleClick}
           >
             <colgroup>
-              ${hasExpand ? html`<col style=${styleMap({ 'inline-size': '2.5rem' })} />` : nothing}
+              ${hasExpand ? html`<col style=${styleMap({ 'inline-size': 'var(--lyra-icon-button-size)' })} />` : nothing}
               ${this.columns.map(
                 (col) =>
                   html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,

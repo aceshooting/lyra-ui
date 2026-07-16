@@ -5,7 +5,7 @@ import { safeFetchUrl } from '../../internal/safe-url.js';
 import { assertTableSize, isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import '../virtual-list/virtual-list.js';
-import { loadPapaParseCached, type PapaParseApi } from './csv-loader.js';
+import { loadPapaParseCached, type PapaParseApi } from '../../internal/papaparse-loader.js';
 import { styles } from './csv-viewer.styles.js';
 
 type CsvState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; rows: unknown[][] } | { kind: 'error'; message: string };
@@ -19,7 +19,7 @@ export class LyraCsvViewer extends LyraElement<LyraCsvViewerEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
-  /** Source filename or display name. */
+  /** Source filename or display name, used as the viewer's accessible name. */
   @property() name = '';
   /** Whether the first parsed row is rendered as a sticky header. */
   @property({ type: Boolean, attribute: 'has-header-row' }) hasHeaderRow = true;
@@ -74,7 +74,7 @@ export class LyraCsvViewer extends LyraElement<LyraCsvViewerEventMap> {
     } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
     else if (this.fetchState.kind === 'error') content = html`<div part="error" role="alert">${this.fetchState.message}</div>`;
     else content = html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
-    return html`<div part="base">${content}</div>`;
+    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('csvViewerLabel')}>${content}</div>`;
   }
 }
 

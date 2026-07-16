@@ -20,7 +20,7 @@ export const styles = css`
     gap: var(--lyra-space-s);
     padding: var(--lyra-space-s);
     border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
-    color: var(--lyra-color-text-muted);
+    color: var(--lyra-color-text-quiet);
     font-size: var(--lyra-font-size-md-sm);
   }
   [part='filter'] {
@@ -196,6 +196,12 @@ export const styles = css`
   [part='row-expand-toggle'][aria-expanded='true'] [part='row-expand-icon'] {
     transform: rotate(90deg);
   }
+  :host(:dir(rtl)) [part='row-expand-icon'] {
+    transform: rotate(180deg);
+  }
+  :host(:dir(rtl)) [part='row-expand-toggle'][aria-expanded='true'] [part='row-expand-icon'] {
+    transform: rotate(90deg);
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='row-expand-icon'] {
       transition: none !important;
@@ -232,6 +238,17 @@ export const styles = css`
     inset-inline-start: auto;
     inset-inline-end: var(--lyra-table-sticky-offset, 0);
     box-shadow: calc(-1 * var(--lyra-size-1px)) 0 0 0 var(--lyra-color-border);
+  }
+  /* box-shadow's X offset is a physical (not logical) value, so it must flip explicitly under RTL:
+     a 'start'-pinned column sits on the *right* edge in RTL with content scrolling underneath from
+     the left, so its seam belongs on the left (negative X) -- the mirror image of each rule above. */
+  :host(:dir(rtl)) [part='header-cell'][data-sticky],
+  :host(:dir(rtl)) [part='cell'][data-sticky] {
+    box-shadow: calc(-1 * var(--lyra-size-1px)) 0 0 0 var(--lyra-color-border);
+  }
+  :host(:dir(rtl)) [part='header-cell'][data-sticky='end'],
+  :host(:dir(rtl)) [part='cell'][data-sticky='end'] {
+    box-shadow: var(--lyra-size-1px) 0 0 0 var(--lyra-color-border);
   }
   [part='foot'] {
     position: sticky;

@@ -177,6 +177,7 @@ export type LyraMessageKey =
   | 'datasetViewerMissingParser'
   | 'datasetViewerEmpty'
   | 'datasetViewerCaption'
+  | 'datasetViewerCaptionNamed'
   | 'contactViewerNoContacts'
   | 'contactViewerUnnamedContact'
   | 'contactViewerPhoneLabel'
@@ -209,6 +210,14 @@ export type LyraMessageKey =
   | 'chartSummaryEmpty'
   | 'chartData'
   | 'chart'
+  | 'chartTypeLine'
+  | 'chartTypeBar'
+  | 'chartTypeScatter'
+  | 'chartTypePie'
+  | 'chartTypeDoughnut'
+  | 'chartTypeRadar'
+  | 'chartTypePolarArea'
+  | 'chartTypeBubble'
   | 'boxPlotSeriesSummary'
   | 'boxPlotSummaryWithData'
   | 'boxPlotSummaryEmpty'
@@ -223,6 +232,7 @@ export type LyraMessageKey =
   | 'histogramFrequency'
   | 'liteChartMarkPosition'
   | 'liteChartMarkSummary'
+  | 'liteChartBarLabel'
   | 'composerLabel'
   | 'textareaLabel'
   | 'citation'
@@ -410,7 +420,9 @@ export type LyraMessageKey =
   | 'pdfViewerPreviousPage'
   | 'pdfViewerNextPage'
   | 'spreadsheetViewerUnavailable'
-  | 'csvViewerUnavailable';
+  | 'csvViewerUnavailable'
+  | 'csvViewerLabel'
+  | 'spreadsheetViewerLabel';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -588,6 +600,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   datasetViewerMissingParser: 'This viewer needs the optional "papaparse" package installed to parse this file.',
   datasetViewerEmpty: 'This dataset has no rows.',
   datasetViewerCaption: '{count} rows',
+  datasetViewerCaptionNamed: '{name}: {count} rows',
   contactViewerNoContacts: 'No contacts found in this file.',
   contactViewerUnnamedContact: 'Unnamed contact',
   contactViewerPhoneLabel: 'Phone',
@@ -620,6 +633,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   chartSummaryEmpty: '{type} chart with no data.',
   chartData: 'Chart data',
   chart: 'Chart',
+  chartTypeLine: 'Line',
+  chartTypeBar: 'Bar',
+  chartTypeScatter: 'Scatter',
+  chartTypePie: 'Pie',
+  chartTypeDoughnut: 'Doughnut',
+  chartTypeRadar: 'Radar',
+  chartTypePolarArea: 'Polar area',
+  chartTypeBubble: 'Bubble',
   boxPlotSeriesSummary: '{label}: {count} distributions, median range {min} to {max}, {trend} median trend',
   boxPlotSummaryWithData: 'Box plot. {summaries}.',
   boxPlotSummaryEmpty: 'Box plot with no data.',
@@ -634,6 +655,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   histogramFrequency: 'Frequency',
   liteChartMarkPosition: '({index} of {total})',
   liteChartMarkSummary: '{series}, {label}: {value} ({index} of {total})',
+  liteChartBarLabel: '{series}, {label}: {value}',
   composerLabel: 'Message',
   textareaLabel: 'Text',
   citation: 'Citation {index}',
@@ -665,6 +687,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   archiveViewerFile: 'File',
   spreadsheetViewerUnavailable: 'Spreadsheet preview is unavailable.',
   csvViewerUnavailable: 'CSV preview is unavailable.',
+  csvViewerLabel: 'CSV document',
+  spreadsheetViewerLabel: 'Spreadsheet',
   documentPreviewTypeDataset: 'dataset',
   documentPreviewTypeContact: 'contact',
   download: 'Download',

@@ -48,4 +48,10 @@ describe('lyra-spreadsheet-viewer', () => {
   });
 
   it('is accessible', async () => { const el = await fixture(html`<lyra-spreadsheet-viewer></lyra-spreadsheet-viewer>`); await expect(el).to.be.accessible(); });
+  it('uses name as the accessible name, falling back to a localized default', async () => {
+    const named = (await fixture(html`<lyra-spreadsheet-viewer name="quarterly.xlsx"></lyra-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('quarterly.xlsx');
+    const unnamed = (await fixture(html`<lyra-spreadsheet-viewer></lyra-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Spreadsheet');
+  });
 });
