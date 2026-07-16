@@ -17,7 +17,9 @@ export const styles = css`
     inset-inline-start: 50%;
     transform: translateX(-50%);
     overflow: hidden;
-    line-height: 1;
+    /* Must resolve to 1: PDF.js positions each text run assuming the line box
+       exactly equals the glyph height, so selection aligns with the canvas. */
+    line-height: var(--lyra-line-height-none);
     opacity: 1;
   }
   :host(:dir(rtl)) [part='text-layer'] { transform: translateX(50%); }
