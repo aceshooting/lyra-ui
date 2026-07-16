@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
@@ -47,12 +47,12 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadHtmlSanitizer();
-      if (!sanitizer) throw new Error(this.localize('documentViewerMissingSanitizer'));
+      if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
       const markup = sanitizer.sanitize(await readResponseText(response));
       if (generation === this.generation) this.fetchState = { kind: 'loaded', markup };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }

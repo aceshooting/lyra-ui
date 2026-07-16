@@ -2,7 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
-import { assertTableSize, isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
+import { assertTableDimensions, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../internal/resource-loader.js';
 import { srOnly } from '../../internal/a11y.js';
 import { loadPapaParse } from './dataset-loader.js';
 import { styles } from './dataset-viewer.styles.js';
@@ -42,18 +42,18 @@ export class LyraDatasetViewer extends LyraElement<LyraDatasetViewerEventMap> {
       if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', table };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }
 
   private async parse(text: string): Promise<DatasetTable> {
     const papa = await loadPapaParse();
-    if (!papa) throw new Error(this.localize('datasetViewerMissingParser'));
+    if (!papa) throw new LyraUserFacingError(this.localize('datasetViewerMissingParser'));
     const result = papa.parse(text, { delimiter: '', header: true, skipEmptyLines: true }) as { data: Record<string, string>[]; meta: { fields?: string[] } };
     const fields = result.meta.fields ?? [];
-    if (!fields.length || !result.data.length) throw new Error(this.localize('datasetViewerEmpty'));
-    assertTableSize([fields, ...result.data.map((row) => fields.map((field) => row[field]))]);
+    if (!fields.length || !result.data.length) throw new LyraUserFacingError(this.localize('datasetViewerEmpty'));
+    assertTableDimensions(result.data.length, fields.length);
     return { fields, rows: result.data };
   }
 

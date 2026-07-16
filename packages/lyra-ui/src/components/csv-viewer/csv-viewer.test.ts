@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './csv-viewer.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 
@@ -11,6 +11,19 @@ describe('lyra-csv-viewer', () => {
     const el = (await fixture(html`<lyra-csv-viewer></lyra-csv-viewer>`)) as LyraCsvViewer;
     const restore = fetchText('Name,Notes\nAda,"Wrote notes on the ""Engine"", 1843"');
     try { el.src = 'https://example.test/people.csv'; await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null); expect((el.shadowRoot!.querySelector('lyra-virtual-list') as HTMLElement & { items: unknown[][] }).items[0]).to.deep.equal(['Ada', 'Wrote notes on the "Engine", 1843']); } finally { restore(); }
+  });
+  it('loads a src that changed while detached once it is reconnected', async () => {
+    const el = (await fixture(html`<lyra-csv-viewer></lyra-csv-viewer>`)) as LyraCsvViewer;
+    const parent = el.parentElement!;
+    const restore = fetchText(CSV);
+    try {
+      el.remove();
+      await aTimeout(0);
+      el.src = 'https://example.test/detached.csv';
+      await aTimeout(0);
+      parent.append(el);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null, 'src set while detached was never loaded after reconnect');
+    } finally { restore(); }
   });
   it('can treat every row as data through a false property binding', async () => {
     const el = (await fixture(html`<lyra-csv-viewer .hasHeaderRow=${false}></lyra-csv-viewer>`)) as LyraCsvViewer;

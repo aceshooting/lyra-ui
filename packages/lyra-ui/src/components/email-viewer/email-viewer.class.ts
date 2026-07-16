@@ -4,7 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { srOnly } from '../../internal/a11y.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer } from '../../internal/resource-loader.js';
 import { formatFileSize } from '../attachment-chip/attachment-chip.class.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
@@ -80,14 +80,14 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
       if (generation === this.generation) this.fetchState = { kind: 'loaded', email };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
-      this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
+      this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lyra-render-error', { error });
     }
   }
 
   private async parse(buffer: ArrayBuffer): Promise<ParsedEmail> {
     const { PostalMime, DOMPurify } = await loadEmailDeps();
-    if (!PostalMime) throw new Error(this.localize('emailViewerMissingParser'));
+    if (!PostalMime) throw new LyraUserFacingError(this.localize('emailViewerMissingParser'));
     const parsed = await PostalMime.parse(buffer);
     const bodyHtml = parsed.html && DOMPurify ? (DOMPurify.sanitize(parsed.html) as string) : null;
     const content = parsed.attachments ?? [];

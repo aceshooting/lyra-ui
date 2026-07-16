@@ -30,6 +30,12 @@ function validateLimit(limit: number): number {
   return Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : DEFAULT_MAX_RESOURCE_BYTES;
 }
 
+/** Rejects tabular dimensions before the data is retained or rendered. */
+export function assertTableDimensions(rowCount: number, columnCount: number, maxRows = DEFAULT_MAX_TABLE_ROWS, maxColumns = DEFAULT_MAX_TABLE_COLUMNS): void {
+  if (rowCount > maxRows) throw new LyraResourceLimitError('The table contains too many rows.');
+  if (columnCount > maxColumns) throw new LyraResourceLimitError('The table contains too many columns.');
+}
+
 /** Rejects parsed tabular data before it is retained or rendered. */
 export function assertTableSize(rows: readonly unknown[][], maxRows = DEFAULT_MAX_TABLE_ROWS, maxColumns = DEFAULT_MAX_TABLE_COLUMNS): void {
   if (rows.length > maxRows) throw new LyraResourceLimitError('The table contains too many rows.');

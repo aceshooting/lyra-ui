@@ -24,6 +24,15 @@ describe('lyra-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelector('caption')!.textContent).to.equal('2 rows');
     } finally { window.fetch = original; }
   });
+  it('surfaces its own localized diagnostic rather than the generic failure', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('name\tage\tcity'))) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/empty.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
+      expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This dataset has no rows.');
+    } finally { window.fetch = original; }
+  });
   it('rejects unsafe URLs', async () => {
     const el = (await fixture(html`<lyra-dataset-viewer src="javascript:alert(1)"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
     await el.updateComplete;

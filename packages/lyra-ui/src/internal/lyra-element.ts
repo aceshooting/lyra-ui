@@ -33,10 +33,16 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private stopLocaleSubscription?: () => void;
   private pendingLoadController?: AbortController;
   private loadSchedulePending = false;
+  private deferredLoad?: () => void;
 
   connectedCallback(): void {
     super.connectedCallback();
     this.stopLocaleSubscription = subscribeLyraLocale(() => this.requestUpdate());
+    const deferred = this.deferredLoad;
+    if (deferred) {
+      this.deferredLoad = undefined;
+      this.scheduleAfterUpdate(deferred);
+    }
   }
 
   disconnectedCallback(): void {
@@ -55,13 +61,18 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return this.pendingLoadController.signal;
   }
 
-  /** Runs one coalesced load callback after the current update completes. */
+  /**
+   * Runs one coalesced load callback after the current update completes.
+   * Lit still runs the update cycle while detached, so a load scheduled then is
+   * held and replayed on reconnect rather than dropped.
+   */
   protected scheduleAfterUpdate(callback: () => void): void {
     if (this.loadSchedulePending) return;
     this.loadSchedulePending = true;
     queueMicrotask(() => {
       this.loadSchedulePending = false;
       if (this.isConnected) callback();
+      else this.deferredLoad = callback;
     });
   }
 
