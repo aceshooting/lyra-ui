@@ -113,6 +113,15 @@
             },
             {
               "kind": "field",
+              "name": "labelText",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "loadSchedulePending",
               "type": {
                 "text": "boolean"
@@ -6943,7 +6952,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Display name associated with the calendar.",
+              "description": "Display name associated with the calendar. Used as the accessible name of `[part='base']` (falling back to a host `aria-label`) alongside `csvViewerLabel`-style sibling document viewers.",
               "attribute": "name"
             },
             {
@@ -7265,7 +7274,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Display name associated with the calendar.",
+              "description": "Display name associated with the calendar. Used as the accessible name of `[part='base']` (falling back to a host `aria-label`) alongside `csvViewerLabel`-style sibling document viewers.",
               "fieldName": "name"
             },
             {
@@ -7334,7 +7343,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-calendar>` — responsive month calendar with event markers and agenda mode.",
+          "description": "`<lyra-calendar>` — responsive month calendar with event markers and agenda mode.\n\nMonth-view event markers are a mouse-only quick-select affordance layered on\ntop of the focusable day cell: the day grid's own roving-tabindex/arrow-key\nnavigation already targets the day `<button>`, and nesting a second\nfocusable control inside that same native `<button>` is not valid (a\n`<button>` element must not contain interactive/tabindex descendants, and\n`role=\"button\"` itself forbids focusable descendants regardless). Agenda\nview renders each event as its own real `<button part=\"agenda-event\">` and\nis the fully keyboard-accessible way to reach `lyra-event-select`.",
           "name": "LyraCalendar",
           "cssParts": [
             {
@@ -7356,6 +7365,22 @@
             {
               "description": "Calendar header.",
               "name": "header"
+            },
+            {
+              "description": "The previous/next chevron glyph, mirrored under RTL.",
+              "name": "nav-glyph"
+            },
+            {
+              "description": "One week row within the month grid.",
+              "name": "week"
+            },
+            {
+              "description": "One weekday header cell.",
+              "name": "weekday"
+            },
+            {
+              "description": "Weekday header row.",
+              "name": "weekdays"
             }
           ],
           "members": [
@@ -7461,6 +7486,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "normalizedFirstDayOfWeek",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "description": "`firstDayOfWeek` clamped into the 0–6 range `monthMatrix`/`weekdayLabels` expect, tolerating a malformed or out-of-range attribute value instead of letting it silently drop leading days of the month or produce `Invalid Date`.",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -7598,16 +7633,6 @@
                   }
                 }
               ]
-            },
-            {
-              "kind": "method",
-              "name": "days",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "Date[]"
-                }
-              }
             },
             {
               "kind": "method",
@@ -7807,6 +7832,16 @@
               "return": {
                 "type": {
                   "text": "string[]"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "weeks",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Date[][]"
                 }
               }
             }
@@ -30967,6 +31002,33 @@
             },
             {
               "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "hint",
               "type": {
                 "text": "string"
@@ -31042,7 +31104,17 @@
             },
             {
               "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
               "privacy": "private"
             },
             {
@@ -31053,6 +31125,11 @@
             {
               "kind": "field",
               "name": "onKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
               "privacy": "private"
             },
             {
@@ -34525,7 +34602,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-command-palette>` — searchable application command menu with keyboard navigation.",
+          "description": "`<lyra-command-palette>` — searchable application command menu with keyboard navigation.\nShared overlay infrastructure (the same one `<lyra-dialog>` uses) coordinates focus-trapping\nTab, Escape dismissal, and document scroll-locking for as long as the palette is open.",
           "name": "LyraCommandPalette",
           "cssParts": [
             {
@@ -34627,14 +34704,6 @@
             },
             {
               "kind": "field",
-              "name": "inputEl",
-              "type": {
-                "text": "HTMLInputElement | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
               "name": "listId",
               "privacy": "private"
             },
@@ -34693,6 +34762,14 @@
             },
             {
               "kind": "field",
+              "name": "overlay",
+              "type": {
+                "text": "OverlayHandle | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "pendingLoadController",
               "type": {
                 "text": "AbortController | undefined"
@@ -34711,6 +34788,14 @@
               },
               "privacy": "private",
               "default": "''"
+            },
+            {
+              "kind": "field",
+              "name": "releaseScrollLock",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -34744,6 +34829,16 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "activateOverlay",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
               }
             },
             {
@@ -45892,23 +45987,6 @@
             },
             {
               "kind": "field",
-              "name": "fetchController",
-              "type": {
-                "text": "AbortController | undefined"
-              },
-              "privacy": "private"
-            },
-            {
-              "kind": "field",
-              "name": "fetchGeneration",
-              "type": {
-                "text": "number"
-              },
-              "privacy": "private",
-              "default": "0"
-            },
-            {
-              "kind": "field",
               "name": "filename",
               "type": {
                 "text": "string"
@@ -45916,6 +45994,15 @@
               "default": "''",
               "description": "Shown in the header and used as the download link's suggested filename.",
               "attribute": "filename"
+            },
+            {
+              "kind": "field",
+              "name": "generation",
+              "type": {
+                "text": "number"
+              },
+              "privacy": "private",
+              "default": "0"
             },
             {
               "kind": "field",
@@ -46163,16 +46250,6 @@
                   }
                 }
               ]
-            },
-            {
-              "kind": "method",
-              "name": "invalidateTextFetch",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              }
             },
             {
               "kind": "method",
@@ -50321,6 +50398,10 @@
                   "type": {
                     "text": "HTMLElement"
                   }
+                },
+                {
+                  "name": "hasFallbackContent",
+                  "default": "false"
                 }
               ]
             },
@@ -60680,6 +60761,14 @@
           "members": [
             {
               "kind": "field",
+              "name": "customSlot",
+              "type": {
+                "text": "HTMLSlotElement | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "deferredLoad",
               "type": {
                 "text": "() => void | undefined"
@@ -60766,6 +60855,11 @@
             },
             {
               "kind": "field",
+              "name": "onCustomSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "path",
               "type": {
                 "text": "string"
@@ -60809,6 +60903,14 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "svgEl",
+              "type": {
+                "text": "SVGSVGElement | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "method",
@@ -60858,6 +60960,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "cloneSvgNode",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "SVGElement | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": {
+                    "text": "Node"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -60989,6 +61109,17 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "syncCustomNodes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "SVG geometry distributed through a shadow-DOM slot does not paint reliably in Chromium when\nthe slot itself is inside an SVG. Keep the public custom-content slot, but clone its trusted\nSVG nodes into the component-owned SVG so path/circle/group content has a real SVG parent."
             }
           ],
           "attributes": [
@@ -66917,7 +67048,7 @@
               "name": "legend"
             },
             {
-              "description": "A legend color swatch. ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile server, which is not suitable for production traffic — see the `DEFAULT_STYLE` doc comment in `map.ts`. Always pass an explicit `mapStyle` in production.",
+              "description": "A legend color swatch. ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile server, which is not suitable for production traffic — see the `DEFAULT_STYLE` doc comment above. Always pass an explicit `mapStyle` in production.",
               "name": "legend-swatch"
             }
           ],
@@ -71505,6 +71636,10 @@
             {
               "description": "The free-text mode's text input.",
               "name": "combobox-input"
+            },
+            {
+              "description": "The empty-listbox message, shown when no rows match.",
+              "name": "empty"
             },
             {
               "description": "The error message.",
@@ -77613,6 +77748,26 @@
             },
             {
               "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute. Named `autoCorrect` (capital `C`), not `autocorrect`, purely to\ndodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a `boolean`-typed\n`HTMLElement.autocorrect` IDL member, which would conflict with this `string`-typed reactive\nproperty; the explicit `attribute: 'autocorrect'` mapping preserves the standard lowercase\n`autocorrect` wire name in both Lit and the rendered attribute.",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the attribute,\nleaving the browser's own default behavior.",
+              "attribute": "autocapitalize"
+            },
+            {
+              "kind": "field",
               "name": "autocomplete",
               "type": {
                 "text": "string"
@@ -78046,6 +78201,16 @@
               "type": {
                 "text": "number | null"
               }
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default. Uses spellcheckConverter rather than Lit's default\npresence-based boolean converter so an explicit `spellcheck=\"false\"` attribute is honored; a\n`.spellcheck=${false}` property binding can still turn this off directly.",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -78572,12 +78737,30 @@
               "fieldName": "accessibleLabel"
             },
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the attribute,\nleaving the browser's own default behavior.",
+              "fieldName": "autocapitalize"
+            },
+            {
               "name": "autocomplete",
               "type": {
                 "text": "string"
               },
               "default": "'tel'",
               "fieldName": "autocomplete"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty\nstring omits the attribute. Named `autoCorrect` (capital `C`), not `autocorrect`, purely to\ndodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a `boolean`-typed\n`HTMLElement.autocorrect` IDL member, which would conflict with this `string`-typed reactive\nproperty; the explicit `attribute: 'autocorrect'` mapping preserves the standard lowercase\n`autocorrect` wire name in both Lit and the rendered attribute.",
+              "fieldName": "autoCorrect"
             },
             {
               "name": "country",
@@ -78692,6 +78875,15 @@
               },
               "default": "''",
               "fieldName": "placeholder"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the\nnative element's own default. Uses spellcheckConverter rather than Lit's default\npresence-based boolean converter so an explicit `spellcheck=\"false\"` attribute is honored; a\n`.spellcheck=${false}` property binding can still turn this off directly.",
+              "fieldName": "spellcheck"
             }
           ],
           "mixins": [
@@ -81667,6 +81859,12 @@
             },
             {
               "kind": "field",
+              "name": "errorId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "errorText",
               "type": {
                 "text": "string"
@@ -81709,6 +81907,12 @@
               },
               "default": "''",
               "attribute": "hint"
+            },
+            {
+              "kind": "field",
+              "name": "hintId",
+              "privacy": "private",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -82183,6 +82387,24 @@
             },
             {
               "kind": "field",
+              "name": "_defaultCaptured",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "_defaultChecked",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "_disabled",
               "type": {
                 "text": "boolean"
@@ -82625,6 +82847,39 @@
                   "optional": true,
                   "type": {
                     "text": "FocusOptions"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formStateRestoreCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "state",
+                  "type": {
+                    "text": "string | File | FormData | null"
+                  }
+                },
+                {
+                  "name": "_mode",
+                  "optional": true,
+                  "type": {
+                    "text": "'restore' | 'autocomplete'"
                   }
                 }
               ]
@@ -83833,7 +84088,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-responsive-panel>` — the same slotted content either docked inline\nin the page's normal layout flow (desktop) or presented as a full-screen/\nbottom-sheet overlay (mobile), depending on viewport width. Typical uses:\na settings panel or a conversation-history sidebar that's a permanent\ndocked pane on a wide screen but a modal on a phone.\n\nBreakpoint detection uses `matchMedia('(max-width: ' + mobileBreakpoint +\n')')`, re-evaluated live while connected -- resizing/rotating a device\nthat crosses the breakpoint while `mode=\"auto\"` (the default) updates the\neffective presentation without unmounting or re-creating the slotted\ncontent: inline and overlay presentation share the exact same shadow DOM\nstructure (only a css class, and the overlay-only `role`/`aria-modal`\nattributes and backdrop element, differ), so lit-html's diffing keeps\n`[part=\"body\"]` and its `<slot>` as the same DOM node across the\ntransition -- scroll position and focus inside the slotted content survive\nit for free. When an open inline panel becomes modal, focus already inside\nis preserved and outside focus moves to the first available target. Closing\nstill returns to the opener captured by the original inline open.\n\nThe overlay presentation uses the library's shared overlay coordinator for\nfocus trapping, Escape/backdrop dismissal, inerting, and stack ordering,\nwhile retaining this component's own responsive rendering and close event.\n\nAccessible name (overlay presentation only -- the inline presentation has\nno dialog semantics to name): `label`, when set, is used verbatim. When\n`label` is empty, this falls back to the `header` slot's content -- a\nheading element (`h1`–`h6` or `[role=\"heading\"]`) among the slotted header\ncontent wins if present, otherwise the header slot's full text content is\nused, mirroring lyra-dialog's `detectHeading()`/`headingText` fallback (see\ndialog.ts's module doc for why this uses `aria-label`, a copied string,\nrather than `aria-labelledby`: the header content is light DOM while\n`[part=\"panel\"]` lives in this element's shadow tree, and an ID-reference\nattribute can't resolve across that boundary). A panel opened without\neither `label` or header content still renders `role=\"dialog\"` with no\naccessible name -- set one of the two to avoid that.",
+          "description": "`<lyra-responsive-panel>` — the same slotted content either docked inline\nin the page's normal layout flow (desktop) or presented as a full-screen/\nbottom-sheet overlay (mobile), depending on viewport width. Typical uses:\na settings panel or a conversation-history sidebar that's a permanent\ndocked pane on a wide screen but a modal on a phone.\n\nBreakpoint detection uses `matchMedia('(max-width: ' + mobileBreakpoint +\n')')`, re-evaluated live while connected -- resizing/rotating a device\nthat crosses the breakpoint while `mode=\"auto\"` (the default) updates the\neffective presentation without unmounting or re-creating the slotted\ncontent: inline and overlay presentation share the exact same shadow DOM\nstructure (only a css class, and the overlay-only `role`/`aria-modal`\nattributes and backdrop element, differ), so lit-html's diffing keeps\n`[part=\"body\"]` and its `<slot>` as the same DOM node across the\ntransition -- scroll position and focus inside the slotted content survive\nit for free. When an open inline panel becomes modal, focus already inside\nis preserved and outside focus moves to the first available target. Closing\nstill returns to the opener captured by the original inline open.\n\nThe overlay presentation uses the library's shared overlay coordinator for\nfocus trapping, Escape/backdrop dismissal, inerting, and stack ordering,\nwhile retaining this component's own responsive rendering and close event.\n\nAccessible name (overlay presentation only -- the inline presentation has\nno dialog semantics to name), in priority order: if the host element itself\nhas an `aria-label` attribute set, its value wins outright, overriding\nevery source below -- the standard ARIA convention for a consumer that\nwants full control over the announced name, matching lyra-dialog's\n`accessibleLabel` pattern. Otherwise `label`, when set, is used verbatim.\nWhen both are empty, this falls back to the `header` slot's content -- a\nheading element (`h1`–`h6` or `[role=\"heading\"]`) among the slotted header\ncontent wins if present, otherwise the header slot's full text content is\nused, mirroring lyra-dialog's `detectHeading()`/`headingText` fallback (see\ndialog.ts's module doc for why this uses `aria-label`, a copied string,\nrather than `aria-labelledby`: the header content is light DOM while\n`[part=\"panel\"]` lives in this element's shadow tree, and an ID-reference\nattribute can't resolve across that boundary). A panel opened without a\nhost `aria-label`, `label`, or header content still renders `role=\"dialog\"`\nwith no accessible name -- set one of those to avoid that.",
           "name": "LyraResponsivePanel",
           "cssParts": [
             {
@@ -83876,6 +84131,17 @@
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "description": "Host-level `aria-label` override for the overlay presentation's accessible name -- wins over\nevery other source (`label`, the header-slot fallback), matching `<lyra-dialog>`'s\n`accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain\n`aria-label` attribute on `<lyra-responsive-panel>` itself, not a public JS property.",
+              "attribute": "aria-label"
+            },
             {
               "kind": "field",
               "name": "belowBreakpoint",
@@ -84435,6 +84701,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Host-level `aria-label` override for the overlay presentation's accessible name -- wins over\nevery other source (`label`, the header-slot fallback), matching `<lyra-dialog>`'s\n`accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain\n`aria-label` attribute on `<lyra-responsive-panel>` itself, not a public JS property.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "label",
               "type": {
@@ -95517,6 +95792,11 @@
             },
             {
               "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onHintSlotChange",
               "privacy": "private"
             },
@@ -95938,6 +96218,14 @@
           ],
           "events": [
             {
+              "description": "The internal switch control lost focus. Bridges the internal element's non-bubbling native `blur`, re-dispatched as bubbling and composed.",
+              "name": "blur"
+            },
+            {
+              "description": "The internal switch control received focus. Bridges the internal element's non-bubbling native `focus`, re-dispatched as bubbling and composed.",
+              "name": "focus"
+            },
+            {
               "description": "The user toggled the switch (click or Space/Enter). `detail: { checked }`.",
               "name": "lyra-change"
             }
@@ -96059,7 +96347,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.\n\n`expandedContent` (a table-level `(row: T) => unknown`, not a per-column\nhook, since the resulting panel spans every column via `colspan`) makes\nevery row render a leading chevron-toggle cell before its data columns.\n`canExpand` optionally gates which rows actually get an interactive\ntoggle — a row that fails it still gets a blank leading cell for column\nalignment. Which rows are currently open is fully consumer-owned via\n`expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/\n`keyOf()`) — the table only reads it and emits `lyra-row-expand-toggle`\non activation, mirroring `sortKey`/`selectedKey`'s existing\npresentational-only convention.\n\nSelection is opt-in through the `selectionMode` property. Use `single` or\n`multiple` to self-manage row selection; the default `none` remains\npresentational. `selectedKeys` contains the raw keys selected in multiple\nmode.\n\n`filterable` adds a compact search field above the grid. `filterText` is\ncontrolled and emits `lyra-filter-change`; `filter` can provide a typed\npredicate, otherwise the row is matched against its JSON representation.\n`pageSize` enables controlled pagination through the existing\n`<lyra-pagination>` primitive. Client mode slices `rows`; server mode\nrenders the supplied page unchanged while using `totalItems` for the\nnavigation summary. `loading` keeps the table shell busy and renders an\nindeterminate spinner.\nColumns with `editable: true` open a native text/number editor on\ndouble-click and emit `lyra-cell-edit`; row mutation remains consumer-owned.\n`groupBy` inserts non-focusable group header rows before each group; use\n`groupLabel` when the raw group key needs custom content.",
+          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.\n\n`expandedContent` (a table-level `(row: T) => unknown`, not a per-column\nhook, since the resulting panel spans every column via `colspan`) makes\nevery row render a leading chevron-toggle cell before its data columns.\n`canExpand` optionally gates which rows actually get an interactive\ntoggle — a row that fails it still gets a blank leading cell for column\nalignment. Which rows are currently open is fully consumer-owned via\n`expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/\n`keyOf()`) — the table only reads it and emits `lyra-row-expand-toggle`\non activation, mirroring `sortKey`/`selectedKey`'s existing\npresentational-only convention.\n\nSelection is opt-in through the `selectionMode` property. Use `single` or\n`multiple` to self-manage row selection; the default `none` remains\npresentational. `selectedKeys` contains the raw keys selected in multiple\nmode.\n\n`filterable` adds a compact search field above the grid. `filterText` is\ncontrolled and emits `lyra-filter-change`; `filter` can provide a typed\npredicate, otherwise the row is matched against its JSON representation.\n`pageSize` enables controlled pagination through the existing\n`<lyra-pagination>` primitive. Client mode slices `rows`; server mode\nrenders the supplied page unchanged while using `totalItems` for the\nnavigation summary. `loading` keeps the table shell busy and renders an\nindeterminate spinner.\nColumns with `editable: true` open a native text/number editor on\ndouble-click and emit `lyra-cell-edit`; row mutation remains consumer-owned.\n`spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`\n(the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.\n`groupBy` inserts non-focusable group header rows before each group; use\n`groupLabel` when the raw group key needs custom content.",
           "name": "LyraTable",
           "cssParts": [
             {
@@ -96188,6 +96476,26 @@
               },
               "privacy": "private",
               "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "autoCorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the same inputs' native `autocorrect` (Safari/WebKit-specific). Empty string\nomits the attribute (browser default). Named `autoCorrect` (capital `C`), not `autocorrect`,\nto dodge a TS `lib.dom.d.ts` collision -- same fix as `<lyra-textarea>`/`<lyra-model-select>`.",
+              "attribute": "autocorrect"
+            },
+            {
+              "kind": "field",
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the same inputs' native `autocapitalize`. Empty string omits the attribute\n(browser default).",
+              "attribute": "autocapitalize"
             },
             {
               "kind": "field",
@@ -96687,6 +96995,16 @@
               },
               "default": "''",
               "attribute": "sort-key"
+            },
+            {
+              "kind": "field",
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the filter input's, and (when the active column's `editType` is `'text'`, the\ndefault) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching\nthe native element's own default. `spellcheck=\"false\"` is parsed as `false` (see\n`spellcheckConverter` above). No effect on a `'number'` cell editor.",
+              "attribute": "spellcheck"
             },
             {
               "kind": "field",
@@ -97324,6 +97642,24 @@
           ],
           "attributes": [
             {
+              "name": "autocapitalize",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the same inputs' native `autocapitalize`. Empty string omits the attribute\n(browser default).",
+              "fieldName": "autocapitalize"
+            },
+            {
+              "name": "autocorrect",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Forwarded to the same inputs' native `autocorrect` (Safari/WebKit-specific). Empty string\nomits the attribute (browser default). Named `autoCorrect` (capital `C`), not `autocorrect`,\nto dodge a TS `lib.dom.d.ts` collision -- same fix as `<lyra-textarea>`/`<lyra-model-select>`.",
+              "fieldName": "autoCorrect"
+            },
+            {
               "name": "columns-hidden",
               "type": {
                 "text": "boolean"
@@ -97515,6 +97851,15 @@
               },
               "default": "''",
               "fieldName": "sortKey"
+            },
+            {
+              "name": "spellcheck",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Forwarded to the filter input's, and (when the active column's `editType` is `'text'`, the\ndefault) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching\nthe native element's own default. `spellcheck=\"false\"` is parsed as `false` (see\n`spellcheckConverter` above). No effect on a `'number'` cell editor.",
+              "fieldName": "spellcheck"
             },
             {
               "name": "total-items",
@@ -101641,6 +101986,15 @@
           "members": [
             {
               "kind": "field",
+              "name": "_fieldsetDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "_value",
               "type": {
                 "text": "string[]"
@@ -101722,6 +102076,15 @@
             },
             {
               "kind": "field",
+              "name": "effectiveDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Effective disabled state: this element's own `disabled` OR an ancestor\n`<fieldset disabled>`'s inherited state -- mirrors native `<input>`, whose\nown `disabled` IDL property/attribute is never mutated by a fieldset.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "effectiveLocale",
               "type": {
                 "text": "string"
@@ -101764,6 +102127,33 @@
               },
               "static": true,
               "default": "true"
+            },
+            {
+              "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
             },
             {
               "kind": "field",
@@ -101854,7 +102244,17 @@
             },
             {
               "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
               "privacy": "private"
             },
             {
@@ -101865,6 +102265,11 @@
             {
               "kind": "field",
               "name": "onKeyDown",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
               "privacy": "private"
             },
             {
@@ -102103,6 +102508,24 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "formDisabledCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "disabled",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ],
+              "description": "Called by the browser when an ancestor `<fieldset disabled>` toggles.\nTracked separately from the consumer's own `disabled` (see\n`effectiveDisabled`) so a consumer's explicit `disabled` survives the\nfieldset re-enabling instead of being permanently overwritten."
             },
             {
               "kind": "method",
@@ -106357,6 +106780,16 @@
           "members": [
             {
               "kind": "field",
+              "name": "accessibleLabel",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Overrides the dialog panel's accessible name, taking precedence over the visible `label`\nheading -- mirrors `<lyra-dialog>`'s/`<lyra-tool-result-dialog>`'s own host-`aria-label`\noverride pattern. Fed only by a host `aria-label`.",
+              "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
               "name": "autoCorrect",
               "type": {
                 "text": "string"
@@ -106979,6 +107412,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "aria-label",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "description": "Overrides the dialog panel's accessible name, taking precedence over the visible `label`\nheading -- mirrors `<lyra-dialog>`'s/`<lyra-tool-result-dialog>`'s own host-`aria-label`\noverride pattern. Fed only by a host `aria-label`.",
+              "fieldName": "accessibleLabel"
+            },
             {
               "name": "autocapitalize",
               "type": {

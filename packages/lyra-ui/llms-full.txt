@@ -912,6 +912,11 @@ interface PhoneNumberAdapter {
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
   visible form-field chrome; each has a matching named slot.
 - `placeholder: string = ''` — forwarded to the native telephone input.
+- `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
+  (attribute `autocorrect`) — forwarded to the internal telephone input's own `spellcheck`/
+  `autocapitalize`/`autocorrect`; `spellcheck="false"` is parsed as `false` via a string-aware
+  converter (Lit's default presence-based boolean converter would otherwise treat any attribute
+  value, including the literal string `"false"`, as `true`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — forwarded to the internal
   telephone input. Name precedence is host `aria-label`, `phoneLabel`, visible `label`, then
   `placeholder`.
@@ -1490,6 +1495,12 @@ and loading chrome are built in while remaining controlled at the public API bou
   filter field; when omitted, rows are matched against their JSON representation
 - `filterLabel: string = ''` (attribute `filter-label`) and `filterPlaceholder: string = ''`
   (attribute `filter-placeholder`) — optional localized-label overrides
+- `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
+  (attribute `autocorrect`) — forwarded to the filter input and, for a `'text'` (the default)
+  `editType`, the inline cell editor; no effect on a `'number'` cell editor. `spellcheck="false"`
+  is parsed as `false` via a string-aware converter (Lit's default presence-based boolean
+  converter would otherwise treat any attribute value, including the literal string `"false"`, as
+  `true`).
 - `loading: boolean = false` (attribute `loading`, reflected) and `loadingLabel: string = ''`
   (attribute `loading-label`) — renders a busy spinner and suppresses the grid while loading
 - `pageSize: number = 0` (attribute `page-size`) — positive values enable controlled pagination;
@@ -5654,6 +5665,9 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
 - `label: string = 'Select tools'` — the dialog's visible heading and accessible name.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the dialog panel's
+  accessible name, taking precedence over the visible `label` heading; mirrors `<lyra-dialog>`'s
+  own host-`aria-label` override pattern.
 - `searchPlaceholder: string = 'Search tools…'` (attribute `search-placeholder`)
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
