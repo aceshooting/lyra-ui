@@ -18,7 +18,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [javascript-typescript]
+        # actions: lints .github/workflows/*.yml itself (e.g. missing `permissions:`) -- the
+        # default setup this replaced covered it, so keep parity here.
+        language: [javascript-typescript, actions]
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
