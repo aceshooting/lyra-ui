@@ -6952,7 +6952,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Display name associated with the calendar. Used as the accessible name of `[part='base']` (falling back to a host `aria-label`) alongside `csvViewerLabel`-style sibling document viewers.",
+              "description": "Display name associated with the calendar. Used as the accessible name of `[part='base']`, falling back to a host `aria-label` and then the localized `calendarViewerLabel` default, matching the `csvViewerLabel`-style sibling document viewers.",
               "attribute": "name"
             },
             {
@@ -7274,7 +7274,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Display name associated with the calendar. Used as the accessible name of `[part='base']` (falling back to a host `aria-label`) alongside `csvViewerLabel`-style sibling document viewers.",
+              "description": "Display name associated with the calendar. Used as the accessible name of `[part='base']`, falling back to a host `aria-label` and then the localized `calendarViewerLabel` default, matching the `csvViewerLabel`-style sibling document viewers.",
               "fieldName": "name"
             },
             {
@@ -35349,7 +35349,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Optional display name for the source document.",
+              "description": "Optional display name for the source document. Used as the accessible\nname of `[part='base']`, falling back to a host `aria-label` and then\nthe localized `contactViewerLabel` default, matching the\n`csvViewerLabel`-style sibling document viewers.",
               "attribute": "name"
             },
             {
@@ -35671,7 +35671,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Optional display name for the source document.",
+              "description": "Optional display name for the source document. Used as the accessible\nname of `[part='base']`, falling back to a host `aria-label` and then\nthe localized `contactViewerLabel` default, matching the\n`csvViewerLabel`-style sibling document viewers.",
               "fieldName": "name"
             },
             {
@@ -49599,7 +49599,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Display name associated with the message.",
+              "description": "Display name associated with the message. Used as the accessible name\nof `[part='base']`, falling back to a host `aria-label` and then the\nlocalized `emailViewerLabel` default, matching the `csvViewerLabel`-\nstyle sibling document viewers.",
               "attribute": "name"
             },
             {
@@ -49939,7 +49939,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Display name associated with the message.",
+              "description": "Display name associated with the message. Used as the accessible name\nof `[part='base']`, falling back to a host `aria-label` and then the\nlocalized `emailViewerLabel` default, matching the `csvViewerLabel`-\nstyle sibling document viewers.",
               "fieldName": "name"
             },
             {
@@ -71137,7 +71137,7 @@
               "type": {
                 "text": "Placement | undefined"
               },
-              "description": "Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself\ndefaults to. A `left`/`right` side is resolved through `rtlAwareSide` semantics (see\n`internal/rtl.ts`) so e.g. `placement=\"left-start\"` still anchors to the menu's trailing edge\nunder RTL rather than pinning to the physical left.",
+              "description": "Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself\ndefaults to. A `left`/`right` side is resolved through `rtlAwarePlacement` semantics (see\n`internal/rtl.ts`) so e.g. `placement=\"left-start\"` still anchors to the menu's trailing edge\nunder RTL rather than pinning to the physical left.",
               "attribute": "placement",
               "reflects": true
             },
@@ -71574,7 +71574,7 @@
               "type": {
                 "text": "Placement | undefined"
               },
-              "description": "Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself\ndefaults to. A `left`/`right` side is resolved through `rtlAwareSide` semantics (see\n`internal/rtl.ts`) so e.g. `placement=\"left-start\"` still anchors to the menu's trailing edge\nunder RTL rather than pinning to the physical left.",
+              "description": "Optional placement override forwarded to `place()`. Defaults to whatever `place()` itself\ndefaults to. A `left`/`right` side is resolved through `rtlAwarePlacement` semantics (see\n`internal/rtl.ts`) so e.g. `placement=\"left-start\"` still anchors to the menu's trailing edge\nunder RTL rather than pinning to the physical left.",
               "fieldName": "placement"
             }
           ],
@@ -84869,7 +84869,7 @@
               "name": "header"
             },
             {
-              "description": "The title text. Truncates with an ellipsis when it overflows; carries its own native `title` attribute (the full string) so hovering the truncated text reveals it via the browser's default tooltip, scoped to just this element rather than the whole card. The host's own `title` attribute is stripped once Lit has synced it into the `title` property (see `attributeChangedCallback`/`updated` below), so the native tooltip never also covers the rest of the card.",
+              "description": "The title text. Truncates with an ellipsis when it overflows; carries its own native `title` attribute (the full string) so hovering the truncated text reveals it via the browser's default tooltip, scoped to just this element rather than the whole card. The host's own `title` attribute is stripped once Lit has synced it into the `title` property (see `StripHostTitleAttribute` in `internal/strip-host-title.ts`), so the native tooltip never also covers the rest of the card.",
               "name": "title"
             }
           ],
@@ -85005,21 +85005,12 @@
             },
             {
               "kind": "field",
-              "name": "stripHostTitleAttr",
-              "type": {
-                "text": "boolean"
-              },
-              "privacy": "private",
-              "default": "false"
-            },
-            {
-              "kind": "field",
               "name": "title",
               "type": {
                 "text": "string"
               },
               "default": "''",
-              "description": "Small heading for the card. Leave unset for an untitled card (e.g. a\nbare block of `<lyra-result-field>` rows with no natural heading).\nRendered into the truncating `[part=\"title\"]` span, which also carries\nthis value as its own `title` attribute so the disclosure tooltip is\nscoped to that element rather than the whole host -- a bare host-level\n`title` attribute (the browser's global tooltip attribute) is actively\nstripped once Lit has synced it into this property, so the card never\ngrows an unsolicited native tooltip repeating the same text. See\n`attributeChangedCallback` and `updated` below.",
+              "description": "Small heading for the card. Leave unset for an untitled card (e.g. a\nbare block of `<lyra-result-field>` rows with no natural heading).\nRendered into the truncating `[part=\"title\"]` span, which also carries\nthis value as its own `title` attribute so the disclosure tooltip is\nscoped to that element rather than the whole host -- a bare host-level\n`title` attribute (the browser's global tooltip attribute) is actively\nstripped once Lit has synced it into this property, so the card never\ngrows an unsolicited native tooltip repeating the same text. See\n`StripHostTitleAttribute` (`internal/strip-host-title.ts`).",
               "attribute": "title"
             },
             {
@@ -85223,13 +85214,19 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Small heading for the card. Leave unset for an untitled card (e.g. a\nbare block of `<lyra-result-field>` rows with no natural heading).\nRendered into the truncating `[part=\"title\"]` span, which also carries\nthis value as its own `title` attribute so the disclosure tooltip is\nscoped to that element rather than the whole host -- a bare host-level\n`title` attribute (the browser's global tooltip attribute) is actively\nstripped once Lit has synced it into this property, so the card never\ngrows an unsolicited native tooltip repeating the same text. See\n`attributeChangedCallback` and `updated` below.",
+              "description": "Small heading for the card. Leave unset for an untitled card (e.g. a\nbare block of `<lyra-result-field>` rows with no natural heading).\nRendered into the truncating `[part=\"title\"]` span, which also carries\nthis value as its own `title` attribute so the disclosure tooltip is\nscoped to that element rather than the whole host -- a bare host-level\n`title` attribute (the browser's global tooltip attribute) is actively\nstripped once Lit has synced it into this property, so the card never\ngrows an unsolicited native tooltip repeating the same text. See\n`StripHostTitleAttribute` (`internal/strip-host-title.ts`).",
               "fieldName": "title"
             }
           ],
+          "mixins": [
+            {
+              "name": "StripHostTitleAttribute",
+              "module": "/src/internal/strip-host-title.js"
+            }
+          ],
           "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
+            "name": "LyraResultCardBase",
+            "module": "src/components/result-card/result-card.class.ts"
           },
           "tagName": "lyra-result-card",
           "customElement": true
@@ -89362,21 +89359,12 @@
             },
             {
               "kind": "field",
-              "name": "stripHostTitleAttr",
-              "type": {
-                "text": "boolean"
-              },
-              "privacy": "private",
-              "default": "false"
-            },
-            {
-              "kind": "field",
               "name": "title",
               "type": {
                 "text": "string"
               },
               "default": "''",
-              "description": "The source's display title, e.g. a filename. Rendered only as the\ntitle button's own text -- a bare host-level `title` attribute (the\nbrowser's global tooltip attribute) is actively stripped once Lit has\nsynced it into this property, so the card never grows an unsolicited\nnative tooltip repeating the same text. See `attributeChangedCallback`\nand `updated` below.",
+              "description": "The source's display title, e.g. a filename. Rendered only as the\ntitle button's own text -- a bare host-level `title` attribute (the\nbrowser's global tooltip attribute) is actively stripped once Lit has\nsynced it into this property, so the card never grows an unsolicited\nnative tooltip repeating the same text. See `StripHostTitleAttribute`\n(`internal/strip-host-title.ts`).",
               "attribute": "title"
             },
             {
@@ -89629,13 +89617,19 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "The source's display title, e.g. a filename. Rendered only as the\ntitle button's own text -- a bare host-level `title` attribute (the\nbrowser's global tooltip attribute) is actively stripped once Lit has\nsynced it into this property, so the card never grows an unsolicited\nnative tooltip repeating the same text. See `attributeChangedCallback`\nand `updated` below.",
+              "description": "The source's display title, e.g. a filename. Rendered only as the\ntitle button's own text -- a bare host-level `title` attribute (the\nbrowser's global tooltip attribute) is actively stripped once Lit has\nsynced it into this property, so the card never grows an unsolicited\nnative tooltip repeating the same text. See `StripHostTitleAttribute`\n(`internal/strip-host-title.ts`).",
               "fieldName": "title"
             }
           ],
+          "mixins": [
+            {
+              "name": "StripHostTitleAttribute",
+              "module": "/src/internal/strip-host-title.js"
+            }
+          ],
           "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
+            "name": "LyraSourceCardBase",
+            "module": "src/components/source-card/source-card.class.ts"
           },
           "tagName": "lyra-source-card",
           "customElement": true
