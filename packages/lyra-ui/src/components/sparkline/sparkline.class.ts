@@ -82,17 +82,19 @@ export class LyraSparkline extends LyraElement {
     const v = this.values;
     if (this.accessibleLabel) return this.accessibleLabel;
 
-    const last = v.at(-1);
+    // Read the last *finite* value -- mirrors the filtering `points()`
+    // already does for the plotted path, so a trailing non-finite sample
+    // (dropped from the chart) can't leak the literal string "NaN" into the
+    // announced aria-label too.
+    const finite = v.filter((n): n is number => Number.isFinite(n));
+    const last = finite.at(-1);
+    if (!v.length || last === undefined) return this.localize('noData');
+
     // Real-world computed data (ratios, averages, percentages) carries
     // floating-point noise that isn't meaningful to announce -- round it for
     // the label the same way a human-facing value would be formatted.
-    const formattedLast =
-      typeof last === 'number' && Number.isFinite(last)
-        ? last.toLocaleString(this.effectiveLocale || undefined, { maximumFractionDigits: 2 })
-        : last;
-    return v.length
-      ? this.localize('trendOf', undefined, { count: v.length, value: String(formattedLast ?? '') })
-      : this.localize('noData');
+    const formattedLast = last.toLocaleString(this.effectiveLocale || undefined, { maximumFractionDigits: 2 });
+    return this.localize('trendOf', undefined, { count: v.length, value: formattedLast });
   }
 
   render(): TemplateResult {

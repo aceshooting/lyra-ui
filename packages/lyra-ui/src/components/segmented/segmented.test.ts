@@ -107,6 +107,19 @@ describe('lyra-segmented', () => {
     )) as LyraSegmented;
     await expect(el).to.be.accessible();
   });
+
+  it('moves focus to the target item when its value contains a double-quote character', async () => {
+    const withQuote = [{ value: 'a', label: 'A' }, { value: 'b"c', label: 'B' }, { value: 'd', label: 'D' }];
+    const el = (await fixture(html`<lyra-segmented .items=${withQuote} value="a"></lyra-segmented>`)) as LyraSegmented;
+    const buttons = segmentButtons(el);
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('b"c');
+    // Without escaping the value in the attribute-selector lookup, `focusItem()` throws before
+    // reaching `.focus()`, so the target button never receives focus even though `value` updated.
+    expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
+  });
 });
 
 describe('item icon', () => {

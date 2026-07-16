@@ -77,7 +77,9 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   private focusStep(id: string): void {
-    const button = this.renderRoot.querySelector(`[part="step"][data-id="${id}"]`) as HTMLElement | null;
+    const button = this.renderRoot.querySelector(
+      `[part="step"][data-id="${CSS.escape(id)}"]`,
+    ) as HTMLElement | null;
     button?.focus();
   }
 

@@ -868,6 +868,32 @@ it('clamps the collapse="start" panel (index 0) to rail-width and marks it via d
   }
 });
 
+it("honors a sibling panel's own panelConstraints while its neighbor is rail-collapsed instead of growing it unclamped", async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lyra-split collapse="start"><div>A</div><div>B</div></lyra-split>`,
+    )) as LyraSplit;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    mockWidth(base, 500);
+    el.panelConstraints = [null, { minPx: 40, maxPx: 120 }];
+    await elementUpdated(el);
+    expect(spy.callbacks.length).to.equal(1);
+
+    fireCollapseResize(spy.callbacks[0], 500); // between floatBreakpoint(400) and railBreakpoint(640) -> rail
+    await elementUpdated(el);
+
+    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    expect(el.collapseState).to.equal('rail');
+    expect(panelA.style.flex).to.equal('0 0 3.5rem');
+    // Panel B still honors its own [40px, 120px] constraint instead of
+    // growing unclamped to fill the space panel A's rail-collapse freed up.
+    expect(panelB.style.flex).to.equal('0 1 clamp(40px, 50%, 120px)');
+  } finally {
+    spy.restore();
+  }
+});
+
 it('resolves collapse="end" to the LAST panel, including for 3+ panels', async () => {
   const spy = installResizeObserverSpy();
   try {

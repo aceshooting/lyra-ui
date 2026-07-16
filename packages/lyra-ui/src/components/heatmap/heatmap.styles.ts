@@ -65,9 +65,6 @@ export const styles = css`
     direction: ltr;
     pointer-events: none;
   }
-  [part='cells'][hidden] {
-    display: none;
-  }
   [part='cell'] {
     position: absolute;
     display: block;

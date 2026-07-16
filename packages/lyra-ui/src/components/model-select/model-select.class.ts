@@ -95,6 +95,7 @@ export interface LyraModelSelectEventMap {
  * @csspart option - An option row.
  * @csspart option-label - An option row's label.
  * @csspart option-badge - The "not in catalog" badge on a synthetic stale-value row.
+ * @csspart empty - The empty-listbox message, shown when no rows match.
  * @csspart expand-icon - The dropdown indicator.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
@@ -607,7 +608,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         @click=${this.onListboxClick}
       >
         ${rows.length === 0
-          ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${emptyText}</div>`
+          ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${emptyText}</div>`
           : this.renderRows(rows, activeId)}
       </div>
     `;

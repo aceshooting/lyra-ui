@@ -857,6 +857,26 @@ describe('single-option auto-commit (autoCommitSingleOption)', () => {
   });
 });
 
+describe('SingleOption / SingleEnabledAmongDisabled stories actually set auto-commit-single-option', () => {
+  it('SingleOption renders the plain-button auto-commit trigger its doc comment describes', async () => {
+    const { SingleOption } = await import('./select.stories.js');
+    const el = (await fixture(SingleOption.render!({}, null as never))) as LyraSelect;
+    const btn = trigger(el);
+    expect(el.autoCommitSingleOption).to.be.true;
+    expect(btn.getAttribute('role')).to.equal('button');
+    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.not.exist;
+  });
+
+  it('SingleEnabledAmongDisabled renders the plain-button auto-commit trigger its doc comment describes', async () => {
+    const { SingleEnabledAmongDisabled } = await import('./select.stories.js');
+    const el = (await fixture(SingleEnabledAmongDisabled.render!({}, null as never))) as LyraSelect;
+    const btn = trigger(el);
+    expect(el.autoCommitSingleOption).to.be.true;
+    expect(btn.getAttribute('role')).to.equal('button');
+    expect(el.shadowRoot!.querySelector('[part="expand-icon"]')).to.not.exist;
+  });
+});
+
 it('lets a consumer pin an exact trigger height via --lyra-select-trigger-height, bypassing the min-height floor', async () => {
   const el = (await fixture(html`<lyra-select label="Role"><lyra-option value="a">A</lyra-option></lyra-select>`)) as LyraSelect;
   el.style.setProperty('--lyra-select-trigger-height', '43px');

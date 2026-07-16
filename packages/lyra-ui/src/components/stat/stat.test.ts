@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './stat.js';
 import type { LyraStat } from './stat.js';
+import { styles } from './stat.styles.js';
 
 it('renders label, value, and unit', async () => {
   const el = (await fixture(
@@ -423,6 +424,13 @@ it('shows the exact value as a title tooltip on the headline value, and makes it
   const valueEl = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
   expect(valueEl.getAttribute('title')).to.equal('$1,204.37');
   expect(valueEl.getAttribute('tabindex')).to.equal('0');
+});
+
+it("gives [part='value']/[part='row-value'] a token-driven :focus-visible outline, since exactValue makes them keyboard-focusable", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    "[part='value']:focus-visible, [part='row-value']:focus-visible { outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color); outline-offset: var(--lyra-focus-ring-offset); }",
+  );
 });
 
 it('associates the focusable value with its label via aria-labelledby', async () => {

@@ -211,6 +211,14 @@ describe('aria-label forwarding', () => {
     expect(base.getAttribute('aria-label')).to.equal('Map');
   });
 
+  it('uses a .strings override for the localized default when neither label nor a host aria-label is set', async () => {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    el.strings = { map: 'Carte' };
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('Carte');
+  });
+
   it('uses the label prop when set', async () => {
     const el = (await fixture(html`<lyra-map label="Delivery regions"></lyra-map>`)) as LyraMap;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

@@ -395,6 +395,23 @@ it('adapts the real libphonenumber-js package, not just a hand-written fake shap
   expect(loaded.parse('123', 'LU').status).to.equal('incomplete');
 });
 
+it('spellcheck defaults to true on the internal telephone input', async () => {
+  const el = (await fixture(html`<lyra-phone-input></lyra-phone-input>`)) as LyraPhoneInput;
+  await el.updateComplete;
+  expect(el.input!.spellcheck).to.be.true;
+});
+
+it('forwards spellcheck=false, autocapitalize, and autocorrect onto the internal telephone input', async () => {
+  const el = (await fixture(html`
+    <lyra-phone-input spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  const input = el.input!;
+  expect(input.spellcheck).to.be.false;
+  expect(input.getAttribute('autocapitalize')).to.equal('off');
+  expect(input.getAttribute('autocorrect')).to.equal('off');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`
     <lyra-phone-input

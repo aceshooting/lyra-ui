@@ -159,6 +159,11 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** The dialog's visible heading and accessible name. */
   @property() label = 'Select tools';
 
+  /** Overrides the dialog panel's accessible name, taking precedence over the visible `label`
+   *  heading -- mirrors `<lyra-dialog>`'s/`<lyra-tool-result-dialog>`'s own host-`aria-label`
+   *  override pattern. Fed only by a host `aria-label`. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
   @property({ attribute: 'search-placeholder' }) searchPlaceholder = 'Search tools…';
   /** Native editing-assistance and virtual-keyboard hints forwarded to the search input. */
   @property() autocomplete = '';
@@ -383,7 +388,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
         part="panel"
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
-        aria-labelledby=${this.titleId}
+        aria-label=${this.accessibleLabel || nothing}
+        aria-labelledby=${this.accessibleLabel ? nothing : this.titleId}
         tabindex="-1"
       >
         <div part="header">

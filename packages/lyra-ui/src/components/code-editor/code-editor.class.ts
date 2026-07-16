@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
@@ -39,6 +39,9 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ attribute: 'autocorrect' }) autoCorrect = 'off';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
+  @state() private hasLabelSlot = false;
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
   @query('textarea') private textarea?: HTMLTextAreaElement;
   override focus(options?: FocusOptions): void { this.textarea?.focus(options); }
   override blur(): void { this.textarea?.blur(); }
@@ -57,17 +60,37 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onFocus = (): void => { this.emit('focus'); };
   private onBlur = (): void => { this.touched = true; this.emit('blur'); };
   private onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Tab' && !this.readonly) { event.preventDefault(); const target = event.target as HTMLTextAreaElement; const start = target.selectionStart; target.setRangeText(' '.repeat(Math.max(1, this.tabSize)), start, target.selectionEnd, 'end'); this.value = target.value; this.emit('input', { value: this.value }); } };
-  protected updated(): void { if (this.textarea && this.textarea.value !== this.value) this.textarea.value = this.value; }
+  private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  protected willUpdate(): void {
+    if (!this.hasUpdated) {
+      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+    }
+  }
+  protected updated(changed: PropertyValues): void {
+    if (this.textarea && this.textarea.value !== this.value) this.textarea.value = this.value;
+    if (changed.has('touched') || changed.has('required') || changed.has('value')) {
+      this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
+    }
+  }
   render(): TemplateResult {
     const lineCount = Math.max(1, this.value.split('\n').length);
-    const label = this.accessibleLabel || this.label || this.localize('codeEditorLabel');
+    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const describedBy = [hasError ? 'textarea-error' : '', hasHint ? 'textarea-hint' : ''].filter(Boolean).join(' ');
+    const label = this.accessibleLabel || (hasLabel ? nothing : this.localize('codeEditorLabel'));
     return html`<div part="form-control">
-      <label part="label" for="textarea" ?hidden=${!this.label}>${this.label}<slot name="label"></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
+      <label part="label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
       <div part="editor" data-language=${this.language}>
         ${this.lineNumbers ? html`<div part="gutter" aria-hidden="true">${Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)}</div>` : nothing}
-        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${`resize:${this.resize};tab-size:${this.tabSize}`} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
+        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${`resize:${this.resize};tab-size:${this.tabSize}`} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
       </div>
-      <div part="hint" ?hidden=${!this.hint}>${this.hint}</div><div part="error" ?hidden=${!this.errorText}>${this.errorText}</div>
+      <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
+      <div id="textarea-error" part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>
     </div>`;
   }
 }

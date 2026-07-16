@@ -201,39 +201,16 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   // by a newer src/mime-type/status before it settles) can detect it's no
   // longer current and skip writing its result over a more recent one --
   // same guard <lyra-tool-result-view>'s resolve() uses.
-  private fetchGeneration = 0;
-  private fetchController?: AbortController;
+  private generation = 0;
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    if (!this.hasUpdated || this.textFetch.kind !== 'idle') return;
-    const safeTextSrc = safeFetchUrl(this.src);
-    if (
-      classifyFormat(this.mimeType) === 'text' &&
-      safeTextSrc !== null &&
-      this.status !== 'converting' &&
-      this.status !== 'error'
-    ) {
-      void this.fetchText(safeTextSrc);
-    }
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    if (this.fetchController) this.invalidateTextFetch();
-  }
-
-  private invalidateTextFetch(): void {
-    this.fetchGeneration++;
-    this.fetchController?.abort();
-    this.fetchController = undefined;
-    this.textFetch = IDLE_TEXT_FETCH;
-  }
-
-  protected willUpdate(changed: PropertyValues): void {
+  protected willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
     }
+  }
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
 
     const safeTextSrc = safeFetchUrl(this.src);
     const shouldFetchText =
@@ -247,40 +224,39 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       // fetchable (e.g. a "converting" -> "ready" transition) and nothing
       // has been fetched yet -- but not on every unrelated property change.
       if (
-        !this.hasUpdated ||
         changed.has('src') ||
         changed.has('mimeType') ||
         (changed.has('status') && this.textFetch.kind === 'idle')
       ) {
-        void this.fetchText(safeTextSrc);
+        this.scheduleAfterUpdate(() => {
+          void this.fetchText(safeTextSrc);
+        });
       }
     } else if (this.textFetch.kind !== 'idle') {
       // No longer applicable (format changed away from text, src cleared,
-      // or status moved to converting/error) -- invalidate any in-flight
-      // fetch and drop the stale result so a later re-entry starts clean.
-      this.invalidateTextFetch();
+      // or status moved to converting/error) -- abort any in-flight fetch
+      // and drop the stale result so a later re-entry starts clean.
+      this.generation++;
+      this.beginAbortableLoad();
+      this.textFetch = IDLE_TEXT_FETCH;
     }
   }
 
   private async fetchText(url: string): Promise<void> {
-    const generation = ++this.fetchGeneration;
-    this.fetchController?.abort();
-    const controller = new AbortController();
-    this.fetchController = controller;
+    const generation = ++this.generation;
+    const signal = this.beginAbortableLoad();
     this.textFetch = { kind: 'loading' };
     try {
-      const response = await fetch(url, { signal: controller.signal });
+      const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
-      if (generation !== this.fetchGeneration) return;
+      if (!this.isConnected || generation !== this.generation) return;
       this.textFetch = { kind: 'loaded', text };
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.fetchGeneration) return;
+      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       const message = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.textFetch = { kind: 'error', message };
       this.emit('lyra-render-error', { error });
-    } finally {
-      if (this.fetchController === controller) this.fetchController = undefined;
     }
   }
 

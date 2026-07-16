@@ -25,7 +25,7 @@ export class LyraProgressBar extends LyraElement {
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   private get percent(): number { return Math.max(0, Math.min(100, this.max > 0 ? this.value / this.max * 100 : 0)); }
   render(): TemplateResult {
-    const value = this.indeterminate ? nothing : String(this.value);
+    const value = this.indeterminate ? nothing : String(Math.round(this.percent));
     const label = this.accessibleLabel || this.localize('progress');
     return html`<div part="base" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.max} aria-valuenow=${this.indeterminate ? nothing : this.value}>

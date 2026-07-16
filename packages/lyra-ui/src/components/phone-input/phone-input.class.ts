@@ -1,10 +1,30 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../internal/a11y.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './phone-input.styles.js';
+
+/**
+ * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
+ * converter is presence-based -- the attribute's mere presence (regardless of its string value)
+ * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
+ * actually get `true` (this component's default), the opposite of what that string reads as --
+ * the same bug class `<lyra-date-input>`'s `spellcheckConverter` documents and fixes. Mirrors
+ * that shape: attribute absent (or removed) -> `true` (the default); `spellcheck="false"` ->
+ * `false`; anything else present (no value, `="true"`, ...) -> `true`.
+ */
+const spellcheckConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting for it; only the
+    // non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
 export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
@@ -237,6 +257,21 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property() autocomplete = 'tel';
   @property() inputmode: 'tel' | 'numeric' | 'text' = 'tel';
   @property() enterkeyhint = '';
+  /** Forwarded to the internal `<input>`'s own `spellcheck`. Defaults to `true`, matching the
+   *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
+   *  presence-based boolean converter so an explicit `spellcheck="false"` attribute is honored; a
+   *  `.spellcheck=${false}` property binding can still turn this off directly. */
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the attribute,
+   *  leaving the browser's own default behavior. */
+  @property() autocapitalize = '';
+  /** Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty
+   *  string omits the attribute. Named `autoCorrect` (capital `C`), not `autocorrect`, purely to
+   *  dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a `boolean`-typed
+   *  `HTMLElement.autocorrect` IDL member, which would conflict with this `string`-typed reactive
+   *  property; the explicit `attribute: 'autocorrect'` mapping preserves the standard lowercase
+   *  `autocorrect` wire name in both Lit and the rendered attribute. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
   @state() private editableValue = '';
@@ -603,6 +638,9 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             autocomplete=${this.autocomplete}
             inputmode=${this.inputmode}
             enterkeyhint=${this.enterkeyhint || nothing}
+            spellcheck=${this.spellcheck}
+            autocapitalize=${this.autocapitalize || nothing}
+            autocorrect=${this.autoCorrect || nothing}
             aria-label=${this.effectivePhoneLabel ?? nothing}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}

@@ -529,6 +529,17 @@ it('prefers an explicit label over the header slot fallback', async () => {
   expect(panel.getAttribute('aria-label')).to.equal('Explicit label');
 });
 
+it('forwards a host-level aria-label attribute to the panel, winning over label and the header-slot fallback', async () => {
+  const el = (await fixture(
+    html`<lyra-responsive-panel mode="overlay" open label="Explicit label" aria-label="Host override"
+      ><span slot="header">Header text</span></lyra-responsive-panel
+    >`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('aria-label')).to.equal('Host override');
+});
+
 it('is accessible while open in the overlay presentation with header-slot content but no label', async () => {
   const el = (await fixture(
     html`<lyra-responsive-panel mode="overlay" open

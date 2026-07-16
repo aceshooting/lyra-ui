@@ -145,7 +145,7 @@ export interface LyraMapEventMap {
  *
  * ⚠️ The default `mapStyle` (when unset) uses OpenStreetMap's demo tile
  * server, which is not suitable for production traffic — see the
- * `DEFAULT_STYLE` doc comment in `map.ts`. Always pass an explicit
+ * `DEFAULT_STYLE` doc comment above. Always pass an explicit
  * `mapStyle` in production.
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {

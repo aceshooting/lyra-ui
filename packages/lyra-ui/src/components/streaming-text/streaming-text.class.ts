@@ -45,15 +45,16 @@ export function looksLikeMarkdown(text: string): boolean {
  * is the actual default this property needs. `markdown` (no value, or
  * `="true"`) -> `true`; `markdown="false"` -> `false`; attribute entirely
  * absent -> `undefined`.
+ *
+ * Only `fromAttribute` is defined: `markdown` is not declared `reflect: true`
+ * below, and Lit only ever calls a converter's `toAttribute()` when the
+ * property it's attached to reflects, so a `toAttribute()` here would be
+ * unreachable dead code.
  */
 const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> = {
   fromAttribute(value): boolean | undefined {
     if (value === null) return undefined;
     return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    if (value === undefined) return null;
-    return value ? '' : 'false';
   },
 };
 

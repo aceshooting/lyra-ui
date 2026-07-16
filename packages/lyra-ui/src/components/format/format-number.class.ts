@@ -12,7 +12,6 @@ import { styles } from './format.styles.js';
 export class LyraFormatNumber extends LyraElement {
   static styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
-  @property() locale = '';
   @property() currency = '';
   @property() notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard';
   @property({ attribute: 'minimum-fraction-digits', type: Number }) minimumFractionDigits?: number;

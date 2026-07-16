@@ -85,10 +85,24 @@ export class LyraEmpty extends LyraElement {
       this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement,
       this.shadowRoot!.querySelector('[part="actions"]') as HTMLElement,
     );
+    // Same fallback reconciliation as icon/actions above, but the heading and
+    // description parts also fall back to the `heading`/`description`
+    // attribute when nothing is slotted, so a forwarded-but-empty slot must
+    // not collapse the part while that attribute still has text to show.
+    this.reconcileSlotHidden(
+      this.shadowRoot!.querySelector('slot[name="heading"]') as HTMLSlotElement,
+      this.shadowRoot!.querySelector('[part="heading"]') as HTMLElement,
+      this.heading.length > 0,
+    );
+    this.reconcileSlotHidden(
+      this.shadowRoot!.querySelector('slot[name="description"]') as HTMLSlotElement,
+      this.shadowRoot!.querySelector('[part="description"]') as HTMLElement,
+      this.description.length > 0,
+    );
   }
 
-  private reconcileSlotHidden(slot: HTMLSlotElement, wrapper: HTMLElement): void {
-    wrapper.toggleAttribute('hidden', slot.assignedElements({ flatten: true }).length === 0);
+  private reconcileSlotHidden(slot: HTMLSlotElement, wrapper: HTMLElement, hasFallbackContent = false): void {
+    wrapper.toggleAttribute('hidden', !hasFallbackContent && slot.assignedElements({ flatten: true }).length === 0);
   }
 
   private onIconSlotChange = (e: Event): void => {

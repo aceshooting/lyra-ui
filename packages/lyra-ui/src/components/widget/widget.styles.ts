@@ -62,6 +62,10 @@ export const styles = css`
     font-size: var(--lyra-font-size-sm);
     color: var(--lyra-color-text-quiet);
   }
+  [part='label'][hidden],
+  [part='sublabel'][hidden] {
+    display: none;
+  }
   [part='actions'] {
     display: flex;
     align-items: center;

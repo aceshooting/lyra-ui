@@ -86,7 +86,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       </div>
       <div part="controls" aria-label=${this.localize('zoomControls')}>
         <button part="zoom-out" type="button" aria-label=${this.localize('zoomOut')} ?disabled=${zoom <= min} @click=${this.zoomOut}>−</button>
-        <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${this.resetZoom}>100%</button>
+        <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${this.resetZoom}>${this.localize('pdfViewerCurrentZoom', undefined, { percent: 100 })}</button>
         <button part="zoom-in" type="button" aria-label=${this.localize('zoomIn')} ?disabled=${zoom >= max} @click=${this.zoomIn}>+</button>
       </div>
     </div>`;

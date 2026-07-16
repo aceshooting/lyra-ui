@@ -182,6 +182,34 @@ it('moves roving focus with arrow keys, wraps at neither end, and Home/End jump 
   expect((event2 as CustomEvent).detail.text).to.equal('alpha'); // first in declaration order
 });
 
+it('swaps which arrow key advances/retreats roving focus under dir="rtl"', async () => {
+  // Mirrors lyra-tree's identical dir="rtl" arrow-key swap test -- word-cloud
+  // is one of the components named in AGENTS.md's RTL roving-focus history.
+  const el = (await fixture(html`<lyra-word-cloud dir="rtl" .words=${WORDS}></lyra-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+
+  // First arrow press (either key) just lands on the first word, same as LTR.
+  keydown(el, 'ArrowLeft');
+  await el.updateComplete;
+  const eventPromise1 = oneEvent(el, 'lyra-word-click');
+  keydown(el, 'Enter');
+  expect((await eventPromise1).detail.text).to.equal('alpha');
+
+  // Under RTL, ArrowLeft is the mirrored "forward" key -- advances to the next word.
+  keydown(el, 'ArrowLeft');
+  await el.updateComplete;
+  const eventPromise2 = oneEvent(el, 'lyra-word-click');
+  keydown(el, 'Enter');
+  expect((await eventPromise2).detail.text).to.equal('beta');
+
+  // ArrowRight is the mirrored "backward" key under RTL -- retreats to the previous word.
+  keydown(el, 'ArrowRight');
+  await el.updateComplete;
+  const eventPromise3 = oneEvent(el, 'lyra-word-click');
+  keydown(el, 'Enter');
+  expect((await eventPromise3).detail.text).to.equal('alpha');
+});
+
 it('does not fire lyra-word-click on Enter/Space before any word is focused', async () => {
   const el = (await fixture(html`<lyra-word-cloud .words=${WORDS}></lyra-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;

@@ -27,20 +27,20 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
 
   private observer?: IntersectionObserver;
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    this.addEventListener('slotchange', this.onSlotChange);
-  }
-
   disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onSlotChange);
     this.observer?.disconnect();
     this.observer = undefined;
     super.disconnectedCallback();
   }
 
   protected updated(changed: PropertyValues): void {
-    if (changed.has('disabled') || changed.has('rootMargin') || changed.has('threshold') || changed.has('root')) queueMicrotask(this.observeTargets);
+    // Routed through the base class's connection-aware scheduler rather than
+    // a bare queueMicrotask: Lit still runs a scheduled update (and this
+    // method) even for an element that disconnects before that update's own
+    // microtask fires, and a plain queueMicrotask has no way to notice that
+    // and would still spin up a new, now-unreachable IntersectionObserver that
+    // disconnectedCallback has already run and won't run again to clean up.
+    if (changed.has('disabled') || changed.has('rootMargin') || changed.has('threshold') || changed.has('root')) this.scheduleAfterUpdate(this.observeTargets);
   }
 
   private onSlotChange = (): void => this.observeTargets();

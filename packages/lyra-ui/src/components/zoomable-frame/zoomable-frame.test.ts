@@ -54,3 +54,19 @@ it('rejects an unsafe image src instead of passing it straight to the DOM', asyn
   const img = el.shadowRoot!.querySelector('[part="content"] img') as HTMLImageElement;
   expect(img.getAttribute('src')).to.equal('');
 });
+
+it('renders the reset button\'s visible zoom percentage through localize (unchanged English default)', async () => {
+  const el = (await fixture(html`<lyra-zoomable-frame></lyra-zoomable-frame>`)) as LyraZoomableFrame;
+  await el.updateComplete;
+  const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+  expect(reset.textContent?.trim()).to.equal('100%');
+});
+
+it('localizes the reset button\'s visible zoom percentage via .strings', async () => {
+  const el = (await fixture(
+    html`<lyra-zoomable-frame .strings=${{ pdfViewerCurrentZoom: '{percent} pourcent' }}></lyra-zoomable-frame>`,
+  )) as LyraZoomableFrame;
+  await el.updateComplete;
+  const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+  expect(reset.textContent?.trim()).to.equal('100 pourcent');
+});

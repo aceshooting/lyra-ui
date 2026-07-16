@@ -296,7 +296,7 @@ export class LyraPdfViewer extends LyraElement<LyraPdfViewerEventMap> {
   }
 
   render(): TemplateResult {
-    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('pdfViewerLabel')}>${this.renderBody()}</div>`;
+    return html`<div part="base" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('pdfViewerLabel')}>${this.renderBody()}</div>`;
   }
 }
 

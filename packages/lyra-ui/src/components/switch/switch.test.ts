@@ -112,6 +112,24 @@ it('forwards focus() and blur() to the internal switch control', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(null);
 });
 
+it('re-dispatches the internal control focus/blur as bubbling, composed host-level events', async () => {
+  const el = (await fixture(html`<lyra-switch>Label</lyra-switch>`)) as LyraSwitch;
+
+  const focusPromise = oneEvent(el, 'focus');
+  el.focus();
+  const focusEvent = await focusPromise;
+  expect(focusEvent.bubbles).to.be.true;
+  expect(focusEvent.composed).to.be.true;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+
+  const blurPromise = oneEvent(el, 'blur');
+  el.blur();
+  const blurEvent = await blurPromise;
+  expect(blurEvent.bubbles).to.be.true;
+  expect(blurEvent.composed).to.be.true;
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
 it('reflects aria-invalid on the inner switch only after the field has been interacted with once', async () => {
   const el = (await fixture(html`<lyra-switch required>Label</lyra-switch>`)) as LyraSwitch;
   await el.updateComplete;

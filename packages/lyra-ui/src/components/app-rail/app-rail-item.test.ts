@@ -31,6 +31,16 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('hides the icon slot wrapper from assistive tech even without a host aria-label', async () => {
+  const el = (await fixture(html`
+    <lyra-app-rail-item href="/inbox">
+      <span slot="icon">📥</span>Inbox
+    </lyra-app-rail-item>
+  `)) as LyraAppRailItem;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]')!;
+  expect(icon.getAttribute('aria-hidden')).to.equal('true');
+});
+
 it('marks the base part aria-current="page" when active', async () => {
   const el = (await fixture(html`<lyra-app-rail-item href="/home" active>Home</lyra-app-rail-item>`)) as LyraAppRailItem;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
@@ -103,5 +113,18 @@ describe('tooltip', () => {
     base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+  });
+
+  it('excludes icon-slot text from the flyout label, using only the default slot content', async () => {
+    const el = (await fixture(html`
+      <lyra-app-rail-item tooltip icon-only>
+        <span slot="icon">📥</span>Dashboard
+      </lyra-app-rail-item>
+    `)) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await el.updateComplete;
+    const flyout = el.shadowRoot!.querySelector('[part="tooltip"]');
+    expect(flyout!.textContent!.trim()).to.equal('Dashboard');
   });
 });

@@ -46,7 +46,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   };
   render(): TemplateResult {
     if (!this.open) return html``;
-    const label = this.accessibleLabel || undefined;
+    const label = this.accessibleLabel || this.getAttribute('aria-label') || undefined;
     return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}" aria-label=${label || nothing}>
       <span part="icon" ?hidden=${!this.hasIcon}><slot name="icon" @slotchange=${this.onSlotChange}></slot></span>
       <div part="content">

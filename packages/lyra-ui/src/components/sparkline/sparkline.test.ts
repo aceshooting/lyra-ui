@@ -117,6 +117,15 @@ it('formats the last value in aria-label instead of announcing raw float noise',
   );
 });
 
+it('announces the last finite value instead of literal "NaN" when the series ends on a non-finite sample', async () => {
+  const el = (await fixture(`<lyra-sparkline></lyra-sparkline>`)) as LyraSparkline;
+  el.values = [1, 3, 2, NaN];
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')!;
+  expect(label).not.to.contain('NaN');
+  expect(label).to.equal('Trend of 4 values, last 2');
+});
+
 it('formats announced values with the effective locale', async () => {
   const el = (await fixture(`<lyra-sparkline locale="de-DE"></lyra-sparkline>`)) as LyraSparkline;
   el.values = [1000, 1234.5];

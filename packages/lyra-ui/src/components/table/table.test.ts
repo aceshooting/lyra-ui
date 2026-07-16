@@ -95,6 +95,62 @@ it('filters rows through the built-in filter field and emits the requested text'
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
 });
 
+it('forwards spellcheck/autocapitalize/autocorrect to the filter input', async () => {
+  const el = (await fixture(html`
+    <lyra-table filterable spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-table>
+  `)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  expect(input.spellcheck).to.be.false;
+  expect(input.getAttribute('autocapitalize')).to.equal('off');
+  expect(input.getAttribute('autocorrect')).to.equal('off');
+});
+
+it('defaults spellcheck to true on the filter input (matching the native element default)', async () => {
+  const el = (await fixture(html`<lyra-table filterable></lyra-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  expect(input.spellcheck).to.be.true;
+  expect(input.hasAttribute('autocapitalize')).to.be.false;
+  expect(input.hasAttribute('autocorrect')).to.be.false;
+});
+
+it('forwards spellcheck/autocapitalize/autocorrect to a text cell editor but not a number one', async () => {
+  const el = (await fixture(html`
+    <lyra-table spellcheck="false" autocapitalize="off" autocorrect="off"></lyra-table>
+  `)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cells = [...el.shadowRoot!.querySelectorAll('[part="row"] [part="cell"]')] as HTMLElement[];
+
+  cells[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const textInput = cells[0].querySelector('[part="cell-editor"]') as HTMLInputElement;
+  expect(textInput.spellcheck).to.be.false;
+  expect(textInput.getAttribute('autocapitalize')).to.equal('off');
+  expect(textInput.getAttribute('autocorrect')).to.equal('off');
+  textInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  cells[1].dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const numberInput = cells[1].querySelector('[part="cell-editor"]') as HTMLInputElement;
+  expect(numberInput.hasAttribute('spellcheck')).to.be.false;
+  expect(numberInput.hasAttribute('autocapitalize')).to.be.false;
+  expect(numberInput.hasAttribute('autocorrect')).to.be.false;
+});
+
 it('filters without throwing over rows containing a circular reference or a BigInt', async () => {
   const cyclic: Record<string, unknown> = { id: 'c', name: 'Circular', score: 5n as unknown as number };
   cyclic.self = cyclic;

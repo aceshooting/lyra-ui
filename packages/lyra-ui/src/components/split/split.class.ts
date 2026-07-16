@@ -876,8 +876,15 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         // collapsed pane: grow to fill whatever space that pane no longer
         // occupies (its full percent-basis space while floating, or
         // percent-basis-minus-railWidth while railed), proportionally to
-        // their own relative `sizes` share for a 3+-panel split.
-        panel.style.flex = `${percent} 1 0%`;
+        // their own relative `sizes` share for a 3+-panel split -- but still
+        // honor this panel's own panelConstraints via the same clamp()
+        // flex-basis the uncollapsed branch below uses, so a constrained
+        // sibling doesn't grow past its own maxPx (or below its own minPx)
+        // just because an adjacent pane collapsed.
+        panel.style.flex =
+          constraint && (constraint.minPx != null || constraint.maxPx != null)
+            ? `0 1 clamp(${constraint.minPx ?? NO_MIN_PX}px, ${percent}%, ${constraint.maxPx ?? NO_MAX_PX}px)`
+            : `${percent} 1 0%`;
       } else {
         // clamp() mixes units natively, so a constrained panel stays pinned
         // between its px bounds across container resizes with no extra

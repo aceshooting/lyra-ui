@@ -49,8 +49,23 @@ export class LyraAppRailItem extends LyraElement {
   @state() private showTooltip = false;
   private stopPositioning?: () => void;
 
+  // Only the default slot's own content counts toward the tooltip text --
+  // text incidentally living inside the (decorative) `icon` slot shouldn't
+  // leak into the flyout label. Mirrors `lyra-chip`'s `labelText` getter.
+  private get labelText(): string {
+    return Array.from(this.childNodes)
+      .filter(
+        (n): n is Text | Element =>
+          (n.nodeType === Node.TEXT_NODE || n instanceof Element) &&
+          !(n instanceof Element && n.getAttribute('slot') === 'icon'),
+      )
+      .map((n) => n.textContent ?? '')
+      .join('')
+      .trim();
+  }
+
   private get tooltipText(): string {
-    return this.getAttribute('aria-label') || this.textContent?.trim() || '';
+    return this.getAttribute('aria-label') || this.labelText || '';
   }
 
   private onFocusShow = (): void => {
@@ -87,7 +102,7 @@ export class LyraAppRailItem extends LyraElement {
     const label = this.getAttribute('aria-label');
     const href = safeLinkHref(this.href);
     const content = html`
-      <span part="icon" aria-hidden=${label ? 'true' : nothing}><slot name="icon"></slot></span>
+      <span part="icon" aria-hidden="true"><slot name="icon"></slot></span>
       <span part="label"><slot></slot></span>
       ${this.showTooltip ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>` : nothing}
     `;

@@ -13,7 +13,6 @@ export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | '
 export class LyraRelativeTime extends LyraElement {
   static styles = [LyraElement.styles, styles];
   @property() date: string | number | Date = '';
-  @property() locale = '';
   @property() unit: RelativeTimeUnit | 'auto' = 'auto';
   @property() numeric: 'always' | 'auto' = 'auto';
   @property({ type: Boolean, attribute: 'sync' }) sync = false;

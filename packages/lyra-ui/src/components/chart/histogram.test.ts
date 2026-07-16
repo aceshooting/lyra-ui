@@ -75,6 +75,30 @@ it('redraws its derived labels and counts when values change after initializatio
   expect((el as any).chart.data.datasets[0].data).to.deep.equal([3, 1]);
 });
 
+it('visually hides the fallback data table via the sr-only sheet when show-data-table is off', async () => {
+  const el = (await fixture(html`<lyra-histogram></lyra-histogram>`)) as LyraHistogram;
+  el.values = [1, 2, 3];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
+  expect(table.classList.contains('sr-only')).to.be.true;
+  // Proves the `.sr-only` class is actually backed by the shared a11y stylesheet (not just present
+  // as a dead class name) -- without `srOnly` in `static styles`, this rule never applies and the
+  // table would render fully visible despite carrying the class. `width`/`height` are intentionally
+  // not asserted here: a `<table>` in the default auto layout algorithm treats a CSS `width` as a
+  // minimum suggestion and grows to fit its content regardless, so those two sr-only properties
+  // don't reliably reflect on a table element even when the rule is correctly applied.
+  const computed = getComputedStyle(table);
+  expect(computed.position).to.equal('absolute');
+  expect(computed.overflow).to.equal('hidden');
+  expect(computed.margin).to.equal('-1px');
+
+  el.showDataTable = true;
+  await el.updateComplete;
+  expect(table.classList.contains('sr-only')).to.be.false;
+});
+
 it('can shrink to a 320px allocation with a long series label', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">

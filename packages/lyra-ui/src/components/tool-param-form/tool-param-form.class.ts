@@ -589,6 +589,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         id=${fieldId}
         aria-label=${errorMessage ? `${label}. ${errorMessage}` : label}
         aria-required=${required ? 'true' : nothing}
+        ?required=${required}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @change=${(e: Event) => this.onSelectChange(key, e)}

@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { srOnly } from '../../internal/a11y.js';
+import { finiteInteger } from '../../internal/numbers.js';
 import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
@@ -140,10 +141,7 @@ function warnInvalidColor(color: string): void {
  * agreement with the count used by `quartileBucket()`.
  */
 export function normalizeBucketCount(bucketCount: number): number {
-  if (!Number.isFinite(bucketCount)) {
-    return DEFAULT_BUCKET_COUNT;
-  }
-  return Math.min(MAX_BUCKET_COUNT, Math.max(2, Math.floor(bucketCount)));
+  return finiteInteger(bucketCount, DEFAULT_BUCKET_COUNT, 2, MAX_BUCKET_COUNT);
 }
 
 const bucketCountConverter = {

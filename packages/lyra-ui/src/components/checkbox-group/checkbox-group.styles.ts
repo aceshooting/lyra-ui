@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host { display: block; }
   [part='form-control'] { display: grid; gap: var(--lyra-space-xs); }
-  [part='label'] { font-weight: 600; color: var(--lyra-color-text); }
+  [part='label'] { font-weight: var(--lyra-font-weight-semibold); color: var(--lyra-color-text); }
   [part='label']::after { content: '*'; margin-inline-start: var(--lyra-space-2xs); color: var(--lyra-color-danger); }
   [part='options'] { display: grid; gap: var(--lyra-space-s); }
   [part='hint'], [part='error'] { color: var(--lyra-color-text-quiet); font-size: var(--lyra-font-size-sm); }

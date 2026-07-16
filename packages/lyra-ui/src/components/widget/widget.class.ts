@@ -299,12 +299,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
               <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
             </span>
             <div part="label-group">
-              ${hasLabel || this.hasLabelSlot
-                ? html`<span part="label"><slot name="label" @slotchange=${this.onLabelSlotChange}>${this.label}</slot></span>`
-                : nothing}
-              ${hasSublabel || this.hasSublabelSlot
-                ? html`<span part="sublabel"><slot name="sublabel" @slotchange=${this.onSublabelSlotChange}>${this.sublabel}</slot></span>`
-                : nothing}
+              <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}><slot name="label" @slotchange=${this.onLabelSlotChange}>${this.label}</slot></span>
+              <span part="sublabel" ?hidden=${!hasSublabel && !this.hasSublabelSlot}><slot name="sublabel" @slotchange=${this.onSublabelSlotChange}>${this.sublabel}</slot></span>
             </div>
           </div>
           <div part="actions" ?hidden=${!this.hasActionsSlot}>

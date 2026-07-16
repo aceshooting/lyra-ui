@@ -103,6 +103,16 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
   expect(panel.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part="title"]')!.id);
 });
 
+it('forwards a host aria-label to the panel and lets it win over the generated title', async () => {
+  const el = (await fixture(
+    html`<lyra-tool-select-dialog open aria-label="Custom tool picker name"></lyra-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+
+  expect(panel.getAttribute('aria-label')).to.equal('Custom tool picker name');
+  expect(panel.hasAttribute('aria-labelledby')).to.equal(false);
+});
+
 it('renders the default label and a live "N of M tools enabled" subtitle', async () => {
   const el = (await fixture(
     html`<lyra-tool-select-dialog .tools=${TOOLS} .selected=${['web_search', 'run_python']}></lyra-tool-select-dialog>`,
@@ -466,6 +476,31 @@ describe('focus management', () => {
     expect(document.activeElement).to.equal(trigger);
 
     trigger.remove();
+  });
+
+  it('re-dispatches bubbling, composed focus/blur events from the search input on the host', async () => {
+    const el = (await fixture(
+      html`<lyra-tool-select-dialog open .tools=${TOOLS}></lyra-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    await el.updateComplete;
+    const searchInput = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+    // Opening already moved focus to the search input (see the sibling test
+    // above); blur it first so the subsequent .focus() actually fires a new
+    // native focus event to bridge.
+    searchInput.blur();
+    await el.updateComplete;
+
+    const focusPromise = oneEvent(el, 'focus');
+    searchInput.focus();
+    const focusEvent = await focusPromise;
+    expect(focusEvent.bubbles).to.be.true;
+    expect(focusEvent.composed).to.be.true;
+
+    const blurPromise = oneEvent(el, 'blur');
+    searchInput.blur();
+    const blurEvent = await blurPromise;
+    expect(blurEvent.bubbles).to.be.true;
+    expect(blurEvent.composed).to.be.true;
   });
 
   it('traps Tab focus inside the panel, wrapping last->first and first->last', async () => {

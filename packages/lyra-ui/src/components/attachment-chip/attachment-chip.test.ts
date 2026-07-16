@@ -50,6 +50,14 @@ it('defaults to status="pending", removable=true, and empty independent props', 
   expect(el.file).to.be.undefined;
 });
 
+it('registers lyra-document-preview transitively via lyra-document-viewer, with no direct import of its own', async () => {
+  // attachment-chip.ts only side-effect-imports document-viewer.js; document-viewer.js in turn
+  // imports document-preview.js as its own built-in fallback renderer, so the tag must still be
+  // defined even though attachment-chip.ts no longer imports document-preview.js directly.
+  await fixture(html`<lyra-attachment-chip></lyra-attachment-chip>`);
+  expect(customElements.get('lyra-document-preview')).to.exist;
+});
+
 describe('document preview integration', () => {
   it('opens the document viewer with the File MIME type and blob source', async () => {
     const file = makeFile('notes.txt', 'text/plain', 12);

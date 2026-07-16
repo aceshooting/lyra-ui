@@ -73,17 +73,21 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  * while retaining this component's own responsive rendering and close event.
  *
  * Accessible name (overlay presentation only -- the inline presentation has
- * no dialog semantics to name): `label`, when set, is used verbatim. When
- * `label` is empty, this falls back to the `header` slot's content -- a
+ * no dialog semantics to name), in priority order: if the host element itself
+ * has an `aria-label` attribute set, its value wins outright, overriding
+ * every source below -- the standard ARIA convention for a consumer that
+ * wants full control over the announced name, matching lyra-dialog's
+ * `accessibleLabel` pattern. Otherwise `label`, when set, is used verbatim.
+ * When both are empty, this falls back to the `header` slot's content -- a
  * heading element (`h1`–`h6` or `[role="heading"]`) among the slotted header
  * content wins if present, otherwise the header slot's full text content is
  * used, mirroring lyra-dialog's `detectHeading()`/`headingText` fallback (see
  * dialog.ts's module doc for why this uses `aria-label`, a copied string,
  * rather than `aria-labelledby`: the header content is light DOM while
  * `[part="panel"]` lives in this element's shadow tree, and an ID-reference
- * attribute can't resolve across that boundary). A panel opened without
- * either `label` or header content still renders `role="dialog"` with no
- * accessible name -- set one of the two to avoid that.
+ * attribute can't resolve across that boundary). A panel opened without a
+ * host `aria-label`, `label`, or header content still renders `role="dialog"`
+ * with no accessible name -- set one of those to avoid that.
  *
  * @customElement lyra-responsive-panel
  * @slot - The panel body.
@@ -136,6 +140,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    *  whether the effective presentation is `'overlay'` (below/at this width) or `'inline'`
    *  (above it). */
   @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '768px';
+
+  /** Host-level `aria-label` override for the overlay presentation's accessible name -- wins over
+   *  every other source (`label`, the header-slot fallback), matching `<lyra-dialog>`'s
+   *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
+   *  `aria-label` attribute on `<lyra-responsive-panel>` itself, not a public JS property. */
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   @state() private belowBreakpoint = false;
   @state() private effectiveMode: ResponsivePanelEffectiveMode = 'inline';
@@ -350,7 +360,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   render(): TemplateResult {
     const overlay = this.effectiveMode === 'overlay';
-    const accessibleName = this.label || this.headingText;
+    const accessibleName = this.accessibleLabel ?? (this.label || this.headingText);
     return html`
       <div part="base" class=${overlay ? 'overlay' : 'inline'}>
         ${overlay ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}

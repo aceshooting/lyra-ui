@@ -38,6 +38,15 @@ export const styles = css`
     font-weight: var(--lyra-font-weight-bold);
     font-family: var(--lyra-font-mono);
   }
+  /* [part='value']/[part='row-value'] become keyboard-focusable (tabindex="0")
+     whenever exactValue/row.exactValue is set (see stat.class.ts), so they
+     need their own visible focus ring like every other focusable part in the
+     library. */
+  [part='value']:focus-visible,
+  [part='row-value']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
   [part='unit'] {
     font-size: var(--lyra-font-size-md-sm);
     color: var(--lyra-color-text-quiet);

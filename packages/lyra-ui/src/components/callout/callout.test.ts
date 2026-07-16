@@ -24,6 +24,18 @@ it('allows close to be vetoed and otherwise hides', async () => {
   expect(el.open).to.be.false;
 });
 
+it('forwards a host-level aria-label to the base region when accessible-label is unset', async () => {
+  const el = (await fixture(html`<lyra-callout aria-label="Storage warning">Disk is nearly full</lyra-callout>`)) as LyraCallout;
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Storage warning');
+});
+
+it('lets accessible-label take precedence over a host-level aria-label', async () => {
+  const el = (await fixture(
+    html`<lyra-callout accessible-label="Explicit label" aria-label="Host label">Message</lyra-callout>`
+  )) as LyraCallout;
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Explicit label');
+});
+
 it('supports a lightweight inline status/error treatment', async () => {
   const el = (await fixture(html`<lyra-callout inline variant="danger"><span slot="icon">!</span>Try again</lyra-callout>`)) as LyraCallout;
   expect(el.inline).to.be.true;

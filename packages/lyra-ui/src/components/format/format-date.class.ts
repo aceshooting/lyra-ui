@@ -12,7 +12,6 @@ import { styles } from './format.styles.js';
 export class LyraFormatDate extends LyraElement {
   static styles = [LyraElement.styles, styles];
   @property() date: string | number | Date = '';
-  @property() locale = '';
   @property() year: Intl.DateTimeFormatOptions['year'] = 'numeric';
   @property() month: Intl.DateTimeFormatOptions['month'] = 'long';
   @property() day: Intl.DateTimeFormatOptions['day'] = 'numeric';

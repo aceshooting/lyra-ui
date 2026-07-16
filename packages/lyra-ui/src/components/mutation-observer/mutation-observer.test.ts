@@ -41,6 +41,27 @@ describe('<lyra-mutation-observer>', () => {
     expect(lastRecordCount).to.equal(2);
   });
 
+  it('drives observation solely through the internal <slot>, not a host-level slotchange listener', async () => {
+    const el = await fixture<LyraMutationObserver>(html`<lyra-mutation-observer><div></div></lyra-mutation-observer>`);
+    await el.updateComplete;
+
+    let hostSlotchangeFired = false;
+    el.addEventListener('slotchange', () => {
+      hostSlotchangeFired = true;
+    });
+
+    const target = el.querySelector('div')!;
+    const event = oneEvent(el, 'lyra-mutation');
+    target.append(document.createElement('span'));
+    await event;
+
+    // slotchange bubbles only within the shadow tree (composed: false), so a listener added
+    // directly on the host element never observes it -- mutation forwarding must therefore be
+    // driven entirely by the internal <slot>'s own @slotchange template binding, confirming
+    // there is no host-level slotchange wiring left to maintain.
+    expect(hostSlotchangeFired).to.equal(false);
+  });
+
   it('supports disabled observation', async () => {
     const el = await fixture<LyraMutationObserver>(html`<lyra-mutation-observer disabled><div></div></lyra-mutation-observer>`);
     expect(el.disabled).to.equal(true);

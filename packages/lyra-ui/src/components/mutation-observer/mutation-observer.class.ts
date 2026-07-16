@@ -29,13 +29,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
   private observer?: MutationObserver;
 
-  connectedCallback(): void {
-    super.connectedCallback();
-    this.addEventListener('slotchange', this.onSlotChange);
-  }
-
   disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onSlotChange);
     this.disconnect();
     super.disconnectedCallback();
   }

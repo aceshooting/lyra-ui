@@ -51,6 +51,11 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private _groupDisabled = false;
   private _groupRequired = false;
   private _tabbable = true;
+  // What `form.reset()` restores to — captured once from the declarative
+  // `checked` content attribute at first connect, mirroring
+  // `<lyra-checkbox>`'s identical `_defaultChecked`/`_defaultCaptured` pair.
+  private _defaultChecked = false;
+  private _defaultCaptured = false;
 
   get checked(): boolean { return this._checked; }
   set checked(value: boolean) {
@@ -113,7 +118,24 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   connectedCallback(): void {
     super.connectedCallback();
     this.hasLabel = Array.from(this.childNodes).some((node) => (node.textContent ?? '').trim().length > 0);
+    if (!this._defaultCaptured) {
+      this._defaultCaptured = true;
+      this._defaultChecked = this.hasAttribute('checked');
+    }
     this.updateValidity();
+  }
+
+  formResetCallback(): void {
+    this.checked = this._defaultChecked;
+  }
+  formStateRestoreCallback(
+    state: string | File | FormData | null,
+    _mode?: 'restore' | 'autocomplete',
+  ): void {
+    const old = this._checked;
+    this._checked = state === 'checked';
+    this.syncFormState();
+    this.requestUpdate('checked', old);
   }
 
   private updateValidity(): void {

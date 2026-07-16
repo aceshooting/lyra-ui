@@ -4,6 +4,9 @@ import './format-date.js';
 import './format-bytes.js';
 import './relative-time.js';
 import type { LyraFormatBytes } from './format-bytes.class.js';
+import type { LyraFormatDate } from './format-date.class.js';
+import type { LyraFormatNumber } from './format-number.class.js';
+import type { LyraRelativeTime } from './relative-time.class.js';
 
 it('formats numbers and bytes through Intl', async () => {
   const el = await fixture(html`<div><lyra-format-number value="1234.5"></lyra-format-number><lyra-format-bytes value="1024"></lyra-format-bytes></div>`);
@@ -48,4 +51,20 @@ it('falls back gracefully when value is programmatically set to NaN', async () =
   el.value = NaN;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal('');
+});
+
+it('reflects the locale property back to the locale attribute (inherited LyraElement `reflect: true`)', async () => {
+  const numberEl = (await fixture(html`<lyra-format-number value="1234.5"></lyra-format-number>`)) as LyraFormatNumber;
+  const dateEl = (await fixture(html`<lyra-format-date date="2024-01-01T00:00:00Z"></lyra-format-date>`)) as LyraFormatDate;
+  const bytesEl = (await fixture(html`<lyra-format-bytes value="1024"></lyra-format-bytes>`)) as LyraFormatBytes;
+  const relativeEl = (await fixture(html`<lyra-relative-time date="2030-01-01T00:00:00Z"></lyra-relative-time>`)) as LyraRelativeTime;
+  numberEl.locale = 'de-DE';
+  dateEl.locale = 'de-DE';
+  bytesEl.locale = 'de-DE';
+  relativeEl.locale = 'de-DE';
+  await Promise.all([numberEl.updateComplete, dateEl.updateComplete, bytesEl.updateComplete, relativeEl.updateComplete]);
+  expect(numberEl.getAttribute('locale')).to.equal('de-DE');
+  expect(dateEl.getAttribute('locale')).to.equal('de-DE');
+  expect(bytesEl.getAttribute('locale')).to.equal('de-DE');
+  expect(relativeEl.getAttribute('locale')).to.equal('de-DE');
 });

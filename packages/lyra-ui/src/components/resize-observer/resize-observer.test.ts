@@ -33,4 +33,20 @@ describe('<lyra-resize-observer>', () => {
 
     parent.append(el);
   });
+
+  it('resumes observation after a bare reconnect with no property change (e.g. a reparent)', async () => {
+    const el = await fixture<LyraResizeObserver>(html`<lyra-resize-observer><button>Resize me</button></lyra-resize-observer>`);
+    const parent = el.parentElement!;
+    await aTimeout(0);
+    expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should exist after the initial connect').to.exist;
+
+    // A pure reparent -- no property change, and the slot's assigned-node set
+    // is unchanged, so slotchange never fires either.
+    el.remove();
+    expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should be torn down on disconnect').to.be.undefined;
+
+    parent.append(el);
+    await aTimeout(0);
+    expect((el as unknown as { observer?: ResizeObserver }).observer, 'observer should be re-armed on reconnect').to.exist;
+  });
 });

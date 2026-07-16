@@ -78,6 +78,47 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
   expect(chart.isDatasetVisible(1)).to.be.false;
 });
 
+it('repaints after restoring a legend-toggled hidden dataset, not just updating metadata', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [
+    { label: 'x', data: [1, 2] },
+    { label: 'y', data: [3, 4] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.setDatasetVisibility(1, false); // simulate a user clicking the legend to hide dataset 1
+
+  // Track ordering between the restore-visibility call and update() calls: setDatasetVisibility()
+  // only flips internal metadata and does not itself repaint, so the fix must call update() again
+  // *after* restoring the hidden flag, not just once before it.
+  let updateCallCount = 0;
+  let visibilityRestoredAtUpdateCount = -1;
+  const originalUpdate = chart.update.bind(chart);
+  const originalSetDatasetVisibility = chart.setDatasetVisibility.bind(chart);
+  chart.update = (...args: unknown[]) => {
+    updateCallCount++;
+    return originalUpdate(...args);
+  };
+  chart.setDatasetVisibility = (datasetIndex: number, visible: boolean) => {
+    if (datasetIndex === 1 && visible === false) {
+      visibilityRestoredAtUpdateCount = updateCallCount;
+    }
+    return originalSetDatasetVisibility(datasetIndex, visible);
+  };
+
+  el.datasets = [
+    { label: 'x', data: [5, 6] },
+    { label: 'y', data: [7, 8] },
+  ];
+  await el.updateComplete;
+
+  expect(visibilityRestoredAtUpdateCount).to.be.greaterThan(-1);
+  expect(updateCallCount).to.be.greaterThan(visibilityRestoredAtUpdateCount);
+});
+
 it('keeps a newly-added series visible instead of inheriting a stale hidden default', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'bar';

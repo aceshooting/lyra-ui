@@ -60,6 +60,23 @@ it('marks a required field without applying HTML nonempty semantics to the inner
   expect(input.getAttribute('aria-required')).to.equal('true');
 });
 
+it('forwards required to a nested lyra-select so its internal trigger reports aria-required', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { mode: { type: 'string', enum: ['fast', 'careful'] } },
+    required: ['mode'],
+  };
+  const el = (await fixture(html`<lyra-tool-param-form .schema=${schema}></lyra-tool-param-form>`)) as LyraToolParamForm;
+  const select = field(el, 'mode').querySelector('lyra-select') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+    required: boolean;
+  };
+  await select.updateComplete;
+  expect(select.required).to.be.true;
+  const trigger = select.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(trigger.getAttribute('aria-required')).to.equal('true');
+});
+
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {
   const el = (await fixture(html`<lyra-tool-param-form .schema=${basicSchema}></lyra-tool-param-form>`)) as LyraToolParamForm;
   const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;

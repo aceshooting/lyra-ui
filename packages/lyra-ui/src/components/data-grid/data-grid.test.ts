@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './data-grid.js';
 import type { LyraDataGrid, DataGridColumn } from './data-grid.js';
 
@@ -12,4 +12,91 @@ it('renders rows and exposes grid semantics', async () => {
 it('is accessible', async () => {
   const el = await fixture(html`<lyra-data-grid aria-label="Results"></lyra-data-grid>`);
   await expect(el).to.be.accessible();
+});
+
+it('renders aria-selected="true"/"false" on rows matching the selected-state contract', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
+  const rows = [{ name: 'Alpha' }, { name: 'Beta' }];
+  const el = (await fixture(
+    html`<lyra-data-grid .columns=${columns} .rows=${rows} .selectedKey=${1} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  const trs = el.shadowRoot!.querySelectorAll('tbody tr');
+  expect(trs[0].getAttribute('aria-selected')).to.equal('false');
+  expect(trs[1].getAttribute('aria-selected')).to.equal('true');
+});
+
+it('activates a row on a single click, firing lyra-row-click and lyra-selection-change', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
+  const rows = [{ name: 'Alpha' }, { name: 'Beta' }];
+  const el = (await fixture(
+    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  const rowClickListener = oneEvent(el, 'lyra-row-click');
+  const selectionListener = oneEvent(el, 'lyra-selection-change');
+  const row = el.shadowRoot!.querySelectorAll('tbody tr')[1] as HTMLElement;
+  row.click();
+  const rowClickEvent = await rowClickListener;
+  const selectionEvent = await selectionListener;
+  expect((rowClickEvent as CustomEvent).detail.row).to.deep.equal(rows[1]);
+  expect((selectionEvent as CustomEvent).detail.row).to.deep.equal(rows[1]);
+  expect(el.selectedKey).to.equal(1);
+});
+
+it('moves roving tabindex to a cell that receives focus via a mouse click, not just via keyboard nav', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
+  const rows = [{ name: 'Alpha', count: 1 }, { name: 'Beta', count: 2 }];
+  const el = (await fixture(
+    html`<lyra-data-grid .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  const targetCell = el.shadowRoot!.querySelector('[data-row="1"][data-column="1"]') as HTMLElement;
+  targetCell.focus();
+  await el.updateComplete;
+  expect(targetCell.getAttribute('tabindex')).to.equal('0');
+  const otherCells = el.shadowRoot!.querySelectorAll('[role="gridcell"][tabindex="0"]');
+  expect(otherCells).to.have.length(1);
+  expect(otherCells[0]).to.equal(targetCell);
+});
+
+it('swaps ArrowLeft/ArrowRight under dir="rtl" for roving cell navigation', async () => {
+  const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }, { key: 'count', label: 'Count' }];
+  const rows = [{ name: 'Alpha', count: 1 }];
+  const el = (await fixture(
+    html`<lyra-data-grid dir="rtl" .columns=${columns} .rows=${rows} aria-label="Results"></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  await el.updateComplete;
+  const firstCell = el.shadowRoot!.querySelector('[data-row="0"][data-column="0"]') as HTMLElement;
+  firstCell.focus();
+  firstCell.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[data-row="0"][data-column="1"]')!.getAttribute('tabindex')).to.equal('0');
+});
+
+it('scrolls [part="viewport"] horizontally rather than overflowing a 320px container', async () => {
+  // `parentNode` is an open-wc fixture option -- the fixture wrapper appends it under
+  // `document.body` itself and the global afterEach fixtureCleanup removes it, so this
+  // test must not append/remove it manually (that would double-remove the node).
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const columns: DataGridColumn[] = [
+    { key: 'name', label: 'Name', width: '10rem' },
+    { key: 'role', label: 'Role', width: '10rem' },
+    { key: 'location', label: 'Location', width: '10rem' },
+    { key: 'email', label: 'Email', width: '14rem' },
+  ];
+  const el = (await fixture(
+    html`<lyra-data-grid
+      aria-label="People"
+      .columns=${columns}
+      .rows=${[{ name: 'Ada Lovelace', role: 'Mathematician', location: 'London', email: 'ada@example.com' }]}
+    ></lyra-data-grid>`,
+    { parentNode: container },
+  )) as LyraDataGrid;
+  await el.updateComplete;
+
+  // The host's own box must not overflow the 320px allocation -- it can only stay
+  // within it if the viewport scrolls instead of forcing the table to widen the host.
+  expect((el as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
+  const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  expect(getComputedStyle(viewport).overflow).to.equal('auto');
+  expect(viewport.scrollWidth).to.be.greaterThan(viewport.clientWidth);
 });

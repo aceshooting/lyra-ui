@@ -106,6 +106,32 @@ describe('rich label/sublabel', () => {
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Load');
     expect(el.shadowRoot!.querySelector('[part="sublabel"]')!.textContent).to.equal('Last 7 days');
   });
+
+  it('detects a slot="label" child appended after connect even when label/sublabel start empty', async () => {
+    // Regression: [part="label"]/[part="sublabel"] must always render their
+    // <slot> (hidden via CSS, like [part="actions"]) so a slotchange fired by
+    // a later-appended slotted child can still be observed -- when the wrapper
+    // itself was conditionally omitted from the template, no <slot> ever
+    // existed in the shadow DOM for a runtime-added child to trigger.
+    const el = (await fixture(html`<lyra-widget>content</lyra-widget>`)) as LyraWidget;
+    const labelPart = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const sublabelPart = el.shadowRoot!.querySelector('[part="sublabel"]') as HTMLElement;
+    expect(labelPart.hasAttribute('hidden')).to.be.true;
+    expect(sublabelPart.hasAttribute('hidden')).to.be.true;
+
+    const labelSlot = el.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
+    const span = document.createElement('span');
+    span.slot = 'label';
+    span.textContent = 'Runtime label';
+    el.appendChild(span);
+    labelSlot.dispatchEvent(new Event('slotchange'));
+    await el.updateComplete;
+
+    expect(labelPart.hasAttribute('hidden')).to.be.false;
+    const assigned = labelSlot.assignedElements({ flatten: true });
+    expect(assigned.length).to.equal(1);
+    expect(assigned[0]!.textContent).to.equal('Runtime label');
+  });
 });
 
 describe('views', () => {

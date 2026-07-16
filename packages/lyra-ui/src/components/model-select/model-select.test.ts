@@ -181,6 +181,39 @@ it('filters suggestions by id/label substring, case-insensitively, as the user t
   expect(visible[0].textContent).to.contain('qwen2.5-coder');
 });
 
+it('shows the localized empty-listbox message when no suggestions match the typed query', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select allow-custom .catalog=${CATALOG}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  const inp = input(el);
+  inp.focus();
+  inp.value = 'no-such-model';
+  inp.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
+  expect(empty).to.exist;
+  expect(empty.textContent).to.equal('No matches');
+});
+
+it('localizes the empty-listbox message via this.localize() when .strings overrides noMatches', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select
+      allow-custom
+      .catalog=${CATALOG}
+      .strings=${{ noMatches: 'Aucun résultat' }}
+    ></lyra-model-select>`,
+  )) as LyraModelSelect;
+  const inp = input(el);
+  inp.focus();
+  inp.value = 'no-such-model';
+  inp.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
+  expect(empty.textContent).to.equal('Aucun résultat');
+});
+
 it('commits a highlighted suggestion with Enter, emitting lyra-change with inCatalog true', async () => {
   const el = (await fixture(
     html`<lyra-model-select allow-custom .catalog=${CATALOG}></lyra-model-select>`,
@@ -358,6 +391,30 @@ it('allows a required model-select to submit once a value is set', async () => {
   el.value = 'mistral';
   await el.updateComplete;
   expect(form.reportValidity()).to.be.true;
+});
+
+describe('validationMessage localization', () => {
+  it('defaults to the built-in English validationMessage for a required, unset model-select', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select required .catalog=${CATALOG}></lyra-model-select>`,
+    )) as LyraModelSelect;
+    expect(el.validationMessage).to.equal('Please choose a model.');
+  });
+
+  it('localizes the validationMessage via this.localize() when .strings overrides modelSelectRequired', async () => {
+    const el = (await fixture(
+      html`<lyra-model-select
+        required
+        .catalog=${CATALOG}
+        .strings=${{ modelSelectRequired: 'Veuillez choisir un modèle.' }}
+      ></lyra-model-select>`,
+    )) as LyraModelSelect;
+    expect(el.validationMessage).to.equal('Veuillez choisir un modèle.');
+
+    el.value = 'mistral';
+    await el.updateComplete;
+    expect(el.validationMessage).to.equal('');
+  });
 });
 
 it('rebinds the validity focus anchor when switching from trigger to free-text mode', async () => {
@@ -565,6 +622,13 @@ it('preserves the exact aria-label/placeholder/"Model" fallback chain when label
 
   const bare = (await fixture(html`<lyra-model-select .catalog=${CATALOG}></lyra-model-select>`)) as LyraModelSelect;
   expect(trigger(bare).getAttribute('aria-label')).to.equal('Model');
+});
+
+it('localizes the "Model" aria-label fallback via this.localize() when .strings overrides model', async () => {
+  const el = (await fixture(
+    html`<lyra-model-select .catalog=${CATALOG} .strings=${{ model: 'Modèle' }}></lyra-model-select>`,
+  )) as LyraModelSelect;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Modèle');
 });
 
 it('is accessible with a visible label set', async () => {

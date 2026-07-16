@@ -199,6 +199,27 @@ describe('text/* and application/json dispatch', () => {
     }
   });
 
+  it('aborts the in-flight fetch on disconnect, via the shared LyraElement load-cancellation helper', async () => {
+    let signal: AbortSignal | undefined;
+    const unstub = stubFetch((_url, init) => {
+      signal = init?.signal ?? undefined;
+      return new Promise(() => {
+        /* never resolves -- disconnect should abort it, not settle it */
+      });
+    });
+    try {
+      const el = (await fixture(html`
+        <lyra-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lyra-document-preview>
+      `)) as LyraDocumentPreview;
+      expect(signal).to.exist;
+      expect(signal!.aborted).to.be.false;
+      el.remove();
+      expect(signal!.aborted).to.be.true;
+    } finally {
+      unstub();
+    }
+  });
+
   it('skips the fetch and renders an empty-state message when src is absent', async () => {
     const unstub = stubFetch(() => Promise.reject(new Error('should not be called')));
     try {

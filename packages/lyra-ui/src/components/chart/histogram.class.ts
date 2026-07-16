@@ -2,6 +2,7 @@ import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraChart, lockChartType, type Series } from './chart.class.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { srOnly } from '../../internal/a11y.js';
 import {
   binValues,
   normalizeHistogramBinCount,
@@ -20,8 +21,11 @@ export class LyraHistogram extends LyraChart {
   // Explicit rather than relying on `LyraChart`'s inherited `static styles` —
   // `histogram.styles.ts` re-exports the same `chart.styles.ts` sheet, so
   // this is behaviorally identical, but it keeps the per-component styles
-  // file meaningful instead of dead weight.
-  static override styles = [LyraElement.styles, styles];
+  // file meaningful instead of dead weight. `srOnly` must still be included
+  // here (mirrors `LyraChart.styles`) since the inherited `renderDataTable()`
+  // relies on it to visually hide the fallback `<table>`/description when
+  // `showDataTable` is false.
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   override type = 'bar' as const;
 

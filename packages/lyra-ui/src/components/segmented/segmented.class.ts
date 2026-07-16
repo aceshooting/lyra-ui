@@ -59,7 +59,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   }
 
   private focusItem(value: string): void {
-    const button = this.renderRoot.querySelector(`[part="segment"][data-value="${value}"]`) as HTMLElement | null;
+    const button = this.renderRoot.querySelector(
+      `[part="segment"][data-value="${CSS.escape(value)}"]`,
+    ) as HTMLElement | null;
     button?.focus();
   }
 

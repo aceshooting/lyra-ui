@@ -112,7 +112,7 @@ export const Disabled: Story = {
  */
 export const SingleOption: Story = {
   render: () => html`
-    <lyra-select label="Region" style="max-width: 20rem">
+    <lyra-select label="Region" auto-commit-single-option style="max-width: 20rem">
       <lyra-option value="us-east">US East</lyra-option>
     </lyra-select>
   `,
@@ -121,7 +121,7 @@ export const SingleOption: Story = {
 /** The same auto-commit behavior applies when only one *enabled* option remains among disabled ones. */
 export const SingleEnabledAmongDisabled: Story = {
   render: () => html`
-    <lyra-select label="Plan" style="max-width: 20rem">
+    <lyra-select label="Plan" auto-commit-single-option style="max-width: 20rem">
       <lyra-option value="free" disabled>Free (unavailable)</lyra-option>
       <lyra-option value="pro">Pro</lyra-option>
       <lyra-option value="enterprise" disabled>Enterprise (unavailable)</lyra-option>

@@ -613,9 +613,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');
+      let restoredHiddenState = false;
       priorVisibility.forEach((visible, i) => {
-        if (!visible) this.chart!.setDatasetVisibility(i, false);
+        if (!visible) {
+          this.chart!.setDatasetVisibility(i, false);
+          restoredHiddenState = true;
+        }
       });
+      // setDatasetVisibility() only flips internal metadata -- it does not repaint on its own (unlike
+      // hide()/show()) -- so without a follow-up update() the canvas would keep showing the series as
+      // visible until some unrelated future draw() call happens to run.
+      if (restoredHiddenState) this.chart.update('none');
       return;
     }
     this.chart?.destroy();

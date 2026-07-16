@@ -88,6 +88,34 @@ it('mirrors the previous/next chevron glyphs under RTL', async () => {
   expect(getComputedStyle(glyph).transform).to.contain('matrix(-1');
 });
 
+it('disables autoplay under prefers-reduced-motion', async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+
+  try {
+    const el = await carousel(html`
+      <lyra-carousel autoplay autoplay-interval="1000">
+        <div>One</div>
+        <div>Two</div>
+        <div>Three</div>
+      </lyra-carousel>
+    `);
+    // The reduced-motion branch must gate autoplay before any timer is ever
+    // scheduled, not just shorten it -- so no interval should exist at all.
+    expect((el as any).reduceMotion).to.be.true;
+    expect((el as any).timer).to.be.undefined;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(el.index).to.equal(0);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
 it('is accessible and supports a consumer supplied accessible label', async () => {
   const el = await carousel(html`
     <lyra-carousel aria-label="Product screenshots">

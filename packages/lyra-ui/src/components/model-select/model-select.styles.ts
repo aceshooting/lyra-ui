@@ -196,7 +196,7 @@ export const styles = css`
     white-space: nowrap;
   }
 
-  .empty {
+  [part='empty'] {
     padding: var(--lyra-space-m);
     color: var(--lyra-color-text-quiet);
     font-size: var(--lyra-font-size-md-sm);

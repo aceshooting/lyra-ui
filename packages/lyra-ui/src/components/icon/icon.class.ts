@@ -1,5 +1,5 @@
 import { html, svg, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './icon.styles.js';
 
@@ -27,9 +27,54 @@ export class LyraIcon extends LyraElement {
   @property() name = '';
   @property() path = '';
   @property() label = '';
+  @query('svg') private svgEl?: SVGSVGElement;
+  @query('slot') private customSlot?: HTMLSlotElement;
+
+  protected updated(): void {
+    this.syncCustomNodes();
+  }
+
+  private onCustomSlotChange = (): void => {
+    this.syncCustomNodes();
+  };
+
+  /**
+   * SVG geometry distributed through a shadow-DOM slot does not paint reliably in Chromium when
+   * the slot itself is inside an SVG. Keep the public custom-content slot, but clone its trusted
+   * SVG nodes into the component-owned SVG so path/circle/group content has a real SVG parent.
+   */
+  private syncCustomNodes(): void {
+    const svgEl = this.svgEl;
+    if (!svgEl) return;
+    svgEl.querySelectorAll('[data-lyra-custom-copy]').forEach((node) => node.remove());
+
+    const slot = this.customSlot;
+    if (!slot) return;
+    for (const node of slot.assignedNodes({ flatten: true })) {
+      const copy = this.cloneSvgNode(node);
+      if (!copy) continue;
+      copy.setAttribute('data-lyra-custom-copy', '');
+      svgEl.append(copy);
+    }
+  }
+
+  private cloneSvgNode(node: Node): SVGElement | null {
+    if (!(node instanceof Element)) return null;
+    const copy = document.createElementNS('http://www.w3.org/2000/svg', node.localName);
+    for (const attribute of node.attributes) {
+      copy.setAttribute(attribute.name, attribute.value);
+    }
+    for (const child of node.childNodes) {
+      const childCopy = this.cloneSvgNode(child);
+      if (childCopy) copy.append(childCopy);
+      else if (child.nodeType === Node.TEXT_NODE) copy.append(child.cloneNode(true));
+    }
+    return copy;
+  }
+
   render(): TemplateResult {
     const path = this.path || PATHS[this.name] || '';
-    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${this.label ? 'false' : 'true'} aria-label=${this.label || undefined} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot></slot>`}</svg>`;
+    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${this.label ? 'false' : 'true'} aria-label=${this.label || undefined} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}</svg>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lyra-icon': LyraIcon; } }

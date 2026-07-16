@@ -25,3 +25,8 @@ export function loadHtmlSanitizer(): Promise<OptionalPeerApi | null> {
 export function clearHtmlSanitizerCache(): void {
   sanitizer = undefined;
 }
+
+/** @internal test-only hook to force a specific resolved sanitizer (e.g. simulate a missing optional peer); pass `undefined` to reset to the real loader. */
+export function __setHtmlSanitizerForTesting(value: OptionalPeerApi | null | undefined): void {
+  sanitizer = value === undefined ? undefined : Promise.resolve(value);
+}

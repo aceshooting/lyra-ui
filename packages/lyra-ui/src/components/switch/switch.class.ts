@@ -6,6 +6,8 @@ import { styles } from './switch.styles.js';
 
 export interface LyraSwitchEventMap {
   'lyra-change': CustomEvent<{ checked: boolean }>;
+  focus: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
 }
 /**
  * `<lyra-switch>` — a boolean toggle-switch form control. Structurally the
@@ -34,6 +36,10 @@ export interface LyraSwitchEventMap {
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @event lyra-change - The user toggled the switch (click or Space/Enter). `detail: { checked }`.
+ * @event focus - The internal switch control received focus. Bridges the internal element's
+ * non-bubbling native `focus`, re-dispatched as bubbling and composed.
+ * @event blur - The internal switch control lost focus. Bridges the internal element's
+ * non-bubbling native `blur`, re-dispatched as bubbling and composed.
  * @csspart form-control - The outer wrapper around the switch, error and hint.
  * @csspart base - The whole interactive control (`role="switch"`); wraps the track and label.
  * @csspart track - The pill-shaped background.
@@ -274,6 +280,11 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
 
   private onBlur = (): void => {
     this.touched = true;
+    this.emit('blur');
+  };
+
+  private onFocus = (): void => {
+    this.emit('focus');
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -321,6 +332,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
           aria-describedby=${describedBy || nothing}
           @click=${this.onClick}
           @keydown=${this.onKeyDown}
+          @focus=${this.onFocus}
           @blur=${this.onBlur}
         >
           <span part="track">

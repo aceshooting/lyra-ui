@@ -85,6 +85,22 @@ describe('markdown tri-state attribute parsing', () => {
     const el = (await fixture(html`<lyra-streaming-text markdown="false"></lyra-streaming-text>`)) as LyraStreamingText;
     expect(el.markdown).to.be.false;
   });
+
+  it('never reflects a programmatic .markdown assignment back to the attribute (not declared reflect: true)', async () => {
+    const el = (await fixture(html`<lyra-streaming-text></lyra-streaming-text>`)) as LyraStreamingText;
+
+    el.markdown = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('markdown')).to.be.false;
+
+    el.markdown = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('markdown')).to.be.false;
+
+    el.markdown = undefined;
+    await el.updateComplete;
+    expect(el.hasAttribute('markdown')).to.be.false;
+  });
 });
 
 describe('coalescing', () => {

@@ -77,6 +77,18 @@ export const styles = css`
     cursor: ew-resize;
   }
   [part='base'][data-orientation='vertical'] [part='handle'] {
+    /* A native <input type="range"> always maps pointer position along its own inline axis,
+       which defaults to horizontal-tb -- so without this override, dragging up/down over the
+       visibly vertical divider does nothing; only a horizontal drag (invisible, off to the
+       side) would move the thumb. writing-mode: vertical-lr switches the input's inline axis to
+       run top-to-bottom, matching [part='divider']'s own top-anchored inset-block-start above.
+       direction is pinned to ltr (rather than left to inherit an ambient dir="rtl") because
+       vertical-lr's inline progression reverses to bottom-to-top under direction: rtl, which
+       would desync the native handle's value from the always-top-to-bottom divider position --
+       the same block-axis-is-unaffected-by-inline-direction invariant the 'before' clip-path
+       override above already relies on for vertical orientation. */
+    writing-mode: vertical-lr;
+    direction: ltr;
     cursor: ns-resize;
   }
   [part='handle']:focus-visible {

@@ -43,6 +43,32 @@ describe('<lyra-scroller>', () => {
     expect(el.shadowRoot!.querySelector('[part~="next"]')).to.exist;
   });
 
+  it('wraps the horizontal chevrons in documented previous-glyph/next-glyph parts', async () => {
+    const el = await fixture<LyraScroller>(html`<lyra-scroller controls><span>Content</span></lyra-scroller>`);
+    const previousGlyph = el.shadowRoot!.querySelector('[part="previous-glyph"]')!;
+    const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
+    expect(previousGlyph).to.exist;
+    expect(previousGlyph.getAttribute('aria-hidden')).to.equal('true');
+    expect(previousGlyph.textContent).to.equal('‹');
+    expect(nextGlyph).to.exist;
+    expect(nextGlyph.getAttribute('aria-hidden')).to.equal('true');
+    expect(nextGlyph.textContent).to.equal('›');
+  });
+
+  it('wraps the vertical-orientation glyphs in the same previous-glyph/next-glyph parts as horizontal, not bare text', async () => {
+    const el = await fixture<LyraScroller>(
+      html`<lyra-scroller controls orientation="vertical"><span>Content</span></lyra-scroller>`,
+    );
+    const previousGlyph = el.shadowRoot!.querySelector('[part="previous-glyph"]')!;
+    const nextGlyph = el.shadowRoot!.querySelector('[part="next-glyph"]')!;
+    expect(previousGlyph).to.exist;
+    expect(previousGlyph.getAttribute('aria-hidden')).to.equal('true');
+    expect(previousGlyph.textContent).to.equal('↑');
+    expect(nextGlyph).to.exist;
+    expect(nextGlyph.getAttribute('aria-hidden')).to.equal('true');
+    expect(nextGlyph.textContent).to.equal('↓');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraScroller>(html`<lyra-scroller label="Recent items"><span>Content</span></lyra-scroller>`);
     await expect(el).to.be.accessible();

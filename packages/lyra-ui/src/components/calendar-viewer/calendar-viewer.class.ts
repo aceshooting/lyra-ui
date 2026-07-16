@@ -38,7 +38,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
   static styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
-  /** Display name associated with the calendar. */
+  /** Display name associated with the calendar. Used as the accessible name of `[part='base']` (falling back to a host `aria-label`) alongside `csvViewerLabel`-style sibling document viewers. */
   @property() name = '';
   /** CSS length that caps the scrollable event body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -98,7 +98,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-calendar-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div></div>`; }
+  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lyra-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || nothing}><div part="body">${this.renderBody()}</div></div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lyra-calendar-viewer': LyraCalendarViewer; } }

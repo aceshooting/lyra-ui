@@ -131,6 +131,26 @@ describe('lyra-stepper', () => {
     expect(document.activeElement === el || el.shadowRoot!.activeElement).to.exist;
   });
 
+  it('navigates to a step whose id contains characters that would break an unescaped CSS attribute selector', async () => {
+    const el = (await fixture(
+      html`<lyra-stepper
+        .steps=${[
+          { id: 'basics', label: 'Basics', state: 'current' as const },
+          { id: 'inputs"]', label: 'Inputs', state: 'pending' as const },
+        ]}
+      ></lyra-stepper>`,
+    )) as LyraStepper;
+    const buttons = stepButtons(el);
+    buttons[0]!.focus();
+    expect(() =>
+      buttons[0]!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+      ),
+    ).not.to.throw();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`<lyra-stepper .steps=${steps()}></lyra-stepper>`)) as LyraStepper;
     await expect(el).to.be.accessible();

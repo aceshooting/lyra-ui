@@ -192,6 +192,23 @@ describe('lyra-pdf-viewer', () => {
     } finally { restore(); }
   });
 
+  it('lets an explicit host aria-label win over the name-derived fallback', async () => {
+    const named = (await fixture(html`<lyra-pdf-viewer name="Report.pdf"></lyra-pdf-viewer>`)) as LyraPdfViewer;
+    expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Report.pdf');
+
+    const overridden = (await fixture(
+      html`<lyra-pdf-viewer name="Report.pdf" aria-label="Quarterly report"></lyra-pdf-viewer>`,
+    )) as LyraPdfViewer;
+    expect(overridden.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Quarterly report');
+  });
+
+  it('falls back to the localized label when neither name nor aria-label is set', async () => {
+    const el = (await fixture(
+      html`<lyra-pdf-viewer .strings=${{ pdfViewerLabel: 'Visionneuse PDF' }}></lyra-pdf-viewer>`,
+    )) as LyraPdfViewer;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse PDF');
+  });
+
   it('is accessible in empty and loaded states', async () => {
     const empty = await fixture(html`<lyra-pdf-viewer></lyra-pdf-viewer>`);
     await expect(empty).to.be.accessible();

@@ -1,4 +1,10 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  nothing,
+  type TemplateResult,
+  type PropertyValues,
+  type ComplexAttributeConverter,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -9,6 +15,25 @@ import { chevronIcon } from '../../internal/icons.js';
 import '../empty/empty.class.js';
 import '../pagination/pagination.js';
 import '../spinner/spinner.js';
+
+/**
+ * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
+ * converter is presence-based -- the attribute's mere presence (regardless of its string value)
+ * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
+ * actually get `true` (this property's default), the opposite of what that string reads as -- the
+ * same bug class `<lyra-textarea>`'s `spellcheckConverter` and `<lyra-model-select>`'s identical
+ * converter document and fix.
+ */
+const spellcheckConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    // `true` is this property's default, so there's nothing worth reflecting for it; only the
+    // non-default `false` needs an attribute at all.
+    return value ? null : 'false';
+  },
+};
 
 export interface TableColumn<T> {
   key: string;
@@ -204,6 +229,8 @@ export interface LyraTableEventMap<T = unknown> {
  * indeterminate spinner.
  * Columns with `editable: true` open a native text/number editor on
  * double-click and emit `lyra-cell-edit`; row mutation remains consumer-owned.
+ * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
+ * (the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.
  * `groupBy` inserts non-focusable group header rows before each group; use
  * `groupLabel` when the raw group key needs custom content.
  *
@@ -281,6 +308,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ attribute: false }) filter?: (row: T, text: string) => boolean;
   @property({ attribute: 'filter-label' }) filterLabel = '';
   @property({ attribute: 'filter-placeholder' }) filterPlaceholder = '';
+  /** Forwarded to the filter input's, and (when the active column's `editType` is `'text'`, the
+   *  default) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching
+   *  the native element's own default. `spellcheck="false"` is parsed as `false` (see
+   *  `spellcheckConverter` above). No effect on a `'number'` cell editor. */
+  @property({ converter: spellcheckConverter }) spellcheck = true;
+  /** Forwarded to the same inputs' native `autocapitalize`. Empty string omits the attribute
+   *  (browser default). */
+  @property() autocapitalize = '';
+  /** Forwarded to the same inputs' native `autocorrect` (Safari/WebKit-specific). Empty string
+   *  omits the attribute (browser default). Named `autoCorrect` (capital `C`), not `autocorrect`,
+   *  to dodge a TS `lib.dom.d.ts` collision -- same fix as `<lyra-textarea>`/`<lyra-model-select>`. */
+  @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property({ type: Boolean, reflect: true }) loading = false;
   @property({ attribute: 'loading-label' }) loadingLabel = '';
   @property({ attribute: false }) groupBy?: (row: T) => string | number;
@@ -1026,6 +1065,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                                   type=${col.editType ?? 'text'}
                                   .value=${this.editorValue(row, col)}
                                   aria-label=${this.localize('tableEditCell', undefined, { column: col.label })}
+                                  spellcheck=${(col.editType ?? 'text') === 'text' ? this.spellcheck : nothing}
+                                  autocapitalize=${(col.editType ?? 'text') === 'text'
+                                    ? this.autocapitalize || nothing
+                                    : nothing}
+                                  autocorrect=${(col.editType ?? 'text') === 'text'
+                                    ? this.autoCorrect || nothing
+                                    : nothing}
                                   @change=${(event: Event) => this.commitEdit(event, encodeKey(key), col.key)}
                                   @focus=${this.onNativeFocus}
                                   @blur=${this.onNativeBlur}
@@ -1074,6 +1120,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                 .value=${this.filterText}
                 placeholder=${filterPlaceholder}
                 aria-label=${filterLabel}
+                spellcheck=${this.spellcheck}
+                autocapitalize=${this.autocapitalize || nothing}
+                autocorrect=${this.autoCorrect || nothing}
                 @input=${this.onFilterInput}
                 @focus=${this.onNativeFocus}
                 @blur=${this.onNativeBlur}

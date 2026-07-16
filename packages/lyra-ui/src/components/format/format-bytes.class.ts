@@ -12,7 +12,6 @@ import { styles } from './format.styles.js';
 export class LyraFormatBytes extends LyraElement {
   static styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
-  @property() locale = '';
   @property({ type: Number, attribute: 'unit-step' }) unitStep = 1024;
   @property({ type: Number }) decimals = 1;
   render(): TemplateResult {

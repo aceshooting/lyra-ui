@@ -37,6 +37,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   private readonly labelId = nextId('radio-group-label');
+  private readonly hintId = nextId('radio-group-hint');
+  private readonly errorId = nextId('radio-group-error');
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -90,15 +92,17 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const hasLabel = this.hasLabelSlot || Boolean(this.label);
     const hasHint = this.hasHintSlot || Boolean(this.hint);
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
+    const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`
       <div part="base" role="radiogroup"
         aria-label=${this.accessibleLabel || nothing}
         aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
+        aria-describedby=${described}
         @keydown=${this.onKeyDown}>
         <div part="label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
         <slot></slot>
-        <div part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
-        <div part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
+        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
+        <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
       </div>
     `;
   }

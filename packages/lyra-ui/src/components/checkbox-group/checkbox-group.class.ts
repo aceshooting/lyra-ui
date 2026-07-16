@@ -125,8 +125,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       <div part="options" role="group" aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : this.labelId} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}>
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
-      <div part="hint" id=${this.hintId} ?hidden=${!this.hint && !this.hasHintSlot}><slot name="hint">${this.hint}</slot></div>
-      <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}><slot name="error">${this.errorText}</slot></div>
+      <div part="hint" id=${this.hintId} ?hidden=${!this.hint && !this.hasHintSlot}><slot name="hint" @slotchange=${this.onSlotChange}>${this.hint}</slot></div>
+      <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}><slot name="error" @slotchange=${this.onSlotChange}>${this.errorText}</slot></div>
     </fieldset>`;
   }
 }

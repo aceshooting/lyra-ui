@@ -44,6 +44,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @property({ attribute: 'delimiter' }) delimiter = ',';
   @state() private draft = '';
   @state() private touched = false;
+  // `[part]:empty` never matches -- the part always contains a literal
+  // `<slot>` child element regardless of assigned content -- so real
+  // emptiness is tracked in JS instead (mirrors lyra-select's identical
+  // hasLabelSlot/hasHintSlot/hasErrorSlot) and reflected via `hidden`.
+  @state() private hasLabelSlot = false;
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
   @query('input') private inputEl?: HTMLInputElement;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -51,6 +58,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private hintId = nextId('token-input-hint');
   private errorId = nextId('token-input-error');
   private _value: string[] = [];
+  // Tracked separately from the consumer's own `disabled` -- a fieldset
+  // cascade must never mutate that IDL property/attribute itself (mirrors
+  // lyra-select's/lyra-combobox's identical `_fieldsetDisabled`/
+  // `effectiveDisabled` pattern), only the combined getter below.
+  private _fieldsetDisabled = false;
 
   @property({ attribute: false })
   get value(): string[] { return this._value; }
@@ -62,12 +74,30 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
   get willValidate(): boolean { return this.internals.willValidate; }
+  /** Effective disabled state: this element's own `disabled` OR an ancestor
+   *  `<fieldset disabled>`'s inherited state -- mirrors native `<input>`, whose
+   *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
+  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
+  /**
+   * Called by the browser when an ancestor `<fieldset disabled>` toggles.
+   * Tracked separately from the consumer's own `disabled` (see
+   * `effectiveDisabled`) so a consumer's explicit `disabled` survives the
+   * fieldset re-enabling instead of being permanently overwritten.
+   */
+  formDisabledCallback(disabled: boolean): void { this._fieldsetDisabled = disabled; this.requestUpdate(); }
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null { return this.inputEl ?? this.renderRoot.querySelector('[part="input-wrapper"]'); }
   checkValidity(): boolean { return this.internals.checkValidity(); }
   reportValidity(): boolean { return this.internals.reportValidity(); }
   override focus(options?: FocusOptions): void { this.inputEl?.focus(options); }
   override blur(): void { this.inputEl?.blur(); }
+  protected willUpdate(): void {
+    if (!this.hasUpdated) {
+      this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
+      this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
+      this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
+    }
+  }
 
   private syncValidity(): void {
     const missing = this.required && this.value.length === 0;
@@ -85,7 +115,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (event === 'add') this.emit('lyra-add', { value: next[next.length - 1] });
   }
   private addDraft(): void {
-    if (this.disabled) return;
+    if (this.effectiveDisabled) return;
     const candidates = this.draft.split(this.delimiter).map((token) => token.trim()).filter(Boolean);
     for (const token of candidates) {
       if (!this.allowDuplicates && this.value.includes(token)) continue;
@@ -100,23 +130,30 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
   private onInput = (event: Event): void => { this.draft = (event.target as HTMLInputElement).value; };
   private onKeyDown = (event: KeyboardEvent): void => {
-    if (this.disabled) return;
-    if (event.key === 'Enter' || event.key === this.delimiter || event.key === 'Tab') { if (this.draft.trim()) { event.preventDefault(); this.addDraft(); } }
+    if (this.effectiveDisabled) return;
+    if (event.key === 'Enter' || event.key === this.delimiter) { if (this.draft.trim()) { event.preventDefault(); this.addDraft(); } }
+    else if (event.key === 'Tab') { if (this.draft.trim()) this.addDraft(); }
     else if (event.key === 'Backspace' && !this.draft && this.value.length) { this.removeToken(this.value.length - 1); }
   };
   private onBlur = (): void => { if (this.draft.trim()) this.addDraft(); this.touched = true; this.syncValidity(); this.emit('blur'); };
   private onFocus = (): void => { this.emit('focus'); };
+  private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
+  private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   formResetCallback(): void { this.value = []; this.draft = ''; this.touched = false; this.syncValidity(); }
   render(): TemplateResult {
-    const described = [this.hint ? this.hintId : '', this.errorText ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
+    const hasLabel = this.hasLabelSlot || this.label.length > 0;
+    const hasHint = this.hasHintSlot || this.hint.length > 0;
+    const hasError = this.hasErrorSlot || this.errorText.length > 0;
+    const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`<div part="form-control">
-      <label part="form-control-label" ?hidden=${!this.label} for="input" id=${this.labelId}>${this.label}${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
-      <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : this.label ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing} aria-describedby=${described}>
-        ${this.value.map((token, index) => html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { context: token })} ?disabled=${this.disabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
-        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.disabled} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
+      <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
+      <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing} aria-describedby=${described}>
+        ${this.value.map((token, index) => html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
+        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
       </div>
-      <div part="hint" id=${this.hintId} ?hidden=${!this.hint}>${this.hint}</div>
-      <div part="error" id=${this.errorId} ?hidden=${!this.errorText}>${this.errorText}</div>
+      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
+      <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>
     </div>`;
   }
 }

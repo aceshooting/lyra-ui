@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { safeLinkHref } from '../../internal/safe-url.js';
+import { styles } from './breadcrumb-item.styles.js';
 
 /**
  * `<lyra-breadcrumb-item>` — one link or current-page label in a breadcrumb.
@@ -11,7 +12,7 @@ import { safeLinkHref } from '../../internal/safe-url.js';
  * @csspart base - The link or current-page label.
  */
 export class LyraBreadcrumbItem extends LyraElement {
-  static styles = [LyraElement.styles];
+  static styles = [LyraElement.styles, styles];
   @property() href = '';
   @property({ type: Boolean, reflect: true }) current = false;
   connectedCallback(): void {

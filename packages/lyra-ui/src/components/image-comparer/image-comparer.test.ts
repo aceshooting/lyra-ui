@@ -55,6 +55,21 @@ it('renders a .strings override for the default label', async () => {
   expect(base.getAttribute('aria-label')).to.equal('Comparaison des images');
 });
 
+it('switches the native range handle to a vertical writing-mode so drag input maps to the visible vertical divider', async () => {
+  const horizontal = (await fixture(html`<lyra-image-comparer></lyra-image-comparer>`)) as LyraImageComparer;
+  await horizontal.updateComplete;
+  const horizontalHandle = horizontal.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  expect(getComputedStyle(horizontalHandle).writingMode).to.equal('horizontal-tb');
+
+  const vertical = (await fixture(html`<lyra-image-comparer orientation="vertical"></lyra-image-comparer>`)) as LyraImageComparer;
+  await vertical.updateComplete;
+  const verticalHandle = vertical.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  expect(getComputedStyle(verticalHandle).writingMode).to.equal('vertical-lr');
+  // Pinned to ltr regardless of an ambient dir="rtl" so the handle's top-to-bottom value
+  // progression always matches the divider's own always-top-anchored inset-block-start.
+  expect(getComputedStyle(verticalHandle).direction).to.equal('ltr');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`
     <lyra-image-comparer aria-label="Compare images">

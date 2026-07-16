@@ -132,9 +132,9 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     const label = this.label || this.getAttribute('aria-label') || this.localize('scrollerLabel');
     const vertical = this.orientation === 'vertical';
     return html`<div part="base" role="region" aria-label=${label}>
-      ${this.controls ? html`<button part="control previous" type="button" aria-label=${this.localize('scrollPrevious')} ?disabled=${this.canScrollStart} @click=${() => this.scrollByDirection(-1)} @dblclick=${() => this.scrollToEdge('start')}>${vertical ? '↑' : html`<span part="previous-glyph" aria-hidden="true">‹</span>`}</button>` : nothing}
+      ${this.controls ? html`<button part="control previous" type="button" aria-label=${this.localize('scrollPrevious')} ?disabled=${this.canScrollStart} @click=${() => this.scrollByDirection(-1)} @dblclick=${() => this.scrollToEdge('start')}>${vertical ? html`<span part="previous-glyph" aria-hidden="true">↑</span>` : html`<span part="previous-glyph" aria-hidden="true">‹</span>`}</button>` : nothing}
       <div part="viewport" tabindex="0" @scroll=${this.onScroll}><div part="content"><slot @slotchange=${this.updateEdges}></slot></div></div>
-      ${this.controls ? html`<button part="control next" type="button" aria-label=${this.localize('scrollNext')} ?disabled=${this.canScrollEnd} @click=${() => this.scrollByDirection(1)} @dblclick=${() => this.scrollToEdge('end')}>${vertical ? '↓' : html`<span part="next-glyph" aria-hidden="true">›</span>`}</button>` : nothing}
+      ${this.controls ? html`<button part="control next" type="button" aria-label=${this.localize('scrollNext')} ?disabled=${this.canScrollEnd} @click=${() => this.scrollByDirection(1)} @dblclick=${() => this.scrollToEdge('end')}>${vertical ? html`<span part="next-glyph" aria-hidden="true">↓</span>` : html`<span part="next-glyph" aria-hidden="true">›</span>`}</button>` : nothing}
     </div>`;
   }
 }
