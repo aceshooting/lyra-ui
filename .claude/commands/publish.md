@@ -166,3 +166,38 @@ need to match what you actually intend to do.
 - Report to the user: old → new version per package, a summary of what shipped (the changeset
   descriptions that were just consumed), the npm and GitHub Release links, and anything you had to
   fix along the way that wasn't already captured by a changeset.
+
+## 6. Sync and deploy the website
+
+The marketing/demo site lives in a sibling repo, `../lyra-ui.com`
+(`git@github.com:aceshooting/lyra-ui.com.git`, deployed at `https://www.lyra-ui.com/`). It depends
+on this repo via `file:../lyra-ui/packages/*` — always the local source tree, never the npm
+tarball — so it never picks up new components, translations, or a version bump on its own; this
+step is what keeps it honest. Run it after step 5 succeeds, on every release, automatically — no
+confirmation prompt for the commit/push/deploy below (the user has authorized this). "Automatic"
+doesn't mean "ignore failures": a dirty tree, a failed build, or a failed deploy smoke-test still
+stops you here, same as every gate above.
+
+- **Preflight** — `git -C ../lyra-ui.com status --short`. If it isn't clean, stop and tell the user
+  what's pending in that repo instead of touching it — the same rule as this file's own step 1,
+  just applied to the sibling checkout instead of this one.
+- **Sync content** — follow `../lyra-ui.com/.claude/commands/update.md` end to end (its own steps
+  1–7): it refreshes the component manifest, diffs for new/removed/renamed tags, authors catalog
+  entries + all 8 locale translations for anything new, validates every existing entry against the
+  now-fresh `custom-elements.json`, then rebuilds derived stats (`pnpm sync-counts`,
+  `pnpm sync-bundle-size`, `pnpm check-i18n`, `pnpm build`). Stop and report on the first failure —
+  don't work around it, same rule as step 2 above.
+- **Commit + push** in `../lyra-ui.com`:
+
+  ```bash
+  git -C ../lyra-ui.com add -A
+  git -C ../lyra-ui.com commit -m "chore: sync with lyra-ui <new-version>"
+  git -C ../lyra-ui.com push origin main
+  ```
+
+- **Deploy**: `cd ../lyra-ui.com && ./deploy.sh` — rebuilds, rsyncs `dist/` to the production host,
+  and runs its own smoke-test curl against `https://www.lyra-ui.com/`. If that smoke test fails,
+  stop and report immediately; don't retry blindly.
+- Add to the final report (alongside step 5's): whether the website changed (new
+  components/translations added, counts or the bundle-size stat changed), the commit pushed to
+  `lyra-ui.com`, and the deploy smoke-test result with the live URL.
