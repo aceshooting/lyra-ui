@@ -2908,6 +2908,10 @@ passthrough). Not a subclass of `LyraChart`.
 - `pointText?: (label: string, value: number, datasetIndex: number) => string` (attribute: false) —
   overrides the per-bar/per-point `<title>`/`aria-label` tooltip text (mirrors `lyra-heatmap`'s
   `cellText`). Falls back to the built-in raw-value template when unset.
+- `legendText?: (label: string, datasetIndex: number) => string` (attribute: false) — appends
+  formatter-supplied text (e.g. a value or percentage share) after each series' label in the
+  built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
+  the label alone when unset; no-op while `legend` is `false`.
 - `roundedBars: boolean = false` (attribute `rounded-bars`, bar type only) — draws each bar as a
   rounded-top-corner shape instead of a square-cornered `<rect>`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
@@ -2950,8 +2954,9 @@ fresh, small SVG render is cheaper and more correct than a lossy cache.
 
 **CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` (each bar rect; carries
 `data-selected` when its category index is in `selectedIndex`), `line`, `point`, `legend`,
-`legend-item`, `legend-swatch`, `live-region` (the current mark announcement for keyboard users),
-`data-list` (a visually hidden list of all plotted data points).
+`legend-item`, `legend-swatch`, `legend-text` (extra per-item text after the series label,
+rendered only when `legendText` is set), `live-region` (the current mark announcement for keyboard
+users), `data-list` (a visually hidden list of all plotted data points).
 
 **Themeable custom properties:** `--lyra-chart-height` (same host-level property as `lyra-chart`);
 `--lyra-chart-grid-color`, `--lyra-chart-tick-color`, `--lyra-chart-legend-color` — same token
@@ -4381,6 +4386,10 @@ conversation-surface level).
   rendered) — mirrors `lyra-widget`'s identical `collapsible`/`collapsed` pair
 - `attachmentsPosition: 'before'|'after' = 'after'` (attribute `attachments-position`) — places the
   `attachments` slot before or after the message body; both the visual and reading order follow it
+- `actionsOutsideBubble: boolean = false` (attribute `actions-outside-bubble`, reflected) — renders
+  the `actions` slot's content as a sibling immediately after `[part="bubble"]` instead of nested
+  inside `[part="footer"]`'s own padding/background box, for a consumer whose action row (e.g. a
+  hover-reveal copy button) must sit visually outside the bubble's chrome
 
 **Events:** `lyra-retry` (no detail payload; fired by the built-in retry button, only rendered when
 `status="failed"`), `lyra-collapse-toggle` (`detail: boolean`, the new `collapsed` state — fired when
@@ -4396,6 +4405,8 @@ attachment chips, rendered below the message body)
 `attachments`, `footer` (hidden entirely when nothing is in it), `status-indicator` (a small
 decorative `aria-hidden` dot, absent while `status="sent"`), `status-text` (the visible text twin of
 `status-indicator`), `timestamp`, `retry-button` (only rendered when `status="failed"`), `actions`
+(rendered inside the footer by default; a sibling immediately after `bubble` when
+`actionsOutsideBubble` is set)
 
 **Themeable custom properties:** `--lyra-chat-message-max-width` (default `80%` — the bubble's max
 inline size; component-specific, no shared width token exists), plus shared tokens
