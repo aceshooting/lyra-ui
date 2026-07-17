@@ -80,7 +80,10 @@ async function listen(server) {
   return `http://127.0.0.1:${address.port}`;
 }
 
+let currentStoryId;
+
 async function waitForStory(page, baseUrl, id, viewport, theme = 'light') {
+  currentStoryId = id;
   await page.setViewportSize(viewport);
   const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme}`;
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
@@ -130,9 +133,16 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
   const browserErrors = [];
   // map--default fetches live tiles from tile.openstreetmap.org; a CI runner without egress to
-  // that host (or a transient hiccup) shouldn't fail this otherwise-passing smoke/a11y check --
-  // MapLibre logs the failed fetch as a console error rather than leaving the story unrendered.
-  const isIgnorableNetworkError = (text) => /tile\.openstreetmap\.org/.test(text);
+  // that host (or a transient hiccup) shouldn't fail this otherwise-passing smoke/a11y check.
+  // A blocked/failed tile request can surface in more than one URL-less, host-less shape depending
+  // on exactly how it fails: Chromium's own automatic "Failed to load resource: net::ERR_*"
+  // network-log line (emitted for every failed request regardless of JS-level handling), or --
+  // if a rejected fetch() promise goes uncaught -- the generic `TypeError: Failed to fetch`.
+  // Only ignore these network-failure shapes while map--default itself is the current story, so a
+  // real network-error bug surfacing in some other component still fails the check.
+  const isIgnorableNetworkError = (text) =>
+    /tile\.openstreetmap\.org/.test(text) ||
+    (currentStoryId === 'map--default' && /Failed to fetch|Failed to load resource|net::ERR_/.test(text));
   page.on('pageerror', (error) => {
     const text = String(error);
     if (!isIgnorableNetworkError(text)) browserErrors.push(text);

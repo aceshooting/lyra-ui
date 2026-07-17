@@ -9787,6 +9787,34 @@
           ]
         },
         {
+          "name": "lyra-swatch-picker",
+          "description": "`<lyra-swatch-picker>` -- a single-select picker over a small, fixed set of color swatches with\nthe WAI-ARIA APG `radiogroup` contract built in: `role=\"radiogroup\"`/`role=\"radio\"`, roving\ntabindex, automatic activation (click or arrow-key move both select immediately, like a native\nradio group), cyclic Arrow/Home/End navigation. Distinct from `<lyra-color-picker>`'s freeform\nnative color input -- this picks exactly one of N designer-chosen named colors, the shape apps\notherwise hand-roll as a row of round accent-color buttons.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"radiogroup\"` root. |\n| `swatch` | A single `role=\"radio\"` color swatch; the selected one is `[part='swatch'][aria-checked='true']`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-swatch-picker-selected-color` (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color.",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Accessible name for the radiogroup, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the `role=\"radiogroup\"` element. A plain `aria-label`\nattribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-segmented>`.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "value",
+              "description": "The currently selected option's `value`, or `null` when nothing is selected.\n\nType: `string | null`  \nDefault: `null`"
+            }
+          ]
+        },
+        {
           "name": "lyra-switch",
           "description": "`<lyra-switch>` — a boolean toggle-switch form control. Structurally the\nsame idea as a checkbox (form-associated via `ElementInternals`, click and\nSpace/Enter both toggle) but with switch semantics: `role=\"switch\"` +\n`aria-checked` read to assistive tech as an on/off state rather than a\nchecked/unchecked one, and there is no indeterminate state.\n\n`checked` is not a plain string, so this attaches `ElementInternals`\ndirectly and implements its own `updateValidity()` rather than using the\n`FormAssociated` mixin (that mixin's `value` accessor assumes a string —\nsee `<lyra-combobox>` for the same direct-`ElementInternals` shape with a\nnon-string value).\n\nShips an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +\n`hint`/`error` CSS parts), mirroring `<lyra-select>`'s pattern for those two pieces -- left\nunset, neither renders. Deliberately no separate top-of-field `label` prop/slot/part mirroring\n`<lyra-select>`'s `form-control-label`: the default slot already *is* this control's visible,\nclickable label (same as `<lyra-checkbox>`), so a second label surface would be redundant.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Label text, rendered next to the track. Clicking it toggles the switch, the same as clicking a checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the control still has an accessible name. |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The whole interactive control (`role=\"switch\"`); wraps the track and label. |\n| `error` | The error message. |\n| `form-control` | The outer wrapper around the switch, error and hint. |\n| `hint` | The hint message. |\n| `label` | The wrapper around the default slot. |\n| `thumb` | The circular knob that slides across the track. |\n| `track` | The pill-shaped background. |",
           "attributes": [
@@ -12047,6 +12075,10 @@
         {
           "name": "--lyra-svg-viewer-max-height",
           "description": "**`<lyra-svg-viewer>`** (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property."
+        },
+        {
+          "name": "--lyra-swatch-picker-selected-color",
+          "description": "**`<lyra-swatch-picker>`** (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color."
         },
         {
           "name": "--lyra-textarea-max-block-size",

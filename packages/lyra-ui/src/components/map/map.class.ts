@@ -266,6 +266,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       center: this.center,
       zoom: this.zoom,
     });
+    // maplibre-gl's Evented base rethrows an 'error' emission that has no
+    // listener attached (mirroring Node's EventEmitter convention) -- with
+    // no handler here, a failed tile/style fetch (e.g. DEFAULT_STYLE's
+    // tile.openstreetmap.org demo server being unreachable or rate-limited)
+    // would surface as an unhandled promise rejection instead of a normal,
+    // catchable error. Log it instead so callers can see it without the
+    // whole page treating it as an uncaught exception.
+    this._map.on('error', (e: OptionalPeerApi) => {
+      console.error('lyra-map:', e?.error ?? e);
+    });
     this._map.on('load', () => {
       this._styleLoaded = true;
       this.applyChoropleth();

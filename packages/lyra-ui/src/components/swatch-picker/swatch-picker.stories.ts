@@ -3,11 +3,11 @@ import { html } from 'lit';
 import './swatch-picker.js';
 
 const accents = () => [
-  { value: 'blue', color: '#0969da', label: 'Blue' },
-  { value: 'green', color: '#1a7f37', label: 'Green' },
-  { value: 'purple', color: '#8250df', label: 'Purple' },
-  { value: 'orange', color: '#bc4c00', label: 'Orange' },
-  { value: 'red', color: '#cf222e', label: 'Red' },
+  { value: 'blue', color: 'var(--lyra-color-brand)', label: 'Blue' },
+  { value: 'green', color: 'var(--lyra-color-success)', label: 'Green' },
+  { value: 'purple', color: 'var(--lyra-color-chart-1)', label: 'Purple' },
+  { value: 'orange', color: 'var(--lyra-color-warning)', label: 'Orange' },
+  { value: 'red', color: 'var(--lyra-color-danger)', label: 'Red' },
 ];
 
 const meta: Meta = {
@@ -60,7 +60,7 @@ export const Rethemed: Story = {
   render: () => html`
     <lyra-swatch-picker
       label="Accent color"
-      style="--lyra-swatch-picker-selected-color: #1a7f37;"
+      style="--lyra-swatch-picker-selected-color: var(--lyra-color-success);"
       .options=${accents()}
       value="red"
     ></lyra-swatch-picker>
@@ -77,11 +77,9 @@ export const Narrow: Story = {
         label="Accent color"
         .options=${[
           ...accents(),
-          { value: 'teal', color: '#0d9488', label: 'Teal' },
-          { value: 'pink', color: '#db2777', label: 'Pink' },
-          { value: 'slate', color: '#475569', label: 'Slate' },
-          { value: 'amber', color: '#b45309', label: 'Amber' },
-          { value: 'indigo', color: '#4338ca', label: 'Indigo' },
+          { value: 'teal', color: 'var(--lyra-color-chart-3)', label: 'Teal' },
+          { value: 'pink', color: 'var(--lyra-color-chart-6)', label: 'Pink' },
+          { value: 'slate', color: 'var(--lyra-color-chart-4)', label: 'Slate' },
         ]}
         value="teal"
       ></lyra-swatch-picker>
@@ -96,9 +94,9 @@ export const RightToLeft: Story = {
       dir="rtl"
       label="لون التمييز"
       .options=${[
-        { value: 'blue', color: '#0969da', label: 'أزرق' },
-        { value: 'green', color: '#1a7f37', label: 'أخضر' },
-        { value: 'red', color: '#cf222e', label: 'أحمر' },
+        { value: 'blue', color: 'var(--lyra-color-brand)', label: 'أزرق' },
+        { value: 'green', color: 'var(--lyra-color-success)', label: 'أخضر' },
+        { value: 'red', color: 'var(--lyra-color-danger)', label: 'أحمر' },
       ]}
       value="green"
     ></lyra-swatch-picker>

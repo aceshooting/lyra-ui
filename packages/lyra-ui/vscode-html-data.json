@@ -8804,6 +8804,36 @@
       ]
     },
     {
+      "name": "lyra-swatch-picker",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lyra-swatch-picker>` -- a single-select picker over a small, fixed set of color swatches with\nthe WAI-ARIA APG `radiogroup` contract built in: `role=\"radiogroup\"`/`role=\"radio\"`, roving\ntabindex, automatic activation (click or arrow-key move both select immediately, like a native\nradio group), cyclic Arrow/Home/End navigation. Distinct from `<lyra-color-picker>`'s freeform\nnative color input -- this picks exactly one of N designer-chosen named colors, the shape apps\notherwise hand-roll as a row of round accent-color buttons.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The `role=\"radiogroup\"` root. |\n| `swatch` | A single `role=\"radio\"` color swatch; the selected one is `[part='swatch'][aria-checked='true']`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-swatch-picker-selected-color` (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color."
+      },
+      "attributes": [
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the radiogroup, used when no visible label context\nexists around it (e.g. no wrapping `<label>` or adjacent heading). Set\nas `aria-label` on the `role=\"radiogroup\"` element. A plain `aria-label`\nattribute on the host itself is honored as a fallback when this is left\nunset, matching `<lyra-segmented>`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "value",
+          "description": {
+            "kind": "markdown",
+            "value": "The currently selected option's `value`, or `null` when nothing is selected.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lyra-switch",
       "description": {
         "kind": "markdown",

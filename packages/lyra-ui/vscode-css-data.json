@@ -513,6 +513,13 @@
       }
     },
     {
+      "name": "--lyra-swatch-picker-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-swatch-picker>`** (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color."
+      }
+    },
+    {
       "name": "--lyra-textarea-max-block-size",
       "description": {
         "kind": "markdown",
