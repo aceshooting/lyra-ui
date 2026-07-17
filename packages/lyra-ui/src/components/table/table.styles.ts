@@ -169,6 +169,12 @@ export const styles = css`
   [part='cell'][data-align='end'] {
     text-align: end;
   }
+  [part='row-total-cell'] {
+    padding: var(--lyra-space-s);
+    border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
+    font-weight: var(--lyra-font-weight-semibold);
+    text-align: end;
+  }
   [part='cell'][data-heat] {
     background: color-mix(in srgb, var(--lyra-table-heat-tint-hi) var(--lyra-table-heat-t), var(--lyra-table-heat-tint-lo));
   }

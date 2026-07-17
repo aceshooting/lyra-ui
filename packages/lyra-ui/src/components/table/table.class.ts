@@ -269,6 +269,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart header-cell - Each `<th>` header cell.
  * @csspart row - Each body `<tr>`.
  * @csspart cell - Each body `<td>`.
+ * @csspart row-total-cell - Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only
+ *   when `rowTotal` is set. The corresponding footer-row cell (holding `grandTotal`) is a
+ *   `footer-cell` instead, matching every other footer cell.
  * @csspart foot - The `<tfoot>`, only rendered when at least one column defines `footer`.
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
@@ -361,6 +364,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  Unset computes the domain automatically from the data, spanning every `heatValue`-defining
    *  column together (a single shared scale across the whole grid, not one scale per column). */
   @property({ attribute: false }) heatTintScale?: { min?: number; max?: number };
+  /** Renders a trailing `<td>` on every body row holding this row's total. Same
+   *  "consumer computes/renders, table only positions" contract as the existing per-column
+   *  `footer(rows)` — does not assume addition, so a non-sum aggregate works identically. Omit for
+   *  no trailing column at all (unchanged output). */
+  @property({ attribute: false }) rowTotal?: (row: T) => unknown;
+  /** Renders the bottom-right cell (row-total column × footer row). Only rendered when both
+   *  `rowTotal` is set **and** at least one column defines `footer` — otherwise there is no footer
+   *  row for it to occupy, and this renders nothing. */
+  @property({ attribute: false }) grandTotal?: (rows: T[]) => unknown;
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
   @property({ attribute: 'more-label' }) moreLabel = '';
   @property({ attribute: 'empty-heading' }) emptyHeading = '';
@@ -979,6 +991,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const hasExpand = Boolean(this.expandedContent);
     const hasHeatTint = this.columns.some((col) => col.heatValue !== undefined);
     const heatDomain = this.computeHeatDomain(hasHeatTint);
+    const hasRowTotal = Boolean(this.rowTotal);
     const renderedEntries = this.renderedEntries();
     const hasPagination = this.normalizedPageSize > 0;
     const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
@@ -1006,6 +1019,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                 (col) =>
                   html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,
               )}
+              ${hasRowTotal ? html`<col />` : nothing}
             </colgroup>
             <thead part="head">
               <tr role="row">
@@ -1035,6 +1049,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                       : nothing}
                   </th>`;
                 })}
+                ${hasRowTotal ? html`<th part="header-cell" data-row-total aria-hidden="true"></th>` : nothing}
               </tr>
             </thead>
             <tbody>
@@ -1058,7 +1073,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           <td
                             part="group-cell"
                             role="gridcell"
-                            colspan=${this.columns.length + (hasExpand ? 1 : 0)}
+                            colspan=${this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0)}
                           >
                             ${this.groupLabel
                               ? this.groupLabel(
@@ -1131,10 +1146,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                               : col.cell(row)}
                           </td>`;
                       })}
+                      ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
                     </tr>`,
                     rowExpanded
                       ? html`<tr part="expanded-row" role="row">
-                          <td part="expanded-cell" role="gridcell" colspan=${this.columns.length + (hasExpand ? 1 : 0)}>
+                          <td
+                            part="expanded-cell"
+                            role="gridcell"
+                            colspan=${this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0)}
+                          >
                             ${this.expandedContent?.(row)}
                           </td>
                         </tr>`
@@ -1154,6 +1174,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                         data-align=${col.align ?? 'start'}
                       >${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`,
                     )}
+                    ${hasRowTotal
+                      ? html`<td part="footer-cell">${this.grandTotal?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`
+                      : nothing}
                   </tr>
                 </tfoot>`
               : nothing}

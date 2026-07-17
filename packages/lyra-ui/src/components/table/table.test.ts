@@ -1649,3 +1649,73 @@ describe('heat-tint mode', () => {
     expect(css).to.match(/\[part='cell'\]\[data-heat\]\s*\{[^}]*color-mix\(/);
   });
 });
+
+describe('rowTotal / grandTotal', () => {
+  const totalsColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', footer: (rs) => rs.reduce((sum, r) => sum + r.score, 0), cell: (r) => r.score },
+  ];
+
+  it('renders no trailing column when rowTotal is unset (unchanged default)', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="row-total-cell"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[data-row-total]')).to.not.exist;
+  });
+
+  it('renders a trailing row-total cell on the header and every row when rowTotal is set', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.rowTotal = (r) => r.score * 2;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-row-total]')).to.exist;
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="row-total-cell"]')];
+    expect(cells.length).to.equal(rows.length);
+    expect(cells[0].textContent!.trim()).to.equal('6'); // Alpha score 3 * 2
+    expect(cells[1].textContent!.trim()).to.equal('2'); // Beta score 1 * 2
+  });
+
+  it('renders grandTotal in the footer row only when a column also defines footer', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = totalsColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.rowTotal = (r) => r.score;
+    el.grandTotal = (rs) => rs.reduce((sum, r) => sum + r.score, 0);
+    await el.updateComplete;
+    const foot = el.shadowRoot!.querySelector('[part="foot"]');
+    expect(foot).to.exist;
+    const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
+    expect(footerCells[footerCells.length - 1].textContent!.trim()).to.equal('4'); // 3 + 1
+  });
+
+  it('renders no footer row at all when grandTotal is set but no column defines footer', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns; // no column has `footer`
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.rowTotal = (r) => r.score;
+    el.grandTotal = (rs) => rs.reduce((sum, r) => sum + r.score, 0);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="foot"]')).to.not.exist;
+  });
+
+  it('extends the expanded-row and group-row colspan to include the new trailing column', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.rowTotal = (r) => r.score;
+    el.expandedContent = (r) => html`<p>${r.name} details</p>`;
+    el.expandedKeys = new Set(['a']);
+    await el.updateComplete;
+    const expandedCell = el.shadowRoot!.querySelector('[part="expanded-cell"]') as HTMLElement;
+    // 2 data columns + 1 leading expand-toggle column + 1 trailing row-total column
+    expect(expandedCell.getAttribute('colspan')).to.equal('4');
+  });
+});
