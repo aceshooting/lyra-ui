@@ -333,7 +333,7 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "  if minor:  $(next_version "$old" minor)"
   echo "  if major:  $(next_version "$old" major)"
   echo "Git tag:     ${TAG[$dir]}"
-  echo "npm publish: ${PKG_NAME[$dir]}@${new} (--access public)"
+  echo "npm publish: ${PKG_NAME[$dir]}@${new} (--access public, via CI once released)"
 done
 echo
 git --no-pager diff --stat -- pnpm-lock.yaml packages/*/package.json || true
@@ -429,8 +429,7 @@ for dir in "${RELEASE_DIRS[@]}"; do
   fi
   for f in "${release_files[@]}"; do
     if [[ ! -f "$f" ]]; then
-      # See the `false` note above: explicit `exit` would skip the ERR trap,
-      # and every package here has already been published to npm by now.
+      # See the `false` note above: explicit `exit` would skip the ERR trap.
       echo "Error: release artifact missing: $f" >&2
       false
     fi
