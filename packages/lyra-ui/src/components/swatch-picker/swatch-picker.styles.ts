@@ -19,7 +19,7 @@ export const styles = css`
        isn't reliably selectable: the CSS Shadow Parts spec only allows a fixed set of
        pseudo-classes after ::part(), not arbitrary attribute selectors, so that combinator can
        silently fail to match depending on the engine. */
-    --lyra-swatch-picker-selected-blur: 0px;
+    --lyra-swatch-picker-selected-blur: 0;
     /* Pulsing "shine" duration for the selected swatch -- 0s (the default) is a no-op (today's
        static look for every existing consumer, and unaffected by this token at all: a 0-duration
        animation resolves to its end state instantly and imperceptibly). A host sets a real
