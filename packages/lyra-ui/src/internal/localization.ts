@@ -60,6 +60,10 @@ export type LyraMessageKey =
   | 'next'
   | 'paginationLabel'
   | 'paginationPage'
+  | 'branchPickerLabel'
+  | 'branchPrevious'
+  | 'branchNext'
+  | 'branchPosition'
   | 'paginationSummary'
   | 'paginationEmptySummary'
   | 'paginationApplied'
@@ -541,6 +545,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   next: 'Next',
   paginationLabel: 'Pagination',
   paginationPage: 'Page',
+  branchPickerLabel: 'Response versions',
+  branchPrevious: 'Previous version',
+  branchNext: 'Next version',
+  branchPosition: 'Version {index} of {total}',
   paginationSummary: '{start}–{end} of {total} {itemLabel}',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationApplied: 'Page {page} of {totalPages}',
