@@ -173,6 +173,7 @@ export type LyraMessageKey =
   | 'fileTypeImage'
   | 'fileTypeAudio'
   | 'fileTypeVideo'
+  | 'fileTypeWithSize'
   | 'pptxViewerLabel'
   | 'pptxViewerFidelityNotice'
   | 'pptxViewerRenderError'
@@ -614,6 +615,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   fileTypeImage: 'Image',
   fileTypeAudio: 'Audio',
   fileTypeVideo: 'Video',
+  fileTypeWithSize: '{label} ({size})',
   pptxViewerLabel: 'Presentation viewer',
   pptxViewerFidelityNotice: 'Some slide content may not display.',
   pptxViewerRenderError: 'Failed to render this presentation.',
