@@ -53,7 +53,8 @@ export const styles = css`
     stroke: var(--lyra-graph-edge-label-halo, var(--lyra-color-surface));
     stroke-width: var(--lyra-size-3px);
   }
-  g[data-edge-labels-hidden] [part='link-label'] {
+  g[data-edge-labels-hidden] [part='link-label'],
+  g[data-edge-labels-hidden] [part='community-label'] {
     display: none;
   }
   [part='empty'] {
@@ -82,6 +83,29 @@ export const styles = css`
   }
   [part='link'][data-selected] {
     stroke: var(--lyra-graph-selected-color, var(--lyra-color-success)) !important;
+    stroke-width: var(--lyra-size-3px);
+  }
+  [part='hull'] {
+    fill: var(--lyra-graph-hull-fill, var(--lyra-color-brand));
+    stroke: var(--lyra-graph-hull-fill, var(--lyra-color-brand));
+    stroke-width: calc(var(--lyra-size-24px) * 2);
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: var(--lyra-graph-hull-opacity, 0.12);
+    cursor: pointer;
+  }
+  [part='hull']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='community-label'] {
+    font-size: var(--lyra-font-size-2xs);
+    fill: var(--lyra-color-text);
+    font-family: var(--lyra-font);
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--lyra-graph-edge-label-halo, var(--lyra-color-surface));
     stroke-width: var(--lyra-size-3px);
   }
 `;

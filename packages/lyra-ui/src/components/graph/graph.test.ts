@@ -1305,6 +1305,136 @@ describe('type filtering (J5)', () => {
   });
 });
 
+describe('community hulls (J6)', () => {
+  const communityNodes = [
+    { id: 'a', label: 'A', communityId: 'team-1' },
+    { id: 'b', label: 'B', communityId: 'team-1' },
+    { id: 'c', label: 'C' },
+  ];
+  const communities = [{ id: 'team-1', label: 'Team One', memberIds: [] }];
+
+  async function mountHulls(): Promise<LyraGraph> {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.communities = communities;
+    el.nodes = communityNodes;
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    return el;
+  }
+
+  it('renders no hull when communities is empty', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('[part="hull"]')).to.not.exist;
+  });
+
+  it('renders one hull per community, membership = union of memberIds and matching communityId', async () => {
+    const el = await mountHulls();
+    expect(el.shadowRoot!.querySelectorAll('[part="hull"]').length).to.equal(1);
+    const hull = el.shadowRoot!.querySelector('[part="hull"]') as SVGPathElement;
+    expect(hull.getAttribute('d')).to.not.equal('');
+  });
+
+  it('renders no hull for a community whose members are all hidden', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodeTypes = [{ id: 'x', label: 'X' }];
+    el.hiddenTypes = ['x'];
+    el.communities = [{ id: 'team-1', label: 'Team', memberIds: ['a', 'b'] }];
+    el.nodes = [
+      { id: 'a', label: 'A', type: 'x' },
+      { id: 'b', label: 'B', type: 'x' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 0, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('[part="hull"]')).to.not.exist;
+  });
+
+  it('a 1-member community draws a degenerate (zero-length) hull path', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.communities = [{ id: 'solo', memberIds: ['a'] }];
+    el.nodes = [{ id: 'a', label: 'A' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const hull = el.shadowRoot!.querySelector('[part="hull"]') as SVGPathElement;
+    expect(hull.getAttribute('d')).to.match(/^M [\d.-]+ [\d.-]+ L [\d.-]+ [\d.-]+$/);
+  });
+
+  it('hulls stack before links/nodes in DOM order', async () => {
+    const el = await mountHulls();
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    const children = [...g.children].map((c) => c.querySelector('[part]')?.getAttribute('part') ?? c.getAttribute('part'));
+    const hullIndex = children.findIndex((p) => p === 'hull');
+    const nodeIndex = children.findIndex((p) => p === 'node');
+    expect(hullIndex).to.be.lessThan(nodeIndex);
+  });
+
+  it('click and Enter/Space on a hull emit lyra-community-click', async () => {
+    const el = await mountHulls();
+    const hull = el.shadowRoot!.querySelector('[part="hull"]') as SVGPathElement;
+    let detail: { id: string } | undefined;
+    el.addEventListener('lyra-community-click', (e) => (detail = (e as CustomEvent).detail));
+    hull.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail).to.deep.equal({ id: 'team-1' });
+    detail = undefined;
+    hull.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(detail).to.deep.equal({ id: 'team-1' });
+  });
+
+  it('hulls join the roving ring after nodes and links, with a matching data-list entry', async () => {
+    const el = await mountHulls();
+    const items = [
+      ...el.shadowRoot!.querySelectorAll('[part="node"]'),
+      ...el.shadowRoot!.querySelectorAll('[part="link"]'),
+      ...el.shadowRoot!.querySelectorAll('[part="hull"]'),
+    ] as SVGElement[];
+    expect(items[items.length - 1]!.getAttribute('part')).to.equal('hull');
+    expect(el.shadowRoot!.querySelectorAll('[part="data-list"] li')).to.have.length(4); // 3 nodes + 1 hull
+  });
+
+  it('fit() bounding box accounts for hull padding when communities render', async () => {
+    const el = await mountHulls();
+    el.fit({ padding: 10 });
+    await aTimeout(400);
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    expect(transform).to.match(/translate\([-\d.]+,\s*[-\d.]+\)\s*scale\([-\d.]+\)/);
+  });
+
+  it('is accessible with hulls rendered', async () => {
+    const el = await mountHulls();
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: no communities set renders no hulls and an unchanged roving ring', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const items = [
+      ...el.shadowRoot!.querySelectorAll('[part="node"]'),
+      ...el.shadowRoot!.querySelectorAll('[part="link"]'),
+    ] as SVGElement[];
+    expect(items.filter((i) => i.getAttribute('tabindex') === '0')).to.have.length(1);
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [

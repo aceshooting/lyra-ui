@@ -9,6 +9,7 @@ import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { getScratchCtx } from '../../internal/canvas.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
+import { convexHull, hullPathD, hullCentroidX, hullTopY, type HullPoint } from './graph-hull.js';
 import '../skeleton/skeleton.class.js';
 
 export interface GraphNode {
@@ -30,6 +31,9 @@ export interface GraphNode {
    *  consumer flips it (or leaves it) after appending neighbors in response to a `lyra-node-expand`.
    *  Does not gate the `lyra-node-expand` event itself, which fires for any node's double-activate. */
   expandable?: boolean;
+  /** Community membership shorthand, unioned with any `GraphCommunity.memberIds` that also lists
+   *  this node's id. */
+  communityId?: string;
 }
 
 /** One entry in `nodeTypes` — declares a node type's legend label, optional fill color (sanitized
@@ -39,6 +43,17 @@ export interface GraphNodeType {
   label: string;
   color?: string;
   shape?: 'circle' | 'square' | 'diamond';
+}
+
+/** One entry in `communities` — declares a hull's id, optional label/fill color (sanitized like
+ *  `GraphNode.color`), and explicit membership. A node also joins this hull when its own
+ *  `GraphNode.communityId` matches this entry's `id`, so `memberIds` and `communityId` are two
+ *  ways to express the same membership relationship. */
+export interface GraphCommunity {
+  id: string;
+  label?: string;
+  memberIds: string[];
+  color?: string;
 }
 /** A link whose `target` id has no matching node renders as a short dashed stub off `source`'s
  *  own position instead of being silently dropped -- e.g. for a wiki-style `[[link]]` reference to
@@ -89,6 +104,7 @@ const EXPAND_KEY_INTERVAL_MS = 500; // window for a double-Enter/Space to count 
 const EXPAND_BADGE_R = 5; // world px, the "+" badge circle radius
 const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge, diagonally upper-right
 const FOCUS_HALO_PADDING = 6; // world px added to the node's own radius for the halo ring
+const HULL_PADDING = 24; // world px; CSS mirrors this via stroke-width: 2 * --lyra-size-24px
 
 
 /**
@@ -181,6 +197,7 @@ export interface LyraGraphEventMap {
   'lyra-link-leave': CustomEvent<{ source: string; target: string; id?: string }>;
   'lyra-node-expand': CustomEvent<{ id: string }>;
   'lyra-selection-change': CustomEvent<{ nodeIds: string[]; linkIds: string[] }>;
+  'lyra-community-click': CustomEvent<{ id: string }>;
 }
 /**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -201,6 +218,11 @@ export interface LyraGraphEventMap {
  * `lastPositionById` remembers every node's last settled x/y across a hide/show round-trip, so
  * toggling a type off and back on restores each node where it was instead of re-randomizing it.
  *
+ * `communities` draws one translucent convex-hull blob per entry, behind links/nodes -- a hull's
+ * membership is the union of its own `memberIds` and every node whose `communityId` matches its
+ * `id`. A community with no currently-visible members (all its nodes hidden by `hiddenTypes`, or
+ * simply empty) renders no hull.
+ *
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
  * @event lyra-link-click - `detail: { source, target, id? }`.
@@ -220,6 +242,7 @@ export interface LyraGraphEventMap {
  * @event lyra-selection-change - `detail: { nodeIds, linkIds }`. Fires when `selectionMode` is not
  *   `'none'` and the user activates/clears a node or link. The component never assigns
  *   `selectedNodeIds`/`selectedLinkIds` itself -- controlled, mirroring `lyra-heatmap.selectedCell`.
+ * @event lyra-community-click - A hull was activated. `detail: { id }`.
  * @csspart base - The graph wrapper.
  * @csspart svg - The graph SVG.
  * @csspart node - A graph node.
@@ -229,6 +252,8 @@ export interface LyraGraphEventMap {
  * @csspart link-label - A drawn edge label (only rendered when `showEdgeLabels` is set).
  * @csspart expand-indicator - The "+" badge rendered on a node with `expandable: true`.
  * @csspart focus-halo - The persistent ring tracking `focusId`'s node.
+ * @csspart hull - A community hull (behind links/nodes; role="button").
+ * @csspart community-label - A hull's label text.
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
@@ -242,6 +267,9 @@ export interface LyraGraphEventMap {
  *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
  * @cssprop [--lyra-graph-focus-halo-color=var(--lyra-color-brand)] - `focus-halo` stroke color.
  * @cssprop [--lyra-graph-selected-color=var(--lyra-color-success)] - Selected node/link stroke.
+ * @cssprop [--lyra-graph-hull-fill=var(--lyra-color-brand)] - Hull fill/stroke color.
+ * @cssprop [--lyra-graph-hull-opacity=0.12] - Hull element opacity (composites fill+stroke as one
+ *   group, avoiding a double-opacity seam at the fill/stroke boundary).
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -258,6 +286,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  diagram counts, as if absent. Positions round-trip via `lastPositionById`: toggling a type
    *  off and back on restores each node where it was. */
   @property({ attribute: false }) hiddenTypes: string[] = [];
+  /** Renders one translucent hull per entry, behind links/nodes. Membership is the union of
+   *  `memberIds` and every node whose `communityId` matches this entry's `id`. */
+  @property({ attribute: false }) communities: GraphCommunity[] = [];
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
@@ -355,6 +386,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  whenever `focusId` itself is cleared, so the same id can center again later. */
   private lastAppliedFocusId: string | null = null;
   private focusHaloEl?: SVGCircleElement;
+  private communityHullEls: SVGPathElement[] = [];
+  private communityLabelEls: SVGTextElement[] = [];
   /** The in-flight `requestAnimationFrame` id for a camera tween (`focusNode()`/`fit()`), if any --
    *  canceled by a new tween request or a user pan/zoom gesture (see `applyInteractions()`'s zoom
    *  `'start'` handler). */
@@ -452,6 +485,30 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.hiddenTypes.length) return this.nodes;
     const hidden = new Set(this.hiddenTypes);
     return this.nodes.filter((n) => n.type == null || !hidden.has(n.type));
+  }
+
+  /** A community's currently-visible members -- the union of `memberIds` and every currently
+   *  simulated node (already filtered by `hiddenTypes`) whose `communityId` matches. */
+  private communityMembers(community: GraphCommunity): SimNode[] {
+    const idSet = new Set(community.memberIds);
+    return this.simNodes.filter((n) => idSet.has(n.id) || n.communityId === community.id);
+  }
+
+  /** `communities` narrowed to entries with at least one currently-visible member -- a community
+   *  whose members are all hidden by `hiddenTypes` (or that starts out empty) draws no hull and
+   *  doesn't occupy a roving-ring slot. */
+  private visibleCommunities(): { community: GraphCommunity; members: SimNode[] }[] {
+    return this.communities
+      .map((community) => ({ community, members: this.communityMembers(community) }))
+      .filter((entry) => entry.members.length > 0);
+  }
+
+  private communityHull(members: SimNode[]): HullPoint[] {
+    return convexHull(members.map((n) => ({ x: n.x ?? 0, y: n.y ?? 0 })));
+  }
+
+  private onCommunityClick(community: GraphCommunity): void {
+    this.emit('lyra-community-click', { id: community.id });
   }
 
   private cameraTransitionMs(): number {
@@ -581,6 +638,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         maxX = Math.max(maxX, (n.x ?? 0) + r);
         minY = Math.min(minY, (n.y ?? 0) - r);
         maxY = Math.max(maxY, (n.y ?? 0) + r);
+      }
+      for (const entry of this.visibleCommunities()) {
+        for (const p of this.communityHull(entry.members)) {
+          minX = Math.min(minX, p.x - HULL_PADDING);
+          maxX = Math.max(maxX, p.x + HULL_PADDING);
+          minY = Math.min(minY, p.y - HULL_PADDING);
+          maxY = Math.max(maxY, p.y + HULL_PADDING);
+        }
       }
       const boxW = Math.max(1, maxX - minX);
       const boxH = Math.max(1, maxY - minY);
@@ -779,7 +844,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomBehavior.scaleExtent([this.minZoom, this.maxZoom]);
     }
 
-    if (!(changed.has('simNodes') || changed.has('simLinks') || changed.has('nodeTypes') || changed.has('showEdgeLabels'))) return;
+    if (
+      !(
+        changed.has('simNodes') ||
+        changed.has('simLinks') ||
+        changed.has('nodeTypes') ||
+        changed.has('showEdgeLabels') ||
+        changed.has('communities')
+      )
+    )
+      return;
 
     const nodeEls = Array.from(this.renderRoot.querySelectorAll('[part="node"]')) as SVGElement[];
     this.nodeEls = nodeEls;
@@ -798,6 +872,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     );
     this.linkLabelHiddenByLength = [];
     this.danglingLinkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"][data-dangling]')) as SVGLineElement[];
+    this.communityHullEls = Array.from(this.renderRoot.querySelectorAll('[part="hull"]')) as SVGPathElement[];
+    this.communityLabelEls = Array.from(
+      this.renderRoot.querySelectorAll('[part="community-label"]'),
+    ) as SVGTextElement[];
 
     nodeEls.forEach((el, i) => {
       if (this.boundNodeEls.has(el)) return;
@@ -917,6 +995,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       line.setAttribute('y2', String(coordinates.y2));
     });
     this.updateFocusHalo();
+    this.visibleCommunities().forEach((entry, i) => {
+      const hullEl = this.communityHullEls[i];
+      const labelEl = this.communityLabelEls[i];
+      if (!hullEl && !labelEl) return;
+      const hull = this.communityHull(entry.members);
+      if (hullEl) hullEl.setAttribute('d', hullPathD(hull));
+      if (labelEl) {
+        labelEl.setAttribute('x', String(hullCentroidX(hull)));
+        labelEl.setAttribute('y', String(hullTopY(hull) - HULL_PADDING));
+      }
+    });
   }
 
   private rebuildSimulation(): void {
@@ -1249,7 +1338,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private graphItemCount(): number {
-    return this.simNodes.length + this.simLinks.length;
+    return this.simNodes.length + this.simLinks.length + this.visibleCommunities().length;
   }
 
   private normalizedGraphItem(index = this.activeGraphItem): number {
@@ -1262,8 +1351,19 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       const node = this.simNodes[index];
       return node ? this.localize('graphNode', undefined, { label: this.nodeAccessibleText(node) }) : '';
     }
-    const link = this.simLinks[index - this.simNodes.length];
-    return link ? this.linkAccessibleText(link) : '';
+    const linkIndex = index - this.simNodes.length;
+    if (linkIndex < this.simLinks.length) {
+      const link = this.simLinks[linkIndex];
+      return link ? this.linkAccessibleText(link) : '';
+    }
+    const hullIndex = linkIndex - this.simLinks.length;
+    const entry = this.visibleCommunities()[hullIndex];
+    return entry
+      ? this.localize('graphCommunity', undefined, {
+          label: entry.community.label ?? entry.community.id,
+          count: entry.members.length,
+        })
+      : '';
   }
 
   private graphItemAnnouncement(index: number): string {
@@ -1289,6 +1389,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       const items = [
         ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
         ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
+        ...Array.from(this.renderRoot.querySelectorAll('[part="hull"]')),
       ] as HTMLElement[];
       items[normalized]?.focus();
     });
@@ -1384,6 +1485,29 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             </marker>
           </defs>
           <g transform="">
+            ${this.visibleCommunities().map((entry, hullIndex) => {
+              const itemIndex = this.simNodes.length + this.simLinks.length + hullIndex;
+              const hull = this.communityHull(entry.members);
+              const fill = sanitizeNodeColor(entry.community.color);
+              const label = this.localize('graphCommunity', undefined, {
+                label: entry.community.label ?? entry.community.id,
+                count: entry.members.length,
+              });
+              return svg`<g>
+                <path
+                  part="hull"
+                  role="button"
+                  tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
+                  aria-label=${label}
+                  d=${hullPathD(hull)}
+                  style=${styleMap(fill ? { '--lyra-graph-hull-fill': fill } : {})}
+                  @click=${() => this.onCommunityClick(entry.community)}
+                  @focus=${() => this.onGraphItemFocus(itemIndex)}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onCommunityClick(entry.community))}
+                ></path>
+                <text part="community-label" aria-hidden="true" x=${hullCentroidX(hull)} y=${hullTopY(hull) - HULL_PADDING}>${entry.community.label ?? entry.community.id}</text>
+              </g>`;
+            })}
             ${this.simLinks.map((l, linkIndex) => {
               const itemIndex = this.simNodes.length + linkIndex;
               const coordinates = this.linkCoordinates(l);
@@ -1506,6 +1630,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             (node) => html`<li>${this.localize('graphNode', undefined, { label: this.nodeAccessibleText(node) })}</li>`,
           )}
           ${this.simLinks.map((link) => html`<li>${this.linkAccessibleText(link)}</li>`)}
+          ${this.visibleCommunities().map(
+            (entry) =>
+              html`<li>${this.localize('graphCommunity', undefined, {
+                label: entry.community.label ?? entry.community.id,
+                count: entry.members.length,
+              })}</li>`,
+          )}
         </ul>
       </div>
     `;

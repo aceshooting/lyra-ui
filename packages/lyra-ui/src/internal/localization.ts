@@ -302,6 +302,7 @@ export type LyraMessageKey =
   | 'graphNodeFocused'
   | 'graphSelectionCount'
   | 'graphNodesHidden'
+  | 'graphCommunity'
   | 'heatmapValueLabel'
   | 'heatmapMatrixCellLabel'
   | 'heatmapCalendarLabel'
@@ -805,6 +806,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphNodeFocused: 'Centered on {label}',
   graphSelectionCount: '{count} selected',
   graphNodesHidden: '{hidden} of {total} nodes hidden',
+  graphCommunity: 'Community {label}, {count} nodes',
   heatmapValueLabel: 'value',
   heatmapMatrixCellLabel: 'Row {row}, Col {col}: {value}',
   heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
