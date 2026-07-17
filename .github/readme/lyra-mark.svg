@@ -1,0 +1,46 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lyra-gradient" x1="72.9" y1="18" x2="23.1" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8DE7FF"/>
+      <stop offset=".5" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
+    </linearGradient>
+    <radialGradient id="vega-core" cx="35%" cy="30%" r="70%">
+      <stop stop-color="#F7FDFF"/>
+      <stop offset=".38" stop-color="#C8F5FF"/>
+      <stop offset="1" stop-color="#8DE7FF"/>
+    </radialGradient>
+    <radialGradient id="violet-core" cx="35%" cy="30%" r="70%">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".42" stop-color="#DCD2FF"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </radialGradient>
+    <radialGradient id="pink-core" cx="35%" cy="30%" r="70%">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".42" stop-color="#F9D8FF"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
+    </radialGradient>
+    <filter id="star-glow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="2.4"/>
+    </filter>
+  </defs>
+
+  <path d="M57 11.5L72.9 21.9L55.6 33.9L57 11.5M55.6 33.9L34.6 41.3L23.1 84.5L44 79.6L55.6 33.9"
+        stroke="#A78BFA" stroke-opacity=".2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M57 11.5L72.9 21.9L55.6 33.9L57 11.5M55.6 33.9L34.6 41.3L23.1 84.5L44 79.6L55.6 33.9"
+        stroke="url(#lyra-gradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g filter="url(#star-glow)" opacity=".42">
+    <circle cx="72.9" cy="21.9" r="8" fill="#8DE7FF"/>
+    <circle cx="55.6" cy="33.9" r="5" fill="#A78BFA"/>
+    <circle cx="23.1" cy="84.5" r="5.5" fill="#F0ABFC"/>
+  </g>
+  <g>
+    <circle cx="57" cy="11.5" r="3.1" fill="url(#vega-core)"/>
+    <circle cx="72.9" cy="21.9" r="5.3" fill="url(#vega-core)"/>
+    <circle cx="55.6" cy="33.9" r="3.2" fill="url(#violet-core)"/>
+    <circle cx="34.6" cy="41.3" r="4.2" fill="url(#violet-core)"/>
+    <circle cx="23.1" cy="84.5" r="4.3" fill="url(#pink-core)"/>
+    <circle cx="44" cy="79.6" r="4.2" fill="url(#pink-core)"/>
+  </g>
+</svg>

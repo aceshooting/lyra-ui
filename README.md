@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="https://www.lyra-ui.com/">
+    <img src=".github/readme/lyra-mark.svg" width="112" height="112" alt="Lyra UI constellation logo" />
+  </a>
+</p>
+
 # Lyra UI (monorepo)
 
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
