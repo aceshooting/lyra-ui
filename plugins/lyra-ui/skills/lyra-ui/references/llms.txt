@@ -1,0 +1,90 @@
+# @aceshooting/lyra-ui
+
+> Free, independent, MIT-licensed Lit web components — an open-source alternative to Shoelace and
+> Web Awesome. Lyra combines accessible form controls, dashboards, charts, data visualization, and
+> Conversation & Agent UI. Selected Web Awesome-compatible components retain documented public names
+> under a `lyra-` prefix for easier migration; the implementation and design system are standalone.
+
+Every component resolves its styling through this library's own `--lyra-theme-*` design tokens with
+hardcoded fallbacks, so it works fully standalone with no theme or runtime dependency required.
+
+## Docs
+
+- [Live docs site](https://aceshooting.github.io/lyra-ui/): Storybook site with a live, interactive
+  example and copy-pasteable source for every component — useful for a human reviewing this
+  library, less relevant for a coding assistant already reading this file.
+- [llms-full.txt](./llms-full.txt): Complete component-by-component API reference (properties,
+  events, slots, CSS parts, themeable custom properties, optional peer deps, usage snippets, and
+  known gotchas) for every tag in the library — the primary resource for a coding assistant
+  integrating `@aceshooting/lyra-ui`.
+- [README.md](./README.md): Install instructions, the full component catalog, `<wa-*>` →
+  `<lyra-*>` and `<sl-*>` → `<lyra-*>` migration notes, theming, accessibility, i18n, RTL, and
+  package-level development commands.
+
+## Component categories
+
+The catalog is grouped by capability; `llms-full.txt` follows the same consumer-facing order:
+
+- **Form controls, toasts, sparkline, and flags** — `lyra-combobox`/`lyra-option`,
+  `lyra-select` (a closed-list, button-trigger single-select sharing `lyra-option` with
+  `lyra-combobox`), `lyra-date-picker`/`lyra-date-input`, `lyra-toast`/`lyra-toast-item`/`toast()`,
+  `lyra-phone-input` (optional `libphonenumber-js` peer, loaded through a consumer adapter), `lyra-sparkline`,
+  `lyra-textarea`, `lyra-input`, `lyra-button`, `lyra-flag` (needs the optional peer `@aceshooting/lyra-flags`).
+- **Dashboard atoms** — first-party, no-Web-Awesome-equivalent building blocks for dashboards:
+  `lyra-empty`, `lyra-skeleton`, `lyra-stat`, `lyra-table`, `lyra-pagination`, `lyra-gauge`,
+  `lyra-export-button`, `lyra-copy-button`, `lyra-split`, `lyra-widget`, `lyra-word-cloud`
+  (zero-dependency SVG word/tag cloud).
+- **Web Awesome parity and visual primitives** — `lyra-number-input`/`lyra-time-input`,
+  `lyra-color-picker`, `lyra-radio`/`lyra-radio-group`, `lyra-spinner`,
+  `lyra-progress-bar`/`lyra-progress-ring`, `lyra-badge`/`lyra-tag`, `lyra-callout`,
+  `lyra-details`/`lyra-accordion`/`lyra-accordion-item`, `lyra-divider`,
+  `lyra-breadcrumb`/`lyra-breadcrumb-item`, `lyra-format-number`/`lyra-format-date`/
+  `lyra-format-bytes`/`lyra-relative-time`, `lyra-rating`, `lyra-popover`/`lyra-tooltip`/
+  `lyra-dropdown`, `lyra-drawer`, `lyra-carousel`, `lyra-image-comparer`, and
+  `lyra-zoomable-frame`, `lyra-carousel-item`, `lyra-button-group`, and
+  `lyra-dropdown-item`, and `lyra-scroller` compatibility primitives.
+  Observer utilities include `lyra-resize-observer`, `lyra-intersection-observer`, and
+  `lyra-mutation-observer`.
+- **Temporal & graph** — time-series and hierarchy/network widgets: `lyra-time-range`,
+  `lyra-playback`, `lyra-heatmap` (matrix and calendar layouts), `lyra-graph` (needs the optional peer
+  deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`), `lyra-tree`/`lyra-tree-node`.
+- **Chart family** — a Chart.js wrapper and its typed subclasses, plus two bespoke chart types:
+  `lyra-chart` (core) and its locked-`type` subclasses (`lyra-line-chart`, `lyra-bar-chart`,
+  `lyra-pie-chart`, `lyra-doughnut-chart`, `lyra-radar-chart`, `lyra-polar-area-chart`,
+  `lyra-bubble-chart`, `lyra-scatter-chart`), `lyra-histogram`, `lyra-box-plot` (needs
+  `@sgratzl/chartjs-chart-boxplot`) — the `lyra-chart` family needs the optional peer deps
+  `chart.js`/`chartjs-plugin-zoom`. `lyra-lite-chart` is a separate, dependency-free bar/line chart
+  (plain SVG/DOM, no peer deps at all) for projects whose architecture forbids a charting
+  dependency outright.
+- **Map & file-input** — `lyra-map` (`maplibre-gl` wrapper with legend + choropleth layer + point
+  markers, needs the optional peer `maplibre-gl`), `lyra-file-input` (drag-drop + click-to-browse
+  dropzone, emits raw `File[]`).
+- **Media and interaction primitives** — `lyra-animated-image`, `lyra-animation`, `lyra-avatar-group`,
+  `lyra-include`, `lyra-known-date`, `lyra-lightbox`, `lyra-qr-code` (needs the optional peer `qrcode`),
+  `lyra-random-content`, `lyra-timeline`/`lyra-timeline-item`, and `lyra-tour`.
+- **Conversation & Agent UI** — chat/tool-call/agent-config building blocks for streaming AI
+  interfaces: `lyra-dialog`/`confirm()`, `lyra-tabs`, `lyra-checkbox`, `lyra-switch`,
+  `lyra-radio`/`lyra-radio-group`, `lyra-input`, `lyra-textarea`, `lyra-callout`, `lyra-spinner`,
+  `lyra-progress-bar`/`lyra-progress-ring`, `lyra-badge`/`lyra-tag`,
+  `lyra-json-viewer`, `lyra-live-region` (+ `internal/announcer.ts`'s throttled `Announcer`),
+  `lyra-markdown` (needs the optional peers `marked`/`dompurify`), `lyra-chat-message`,
+  `lyra-typing-indicator`, `lyra-tool-call-chip`, `lyra-tool-result-view` (+ its
+  `registerToolRenderer()` renderer registry), `lyra-tool-result-dialog`, `lyra-chat-composer`
+  (form-associated), `lyra-attachment-chip`, `lyra-stream-status`, `lyra-virtual-list`,
+  `lyra-conversation-item`, `lyra-model-select`, `lyra-slider` (form-associated),
+  `lyra-tool-select-dialog`, `lyra-citation-badge`, `lyra-source-list`/`lyra-source-card`,
+  `lyra-app-rail`/`lyra-app-rail-item`, `lyra-responsive-panel`, `lyra-mention-popover`, `lyra-streaming-text`,
+  `lyra-thinking-panel`, `lyra-generation-status`, `lyra-code-block` (needs the optional peer
+  `shiki`), `lyra-tool-approval-dialog`, `lyra-tool-param-form`, `lyra-menu`/`lyra-menu-item`,
+  `lyra-chip`/`lyra-chip-group`, `lyra-model-settings-panel`, `lyra-context-meter`,
+  `lyra-dock-panel`, `lyra-document-preview`, `lyra-document-viewer`, `lyra-svg-viewer`, `lyra-html-viewer`,
+  `lyra-dataset-viewer`, `lyra-contact-viewer`, `lyra-pdf-viewer`, `lyra-spreadsheet-viewer`, `lyra-csv-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`, `lyra-archive-viewer`, `lyra-ebook-viewer`, `lyra-pptx-viewer`, `lyra-file-icon`, `lyra-media-card`, `lyra-attachment-trigger`,
+  `lyra-kbd`, `lyra-result-card`/`lyra-result-field`, `lyra-avatar`, `lyra-card`, `lyra-stepper`,
+  `lyra-segmented`, `lyra-swatch-picker`, `lyra-diff-view`, `lyra-poll-status`,
+  `lyra-code-block-core` (needs the optional peer `shiki`).
+
+## Also useful
+
+- Shared internals every tag builds on (`LyraElement` base class, the `FormAssociated` mixin, the
+  floating-ui `positioner`, and the independent `--lyra-theme-*` design-token layer) are documented at the
+  top of `llms-full.txt`, along with cross-cutting packaging notes that apply to the whole library.
