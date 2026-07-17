@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
-import type { LyraTree } from './tree.js';
+import type { LyraTree, TreeItem } from './tree.js';
 import type { LyraTreeNode } from './tree-node.js';
 import { styles as treeNodeStyles } from './tree-node.styles.js';
 
@@ -601,6 +601,69 @@ it('renders a badge value of 0 instead of treating it as absent', async () => {
   const badge = root.shadowRoot!.querySelector('[part="badge"]');
   expect(badge).to.exist;
   expect(badge!.textContent).to.equal('0');
+});
+
+describe('tree-node badges', () => {
+  const dataWithBadges: TreeItem[] = [
+    {
+      id: 'a',
+      label: 'src/app.ts',
+      badge: 3,
+      badges: [
+        { text: 'M', tone: 'brand', label: 'Modified' },
+        { text: '+2', tone: 'success' },
+      ],
+    },
+  ];
+
+  it('renders no badge parts when neither badge nor badges is set', async () => {
+    const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+    el.data = [{ id: 'a', label: 'no badges here' }];
+    await el.updateComplete;
+    const node = el.querySelector('lyra-tree-node') as LyraTreeNode;
+    const badgeParts = node.shadowRoot!.querySelectorAll('[part="badge"]');
+    expect(badgeParts.length).to.equal(0);
+  });
+
+  it('renders badges chips with data-tone after the legacy badge', async () => {
+    const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+    el.data = dataWithBadges;
+    await el.updateComplete;
+    const node = el.querySelector('lyra-tree-node') as LyraTreeNode;
+    const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
+    // legacy badge (3) first, then the two badges chips, in array order
+    expect(badgeParts.length).to.equal(3);
+    expect(badgeParts[0].textContent!.trim()).to.equal('3');
+    expect(badgeParts[1].textContent!.trim()).to.equal('M');
+    expect(badgeParts[1].dataset.tone).to.equal('brand');
+    expect(badgeParts[2].textContent!.trim()).to.equal('+2');
+    expect(badgeParts[2].dataset.tone).to.equal('success');
+  });
+
+  it('uses label as the accessible name when set, else falls back to text', async () => {
+    const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+    el.data = dataWithBadges;
+    await el.updateComplete;
+    const node = el.querySelector('lyra-tree-node') as LyraTreeNode;
+    const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
+    expect(badgeParts[1].getAttribute('aria-label')).to.equal('Modified'); // label wins
+    expect(badgeParts[2].getAttribute('aria-label')).to.equal('+2'); // falls back to text
+  });
+
+  it('defaults an unset tone to neutral', async () => {
+    const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+    el.data = [{ id: 'a', label: 'x', badges: [{ text: 'U' }] }];
+    await el.updateComplete;
+    const node = el.querySelector('lyra-tree-node') as LyraTreeNode;
+    expect((node.shadowRoot!.querySelector('[part="badge"]') as HTMLElement).dataset.tone).to.equal('neutral');
+  });
+
+  it('is accessible with badges and the legacy badge both present', async () => {
+    const el = (await fixture(html`<lyra-tree></lyra-tree>`)) as LyraTree;
+    el.data = dataWithBadges;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
 });
 
 it('swaps which arrow key expands/collapses under dir="rtl"', async () => {

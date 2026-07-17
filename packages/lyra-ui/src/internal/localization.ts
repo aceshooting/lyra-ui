@@ -323,6 +323,13 @@ export type LyraMessageKey =
   | 'breadcrumb'
   | 'timeline'
   | 'rating'
+  | 'feedbackPositive'
+  | 'feedbackNegative'
+  | 'feedbackReasonsLabel'
+  | 'feedbackCommentLabel'
+  | 'feedbackCommentPlaceholder'
+  | 'feedbackSubmit'
+  | 'feedbackSubmitted'
   | 'colorPicker'
   | 'mediaCardUntitledFile'
   | 'mediaCardOpenName'
@@ -827,6 +834,13 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   breadcrumb: 'Breadcrumb',
   timeline: 'Timeline',
   rating: 'Rating',
+  feedbackPositive: 'Good response',
+  feedbackNegative: 'Bad response',
+  feedbackReasonsLabel: 'Choose a reason',
+  feedbackCommentLabel: 'Add a comment',
+  feedbackCommentPlaceholder: 'Add more detail (optional)',
+  feedbackSubmit: 'Submit feedback',
+  feedbackSubmitted: 'Feedback submitted',
   colorPicker: 'Color picker',
   mediaCardUntitledFile: 'Untitled file',
   mediaCardOpenName: 'Open {name}',

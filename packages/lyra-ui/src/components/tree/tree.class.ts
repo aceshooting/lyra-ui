@@ -9,11 +9,21 @@ import '../empty/empty.class.js';
 import './tree-node.class.js';
 import type { LyraTreeNode } from './tree-node.class.js';
 
+export interface TreeBadge {
+  text: string;
+  tone?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+  /** Accessible name override; falls back to `text` when omitted. */
+  label?: string;
+}
+
 export interface TreeItem {
   id: string;
   label: string;
   children?: TreeItem[];
   badge?: string | number;
+  /** Additive, token-colored chips rendered after the legacy `badge`. Omit for byte-identical
+   *  output to today. */
+  badges?: TreeBadge[];
   /** Optional decorative leading content, such as an icon TemplateResult. */
   icon?: unknown;
   /** Secondary visible row text. */

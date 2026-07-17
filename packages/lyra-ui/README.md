@@ -509,6 +509,40 @@ each one-liner below.
 | `<lyra-breadcrumb>` + `<lyra-breadcrumb-item>` | `wa-breadcrumb` | Responsive navigation trail |
 | `<lyra-format-number>` + `<lyra-format-date>` + `<lyra-format-bytes>` + `<lyra-relative-time>` | `wa-format-*` / `wa-relative-time` | Locale-aware formatting primitives |
 
+### Citation → document recipe
+
+Wiring a `<lyra-citation-badge>` click to open a `<lyra-document-viewer>` at the cited passage, flashed:
+
+```html
+<p>…revenue grew 12%<lyra-citation-badge index="1" source-id="doc-1"></lyra-citation-badge>.</p>
+<lyra-document-viewer id="dv"></lyra-document-viewer>
+```
+
+```js
+const SOURCES = {
+  'doc-1': {
+    name: 'annual_report.pdf', mimeType: 'application/pdf', src: '/files/annual_report.pdf',
+    highlight: { id: 'cite-1', tone: 'accent',
+      anchor: { kind: 'text-quote', quote: 'revenue grew 12% year over year', prefix: 'Overall ', suffix: ', driven', page: 12 } },
+  },
+};
+document.addEventListener('lyra-citation-activate', (e) => {
+  const s = SOURCES[e.detail.sourceId];
+  if (!s) return;
+  const dv = document.getElementById('dv');
+  Object.assign(dv, { name: s.name, mimeType: s.mimeType, src: s.src });
+  dv.highlights = [s.highlight];
+  dv.anchor = s.highlight.id; // scroll + activate + flash once the pdf loads
+  dv.open = true;
+});
+document.getElementById('dv').addEventListener('lyra-anchor-result', (e) => {
+  if (!e.detail.found) console.warn('citation passage not found');
+});
+```
+
+The reverse direction ("select a passage → cite it") is the same wiring inverted: listen for
+`lyra-text-select` on the viewer and hand `detail.anchor` to the host's citation store.
+
 ## Known limitations
 
 A non-exhaustive list of gaps a new consumer should know about before adopting:

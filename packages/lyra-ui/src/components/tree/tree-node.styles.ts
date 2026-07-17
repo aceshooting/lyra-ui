@@ -91,4 +91,27 @@ export const styles = css`
     border-radius: var(--lyra-radius);
     padding: 0 var(--lyra-space-xs);
   }
+  [part='badge'] + [part='badge'] {
+    margin-inline-start: var(--lyra-space-xs);
+  }
+  [part='badge'][data-tone='neutral'] {
+    color: var(--lyra-color-text-quiet);
+    background: var(--lyra-color-surface);
+  }
+  [part='badge'][data-tone='brand'] {
+    color: var(--lyra-color-brand);
+    background: var(--lyra-color-brand-quiet);
+  }
+  [part='badge'][data-tone='success'] {
+    color: var(--lyra-color-success);
+    background: var(--lyra-color-success-quiet);
+  }
+  [part='badge'][data-tone='warning'] {
+    color: var(--lyra-color-warning);
+    background: var(--lyra-color-warning-quiet);
+  }
+  [part='badge'][data-tone='danger'] {
+    color: var(--lyra-color-danger);
+    background: var(--lyra-color-danger-quiet);
+  }
 `;

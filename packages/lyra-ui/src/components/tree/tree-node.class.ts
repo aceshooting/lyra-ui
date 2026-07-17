@@ -32,7 +32,8 @@ export interface LyraTreeNodeEventMap {
  * @csspart content - The primary and secondary text wrapper.
  * @csspart label - The node label.
  * @csspart description - The optional secondary description.
- * @csspart badge - The optional node badge.
+ * @csspart badge - The optional node badge (the legacy `item.badge`, and/or one chip per
+ *   `item.badges` entry, tone-mapped via `data-tone`).
  * @csspart group - The wrapper around a node's expanded child items.
  */
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
@@ -142,6 +143,11 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
             : nothing}
         </span>
         ${this.item.badge != null ? html`<span part="badge">${this.item.badge}</span>` : nothing}
+        ${(this.item.badges ?? []).map(
+          (b) => html`<span part="badge" data-tone=${b.tone ?? 'neutral'} aria-label=${b.label ?? b.text}
+            >${b.text}</span
+          >`,
+        )}
       </div>
       ${this.expanded && this.hasChildren
         ? html`<div part="group" role="group">
