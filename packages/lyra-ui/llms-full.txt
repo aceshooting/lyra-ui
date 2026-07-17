@@ -8066,10 +8066,10 @@ spreadsheet, presentation, code, archive, image, audio, and video formats. An ex
 type wins; filename extension fallback is used only for an empty or `application/octet-stream`
 MIME type. Unknown values return a generic file result.
 
-**Properties:** `mimeType` (attribute `mime-type`), `name`, `label`, `decorative`, and
-`variant: 'icon' | 'label'`.
+**Properties:** `mimeType` (attribute `mime-type`), `name`, `size` (bytes; `0` renders no size),
+`label`, `decorative`, and `variant: 'icon' | 'label'`.
 
-**CSS parts:** `base`, `icon`, and `label`.
+**CSS parts:** `base`, `icon`, `label`, and `size`.
 
 **Exports:** `LyraFileTypeMetadata`, `LyraFileTypeIcon`, `LyraFileTypeCategory`,
 `getFileTypeMetadata()`, and `registerFileTypeMetadata()` for application-specific mappings.

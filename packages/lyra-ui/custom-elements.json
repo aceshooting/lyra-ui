@@ -53486,6 +53486,13 @@
           "kind": "class",
           "description": "Displays a localized, tokenized file-type badge from a MIME type.",
           "name": "LyraFileIcon",
+          "cssProperties": [
+            {
+              "description": "Inline/block size of the format badge.",
+              "name": "--lyra-file-icon-size",
+              "default": "var(--lyra-size-2rem)"
+            }
+          ],
           "cssParts": [
             {
               "description": "The outer presentation wrapper.",
@@ -53498,6 +53505,10 @@
             {
               "description": "The localized format label in `variant=\"label\"` mode.",
               "name": "label"
+            },
+            {
+              "description": "The formatted `size`, shown alongside `label` in `variant=\"label\"` mode when `size` is known.",
+              "name": "size"
             }
           ],
           "members": [
@@ -53597,7 +53608,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "MIME type used to resolve metadata.",
+              "description": "MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge.",
               "attribute": "mime-type"
             },
             {
@@ -53621,6 +53632,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "size",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "File size in bytes, shown alongside the label in `variant=\"label\"` mode. `0` (the default) renders no size — matches `<lyra-attachment-chip>`'s `size` convention.",
+              "attribute": "size"
             },
             {
               "kind": "field",
@@ -53877,7 +53898,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "MIME type used to resolve metadata.",
+              "description": "MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge.",
               "fieldName": "mimeType"
             },
             {
@@ -53888,6 +53909,15 @@
               "default": "''",
               "description": "Optional filename used for fallback detection with an empty or generic MIME type.",
               "fieldName": "name"
+            },
+            {
+              "name": "size",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "File size in bytes, shown alongside the label in `variant=\"label\"` mode. `0` (the default) renders no size — matches `<lyra-attachment-chip>`'s `size` convention.",
+              "fieldName": "size"
             },
             {
               "name": "variant",
