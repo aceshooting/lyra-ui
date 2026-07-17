@@ -181,6 +181,10 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     if (collapsed) next.delete(id);
     else next.add(id);
     this.collapsedIds = next;
+    // The toggled row stays visible even when it collapses (only its children hide), so re-point
+    // roving tabindex here -- otherwise toggling an ancestor other than the currently-focused row
+    // can hide that row entirely, leaving no row with tabindex="0" at all.
+    this.focusedId = id;
     this.emit('lyra-span-toggle', { id, expanded: collapsed });
   }
 
@@ -197,6 +201,16 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     const hasChild = new Set(this.spans.filter((s) => s.parentId && byId.has(s.parentId)).map((s) => s.parentId!));
     for (const id of hasChild) next.add(id);
     this.collapsedIds = next;
+    // Collapsing everything only ever leaves root-level rows visible -- if the focused row was a
+    // now-hidden descendant, re-point roving tabindex to its topmost ancestor (always a root, and
+    // always still rendered) rather than leaving it pointed at a row that no longer exists.
+    if (this.focusedId != null) {
+      let current = byId.get(this.focusedId);
+      while (current?.parentId != null && byId.has(current.parentId)) {
+        current = byId.get(current.parentId);
+      }
+      this.focusedId = current?.id ?? null;
+    }
   }
 
   private focusRow(row: SpanRow | undefined): void {

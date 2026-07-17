@@ -110,6 +110,38 @@ describe('lyra-trace-tree', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
   });
 
+  it('keeps a roving tabindex when a different row is toggled than the focused one (regression)', async () => {
+    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const search = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
+    search.click();
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLElement;
+    setTimeout(() => toggle.click());
+    await oneEvent(el, 'lyra-span-toggle');
+    await el.updateComplete;
+    const rows = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
+    expect(rows).to.have.length(1);
+    const zeroTab = rows.filter((r) => r.getAttribute('tabindex') === '0');
+    expect(zeroTab).to.have.length(1);
+    expect(zeroTab[0].getAttribute('data-id')).to.equal('root');
+  });
+
+  it('keeps a roving tabindex after collapseAll() hides the focused row (regression)', async () => {
+    const el = (await fixture(html`<lyra-trace-tree .spans=${SPANS}></lyra-trace-tree>`)) as LyraTraceTree;
+    await el.updateComplete;
+    const search = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
+    search.click();
+    await el.updateComplete;
+    el.collapseAll();
+    await el.updateComplete;
+    const rows = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
+    expect(rows).to.have.length(1);
+    const zeroTab = rows.filter((r) => r.getAttribute('tabindex') === '0');
+    expect(zeroTab).to.have.length(1);
+    expect(zeroTab[0].getAttribute('data-id')).to.equal('root');
+  });
+
   it('renders lyra-empty when spans is empty', async () => {
     const el = (await fixture(html`<lyra-trace-tree></lyra-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
