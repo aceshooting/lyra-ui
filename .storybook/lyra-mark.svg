@@ -2,27 +2,47 @@
   <title id="title">Lyra constellation mark</title>
   <desc id="desc">A stylized lyre formed from connected stars.</desc>
   <defs>
-    <linearGradient id="lyra-glow" x1="16" y1="12" x2="82" y2="86" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lyra-gradient" x1="72.9" y1="18" x2="23.1" y2="88" gradientUnits="userSpaceOnUse">
       <stop stop-color="#8DE7FF"/>
-      <stop offset="0.48" stop-color="#A78BFA"/>
+      <stop offset=".5" stop-color="#A78BFA"/>
       <stop offset="1" stop-color="#F0ABFC"/>
     </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2.6" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <radialGradient id="vega-core" cx="35%" cy="30%" r="70%">
+      <stop stop-color="#F7FDFF"/>
+      <stop offset=".38" stop-color="#C8F5FF"/>
+      <stop offset="1" stop-color="#8DE7FF"/>
+    </radialGradient>
+    <radialGradient id="violet-core" cx="35%" cy="30%" r="70%">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".42" stop-color="#DCD2FF"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </radialGradient>
+    <radialGradient id="pink-core" cx="35%" cy="30%" r="70%">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".42" stop-color="#F9D8FF"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
+    </radialGradient>
+    <filter id="star-glow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="2.4"/>
     </filter>
   </defs>
-  <path d="M24 21L19 54C17.2 65.8 26.5 76 38.5 76H57.5C69.5 76 78.8 65.8 77 54L72 21" stroke="url(#lyra-glow)" stroke-width="4.5" stroke-linecap="round"/>
-  <path d="M29 53C35.8 46.2 43 42.5 48 42.5C53 42.5 60.2 46.2 67 53" stroke="url(#lyra-glow)" stroke-width="3" stroke-linecap="round" opacity=".78"/>
-  <path d="M34 54L38 72M43 48L45 75M53 48L51 75M62 54L58 72" stroke="url(#lyra-glow)" stroke-width="1.6" stroke-linecap="round" opacity=".65"/>
-  <g fill="url(#lyra-glow)" filter="url(#glow)">
-    <circle cx="24" cy="21" r="5.2"/>
-    <circle cx="72" cy="21" r="4.4"/>
-    <circle cx="48" cy="42.5" r="3.2"/>
-    <circle cx="19" cy="54" r="2.2"/>
-    <circle cx="77" cy="54" r="2.6"/>
+
+  <path d="M57 11.5L72.9 21.9L55.6 33.9L57 11.5M55.6 33.9L34.6 41.3L23.1 84.5L44 79.6L55.6 33.9"
+        stroke="#A78BFA" stroke-opacity=".2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M57 11.5L72.9 21.9L55.6 33.9L57 11.5M55.6 33.9L34.6 41.3L23.1 84.5L44 79.6L55.6 33.9"
+        stroke="url(#lyra-gradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g filter="url(#star-glow)" opacity=".42">
+    <circle cx="72.9" cy="21.9" r="8" fill="#8DE7FF"/>
+    <circle cx="55.6" cy="33.9" r="5" fill="#A78BFA"/>
+    <circle cx="23.1" cy="84.5" r="5.5" fill="#F0ABFC"/>
   </g>
-  <circle cx="48" cy="17" r="1.5" fill="#F8FAFC"/>
-  <circle cx="83" cy="38" r="1.15" fill="#F8FAFC" opacity=".8"/>
-  <circle cx="14" cy="35" r="1" fill="#F8FAFC" opacity=".72"/>
+  <g>
+    <circle cx="57" cy="11.5" r="3.1" fill="url(#vega-core)"/>
+    <circle cx="72.9" cy="21.9" r="5.3" fill="url(#vega-core)"/>
+    <circle cx="55.6" cy="33.9" r="3.2" fill="url(#violet-core)"/>
+    <circle cx="34.6" cy="41.3" r="4.2" fill="url(#violet-core)"/>
+    <circle cx="23.1" cy="84.5" r="4.3" fill="url(#pink-core)"/>
+    <circle cx="44" cy="79.6" r="4.2" fill="url(#pink-core)"/>
+  </g>
 </svg>
