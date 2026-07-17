@@ -11,6 +11,7 @@ import {
   type DocumentRendererDefinition,
   type DocumentRendererRegistry,
 } from './registry.js';
+import type { AnchorResultDetail, LyraAnchor, LyraHighlight } from './anchors.js';
 import { styles } from './document-viewer.styles.js';
 
 export type DocumentViewerCloseReason = DialogCloseReason;
@@ -18,6 +19,7 @@ export type DocumentViewerCloseReason = DialogCloseReason;
 export interface LyraDocumentViewerEventMap {
   'lyra-close': CustomEvent<DocumentViewerCloseReason>;
   'lyra-download': CustomEvent<{ src: string; filename: string }>;
+  'lyra-anchor-result': CustomEvent<AnchorResultDetail>;
 }
 
 /**
@@ -30,6 +32,11 @@ export interface LyraDocumentViewerEventMap {
  *   detail is the dialog close reason.
  * @event lyra-download - Fired when the viewer's safe download action is
  *   activated. The browser download itself is handled by the native link.
+ * @event lyra-anchor-result - Fired with `{ found: false }` once per applied `anchor` when the
+ *   resolved renderer can't honor it (no `capabilities`, or an unsupported anchor kind) or the
+ *   file fell back to `<lyra-document-preview>`. An anchor-capable renderer instead reports its
+ *   own jump result through its embedded `DocumentAnchorTarget` mixin, which composes up through
+ *   this element unchanged.
  * @csspart body - Wrapper around the active renderer or fallback preview.
  * @csspart download-link - The native download action shown when `src` is safe.
  * @cssprop [--lyra-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
@@ -52,6 +59,18 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   /** Optional per-instance registry; the default registry is used when unset. */
   @property({ attribute: false }) registry?: DocumentRendererRegistry;
 
+  /** Declarative scroll-to-anchor target, forwarded to the resolved renderer. A string is a
+   *  highlight id in `highlights`. `hasChanged: () => true` so re-assigning the same value (e.g.
+   *  re-clicking the same citation badge) still re-fires, mirroring the anchor-target mixin's
+   *  identical property. */
+  @property({ attribute: false, hasChanged: () => true }) anchor: LyraAnchor | string | null = null;
+
+  /** Highlights forwarded to the resolved renderer. */
+  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+
+  /** Media alt text forwarded to the resolved renderer, for image-like renderers. */
+  @property() alt = '';
+
   @state()
   private renderState:
     | { kind: 'fallback' }
@@ -63,13 +82,29 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private resolvedLazy?: { def: DocumentRendererDefinition; resolved: DocumentRendererDefinition };
 
   protected willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('name') || changed.has('mimeType') || changed.has('src') || changed.has('registry')) {
+    if (
+      !this.hasUpdated ||
+      changed.has('name') ||
+      changed.has('mimeType') ||
+      changed.has('src') ||
+      changed.has('registry') ||
+      changed.has('anchor') ||
+      changed.has('highlights') ||
+      changed.has('alt')
+    ) {
       void this.resolve();
     }
   }
 
   private currentFile(): DocumentFile {
-    return { name: this.name, mimeType: this.mimeType, src: this.src };
+    return {
+      name: this.name,
+      mimeType: this.mimeType,
+      src: this.src,
+      anchor: this.anchor ?? undefined,
+      highlights: this.highlights,
+      alt: this.alt || undefined,
+    };
   }
 
   private async resolve(): Promise<void> {
@@ -81,17 +116,20 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     if (!def) {
       this.resolvedLazy = undefined;
       this.renderState = { kind: 'fallback' };
+      this.finishAnchorResult(undefined, file, generation);
       return;
     }
 
     if (this.resolvedLazy?.def === def) {
       this.renderWith(this.resolvedLazy.resolved, file);
+      this.finishAnchorResult(this.resolvedLazy.resolved, file, generation);
       return;
     }
 
     if (!def.load) {
       this.resolvedLazy = { def, resolved: def };
       this.renderWith(def, file);
+      this.finishAnchorResult(def, file, generation);
       return;
     }
 
@@ -100,12 +138,38 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     try {
       resolved = await loadDocumentRenderer(def);
     } catch {
-      if (generation === this.generation) this.renderState = { kind: 'error' };
+      if (generation === this.generation) {
+        this.renderState = { kind: 'error' };
+        this.finishAnchorResult(undefined, file, generation);
+      }
       return;
     }
     if (generation !== this.generation) return;
     this.resolvedLazy = { def, resolved };
     this.renderWith(resolved, file);
+    this.finishAnchorResult(resolved, file, generation);
+  }
+
+  /** Emits `lyra-anchor-result { found: false }` from the shell itself when the resolved renderer
+   *  isn't capable of `file.anchor`'s kind (or, for a highlight-id anchor, declares no anchor
+   *  capability at all). When it IS capable, the embedded viewer's own `DocumentAnchorTarget`
+   *  mixin emits `lyra-anchor-result` after its own scroll attempt, and that composed event
+   *  surfaces through this element unchanged -- so the shell must not also emit in that case. */
+  private finishAnchorResult(def: DocumentRendererDefinition | undefined, file: DocumentFile, generation: number): void {
+    if (file.anchor == null) return;
+    if (generation !== this.generation) return;
+    if (this.isAnchorCapable(def, file.anchor)) return;
+    this.scheduleAfterUpdate(() => {
+      if (generation !== this.generation) return;
+      this.emit<AnchorResultDetail>('lyra-anchor-result', { found: false });
+    });
+  }
+
+  private isAnchorCapable(def: DocumentRendererDefinition | undefined, anchor: LyraAnchor | string): boolean {
+    const anchors = def?.capabilities?.anchors;
+    if (!anchors || anchors.length === 0) return false;
+    if (typeof anchor === 'string') return true; // highlight id -- any declared anchor kind implies highlight support
+    return anchors.includes(anchor.kind);
   }
 
   private renderWith(def: DocumentRendererDefinition, file: DocumentFile): void {

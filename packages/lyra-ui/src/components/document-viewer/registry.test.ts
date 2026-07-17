@@ -8,6 +8,7 @@ import {
   type DocumentFile,
   type DocumentRendererDefinition,
 } from './registry.js';
+import type { LyraAnchor, LyraHighlight } from './anchors.js';
 
 const PDF_FILE: DocumentFile = {
   name: 'report.pdf',
@@ -139,5 +140,30 @@ describe('clearDocumentRenderers()', () => {
     clearDocumentRenderers();
     expect(getDefaultDocumentRendererRegistry().size).to.equal(0);
     expect(findDocumentRenderer(PDF_FILE)).to.be.undefined;
+  });
+});
+
+describe('DocumentFile/DocumentRendererDefinition widening', () => {
+  it('DocumentFile accepts anchor/highlights/alt as optional fields', () => {
+    const anchor: LyraAnchor = { kind: 'page', page: 3 };
+    const highlights: LyraHighlight[] = [{ id: 'cite-1', anchor }];
+    const file: import('./registry.js').DocumentFile = {
+      name: 'report.pdf',
+      mimeType: 'application/pdf',
+      src: 'https://example.test/report.pdf',
+      anchor,
+      highlights,
+      alt: 'Annual report',
+    };
+    expect(file.anchor).to.deep.equal(anchor);
+    expect(file.highlights).to.deep.equal(highlights);
+    expect(file.alt).to.equal('Annual report');
+  });
+
+  it('DocumentRendererDefinition accepts an optional capabilities declaration', () => {
+    const def: import('./registry.js').DocumentRendererDefinition = {
+      capabilities: { anchors: ['page', 'text-quote'], textSelect: true },
+    };
+    expect(def.capabilities?.anchors).to.deep.equal(['page', 'text-quote']);
   });
 });

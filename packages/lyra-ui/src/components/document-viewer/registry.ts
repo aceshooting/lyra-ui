@@ -1,8 +1,15 @@
+import type { AnchorTargetCapabilities, LyraAnchor, LyraHighlight } from './anchors.js';
+
 /** A file supplied to a document renderer. */
 export interface DocumentFile {
   name: string;
   mimeType: string;
   src: string;
+  /** A string is a highlight id in `highlights`. */
+  anchor?: LyraAnchor | string;
+  highlights?: LyraHighlight[];
+  /** Media alt text for image-like renderers. */
+  alt?: string;
 }
 
 /** A renderer for one document format or a family of related formats. */
@@ -13,6 +20,8 @@ export interface DocumentRendererDefinition {
   matches?: (file: DocumentFile) => boolean;
   /** Lazily loads the renderer definition when a matching file is opened. */
   load?: () => Promise<DocumentRendererDefinition | { default: DocumentRendererDefinition }>;
+  /** Anchor/search/text-select capability declaration, so hosts can feature-detect before opening. */
+  capabilities?: AnchorTargetCapabilities;
 }
 
 /** MIME-type to renderer-definition registry. */
