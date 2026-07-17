@@ -8,6 +8,8 @@ import '../components/tool-result-dialog/tool-result-dialog.js';
 import '../components/app-rail/app-rail.js';
 import '../components/widget/widget.js';
 import '../components/date-picker/date-input.js';
+import '../components/lightbox/lightbox.js';
+import type { LyraLightboxImage } from '../components/lightbox/lightbox.class.js';
 
 interface ReactiveOverlay extends HTMLElement {
   updateComplete: Promise<unknown>;
@@ -17,7 +19,13 @@ interface ReactiveOverlay extends HTMLElement {
   label?: string;
   toolName?: string;
   expandable?: boolean;
+  images?: LyraLightboxImage[];
 }
+
+const lightboxImage: LyraLightboxImage = {
+  src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3Crect width="8" height="8" fill="%230969da"/%3E%3C/svg%3E',
+  alt: 'Blue square',
+};
 
 interface OverlayAdapter {
   tag: string;
@@ -73,6 +81,12 @@ const adapters: OverlayAdapter[] = [
     },
     activate: (element) => (element.fullscreen = true),
     deactivate: (element) => (element.fullscreen = false),
+  },
+  {
+    tag: 'lyra-lightbox',
+    setup: (element) => (element.images = [lightboxImage]),
+    activate: (element) => (element.open = true),
+    deactivate: (element) => (element.open = false),
   },
 ];
 
@@ -157,6 +171,7 @@ const reconnectAdapters = adapters.filter(({ tag }) =>
     'lyra-tool-select-dialog',
     'lyra-tool-approval-dialog',
     'lyra-tool-result-dialog',
+    'lyra-lightbox',
   ].includes(tag),
 );
 

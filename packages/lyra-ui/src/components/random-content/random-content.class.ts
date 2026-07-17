@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { finiteDuration } from '../../internal/numbers.js';
 import { styles } from './random-content.styles.js';
 
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';
@@ -251,7 +252,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private restartAutoplay(): void {
     this.stopAutoplay();
     if (!this.autoplay || this.reduceMotion || this.eligible().length < 2) return;
-    const interval = Number.isFinite(this.autoplayInterval) ? Math.max(1000, this.autoplayInterval) : 3000;
+    const interval = finiteDuration(this.autoplayInterval, 3000, 1000);
     this.timer = window.setInterval(() => {
       this.reselect();
     }, interval);

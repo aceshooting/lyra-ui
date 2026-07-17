@@ -306,8 +306,6 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   }
 
   private createAnimation = (): void => {
-    // eslint-disable-next-line no-console
-    console.log('createAnimation() called from:\n' + new Error().stack);
     this.destroyAnimation();
     const target = this.currentTarget();
     const keyframes = this.resolveKeyframes();
