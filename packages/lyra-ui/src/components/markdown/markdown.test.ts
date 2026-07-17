@@ -649,6 +649,18 @@ describe('shiki highlighting (real peer)', () => {
     await aTimeout(500);
     expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
   });
+
+  it('is accessible once a fenced code block has been highlighted', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'never highlighted',
+      { timeout: 8000 },
+    );
+    await expect(el).to.be.accessible();
+  });
 });
 
 describe('languages (fine-grained shiki opt-in) — markdown', () => {

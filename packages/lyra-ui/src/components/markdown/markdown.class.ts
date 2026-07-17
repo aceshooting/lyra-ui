@@ -123,6 +123,14 @@ export interface LyraMarkdownEventMap {
  * directly into the produced HTML — a single pass, not a second DOM walk
  * after insertion.
  *
+ * Fenced code blocks are syntax-highlighted via the same optional `shiki` peer `<lyra-code-block>`
+ * uses (`highlightCode`, default `true` — a pure upgrade gated by whether `shiki` is installed at
+ * all, not a separate opt-in). `languages`/`languagesOnly` mirror `<lyra-code-block>`'s own
+ * fine-grained bundle-size controls. The very first render of any content is always plain
+ * (identical to today's output); highlighting arrives as an asynchronous upgrade one render later,
+ * once shiki resolves. No highlighting is attempted while `streaming` is `true` — it applies once a
+ * stream settles, so there is no added per-chunk cost while content is still arriving.
+ *
  * @customElement lyra-markdown
  * @event lyra-link-click - Fired (and the click prevented) when a rendered
  *   link's `href` starts with `internal-link-prefix`. `detail: { href:
