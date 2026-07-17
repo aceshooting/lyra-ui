@@ -163,6 +163,13 @@ export function createAnsiParser(): AnsiParser {
       if (i > textStart) segments.push({ text: input.slice(textStart, i), styles });
 
       const next = input[i + 1];
+      if (next === undefined) {
+        // ESC is the last byte of this chunk -- whether a '[' or ']' follows isn't knowable
+        // until the next push(), so buffer it rather than dropping it as an unrecognized
+        // sequence (matches the incomplete-CSI/OSC buffering below).
+        carry = input.slice(i);
+        return segments;
+      }
       if (next === '[') {
         let j = i + 2;
         while (j < input.length && !CSI_FINAL_BYTE.test(input[j])) j++;

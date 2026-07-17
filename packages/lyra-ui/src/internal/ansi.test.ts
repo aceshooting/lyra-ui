@@ -103,6 +103,16 @@ describe('createAnsiParser', () => {
     expect(second[0].text).to.equal('red');
   });
 
+  it('buffers a bare trailing ESC split from the rest of its sequence across two push() calls', () => {
+    const parser = createAnsiParser();
+    const first = parser.push('text\x1b');
+    expect(first.map((s) => s.text).join('')).to.equal('text');
+    const second = parser.push('[31mfoo');
+    expect(second).to.have.length(1);
+    expect(second[0].text).to.equal('foo');
+    expect(second[0].styles.fg).to.equal('var(--lyra-terminal-color-red)');
+  });
+
   it('buffers an OSC sequence split across two push() calls', () => {
     const parser = createAnsiParser();
     const first = parser.push('start\x1b]0;ti');
