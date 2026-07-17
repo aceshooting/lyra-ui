@@ -108,6 +108,27 @@ describe('lyra-page-rail', () => {
     expect(viewer.renderCalls[0].width).to.equal(64);
   });
 
+  it('falls back to lyra-file-icon when renderPageThumbnail() rejects, same as resolving false (regression)', async () => {
+    class RejectingViewer extends StubViewer {
+      renderPageThumbnail(page: number, canvas: HTMLCanvasElement, options?: { width?: number }): Promise<boolean> {
+        this.renderCalls.push({ page, width: options?.width });
+        return Promise.reject(new Error('decode failed'));
+      }
+    }
+    const viewer = new RejectingViewer();
+    const el = await fixture<LyraPageRail>(html`<lyra-page-rail .viewer=${viewer}></lyra-page-rail>`);
+    viewer.emitLoad(1);
+    await el.updateComplete;
+    await waitUntil(() => viewer.renderCalls.length > 0);
+    await waitUntil(() => {
+      const list = el.shadowRoot!.querySelector('lyra-virtual-list');
+      return list?.shadowRoot?.querySelector('lyra-file-icon') != null;
+    });
+    const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+    expect(list.shadowRoot!.querySelector('lyra-file-icon')).to.exist;
+    expect(list.shadowRoot!.querySelector('canvas')).to.not.exist;
+  });
+
   it('typing a digit jumps to that page in mediated mode', async () => {
     const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="12"></lyra-page-rail>`);
     await el.updateComplete;

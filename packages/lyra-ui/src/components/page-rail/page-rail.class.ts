@@ -136,7 +136,16 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (!viewer) return;
     this.thumbnailStates.set(pageNumber, 'pending');
     this.requestUpdate();
-    const ok = await viewer.renderPageThumbnail(pageNumber, canvas, { width: this.thumbWidth });
+    let ok: boolean;
+    try {
+      ok = await viewer.renderPageThumbnail(pageNumber, canvas, { width: this.thumbWidth });
+    } catch {
+      // A rejected renderPageThumbnail() (decode error, detached canvas, resource exhaustion, ...)
+      // is otherwise an unhandled rejection that leaves this page's skeleton spinning forever --
+      // treat it the same as the documented `resolves(false)` case, falling back to the file-icon
+      // placeholder instead.
+      ok = false;
+    }
     if (this.canvases.get(pageNumber) !== canvas) return;
     this.thumbnailStates.set(pageNumber, ok ? 'ready' : 'unavailable');
     this.requestUpdate();
