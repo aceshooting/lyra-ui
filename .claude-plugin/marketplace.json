@@ -1,6 +1,6 @@
 {
   "name": "aceshooting",
-  "license": "MIT",
+  "description": "Aceshooting's Claude Code plugin marketplace — currently ships the lyra-ui plugin.",
   "owner": {
     "name": "Aceshooting"
   },
