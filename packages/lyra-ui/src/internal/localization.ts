@@ -577,7 +577,12 @@ export type LyraMessageKey =
   | 'testResultsSkipped'
   | 'testResultsRunning'
   | 'testResultsFilterLabel'
-  | 'testResultsCompleteAnnounce';
+  | 'testResultsCompleteAnnounce'
+  | 'envListLabel'
+  | 'envListReveal'
+  | 'envListHide'
+  | 'envListValueHidden'
+  | 'envListCopy';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1156,6 +1161,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   testResultsRunning: '{count} running',
   testResultsFilterLabel: 'Filter by status',
   testResultsCompleteAnnounce: '{passed} passed, {failed} failed, {skipped} skipped',
+  envListLabel: 'Environment variables',
+  envListReveal: 'Reveal {name}',
+  envListHide: 'Hide {name}',
+  envListValueHidden: 'Value hidden',
+  envListCopy: 'Copy {name}',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
