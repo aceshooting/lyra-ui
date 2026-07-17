@@ -153,4 +153,41 @@ describe('acquireHighlightHandle', () => {
       root.remove();
     }
   });
+
+  it('fallback: setActive, flash, and setRanges(accent) each produce a distinguishably-named mark', () => {
+    if (supportsCustomHighlights()) return; // this test targets the fallback path specifically
+    const root = makeContent('<p>One active two flash three accent four.</p>');
+    try {
+      const activeOwner = {};
+      const flashOwner = {};
+      const accentOwner = {};
+      const activeHandle = acquireHighlightHandle(activeOwner, document);
+      const flashHandle = acquireHighlightHandle(flashOwner, document);
+      const accentHandle = acquireHighlightHandle(accentOwner, document);
+
+      activeHandle.setActive(rangeOverText(root, 'active'));
+      flashHandle.flash(rangeOverText(root, 'flash'), 20_000); // long duration so it's still painted below
+      accentHandle.setRanges('accent', [rangeOverText(root, 'accent')]);
+
+      // All three marks share tone="accent" (setActive/flash always paint with tone 'accent'
+      // internally) but must now carry three distinct data-lyra-highlight-name values.
+      expect(root.querySelectorAll('mark[data-lyra-highlight-tone="accent"]')).to.have.length(3);
+      expect(root.querySelectorAll('mark[data-lyra-highlight-name="lyra-highlight-active"]')).to.have.length(1);
+      expect(root.querySelectorAll('mark[data-lyra-highlight-name="lyra-highlight-flash"]')).to.have.length(1);
+      expect(root.querySelectorAll('mark[data-lyra-highlight-name="lyra-highlight-accent"]')).to.have.length(1);
+
+      const activeMark = root.querySelector('mark[data-lyra-highlight-name="lyra-highlight-active"]')!;
+      const flashMark = root.querySelector('mark[data-lyra-highlight-name="lyra-highlight-flash"]')!;
+      const accentMark = root.querySelector('mark[data-lyra-highlight-name="lyra-highlight-accent"]')!;
+      expect(activeMark.textContent).to.equal('active');
+      expect(flashMark.textContent).to.equal('flash');
+      expect(accentMark.textContent).to.equal('accent');
+
+      activeHandle.release();
+      flashHandle.release();
+      accentHandle.release();
+    } finally {
+      root.remove();
+    }
+  });
 });

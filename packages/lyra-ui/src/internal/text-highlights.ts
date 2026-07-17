@@ -96,7 +96,13 @@ function splitTextNodeAtRange(range: Range, textNode: Text): Text {
   return target;
 }
 
-function wrapRangeInMarks(range: Range, tone: LyraHighlightTone, doc: Document): HTMLElement[] {
+/** Wraps the text covered by `range` in one or more `<mark>` elements. `name` is the highlight's
+ *  identity (`lyra-highlight-accent|success|...`, `lyra-highlight-active`, or `lyra-highlight-flash`)
+ *  and is written to `data-lyra-highlight-name` -- the fallback-path equivalent of the CSS Custom
+ *  Highlight API path's separately-registered `Highlight` objects, letting a stylesheet distinguish
+ *  an active/flash mark from a genuine `setRanges`-painted one even when they share the same `tone`.
+ *  `data-lyra-highlight-tone` is kept alongside it so tone-based selection still works. */
+function wrapRangeInMarks(range: Range, name: string, tone: LyraHighlightTone, doc: Document): HTMLElement[] {
   const ancestor = range.commonAncestorContainer;
   const walkRoot = ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentNode! : ancestor;
   const walker = doc.createTreeWalker(walkRoot, NodeFilter.SHOW_TEXT);
@@ -111,6 +117,7 @@ function wrapRangeInMarks(range: Range, tone: LyraHighlightTone, doc: Document):
     if (!inRange.data) continue;
     const mark = doc.createElement('mark');
     mark.setAttribute('data-lyra-highlight-tone', tone);
+    mark.setAttribute('data-lyra-highlight-name', name);
     mark.setAttribute('role', 'mark');
     inRange.parentNode?.insertBefore(mark, inRange);
     mark.appendChild(inRange);
@@ -138,7 +145,7 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
   function paint(name: string, tone: LyraHighlightTone, ranges: Range[]): void {
     clear(name);
     const marks: HTMLElement[] = [];
-    for (const range of ranges) marks.push(...wrapRangeInMarks(range, tone, doc));
+    for (const range of ranges) marks.push(...wrapRangeInMarks(range, name, tone, doc));
     marksByName.set(name, marks);
   }
 
