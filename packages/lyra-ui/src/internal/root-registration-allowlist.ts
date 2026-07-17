@@ -183,6 +183,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-env-list',
   'lyra-handoff-divider',
   'lyra-test-results',
+  'lyra-av-player',
 ] as const;
 
 export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [

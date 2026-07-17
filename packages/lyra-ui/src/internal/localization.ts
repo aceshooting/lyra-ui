@@ -587,7 +587,13 @@ export type LyraMessageKey =
   | 'voicePickerNoVoices'
   | 'voicePickerRequired'
   | 'voicePickerPreview'
-  | 'voicePickerStopPreview';
+  | 'voicePickerStopPreview'
+  | 'avPlayerLabel'
+  | 'avPlayerFailedToLoad'
+  | 'avPlayerTranscript'
+  | 'avPlayerTimeline'
+  | 'avPlayerPlaybackRate'
+  | 'avPlayerPosition';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1176,6 +1182,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   voicePickerRequired: 'Please choose a voice.',
   voicePickerPreview: 'Preview {name}',
   voicePickerStopPreview: 'Stop preview',
+  avPlayerLabel: 'Audio/video player',
+  avPlayerFailedToLoad: 'The media failed to load.',
+  avPlayerTranscript: 'Transcript',
+  avPlayerTimeline: 'Seek',
+  avPlayerPlaybackRate: 'Playback speed',
+  avPlayerPosition: '{current} of {duration}',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

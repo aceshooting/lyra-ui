@@ -179,6 +179,7 @@ import './components/message-actions/message-actions.js';
 import './components/transcript-feed/transcript-feed.js';
 import './components/env-list/env-list.js';
 import './components/handoff-divider/handoff-divider.js';
+import './components/av-player/av-player.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraEnvList } from './components/env-list/env-list.js';
@@ -722,6 +723,7 @@ export type { LyraDatasetViewerEventMap } from './components/dataset-viewer/data
 export type { LyraContactViewerEventMap } from './components/contact-viewer/contact-viewer.js';
 export * from './components/pdf-viewer/pdf-viewer.js';
 export * from './components/image-viewer/image-viewer.js';
+export * from './components/av-player/av-player.js';
 export * from './components/spreadsheet-viewer/spreadsheet-viewer.js';
 export * from './components/csv-viewer/csv-viewer.js';
 export * from './components/docx-viewer/docx-viewer.js';
