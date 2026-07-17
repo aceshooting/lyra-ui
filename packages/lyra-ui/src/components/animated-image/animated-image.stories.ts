@@ -18,7 +18,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const SAMPLE_GIF = 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Newtons_cradle_animation_book_2.gif';
+const SAMPLE_GIF = 'https://upload.wikimedia.org/wikipedia/commons/d/d3/Newtons_cradle_animation_book_2.gif';
 const BROKEN_SRC = './does-not-exist-lyra-animated-image.gif';
 
 export const Default: Story = {

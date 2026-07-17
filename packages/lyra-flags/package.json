@@ -21,7 +21,7 @@
     "url": "git+https://github.com/aceshooting/lyra-ui.git",
     "directory": "packages/lyra-flags"
   },
-  "homepage": "https://github.com/aceshooting/lyra-ui#readme",
+  "homepage": "https://www.lyra-ui.com/",
   "bugs": {
     "url": "https://github.com/aceshooting/lyra-ui/issues"
   },

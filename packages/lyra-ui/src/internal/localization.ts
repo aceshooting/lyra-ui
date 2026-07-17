@@ -451,6 +451,10 @@ export type LyraMessageKey =
   | 'highlightLayerLabel'
   | 'highlightWithLabel'
   | 'highlightOfTotal'
+  | 'pageRailLabel'
+  | 'pageRailPage'
+  | 'pageRailPageHighlighted'
+  | 'pageRailPageHighlightedPlural'
   | 'spreadsheetViewerUnavailable'
   | 'csvViewerUnavailable'
   | 'csvViewerLabel'
@@ -947,6 +951,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   highlightLayerLabel: 'Highlights',
   highlightWithLabel: 'Highlight: {label}',
   highlightOfTotal: 'Highlight {index} of {total}',
+  pageRailLabel: 'Page thumbnails',
+  pageRailPage: 'Page {page}',
+  pageRailPageHighlighted: 'Page {page}, {count} highlighted passage',
+  pageRailPageHighlightedPlural: 'Page {page}, {count} highlighted passages',
   skipToContent: 'Skip to content',
   tourSkip: 'Skip',
   tourDone: 'Done',

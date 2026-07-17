@@ -26,6 +26,12 @@ get a written plan and TDD, matching every completed request already sitting in
 - `ls docs/superpowers/feature_requests/*.md` — if `$ARGUMENTS` was given, filter to the matching
   file(s) by name/substring; if nothing matches, or the directory is empty, stop and tell the user
   there's nothing to do. Don't invent work.
+- `ls docs/superpowers/specs/*.md` — for each spec whose filename stem has no matching
+  `<stem>-plan.md`/`<stem>.md` anywhere in `docs/superpowers/plans/` or `docs/superpowers/done/`,
+  flag it to the user before continuing (don't silently plan or skip it). An approved spec with no
+  companion plan is unfinished work sitting outside this directory's own tracking — this has
+  happened before (`2026-07-16-agentic-expansion-design.md` sat fully unplanned for a day, found
+  only when the whole `docs/superpowers/` tree was audited by hand).
 
 ## 2. Triage
 
