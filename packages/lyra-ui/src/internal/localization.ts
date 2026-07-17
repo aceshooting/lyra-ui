@@ -566,7 +566,15 @@ export type LyraMessageKey =
   | 'commitCardHideFiles'
   | 'stackTraceLabel'
   | 'stackTraceShowFrames'
-  | 'stackTraceHideFrames';
+  | 'stackTraceHideFrames'
+  | 'statusSkipped'
+  | 'testResultsLabel'
+  | 'testResultsPassed'
+  | 'testResultsFailed'
+  | 'testResultsSkipped'
+  | 'testResultsRunning'
+  | 'testResultsFilterLabel'
+  | 'testResultsCompleteAnnounce';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1134,6 +1142,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   stackTraceLabel: 'Stack trace',
   stackTraceShowFrames: 'Show {count} internal frames',
   stackTraceHideFrames: 'Hide {count} internal frames',
+  statusSkipped: 'Skipped',
+  testResultsLabel: 'Test results',
+  testResultsPassed: '{count} passed',
+  testResultsFailed: '{count} failed',
+  testResultsSkipped: '{count} skipped',
+  testResultsRunning: '{count} running',
+  testResultsFilterLabel: 'Filter by status',
+  testResultsCompleteAnnounce: '{passed} passed, {failed} failed, {skipped} skipped',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
