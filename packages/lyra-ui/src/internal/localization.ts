@@ -658,6 +658,15 @@ export type LyraMessageKey =
   | 'notebookViewerShowAllOutput'
   | 'notebookViewerCollapseOutput'
   | 'notebookViewerUnrenderedOutput'
+  | 'xmlViewerLabel'
+  | 'xmlViewerParseError'
+  | 'xmlViewerTooManyNodes'
+  | 'xmlViewerChildCount'
+  | 'xmlViewerChildCountPlural'
+  | 'xmlViewerCopyDocument'
+  | 'xmlViewerCopyNode'
+  | 'xmlViewerExpandNode'
+  | 'xmlViewerCollapseNode'
   | 'artifactPanelLabel'
   | 'artifactPanelPreview'
   | 'artifactPanelCode'
@@ -1324,6 +1333,15 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   notebookViewerShowAllOutput: 'Show all output',
   notebookViewerCollapseOutput: 'Collapse output',
   notebookViewerUnrenderedOutput: 'This output type cannot be displayed.',
+  xmlViewerLabel: 'XML viewer',
+  xmlViewerParseError: 'This document could not be parsed as XML.',
+  xmlViewerTooManyNodes: 'This document has too many nodes to display.',
+  xmlViewerChildCount: '{count} child',
+  xmlViewerChildCountPlural: '{count} children',
+  xmlViewerCopyDocument: 'Copy XML to clipboard',
+  xmlViewerCopyNode: 'Copy {name}',
+  xmlViewerExpandNode: 'Expand {name}',
+  xmlViewerCollapseNode: 'Collapse {name}',
   artifactPanelLabel: 'Artifact',
   artifactPanelPreview: 'Preview',
   artifactPanelCode: 'Code',

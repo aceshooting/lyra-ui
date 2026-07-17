@@ -1,7 +1,8 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './docx-viewer.js';
-import type { LyraDocxViewer } from './docx-viewer.js';
+import type { LyraDocxViewer, DocxHeadingItem } from './docx-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
+import { supportsCustomHighlights } from '../../internal/text-highlights.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
@@ -22,6 +23,36 @@ function useLibrary(el: LyraDocxViewer, deps: unknown): void {
 }
 
 const BUFFER = base64ToArrayBuffer(MINIMAL_DOCX_BASE64);
+
+/** Fixtures a `<lyra-docx-viewer>`, stubs `mammoth.convertToHtml` to resolve `markup` verbatim and
+ *  `DOMPurify.sanitize` to the identity function, then sets `src` and awaits the loaded
+ *  `[part="content"]` region. Mirrors the `useLibrary`/`stubFetch` primitives every other test in
+ *  this file already uses -- just packaged as one helper for the anchor/search tests below, which
+ *  don't otherwise care about the conversion/sanitization pipeline itself. */
+async function loadWithMarkup(markup: string): Promise<{ el: LyraDocxViewer; restore: () => void }> {
+  const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+  useLibrary(el, {
+    mammoth: { convertToHtml: () => Promise.resolve({ value: markup, messages: [] }) },
+    DOMPurify: { sanitize: (value: string) => value },
+  });
+  const restore = stubFetch(BUFFER);
+  el.src = 'https://example.test/report.docx';
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
+  return { el, restore };
+}
+
+/** Whether a `text-quote` highlight painted with `tone` is currently visible, via whichever paint
+ *  path this browser uses -- the CSS Custom Highlight API registers ranges with no DOM element to
+ *  query, so this checks the shared `CSS.highlights` registry directly there, and falls back to the
+ *  `<mark data-lyra-highlight-tone>` element the fallback path creates otherwise. Mirrors
+ *  `<lyra-markdown>`'s own equivalent test helper. */
+function highlightPainted(el: LyraDocxViewer, tone = 'accent'): boolean {
+  if (supportsCustomHighlights()) {
+    const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { size: number }> } }).CSS.highlights;
+    return (registry.get(`lyra-highlight-${tone}`)?.size ?? 0) > 0;
+  }
+  return el.shadowRoot!.querySelector(`[part="content"] mark[data-lyra-highlight-tone="${tone}"]`) !== null;
+}
 
 describe('lyra-docx-viewer', () => {
   it('renders an empty localized state by default', async () => {
@@ -164,5 +195,285 @@ describe('DOCX registry', () => {
     expect(findDocumentRenderer({ name: 'report.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', src: 'x' })).to.exist;
     expect(findDocumentRenderer({ name: 'report.docx', mimeType: 'application/octet-stream', src: 'x' })).to.exist;
     expect(findDocumentRenderer({ name: 'report.pdf', mimeType: 'application/pdf', src: 'x' })).to.not.exist;
+  });
+
+  it('declares its anchor/search/text-select capabilities', () => {
+    const exact = findDocumentRenderer({ name: 'report.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', src: 'x' });
+    expect(exact!.capabilities?.anchors).to.deep.equal(['fragment', 'text-quote']);
+    expect(exact!.capabilities?.search).to.be.true;
+    expect(exact!.capabilities?.textSelect).to.be.true;
+  });
+});
+
+describe('getHeadingTree', () => {
+  it('derives a document-ordered heading tree from the rendered h1-h6 elements', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1><p>Body.</p><h2>Section One</h2><h2>Section One</h2>');
+    try {
+      const expected: DocxHeadingItem[] = [
+        { id: 'title', label: 'Title', level: 1 },
+        { id: 'section-one', label: 'Section One', level: 2 },
+        { id: 'section-one-1', label: 'Section One', level: 2 },
+      ];
+      expect(el.getHeadingTree()).to.deep.equal(expected);
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves an empty array before anything has loaded', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    expect(el.getHeadingTree()).to.deep.equal([]);
+  });
+
+  it('matches markdown slugging on identical heading text (shared-util regression)', async () => {
+    const { el, restore } = await loadWithMarkup('<h2>Getting Started!</h2>');
+    try {
+      expect(el.getHeadingTree()[0]!.id).to.equal('getting-started');
+    } finally {
+      restore();
+    }
+  });
+
+  it('stamps id attributes on the rendered headings', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
+    try {
+      expect(el.shadowRoot!.querySelector('h1')!.getAttribute('id')).to.equal('title');
+    } finally {
+      restore();
+    }
+  });
+
+  it('getHeadingTree() returns a fresh array each call -- mutating the result cannot corrupt internal state', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
+    try {
+      const tree = el.getHeadingTree();
+      tree.push({ id: 'injected', label: 'Injected', level: 1 });
+      expect(el.getHeadingTree()).to.have.length(1);
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('scrollToAnchor (fragment)', () => {
+  it('scrolls to a heading by id', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1><h2>Section One</h2>');
+    try {
+      let scrolled = false;
+      const heading = el.shadowRoot!.querySelector('#section-one') as HTMLElement;
+      heading.scrollIntoView = () => {
+        scrolled = true;
+      };
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'section-one' })).to.be.true;
+      expect(scrolled).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves false for an unknown fragment id', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'nope' })).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports its supported anchor kinds', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lyra-docx-viewer></lyra-docx-viewer>`);
+    expect(el.anchorKinds).to.deep.equal(['fragment', 'text-quote']);
+  });
+});
+
+describe('scrollToAnchor / highlights (text-quote)', () => {
+  it('resolves a quote spanning an inline <strong> boundary', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The <strong>quick brown</strong> fox jumps.</p>');
+    try {
+      let scrolled = false;
+      // The quote starts inside <strong>, so the resolved range's own scroll target may be that
+      // inline element rather than the paragraph itself -- stub scrollIntoView on every element in
+      // the rendered content so the assertion doesn't depend on exactly which one is targeted.
+      el.shadowRoot!.querySelectorAll('[part="content"] *').forEach((node) => {
+        (node as HTMLElement).scrollIntoView = () => {
+          scrolled = true;
+        };
+      });
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'quick brown fox' })).to.be.true;
+      expect(scrolled).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves false for a text-quote anchor that matches nothing', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'nothing to see here' })).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('paints a text-quote highlight (CSS Custom Highlight API, or a <mark> fallback)', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      expect(highlightPainted(el)).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('clears a previously-painted highlight once highlights is set back to empty', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      expect(highlightPainted(el)).to.be.true;
+      el.highlights = [];
+      await el.updateComplete;
+      expect(highlightPainted(el)).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('emits lyra-highlight-activate when a painted highlight is clicked', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+      const textNode = paragraph.firstChild as Text;
+      const offset = textNode.data.indexOf('world');
+      const range = document.createRange();
+      range.setStart(textNode, offset);
+      range.setEnd(textNode, offset + 'world'.length);
+      const rect = range.getClientRects()[0];
+
+      const listener = oneEvent(el, 'lyra-highlight-activate');
+      paragraph.dispatchEvent(
+        new MouseEvent('click', {
+          bubbles: true,
+          composed: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        }),
+      );
+      const event = (await listener) as CustomEvent<{ id: string }>;
+      expect(event.detail).to.deep.equal({ id: 'h1' });
+    } finally {
+      restore();
+    }
+  });
+
+  it('emits lyra-text-select with a text-quote anchor on selection', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The quick brown fox jumps over the lazy dog.</p>');
+    try {
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+      const textNode = paragraph.firstChild!;
+      const range = document.createRange();
+      range.setStart(textNode, 10);
+      range.setEnd(textNode, 15);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const listener = oneEvent(el, 'lyra-text-select');
+      (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
+      const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+      expect(event.detail.text).to.equal('brown');
+      selection.removeAllRanges();
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('search', () => {
+  it('finds and counts matches, clearing state fully on src change', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat, said the cat.</p>');
+    try {
+      const count = await el.search('cat');
+      expect(count).to.equal(2);
+      expect(await el.searchNext()).to.be.true;
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match-active"]').length).to.equal(1);
+
+      el.src = '';
+      await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="search-match"]').length === 0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('wraps around in both directions', async () => {
+    const { el, restore } = await loadWithMarkup('<p>cat cat cat</p>');
+    try {
+      expect(await el.search('cat')).to.equal(3);
+      let detail: { activeIndex: number } | undefined;
+      el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+      expect(await el.searchPrevious()).to.be.true;
+      expect(detail?.activeIndex).to.equal(2);
+      expect(await el.searchNext()).to.be.true;
+      expect(detail?.activeIndex).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves 0 and no-ops searchNext/searchPrevious for a query with no matches', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      expect(await el.search('nope')).to.equal(0);
+      expect(await el.searchNext()).to.be.false;
+      expect(await el.searchPrevious()).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('clearSearch() clears the query, matches, and painted marks, and fires lyra-search-change', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat.</p>');
+    try {
+      await el.search('cat');
+      const listener = oneEvent(el, 'lyra-search-change');
+      el.clearSearch();
+      const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+      expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('is accessible with an active search match', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat on the mat.</p>');
+    try {
+      await el.search('cat');
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('back-compat', () => {
+  it('rendering is unchanged with no anchor/search method ever called (only the heading id is additive)', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1><p>Body.</p>');
+    try {
+      const content = el.shadowRoot!.querySelector('[part="content"]')!;
+      expect(content.querySelector('h1')!.textContent).to.equal('Title');
+      expect(content.querySelector('p')!.textContent).to.equal('Body.');
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
+    } finally {
+      restore();
+    }
   });
 });

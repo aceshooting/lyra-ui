@@ -3268,8 +3268,8 @@ independently of the base `chart-loader.ts`).
 
 ## `lyra-map`
 
-A `maplibre-gl` wrapper with a declarative legend and a single choropleth GeoJSON fill layer, plus a
-raw `map` escape hatch for anything unexposed.
+A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
+and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anything unexposed.
 
 **Properties:**
 - `center: [number, number] = [0, 0]`
@@ -3294,6 +3294,17 @@ raw `map` escape hatch for anything unexposed.
   escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas.
+- `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
+  geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
+  'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three layers
+  (`${sourceId}-fill`/`${sourceId}-line`/`${sourceId}-circle`, filtered by geometry type so a mixed
+  `FeatureCollection` renders correctly across all three), colored from the matching `--lyra-color-*`
+  token (`tone` defaults to `'accent'` → `--lyra-color-brand`). Independent of `choropleth` — no
+  `field`/`stops` color-interpolation, just the geometry rendered in a flat tone; use `choropleth`
+  instead when you need a data-driven color ramp. Reconciled by `sourceId` the same way `choropleth`
+  is: an entry whose `sourceId` persists across a `dataLayers` reassignment gets its GeoJSON updated
+  in place (`setData()`), one that's dropped has its source/layers removed, and a genuinely new
+  `sourceId` gets a new source/layers — nothing leaks on removal, style change, or disconnect.
 - `label: string = ''` — accessible name for the map region, applied as `[part="base"]`'s
   `aria-label`. A plain `aria-label` attribute on the host itself is honored as a fallback when
   `label` is left unset, matching `lyra-slider`/`lyra-checkbox`/`lyra-switch`; with neither set, it
@@ -3338,9 +3349,9 @@ exists and was hit)
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
   cleared).
 - `mapStyle` changes after construction now call `setStyle()` (in addition to `center`/`zoom`
-  already calling `setCenter`/`setZoom`) — the choropleth is automatically re-applied once the new
-  style's own `'style.load'` fires, since a style change wipes every layer/source maplibre-gl knows
-  about.
+  already calling `setCenter`/`setZoom`) — the choropleth and `dataLayers` are both automatically
+  re-applied once the new style's own `'style.load'` fires, since a style change wipes every
+  layer/source maplibre-gl knows about.
 - Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
   hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
@@ -8362,18 +8373,47 @@ epub.js renders the reading area into its stable `mount` element, using an inter
 chapter content.
 
 **Properties:** `src` and `name` are strings. `accessibleLabel` (attribute `aria-label`) overrides
-the reading region's accessible name.
+the reading region's accessible name. `location: string = ''` (not reflected — CFIs are long) is
+a CFI or spine href identifying the current reading position: set before the book finishes
+loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
+`relocated` event keeps it in sync with user navigation without re-triggering its own `display()`
+call. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this viewer's supported `LyraAnchor.kind`
+values for the shared anchor-target contract).
 
-**Events:** `lyra-render-error` with `detail.error` when fetching, opening, or rendering fails.
+**Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
+populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
+label, href, level }`, `level` starting at 1 for a top-level entry, `id` falling back to `href`
+when a navigation entry has none), `[]` before a book has loaded. `search(query)` resolves the
+match count across every spine section, in document order, via epub.js's own `item.load()`/
+`item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
+`search()` call or a `src` change aborts an in-flight scan); `searchNext()`/`searchPrevious()`
+advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
+clears the query, matches, and painted search annotation.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching, opening, or rendering fails;
+`lyra-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
+`lyra-search-change` (`detail: { query, matchCount, activeIndex }`) from `search()`/`searchNext()`/
+`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, and `error`.
+`mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
+announce through).
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
-matches `application/epub+zip` and `.epub` filenames.
+matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
+search: true, textSelect: true }` capabilities.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
+
+Adopts the shared anchor-target contract (`highlights`, `activeHighlightId`, `scrollToAnchor()`,
+events `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result`): a `cfi` anchor displays
+directly via `rendition.display()`; a `text-quote` anchor resolves by scanning the spine with
+epub.js's own `item.find()`, since chapter content lives inside epub.js-owned iframes rather than
+this component's own shadow DOM — `lyra-text-select` mirrors epub.js's own `selected` event for the
+same reason. `highlights` (kind `cfi`) paint via `rendition.annotations.highlight()` and are
+re-applied whenever the rendition is recreated (a `src` change, or a reconnect remount), since
+epub.js doesn't persist annotations across a fresh `renderTo()`.
 
 ## `lyra-pptx-viewer`
 

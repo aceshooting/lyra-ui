@@ -96,4 +96,60 @@ export const styles = css`
     justify-content: center;
     padding: var(--lyra-space-l);
   }
+
+  /* Painted text-quote highlights: the CSS Custom Highlight API path styles the browser-native
+     ::highlight() pseudo (no element exists to select, so a [part='content'] mark[...] selector
+     below never matches on that path); the <mark>-wrap fallback path styles the real elements
+     text-highlights.ts creates in this same shadow tree. Both are kept in sync by tone. */
+  ::highlight(lyra-highlight-accent) {
+    background-color: var(--lyra-color-brand-quiet);
+  }
+  ::highlight(lyra-highlight-success) {
+    background-color: var(--lyra-color-success-quiet);
+  }
+  ::highlight(lyra-highlight-warning) {
+    background-color: var(--lyra-color-warning-quiet);
+  }
+  ::highlight(lyra-highlight-danger) {
+    background-color: var(--lyra-color-danger-quiet);
+  }
+  ::highlight(lyra-highlight-neutral) {
+    background-color: var(--lyra-color-surface);
+  }
+  ::highlight(lyra-highlight-active) {
+    background-color: var(--lyra-color-brand-quiet);
+    text-decoration: underline;
+  }
+  [part='content'] mark[data-lyra-highlight-tone] {
+    background: var(--lyra-color-brand-quiet);
+    color: inherit;
+    border-radius: calc(var(--lyra-radius) * 0.5);
+    cursor: pointer;
+  }
+  [part='content'] mark[data-lyra-highlight-tone='success'] {
+    background: var(--lyra-color-success-quiet);
+  }
+  [part='content'] mark[data-lyra-highlight-tone='warning'] {
+    background: var(--lyra-color-warning-quiet);
+  }
+  [part='content'] mark[data-lyra-highlight-tone='danger'] {
+    background: var(--lyra-color-danger-quiet);
+  }
+  [part='content'] mark[data-lyra-highlight-tone='neutral'] {
+    background: var(--lyra-color-surface);
+  }
+  [part='content'] mark[data-lyra-highlight-name='lyra-highlight-active'] {
+    outline: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+
+  [part='content'] mark[part~='search-match'] {
+    background: var(--lyra-color-warning-quiet);
+    color: inherit;
+    border-radius: var(--lyra-radius-xs);
+  }
+  [part='content'] mark[part~='search-match-active'] {
+    background: var(--lyra-color-warning);
+    color: var(--lyra-color-on-warning);
+  }
 `;

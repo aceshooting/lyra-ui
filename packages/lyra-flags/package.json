@@ -58,6 +58,6 @@
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "sharp": "^0.35.3",
-    "svgo": "^4.0.1"
+    "svgo": "^4.0.2"
   }
 }

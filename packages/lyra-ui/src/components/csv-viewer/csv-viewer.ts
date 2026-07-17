@@ -5,4 +5,13 @@ import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/
 import { LyraCsvViewer } from './csv-viewer.class.js';
 
 defineElement('csv-viewer', LyraCsvViewer);
-registerDocumentRenderer('text/csv', { matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.csv'), render: (file: DocumentFile) => html`<lyra-csv-viewer src=${file.src} name=${file.name}></lyra-csv-viewer>` });
+registerDocumentRenderer('text/csv', {
+  matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.csv'),
+  capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
+  render: (file: DocumentFile) => html`<lyra-csv-viewer
+    src=${file.src}
+    name=${file.name}
+    .anchor=${file.anchor ?? null}
+    .highlights=${file.highlights ?? []}
+  ></lyra-csv-viewer>`,
+});
