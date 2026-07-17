@@ -313,6 +313,33 @@ it('scrolls the matching row into view once active-id changes after mount', asyn
   }
 });
 
+describe('aria-label forwarding', () => {
+  it('forwards a host-level aria-label onto the internal role="list" element', async () => {
+    const el = (await fixture(
+      html`<lyra-virtual-list
+        aria-label="Recent activity"
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Recent activity');
+  });
+
+  it('has no aria-label on the internal element when the host has none', async () => {
+    const el = (await fixture(
+      html`<lyra-virtual-list
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.be.false;
+  });
+});
+
 it('scrollToIndex scrolls a fixed-row-height list to the requested row, honoring align', async () => {
   const items = Array.from({ length: 50 }, (_, i) => i);
   const el = (await fixture(

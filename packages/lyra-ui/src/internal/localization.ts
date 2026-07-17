@@ -372,6 +372,9 @@ export type LyraMessageKey =
   | 'taskListStepStartedAnnounce'
   | 'taskListStepCompletedAnnounce'
   | 'taskListStepFailedAnnounce'
+  | 'activityFeedLabel'
+  | 'activityFeedCompletedSteps'
+  | 'activityFeedCompletedStep'
   | 'thoughtFor'
   | 'thinking'
   | 'rangeStart'
@@ -915,6 +918,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   taskListStepStartedAnnounce: 'Step started: {label}',
   taskListStepCompletedAnnounce: 'Step completed: {label}',
   taskListStepFailedAnnounce: 'Step failed: {label}',
+  activityFeedLabel: 'Activity',
+  activityFeedCompletedSteps: 'Completed {count} steps',
+  activityFeedCompletedStep: 'Completed {count} step',
   thoughtFor: 'Thought for {duration}',
   thinking: 'Thinking…',
   rangeStart: 'Range start',

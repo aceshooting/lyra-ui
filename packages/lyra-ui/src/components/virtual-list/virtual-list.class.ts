@@ -144,6 +144,10 @@ export interface LyraVirtualListEventMap {
  * @event lyra-visible-range-changed - `detail: { start, end }` (see
  *   `VirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
+ *
+ * A host `aria-label` attribute on this element is forwarded onto the internal `role="list"`
+ * container, since `aria-label` set on a custom-element host does not by itself name a role living
+ * on an internal shadow element. Used by `<lyra-activity-feed>`'s virtualized mode.
  * @csspart base - The scrollable container (`role="list"`).
  * @csspart spacer - The full-content-height inner element that gives the
  *   container its true scrollable extent.
@@ -674,7 +678,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
 
     return html`
-      <div part="base" role="list" tabindex="0" aria-busy=${this.loading ? 'true' : nothing}>
+      <div
+        part="base"
+        role="list"
+        tabindex="0"
+        aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-busy=${this.loading ? 'true' : nothing}
+      >
         <div part="spacer" style=${styleMap({ height: `${totalHeight}px` })}>
           ${this.renderGroups()}
           ${repeat(
