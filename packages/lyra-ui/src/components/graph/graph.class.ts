@@ -494,13 +494,23 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return this.simNodes.filter((n) => idSet.has(n.id) || n.communityId === community.id);
   }
 
+  /** Memoized `visibleCommunities()` result -- `undefined` means "stale, recompute on next call".
+   *  Cleared from `willUpdate()` whenever `simNodes`/`communities` actually change, the same
+   *  structural-change gate `applyInteractions()` re-caches its own DOM lookups on, so every other
+   *  call site (roving-ring math, `render()`'s template, keyboard navigation) shares one
+   *  `O(communities × simNodes)` computation per structural update instead of repeating it. */
+  private visibleCommunitiesCache?: { community: GraphCommunity; members: SimNode[] }[];
+
   /** `communities` narrowed to entries with at least one currently-visible member -- a community
    *  whose members are all hidden by `hiddenTypes` (or that starts out empty) draws no hull and
    *  doesn't occupy a roving-ring slot. */
   private visibleCommunities(): { community: GraphCommunity; members: SimNode[] }[] {
-    return this.communities
-      .map((community) => ({ community, members: this.communityMembers(community) }))
-      .filter((entry) => entry.members.length > 0);
+    if (!this.visibleCommunitiesCache) {
+      this.visibleCommunitiesCache = this.communities
+        .map((community) => ({ community, members: this.communityMembers(community) }))
+        .filter((entry) => entry.members.length > 0);
+    }
+    return this.visibleCommunitiesCache;
   }
 
   private communityHull(members: SimNode[]): HullPoint[] {
@@ -727,6 +737,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // and pointless work).
     if (this.d3 && (changed.has('nodes') || changed.has('links') || changed.has('hiddenTypes'))) {
       this.rebuildSimulation();
+    }
+    // rebuildSimulation() above always reassigns simNodes, so checking it here (after that call)
+    // also catches a nodes/links/hiddenTypes-driven rebuild, not just a direct communities set.
+    if (changed.has('simNodes') || changed.has('communities')) {
+      this.visibleCommunitiesCache = undefined;
     }
     // Same reasoning as rebuildSimulation() above -- assigning graphLiveText from updated() would
     // schedule a whole extra update pass instead of landing in the render this update is already

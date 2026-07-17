@@ -1433,6 +1433,28 @@ describe('community hulls (J6)', () => {
     ] as SVGElement[];
     expect(items.filter((i) => i.getAttribute('tabindex') === '0')).to.have.length(1);
   });
+
+  it('memoizes the per-community member walk once per structural update instead of once per graphItemCount() call site', async () => {
+    const el = await mountHulls();
+    type WithCommunityMembers = { communityMembers: (c: unknown) => unknown };
+    let calls = 0;
+    const original = (el as unknown as WithCommunityMembers).communityMembers.bind(el);
+    (el as unknown as WithCommunityMembers).communityMembers = (c: unknown) => {
+      calls++;
+      return original(c);
+    };
+    // A structural change (a genuinely new nodes array) is the only thing that should force a fresh
+    // recompute -- the render this triggers reads the community/member walk from many places (every
+    // node/link/hull tabindex expression, the outer <svg> tabindex, the live-region branch, the
+    // hull/data-list templates), all of which must share one cached result instead of each
+    // independently re-walking `communities` × `simNodes`.
+    el.nodes = [...communityNodes, { id: 'd', label: 'D', communityId: 'team-1' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 4, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(calls).to.equal(communities.length);
+  });
 });
 
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
