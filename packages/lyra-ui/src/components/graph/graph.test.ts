@@ -576,6 +576,24 @@ describe('drawn edge labels (J2)', () => {
     expect(g.hasAttribute('data-edge-labels-hidden')).to.be.false;
   });
 
+  it('applies the edge-label zoom gate at initial mount, before any pan/zoom gesture (regression)', async () => {
+    // edgeLabelMinZoom set above the initial identity transform's k=1 -- the gate must already be
+    // applied by the time the graph first paints, not only reactively after the user's first
+    // pan/zoom gesture (see updateEdgeLabelZoomGate()'s own doc comment).
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.showEdgeLabels = true;
+    el.edgeLabelMinZoom = 2;
+    el.nodes = nodes;
+    el.links = labeledLinks;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    expect(g.hasAttribute('data-edge-labels-hidden')).to.be.true;
+  });
+
   it('spoken output (link accessible name) is identical whether showEdgeLabels is on or off', async () => {
     const off = await mountLabeled(false);
     const on = await mountLabeled(true);
@@ -599,6 +617,22 @@ describe('drawn edge labels (J2)', () => {
     });
     expect(el.shadowRoot!.querySelectorAll('[part="link-label"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelector('g')!.hasAttribute('data-edge-labels-hidden')).to.be.false;
+  });
+
+  it('does not wrap a link in an extra per-link <g> when showEdgeLabels is unset (byte-for-byte link DOM, regression)', async () => {
+    // The link must remain a direct child of the outer zoomed <g transform=""> (the only <g> in
+    // this part of the template that carries a transform attribute) -- not nested inside a
+    // per-link <g> introduced for the (here, unused) drawn-edge-label <text> sibling.
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    const linkEl = el.shadowRoot!.querySelector('[part="link"]:not([data-dangling])')!;
+    expect(linkEl.parentElement?.getAttribute('transform')).to.equal('');
   });
 
   it('refreshes the cached linkLabelEls when showEdgeLabels toggles true post-mount (regression)', async () => {

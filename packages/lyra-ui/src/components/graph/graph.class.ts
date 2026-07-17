@@ -460,6 +460,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           this.isPanning = false;
         });
       this.d3.select(svgEl).call(this.zoomBehavior);
+      // `.call(zoomBehavior)` does not synchronously fire the 'zoom' handler above (only a real
+      // user gesture or an explicit `.transform()` call does, and nothing in this component ever
+      // calls `.transform()`) -- so the initial transform right here is always d3-zoom's own
+      // identity transform, k=1. Apply the edge-label zoom gate against that known value now, or
+      // it stays unset (edge labels wrongly visible) until the user's first pan/zoom, regardless
+      // of what edgeLabelMinZoom actually is.
+      this.updateEdgeLabelZoomGate(1);
     } else if (this.zoomBehavior && (changed.has('minZoom') || changed.has('maxZoom'))) {
       this.zoomBehavior.scaleExtent([this.minZoom, this.maxZoom]);
     }
@@ -935,8 +942,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const color = sanitizeNodeColor(l.color);
               const dash = normalizeLinkDash(l.dash);
               const labelPos = this.showEdgeLabels && l.label ? this.edgeLabelPosition(l) : undefined;
-              return svg`<g>
-                <line
+              const lineEl = svg`<line
                   part="link"
                   role="button"
                   tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
@@ -954,11 +960,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
                   @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
                   @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
-                >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>
-                ${labelPos
-                  ? svg`<text part="link-label" aria-hidden="true" text-anchor="middle" x=${labelPos.x} y=${labelPos.y}>${l.label}</text>`
-                  : ''}
-              </g>`;
+                >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>`;
+              // Only wrap in a <g> when a label will actually be drawn -- an unconditional wrapper
+              // would change existing consumers' rendered link DOM (bare <line part="link">) even
+              // when showEdgeLabels is never set, breaking the "existing usage renders byte-for-byte
+              // identical output" contract this drawn-edge-label feature must preserve.
+              return labelPos
+                ? svg`<g>${lineEl}<text part="link-label" aria-hidden="true" text-anchor="middle" x=${labelPos.x} y=${labelPos.y}>${l.label}</text></g>`
+                : lineEl;
             })}
             ${this.danglingLinks.map((l) => {
               const source = l.source as SimNode;
