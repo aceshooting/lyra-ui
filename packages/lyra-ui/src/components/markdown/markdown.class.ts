@@ -247,9 +247,9 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
   private deps?: MarkdownDeps;
 
   /** `(lang, code)` -> already-highlighted HTML, content-addressed (see `PendingHighlight`'s doc).
-   *  Persists across renders of this instance; populated asynchronously by Task 2's
-   *  `highlightPending()`. Never consulted while `streaming` is `true` or `highlightCode` is
-   *  `false` -- both gates live in the `code()` renderer inside `parseMarkdown()`. */
+   *  Persists across renders of this instance; populated asynchronously by `highlightPending()`.
+   *  Never consulted while `streaming` is `true` or `highlightCode` is `false` -- both gates live
+   *  in the `code()` renderer inside `parseMarkdown()`. */
   private highlightCache = new Map<string, string>();
 
   /** Bumped on every `highlightPending()` call, including ones that end up not actually loading
