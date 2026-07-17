@@ -6,6 +6,7 @@ import { nextId, srOnly } from '../../internal/a11y.js';
 import { prefersReducedMotion } from '../../internal/motion.js';
 import { isRtl } from '../../internal/rtl.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
+import { getScratchCtx } from '../../internal/canvas.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
 import '../skeleton/skeleton.class.js';
@@ -77,6 +78,8 @@ type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNod
 };
 
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
+const EDGE_LABEL_OFFSET_PX = 4; // perpendicular offset from the segment midpoint, in world px
+const EDGE_LABEL_LENGTH_GATE_RATIO = 0.85; // label hides when its measured width exceeds this * edge length
 
 
 /**
@@ -201,6 +204,7 @@ export interface LyraGraphEventMap {
  * @csspart link - A graph link.
  * @csspart arrowhead - The marker used by directed graph links.
  * @csspart label - A node label.
+ * @csspart link-label - A drawn edge label (only rendered when `showEdgeLabels` is set).
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
@@ -210,6 +214,8 @@ export interface LyraGraphEventMap {
  *   `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries).
  *   Declared centrally in `tokens.styles.ts` so `<lyra-graph>` and any future `<lyra-graph-legend>`-
  *   style component resolve the identical default.
+ * @cssprop [--lyra-graph-edge-label-halo=var(--lyra-color-surface)] - Legibility halo (`stroke`)
+ *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -237,6 +243,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  not retroactively reposition already-settled nodes; there is currently
    *  no way to make an already-rendered graph reproducible after the fact. */
   @property({ type: Number }) seed?: number;
+  /** Draws each resolved (non-dangling) link's `label` as visible SVG text at the segment
+   *  midpoint. Off by default — `GraphLink.label` stays spoken/tooltip-only, matching today's
+   *  behavior, unless this is set. */
+  @property({ type: Boolean, attribute: 'show-edge-labels' }) showEdgeLabels = false;
+  /** Below this zoom scale, every drawn edge label is hidden (a `data-edge-labels-hidden`
+   *  attribute toggled on the zoomed `<g>`, no Lit re-render). Ignored when `showEdgeLabels` is
+   *  false. */
+  @property({ type: Number, attribute: 'edge-label-min-zoom' }) edgeLabelMinZoom = 0.6;
 
   private readonly arrowMarkerId = nextId('graph-arrow');
 
@@ -277,6 +291,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private nodeEls: SVGElement[] = [];
   private nodeLabelEls: (SVGTextElement | null)[] = [];
   private linkEls: SVGLineElement[] = [];
+  private linkLabelEls: (SVGTextElement | null)[] = [];
+  /** Per-simLink-index flip cache for the length declutter gate -- `onTick()` only writes
+   *  `visibility` when the boolean actually changes, not every tick. */
+  private linkLabelHiddenByLength: boolean[] = [];
+  private edgeLabelWidthCache = new Map<string, number>();
   /** Dangling-stub `<line>`s, index-aligned with `danglingLinks` -- cached separately from
    *  `linkEls` (real, simulated links only) so onTick() can write their positions too; see
    *  onTick()'s own comment for why a stub needs this at all. */
@@ -435,6 +454,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         })
         .on('zoom', (event: OptionalPeerApi) => {
           this.gEl?.setAttribute('transform', event.transform.toString());
+          this.updateEdgeLabelZoomGate(event.transform.k);
         })
         .on('end', () => {
           this.isPanning = false;
@@ -455,6 +475,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // real edge) -- excluded here explicitly so `linkEls` stays index-aligned with `simLinks`
     // rather than relying on stubs always sorting after real links in template/DOM order.
     this.linkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"]:not([data-dangling])')) as SVGLineElement[];
+    this.linkLabelEls = this.linkEls.map(
+      (el) => (el.parentElement?.querySelector('[part="link-label"]') as SVGTextElement | null) ?? null,
+    );
+    this.linkLabelHiddenByLength = [];
     this.danglingLinkEls = Array.from(this.renderRoot.querySelectorAll('[part="link"][data-dangling]')) as SVGLineElement[];
 
     nodeEls.forEach((el, i) => {
@@ -530,6 +554,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       line.setAttribute('x2', String(coordinates.x2));
       line.setAttribute('y2', String(coordinates.y2));
     });
+    if (this.showEdgeLabels) {
+      this.simLinks.forEach((l, i) => {
+        const labelEl = this.linkLabelEls[i];
+        if (!labelEl) return;
+        const pos = this.edgeLabelPosition(l);
+        labelEl.setAttribute('x', String(pos.x));
+        labelEl.setAttribute('y', String(pos.y));
+        const { x1, y1, x2, y2 } = this.linkCoordinates(l);
+        const edgeLength = Math.hypot(x2 - x1, y2 - y1);
+        const tooLong = this.edgeLabelWidth(l.label ?? '') > edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
+        if (this.linkLabelHiddenByLength[i] !== tooLong) {
+          this.linkLabelHiddenByLength[i] = tooLong;
+          labelEl.setAttribute('visibility', tooLong ? 'hidden' : 'visible');
+        }
+      });
+    }
     // Dangling stubs are excluded from d3-force's own simulation input (see
     // rebuildSimulation()'s "stubs never enter d3-force's own simulation input"), so the
     // synthetic target position the danglingLinks loop at the top of this method just
@@ -720,6 +760,56 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     };
   }
 
+  /** World-space midpoint of a link, offset EDGE_LABEL_OFFSET_PX perpendicular to the segment
+   *  (horizontal, unrotated text — rotated edge-label text is a readability and RTL hazard). */
+  private edgeLabelPosition(link: SimLink): { x: number; y: number } {
+    const { x1, y1, x2, y2 } = this.linkCoordinates(link);
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    if (len === 0) return { x: mx, y: my };
+    return {
+      x: mx + (-dy / len) * EDGE_LABEL_OFFSET_PX,
+      y: my + (dx / len) * EDGE_LABEL_OFFSET_PX,
+    };
+  }
+
+  private edgeLabelFontPx(): number {
+    const raw = getComputedStyle(this).getPropertyValue('--lyra-font-size-2xs').trim();
+    const parsed = parseFloat(raw);
+    if (!Number.isFinite(parsed)) return 10;
+    // rem tokens are resolved relative to the root font-size; this is a decluttering heuristic,
+    // not a pixel-perfect layout, so the standard 16px/rem approximation is sufficient.
+    return raw.endsWith('rem') ? parsed * 16 : parsed;
+  }
+
+  private edgeLabelWidth(text: string): number {
+    const cached = this.edgeLabelWidthCache.get(text);
+    if (cached != null) return cached;
+    const ctx = getScratchCtx();
+    let width: number;
+    if (ctx) {
+      const fontFamily = getComputedStyle(this).getPropertyValue('--lyra-font').trim() || 'sans-serif';
+      ctx.font = `${this.edgeLabelFontPx()}px ${fontFamily}`;
+      width = ctx.measureText(text).width;
+    } else {
+      width = text.length * this.edgeLabelFontPx() * 0.6;
+    }
+    this.edgeLabelWidthCache.set(text, width);
+    return width;
+  }
+
+  /** Toggles `data-edge-labels-hidden` on the cached zoomed `<g>` when crossing `edgeLabelMinZoom`
+   *  -- called from the d3-zoom `'zoom'` handler (render-free, CSS hides `[part="link-label"]`
+   *  beneath the attribute) so this scales with every pan/zoom event without a Lit re-render. */
+  private updateEdgeLabelZoomGate(k: number): void {
+    if (!this.gEl) return;
+    if (k < this.edgeLabelMinZoom) this.gEl.setAttribute('data-edge-labels-hidden', '');
+    else this.gEl.removeAttribute('data-edge-labels-hidden');
+  }
+
   private graphItemCount(): number {
     return this.simNodes.length + this.simLinks.length;
   }
@@ -844,25 +934,31 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const coordinates = this.linkCoordinates(l);
               const color = sanitizeNodeColor(l.color);
               const dash = normalizeLinkDash(l.dash);
-              return svg`<line
-                part="link"
-                role="button"
-                tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
-                aria-label=${this.linkAccessibleText(l)}
-                stroke-width=${l.width ?? 1.5}
-                stroke-dasharray=${dash ?? nothing}
-                marker-end=${l.directed ? `url(#${this.arrowMarkerId})` : nothing}
-                style=${styleMap(color ? { '--lyra-link-color': color } : {})}
-                x1=${coordinates.x1}
-                y1=${coordinates.y1}
-                x2=${coordinates.x2}
-                y2=${coordinates.y2}
-                @click=${() => this.onLinkClick(l)}
-                @focus=${() => this.onGraphItemFocus(itemIndex)}
-                @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
-                @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
-                @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
-              >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>`;
+              const labelPos = this.showEdgeLabels && l.label ? this.edgeLabelPosition(l) : undefined;
+              return svg`<g>
+                <line
+                  part="link"
+                  role="button"
+                  tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
+                  aria-label=${this.linkAccessibleText(l)}
+                  stroke-width=${l.width ?? 1.5}
+                  stroke-dasharray=${dash ?? nothing}
+                  marker-end=${l.directed ? `url(#${this.arrowMarkerId})` : nothing}
+                  style=${styleMap(color ? { '--lyra-link-color': color } : {})}
+                  x1=${coordinates.x1}
+                  y1=${coordinates.y1}
+                  x2=${coordinates.x2}
+                  y2=${coordinates.y2}
+                  @click=${() => this.onLinkClick(l)}
+                  @focus=${() => this.onGraphItemFocus(itemIndex)}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
+                  @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
+                  @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
+                >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>
+                ${labelPos
+                  ? svg`<text part="link-label" aria-hidden="true" text-anchor="middle" x=${labelPos.x} y=${labelPos.y}>${l.label}</text>`
+                  : ''}
+              </g>`;
             })}
             ${this.danglingLinks.map((l) => {
               const source = l.source as SimNode;

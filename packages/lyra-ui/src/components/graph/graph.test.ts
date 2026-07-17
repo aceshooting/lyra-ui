@@ -526,6 +526,82 @@ describe('node typing (J1)', () => {
   });
 });
 
+describe('drawn edge labels (J2)', () => {
+  const labeledLinks = [{ source: 'a', target: 'b', label: 'cites' }];
+
+  async function mountLabeled(showEdgeLabels = true): Promise<LyraGraph> {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.showEdgeLabels = showEdgeLabels;
+    el.nodes = nodes;
+    el.links = labeledLinks;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    return el;
+  }
+
+  it('defaults showEdgeLabels to false and renders no link-label text', async () => {
+    const el = await mountLabeled(false);
+    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+  });
+
+  it('draws a link-label per labeled link when showEdgeLabels is set, aria-hidden and text-anchor middle', async () => {
+    const el = await mountLabeled(true);
+    const label = el.shadowRoot!.querySelector('[part="link-label"]') as SVGTextElement;
+    expect(label).to.exist;
+    expect(label.textContent).to.equal('cites');
+    expect(label.getAttribute('aria-hidden')).to.equal('true');
+    expect(label.getAttribute('text-anchor')).to.equal('middle');
+  });
+
+  it('does not draw a link-label for a link with no label text', async () => {
+    const el = (await fixture(html`<lyra-graph show-edge-labels></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links; // no .label set
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+  });
+
+  it('hides all edge labels below edgeLabelMinZoom via a data-edge-labels-hidden toggle on the zoomed g, without a Lit re-render', async () => {
+    const el = await mountLabeled(true);
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    expect(g.hasAttribute('data-edge-labels-hidden')).to.be.false;
+    (el as unknown as { updateEdgeLabelZoomGate: (k: number) => void }).updateEdgeLabelZoomGate(0.3);
+    expect(g.getAttribute('data-edge-labels-hidden')).to.equal('');
+    (el as unknown as { updateEdgeLabelZoomGate: (k: number) => void }).updateEdgeLabelZoomGate(1);
+    expect(g.hasAttribute('data-edge-labels-hidden')).to.be.false;
+  });
+
+  it('spoken output (link accessible name) is identical whether showEdgeLabels is on or off', async () => {
+    const off = await mountLabeled(false);
+    const on = await mountLabeled(true);
+    const offLink = off.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
+    const onLink = on.shadowRoot!.querySelector('[part="link"]') as SVGLineElement;
+    expect(offLink.getAttribute('aria-label')).to.equal(onLink.getAttribute('aria-label'));
+  });
+
+  it('is accessible with edge labels drawn', async () => {
+    const el = await mountLabeled(true);
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: showEdgeLabels unset draws nothing and every existing link/node assertion still holds', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelectorAll('[part="link-label"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('g')!.hasAttribute('data-edge-labels-hidden')).to.be.false;
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [

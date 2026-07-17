@@ -44,6 +44,18 @@ export const styles = css`
     font-family: var(--lyra-font);
     pointer-events: none;
   }
+  [part='link-label'] {
+    font-size: var(--lyra-font-size-2xs);
+    fill: var(--lyra-color-text);
+    font-family: var(--lyra-font);
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--lyra-graph-edge-label-halo, var(--lyra-color-surface));
+    stroke-width: var(--lyra-size-3px);
+  }
+  g[data-edge-labels-hidden] [part='link-label'] {
+    display: none;
+  }
   [part='empty'] {
     color: var(--lyra-color-text-quiet);
     font-size: var(--lyra-font-size-md-sm);
