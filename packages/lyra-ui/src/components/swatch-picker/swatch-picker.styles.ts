@@ -27,9 +27,9 @@ export const styles = css`
     padding: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: 50%;
-    /* Per-swatch fill from the option's `color`, set inline by swatch-picker.class.ts.
-       Read through a var() (rather than an inline `background-color`) so a consumer's
-       ::part(swatch) background rule can still win when they want to override it. */
+    /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts.
+       Read through a var() (rather than an inline background-color declaration) so a
+       consumer's ::part(swatch) background rule can still win when overriding it. */
     background-color: var(--lyra-swatch-color);
     cursor: pointer;
     transition: transform var(--lyra-transition-fast);

@@ -5,7 +5,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 167 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 168 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lyra-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -251,7 +251,7 @@ containing the component's token CSS and internal `<button>` markup, and the con
 `ElementInternals`-based `attachInternals()` call (used for native form association) does not throw
 under `@lit-labs/ssr-dom-shim`'s server DOM shim.
 
-That said, **lyra-ui has not been systematically tested or tuned for SSR** across its 167 components:
+That said, **lyra-ui has not been systematically tested or tuned for SSR** across its 168 components:
 no CI job renders the library under `@lit-labs/ssr`, no component has been verified to hydrate
 correctly on the client afterward, and components that reach for browser-only APIs early
 (`ResizeObserver`/`IntersectionObserver`, Floating UI positioning in the popover/tooltip/dropdown
@@ -314,7 +314,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 167 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 168 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -492,6 +492,7 @@ each one-liner below.
 | `<lyra-card>` | — (extra) | Generic bordered content container (`header`/`media`/`footer`/`actions` slots) — a direct `<lyra-*>` counterpart to `wa-card` |
 | `<lyra-stepper>` | — (extra) | Ordered multi-step wizard navigation — label + index, current/completed/locked/error state, click-to-jump, data-driven and controlled |
 | `<lyra-segmented>` | — (extra) | Single-select text/icon button row with the WAI-ARIA APG `radiogroup` contract built in (roving tabindex, automatic activation) |
+| `<lyra-swatch-picker>` | — (extra) | Single-select picker over a fixed set of color swatches — `radiogroup` semantics (roving tabindex, automatic activation), themeable selection ring |
 | `<lyra-diff-view>` | — (extra) | Real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output |
 | `<lyra-poll-status>` | — (extra) | "Next scheduled refresh" countdown with a built-in pause control and live-region announcements |
 | `<lyra-code-block-core>` | — (extra) | Build-lean `lyra-code-block` variant for a consumer whose `languages` map already covers every language it renders — never references shiki's full ~200-language table |
