@@ -179,6 +179,23 @@ describe('hover events', () => {
     expect(fired).to.be.false;
   });
 
+  it('suppresses hover events during a programmatic camera tween (regression)', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+
+    (el as unknown as { isCameraTweening: boolean }).isCameraTweening = true;
+    let fired = false;
+    el.addEventListener('lyra-node-enter', () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(fired).to.be.false;
+  });
+
   it('does not fire lyra-link-enter/lyra-link-leave or set data-hovered for a dangling-stub link', async () => {
     // A dangling stub's `target` is a synthetic stand-in that never resolves to a real node (see
     // SimLink.dangling) -- emitting a link-identity hover event for it would hand a consumer an id
@@ -902,6 +919,24 @@ describe('focus & fit (J4 camera)', () => {
     } finally {
       window.matchMedia = originalMatchMedia;
     }
+  });
+
+  it('a superseded focusNode() call resolves false instead of hanging (regression)', async () => {
+    const el = await mountWide();
+    const firstCall = el.focusNode('a');
+    const secondCall = el.focusNode('b');
+    expect(await firstCall).to.be.false;
+    expect(await secondCall).to.be.true;
+  });
+
+  it('a real user pan/zoom gesture interrupting focusNode() resolves it false instead of hanging (regression)', async () => {
+    const el = await mountWide();
+    const call = el.focusNode('a');
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    svgEl.dispatchEvent(
+      new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100, clientX: 10, clientY: 10 }),
+    );
+    expect(await call).to.be.false;
   });
 
   it('fit() frames the bounding box of all visible node positions within width/height minus padding', async () => {

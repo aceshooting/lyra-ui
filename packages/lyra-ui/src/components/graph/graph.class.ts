@@ -339,6 +339,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  canceled by a new tween request or a user pan/zoom gesture (see `applyInteractions()`'s zoom
    *  `'start'` handler). */
   private cameraTweenId?: number;
+  /** The current tween's own `resolve`, so cancellation (a superseding tween, or a real user
+   *  pan/zoom gesture) settles it with `false` instead of leaving the caller's `Promise` hanging
+   *  forever -- `cancelAnimationFrame()` alone stops the rAF loop but never touches the Promise. */
+  private cameraTweenResolve?: (arrived: boolean) => void;
+  /** True for a camera tween's whole duration (set before its first frame, cleared on
+   *  resolution) -- `isPanning` alone doesn't cover this: `applyZoomTransform()`'s per-frame
+   *  `zoomBehavior.transform()` call on a non-transition selection fires d3-zoom's
+   *  start/zoom/end synchronously within that single call, so `isPanning` flips true-then-false
+   *  within one frame rather than staying true for the tween's real duration the way an actual
+   *  user gesture does. */
+  private isCameraTweening = false;
   private linkEls: SVGLineElement[] = [];
   private linkLabelEls: (SVGTextElement | null)[] = [];
   /** Per-simLink-index flip cache for the length declutter gate -- `onTick()` only writes
@@ -425,11 +436,28 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       cancelAnimationFrame(this.cameraTweenId);
       this.cameraTweenId = undefined;
     }
+    this.isCameraTweening = false;
+    const resolve = this.cameraTweenResolve;
+    if (resolve) {
+      this.cameraTweenResolve = undefined;
+      resolve(false);
+    }
   }
+
+  /** Writing a transform on a plain (non-transition) selection makes d3-zoom fire its own
+   *  start/zoom/end sequence synchronously, in this same call -- `isApplyingZoomTransform` lets
+   *  the zoom `'start'` handler tell that self-triggered echo apart from a genuine external
+   *  gesture, so a camera tween's own per-frame write doesn't cancel itself. */
+  private isApplyingZoomTransform = false;
 
   private applyZoomTransform(transform: OptionalPeerApi): void {
     if (!this.d3 || !this.zoomedEl || !this.zoomBehavior) return;
-    this.zoomBehavior.transform(this.d3.select(this.zoomedEl), transform);
+    this.isApplyingZoomTransform = true;
+    try {
+      this.zoomBehavior.transform(this.d3.select(this.zoomedEl), transform);
+    } finally {
+      this.isApplyingZoomTransform = false;
+    }
   }
 
   /** Animates from the zoom behavior's current transform toward `computeTarget()`'s result via a
@@ -440,17 +468,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  instead of tweening toward a stale snapshot from the moment the call was made --
    *  `focusNode()`/`fit()` are just as likely to run while the graph is still animating its initial
    *  layout as after it's settled. `prefers-reduced-motion` jumps straight to one write of the
-   *  then-current target. A concurrent call cancels the previous tween. */
-  private tweenCamera(computeTarget: () => OptionalPeerApi): Promise<void> {
+   *  then-current target. A concurrent call cancels the previous tween -- resolves `true` on
+   *  genuine arrival, `false` if superseded or interrupted by a user gesture before completing. */
+  private tweenCamera(computeTarget: () => OptionalPeerApi): Promise<boolean> {
     return new Promise((resolve) => {
       if (!this.d3 || !this.zoomedEl || !this.zoomBehavior) {
-        resolve();
+        resolve(false);
         return;
       }
       this.cancelCameraTween();
+      this.cameraTweenResolve = resolve;
+      this.isCameraTweening = true;
       if (prefersReducedMotion()) {
         this.applyZoomTransform(computeTarget());
-        resolve();
+        this.isCameraTweening = false;
+        this.cameraTweenResolve = undefined;
+        resolve(true);
         return;
       }
       const current = this.d3.zoomTransform(this.zoomedEl);
@@ -474,7 +507,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           this.cameraTweenId = requestAnimationFrame(step);
         } else {
           this.cameraTweenId = undefined;
-          resolve();
+          this.isCameraTweening = false;
+          this.cameraTweenResolve = undefined;
+          resolve(true);
         }
       };
       this.cameraTweenId = requestAnimationFrame(step);
@@ -491,11 +526,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!node || !this.d3 || !this.zoomedEl || !this.zoomBehavior) return false;
     const current = this.d3.zoomTransform(this.zoomedEl);
     const k = Math.min(this.maxZoom, Math.max(this.minZoom, options?.zoom ?? (current.k as number)));
-    await this.tweenCamera(() =>
+    const arrived = await this.tweenCamera(() =>
       this.d3!.zoomIdentity.translate(this.width / 2 - k * (node.x ?? 0), this.height / 2 - k * (node.y ?? 0)).scale(k),
     );
-    this.graphLiveText = this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) });
-    return true;
+    if (arrived) {
+      this.graphLiveText = this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) });
+    }
+    return arrived;
   }
 
   /** Animates the camera to frame the bounding box of every currently visible node position (plus
@@ -688,6 +725,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([this.minZoom, this.maxZoom])
         .on('start', () => {
+          // A camera tween writes a transform on every frame via applyZoomTransform(), which
+          // itself synchronously replays this same 'start' handler -- ignore that self-triggered
+          // echo so a tween doesn't cancel itself on its own first frame.
+          if (this.isApplyingZoomTransform) return;
           this.isPanning = true;
           this.cancelCameraTween();
         })
@@ -997,13 +1038,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onNodeEnter(node: SimNode, e: MouseEvent): void {
-    if (this.isDragging || this.isPanning) return;
+    if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
     this.emit('lyra-node-enter', { id: node.id });
   }
 
   private onNodeLeave(node: SimNode, e: MouseEvent): void {
-    if (this.isDragging || this.isPanning) return;
+    if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).removeAttribute('data-hovered');
     this.emit('lyra-node-leave', { id: node.id });
   }
@@ -1016,7 +1057,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onLinkEnter(link: SimLink, e: MouseEvent): void {
-    if (this.isDragging || this.isPanning) return;
+    if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
     const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
     const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
@@ -1024,7 +1065,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onLinkLeave(link: SimLink, e: MouseEvent): void {
-    if (this.isDragging || this.isPanning) return;
+    if (this.isDragging || this.isPanning || this.isCameraTweening) return;
     (e.currentTarget as SVGElement).removeAttribute('data-hovered');
     const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
     const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
