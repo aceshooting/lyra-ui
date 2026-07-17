@@ -508,7 +508,12 @@ export type LyraMessageKey =
   | 'spanTokens'
   | 'rubricSubmit'
   | 'rubricSubmitAndNext'
-  | 'rubricSkip';
+  | 'rubricSkip'
+  | 'audioVisualizerLabel'
+  | 'audioVisualizerIdle'
+  | 'audioVisualizerListening'
+  | 'audioVisualizerThinking'
+  | 'audioVisualizerSpeaking';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1018,6 +1023,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   rubricSubmit: 'Submit',
   rubricSubmitAndNext: 'Submit and next',
   rubricSkip: 'Skip',
+  audioVisualizerLabel: 'Voice activity: {state}',
+  audioVisualizerIdle: 'Idle',
+  audioVisualizerListening: 'Listening',
+  audioVisualizerThinking: 'Thinking',
+  audioVisualizerSpeaking: 'Speaking',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
