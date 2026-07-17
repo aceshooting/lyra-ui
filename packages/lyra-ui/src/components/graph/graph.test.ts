@@ -98,6 +98,88 @@ it('emits lyra-link-click with the source/target ids when a link is activated', 
   expect(detail).to.deep.equal({ source: 'a', target: 'b' });
 });
 
+describe('hover events', () => {
+  it('emits lyra-node-enter/lyra-node-leave and toggles data-hovered on the node element', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+
+    let enterDetail: { id: string } | undefined;
+    let leaveDetail: { id: string } | undefined;
+    el.addEventListener('lyra-node-enter', (e) => (enterDetail = (e as CustomEvent).detail));
+    el.addEventListener('lyra-node-leave', (e) => (leaveDetail = (e as CustomEvent).detail));
+
+    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(enterDetail).to.deep.equal({ id: 'a' });
+    expect(nodeEl.hasAttribute('data-hovered')).to.be.true;
+
+    nodeEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(leaveDetail).to.deep.equal({ id: 'a' });
+    expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
+  });
+
+  it('emits lyra-link-enter/lyra-link-leave with source/target ids and toggles data-hovered on the link element', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
+
+    let enterDetail: { source: string; target: string } | undefined;
+    el.addEventListener('lyra-link-enter', (e) => (enterDetail = (e as CustomEvent).detail));
+
+    linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(enterDetail).to.deep.equal({ source: 'a', target: 'b' });
+    expect(linkEl.hasAttribute('data-hovered')).to.be.true;
+
+    linkEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(linkEl.hasAttribute('data-hovered')).to.be.false;
+  });
+
+  it('suppresses hover events and the data-hovered attribute while a drag is in progress', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+
+    (el as unknown as { isDragging: boolean }).isDragging = true;
+    let fired = false;
+    el.addEventListener('lyra-node-enter', () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(fired).to.be.false;
+    expect(nodeEl.hasAttribute('data-hovered')).to.be.false;
+  });
+
+  it('suppresses hover events while panning', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+
+    (el as unknown as { isPanning: boolean }).isPanning = true;
+    let fired = false;
+    el.addEventListener('lyra-node-enter', () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(fired).to.be.false;
+  });
+});
+
 it('renders directed links with arrowheads shortened to the target radius', async () => {
   const el = (await fixture(html`<lyra-graph seed="42"></lyra-graph>`)) as LyraGraph;
   el.nodes = nodes;

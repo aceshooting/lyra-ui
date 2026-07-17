@@ -123,6 +123,10 @@ function normalizeLinkDash(dash: number[] | undefined): string | undefined {
 export interface LyraGraphEventMap {
   'lyra-node-click': CustomEvent<{ id: string }>;
   'lyra-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
+  'lyra-node-enter': CustomEvent<{ id: string }>;
+  'lyra-node-leave': CustomEvent<{ id: string }>;
+  'lyra-link-enter': CustomEvent<{ source: string; target: string; id?: string }>;
+  'lyra-link-leave': CustomEvent<{ source: string; target: string; id?: string }>;
 }
 /**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -142,6 +146,15 @@ export interface LyraGraphEventMap {
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
  * @event lyra-link-click - `detail: { source, target, id? }`.
+ * @event lyra-node-enter - A node was hovered. `detail: { id }`. Suppressed while dragging or
+ *   panning. Also toggles a `data-hovered` attribute on that node's `[part="node"]` element for
+ *   pure-CSS theming (not a substitute for this event — a consumer computing its own
+ *   adjacency-based highlight needs the id, which only the event carries).
+ * @event lyra-node-leave - The hover from `lyra-node-enter` ended. `detail: { id }`.
+ * @event lyra-link-enter - A link was hovered. `detail: { source, target, id? }`. Same
+ *   suppression/`data-hovered` behavior as `lyra-node-enter`.
+ * @event lyra-link-leave - The hover from `lyra-link-enter` ended. `detail: { source, target, id?
+ *   }`.
  * @csspart base - The graph wrapper.
  * @csspart svg - The graph SVG.
  * @csspart node - A graph node.
@@ -307,6 +320,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.applyInteractions(changed);
   }
 
+  /** Suppresses hover events/`data-hovered` while a node drag is in progress (tracked from the
+   *  existing d3-drag `.on('start')`/`.on('end')` handlers in `applyInteractions()`) — a drag
+   *  crossing over other nodes/links would otherwise spam enter/leave pairs unrelated to genuine
+   *  pointer hovering. */
+  private isDragging = false;
+  /** Same purpose as `isDragging`, for d3-zoom pan/zoom gestures (tracked from `applyInteractions()`'s
+   *  zoom `.on('start')`/`.on('end')` handlers, added by this same change). */
+  private isPanning = false;
+
   /**
    * Imperatively wires up d3-zoom (pan/zoom on the `<svg>`) and d3-drag
    * (per-node drag) against the just-rendered DOM. The zoom bind itself is a
@@ -338,8 +360,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomBehavior = this.d3
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([this.minZoom, this.maxZoom])
+        .on('start', () => {
+          this.isPanning = true;
+        })
         .on('zoom', (event: OptionalPeerApi) => {
           this.gEl?.setAttribute('transform', event.transform.toString());
+        })
+        .on('end', () => {
+          this.isPanning = false;
         });
       this.d3.select(svgEl).call(this.zoomBehavior);
     } else if (this.zoomBehavior && (changed.has('minZoom') || changed.has('maxZoom'))) {
@@ -367,6 +395,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.d3!.select<Element, SimNode>(el).call(
         this.d3!.drag<Element, SimNode>()
           .on('start', (event: OptionalPeerApi) => {
+            this.isDragging = true;
             // Keep a node drag from also triggering the svg's own pan gesture.
             (event.sourceEvent as Event | undefined)?.stopPropagation();
             if (!event.active) this.simulation?.alphaTarget(0.3).restart();
@@ -378,6 +407,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             n.fy = event.y;
           })
           .on('end', (event: OptionalPeerApi) => {
+            this.isDragging = false;
             if (!event.active) this.simulation?.alphaTarget(0);
             n.fx = null;
             n.fy = null;
@@ -545,6 +575,34 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
     const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
     this.emit('lyra-link-click', { source, target, ...(link.id ? { id: link.id } : {}) });
+  }
+
+  private onNodeEnter(node: SimNode, e: MouseEvent): void {
+    if (this.isDragging || this.isPanning) return;
+    (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
+    this.emit('lyra-node-enter', { id: node.id });
+  }
+
+  private onNodeLeave(node: SimNode, e: MouseEvent): void {
+    if (this.isDragging || this.isPanning) return;
+    (e.currentTarget as SVGElement).removeAttribute('data-hovered');
+    this.emit('lyra-node-leave', { id: node.id });
+  }
+
+  private onLinkEnter(link: SimLink, e: MouseEvent): void {
+    if (this.isDragging || this.isPanning) return;
+    (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
+    const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
+    const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
+    this.emit('lyra-link-enter', { source, target, ...(link.id ? { id: link.id } : {}) });
+  }
+
+  private onLinkLeave(link: SimLink, e: MouseEvent): void {
+    if (this.isDragging || this.isPanning) return;
+    (e.currentTarget as SVGElement).removeAttribute('data-hovered');
+    const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
+    const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
+    this.emit('lyra-link-leave', { source, target, ...(link.id ? { id: link.id } : {}) });
   }
 
   private nodeAccessibleText(node: GraphNode): string {
@@ -725,6 +783,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 @click=${() => this.onLinkClick(l)}
                 @focus=${() => this.onGraphItemFocus(itemIndex)}
                 @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
+                @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
+                @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
               >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>`;
             })}
             ${this.danglingLinks.map((l) => {
@@ -738,6 +798,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 y1=${source.y ?? 0}
                 x2=${target.x ?? 0}
                 y2=${target.y ?? 0}
+                @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
+                @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
               ></line>`;
             })}
             ${this.simNodes.map((n, nodeIndex) => {
@@ -756,6 +818,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   @click=${() => this.onNodeClick(n)}
                   @focus=${() => this.onGraphItemFocus(itemIndex)}
                   @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
+                  @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
+                  @mouseleave=${(e: MouseEvent) => this.onNodeLeave(n, e)}
                 >${n.description ? svg`<title>${n.description}</title>` : nothing}</circle>
                 ${n.label
                   ? svg`<text part="label" aria-hidden="true" x=${(n.x ?? 0) + this.nodeRadius(n) + 2} y=${n.y ?? 0}>${n.label}</text>`
