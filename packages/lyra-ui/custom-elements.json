@@ -8267,7 +8267,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control.",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control. `'quiet'` is a bordered, transparent-until-hover tier for a\ntoolbar-style icon+label action — its border/text read fixed `--lyra-color-border`/`--lyra-color-text-quiet`\ntokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays\nvisually muted at rest.",
               "attribute": "appearance",
               "reflects": true
             },
@@ -8675,7 +8675,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control.",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control. `'quiet'` is a bordered, transparent-until-hover tier for a\ntoolbar-style icon+label action — its border/text read fixed `--lyra-color-border`/`--lyra-color-text-quiet`\ntokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays\nvisually muted at rest.",
               "fieldName": "appearance"
             },
             {
@@ -20030,7 +20030,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM\nrendering with zero peer dependencies (unlike `lyra-chart`, which wraps\n`chart.js`). For a project whose architecture forbids a charting\ndependency outright, this covers the common bar/line case: grouped or\nstacked bars, multi-series lines, per-point click, and hover tooltips\n(native SVG `<title>`, no positioning JS needed) — not a full `lyra-chart`\nreplacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no\nhorizontal/dual-y-axis, no raw-config passthrough).\n\nBecause this renders real DOM (not canvas), it reuses `lyra-chart`'s\n`--lyra-chart-*` theme tokens directly via CSS `var()` — no\n`getComputedStyle()`-based re-theming step is needed the way `chart.ts`\nneeds one for its canvas.\n\nBy default (`layout=\"fit\"`) the plot always squeezes to the measured host\nwidth. Three independent, opt-in escape hatches for dense/aligned data:\n`layout=\"scroll\"` (+ `barWidth`) gives every bar a fixed pixel width and\nlets the plot overflow the host horizontally (scrollable) instead of\nsqueezing; `maxLabels` decimates which x-axis text labels render (bars\nalways still render) once there are more categories than that; and\n`barX` lets a consumer hand in its own per-category x-coordinate function\n— e.g. to pixel-align this chart's bars with a sibling `lyra-heatmap`'s\ncalendar columns — overriding the internal slot math for both bars and\ntheir labels. All three are additive and no-ops when left unset.\n\nSeven further additive, opt-in properties: `pointText` overrides the\nper-bar/per-point `<title>`/`aria-label` tooltip text (mirrors\n`lyra-heatmap`'s `cellText` hook), falling back to the built-in raw-value\ntemplate when unset; `roundedBars` draws bars as a rounded-top path\ninstead of a square-cornered rect; `skipZero` omits a bar entirely (not\njust zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`\noverride the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`\n(`type=\"bar\"` only) switches the bar-height mapping from the default\nlinear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`\ncompression (mirroring `lyra-heatmap`'s matrix-mode `sqrt` scale) so a\nskewed dataset's smaller bars don't get washed out by one dominant value\n— gridlines/tick labels stay on the linear domain regardless, only the bar\nmarks' own height changes, and `type=\"line\"` ignores `scale` entirely; and\n`hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether\n(x-axis category labels, rendered separately, are unaffected).",
+          "description": "`<lyra-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM\nrendering with zero peer dependencies (unlike `lyra-chart`, which wraps\n`chart.js`). For a project whose architecture forbids a charting\ndependency outright, this covers the common bar/line case: grouped or\nstacked bars, multi-series lines, per-point click, and hover tooltips\n(native SVG `<title>`, no positioning JS needed) — not a full `lyra-chart`\nreplacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no\nhorizontal/dual-y-axis, no raw-config passthrough).\n\nBecause this renders real DOM (not canvas), it reuses `lyra-chart`'s\n`--lyra-chart-*` theme tokens directly via CSS `var()` — no\n`getComputedStyle()`-based re-theming step is needed the way `chart.ts`\nneeds one for its canvas.\n\nBy default (`layout=\"fit\"`) the plot always squeezes to the measured host\nwidth. Three independent, opt-in escape hatches for dense/aligned data:\n`layout=\"scroll\"` (+ `barWidth`) gives every bar a fixed pixel width and\nlets the plot overflow the host horizontally (scrollable) instead of\nsqueezing; `maxLabels` decimates which x-axis text labels render (bars\nalways still render) once there are more categories than that; and\n`barX` lets a consumer hand in its own per-category x-coordinate function\n— e.g. to pixel-align this chart's bars with a sibling `lyra-heatmap`'s\ncalendar columns — overriding the internal slot math for both bars and\ntheir labels. All three are additive and no-ops when left unset.\n\nSeven further additive, opt-in properties: `pointText` overrides the\nper-bar/per-point `<title>`/`aria-label` tooltip text (mirrors\n`lyra-heatmap`'s `cellText` hook), falling back to the built-in raw-value\ntemplate when unset; `roundedBars` draws bars as a rounded-top path\ninstead of a square-cornered rect; `skipZero` omits a bar entirely (not\njust zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`\noverride the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`\n(`type=\"bar\"` only) switches the bar-height mapping from the default\nlinear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`\ncompression (mirroring `lyra-heatmap`'s matrix-mode `sqrt` scale) so a\nskewed dataset's smaller bars don't get washed out by one dominant value\n— gridlines/tick labels stay on the linear domain regardless, only the bar\nmarks' own height changes, and `type=\"line\"` ignores `scale` entirely; and\n`hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether\n(x-axis category labels, rendered separately, are unaffected). An eighth,\n`legendText`, appends a formatter-supplied string after each series' label in the\nbuilt-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same\nfallback-to-unchanged convention as every other hook here;",
           "name": "LyraLiteChart",
           "cssProperties": [
             {
@@ -20075,6 +20075,10 @@
             {
               "description": "Each legend entry's color swatch.",
               "name": "legend-swatch"
+            },
+            {
+              "description": "Extra per-item text after the series label, rendered only when `legendText` is set.",
+              "name": "legend-text"
             },
             {
               "description": "Each series' stroked line path (type=\"line\").",
@@ -20239,6 +20243,14 @@
               },
               "default": "false",
               "attribute": "legend"
+            },
+            {
+              "kind": "field",
+              "name": "legendText",
+              "type": {
+                "text": "(label: string, datasetIndex: number) => string | undefined"
+              },
+              "description": "Formats extra per-item text appended after a series' label in the built-in legend row (e.g. a\nvalue or percentage share) — receives the series label and its dataset index. Falls back to\nrendering the label alone when unset (today's exact legend output), mirroring `pointText`'s and\n`tickFormat`'s existing opt-in-hook convention. Has no effect while `legend` is `false`."
             },
             {
               "kind": "field",
@@ -27200,7 +27212,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lyra-chat-message>` — a role-based message bubble *shell* for a chat/\nagent conversation surface. It renders none of the message content itself:\nthe default slot carries whatever a consumer wants to display (plain\ntext, a `<lyra-markdown>`, a custom template, anything at all) and this\ncomponent only supplies the surrounding chrome — alignment/coloring by\n`role`, an avatar/badges header row, an optional collapse toggle, an\nattachments strip, and a status-aware footer (a live-updating status dot +\ntext, the formatted `timestamp`, a built-in retry affordance for\n`status=\"failed\"`, and an `actions` slot for everything else).\n\nNo built-in copy button is rendered. Deciding what \"the copyable text\" of\nan arbitrary slotted message even means (plain text? the rendered\nmarkdown source? something else?) is exactly the kind of content\ninterpretation this shell deliberately stays out of — slot a copy control\ninto `actions` instead. Firing `lyra-copy` (`detail: { text }`) from that\ncontrol keeps the event name consistent with `<lyra-json-viewer>`'s own\ncopy affordance, for anything listening at the conversation-surface level.\n\nAccessibility of `status`: the current status is always available as\nplain visible text (`[part=\"status-text\"]`), never color alone. A\ntransition *to* `\"failed\"`, or *from* `\"streaming\"` to `\"sent\"` (a stream\nfinishing), is additionally announced through an internal\n`<lyra-live-region>` (see that component's header for the throttled-\nannouncement wiring this composes) so a screen-reader user who isn't\ncurrently focused on this message still learns about it. This differs\nfrom `<lyra-typing-indicator>`'s deliberately simpler `role=\"status\"`\napproach — that component only ever has one thing to announce (its own\nmount); this one has a `status` that can flip between several values\nacross a single element's lifetime, which is exactly the coalescing job\n`<lyra-live-region>` exists for.\n\n`role` is a message-author role (`user`/`assistant`/`system`, matching\nthe vocabulary of every chat/completion API), *not* a WAI-ARIA role, so\nit reflects to a `data-role` attribute rather than the bare `role`\nattribute — `role=\"user\"` would collide with `Element`'s own ARIA `role`\naccessor and is not a valid ARIA role token to begin with.",
+          "description": "`<lyra-chat-message>` — a role-based message bubble *shell* for a chat/\nagent conversation surface. It renders none of the message content itself:\nthe default slot carries whatever a consumer wants to display (plain\ntext, a `<lyra-markdown>`, a custom template, anything at all) and this\ncomponent only supplies the surrounding chrome — alignment/coloring by\n`role`, an avatar/badges header row, an optional collapse toggle, an\nattachments strip, and a status-aware footer (a live-updating status dot +\ntext, the formatted `timestamp`, a built-in retry affordance for\n`status=\"failed\"`, and an `actions` slot for everything else).\n\nNo built-in copy button is rendered. Deciding what \"the copyable text\" of\nan arbitrary slotted message even means (plain text? the rendered\nmarkdown source? something else?) is exactly the kind of content\ninterpretation this shell deliberately stays out of — slot a copy control\ninto `actions` instead. Firing `lyra-copy` (`detail: { text }`) from that\ncontrol keeps the event name consistent with `<lyra-json-viewer>`'s own\ncopy affordance, for anything listening at the conversation-surface level.\n\nAccessibility of `status`: the current status is always available as\nplain visible text (`[part=\"status-text\"]`), never color alone. A\ntransition *to* `\"failed\"`, or *from* `\"streaming\"` to `\"sent\"` (a stream\nfinishing), is additionally announced through an internal\n`<lyra-live-region>` (see that component's header for the throttled-\nannouncement wiring this composes) so a screen-reader user who isn't\ncurrently focused on this message still learns about it. This differs\nfrom `<lyra-typing-indicator>`'s deliberately simpler `role=\"status\"`\napproach — that component only ever has one thing to announce (its own\nmount); this one has a `status` that can flip between several values\nacross a single element's lifetime, which is exactly the coalescing job\n`<lyra-live-region>` exists for.\n\n`role` is a message-author role (`user`/`assistant`/`system`, matching\nthe vocabulary of every chat/completion API), *not* a WAI-ARIA role, so\nit reflects to a `data-role` attribute rather than the bare `role`\nattribute — `role=\"user\"` would collide with `Element`'s own ARIA `role`\naccessor and is not a valid ARIA role token to begin with.\n\n`actionsOutsideBubble` allows the `actions` slot to render as a sibling\nimmediately after the message bubble instead of nested inside the footer —\nuseful for consumers whose action row (e.g., a hover-reveal copy button)\nmust sit visually outside the bubble's chrome.",
           "name": "LyraChatMessage",
           "cssProperties": [
             {
@@ -27216,7 +27228,7 @@
           ],
           "cssParts": [
             {
-              "description": "The wrapper around the `actions` slot.",
+              "description": "The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsOutsideBubble` is set.",
               "name": "actions"
             },
             {
@@ -27299,6 +27311,17 @@
               },
               "privacy": "private",
               "default": "'sent'"
+            },
+            {
+              "kind": "field",
+              "name": "actionsOutsideBubble",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders the `actions` slot's content as a sibling immediately after `[part=\"bubble\"]` instead of\nnested inside `[part=\"footer\"]`'s own padding/background box — for a consumer whose action row\n(e.g. a hover-reveal copy button) must sit visually outside the bubble's chrome. `false` (the\ndefault) keeps today's exact DOM: actions render inside the footer, inside the bubble.",
+              "attribute": "actions-outside-bubble",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -27829,6 +27852,15 @@
             }
           ],
           "attributes": [
+            {
+              "name": "actions-outside-bubble",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders the `actions` slot's content as a sibling immediately after `[part=\"bubble\"]` instead of\nnested inside `[part=\"footer\"]`'s own padding/background box — for a consumer whose action row\n(e.g. a hover-reveal copy button) must sit visually outside the bubble's chrome. `false` (the\ndefault) keeps today's exact DOM: actions render inside the footer, inside the bubble.",
+              "fieldName": "actionsOutsideBubble"
+            },
             {
               "name": "attachments-position",
               "type": {
