@@ -73,8 +73,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Pinned to an exact version (OSSF Scorecard's Pinned-Dependencies check flags floating tags
+      # like `npm@latest`) -- bump manually when a newer npm CLI is needed; Dependabot can't track
+      # a version embedded in this inline command.
       - name: Update npm CLI (trusted publishing needs >=11.5.1)
-        run: npm i -g npm@latest
+        run: npm i -g npm@12.0.1
 
       - name: Build package
         run: pnpm --filter "${{ steps.pkg.outputs.name }}" run build
