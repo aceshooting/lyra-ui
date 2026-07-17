@@ -552,7 +552,10 @@ export type LyraMessageKey =
   | 'imageViewerAnnotationHint'
   | 'imageViewerAnnotationBoxPosition'
   | 'imageViewerAnnotationAdded'
-  | 'imageViewerAnnotationCancelled';
+  | 'imageViewerAnnotationCancelled'
+  | 'transcriptFeedLabel'
+  | 'transcriptFeedEmpty'
+  | 'transcriptFeedInterim';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1106,6 +1109,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   imageViewerAnnotationBoxPosition: 'Region at {x} percent, {y} percent, {width} by {height} percent.',
   imageViewerAnnotationAdded: 'Region added.',
   imageViewerAnnotationCancelled: 'Region cancelled.',
+  transcriptFeedLabel: 'Transcript',
+  transcriptFeedEmpty: 'No transcript yet',
+  transcriptFeedInterim: 'Transcribing…',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
