@@ -13,6 +13,10 @@ export interface SwatchOption {
   color: string;
   /** The swatch's accessible name; also used as its native `title` tooltip. */
   label: string;
+  /** Optional custom shape rendered in place of the plain filled circle -- e.g. a gem or other
+   *  brand-specific glyph. A `currentColor`-based SVG (fill or stroke) picks up `color` automatically
+   *  via the swatch's `color` CSS property, matching `<lyra-segmented>`'s `SegmentedItem.icon` field. */
+  icon?: unknown;
 }
 
 export interface LyraSwatchPickerEventMap {
@@ -33,8 +37,18 @@ export interface LyraSwatchPickerEventMap {
  * @csspart base - The `role="radiogroup"` root.
  * @csspart swatch - A single `role="radio"` color swatch; the selected one is
  *   `[part='swatch'][aria-checked='true']`.
+ * @csspart swatch-icon - Optional custom shape supplied by the option's `icon` field; when present it
+ *   replaces the plain filled circle and the swatch renders unfilled/unbordered behind it.
  * @cssprop [--lyra-swatch-picker-selected-color=var(--lyra-color-brand)] - Ring color drawn around
  *   the selected swatch, themeable independently of the focus ring and every other ring color.
+ * @cssprop [--lyra-swatch-picker-selected-blur=0px] - Blur radius of that same ring. 0 by default
+ *   (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead.
+ * @cssprop [--lyra-swatch-picker-shine-duration=0s] - Duration of a rhythmic brighten-and-settle
+ *   "shine" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every
+ *   existing consumer. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under
+ *   `prefers-reduced-motion: reduce`. Independent of `--lyra-swatch-picker-selected-blur` (a separate
+ *   `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works
+ *   identically for a plain color circle and an icon swatch alike.
  */
 export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -119,7 +133,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             tabindex=${index === tabbableIndex ? '0' : '-1'}
             style=${styleMap({ '--lyra-swatch-color': option.color })}
             @click=${() => this.select(option)}
-          ></button>`,
+          >${option.icon ? html`<span part="swatch-icon" aria-hidden="true">${option.icon}</span>` : nothing}</button>`,
         )}
       </div>
     `;

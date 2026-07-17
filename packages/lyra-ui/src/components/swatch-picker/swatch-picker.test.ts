@@ -129,10 +129,50 @@ describe('lyra-swatch-picker', () => {
     ).to.equal('Forwarded');
   });
 
+  it('renders a custom icon in place of the plain circle when the option provides one', async () => {
+    const withIcon = [
+      { value: 'blue', color: '#0969da', label: 'Blue' },
+      { value: 'green', color: '#1a7f37', label: 'Green', icon: html`<svg data-testid="gem-icon"></svg>` },
+    ];
+    const el = (await fixture(
+      html`<lyra-swatch-picker .options=${withIcon} value="blue"></lyra-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    const buttons = swatches(el);
+    expect(buttons[0]!.querySelector('[part="swatch-icon"]')).to.equal(null);
+    const iconSpan = buttons[1]!.querySelector('[part="swatch-icon"]');
+    expect(iconSpan).to.not.equal(null);
+    expect(iconSpan!.getAttribute('aria-hidden')).to.equal('true');
+    expect(iconSpan!.querySelector('[data-testid="gem-icon"]')).to.not.equal(null);
+    // Still wired for currentColor: the option's color stays on the custom property the icon inherits.
+    expect(buttons[1]!.style.getPropertyValue('--lyra-swatch-color')).to.equal('#1a7f37');
+  });
+
+  it('exposes the swatch color through `color` for currentColor icons, and suppresses fill/border when an icon is present', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('color: var(--lyra-swatch-color); cursor: pointer;');
+    expect(css).to.include("[part='swatch']:has([part='swatch-icon']) { background-color: transparent");
+  });
+
   it('draws the selected ring through the --lyra-swatch-picker-selected-color token', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(
       /\[part='swatch'\]\[aria-checked='true'\]\s*\{[^}]*var\(--lyra-swatch-picker-selected-color\)/,
+    );
+  });
+
+  it('defaults --lyra-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('--lyra-swatch-picker-shine-duration: 0s;');
+    expect(css).to.match(
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\{[^}]*animation:\s*lyra-swatch-picker-shine var\(--lyra-swatch-picker-shine-duration\)/,
+    );
+    expect(css).to.match(/@keyframes lyra-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/);
+  });
+
+  it('disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/,
     );
   });
 
