@@ -72,3 +72,55 @@ it('renders an empty strip (no cells, generic aria-label) when items is empty', 
   expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.a('string');
 });
+
+describe('hover tooltip', () => {
+  const labeledItems = [
+    { id: '1', category: 'text', label: 'Turn 1: text' },
+    { id: '2', category: 'tool', label: 'Turn 2: tool' },
+  ];
+
+  it('hides the tooltip until a cell is hovered', async () => {
+    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  });
+
+  it('shows the item label in the tooltip on pointerenter and hides it on pointerleave', async () => {
+    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelectorAll('[part="cell"]')[1] as HTMLElement;
+
+    cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hasAttribute('hidden')).to.be.false;
+    expect(tooltip.textContent!.trim()).to.equal('Turn 2: tool');
+
+    cell.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  });
+
+  it('falls back to the category label when the item has no label of its own', async () => {
+    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = items; // no per-item label set
+    el.categories = categories;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelectorAll('[part="cell"]')[0] as HTMLElement;
+    cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Text');
+  });
+
+  it('is accessible with items, categories, and markers set', async () => {
+    const el = (await fixture(html`<lyra-sequence-strip></lyra-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = items;
+    el.categories = categories;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

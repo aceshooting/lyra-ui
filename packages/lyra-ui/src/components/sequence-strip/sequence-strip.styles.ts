@@ -5,12 +5,11 @@ export const styles = css`
     display: block;
   }
   [part='base'] {
+    position: relative;
     display: flex;
     align-items: stretch;
     gap: var(--lyra-size-1px);
     block-size: var(--lyra-sequence-strip-height, var(--lyra-size-1-5rem));
-    border-radius: var(--lyra-radius-xs);
-    overflow: hidden;
   }
   [part='cell'] {
     position: relative;
@@ -20,10 +19,38 @@ export const styles = css`
     align-items: flex-end;
     justify-content: center;
   }
+  /* Round the strip's own outer ends via the first/last cell, not overflow:hidden on [part='base'] --
+     that would clip [part='tooltip'], which is deliberately positioned outside the base's own box. */
+  [part='cell']:first-child {
+    border-start-start-radius: var(--lyra-radius-xs);
+    border-end-start-radius: var(--lyra-radius-xs);
+  }
+  [part='cell']:last-child {
+    border-start-end-radius: var(--lyra-radius-xs);
+    border-end-end-radius: var(--lyra-radius-xs);
+  }
   [part='marker'] {
     display: block;
     inline-size: 100%;
     block-size: var(--lyra-size-2px);
     background: var(--lyra-sequence-strip-marker-color, var(--lyra-color-text));
+  }
+  [part='tooltip'] {
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline-start: 50%;
+    transform: translate(-50%, calc(-1 * var(--lyra-size-6px)));
+    padding: var(--lyra-size-2px) var(--lyra-size-6px);
+    border-radius: var(--lyra-radius);
+    background: var(--lyra-color-surface);
+    color: var(--lyra-color-text);
+    font-size: var(--lyra-font-size-xs);
+    white-space: nowrap;
+    box-shadow: var(--lyra-shadow);
+    pointer-events: none;
+    z-index: var(--lyra-layer-content);
+  }
+  [part='tooltip'][hidden] {
+    display: none;
   }
 `;

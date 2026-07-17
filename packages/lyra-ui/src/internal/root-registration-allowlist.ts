@@ -123,6 +123,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-slider',
   'lyra-source-card',
   'lyra-source-list',
+  'lyra-sequence-strip',
   'lyra-sparkline',
   'lyra-spinner',
   'lyra-split',
