@@ -107,4 +107,8 @@ export const styles = css`
     border-radius: var(--lyra-size-2px);
     flex: 0 0 auto;
   }
+  [part='legend-text'] {
+    margin-inline-start: var(--lyra-space-2xs);
+    color: var(--lyra-chart-tick-color);
+  }
 `;

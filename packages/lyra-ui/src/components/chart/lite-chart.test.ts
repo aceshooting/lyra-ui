@@ -292,6 +292,30 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('renders the legend with just the label when legendText is unset (unchanged default)', async () => {
+  const el = await mount(html`<lyra-lite-chart
+    legend
+    type="bar"
+    .labels=${BAR_LABELS}
+    .datasets=${BAR_DATASETS}
+  ></lyra-lite-chart>`);
+  const items = [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')];
+  expect(items.map((i) => i.textContent!.trim())).to.deep.equal(['A', 'B']);
+  expect(el.shadowRoot!.querySelector('[part="legend-text"]')).to.not.exist;
+});
+
+it('appends legendText output next to each series label when set', async () => {
+  const el = await mount(html`<lyra-lite-chart
+    legend
+    type="bar"
+    .labels=${BAR_LABELS}
+    .datasets=${BAR_DATASETS}
+    .legendText=${(label: string, datasetIndex: number) => ` (${label}:${datasetIndex})`}
+  ></lyra-lite-chart>`);
+  const texts = [...el.shadowRoot!.querySelectorAll('[part="legend-text"]')].map((n) => n.textContent);
+  expect(texts).to.deep.equal([' (A:0)', ' (B:1)']);
+});
+
 it('uses tickFormat for y-axis labels when provided', async () => {
   const el = (await fixture(html`<lyra-lite-chart
     .labels=${['a', 'b']}

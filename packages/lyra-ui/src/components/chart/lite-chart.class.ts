@@ -138,7 +138,10 @@ export interface LyraLiteChartEventMap {
  * — gridlines/tick labels stay on the linear domain regardless, only the bar
  * marks' own height changes, and `type="line"` ignores `scale` entirely; and
  * `hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether
- * (x-axis category labels, rendered separately, are unaffected).
+ * (x-axis category labels, rendered separately, are unaffected). An eighth,
+ * `legendText`, appends a formatter-supplied string after each series' label in the
+ * built-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same
+ * fallback-to-unchanged convention as every other hook here;
  *
  * @customElement lyra-lite-chart
  * @event lyra-point-click - Fired when a bar/point is activated (click, or
@@ -155,6 +158,7 @@ export interface LyraLiteChartEventMap {
  * @csspart legend - The legend row, when `legend` is set.
  * @csspart legend-item - Each legend entry.
  * @csspart legend-swatch - Each legend entry's color swatch.
+ * @csspart legend-text - Extra per-item text after the series label, rendered only when `legendText` is set.
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden list of all plotted data points.
  * @cssprop [--lyra-lite-chart-selected-outline-color=var(--lyra-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
@@ -200,6 +204,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  label, the raw value, and the dataset index. Falls back to the built-in raw-value template
    *  when unset (mirrors `lyra-heatmap`'s `cellText` hook). */
   @property({ attribute: false }) pointText?: (label: string, value: number, datasetIndex: number) => string;
+  /** Formats extra per-item text appended after a series' label in the built-in legend row (e.g. a
+   *  value or percentage share) — receives the series label and its dataset index. Falls back to
+   *  rendering the label alone when unset (today's exact legend output), mirroring `pointText`'s and
+   *  `tickFormat`'s existing opt-in-hook convention. Has no effect while `legend` is `false`. */
+  @property({ attribute: false }) legendText?: (label: string, datasetIndex: number) => string;
   /** `type="bar"` only: draws each bar as a rounded-top-corner shape instead of the default
    *  square-cornered rect. Default `false` renders exactly today's plain `<rect>`. */
   @property({ type: Boolean, attribute: 'rounded-bars' }) roundedBars = false;
@@ -858,7 +867,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 (s, i) => html`
                   <span part="legend-item">
                     <span part="legend-swatch" style="background:${this.colorFor(i, s)}"></span>
-                    ${s.label}
+                    ${s.label}${this.legendText
+                      ? html`<span part="legend-text">${this.legendText(s.label, i)}</span>`
+                      : nothing}
                   </span>
                 `,
               )}
