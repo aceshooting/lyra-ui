@@ -12,6 +12,11 @@ export type LyraMessageKey =
   | 'sequenceStripCategoryCount'
   | 'noColumns'
   | 'loadMore'
+  | 'viewerSearchMatchCount'
+  | 'viewerSearchMatchCountPlural'
+  | 'viewerSearchNoMatches'
+  | 'viewerSearchActiveMatch'
+  | 'viewerHighlightLabel'
   | 'tableFilterLabel'
   | 'tableFilterPlaceholder'
   | 'tableLoading'
@@ -516,6 +521,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'No columns configured',
   loadMore: 'Load more',
+  viewerSearchMatchCount: '{count} match',
+  viewerSearchMatchCountPlural: '{count} matches',
+  viewerSearchNoMatches: 'No matches',
+  viewerSearchActiveMatch: 'Match {current} of {total}',
+  viewerHighlightLabel: 'Highlight',
   tableFilterLabel: 'Filter rows',
   tableFilterPlaceholder: 'Filter rows',
   tableLoading: 'Loading rows',
