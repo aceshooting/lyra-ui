@@ -35,6 +35,10 @@ export type LyraMessageKey =
   | 'lightboxLabel'
   | 'lightboxImagePosition'
   | 'scrollerLabel'
+  | 'chatViewportLabel'
+  | 'newMessageCount'
+  | 'newMessagesCount'
+  | 'newMessages'
   | 'scrollPrevious'
   | 'scrollNext'
   | 'showAllColumns'
@@ -630,6 +634,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   lightboxLabel: 'Image viewer',
   lightboxImagePosition: 'Image {index} of {total}',
   scrollerLabel: 'Scrollable content',
+  chatViewportLabel: 'Conversation',
+  newMessageCount: '{count} new message',
+  newMessagesCount: '{count} new messages',
+  newMessages: 'New messages',
   scrollPrevious: 'Scroll backward',
   scrollNext: 'Scroll forward',
   showAllColumns: 'Show all columns',

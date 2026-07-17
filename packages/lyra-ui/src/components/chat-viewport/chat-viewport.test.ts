@@ -1,0 +1,344 @@
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import './chat-viewport.js';
+import '../virtual-list/virtual-list.js';
+import type { LyraChatViewport } from './chat-viewport.js';
+import type { LyraVirtualList } from '../virtual-list/virtual-list.class.js';
+
+/** Waits two animation frames -- enough for this component's own rAF-coalesced growth tick (and,
+ *  when a slotted lyra-virtual-list is involved, its own rAF-coalesced scroll handler) to settle. */
+async function nextFrame(): Promise<void> {
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
+// Returns a real lit-html TemplateResult (not a plain HTML string) -- a plain string
+// interpolated via `${...}` in an `html` tagged template renders as escaped text, not parsed
+// markup, which would leave `el.children` empty and defeat every index-based assertion below.
+function row(text: string, heightPx = 40) {
+  return html`<div style="block-size:${heightPx}px;box-sizing:border-box;">${text}</div>`;
+}
+
+it('defaults to follow=true, bottomThreshold=24, unreadStartIndex=null', async () => {
+  const el = (await fixture(html`<lyra-chat-viewport></lyra-chat-viewport>`)) as LyraChatViewport;
+  expect(el.follow).to.be.true;
+  expect(el.bottomThreshold).to.equal(24);
+  expect(el.unreadStartIndex).to.equal(null);
+});
+
+it('is role="log" with aria-live="off" and tabindex="0", labeled by the default or a custom label', async () => {
+  const el = (await fixture(html`<lyra-chat-viewport></lyra-chat-viewport>`)) as LyraChatViewport;
+  const scroll = el.shadowRoot!.querySelector('[part="scroll"]')!;
+  expect(scroll.getAttribute('role')).to.equal('log');
+  expect(scroll.getAttribute('aria-live')).to.equal('off');
+  expect(scroll.getAttribute('tabindex')).to.equal('0');
+  expect(scroll.getAttribute('aria-label')).to.equal('Conversation');
+
+  const labeled = (await fixture(
+    html`<lyra-chat-viewport label="Support thread"></lyra-chat-viewport>`,
+  )) as LyraChatViewport;
+  expect(labeled.shadowRoot!.querySelector('[part="scroll"]')!.getAttribute('aria-label')).to.equal(
+    'Support thread',
+  );
+});
+
+describe('slotted mode -- follow/release/re-engage state machine', () => {
+  it('auto-scrolls to the end as content grows while following', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:120px" unread-start-index="0"
+        >${[1, 2, 3].map((n) => row(`m${n}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+    const before = scroll.scrollTop;
+
+    const extra = document.createElement('div');
+    extra.style.blockSize = '40px';
+    extra.textContent = 'm4';
+    el.appendChild(extra);
+    await nextFrame();
+    await nextFrame();
+
+    expect(scroll.scrollTop).to.be.greaterThan(before);
+    expect(scroll.scrollTop + scroll.clientHeight).to.be.closeTo(scroll.scrollHeight, 1);
+  });
+
+  it('releases follow on a user wheel scroll-up past bottomThreshold, and fires lyra-follow-change', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+    expect(scroll.scrollTop + scroll.clientHeight).to.be.closeTo(scroll.scrollHeight, 1);
+
+    const eventPromise = oneEvent(el, 'lyra-follow-change');
+    scroll.dispatchEvent(new WheelEvent('wheel', { bubbles: true, composed: true }));
+    scroll.scrollTop = 0;
+    scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+    const ev = await eventPromise;
+    expect(ev.detail).to.deep.equal({ following: false });
+    expect(el.follow).to.be.false;
+  });
+
+  it('does not release follow for a programmatic/layout-driven scroll with no preceding intent gesture', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+
+    let fired = false;
+    el.addEventListener('lyra-follow-change', () => (fired = true));
+    // A scroll event with no preceding wheel/touch/keydown/pointerdown intent gesture -- e.g. the
+    // component's own scrollTo() call settling, or a layout shift.
+    scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+    await nextFrame();
+    expect(fired).to.be.false;
+    expect(el.follow).to.be.true;
+  });
+
+  it('re-engages follow once scroll naturally reaches the bottom again', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+
+    scroll.dispatchEvent(new WheelEvent('wheel', { bubbles: true, composed: true }));
+    scroll.scrollTop = 0;
+    scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+    await nextFrame();
+    expect(el.follow).to.be.false;
+
+    const eventPromise = oneEvent(el, 'lyra-follow-change');
+    scroll.scrollTop = scroll.scrollHeight - scroll.clientHeight;
+    scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+    const ev = await eventPromise;
+    expect(ev.detail).to.deep.equal({ following: true });
+    expect(el.follow).to.be.true;
+  });
+
+  it('never fires lyra-follow-change for the initial mount state', async () => {
+    const el = (await fixture(html`<lyra-chat-viewport></lyra-chat-viewport>`)) as LyraChatViewport;
+    let fired = false;
+    el.addEventListener('lyra-follow-change', () => (fired = true));
+    await el.updateComplete;
+    await nextFrame();
+    expect(fired).to.be.false;
+  });
+});
+
+describe('scrollToBottom()', () => {
+  it('scrolls to the end and re-engages a released follow', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px" follow="false"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+    scroll.scrollTop = 0;
+
+    el.scrollToBottom({ behavior: 'auto' });
+    await nextFrame();
+    expect(el.follow).to.be.true;
+    expect(scroll.scrollTop + scroll.clientHeight).to.be.closeTo(scroll.scrollHeight, 1);
+  });
+
+  it('forces behavior "auto" under prefers-reduced-motion', async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as typeof window.matchMedia;
+    try {
+      const el = (await fixture(
+        html`<lyra-chat-viewport style="block-size:100px"
+          >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+        >`,
+      )) as LyraChatViewport;
+      await el.updateComplete;
+      await nextFrame();
+      const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+      scroll.scrollTop = 0;
+      el.scrollToBottom({ behavior: 'smooth' });
+      await nextFrame();
+      // Reduced motion forces an immediate jump rather than an animated scroll.
+      expect(scroll.scrollTop + scroll.clientHeight).to.be.closeTo(scroll.scrollHeight, 1);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+});
+
+describe('jump pill', () => {
+  it('is absent while following and appears once follow is released', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.shadowRoot!.querySelector('[part="jump-pill"]')).to.not.exist;
+
+    el.follow = false;
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]');
+    expect(pill).to.exist;
+  });
+
+  it('shows a pluralized unread count once unreadStartIndex yields a positive count', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px" unread-start-index="8"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]')!;
+    expect(pill.textContent).to.include('2'); // 10 total - 8 unread-start = 2 new
+  });
+
+  it('activating the pill calls scrollToBottom()', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="jump-pill"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.follow).to.be.true;
+  });
+});
+
+describe('unread divider (slotted mode)', () => {
+  it('positions the divider above the child at unreadStartIndex', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:200px" unread-start-index="2"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const divider = el.shadowRoot!.querySelector('[part="unread-divider"]') as HTMLElement;
+    expect(divider).to.exist;
+    expect(divider.getAttribute('role')).to.equal('separator');
+    expect(parseFloat(divider.style.top)).to.equal(80); // 2 rows * 40px
+  });
+
+  it('renders no divider when unreadStartIndex is null', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:200px"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    expect(el.shadowRoot!.querySelector('[part="unread-divider"]')).to.not.exist;
+  });
+
+  it('scrollToUnread scrolls to the divider and returns true; false when unreadStartIndex is null', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px" unread-start-index="8"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+    scroll.scrollTop = 0;
+
+    const result = el.scrollToUnread({ behavior: 'auto' });
+    await nextFrame();
+    expect(result).to.be.true;
+    expect(scroll.scrollTop).to.be.closeTo(320, 1); // 8 rows * 40px
+
+    const noUnread = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${row('only')}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    expect(noUnread.scrollToUnread()).to.be.false;
+  });
+});
+
+describe('virtual mode', () => {
+  function virtualFixtureMarkup(itemCount: number) {
+    return html`
+      <lyra-chat-viewport style="block-size:120px">
+        <lyra-virtual-list
+          style="--lyra-virtual-list-height:120px"
+          row-height="40"
+          .items=${Array.from({ length: itemCount }, (_, i) => i)}
+          .renderItem=${(item: unknown) => html`row ${item}`}
+          .keyFunction=${(item: unknown) => item as number}
+        ></lyra-virtual-list>
+      </lyra-chat-viewport>
+    `;
+  }
+
+  it('detects a single slotted lyra-virtual-list and defers scrolling to it', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lyra-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    el.follow = false;
+    await el.updateComplete;
+    base.scrollTop = 0;
+    base.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+
+    el.scrollToBottom({ behavior: 'auto' });
+    await nextFrame();
+    expect(base.scrollTop).to.be.greaterThan(0);
+  });
+
+  it('re-engages follow once the visible range reaches the last item', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lyra-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    base.dispatchEvent(new WheelEvent('wheel', { bubbles: true, composed: true }));
+    base.scrollTop = 0;
+    base.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    expect(el.follow).to.be.false;
+
+    const eventPromise = oneEvent(el, 'lyra-follow-change');
+    base.scrollTop = base.scrollHeight - base.clientHeight;
+    base.dispatchEvent(new Event('scroll'));
+    const ev = await eventPromise;
+    expect(ev.detail).to.deep.equal({ following: true });
+  });
+});
+
+it('is accessible in slotted mode with an unread divider and a released follow', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-viewport style="block-size:100px" unread-start-index="1" follow="false"
+      >${row('m0')}${row('m1')}${row('m2')}</lyra-chat-viewport
+    >`,
+  )) as LyraChatViewport;
+  el.follow = false;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
