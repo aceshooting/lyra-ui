@@ -652,7 +652,15 @@ export type LyraMessageKey =
   | 'notebookViewerErrorOutput'
   | 'notebookViewerShowAllOutput'
   | 'notebookViewerCollapseOutput'
-  | 'notebookViewerUnrenderedOutput';
+  | 'notebookViewerUnrenderedOutput'
+  | 'artifactPanelLabel'
+  | 'artifactPanelPreview'
+  | 'artifactPanelCode'
+  | 'artifactPanelPreviousVersion'
+  | 'artifactPanelNextVersion'
+  | 'artifactPanelVersionPosition'
+  | 'artifactPanelRestore'
+  | 'artifactPanelGenerating';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1306,6 +1314,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   notebookViewerShowAllOutput: 'Show all output',
   notebookViewerCollapseOutput: 'Collapse output',
   notebookViewerUnrenderedOutput: 'This output type cannot be displayed.',
+  artifactPanelLabel: 'Artifact',
+  artifactPanelPreview: 'Preview',
+  artifactPanelCode: 'Code',
+  artifactPanelPreviousVersion: 'Previous version',
+  artifactPanelNextVersion: 'Next version',
+  artifactPanelVersionPosition: 'Version {index} of {count}',
+  artifactPanelRestore: 'Restore this version',
+  artifactPanelGenerating: 'Generating…',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
