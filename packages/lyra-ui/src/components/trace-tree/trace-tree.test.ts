@@ -148,6 +148,15 @@ describe('lyra-trace-tree', () => {
     expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
   });
 
+  it('registers lyra-live-region and lyra-empty as a side effect of importing trace-tree.js (regression)', async () => {
+    // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
+    // does. A component that imports its dependencies via the .class.js path renders an
+    // un-upgraded, plain HTMLElement for them, silently breaking anything that calls a method on
+    // that dependency (e.g. announce()).
+    expect(customElements.get('lyra-live-region')).to.exist;
+    expect(customElements.get('lyra-empty')).to.exist;
+  });
+
   it('falls back to the built-in English label and honors a strings override', async () => {
     const el = (await fixture(html`<lyra-trace-tree></lyra-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
