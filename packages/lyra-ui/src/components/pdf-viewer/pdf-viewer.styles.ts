@@ -39,6 +39,10 @@ export const styles = css`
     transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1));
   }
   [part='text-layer'] ::selection { background: var(--lyra-color-brand-quiet); }
+  /* Kept text-transparent like every other text-layer run above -- only the highlighted background
+     should show, letting the canvas's own painted glyphs remain the visible text underneath. */
+  [part='text-layer'] mark[part~='search-match'] { background: var(--lyra-color-warning-quiet); color: transparent; border-radius: var(--lyra-radius-xs); }
+  [part='text-layer'] mark[part~='search-match-active'] { background: var(--lyra-color-warning); }
   .empty-note, [part='error'] { margin: 0; padding: var(--lyra-space-l); color: var(--lyra-color-text-quiet); font-size: var(--lyra-font-size-md-sm); text-align: center; }
   [part='error'] { color: var(--lyra-color-danger); }
   [part='spinner'] { display: flex; justify-content: center; padding: var(--lyra-space-l); }

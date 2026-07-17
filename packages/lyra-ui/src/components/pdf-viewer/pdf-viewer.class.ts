@@ -54,11 +54,56 @@ type PdfLoadState =
   | { kind: 'ready'; doc: PdfJsApi; pageCount: number }
   | { kind: 'error'; message: string };
 
+/** One entry of a PDF's table of contents, as returned by `getOutline()`. `page` is a 1-based page
+ *  number; it's omitted when the entry's destination couldn't be resolved to a page. */
+export interface PdfOutlineItem {
+  title: string;
+  page?: number;
+  children?: PdfOutlineItem[];
+}
+
+/** One `search()` match, in `getPageText()`'s own raw coordinate space -- what lets a match be
+ *  located back inside the real per-page text layer for painting. */
+interface PdfSearchMatch {
+  page: number;
+  start: number;
+  length: number;
+}
+
+/** Collapses whitespace runs to single spaces and lower-cases for case-insensitive search, while
+ *  keeping a normalized-index -> raw-index offset table so a match found in the normalized text can
+ *  be mapped back to a range in the original `getPageText()` output for painting. */
+function normalizeForSearch(raw: string): { text: string; rawOffsets: number[] } {
+  let text = '';
+  const rawOffsets: number[] = [];
+  let lastWasSpace = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]!;
+    if (/\s/.test(ch)) {
+      if (!lastWasSpace && text.length > 0) {
+        text += ' ';
+        rawOffsets.push(i);
+        lastWasSpace = true;
+      }
+      continue;
+    }
+    text += ch.toLowerCase();
+    rawOffsets.push(i);
+    lastWasSpace = false;
+  }
+  if (text.endsWith(' ')) {
+    text = text.slice(0, -1);
+    rawOffsets.pop();
+  }
+  return { text, rawOffsets };
+}
+
 export interface LyraPdfViewerEventMap extends LyraAnchorTargetEventMap {
   'lyra-render-error': CustomEvent<{ error: unknown }>;
   'lyra-page-change': CustomEvent<{ page: number; pageCount: number }>;
   'lyra-zoom-change': CustomEvent<{ zoom: number }>;
   'lyra-load': CustomEvent<{ pageCount: number }>;
+  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 
 class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
@@ -86,6 +131,9 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   anchor, rects }`.
  * @event lyra-anchor-result - Fired after an `anchor` (or `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
+ * @event lyra-search-change - Fired whenever the search query, match count, or active match index
+ *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
+ *   matchCount, activeIndex }`.
  * @csspart base - The root viewer container.
  * @csspart toolbar - Pagination and zoom controls.
  * @csspart page-indicator - The current page text.
@@ -93,6 +141,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart pages - The virtualized page list.
  * @csspart page - One rendered page wrapper.
  * @csspart text-layer - Selectable text positioned over a page canvas.
+ * @csspart search-match - A painted in-document search match.
+ * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
  * @cssprop [--lyra-pdf-viewer-height=var(--lyra-size-24rem)] - Block size of the virtualized page list.
@@ -134,6 +184,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private readonly highlightLayerRefs = new Map<number, (element: Element | undefined) => void>();
   private textSelectionCleanup?: () => void;
 
+  @state() private searchMatches: PdfSearchMatch[] = [];
+  @state() private searchActiveIndex = -1;
+  private searchQuery = '';
+  private searchGeneration = 0;
+
   protected willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('page')) this.page = this.clampPage(this.page);
@@ -141,6 +196,18 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (changed.has('zoom')) {
       this.zoom = clampZoom(this.zoom);
       for (const [pageNumber, canvas] of this.pageCanvases) void this.renderPage(pageNumber, canvas);
+    }
+    if (changed.has('src')) {
+      // Search match page/offset coordinates are only meaningful for the document they were found
+      // in -- silently reset (no event) rather than emit, mirroring how pageHighlightItems/
+      // pageTextCache reset without notifying either (see updated() below); the painted marks
+      // themselves are torn down for free along with the old page DOM as lyra-virtual-list
+      // re-renders with the new document. Reset here (not updated()) so re-assigning these @state()
+      // fields folds into this same update cycle instead of scheduling a follow-up one.
+      this.searchGeneration++;
+      this.searchQuery = '';
+      this.searchMatches = [];
+      this.searchActiveIndex = -1;
     }
   }
 
@@ -243,6 +310,40 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   previousPage(): void { this.scrollDrivenPage = false; this.setPage(this.page - 1); }
   zoomIn(): void { this.setZoom(this.zoom + ZOOM_STEP); }
   zoomOut(): void { this.setZoom(this.zoom - ZOOM_STEP); }
+
+  /** Sets `page` and resolves once the target page's canvas has actually mounted inside the
+   *  virtualized list (bounded by a timeout, so a page that somehow never mounts can't hang this
+   *  promise forever). Resolves `false` without changing `page` for an out-of-range value. */
+  async goToPage(page: number): Promise<boolean> {
+    if (this.loadState.kind !== 'ready') return false;
+    if (!Number.isInteger(page) || page < 1 || page > this.loadState.pageCount) return false;
+    if (page === this.page && this.pageCanvases.has(page)) return true;
+    this.scrollDrivenPage = false;
+    this.page = page;
+    await this.updateComplete;
+    await this.waitForPageMount(page);
+    return true;
+  }
+
+  private waitForPageMount(page: number): Promise<void> {
+    if (this.pageCanvases.has(page)) return Promise.resolve();
+    const list = this.shadowRoot?.querySelector('lyra-virtual-list');
+    if (!list) return Promise.resolve();
+    return new Promise((resolve) => {
+      const onRange = (): void => {
+        if (this.pageCanvases.has(page)) {
+          list.removeEventListener('lyra-visible-range-changed', onRange as EventListener);
+          clearTimeout(timeoutId);
+          resolve();
+        }
+      };
+      list.addEventListener('lyra-visible-range-changed', onRange as EventListener);
+      const timeoutId = setTimeout(() => {
+        list.removeEventListener('lyra-visible-range-changed', onRange as EventListener);
+        resolve();
+      }, 500);
+    });
+  }
 
   private setPage(value: number): void {
     const next = this.clampPage(value);
@@ -536,6 +637,203 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
+  // -- outline ---------------------------------------------------------------------------------------
+
+  /** Maps pdf.js's own `getOutline()` tree to `PdfOutlineItem[]`, resolving each entry's
+   *  destination to a 1-based page number best-effort -- an unresolvable destination keeps its
+   *  `title`/`children` with `page` omitted rather than dropping the entry. `[]` for a document with
+   *  no outline or before one is loaded. */
+  async getOutline(): Promise<PdfOutlineItem[]> {
+    if (this.loadState.kind !== 'ready') return [];
+    const doc = this.loadState.doc;
+    if (!doc.getOutline) return [];
+    const raw = await doc.getOutline();
+    if (!raw) return [];
+    return Promise.all((raw as PdfJsApi[]).map((item) => this.mapOutlineItem(doc, item)));
+  }
+
+  private async mapOutlineItem(doc: PdfJsApi, item: PdfJsApi): Promise<PdfOutlineItem> {
+    const page = await this.resolveOutlineDestPage(doc, item.dest);
+    const rawChildren = (item.items ?? []) as PdfJsApi[];
+    const children =
+      rawChildren.length > 0 ? await Promise.all(rawChildren.map((child) => this.mapOutlineItem(doc, child))) : undefined;
+    return {
+      title: String(item.title ?? ''),
+      ...(page !== undefined ? { page } : {}),
+      ...(children ? { children } : {}),
+    };
+  }
+
+  private async resolveOutlineDestPage(doc: PdfJsApi, dest: unknown): Promise<number | undefined> {
+    if (!dest) return undefined;
+    try {
+      const explicitDest = typeof dest === 'string' ? await doc.getDestination(dest) : dest;
+      const ref = Array.isArray(explicitDest) ? explicitDest[0] : undefined;
+      if (!ref) return undefined;
+      const pageIndex = await doc.getPageIndex(ref);
+      return typeof pageIndex === 'number' ? pageIndex + 1 : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  // -- search ----------------------------------------------------------------------------------------
+
+  /** Case-insensitive substring search over every page's text (via `getPageText()`). Matches are
+   *  stored in `getPageText()`'s own raw coordinate space via a normalized/raw offset table (see
+   *  `normalizeForSearch()`), never touching `highlights` -- painting is a self-contained overlay
+   *  scoped to search only (see `paintSearchMatches()`). An empty/whitespace-only query behaves like
+   *  `clearSearch()` and resolves `0`. */
+  async search(query: string): Promise<number> {
+    const generation = ++this.searchGeneration;
+    this.searchQuery = query;
+    this.clearSearchPaint();
+    if (this.loadState.kind !== 'ready' || !query.trim()) {
+      this.searchMatches = [];
+      this.searchActiveIndex = -1;
+      this.emitSearchChange();
+      return 0;
+    }
+    const { pageCount } = this.loadState;
+    const normalizedQuery = query.trim().toLowerCase();
+    const matches: PdfSearchMatch[] = [];
+    for (let page = 1; page <= pageCount; page++) {
+      if (generation !== this.searchGeneration) return this.searchMatches.length;
+      let raw: string;
+      try {
+        raw = await this.getPageText(page);
+      } catch {
+        continue;
+      }
+      const { text, rawOffsets } = normalizeForSearch(raw);
+      let from = 0;
+      let idx: number;
+      while ((idx = text.indexOf(normalizedQuery, from)) !== -1) {
+        const rawStart = rawOffsets[idx] ?? 0;
+        const rawEndExclusive = (rawOffsets[idx + normalizedQuery.length - 1] ?? rawStart) + 1;
+        matches.push({ page, start: rawStart, length: rawEndExclusive - rawStart });
+        from = idx + Math.max(1, normalizedQuery.length);
+      }
+    }
+    if (generation !== this.searchGeneration) return this.searchMatches.length;
+    this.searchMatches = matches;
+    this.searchActiveIndex = matches.length > 0 ? 0 : -1;
+    this.emitSearchChange();
+    if (this.searchActiveIndex >= 0) await this.focusSearchMatch(this.searchActiveIndex);
+    return matches.length;
+  }
+
+  /** Advances to the next match, wrapping to the first after the last. Resolves `false` (no-op)
+   *  when there are no matches. */
+  async searchNext(): Promise<boolean> {
+    if (this.searchMatches.length === 0) return false;
+    this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
+    this.emitSearchChange();
+    await this.focusSearchMatch(this.searchActiveIndex);
+    return true;
+  }
+
+  /** Moves to the previous match, wrapping to the last before the first. Resolves `false` (no-op)
+   *  when there are no matches. */
+  async searchPrevious(): Promise<boolean> {
+    if (this.searchMatches.length === 0) return false;
+    this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.emitSearchChange();
+    await this.focusSearchMatch(this.searchActiveIndex);
+    return true;
+  }
+
+  /** Clears the query, matches, and any painted marks, and resets `lyra-search-change` to a
+   *  0-match/no-active-index state. */
+  clearSearch(): void {
+    this.searchGeneration++;
+    this.searchQuery = '';
+    this.searchMatches = [];
+    this.searchActiveIndex = -1;
+    this.clearSearchPaint();
+    this.emit('lyra-search-change', { query: '', matchCount: 0, activeIndex: -1 });
+  }
+
+  private emitSearchChange(): void {
+    this.emit('lyra-search-change', {
+      query: this.searchQuery,
+      matchCount: this.searchMatches.length,
+      activeIndex: this.searchActiveIndex,
+    });
+  }
+
+  private async focusSearchMatch(index: number): Promise<void> {
+    const match = this.searchMatches[index];
+    if (!match) return;
+    await this.goToPage(match.page);
+    // Wait for an in-flight text-layer render for the target page, if any, so the very first paint
+    // attempt lands on real content instead of an empty container -- the renderTextLayer() hook below
+    // re-paints anyway once ready, but this avoids a needless empty-container round-trip.
+    await this.textLayerReadyPromises.get(match.page);
+    this.paintSearchMatches(match.page);
+  }
+
+  /** Unwraps every painted `<mark part="search-match">` back into plain text, across every mounted
+   *  page's text-layer container (or just `container` when given, for a single-page repaint). */
+  private clearSearchPaint(container?: HTMLElement): void {
+    const containers = container ? [container] : Array.from(this.textLayerContainers.values());
+    for (const target of containers) {
+      target.querySelectorAll('mark[part~="search-match"]').forEach((mark) => {
+        const parent = mark.parentNode;
+        if (!parent) return;
+        while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+        parent.removeChild(mark);
+        parent.normalize();
+      });
+    }
+  }
+
+  /** Walks the given page's mounted text-layer container in the same order `getPageText()` reads
+   *  it (raw text-node concatenation) and wraps each search match's raw-offset range in a
+   *  `<mark part="search-match">` (`search-match-active` added for the current match). A page whose
+   *  text layer hasn't mounted yet (out of the virtualized render window) is silently skipped --
+   *  painting resumes the next time that page's text layer finishes rendering, via the hook in
+   *  `renderTextLayer()`. */
+  private paintSearchMatches(page: number): void {
+    const container = this.textLayerContainers.get(page);
+    if (!container) return;
+    this.clearSearchPaint(container);
+    const pageMatches = this.searchMatches
+      .map((match, matchIndex) => ({ ...match, matchIndex }))
+      .filter((match) => match.page === page);
+    if (pageMatches.length === 0) return;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const ranges: { node: Text; start: number; end: number }[] = [];
+    let cursor = 0;
+    let node: Text | null;
+    while ((node = walker.nextNode() as Text | null)) {
+      const len = node.data.length;
+      ranges.push({ node, start: cursor, end: cursor + len });
+      cursor += len + 1;
+    }
+    for (const match of pageMatches) {
+      for (const r of ranges) {
+        const start = Math.max(match.start, r.start);
+        const end = Math.min(match.start + match.length, r.end);
+        if (start >= end) continue;
+        const range = document.createRange();
+        range.setStart(r.node, start - r.start);
+        range.setEnd(r.node, end - r.start);
+        const mark = document.createElement('mark');
+        mark.setAttribute(
+          'part',
+          match.matchIndex === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match',
+        );
+        try {
+          range.surroundContents(mark);
+        } catch {
+          // A range spanning a text-layer span boundary in a way surroundContents can't wrap --
+          // best-effort painting, the match is still reachable via goToPage()/searchNext().
+        }
+      }
+    }
+  }
+
   // -- highlight painting --------------------------------------------------------------------------------
 
   private async resolvePageHighlights(pageNumber: number): Promise<void> {
@@ -695,7 +993,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     );
     this.textLayerReadyPromises.set(pageNumber, renderPromise);
     await renderPromise;
-    if (this.textLayers.get(pageNumber) === textLayer) void this.resolvePageHighlights(pageNumber);
+    if (this.textLayers.get(pageNumber) === textLayer) {
+      void this.resolvePageHighlights(pageNumber);
+      // A page that mounts (or remounts, e.g. after a zoom change re-renders every visible page) while
+      // it already has search matches needs its marks painted here too -- focusSearchMatch() only
+      // paints the page it just navigated to, not every page that might scroll into view afterward.
+      if (this.searchMatches.some((match) => match.page === pageNumber)) this.paintSearchMatches(pageNumber);
+    }
   }
 
   private pageCanvasRef(pageNumber: number): (element: Element | undefined) => void {

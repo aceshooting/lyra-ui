@@ -8,7 +8,7 @@ defineElement('pdf-viewer', LyraPdfViewer);
 
 registerDocumentRenderer('application/pdf', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.pdf'),
-  capabilities: { anchors: ['page', 'text-quote', 'region'], textSelect: true },
+  capabilities: { anchors: ['page', 'text-quote', 'region'], textSelect: true, search: true },
   load: async () => ({
     render: (file: DocumentFile) => html`<lyra-pdf-viewer
       src=${file.src}
