@@ -77,10 +77,11 @@ describe('lyra-span-waterfall', () => {
     expect(el.shadowRoot!.querySelector('lyra-empty')).to.exist;
   });
 
-  it('registers lyra-empty as a side effect of importing span-waterfall.js (regression)', async () => {
+  it('registers lyra-live-region and lyra-empty as a side effect of importing span-waterfall.js (regression)', async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
-    // does. Rendering an un-registered <lyra-empty> silently produces a plain, un-upgraded
+    // does. Rendering an un-registered dependency silently produces a plain, un-upgraded
     // HTMLElement instead of the real component.
+    expect(customElements.get('lyra-live-region')).to.exist;
     expect(customElements.get('lyra-empty')).to.exist;
   });
 
