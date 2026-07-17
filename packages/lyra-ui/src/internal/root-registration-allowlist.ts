@@ -161,6 +161,9 @@ export const ROOT_BARREL_TAGS = [
   'lyra-widget',
   'lyra-word-cloud',
   'lyra-zoomable-frame',
+  'lyra-file-tree',
+  'lyra-image-viewer',
+  'lyra-commit-card',
 ] as const;
 
 export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [
