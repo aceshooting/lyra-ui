@@ -798,8 +798,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 y1=${source.y ?? 0}
                 x2=${target.x ?? 0}
                 y2=${target.y ?? 0}
-                @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
-                @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
               ></line>`;
             })}
             ${this.simNodes.map((n, nodeIndex) => {

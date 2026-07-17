@@ -178,6 +178,34 @@ describe('hover events', () => {
     nodeEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     expect(fired).to.be.false;
   });
+
+  it('does not fire lyra-link-enter/lyra-link-leave or set data-hovered for a dangling-stub link', async () => {
+    // A dangling stub's `target` is a synthetic stand-in that never resolves to a real node (see
+    // SimLink.dangling) -- emitting a link-identity hover event for it would hand a consumer an id
+    // guaranteed to never match anything in `nodes`, so the stub is deliberately excluded from
+    // hover wiring the same way it's excluded from click/focus/keydown/tooltip/accessible-list.
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes; // ids: a, b
+    el.links = [...links, { source: 'a', target: 'does-not-exist' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const stub = el.shadowRoot!.querySelector('[part="link"][data-dangling]') as SVGLineElement;
+    expect(stub).to.exist;
+
+    let fired = false;
+    el.addEventListener('lyra-link-enter', () => (fired = true));
+    el.addEventListener('lyra-link-leave', () => (fired = true));
+
+    stub.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(fired).to.be.false;
+    expect(stub.hasAttribute('data-hovered')).to.be.false;
+
+    stub.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(fired).to.be.false;
+    expect(stub.hasAttribute('data-hovered')).to.be.false;
+  });
 });
 
 it('renders directed links with arrowheads shortened to the target radius', async () => {
