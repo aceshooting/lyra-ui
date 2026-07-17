@@ -1,0 +1,234 @@
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import './image-viewer.js';
+import type { LyraImageViewer } from './image-viewer.js';
+import type { LyraHighlight } from '../document-viewer/anchors.js';
+
+const PNG_SRC = 'https://example.test/photo.png';
+
+function stubImageLoad(el: LyraImageViewer, width = 800, height = 600): void {
+  const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+  Object.defineProperty(img, 'naturalWidth', { value: width, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: height, configurable: true });
+  img.dispatchEvent(new Event('load'));
+}
+
+describe('defaults', () => {
+  it('defaults to empty src/name/alt, fit contain, zoom 1, rotation 0, not annotatable', async () => {
+    const el = (await fixture(html`<lyra-image-viewer></lyra-image-viewer>`)) as LyraImageViewer;
+    expect(el.src).to.equal('');
+    expect(el.name).to.equal('');
+    expect(el.alt).to.be.undefined;
+    expect(el.fit).to.equal('contain');
+    expect(el.zoom).to.equal(1);
+    expect(el.rotation).to.equal(0);
+    expect(el.annotatable).to.be.false;
+    expect(el.highlights).to.deep.equal([]);
+    expect(el.activeHighlightId).to.be.null;
+    expect(el.anchor).to.be.null;
+  });
+
+  it('renders an empty-state message when there is no src', async () => {
+    const el = (await fixture(html`<lyra-image-viewer></lyra-image-viewer>`)) as LyraImageViewer;
+    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No image to display.');
+  });
+});
+
+describe('image loading', () => {
+  it('renders the img with a safe src and emits lyra-load with natural dimensions', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} name="Chart"></lyra-image-viewer>`)) as LyraImageViewer;
+    const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.src).to.equal(PNG_SRC);
+    const eventPromise = oneEvent(el, 'lyra-load');
+    stubImageLoad(el, 800, 600);
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ naturalWidth: 800, naturalHeight: 600 });
+  });
+
+  it('renders the error state and fires lyra-render-error when the image fails to load', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    const eventPromise = oneEvent(el, 'lyra-render-error');
+    img.dispatchEvent(new Event('error'));
+    await eventPromise;
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal('alert');
+  });
+
+  it('renders the empty state and never sets an img src for an unsafe src', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src="javascript:alert(1)"></lyra-image-viewer>`)) as LyraImageViewer;
+    expect(el.shadowRoot!.querySelector('img')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+  });
+
+  it('falls back alt to name, and lets an explicit empty alt mark the image decorative', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} name="Chart"></lyra-image-viewer>`)) as LyraImageViewer;
+    expect((el.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('Chart');
+    el.alt = '';
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('img') as HTMLImageElement).alt).to.equal('');
+  });
+});
+
+describe('zoom, rotation, and fit', () => {
+  it('delegates zoomIn/zoomOut/resetZoom to the embedded zoomable-frame and stays in sync', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    el.zoomIn();
+    await el.updateComplete;
+    expect(el.zoom).to.equal(1.25);
+    el.zoomOut();
+    await el.updateComplete;
+    expect(el.zoom).to.equal(1);
+    el.resetZoom();
+    await el.updateComplete;
+    expect(el.zoom).to.equal(1);
+  });
+
+  it('emits lyra-zoom-change when zoom changes via the embedded frame', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    const eventPromise = oneEvent(el, 'lyra-zoom-change');
+    el.zoomIn();
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ zoom: 1.25 });
+  });
+
+  it('rotate() advances 90deg clockwise and wraps at 360, emitting lyra-rotation-change', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    const first = oneEvent(el, 'lyra-rotation-change');
+    el.rotate();
+    expect((await first).detail).to.deep.equal({ rotation: 90 });
+    el.rotate();
+    el.rotate();
+    el.rotate();
+    await el.updateComplete;
+    expect(el.rotation).to.equal(0);
+  });
+
+  it('emits lyra-fit-change when fit is reassigned after first render', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    const eventPromise = oneEvent(el, 'lyra-fit-change');
+    el.fit = 'actual';
+    const event = await eventPromise;
+    expect(event.detail).to.deep.equal({ fit: 'actual' });
+  });
+});
+
+describe('region highlights', () => {
+  const highlights: LyraHighlight[] = [
+    { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } }, label: 'Zone A' },
+    { id: 'h2', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 10, height: 10 } } },
+  ];
+
+  it('renders one focusable button per region highlight, named by label or an indexed fallback', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} .highlights=${highlights}></lyra-image-viewer>`)) as LyraImageViewer;
+    const boxes = [...el.shadowRoot!.querySelectorAll('[part="highlight"]')] as HTMLButtonElement[];
+    expect(boxes.length).to.equal(2);
+    expect(boxes[0].getAttribute('aria-label')).to.equal('Zone A');
+    expect(boxes[1].getAttribute('aria-label')).to.include('2');
+  });
+
+  it('marks the active highlight with data-active and emits lyra-highlight-activate on click', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} .highlights=${highlights} active-highlight-id="h1"></lyra-image-viewer>`)) as LyraImageViewer;
+    const boxes = [...el.shadowRoot!.querySelectorAll('[part="highlight"]')] as HTMLButtonElement[];
+    expect(boxes[0].hasAttribute('data-active')).to.be.true;
+    expect(boxes[1].hasAttribute('data-active')).to.be.false;
+    const eventPromise = oneEvent(el, 'lyra-highlight-activate');
+    boxes[1].click();
+    expect((await eventPromise).detail).to.deep.equal({ id: 'h2' });
+    await el.updateComplete;
+    expect(el.activeHighlightId).to.equal('h2');
+  });
+
+  it('scrollToAnchor resolves true for a region anchor and false for an unsupported kind', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} .highlights=${highlights}></lyra-image-viewer>`)) as LyraImageViewer;
+    stubImageLoad(el);
+    await el.updateComplete;
+    // Shrink the retry loop's real-timer thresholds so the unsupported-kind case below (which
+    // never succeeds and only resolves once the retry loop times out) doesn't take the mixin's
+    // default 5s before settling to false.
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    expect(await el.scrollToAnchor('h1')).to.be.true;
+    expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;
+  });
+
+  it('setting the anchor property declaratively resolves via scrollToAnchor', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    stubImageLoad(el);
+    await el.updateComplete;
+    const eventPromise = oneEvent(el, 'lyra-anchor-result');
+    el.anchor = { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } };
+    expect((await eventPromise).detail).to.deep.equal({ found: true });
+  });
+});
+
+describe('annotation', () => {
+  it('is off by default and toggles via the toolbar button', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC}></lyra-image-viewer>`)) as LyraImageViewer;
+    const toggle = el.shadowRoot!.querySelector('[part="annotate-toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-pressed')).to.equal('false');
+    toggle.click();
+    await el.updateComplete;
+    expect(el.annotatable).to.be.true;
+    expect(toggle.getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('places a centered starter box on Enter, moves it with arrow keys, and commits on Enter', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} annotatable></lyra-image-viewer>`)) as LyraImageViewer;
+    const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await el.updateComplete;
+    let box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box).to.exist;
+    expect(box.style.insetInlineStart).to.equal('37.5%');
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.insetInlineStart).to.equal('39.5%');
+    const eventPromise = oneEvent(el, 'lyra-annotation-create');
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const event = await eventPromise;
+    expect(event.detail.anchor.kind).to.equal('region');
+    expect(event.detail.anchor.rect.x).to.be.closeTo(39.5, 0.01);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+
+  it('resizes with Shift+arrow keys and cancels on Escape without emitting', async () => {
+    const el = (await fixture(html`<lyra-image-viewer src=${PNG_SRC} annotatable></lyra-image-viewer>`)) as LyraImageViewer;
+    const viewport = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }));
+    await el.updateComplete;
+    const box = el.shadowRoot!.querySelector('[part="annotation-box"]') as HTMLElement;
+    expect(box.style.inlineSize).to.equal('27%');
+    let fired = false;
+    el.addEventListener('lyra-annotation-create', () => (fired = true));
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await el.updateComplete;
+    expect(fired).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
+});
+
+describe('accessibility', () => {
+  it('is accessible with highlights and annotation on', async () => {
+    const el = await fixture(html`<lyra-image-viewer src=${PNG_SRC} name="Chart" annotatable .highlights=${[
+      { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } }, label: 'Zone A' },
+    ]}></lyra-image-viewer>`);
+    await expect(el).to.be.accessible();
+  });
+
+  it('is accessible in the empty state', async () => {
+    const el = await fixture(html`<lyra-image-viewer></lyra-image-viewer>`);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('localization', () => {
+  it('renders a localized rotate button label from strings overrides', async () => {
+    const el = (await fixture(
+      html`<lyra-image-viewer src=${PNG_SRC} .strings=${{ imageViewerRotate: 'Pivoter' }}></lyra-image-viewer>`,
+    )) as LyraImageViewer;
+    expect(el.shadowRoot!.querySelector('[part="rotate-button"]')!.getAttribute('aria-label')).to.equal('Pivoter');
+  });
+});

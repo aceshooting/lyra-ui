@@ -653,6 +653,7 @@ export type { LyraHtmlViewerEventMap } from './components/html-viewer/html-viewe
 export type { LyraDatasetViewerEventMap } from './components/dataset-viewer/dataset-viewer.js';
 export type { LyraContactViewerEventMap } from './components/contact-viewer/contact-viewer.js';
 export * from './components/pdf-viewer/pdf-viewer.js';
+export * from './components/image-viewer/image-viewer.js';
 export * from './components/spreadsheet-viewer/spreadsheet-viewer.js';
 export * from './components/csv-viewer/csv-viewer.js';
 export * from './components/docx-viewer/docx-viewer.js';

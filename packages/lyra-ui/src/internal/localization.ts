@@ -538,7 +538,21 @@ export type LyraMessageKey =
   | 'gitStatusRenamed'
   | 'gitStatusUntracked'
   | 'gitStatusConflicted'
-  | 'gitStatusIgnored';
+  | 'gitStatusIgnored'
+  | 'imageViewerLabel'
+  | 'imageViewerFailedToLoad'
+  | 'imageViewerRotate'
+  | 'imageViewerFitLabel'
+  | 'imageViewerFitContain'
+  | 'imageViewerFitWidth'
+  | 'imageViewerFitActual'
+  | 'imageViewerAnnotate'
+  | 'imageViewerHighlightsLabel'
+  | 'imageViewerUnlabeledHighlight'
+  | 'imageViewerAnnotationHint'
+  | 'imageViewerAnnotationBoxPosition'
+  | 'imageViewerAnnotationAdded'
+  | 'imageViewerAnnotationCancelled';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1078,6 +1092,20 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   gitStatusUntracked: 'Untracked',
   gitStatusConflicted: 'Conflicted',
   gitStatusIgnored: 'Ignored',
+  imageViewerLabel: 'Image viewer',
+  imageViewerFailedToLoad: 'The image failed to load.',
+  imageViewerRotate: 'Rotate',
+  imageViewerFitLabel: 'Fit',
+  imageViewerFitContain: 'Fit image',
+  imageViewerFitWidth: 'Fit width',
+  imageViewerFitActual: 'Actual size',
+  imageViewerAnnotate: 'Annotate',
+  imageViewerHighlightsLabel: 'Highlighted regions',
+  imageViewerUnlabeledHighlight: 'Highlight {index}',
+  imageViewerAnnotationHint: 'Annotation mode on. Press Enter to place a region, then use arrow keys to move it, Shift plus arrow keys to resize it, Enter to save, or Escape to cancel.',
+  imageViewerAnnotationBoxPosition: 'Region at {x} percent, {y} percent, {width} by {height} percent.',
+  imageViewerAnnotationAdded: 'Region added.',
+  imageViewerAnnotationCancelled: 'Region cancelled.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
