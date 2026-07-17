@@ -13,3 +13,7 @@ storybook-static
 # reviewed baselines it diffs against live in packages/lyra-ui/visual-baselines/ and ARE
 # committed, deliberately outside this pattern.
 .visual-diff-output/
+
+# Internal planning/working docs (specs, plans, feature requests) -- never staged. The rest of
+# docs/ (e.g. docs/index.md) IS committed and is real, public documentation.
+docs/superpowers/
