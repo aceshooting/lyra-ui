@@ -67,10 +67,21 @@ function selectionRange(root: LyraElement): Range | null {
  * `computeSelectionAnchor(range, text)` (default: a `text-quote` anchor built from the whole render
  * root's text via `internal/text-quote.ts` -- a viewer with a narrower/paginated content root, e.g.
  * pdf, overrides this for a page-scoped scope).
+ *
+ * The return type's trailing `{ renderAnchorLiveRegion(): unknown }` intersection member is the one
+ * mixin hook every real adopting viewer calls but none needs to *override* (`applyAnchor`/
+ * `computeSelectionAnchor`/`bindTextSelection` are only ever overridden, never called directly by a
+ * subclass, so a subclass's own `protected` re-declaration of one of those is a brand-new member as
+ * far as this narrowed return type is concerned -- no conflict). Without it, a real subclass's own
+ * `render()` calling `this.renderAnchorLiveRegion()` fails to type-check with "property does not
+ * exist", since TypeScript can't emit a `.d.ts` declaration for this generic function's *inferred*
+ * return type (a class expression with `protected` members, TS4094) and this annotation is what
+ * replaces that inference -- narrowed to just the public `LyraAnchorTarget` contract plus this one
+ * called-not-overridden method.
  */
 export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
   Base: T,
-): T & Constructor<LyraAnchorTarget> {
+): T & Constructor<LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }> {
   class DocumentAnchorTargetElement extends Base implements LyraAnchorTarget {
     @property({ attribute: false }) highlights: LyraHighlight[] = [];
     @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
@@ -213,8 +224,11 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
     /** Renders the visually-hidden live region carrying anchor-jump announcements. Adopting viewers
      *  include this once in their own `render()` output -- the mixin doesn't own `render()` itself,
      *  matching how `components/graph/graph.class.ts` hand-rolls its own equivalent
-     *  `[part="live-region"]` without a mixin. */
-    protected renderAnchorLiveRegion(): unknown {
+     *  `[part="live-region"]` without a mixin. Deliberately not `protected`: unlike the other mixin
+     *  hooks, a real adopting viewer's own `render()` *calls* this directly rather than overriding it,
+     *  and the mixin's exported return-type annotation needs it visible for that call to type-check
+     *  (see this file's `DocumentAnchorTarget` doc comment). */
+    renderAnchorLiveRegion(): unknown {
       return html`<div
         part="anchor-live-region"
         class="sr-only"
