@@ -407,7 +407,8 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
         hl = await loadShikiHighlighterCore(languages);
       } else if (this.languagesOnly) {
         // languagesOnly skips the default full-bundle loader entirely (mirrors <lyra-code-block>) --
-        // permanent for this key unless `languages`/`languagesOnly` themselves change.
+        // permanent for this key: failedHighlightKeys is never cleared, and languages/languagesOnly
+        // aren't in willUpdate()'s trigger list, so changing either doesn't retry it on its own.
         this.failedHighlightKeys.add(pending.key);
         return;
       } else {
