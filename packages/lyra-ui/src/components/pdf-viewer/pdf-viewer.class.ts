@@ -95,7 +95,6 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart text-layer - Selectable text positioned over a page canvas.
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
- * @csspart anchor-live-region - Visually-hidden `role="status"` region announcing anchor-jump results.
  * @cssprop [--lyra-pdf-viewer-height=var(--lyra-size-24rem)] - Block size of the virtualized page list.
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {

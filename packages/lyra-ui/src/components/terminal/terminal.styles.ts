@@ -3,22 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lyra-terminal-color-black: #24292e;
-    --lyra-terminal-color-red: #cf222e;
-    --lyra-terminal-color-green: #1a7f37;
-    --lyra-terminal-color-yellow: #9a6700;
-    --lyra-terminal-color-blue: #0969da;
-    --lyra-terminal-color-magenta: #8250df;
-    --lyra-terminal-color-cyan: #1b7c83;
-    --lyra-terminal-color-white: #6b7280;
-    --lyra-terminal-color-bright-black: #57606a;
-    --lyra-terminal-color-bright-red: #fa4549;
-    --lyra-terminal-color-bright-green: #4ac26b;
-    --lyra-terminal-color-bright-yellow: #d4a72c;
-    --lyra-terminal-color-bright-blue: #4184e4;
-    --lyra-terminal-color-bright-magenta: #a475f9;
-    --lyra-terminal-color-bright-cyan: #3192aa;
-    --lyra-terminal-color-bright-white: #d0d7de;
   }
   [part='base'] {
     display: flex;
@@ -48,7 +32,7 @@ export const styles = css`
   }
   [part='viewport'] {
     position: relative;
-    block-size: var(--lyra-terminal-height, 20rem);
+    block-size: var(--lyra-terminal-height, var(--lyra-size-20rem));
   }
   lyra-virtual-list {
     display: block;

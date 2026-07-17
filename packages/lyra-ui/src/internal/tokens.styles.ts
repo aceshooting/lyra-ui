@@ -92,6 +92,25 @@ export const tokens = css`
     --lyra-graph-cat-6: var(--lyra-theme-graph-cat-6, #f470b8);
     --lyra-graph-cat-7: var(--lyra-theme-graph-cat-7, #52d6e8);
     --lyra-graph-cat-8: var(--lyra-theme-graph-cat-8, #c9d1d9);
+    /* The 16-color ANSI/SGR palette (<lyra-terminal>'s CSI-30..37/90..97 foreground and
+       CSI-40..47/100..107 background codes render via these, see internal/ansi.ts's FG_VARS/BG_VARS) --
+       each independently themeable via its own --lyra-theme-terminal-color-* hook. */
+    --lyra-terminal-color-black: var(--lyra-theme-terminal-color-black, #24292e);
+    --lyra-terminal-color-red: var(--lyra-theme-terminal-color-red, #cf222e);
+    --lyra-terminal-color-green: var(--lyra-theme-terminal-color-green, #1a7f37);
+    --lyra-terminal-color-yellow: var(--lyra-theme-terminal-color-yellow, #9a6700);
+    --lyra-terminal-color-blue: var(--lyra-theme-terminal-color-blue, #0969da);
+    --lyra-terminal-color-magenta: var(--lyra-theme-terminal-color-magenta, #8250df);
+    --lyra-terminal-color-cyan: var(--lyra-theme-terminal-color-cyan, #1b7c83);
+    --lyra-terminal-color-white: var(--lyra-theme-terminal-color-white, #6b7280);
+    --lyra-terminal-color-bright-black: var(--lyra-theme-terminal-color-bright-black, #57606a);
+    --lyra-terminal-color-bright-red: var(--lyra-theme-terminal-color-bright-red, #fa4549);
+    --lyra-terminal-color-bright-green: var(--lyra-theme-terminal-color-bright-green, #4ac26b);
+    --lyra-terminal-color-bright-yellow: var(--lyra-theme-terminal-color-bright-yellow, #d4a72c);
+    --lyra-terminal-color-bright-blue: var(--lyra-theme-terminal-color-bright-blue, #4184e4);
+    --lyra-terminal-color-bright-magenta: var(--lyra-theme-terminal-color-bright-magenta, #a475f9);
+    --lyra-terminal-color-bright-cyan: var(--lyra-theme-terminal-color-bright-cyan, #3192aa);
+    --lyra-terminal-color-bright-white: var(--lyra-theme-terminal-color-bright-white, #d0d7de);
     --lyra-layer-base: var(--lyra-theme-z-index-base, 0);
     --lyra-layer-content: var(--lyra-theme-z-index-content, 1);
     --lyra-layer-dropdown: var(--lyra-theme-z-index-dropdown, 900);
