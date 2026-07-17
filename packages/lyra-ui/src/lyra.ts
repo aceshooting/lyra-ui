@@ -181,6 +181,17 @@ import './components/transcript-feed/transcript-feed.js';
 import './components/env-list/env-list.js';
 import './components/handoff-divider/handoff-divider.js';
 import './components/av-player/av-player.js';
+import './components/artifact-panel/artifact-panel.js';
+import './components/browser-frame/browser-frame.js';
+import './components/chat-viewport/chat-viewport.js';
+import './components/checkpoint/checkpoint.js';
+import './components/confirm-bar/confirm-bar.js';
+import './components/notebook-viewer/notebook-viewer.js';
+import './components/suggestion-chips/suggestion-chips.js';
+import './components/thread-list/thread-list.js';
+import './components/usage-badge/usage-badge.js';
+import './components/voice-picker/voice-picker.js';
+import './components/widget-renderer/widget-renderer.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraEnvList } from './components/env-list/env-list.js';
@@ -725,6 +736,17 @@ export type { LyraContactViewerEventMap } from './components/contact-viewer/cont
 export * from './components/pdf-viewer/pdf-viewer.js';
 export * from './components/image-viewer/image-viewer.js';
 export * from './components/av-player/av-player.js';
+export * from './components/artifact-panel/artifact-panel.js';
+export * from './components/browser-frame/browser-frame.js';
+export * from './components/chat-viewport/chat-viewport.js';
+export * from './components/checkpoint/checkpoint.js';
+export * from './components/confirm-bar/confirm-bar.js';
+export * from './components/notebook-viewer/notebook-viewer.js';
+export * from './components/suggestion-chips/suggestion-chips.js';
+export * from './components/thread-list/thread-list.js';
+export * from './components/usage-badge/usage-badge.js';
+export * from './components/voice-picker/voice-picker.js';
+export * from './components/widget-renderer/widget-renderer.js';
 export * from './components/spreadsheet-viewer/spreadsheet-viewer.js';
 export * from './components/csv-viewer/csv-viewer.js';
 export * from './components/xml-viewer/xml-viewer.js';

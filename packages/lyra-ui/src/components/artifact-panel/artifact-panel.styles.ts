@@ -21,7 +21,7 @@ export const styles = css`
     border-block-end: var(--lyra-size-1px) solid var(--lyra-color-border);
   }
   [part='label'] {
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='kind'] {
     font-size: var(--lyra-font-size-xs);
@@ -39,7 +39,7 @@ export const styles = css`
     font-size: var(--lyra-font-size-xs);
     background: var(--lyra-color-surface);
     border: var(--lyra-size-1px) solid var(--lyra-color-border);
-    padding: var(--lyra-space-2xs, 0.125rem) var(--lyra-space-s);
+    padding: var(--lyra-space-2xs) var(--lyra-space-s);
     cursor: pointer;
   }
   [part='view-button'][aria-pressed='true'] {

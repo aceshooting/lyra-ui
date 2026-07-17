@@ -2667,15 +2667,31 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   force mode. Switching `layout` at runtime repositions every node without a tween. The layering
   algorithm itself lives in the standalone, dependency-free `layeredLayout()` export
   (`@aceshooting/lyra-ui/internal/layered-layout`), reusable by any other layered-diagram consumer
+- `renderer: 'svg' | 'canvas' = 'svg'` — `'canvas'` swaps the per-node/per-link SVG DOM for a single
+  DPR-aware `<canvas>`; every event/method/property behaves identically to `'svg'`, with hit-testing
+  resolved via an offscreen color-picking canvas instead of DOM event targets. Trade-offs: no
+  `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
+  native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
+  CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
+  button per node/link/hull.
 
 **Events:** `lyra-node-click` (`detail: { id }`), `lyra-link-click` (`detail: { source, target,
-id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller)
+id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), `lyra-node-enter`/
+`lyra-node-leave` (`detail: { id }`, hover start/end, suppressed while dragging/panning),
+`lyra-link-enter`/`lyra-link-leave` (`detail: { source, target, id? }`, same hover contract),
+`lyra-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
+Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), `lyra-community-click`
+(`detail: { id }`, a hull was activated)
 
 **Slots:** none.
 
 **CSS parts:** `base`, `svg`, `node`, `link`, `arrowhead` (the marker path shared by directed links),
 `label`, `link-label` (a drawn edge label, only rendered when `showEdgeLabels` is set),
-`live-region`, `data-list`, `empty`
+`expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
+ring tracking `focusId`'s node), `hull` (a community hull), `community-label`,
+`live-region`, `data-list`, `empty`, `canvas`/`tooltip`/`cursor-items`/`cursor-item`
+(`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
+the offscreen keyboard-roving items)
 
 **Themeable custom properties:** `--lyra-node-fill` (set inline per-node from `GraphNode.color`,
 falls back to `--lyra-color-brand`) and `--lyra-link-color` (set inline per-link from
@@ -3268,8 +3284,8 @@ independently of the base `chart-loader.ts`).
 
 ## `lyra-map`
 
-A `maplibre-gl` wrapper with a declarative legend and a single choropleth GeoJSON fill layer, plus a
-raw `map` escape hatch for anything unexposed.
+A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
+and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anything unexposed.
 
 **Properties:**
 - `center: [number, number] = [0, 0]`
@@ -3294,6 +3310,17 @@ raw `map` escape hatch for anything unexposed.
   escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas.
+- `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
+  geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
+  'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three layers
+  (`${sourceId}-fill`/`${sourceId}-line`/`${sourceId}-circle`, filtered by geometry type so a mixed
+  `FeatureCollection` renders correctly across all three), colored from the matching `--lyra-color-*`
+  token (`tone` defaults to `'accent'` → `--lyra-color-brand`). Independent of `choropleth` — no
+  `field`/`stops` color-interpolation, just the geometry rendered in a flat tone; use `choropleth`
+  instead when you need a data-driven color ramp. Reconciled by `sourceId` the same way `choropleth`
+  is: an entry whose `sourceId` persists across a `dataLayers` reassignment gets its GeoJSON updated
+  in place (`setData()`), one that's dropped has its source/layers removed, and a genuinely new
+  `sourceId` gets a new source/layers — nothing leaks on removal, style change, or disconnect.
 - `label: string = ''` — accessible name for the map region, applied as `[part="base"]`'s
   `aria-label`. A plain `aria-label` attribute on the host itself is honored as a fallback when
   `label` is left unset, matching `lyra-slider`/`lyra-checkbox`/`lyra-switch`; with neither set, it
@@ -3338,9 +3365,9 @@ exists and was hit)
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
   cleared).
 - `mapStyle` changes after construction now call `setStyle()` (in addition to `center`/`zoom`
-  already calling `setCenter`/`setZoom`) — the choropleth is automatically re-applied once the new
-  style's own `'style.load'` fires, since a style change wipes every layer/source maplibre-gl knows
-  about.
+  already calling `setCenter`/`setZoom`) — the choropleth and `dataLayers` are both automatically
+  re-applied once the new style's own `'style.load'` fires, since a style change wipes every
+  layer/source maplibre-gl knows about.
 - Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
   hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
@@ -4243,22 +4270,32 @@ stack overflow on cyclic `data`.
 - `search: string = ''` — case-insensitive substring match against keys/values; matches are
   highlighted and their ancestors auto-expanded
 
+**Methods:** `runSearch(query)` sets the declarative `search` property and awaits the recompute,
+resolving the match count — named distinctly from `search` because a class member can't share a name
+with a reactive property. `searchNext()`/`searchPrevious()` advance/step back a match cursor
+(wrapping) and scroll the active match into view, resolving `false` when there are no matches.
+`clearSearch()` resets `search` to `''`, clearing all matches and the cursor.
+
 **Events:** `lyra-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
 per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
 (a rejected `writeText()` is swallowed), so a consumer can still observe copy *intent* — the event
 is not a confirmation that the OS clipboard was actually reached. Copying a circular `data` value
 serializes safely, substituting the same `Circular reference` marker the tree view renders, instead
-of throwing.
+of throwing. `lyra-search-change` (`detail: { query, matchCount, activeIndex }`) — fired whenever the
+search query, match count, or active-match cursor changes, from `runSearch()`/`searchNext()`/
+`searchPrevious()`/`clearSearch()`, or a direct `search`/`data` property write.
 
 **Slots:** none — the tree is rendered entirely from `data`.
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
-tree), `key` (an object property key or array index label, `data-match` while it matches `search`),
+tree), `key` (an object property key or array index label, `data-match` while it matches `search`,
+`data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position),
 `value` (a primitive value's text — carries `data-type` of
-`string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, and `data-match`
-while it matches `search`), `bracket` (a `{`, `}`, `[`, or `]` delimiter), `toggle` (a container
-node's expand/collapse button; hidden but present for row alignment on leaf/empty nodes),
+`string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, `data-match`
+while it matches `search`, and `data-active` while it is the current cursor position), `bracket` (a
+`{`, `}`, `[`, or `]` delimiter), `toggle` (a container node's expand/collapse button; hidden but
+present for row alignment on leaf/empty nodes),
 `copy-button` (a copy-to-clipboard button — the top-level one in `toolbar` (aria-label "Copy JSON to
 clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); only rendered when
 `copyable`)
@@ -5497,6 +5534,15 @@ invention (no Web Awesome equivalent).
 - `rowHeight: string = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real height via
   `ResizeObserver`; a numeric string (e.g. `"56"`) fixes every row to that many pixels. Anything else
   (non-numeric, zero, negative, non-finite) silently falls back to `'auto'` rather than throwing.
+- `itemRole: 'listitem' | 'row' = 'listitem'` (attribute `item-role`) — `'listitem'` (default)
+  preserves the plain `role="list"`/`role="listitem"` mapping with `aria-setsize`/`aria-posinset`.
+  `'row'` additionally maps `[part="base"]` to `role="rowgroup"`, `[part="spacer"]` to
+  `role="presentation"`, and each row to `role="row"` with `aria-rowindex` instead — for a consumer
+  composing its own `role="table"` wrapper and header row around this component (see
+  `lyra-dataset-viewer`).
+- `rowIndexOffset: number = 0` (attribute `row-index-offset`) — added to a row's 1-based index to
+  compute `aria-rowindex` in `item-role="row"` mode (e.g. `1` when a consumer renders its own header
+  row occupying `aria-rowindex="1"` outside this component). No effect in `'listitem'` mode.
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
@@ -5530,10 +5576,12 @@ current visible, non-overscanned item index range — fired only when it actuall
 
 **Slots:** none — all content comes from `renderItem`.
 
-**CSS parts:** `base` (the scrollable container, `role="list"`, `tabindex="0"`), `spacer` (the
-full-content-height inner element establishing true scroll extent), `row` (one rendered row's
-absolutely-positioned wrapper, `role="listitem"`), `group` (a `groups` entry's positioned
-`role="heading"` marker)
+**CSS parts:** `base` (the scrollable container, `role="list"` — or `role="rowgroup"` in
+`item-role="row"` mode — `tabindex="0"`), `spacer` (the full-content-height inner element
+establishing true scroll extent; `role="presentation"` in `item-role="row"` mode), `row` (one
+rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
+`aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned `role="heading"`
+marker)
 
 **Themeable custom properties:** `--lyra-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
@@ -6953,6 +7001,19 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
   code scrolls internally past this height instead of growing the page
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
   numbers for both highlighted output and the plain-text fallback
+- `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
+  line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
+  with, and renders identically to, any `line-range` entries there.
+- `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
+  (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lyra-line-click`.
+  Has no effect while `lineNumbers` is unset.
+- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
+  code (the shared anchor-target `LyraHighlight` contract from `document-viewer/anchors.ts`). Only
+  `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
+  entry, if any, currently treated as active (`data-active` on its lines).
+- `anchorKinds: LyraAnchor['kind'][]` — readonly `['line-range']`, for the shared anchor-target
+  contract.
 - `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — a map of language id to an
   already-imported shiki grammar module (e.g. `{ bash: bashGrammar }` from a module-scope
   `import bash from 'shiki/langs/bash.mjs'`). When `language` matches a key here, highlighting is
@@ -6964,15 +7025,26 @@ and it's what every instance renders at zero extra bytes until shiki resolves.
 - `languagesOnly: boolean = false` (attribute `languages-only`) — skips the default shiki loader;
   use when every requested language is supplied through `languages`
 
+**Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
+resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
+when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+
 **Events:** `lyra-copy` (`detail: { text: string }` — always the raw `code` value, never the
 highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
 `lyra-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
-button is activated, same event name/shape convention as `<lyra-thinking-panel>`'s own `lyra-toggle`)
+button is activated, same event name/shape convention as `<lyra-thinking-panel>`'s own `lyra-toggle`),
+`lyra-line-click` (`detail: { line: number }` — a gutter line number was activated while
+`interactiveLines` is set), `lyra-highlight-activate` (`detail: { id: string }` — declared for
+parity with this library's other anchor-target viewers; not currently emitted by this component),
+`lyra-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
+`anchor` is a `line-range` anchor covering the selected lines)
 
 **Slots:** none.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `toggle`, `body`, `pre`,
-`code`
+`code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
+`line-button` (a gutter line-number button, only rendered while `interactiveLines` and `lineNumbers`
+are both set)
 
 **Themeable custom properties:** `--lyra-code-block-max-height` (default `none` — the consumer-tunable
 scroll cap; only takes effect once `max-height` is set), `--lyra-code-block-font` (default
@@ -7070,19 +7142,40 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   code scrolls internally past this height instead of growing the page.
 - `lineNumbers: boolean = false` (attribute `line-numbers`, reflected) — displays one-based line
   numbers for highlighted and plain output.
+- `highlightLines: string = ''` (attribute `highlight-lines`) — comma-separated 1-based inclusive
+  line ranges (e.g. `"3-5,7"`) to visually emphasize. Declarative sugar over `highlights` — merges
+  with, and renders identically to, any `line-range` entries there.
+- `interactiveLines: boolean = false` (attribute `interactive-lines`) — turns the
+  (`lineNumbers`-gated) gutter into a roving-tabindex group of buttons emitting `lyra-line-click`.
+  Has no effect while `lineNumbers` is unset.
+- `highlights: LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
+  code. Only `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
+  entry, if any, currently treated as active (`data-active` on its lines).
+- `anchorKinds: LyraAnchor['kind'][]` — readonly `['line-range']`, for the shared anchor-target
+  contract, identical to `<lyra-code-block>`.
 - `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`). Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback.
 
+**Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
+resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
+when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
+Identical behavior to `<lyra-code-block>`'s own method.
+
 **Events:** `lyra-copy` (`detail: { text: string }` — always the raw `code` value, never the
 highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
 `lyra-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
-button is activated).
+button is activated), `lyra-line-click` (`detail: { line: number }` — a gutter line number was
+activated while `interactiveLines` is set), `lyra-highlight-activate` (`detail: { id: string }` —
+declared for parity with this library's other anchor-target viewers; not currently emitted by this
+component), `lyra-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
+body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
 **Slots:** none.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `toggle`, `body`, `pre`,
-`code` — identical set to `<lyra-code-block>`.
+`code`, `line-highlight`, `line-button` — identical set to `<lyra-code-block>`.
 
 **Themeable custom properties:** identical to `<lyra-code-block>` — `--lyra-code-block-max-height`,
 `--lyra-code-block-font`, plus the same shared tokens.
@@ -7129,6 +7222,15 @@ First-party invention (no Web Awesome equivalent).
   all-removals diff of `oldText`.
 - `copyable: boolean = false` — shows a copy-to-clipboard button for the full unified-diff text.
   `false` (the default) renders no button.
+- `layout: 'unified' | 'split' = 'unified'` (reflected) — `'unified'` (the default) renders today's
+  single interleaved `<pre>`; `'split'` renders two side-by-side `[part="side"]` columns derived from
+  the same diff alignment.
+- `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this
+  has a matching entry in `languages` — there is deliberately no default full-table
+  `lyra-code-block`-style fallback, so this component never reaches shiki's ~200-language
+  dynamic-import table.
+- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — grammar definitions this
+  instance can highlight, same shape as `lyra-code-block-core`'s own `languages`.
 
 **Events:** `lyra-copy` (`detail: { text: string }` — the full unified-diff text, fired on
 copy-button activation regardless of whether the clipboard write actually succeeded).
@@ -7136,15 +7238,19 @@ copy-button activation regardless of whether the clipboard write actually succee
 **Slots:** none.
 
 **CSS parts:** `base` (the root wrapper), `line` (a single line; carries
-`data-type="equal"|"add"|"remove"`), `copy-button` (the copy affordance, only rendered while
-`copyable`).
+`data-type="equal"|"add"|"remove"|"empty"` — `"empty"` is an unbalanced-replace placeholder cell in
+`layout="split"` and never carries a `+`/`-` prefix), `copy-button` (the copy affordance, only
+rendered while `copyable`), `side` (one column in `layout="split"`, `data-side="old"|"new"`).
 
 **Themeable custom properties:** `--lyra-diff-view-font` (default `var(--lyra-font-mono)`), plus
 shared tokens `--lyra-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
 `-danger-quiet`/`-text`, `--lyra-radius`, `--lyra-space-xs`/`-s`, `--lyra-font-size-sm`,
 `--lyra-line-height-snug`, `--lyra-focus-ring-*`.
 
-**Optional peer deps:** none.
+**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma`/
+`shiki/wasm` subset `lyra-code-block-core` uses, never `shiki`'s full ~200-language main entry point)
+— only loaded once both `language` and a matching `languages` entry are set; unset/unmatched leaves
+the plain unhighlighted diff text untouched.
 
 ```html
 <lyra-diff-view copyable></lyra-diff-view>
@@ -8108,6 +8214,20 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"24rem"`); once set,
   `[part="body"]` scrolls internally past this height instead of growing the page — same contract as
   `lyra-json-viewer`'s identically-named prop.
+- `zoomable: boolean = false` (reflected) — wraps the rendered image (image format only) in an
+  internal `<lyra-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
+  inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
+  viewport; an inspection surface opts in.
+- `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
+  over the image-format preview; ignored for the `text`/`generic` formats.
+- `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
+  entry, if any, currently treated as active (`data-active` on its `region-highlight`).
+- `anchorKinds` is a readonly `['region']` (this viewer's supported `LyraAnchor.kind` values for the
+  shared anchor-target contract).
+
+**Methods:** `scrollToAnchor(target)` — scrolls a `region` highlight (by id, or a `LyraAnchor`
+matched back to its owning `LyraHighlight` by reference) into view; resolves `false` when nothing
+matches, the anchor isn't `region`, or the format isn't currently `image`.
 
 **Events:**
 - `lyra-download` — `detail: { src, filename }` — fired when the generic-download fallback's link is
@@ -8116,6 +8236,8 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
 - `lyra-render-error` — `detail: { error }` — fired when this component's own `text/*`/
   `application/json` `fetch(src)` fails (network error or non-2xx response). Distinct from
   `status="error"`, which is entirely host-driven.
+- `lyra-highlight-activate` — `detail: { id }` — a region highlight was clicked or activated via
+  Enter/Space (image format only).
 
 **Slots:** `unsupported` — escape hatch: when populated, its content renders *instead of* the generic
 download fallback for any `mime-type` this component doesn't natively support. Ignored while
@@ -8126,7 +8248,11 @@ download fallback for any `mime-type` this component doesn't natively support. I
 used both for `status="converting"` and this component's own in-flight text fetch), `error`
 (`role="alert"` — used both for `status="error"` and a failed text fetch), `download-link` (only
 rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
-above; excludes `data:` even though the other two sinks allow it)
+above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
+every rendered region highlight, image format only), `region-highlight` (one region highlight,
+`data-tone`, `data-active`; image format only), `frame-viewport`/`frame-content`/`frame-controls`/
+`frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lyra-zoomable-frame>`
+while `zoomable`; image format only)
 
 **Themeable custom properties:** `--lyra-document-preview-max-height` (default `none`) — the
 consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` means the preview grows
@@ -8269,13 +8395,33 @@ Mammoth preserves document structure such as headings, paragraphs, lists, tables
 not intended to reproduce pixel-exact Word page layout. There is no unsanitized rendering escape
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
 
+Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lyra-markdown>` uses) is
+stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Adopts
+`DocumentAnchorTarget`: `fragment` anchors resolve against that outline, `text-quote` anchors via
+the shared quote-scoping helpers; `highlights` re-resolve by quote after every render.
+
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable document body.
+the scrollable document body. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
+viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+
+**Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,
+label, level }`), cached on every successful load. `search(query)` resolves the match count via a
+case-insensitive substring search over the rendered content's text (empty/whitespace query behaves
+like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches
+(wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
+painted marks.
 
 **Events:** `lyra-render-error` with `detail.error` when fetching, conversion, sanitization, or a
-non-fatal Mammoth conversion message occurs.
+non-fatal Mammoth conversion message occurs. `lyra-search-change` (`detail: { query, matchCount,
+activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
+`lyra-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked.
+`lyra-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
+content. `lyra-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
+`scrollToAnchor()` call.
 
-**CSS parts:** `base`, `body`, `content`, `spinner`, and `error`.
+**CSS parts:** `base`, `body`, `content`, `spinner`, `error`, `highlight` (a painted `text-quote`
+highlight), `search-match` (a painted in-document search match), and `search-match-active` (the
+currently active search match, also carries `search-match`).
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -8300,13 +8446,17 @@ remain available without DOMPurify. Attachments are listed as filename and size 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `foldQuotes:
+boolean = false` (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
+localized show/hide toggle. `false` (the default) preserves the full body rendering.
 
 **Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
 
 **CSS parts:** `base`, `headers`, `from-label`, `from`, `to-label`, `to`, `subject-label`, `subject`,
 `date-label`, `date`, `body`, `body-html`, `body-text`, `attachments`, `attachments-label`,
-`attachment-list`, `attachment-item`, `spinner`, and `error`.
+`attachment-list`, `attachment-item`, `quoted` (a folded quoted-text block, hidden until expanded, only
+while `foldQuotes`), `quote-toggle` (the show/hide-quoted-text toggle button, only while `foldQuotes`),
+`spinner`, and `error`.
 
 **Optional peer dependencies:** install `postal-mime` and `dompurify` with
 `pnpm add postal-mime dompurify`. The component registers `message/rfc822` and falls back to
@@ -8362,18 +8512,47 @@ epub.js renders the reading area into its stable `mount` element, using an inter
 chapter content.
 
 **Properties:** `src` and `name` are strings. `accessibleLabel` (attribute `aria-label`) overrides
-the reading region's accessible name.
+the reading region's accessible name. `location: string = ''` (not reflected — CFIs are long) is
+a CFI or spine href identifying the current reading position: set before the book finishes
+loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
+`relocated` event keeps it in sync with user navigation without re-triggering its own `display()`
+call. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this viewer's supported `LyraAnchor.kind`
+values for the shared anchor-target contract).
 
-**Events:** `lyra-render-error` with `detail.error` when fetching, opening, or rendering fails.
+**Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
+populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
+label, href, level }`, `level` starting at 1 for a top-level entry, `id` falling back to `href`
+when a navigation entry has none), `[]` before a book has loaded. `search(query)` resolves the
+match count across every spine section, in document order, via epub.js's own `item.load()`/
+`item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
+`search()` call or a `src` change aborts an in-flight scan); `searchNext()`/`searchPrevious()`
+advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
+clears the query, matches, and painted search annotation.
+
+**Events:** `lyra-render-error` with `detail.error` when fetching, opening, or rendering fails;
+`lyra-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
+`lyra-search-change` (`detail: { query, matchCount, activeIndex }`) from `search()`/`searchNext()`/
+`searchPrevious()`/`clearSearch()`.
 
 **CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, and `error`.
+`mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
+announce through).
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
-matches `application/epub+zip` and `.epub` filenames.
+matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
+search: true, textSelect: true }` capabilities.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
+
+Adopts the shared anchor-target contract (`highlights`, `activeHighlightId`, `scrollToAnchor()`,
+events `lyra-highlight-activate`/`lyra-text-select`/`lyra-anchor-result`): a `cfi` anchor displays
+directly via `rendition.display()`; a `text-quote` anchor resolves by scanning the spine with
+epub.js's own `item.find()`, since chapter content lives inside epub.js-owned iframes rather than
+this component's own shadow DOM — `lyra-text-select` mirrors epub.js's own `selected` event for the
+same reason. `highlights` (kind `cfi`) paint via `rendition.annotations.highlight()` and are
+re-applied whenever the rendition is recreated (a `src` change, or a reconnect remount), since
+epub.js doesn't persist annotations across a fresh `renderTo()`.
 
 ## `lyra-pptx-viewer`
 
@@ -8424,11 +8603,28 @@ MIME type. Unknown values return a generic file result.
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable body.
+the scrollable body. `zoomable: boolean = false` (reflected) — wraps the rendered content in an
+internal `<lyra-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
+inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
+an inspection surface opts in. `highlights: LyraHighlight[] = []` (attribute: false) — display-only
+`region` highlights painted over the rendered SVG. `activeHighlightId: string | null = null`
+(attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
+(`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
+supported `LyraAnchor.kind` values for the shared anchor-target contract).
+
+**Methods:** `scrollToAnchor(target)` — scrolls a `region` highlight (by id, or a `LyraAnchor` matched
+back to its owning `LyraHighlight` by reference) into view; resolves `false` when nothing matches, the
+anchor isn't `region`, or the document isn't loaded yet (no retry loop — a caller invoking this before
+`src` resolves simply gets `false`).
 
 **Events:** `lyra-render-error` with `detail.error` when fetching or sanitizing fails.
+`lyra-highlight-activate` (`detail: { id }`) — a region highlight was clicked or activated via
+Enter/Space.
 
-**CSS parts:** `base`, `body`, `svg`, `spinner`, and `error`.
+**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `highlight-layer` (wrapper around every
+rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
+`frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
+(forwarded from the internal `<lyra-zoomable-frame>` while `zoomable`).
 
 **Optional peer dependency:** `dompurify`.
 
@@ -8453,23 +8649,41 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lyra-dataset-viewer`
 
-Fetches tab-, pipe-, or delimiter-separated text and renders an accessible table using the optional
-`papaparse` peer. The document registry matches `.tsv`, `.psv`, and `.dat` filenames.
+Fetches tab-, pipe-, or delimiter-separated text and renders a virtualized, accessible table (a
+`role="table"` container with a sticky `role="row"` header, composed with `<lyra-virtual-list
+item-role="row">` for the body) using the optional `papaparse` peer. The document registry matches
+`.tsv`, `.psv`, and `.dat` filenames.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
+header row always occupying row 1 (this component always parses with a header row, so the first row
+is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
+the virtualized list's `active-id`. `highlights` paint as a focusable `part="cell-highlight"`.
+
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `anchorKinds` is
+a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
+
+**Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
+every body cell's raw string value, ordered row then column (empty/whitespace query behaves like
+`clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
+resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
 **Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+`lyra-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+Enter/Space. `lyra-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
+`scrollToAnchor()` call. `lyra-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `body`, `table`, `spinner`, and `error`.
+**CSS parts:** `base`, `body`, `table`, `header-row`, `header-cell`, `data-row`, `cell`,
+`cell-highlight` (a cell covered by a `highlights` entry), `spinner`, and `error`.
 
 **Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
 
 **Optional peer dependency:** `papaparse`.
 
-Remote resources are capped at 25 MB, and the parsed table at 1,000 rows and 1,000 columns (lower
-than `lyra-csv-viewer`/`lyra-spreadsheet-viewer`'s shared 10,000-row cap, since this component renders
-every row into a real, non-virtualized `<table>` in one synchronous pass); exceeding any of these
-surfaces the localized `documentPreviewResourceTooLarge` message instead of the table.
+Remote resources are capped at 25 MB, and the parsed table at 10,000 rows and 1,000 columns (the
+same shared default as `lyra-csv-viewer`/`lyra-spreadsheet-viewer`); exceeding either surfaces the
+localized `documentPreviewResourceTooLarge` message instead of the table.
 
 ## `lyra-contact-viewer`
 
@@ -8530,12 +8744,29 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 Fetches and renders `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer. Multiple
 worksheets render through a `<lyra-tabs>` switcher, and body rows use `<lyra-virtual-list>`.
 
-**Properties:** `src` and `name` are strings.
+Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw grid, 1-based, with
+its header row included, resolving the target sheet from the anchor's own `sheet` field (falling
+back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` switches
+`<lyra-tabs>`'s active tab first when needed, then scrolls the addressed row/column into view.
+`highlights` paint as a focusable `part="cell-highlight"`.
+
+**Properties:** `src` and `name` are strings. `anchorKinds` is a readonly `['cell-range']` (this
+viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+
+**Methods:** `search(query)` resolves the match count across every sheet's stringified cell values,
+ordered sheet then row then column, switching tabs as navigation crosses sheets (empty/whitespace
+query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through
+matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
+matches, and painted marks.
 
 **Events:** `lyra-render-error` with `detail.error` when fetching or parsing fails.
+`lyra-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+Enter/Space. `lyra-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
+`scrollToAnchor()` call. `lyra-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `rows`, `spinner`, and
-`error`.
+**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell
+covered by a `highlights` entry), `rows`, `spinner`, and `error`.
 
 **Optional peer dependency:** install `xlsx` with `pnpm add xlsx`. The registry matches the official
 `.xlsx` and `.xls` MIME types and filename extensions.
@@ -8548,12 +8779,30 @@ the workbook.
 
 Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and virtualizes body rows.
 
+Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
+header row included whenever `has-header-row` is set; `scrollToAnchor()` scrolls the addressed
+row/column into view via the virtualized list's `active-id`. `highlights` paint as a focusable
+`part="cell-highlight"`.
+
 **Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
+`anchorKinds` is a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for
+the shared anchor-target contract).
+
+**Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
+the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
+behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches
+(wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
+painted marks.
 
 **Events:** `lyra-render-error` with `detail.error` when fetching or parsing reports an error.
+`lyra-highlight-activate` (`detail: { id }`) — a `highlights` cell was clicked or activated via
+Enter/Space. `lyra-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
+`scrollToAnchor()` call. `lyra-search-change` (`detail: { query, matchCount, activeIndex }`) — from
+`search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `rows`, `spinner`, and `error`.
+**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell covered by
+a `highlights` entry), `rows`, `spinner`, and `error`.
 
 **Optional peer dependency:** install `papaparse` with `pnpm add papaparse`. The registry matches
 `text/csv` and `.csv` filenames.
@@ -9894,3 +10143,593 @@ string = ''`.
 **CSS parts:** `base` (the separator root, `role="separator"`), `line` (each of the two flanking
 rules), `chip` (the visual `aria-hidden` chip wrapping the avatar and label), `avatar` (wrapper
 around the `avatar` slot, only shown while the slot has content), and `label`.
+
+## `lyra-chat-viewport`
+
+The transcript scroll container: owns stick-to-bottom behavior while an answer streams, the "jump to
+latest" pill, and the unread divider. Two supported content shapes, auto-detected: ordinary element
+children (typically `lyra-chat-message`s — *slotted mode*), or exactly one `lyra-virtual-list`
+(*virtual mode*, detected via `instanceof`). In virtual mode this component defers all scrolling to
+the slotted list's own `scrollToIndex()`. Follow/release state machine: while `follow` is engaged,
+content growth re-scrolls to the end; release happens only on a user-intent gesture (wheel,
+touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
+view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
+scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
+`follow`.
+
+**Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
+host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
+it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
+counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
+index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
+`null` disables both the divider and the pill's unread count. `label: string = ''` — accessible name
+for the log region, defaults to the localized `chatViewportLabel`.
+
+**Methods:** `scrollToBottom(options?)` — scrolls to the end and re-engages `follow`; default
+`smooth`, forced to `auto` under `prefers-reduced-motion`. `scrollToUnread(options?)` — scrolls the
+unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
+range; does not re-engage `follow`.
+
+**Events:** `lyra-follow-change` — `detail: { following }`, fired whenever `follow` flips (user
+scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
+
+**Slots:** default — the transcript: ordinary element children, or exactly one `lyra-virtual-list`.
+
+**CSS parts:** `base` (the positioning root), `scroll` (the scroll container, `role="log"`,
+`tabindex="0"`; in virtual mode it stops scrolling itself but keeps the role), `content` (the
+slotted-content wrapper the growth observers watch), `jump-pill` (the built-in jump-to-latest button,
+absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
+only).
+
+Renders no messages and computes no unread state itself — the host supplies `unreadStartIndex`; no
+virtualization of its own (`lyra-virtual-list`); not a generic overflow surface (`lyra-scroller`); no
+message semantics (`lyra-chat-message`).
+
+```html
+<lyra-chat-viewport unread-start-index="12" @lyra-follow-change=${(e) => console.log(e.detail.following)}>
+  <lyra-chat-message role="user">…</lyra-chat-message>
+  <lyra-chat-message role="assistant" status="streaming">
+    <lyra-streaming-text streaming .content=${partial}></lyra-streaming-text>
+  </lyra-chat-message>
+</lyra-chat-viewport>
+<lyra-chat-composer status="streaming"></lyra-chat-composer>
+```
+
+## `lyra-suggestion-chips`
+
+Starter prompts (empty thread) and follow-up suggestions (after a response) as a horizontally
+scrollable chip row; activation hands the prompt to the host, which decides whether to compose it
+into an input or send it directly. Never writes into a composer or sends anything itself.
+Streaming-friendly: chips render through a keyed `repeat()` on `id`, so replacing follow-ups
+mid-conversation preserves focus on any chip whose `id` survives.
+
+**Properties:** `suggestions: ChatSuggestion[] = []` (attribute: false, each `{ id, label, detail? }`
+— `detail` is an optional secondary line). Empty renders nothing at all. `wrap: boolean = false`
+(reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
+string = ''` — accessible name for the group, defaults to the localized `suggestionsLabel`.
+
+**Events:** `lyra-suggestion-select` — `detail: { id, label }`.
+
+**CSS parts:** `base` (the labeled group), `chip` (each suggestion button), `chip-label` (the primary
+text), `chip-detail` (the secondary line, only rendered when `detail` is set).
+
+Keyboard: roving tabindex across chips; ArrowLeft/ArrowRight (direction-aware) plus Home/End;
+Enter/Space activate. Renders inside an internal `lyra-scroller` (`orientation="horizontal"`,
+`hide-scrollbar`) unless `wrap` is set.
+
+```html
+<lyra-suggestion-chips .suggestions=${followUps}
+  @lyra-suggestion-select=${(e) => (composer.value = e.detail.label)}></lyra-suggestion-chips>
+<lyra-chat-composer></lyra-chat-composer>
+```
+
+## `lyra-thread-list`
+
+The conversation sidebar: a grouped, searchable list of chat sessions with pin/archive/delete/rename
+affordances. *Data mode* (non-empty `threads`, or empty `threads` with nothing slotted) renders every
+row as a `lyra-conversation-item` inside an internal `lyra-virtual-list` — virtualized by
+construction, scroll position and per-row state survive a `threads` replacement; zero rows renders
+the built-in empty state. *Slotted mode* (empty `threads` *and* real slotted content) renders
+host-supplied `lyra-conversation-item`s from the default slot as-is: no grouping, virtualization, or
+row actions in that mode. No thread CRUD or persistence — every mutation
+(`lyra-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the *requested* new
+state; the host mutates `threads`.
+
+**Properties:** `threads: ChatThread[] = []` (attribute: false, each `{ id, title, excerpt?,
+timestamp?, pinned?, archived? }`). `activeId: string = ''` (attribute `active-id`) — data mode:
+marks the matching row `active`/`aria-current` and scrolls it into view. `searchable: boolean =
+false` (reflected) — shows the built-in search field. `filter?: (thread, query) => boolean`
+(attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
+`grouping: 'date' | 'none' = 'date'` — data mode: bucket rows under localized date headers
+(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), or a flat
+list. `rowActions: ThreadRowAction[] = []` (attribute: false, each `'pin' | 'archive' | 'delete'`) —
+data mode only: built-in icon buttons rendered into each row's `actions` slot. `showArchived: boolean
+= false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
+trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
+rename. `label: string = ''` — accessible name for the list region, defaults to the localized
+`threadListLabel`.
+
+**Slots:** default — slotted mode only: host-supplied `lyra-conversation-item`s, rendered in order.
+`empty` — replaces the built-in empty state.
+
+**Events:** (data mode; slotted mode only ever fires `lyra-filter-change`) `lyra-select` (`detail: {
+id }`), `lyra-thread-pin` (`detail: { id, pinned }` — the requested new state), `lyra-thread-archive`
+(`detail: { id, archived }`), `lyra-thread-delete` (`detail: { id }`, no built-in confirmation),
+`lyra-thread-rename` (`detail: { id, title }`, re-emitted from the row's `lyra-rename`),
+`lyra-filter-change` (`detail: { text, matchCount }`).
+
+**CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
+type="search">`), `list` (the list region), `empty`, `row-action` (a built-in pin/archive/delete icon
+button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`/`row` (exported from
+the internal `lyra-virtual-list`).
+
+```html
+<lyra-thread-list
+  searchable
+  .threads=${threads}
+  active-id=${activeThreadId}
+  .rowActions=${['pin', 'archive', 'delete']}
+  @lyra-select=${(e) => openThread(e.detail.id)}
+></lyra-thread-list>
+```
+
+Composed with `lyra-split` (or `lyra-app-rail` + `lyra-responsive-panel`): thread-list in the start
+pane driving `activeId`, `lyra-chat-viewport` + `lyra-chat-composer` in the main pane.
+
+## `lyra-confirm-bar`
+
+An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
+`lyra-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
+focus. Same `lyra-approve`/`lyra-deny` event shapes as the dialog, and the same
+`toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
+translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
+semantics, and it never steals focus when it appears in the transcript. DOM and tab order put Deny
+before Approve. On activation, focus moves synchronously to `[part="status"]` (an always-rendered,
+`tabindex="-1"` element) before the Deny/Approve buttons unmount.
+
+**Properties:** `toolName: string = ''` (attribute `tool-name`) — drives the default heading through
+the existing `toolApprovalHeading`/`toolApprovalGenericTool` dialog keys. `heading: string = ''` —
+free-form heading override for non-tool proposals; wins over `toolName`. `args: unknown = undefined`
+(attribute: false) — shown read-only inside a collapsed `lyra-details` + `lyra-json-viewer` when
+defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
+component on activation and host-writable (an externally-resolved decision renders identically but
+emits nothing). `tone: 'neutral' | 'danger' = 'neutral'` (reflected).
+
+**Slots:** default — supplementary body content between the heading and the actions (e.g. a
+`lyra-diff-view`). `footer` — extra content at the start of the action row.
+
+**Events:** `lyra-approve` (`detail: { args }` — the `args` prop as-is, identical shape to
+`lyra-tool-approval-dialog`), `lyra-deny` (no detail, identical to the dialog).
+
+**CSS parts:** `base` (`role="group"`), `heading`/`tool-name`, `body`, `args` (the
+details/json-viewer wrapper, only rendered when `args` is defined), `footer`, `deny-button`,
+`approve-button` (named identically to the dialog's parts), `status` (the decided-state text, always
+present in the DOM as a focus landing spot).
+
+```html
+<lyra-tool-call-chip status="pending"></lyra-tool-call-chip>
+<lyra-confirm-bar tool-name="run_shell" .args=${args}
+  @lyra-approve=${(e) => run(e.detail.args)} @lyra-deny=${() => cancel()}
+></lyra-confirm-bar>
+```
+
+## `lyra-checkpoint`
+
+An inline conversation restore point: a labeled marker between messages whose Restore affordance
+confirms inline, then hands the host a `lyra-restore` event. This component persists and restores
+nothing itself — host state in, events out. Not a handoff or plain rule
+(`lyra-handoff-divider`/`lyra-divider`); not branch navigation across regenerated variants
+(`lyra-branch-picker`); not recorded-run playback (`lyra-playback`).
+
+**Properties:** `checkpointId: string = ''` (attribute `checkpoint-id`) — opaque id echoed in the
+`lyra-restore` event detail. `label: string = ''` — checkpoint name; the localized `checkpointLabel`
+fallback renders while empty. `timestamp?: Date | string` (attribute: false) — optional creation
+time, rendered as `<time datetime>`, default `hour:minute` in `effectiveLocale`; invalid strings are
+treated as unset. `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the
+default rendering. `restorable: boolean = true` — when `false`, renders a plain marker with no
+button. `confirmRestore: boolean = true` (attribute `confirm-restore`) — gates the event behind an
+inline confirm step; a string-aware converter parses `confirm-restore="false"` correctly from plain
+HTML. `restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
+`aria-disabled="true"` with a spinner beside the localized "Restoring…" text.
+
+**Slots:** default — optional supplemental content under the marker row (e.g. what changed since
+this point).
+
+**Events:** `lyra-restore` — `detail: { checkpointId, label }`; fired on Restore activation, after
+the inline confirm when `confirmRestore` is on. Not cancelable.
+
+**CSS parts:** `base` (`role="group"`), `line` (each of the two flanking rules), `icon` (bookmark
+glyph), `label`, `timestamp`, `restore-button` (only while `restorable`), `confirm-group`,
+`confirm-prompt`, `confirm-button`, `cancel-button`.
+
+```html
+<lyra-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}
+  @lyra-restore=${(e) => restoreTo(e.detail.checkpointId)}></lyra-checkpoint>
+```
+
+## `lyra-usage-badge`
+
+Compact, static resource strip for one message or run — tokens in/out, cost, latency — with a
+hover/focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
+is independently optional, and with nothing set, nothing renders at all (not even a focusable shell).
+The tooltip reuses `lyra-tool-call-chip`'s hover/focus/Escape/`aria-describedby` contract wholesale.
+Not `lyra-context-meter` (occupancy of a fixed capacity); not `lyra-generation-status` (live, with a
+Stop button) — this is static after the fact.
+
+**Properties:** `tokensIn?: number` (attribute `tokens-in`) — input tokens, normalized to a
+non-negative integer, locale-formatted; segment omitted while unset/non-finite. `tokensOut?: number`
+(attribute `tokens-out`) — same rules. `costText: string = ''` (attribute `cost-text`) —
+pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. `latencyMs?: number` (attribute
+`latency-ms`) — formatted with the shared duration algorithm (`820 -> "820ms"`, `1500 -> "1.5s"`).
+`compact: boolean = false` — token counts render via `Intl.NumberFormat` `notation: 'compact'`; the
+tooltip always shows full grouped figures.
+
+**Slots:** default — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
+tokens); the visible strip itself is prop-driven only.
+
+**CSS parts:** `base` (a focusable non-button `role="group"`, only rendered while at least one
+segment or the default slot has content), `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
+
+```html
+<lyra-chat-message role="assistant" status="sent">
+  <lyra-usage-badge slot="badges" tokens-in="1204" tokens-out="386"
+    cost-text="$0.012" latency-ms="2350"></lyra-usage-badge>
+  <lyra-markdown .content=${answer}></lyra-markdown>
+</lyra-chat-message>
+```
+
+## `lyra-browser-frame`
+
+Presentational "agent computer" viewport: a screenshot/frame stream (or slotted live media), a
+read-only URL display, action-ping overlays, and take-over/stop affordances. No automation transport
+(no CDP/WebRTC/WebSocket) and no input relay — take-over is an event; the host swaps in its own
+interactive element (e.g. an iframe). No replay scrubber (compose `lyra-playback` driving `frame-src`
+from a screenshot array); no console/network drawers (compose `lyra-terminal`/`lyra-json-viewer`); no
+pan/zoom of the frame content (slot the image/video inside a `lyra-zoomable-frame` instead, though
+the pings overlay assumes the unzoomed content box in that composition).
+
+**Properties:** `frameSrc: string = ''` (attribute `frame-src`) — image/MJPEG stream URL rendered as
+an `<img>` (safe-URL-gated via `safeMediaSrc`); ignored once the default slot has content. `url:
+string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating, full value in
+`title`). `status: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle'` (reflected). `controller:
+'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
+`pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
+'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
+letterboxing-aware). `controls: boolean = true` — render the built-in take-over/stop buttons.
+
+**Slots:** default — host-owned live element (e.g. `<video>` or an interactive `<iframe>`), replacing
+the `frame-src` image. `actions` — extra toolbar controls.
+
+**Events:** `lyra-take-over` — `detail: { controller }`, the *requested* controller (`'user'` when
+"Take over" is pressed, `'agent'` when "Hand back" is). `lyra-stop` — stop the agent's browser
+session, no detail.
+
+**CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (`role="status"`),
+`controller-badge`, `actions`, `take-over-button`, `stop-button`, `viewport`, `frame` (the
+`frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
+carries `data-kind`).
+
+**Themeable custom properties:** `--lyra-browser-frame-aspect-ratio` (default `16 / 9`) — the
+viewport's aspect ratio.
+
+```html
+<lyra-browser-frame status="streaming" url="https://example.com" .pings=${pings}
+  @lyra-take-over=${(e) => setController(e.detail.controller)} @lyra-stop=${() => stopSession()}
+></lyra-browser-frame>
+```
+
+## `lyra-artifact-panel`
+
+Shell around one agent-generated artifact: a title/kind header, a preview↔code toggle, version
+navigation with restore, a streaming indicator, and built-in copy/download actions. Renders none of
+the artifact itself — content is slotted. No content rendering of its own (slots own it), no
+dialog/dock chrome (compose `lyra-dialog`/`lyra-dock-panel`/`lyra-split`), no version storage or
+diffing (host state; diffs via `lyra-diff-view`), no code editing (`lyra-code-editor`).
+
+**Properties:** `label: string = ''` — the artifact's title, shown in the header. `kind: string = ''`
+— a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
+'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
+(attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last
+entry is the latest version. `activeVersionId: string | null = null` (attribute
+`active-version-id`) — the currently viewed version's id, or `null` for "the latest version."
+`streaming: boolean = false` (reflected) — whether the artifact is still being generated; sets
+`aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
+motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
+copy button; empty hides the button. `downloadSrc: string = ''` (attribute `download-src`) — the
+download URL, sanitized through `safeMediaSrc()`; empty hides the button. `downloadName: string =
+''` (attribute `download-name`) — the suggested filename reported in the `lyra-download` event
+detail.
+
+**Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
+code-view content (typically a `lyra-code-block`); the preview/code toggle only renders once this
+slot has assigned content. `actions` — extra header controls, rendered between the version
+navigation and the built-in copy/download buttons.
+
+**Events:** `lyra-view-change` (`detail: { view }`), `lyra-version-change` (`detail: { versionId }`,
+fired when the previous/next navigation moves to a different version), `lyra-restore` (`detail: {
+versionId }`, fired by the restore-this-version button; mutates nothing itself), `lyra-copy`
+(`detail: { text }`, after a best-effort clipboard write), `lyra-download` (`detail: { filename,
+src? }`, with the sanitized download URL).
+
+**CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
+has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
+(rendered only once `versions` is non-empty), `version-previous`, `version-next`, `version-position`
+(the "Version N of M" text), `restore-button` (rendered only while the active version isn't the
+latest), `actions`, `copy-button` (rendered only while `copyText` is non-empty), `download-button`
+(rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
+`streaming`).
+
+```html
+<lyra-artifact-panel label="report.md" kind="document" .versions=${versions}
+  @lyra-restore=${(e) => restoreVersion(e.detail.versionId)}>
+  <lyra-markdown .content=${markdown}></lyra-markdown>
+  <lyra-code-block slot="code" language="markdown" .code=${markdown}></lyra-code-block>
+</lyra-artifact-panel>
+```
+
+## `lyra-widget-renderer`
+
+Renders an agent-streamed declarative JSON widget tree through an allowlisted `type -> lyra tag`
+registry: safe generative UI with exactly one action event out. A mapped node's real element is
+created via `document.createElement()` with every prop assigned as a plain JS property (never
+`setAttribute`, never `innerHTML`), and reused by key across a re-resolve so a mapped widget's own
+internal state (an open `<details>`, focus, scroll position) survives a streamed `tree` update.
+Built-in `row`/`col`/`text` structural nodes render through ordinary nested templates instead. Not a
+form runtime (no input/select/form types in the default registry), no expression language or
+data-binding, no remote widget/schema fetching, and it never renders arbitrary HTML or navigates (no
+`href` props are allowlisted anywhere).
+
+**Exported types:** `WidgetNode { type: string; id?: string; props?: Record<string, unknown>;
+children?: (WidgetNode | string)[]; slot?: string; actionId?: string; payload?: unknown }` — `id` is
+a stable reconciliation key (falling back to a structural path), `slot` is honored only when the
+parent type allowlists it, `actionId` arms the type's declared action trigger, and `payload` is
+echoed back in `lyra-widget-action`.
+
+**Properties:** `tree: WidgetNode | null = null` (property only) — the declarative widget tree to
+render; `null` renders an empty base. `registry?: WidgetTypeRegistry` (attribute: false) — a
+per-instance override of the module-level default registry.
+
+**Registry module (`widget-renderer/registry.js`):** `registerWidgetType(type, def)` registers (or
+overwrites) a type in the default registry; `def: WidgetTypeDefinition { tag?: string; props?:
+Record<string, 'string' | 'number' | 'boolean'>; forcedProps?: Record<string, unknown>; slots?:
+string[]; action?: { event: string } }` — `tag` is resolved prefix-aware, `props` is a prop allowlist
+(a prop absent here, or whose runtime type doesn't match, is silently skipped — never assigned),
+`forcedProps` always apply and are never overridable by `WidgetNode.props`, `slots` allowlists child
+`slot` names (a disallowed one renders unslotted rather than being dropped), and `action.event` is
+the native/custom DOM event that arms `lyra-widget-action` when a node also sets `actionId`.
+`getDefaultWidgetTypeRegistry()` returns the module-level registry `registerWidgetType()` writes to.
+
+**Default registry** (populated by the side-effect entry's `registerDefaultWidgetTypes()`): `text`
+(plain text node), `row`/`col` (internal flex wrappers; props `gap: 's'|'m'|'l'`, `align:
+'start'|'center'|'end'|'stretch'`, `justify: 'start'|'center'|'end'|'between'`), `card` →
+`lyra-card` (`appearance`), `badge` → `lyra-badge` (`variant`), `button` → `lyra-button` (`variant`,
+`appearance`, `size`, `disabled`, `loading`; action: `click`), `stat` → `lyra-stat` (`label`,
+`value`, `unit`, `variant`, `caption`, `sub`), `result-card` → `lyra-result-card` (`title`),
+`result-field` → `lyra-result-field` (`label`, `value`), `markdown` → `lyra-markdown` (`content`;
+forced `{ sanitize: true }`), `image` → `lyra-media-card` (`src`, `alt`, `filename`; forced `{ kind:
+'image' }`).
+
+**Events:** `lyra-widget-action` — `detail: { actionId, payload }`, the single bubbling action
+channel. `lyra-render-error` — `detail: { error }`, the root value was structurally unusable
+(non-object, or the depth/size caps made it empty).
+
+**CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
+structural nodes only — a mapped lyra component exposes its own parts instead).
+
+Caps: depth 32, 5,000 nodes — excess is skipped with a deduped `console.warn` per type/prop per
+instance. Reconciliation is keyed by `id ?? structural path`, so a streamed re-send patches in
+place and user state (an open `<details>`, focus, scroll) survives.
+
+```ts
+registerWidgetType('sparkline', { tag: tag('sparkline'), props: { data: 'string' } });
+```
+```html
+<lyra-widget-renderer .tree=${msg.widget}
+  @lyra-widget-action=${(e) => sendToAgent(e.detail.actionId, e.detail.payload)}
+></lyra-widget-renderer>
+```
+
+**Optional peer deps:** none new — the default-registry entry directly imports the eight mapped
+components (`markdown` keeps its own `marked`/`dompurify` optional-peer fallback). A host wanting a
+leaner dependency graph registers a custom registry (via the `registry` property) and imports only
+the components it maps.
+
+## `lyra-voice-picker`
+
+A TTS voice selector over a host-supplied `catalog`, mirroring `lyra-model-select`'s
+closed-dropdown/free-text-combobox dual mode, stale-value handling, and form-association verbatim
+(see that section for the full mode-switching contract this one shares), extended with a
+TTS-agnostic preview affordance. Preview is event-first: `lyra-preview-request` always fires first
+and is cancelable — left un-prevented, a `previewUrl` plays through one internal native `<audio>`
+(validated by `safeMediaSrc()` first); `preventDefault()` or no URL leaves playback to the host's own
+TTS. Requesting the same voice while it's already playing internally stops it instead of
+re-requesting; requesting a different voice switches. Does not synthesize speech, fetch catalogs, or
+persist selection; not a persona picker; `lyra-model-select` stays for LLMs.
+
+**Exported types:** `LyraVoiceCatalogEntry { id: string; label: string; language?: string;
+description?: string; previewUrl?: string }` — `language`/`description` render as a quiet
+`[part="option-meta"]` second line. `LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[]` —
+homogeneous, same union contract as `LyraModelCatalog`.
+
+**Properties:** `provider: string = ''` — informational only (e.g. `'elevenlabs'`); rendered as a
+small leading badge. `catalog?: LyraVoiceCatalog` (attribute: false) — the full voice list; omit (or
+leave empty) to fall back to plain free-text entry. `allowCustom: boolean = false` (attribute
+`allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`. `preview:
+boolean = true` (reflected) — whether to render preview affordances at all. `label: string = ''`,
+`hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
+`spellcheck: boolean = true` (string-aware converter, same as `lyra-model-select`), `autocapitalize:
+string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,
+`inputMode: string = ''` (attribute `inputmode`), `enterKeyHint: string = ''` (attribute
+`enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lyra-model-select`'s
+identically-named properties.
+
+**Form association:** hand-rolled via `attachInternals()`, mirroring `lyra-model-select`: `value`
+getter/setter (the current voice id, `''` when nothing is selected), `name` (reflected), `disabled`
+(reflected), `required` (reflected — enforced via `internals.setValidity()`).
+
+**Events:** `lyra-change` — `detail: { value, inCatalog }`. `lyra-preview-request` — `detail: {
+voiceId, previewUrl? }`, cancelable. `lyra-preview-change` — `detail: { voiceId }`, internal playback
+started (`voiceId`) or stopped (`null`). Plus mirrored native `input`/`change` and re-dispatched
+`focus`/`blur` (picker-family contract, same as `lyra-model-select`).
+
+**Slots:** `hint`, `error`.
+
+**CSS parts:** `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
+(free-text mode), `provider-badge`, `listbox`, `option`, `option-label`, `option-meta` (the quiet
+`language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
+stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabindex="-1"`,
+`aria-hidden`), `preview-button` (the standalone, keyboard-reachable preview toggle beside the
+trigger), `expand-icon`, `empty`, `hint`, `error`.
+
+```html
+<lyra-voice-picker provider="elevenlabs" .catalog=${voices} allow-custom
+  @lyra-change=${(e) => setVoice(e.detail.value)}
+  @lyra-preview-request=${(e) => {
+    if (!e.detail.previewUrl) {
+      e.preventDefault();
+      playSample(e.detail.voiceId);
+    }
+  }}
+></lyra-voice-picker>
+```
+
+**Known gotchas:**
+- Listbox options must not contain tab-focusable controls, so preview is accessible via the
+  standalone `[part="preview-button"]` beside the trigger (previews the active option while open,
+  else the committed value) — the per-row `[part="option-preview"]` icon is a pointer-only
+  duplicate (`tabindex="-1"`, `aria-hidden="true"`).
+- `catalog` must be homogeneous — the same constraint `lyra-model-select`'s `LyraModelCatalog` union
+  documents.
+
+## `lyra-notebook-viewer`
+
+Read-only Jupyter notebook (nbformat 4.x) renderer, composing existing components per cell.
+Execution is a hard non-goal. Markdown cells render through `lyra-markdown`, code cells through
+`lyra-code-block` (using the notebook's kernel language for syntax highlighting), and raw cells as
+plain preformatted text. A code cell's `execute_result`/`display_data` outputs prefer, in order,
+`image/png`, `image/jpeg`, `image/svg+xml` (sanitized), `text/html` (sanitized), `application/json`
+(via `lyra-json-viewer`), then `text/plain`. Stream/error outputs render as plain preformatted text
+(tinted `danger` for stderr/tracebacks). Sanitizing raw HTML/SVG output markup lazy-loads the
+optional peer `dompurify`; without it, the output renders a localized notice instead of raw markup.
+Cells are virtualized through `lyra-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
+index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
+ipywidgets.
+
+**Properties:** `src: string = ''` — URL to fetch and parse as a notebook; ignored once `notebook` is
+set. `notebook?: object | string` (property only) — an already-parsed notebook document, or its raw
+JSON text; wins over `src` and is parsed (and validated) synchronously. `name: string = ''` —
+accessible label, and matched against a `fragment` anchor's cell id. `outputCollapseLines: number =
+40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
+collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
+`max-height`) — once set, the notebook scrolls internally past this height. `anchorKinds` is a
+readonly `['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the
+shared anchor-target contract).
+
+**Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
+matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
+`searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and flashing the
+target cell; `clearSearch()` clears the query and matches.
+
+**Events:** `lyra-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
+and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
+`lyra-highlight-activate` — `detail: { id }`. `lyra-search-change` — `detail: { query, matchCount,
+activeIndex }`. `lyra-render-error` — `detail: { error }`, fetching, parsing, or validating the
+notebook failed.
+
+**CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
+`data-active`), `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`,
+`output` (`data-output-type`, `data-stream`), `output-toggle`, `error`, `spinner`.
+
+**Themeable custom properties:** `--lyra-notebook-viewer-max-height` (default `none`).
+
+**Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
+`shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
+`text/plain`).
+
+```html
+<lyra-notebook-viewer .notebook=${result} max-height="30rem"
+  @lyra-load=${(e) => console.log(e.detail.cellCount, 'cells')}
+></lyra-notebook-viewer>
+```
+
+A notebook major version outside 4.0–4.5, an invalid shape, or more than 2,000 cells renders a
+localized error and fires `lyra-render-error` instead of the notebook.
+
+## `lyra-xml-viewer`
+
+Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lyra-json-viewer`'s
+UX (`collapsed-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
+`xml` reassignment) adapted for XML's own node kinds: elements with attributes, text, comments, CDATA
+sections, and processing instructions. Namespace-literal: qualified names render exactly as authored,
+with no namespace-URI-aware matching. `DOMParser` never resolves external entities or DTDs, so XXE
+injection is structurally out of reach. Not `lyra-json-viewer` (JS values); not `lyra-html-viewer`
+(sanitized *rendered* HTML). No XPath/XSLT evaluation, no editing, no schema validation.
+
+**Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
+string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
+synchronously. `name: string = ''` — accessible label. `collapsedDepth?: number` (attribute
+`collapsed-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed. `copyable:
+boolean = false` (reflected) — shows copy-to-clipboard affordances, one for the whole document plus
+one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds` is a readonly
+`['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract) — each numeric path segment is the 0-based index within the parent's *element* children,
+and an optional trailing string segment `'@attrName'` addresses one attribute.
+
+**Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
+every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
+`clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
+`clearSearch()` clears the query and matches.
+
+**Events:** `lyra-copy` — `detail: { text }`. `lyra-search-change` — `detail: { query, matchCount,
+activeIndex }`. `lyra-render-error` — `detail: { error }`, fetching or parsing failed, including a
+parse error or exceeding the node cap.
+
+**CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
+`copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
+the resolved anchor target, `data-match`, `data-active-match`), `tag` (`data-match`), `attribute`,
+`attribute-name`, `attribute-value` (`data-match`), `text` (`data-match`), `comment`, `cdata`, `pi`,
+`toggle` (an element's expand/collapse button, hidden but present for row alignment on leaf/empty
+elements), `error`, `spinner`.
+
+**Themeable custom properties:** `--lyra-xml-viewer-max-height` (default `none`).
+
+```html
+<lyra-xml-viewer .xml=${payload} collapsed-depth="2" copyable
+  search=${query}
+></lyra-xml-viewer>
+```
+
+Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
+tree.
+
+## `lyra-geojson-view`
+
+Internal document-registry bridge that fetches, validates, and renders a GeoJSON file through
+`<lyra-map>`'s `dataLayers` — not a documented public tag: excluded from the README/llms family
+tables, present in the generated manifest since a defined custom element is technically reachable.
+The document registry matches `application/geo+json` and `.geojson` filenames.
+
+Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
+`LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
+rendering; anything else renders the localized `geojsonViewInvalid` error. On success, it walks every
+coordinate to compute a bounding box and fits a `center`/`zoom` to it (a Web-Mercator-fit
+approximation weighting latitude span ~2x, with 40% padding), then hands the parsed value to
+`<lyra-map>` as a single `dataLayers` entry (`sourceId: 'lyra-geojson'`). When the optional
+`maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lyra-json-viewer
+collapsed-depth="2">` of the raw value instead of the map.
+
+**Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
+used as `<lyra-map>`'s `label` and the root's `aria-label` (falling back to the localized
+`geojsonViewLabel` when unset).
+
+**Events:** `lyra-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+
+**CSS parts:** `base` (the root container), `status` (the feature-count status line, `role="status"`,
+shown only in the `<lyra-map>` path), `missing-library` (the missing-`maplibre-gl` callout shown
+alongside the `lyra-json-viewer` fallback), `error` (the error region, `role="alert"`), `spinner`
+(the loading status region).
+
+Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
+same as `lyra-map`/`lyra-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
+resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
+message instead of the map.

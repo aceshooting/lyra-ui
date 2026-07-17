@@ -120,6 +120,16 @@
     "./dist/components/pdf-viewer/pdf-viewer.js",
     "./dist/components/image-viewer/image-viewer.js",
     "./dist/components/av-player/av-player.js",
+    "./dist/components/artifact-panel/artifact-panel.js",
+    "./dist/components/browser-frame/browser-frame.js",
+    "./dist/components/chat-viewport/chat-viewport.js",
+    "./dist/components/checkpoint/checkpoint.js",
+    "./dist/components/confirm-bar/confirm-bar.js",
+    "./dist/components/suggestion-chips/suggestion-chips.js",
+    "./dist/components/thread-list/thread-list.js",
+    "./dist/components/usage-badge/usage-badge.js",
+    "./dist/components/voice-picker/voice-picker.js",
+    "./dist/components/widget-renderer/widget-renderer.js",
     "./dist/components/spreadsheet-viewer/spreadsheet-viewer.js",
     "./dist/components/csv-viewer/csv-viewer.js",
     "./dist/components/xml-viewer/xml-viewer.js",
@@ -605,5 +615,5 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
   },
   "packageManager": "pnpm@11.13.0",
-  "customElements": "/tmp/custom-elements.json"
+  "customElements": "custom-elements.json"
 }

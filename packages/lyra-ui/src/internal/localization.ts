@@ -117,6 +117,8 @@ export type LyraMessageKey =
   | 'codeRegionWithLanguage'
   | 'codeBlockLineLabel'
   | 'copyDiff'
+  | 'diffViewOldLabel'
+  | 'diffViewNewLabel'
   | 'jsonArray'
   | 'jsonObject'
   | 'jsonValue'
@@ -497,6 +499,9 @@ export type LyraMessageKey =
   | 'emailViewerDate'
   | 'emailViewerAttachments'
   | 'emailViewerNoSubject'
+  | 'emailViewerOpenAttachment'
+  | 'emailViewerShowQuoted'
+  | 'emailViewerHideQuoted'
   | 'calendarViewerLabel'
   | 'calendarViewerMissingParser'
   | 'calendarViewerEmpty'
@@ -674,7 +679,12 @@ export type LyraMessageKey =
   | 'artifactPanelNextVersion'
   | 'artifactPanelVersionPosition'
   | 'artifactPanelRestore'
-  | 'artifactPanelGenerating';
+  | 'artifactPanelGenerating'
+  | 'geojsonViewLabel'
+  | 'geojsonViewInvalid'
+  | 'geojsonViewFeatureCount'
+  | 'geojsonViewFeatureCountPlural'
+  | 'geojsonViewMissingMapLibrary';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -792,6 +802,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   codeRegionWithLanguage: '{language} code',
   codeBlockLineLabel: 'Line {line}',
   copyDiff: 'Copy diff',
+  diffViewOldLabel: 'Original',
+  diffViewNewLabel: 'Modified',
   jsonArray: 'array',
   jsonObject: 'object',
   jsonValue: 'value',
@@ -1179,6 +1191,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   emailViewerDate: 'Date',
   emailViewerAttachments: 'Attachments',
   emailViewerNoSubject: '(no subject)',
+  emailViewerOpenAttachment: 'Open {filename}',
+  emailViewerShowQuoted: 'Show quoted text',
+  emailViewerHideQuoted: 'Hide quoted text',
   calendarViewerLabel: 'Calendar viewer',
   calendarViewerMissingParser: 'This viewer needs the optional "ical.js" package installed to parse this calendar.',
   calendarViewerEmpty: 'This calendar has no events.',
@@ -1350,6 +1365,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   artifactPanelVersionPosition: 'Version {index} of {count}',
   artifactPanelRestore: 'Restore this version',
   artifactPanelGenerating: 'Generating…',
+  geojsonViewLabel: 'Map',
+  geojsonViewInvalid: 'This file is not valid GeoJSON.',
+  geojsonViewFeatureCount: '{count} feature',
+  geojsonViewFeatureCountPlural: '{count} features',
+  geojsonViewMissingMapLibrary: 'Install the optional maplibre-gl peer to render this file on a map. Showing the raw GeoJSON instead.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

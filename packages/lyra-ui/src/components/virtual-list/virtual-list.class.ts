@@ -132,6 +132,13 @@ export interface LyraVirtualListEventMap {
  * scroll-into-view -- used by `<lyra-chat-viewport>`'s virtual mode and any other host that needs to
  * scroll to a specific row without also changing which row is "active."
  *
+ * **`item-role="row"` mode.** Additive to the default `'listitem'` mapping above: `[part="base"]`
+ * becomes `role="rowgroup"`, `[part="spacer"]` becomes `role="presentation"`, and each row becomes
+ * `role="row"` with `aria-rowindex` (the row's 1-based index plus `row-index-offset`) instead of
+ * `aria-setsize`/`aria-posinset`. For a consumer composing its own `role="table"` wrapper and header
+ * row around this component (see `<lyra-dataset-viewer>`), where `row-index-offset="1"` accounts for
+ * that external header row occupying `aria-rowindex="1"`.
+ *
  * @customElement lyra-virtual-list
  * @event lyra-load-more - Fired once per approach to the bottom of the list
  *   while `has-more` is true and `loading` is false. Deliberately does not
@@ -178,6 +185,17 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** `'auto'` (default) measures each row's real height via `ResizeObserver`;
    *  a numeric string fixes every row to that many pixels. */
   @property({ attribute: 'row-height' }) rowHeight = 'auto';
+
+  /** `'listitem'` (default) preserves today's `role="list"`/`role="listitem"` mapping with
+   *  `aria-setsize`/`aria-posinset`. `'row'` maps to `role="rowgroup"`/`role="row"` with
+   *  `aria-rowindex` instead -- for a consumer composing a virtualized `role="table"` (see
+   *  `<lyra-dataset-viewer>`). */
+  @property({ attribute: 'item-role' }) itemRole: 'listitem' | 'row' = 'listitem';
+
+  /** Added to a row's 1-based index to compute `aria-rowindex` in `item-role="row"` mode (e.g. `1`
+   *  when a consumer renders its own header row occupying `aria-rowindex="1"` outside this
+   *  component). No effect in `'listitem'` mode. */
+  @property({ type: Number, attribute: 'row-index-offset' }) rowIndexOffset = 0;
 
   /** Extra rows rendered beyond the visible viewport on each side, to reduce
    *  blank-frame risk during fast scrolling. Normalized to a whole number in
@@ -502,7 +520,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     const current = new Map<VirtualListKey, HTMLElement>();
     this.renderRoot.querySelectorAll<HTMLElement>('[part="row"]').forEach((el) => {
-      const index = Number(el.getAttribute('aria-posinset')) - 1;
+      const index = Number(el.getAttribute('data-row-index'));
       if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return;
       const key = this.keyOf(this.items[index], index);
       current.set(key, el);
@@ -630,13 +648,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const key = this.keyOf(item, index);
     const top = this.offsets[index] ?? 0;
     const isActive = this.activeId !== '' && Object.is(key, this.activeId);
+    const isRowMode = this.itemRole === 'row';
     return html`
       <div
         part="row"
-        role="listitem"
+        role=${isRowMode ? 'row' : 'listitem'}
         data-row-key=${domKeyToken(key)}
-        aria-setsize=${total}
-        aria-posinset=${index + 1}
+        data-row-index=${index}
+        aria-setsize=${isRowMode ? nothing : total}
+        aria-posinset=${isRowMode ? nothing : index + 1}
+        aria-rowindex=${isRowMode ? index + 1 + this.rowIndexOffset : nothing}
         aria-current=${isActive ? 'true' : nothing}
         style=${styleMap({ transform: `translateY(${top}px)` })}
       >
@@ -674,16 +695,17 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     for (let i = this.renderStart; i <= this.renderEnd; i++) {
       windowed.push({ item: this.items[i], index: i });
     }
+    const isRowMode = this.itemRole === 'row';
 
     return html`
       <div
         part="base"
-        role="list"
+        role=${isRowMode ? 'rowgroup' : 'list'}
         tabindex="0"
         aria-label=${this.getAttribute('aria-label') || nothing}
         aria-busy=${this.loading ? 'true' : nothing}
       >
-        <div part="spacer" style=${styleMap({ height: `${totalHeight}px` })}>
+        <div part="spacer" role=${isRowMode ? 'presentation' : nothing} style=${styleMap({ height: `${totalHeight}px` })}>
           ${this.renderGroups()}
           ${repeat(
             windowed,

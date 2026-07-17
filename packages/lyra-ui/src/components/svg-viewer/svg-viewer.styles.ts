@@ -53,4 +53,22 @@ export const styles = css`
     display: flex;
     justify-content: center;
   }
+  .zoom-content {
+    position: relative;
+  }
+  [part='highlight-layer'] {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  [part='region-highlight'] {
+    position: absolute;
+    pointer-events: auto;
+    border: var(--lyra-border-width-thick) solid var(--lyra-color-brand);
+    border-radius: var(--lyra-radius-xs);
+    cursor: pointer;
+  }
+  [part='region-highlight'][data-active] {
+    border-color: var(--lyra-color-warning, var(--lyra-color-brand));
+  }
 `;

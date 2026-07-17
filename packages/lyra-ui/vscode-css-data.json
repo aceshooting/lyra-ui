@@ -2,6 +2,13 @@
   "version": 1.1,
   "properties": [
     {
+      "name": "--lyra-activity-feed-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-activity-feed>`** (default: `16rem`) — Cap on how tall the expanded body grows before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list."
+      }
+    },
+    {
       "name": "--lyra-animated-image-control-box-size",
       "description": {
         "kind": "markdown",
@@ -58,6 +65,27 @@
       }
     },
     {
+      "name": "--lyra-audio-visualizer-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-audio-visualizer>`** (default: `var(--lyra-color-brand)`) — Active bar/waveform color."
+      }
+    },
+    {
+      "name": "--lyra-audio-visualizer-quiet-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-audio-visualizer>`** (default: `var(--lyra-color-brand-quiet)`) — Inactive/idle color."
+      }
+    },
+    {
+      "name": "--lyra-av-player-transcript-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-av-player>`** (default: `var(--lyra-size-16rem)`) — Block size of the virtualized transcript list."
+      }
+    },
+    {
       "name": "--lyra-avatar-group-avatar-size",
       "description": {
         "kind": "markdown",
@@ -97,6 +125,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-avatar-group>`** (default: `var(--lyra-border-width-medium)`) — Ring thickness."
+      }
+    },
+    {
+      "name": "--lyra-browser-frame-aspect-ratio",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-browser-frame>`** (default: `16 / 9`) — The viewport's aspect ratio."
       }
     },
     {
@@ -289,6 +324,48 @@
       }
     },
     {
+      "name": "--lyra-graph-cat-1..8",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** — Ordered categorical fallback palette for a typed node with no `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries). Declared centrally in `tokens.styles.ts` so `<lyra-graph>` and any future `<lyra-graph-legend>`- style component resolve the identical default."
+      }
+    },
+    {
+      "name": "--lyra-graph-edge-label-halo",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `var(--lyra-color-surface)`) — Legibility halo (`stroke`) behind a drawn edge label, painted under the fill via `paint-order: stroke`."
+      }
+    },
+    {
+      "name": "--lyra-graph-focus-halo-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `var(--lyra-color-brand)`) — `focus-halo` stroke color."
+      }
+    },
+    {
+      "name": "--lyra-graph-hull-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `var(--lyra-color-brand)`) — Hull fill/stroke color."
+      }
+    },
+    {
+      "name": "--lyra-graph-hull-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `0.12`) — Hull element opacity (composites fill+stroke as one group, avoiding a double-opacity seam at the fill/stroke boundary)."
+      }
+    },
+    {
+      "name": "--lyra-graph-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `var(--lyra-color-success)`) — Selected node/link stroke."
+      }
+    },
+    {
       "name": "--lyra-heatmap-annotation-color",
       "description": {
         "kind": "markdown",
@@ -394,10 +471,24 @@
       }
     },
     {
+      "name": "--lyra-notebook-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-notebook-viewer>`** (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
       "name": "--lyra-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-dropdown>`, `<lyra-popover>`** — Maximum inline size of the popup (default `--lyra-size-20rem`)."
+      }
+    },
+    {
+      "name": "--lyra-page-rail-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-page-rail>`** (default: `var(--lyra-size-24rem)`) — Block size of the virtualized rail."
       }
     },
     {
@@ -492,6 +583,20 @@
       }
     },
     {
+      "name": "--lyra-span-waterfall-name-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-span-waterfall>`** (default: `8rem`) — Width of the name gutter column."
+      }
+    },
+    {
+      "name": "--lyra-span-waterfall-stripe-speed",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-span-waterfall>`** — Animation duration for a `running` span's striped bar; defaults to `--lyra-transition-ambient`."
+      }
+    },
+    {
       "name": "--lyra-sparkline-area-opacity",
       "description": {
         "kind": "markdown",
@@ -513,10 +618,31 @@
       }
     },
     {
+      "name": "--lyra-swatch-picker-selected-blur",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-swatch-picker>`** (default: `0px`) — Blur radius of that same ring. 0 by default (a crisp ring); set a real length (e.g. 0.4rem) for a soft glow instead."
+      }
+    },
+    {
       "name": "--lyra-swatch-picker-selected-color",
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-swatch-picker>`** (default: `var(--lyra-color-brand)`) — Ring color drawn around the selected swatch, themeable independently of the focus ring and every other ring color."
+      }
+    },
+    {
+      "name": "--lyra-swatch-picker-shine-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-swatch-picker>`** (default: `0s`) — Duration of a rhythmic brighten-and-settle \"shine\" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every existing consumer. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under `prefers-reduced-motion: reduce`. Independent of `--lyra-swatch-picker-selected-blur` (a separate `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works identically for a plain color circle and an icon swatch alike."
+      }
+    },
+    {
+      "name": "--lyra-task-list-spin",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-task-list>`** (default: `1s linear`) — Running-status icon spin animation duration/timing."
       }
     },
     {
@@ -720,6 +846,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lyra-word-cloud>`** (default: `var(--lyra-color-chart-4)`) — Eighth entry of the default categorical palette."
+      }
+    },
+    {
+      "name": "--lyra-xml-viewer-max-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-xml-viewer>`** (default: `none`) — Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property."
       }
     },
     {

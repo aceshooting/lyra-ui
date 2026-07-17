@@ -321,7 +321,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 168 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 205 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -396,6 +396,7 @@ API details.
 | `<lyra-time-range>` | — (extra) | Two-handle brush/scrubber over a numeric domain |
 | `<lyra-playback>` | — (extra) | Play/pause index stepper on a fixed interval |
 | `<lyra-heatmap>` | — (extra) | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling |
+| `<lyra-sequence-strip>` | — (extra) | Compact, one-thin-cell-per-item strip visualizing a sequence of categorical states with an optional secondary per-cell marker — pure CSS/flex, no chart.js/SVG/canvas; a glanceable aggregate (`role="img"`) sized/named consistently with the sparkline/heatmap family, not a `role="list"` of separately-operable cells |
 | `<lyra-graph>` | — (extra) | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` |
 | `<lyra-tree>` + `<lyra-tree-node>` | — (extra) | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation |
 
@@ -432,15 +433,26 @@ each one-liner below.
 | Component | Mirrors | Notes |
 |-----------|---------|-------|
 | `<lyra-chat-message>` | — (extra) | Role-based (`user`/`assistant`/`system`) message bubble shell; avatar/badges header, status-aware footer (built-in retry on `status="failed"`), attachments strip — renders no message content itself, just the chrome around a slotted body |
+| `<lyra-chat-viewport>` | — (extra) | Transcript scroll container: stick-to-bottom while an answer streams, a "jump to latest" pill, and an unread divider; auto-detects slotted `<lyra-chat-message>` children vs. a single nested `<lyra-virtual-list>` (virtual mode) and defers scrolling to it |
+| `<lyra-message-actions>` | — (extra) | Per-message action toolbar for `<lyra-chat-message>`'s `actions` slot — opt-in copy/regenerate/edit/feedback built-ins plus a default slot for custom controls (e.g. a slotted `<lyra-branch-picker>`); `role="toolbar"` with APG roving-tabindex across every stop |
+| `<lyra-message-feedback>` | — (extra) | Thumbs up/down for one assistant message with an optional inline reason-chips + free-text comment disclosure; emits, never persists — the host reflects a prior rating back via `value` |
+| `<lyra-branch-picker>` | — (extra) | The "‹ 2 / 5 ›" navigator across regenerated/edited message variants; pure controlled (`lyra-branch-change`, never mutates its own `index`) — same contract `<lyra-pagination>` establishes for `page`; renders nothing while `count < 2` |
 | `<lyra-typing-indicator>` | — (extra) | Purely presentational "assistant is responding" cue; `dots`/`pulse`/`cursor` variants |
 | `<lyra-streaming-text>` | — (extra) | Token-coalescing incremental text renderer for streamed output; auto-detects Markdown (or force via `markdown`), optional blinking cursor |
 | `<lyra-thinking-panel>` | — (extra) | Collapsible panel for an agent's intermediate reasoning transcript; `live` mode auto-scrolls (stick-to-bottom) while streaming, `post-hoc` doesn't |
+| `<lyra-activity-feed>` | — (extra) | Append-only streaming log of granular agent actions ("Searching the web…"), collapsing to a localized "Completed N steps" summary once the run ends; virtualizes past `virtualizeThreshold` entries, shares the `follow`/`lyra-follow-change` stick-to-bottom contract |
+| `<lyra-task-list>` | — (extra) | Live, collapsible tracker for an agent's plan — ordered steps with per-step lifecycle status and one level of nested sub-steps; controlled `items`, mirrors `<lyra-stepper>`'s `steps` contract but read-only (several steps can be `running` at once, no selection) |
 | `<lyra-generation-status>` | — (extra) | Ticking elapsed-time / token-count / throughput readout for an in-progress response, plus a built-in Stop button |
 | `<lyra-stream-status>` | — (extra) | Compact transport-health indicator (`idle`/`connecting`/`streaming`/`stalled`) with heartbeat-aware stall detection via `recordActivity()` |
+| `<lyra-checkpoint>` | — (extra) | Inline conversation restore-point marker between messages; its Restore affordance confirms inline, then hands the host a `lyra-restore` event — persists and restores nothing itself |
+| `<lyra-handoff-divider>` | — (extra) | Labeled separator marking control transfer between agents in a transcript ("Transferred to Research Agent"), with an optional agent avatar; purely presentational, announced once via an internal `<lyra-live-region>` on connect |
 | `<lyra-markdown>` | — (extra) | Sanitized Markdown → HTML (GFM tables, fenced code, links); lazy-loads the optional peers `marked` + `dompurify` |
 | `<lyra-code-block>` | — (extra) | Fenced code display with a copy button, optional line numbers, lazy-loaded `shiki` grammars, and built-in GreyCat/GCL highlighting |
+| `<lyra-artifact-panel>` | — (extra) | Shell around one agent-generated artifact — title/kind header, preview↔code toggle, version navigation with restore, a streaming indicator, and built-in copy/download actions; renders none of the artifact itself, content is slotted |
 | `<lyra-live-region>` | — (extra) | Throttled/coalesced ARIA live-region announcer for streaming UIs, built on the reusable internal `Announcer` engine |
 | `<lyra-chat-composer>` | — (extra) | Auto-resizing message `<textarea>` + built-in send/stop button; form-associated, Enter-to-send with Shift+Enter/IME handling |
+| `<lyra-suggestion-chips>` | — (extra) | Starter prompts (empty thread) or follow-up suggestions (after a response) as a horizontally scrollable chip row; activation hands the prompt to the host — never composes or sends anything itself |
+| `<lyra-emoji-picker>` | — (extra) | Searchable, keyboard-navigable, form-associated emoji picker; ships no emoji data of its own (`groups` is consumer-suppliable) with an optional convenience auto-loader for a default set |
 | `<lyra-attachment-chip>` | — (extra) | Pre-send or sent file chip with thumbnail/size/upload-progress/retry; derives metadata from a real `File` or from persisted server metadata |
 | `<lyra-attachment-trigger>` | — (extra) | Attach-file affordance for a composer's leading slot; a single icon button, or a `<lyra-menu>` when more than one capability (`files`/`image`/`camera`) is configured |
 | `<lyra-mention-popover>` | — (extra) | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself |
@@ -448,21 +460,29 @@ each one-liner below.
 | `<lyra-tool-result-view>` + `registerToolRenderer()` | — (extra) | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lyra-json-viewer>` |
 | `<lyra-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lyra-tabs>` of Input/Preview/JSON/Raw) |
 | `<lyra-tool-approval-dialog>` | — (extra) | Human-in-the-loop approve/deny gate for one proposed tool call, with an optional inline JSON argument editor before approving |
+| `<lyra-confirm-bar>` | — (extra) | Inline, non-modal approve/deny block for one proposed action — the in-flow sibling of `<lyra-tool-approval-dialog>` for confirmations that shouldn't hijack focus; same `lyra-approve`/`lyra-deny` event shapes and localization keys as the dialog |
 | `<lyra-tool-param-form>` | — (extra) | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing |
 | `<lyra-tool-select-dialog>` | — (extra) | Category-grouped, filterable, searchable dialog for picking which agent tools are enabled in a conversation |
 | `<lyra-command-palette>` | — (extra) | Searchable command menu with groups, keyboard navigation, async-friendly registration, and `mod+k` opening |
+| `<lyra-widget-renderer>` | — (extra) | Renders an agent-streamed declarative JSON widget tree through an allowlisted `type -> lyra tag` registry (`registerWidgetType()`); mapped nodes are real elements with props assigned as JS properties (never `innerHTML`), reused by key across a re-resolve |
 | `<lyra-json-viewer>` | — (extra) | Collapsible, copyable tree view for an arbitrary JSON value; path-keyed expand state survives a streamed in-place `data` patch |
 | `<lyra-citation-badge>` | — (extra) | Inline `[n]` citation marker with a hover/focus preview popover and confidence/verification-status coloring |
 | `<lyra-source-list>` + `<lyra-source-card>` | — (extra) | Collapsible "Sources" panel for one chat message, grouping per-source cards with an excerpt + "Show more" full-text toggle |
 | `<lyra-conversation-item>` | — (extra) | Selectable chat-history row with inline rename; usable standalone or as `<lyra-virtual-list>`'s `renderItem()` payload |
 | `<lyra-virtual-list>` | — (extra) | Generic windowed/virtualized list host — renders only the viewport's rows as real DOM, for a multi-thousand-row history sidebar |
+| `<lyra-thread-list>` | — (extra) | Conversation sidebar — grouped, searchable chat-session list with pin/archive/delete/rename affordances; data mode renders `<lyra-conversation-item>` rows through an internal `<lyra-virtual-list>`, slotted mode renders host-supplied items as-is |
 | `<lyra-app-rail>` + `<lyra-app-rail-item>` | — (extra) | Responsive navigation rail: `full` ↔ `icon-only` ↔ `mobile` overlay, tracked off live viewport-width breakpoints; the item provides an accessible icon/label link or button |
 | `<lyra-responsive-panel>` | — (extra) | The same slotted content docked inline in normal layout flow (desktop) or as a fullscreen/bottom-sheet overlay (mobile) |
 | `<lyra-dock-panel>` | — (extra) | Single panel docked to one edge of its container, drag/keyboard-resizable and collapsible — the single-edge counterpart to `<lyra-split>`'s multi-sibling-panel case |
 | `<lyra-model-select>` | — (extra) | Provider/model picker: closed dropdown over a fixed `catalog`, or a filterable free-text combobox when there isn't one (or `allow-custom` is set) |
 | `<lyra-model-settings-panel>` | — (extra) | Fixed `<lyra-model-select>` + `<lyra-slider>` composition for picking a model and tuning its sampling temperature in one `lyra-change` |
+| `<lyra-voice-picker>` | — (extra) | TTS voice selector over a host-supplied `catalog`, mirroring `lyra-model-select`'s closed-dropdown/free-text-combobox dual mode and form-association verbatim, extended with a standalone preview button that plays a `previewUrl` or defers to the host's own TTS |
+| `<lyra-audio-visualizer>` | — (extra) | Presentational canvas-drawn voice-activity visualization (bars or waveform), the LiveKit-BarVisualizer counterpart — driven by a `MediaStream`, a numeric `level` (e.g. from `<lyra-push-to-talk>`'s `lyra-level`), or `state` alone for ambient animation |
+| `<lyra-push-to-talk>` | — (extra) | Mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle (permission, recording, optional chunked streaming, teardown) — native browser APIs only, no SDK; `mode="hold"` (press-and-hold) or `mode="toggle"` |
+| `<lyra-transcript-feed>` | — (extra) | Live captions for an in-progress voice session — speaker-grouped entries, interim-vs-final styling with in-place `id`-keyed upgrades, and the same stick-to-bottom `follow`/`lyra-follow-change` contract `lyra-terminal` uses |
 | `<lyra-slider>` | — (extra) | Numeric range control (e.g. an LLM "temperature" setting), form-associated, mirrors native `<input type="range">` semantics |
 | `<lyra-context-meter>` | — (extra) | Segmented bar/ring occupancy meter for a token budget or context window, split across labeled categories |
+| `<lyra-usage-badge>` | — (extra) | Compact, static resource strip for one message or run — tokens in/out, cost, latency, with a hover/focus tooltip breakdown; purely formatting, renders nothing at all when every segment is unset |
 | `<lyra-dialog>` + `confirm()` | — (extra) | General-purpose modal/overlay (focus-trapped, Escape/backdrop-dismissible, scroll-locking, dialog stacking); `confirm()` is a promise-based `window.confirm()` replacement built on it |
 | `<lyra-drawer>` | — (extra) | Modal panel anchored to the logical start/end edge or top/bottom, sharing dialog focus, dismissal, stacking, and scroll-lock behavior |
 | `<lyra-carousel>` | `wa-carousel` | Accessible slotted-slide carousel with keyboard navigation, indicators, looping, and reduced-motion-aware autoplay |
@@ -481,10 +501,16 @@ each one-liner below.
 | `<lyra-document-preview>` | — (extra) | Format-dispatching document/attachment viewer (`text/*`/JSON inline, `image/*` inline, else a download fallback) plus a host-driven async-conversion status shell |
 | `<lyra-document-viewer>` | — (extra) | Dialog-hosted, format-dispatching full document viewer with a pluggable renderer registry |
 | `<lyra-svg-viewer>` | — (extra) | Optional-DOMPurify sanitized inline SVG document viewer |
+| `<lyra-image-viewer>` | — (extra) | Full pan/zoom raster-image viewer with labeled region highlights and opt-in region annotation — the landing surface for `region`-anchored citations; distinct from `<lyra-svg-viewer>` (vector documents) and `<lyra-image-comparer>` (before/after) |
+| `<lyra-highlight-layer>` | — (extra) | Presentational overlay that paints highlight rectangles (percent-of-box coordinates) over positioned content and owns their activation/flash styling and keyboard access — the shared overlay engine behind `<lyra-svg-viewer>`, `<lyra-image-viewer>`, and `<lyra-pdf-viewer>` |
 | `<lyra-html-viewer>` | — (extra) | Optional-DOMPurify sanitized inline HTML document viewer |
+| `<lyra-xml-viewer>` | — (extra) | Collapsible, copyable `DOMParser`-based tree view for XML documents, mirroring `<lyra-json-viewer>`'s UX (`collapsed-depth`, `copyable`, path-keyed expand state) for elements, attributes, comments, CDATA, and processing instructions; imperative `search()`/`searchNext()` like the other anchor-target viewers |
 | `<lyra-dataset-viewer>` | — (extra) | Optional-PapaParse accessible TSV/PSV/delimited dataset table viewer |
 | `<lyra-contact-viewer>` | — (extra) | vCard contact viewer with support for multiple contacts and common fields |
 | `<lyra-pdf-viewer>` | — (extra) | Optional-PDF.js renderer with pagination, zoom, selectable text, and virtualized page canvases |
+| `<lyra-page-rail>` | — (extra) | Virtualized vertical thumbnail rail for page-addressed documents with per-page highlight heat markers — **wired** mode tracks a live `PageThumbnailSource` (e.g. `lyra-pdf-viewer`) or **mediated** mode binds `page-count`/`page` directly |
+| `<lyra-av-player>` | — (extra) | Audio/video player on a native `<audio>`/`<video>` element with a cue transcript synced to `currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform, and playback-rate control; virtualizes its transcript through `<lyra-virtual-list>` |
+| `<lyra-notebook-viewer>` | — (extra) | Read-only Jupyter notebook (nbformat 4.x) renderer composing existing components per cell — Markdown cells through `<lyra-markdown>`, code cells through `<lyra-code-block>`, rich outputs preferring image/HTML/JSON/plain-text in order; optional-DOMPurify sanitizes raw HTML/SVG output |
 | `<lyra-spreadsheet-viewer>` | — (extra) | Optional-SheetJS `.xlsx`/`.xls` workbook viewer with sheet tabs and virtualized rows |
 | `<lyra-csv-viewer>` | — (extra) | Optional-PapaParse CSV viewer with quoted-field support and virtualized rows |
 | `<lyra-docx-viewer>` | — (extra) | Optional-Mammoth DOCX viewer that renders sanitized semantic HTML |
@@ -501,9 +527,20 @@ each one-liner below.
 | `<lyra-segmented>` | — (extra) | Single-select text/icon button row with the WAI-ARIA APG `radiogroup` contract built in (roving tabindex, automatic activation) |
 | `<lyra-swatch-picker>` | — (extra) | Single-select picker over a fixed set of color swatches — `radiogroup` semantics (roving tabindex, automatic activation), themeable selection ring |
 | `<lyra-diff-view>` | — (extra) | Real two-string line diff (LCS-aligned), rendered as interleaved unified-diff output |
+| `<lyra-commit-card>` | — (extra) | Compact commit summary — subject, author/time, diffstat, per-file changes — that links file rows out to a diff view |
 | `<lyra-poll-status>` | — (extra) | "Next scheduled refresh" countdown with a built-in pause control and live-region announcements |
 | `<lyra-code-block-core>` | — (extra) | Build-lean `lyra-code-block` variant for a consumer whose `languages` map already covers every language it renders — never references shiki's full ~200-language table |
 | `<lyra-code-editor>` | — (extra) | Dependency-free form-associated multiline code editor with line numbers and selection APIs |
+| `<lyra-terminal>` | — (extra) | Read-only ANSI console for streamed agent/tool output; not a PTY — no stdin/keystroke handling, no cursor-addressed full-screen apps |
+| `<lyra-stack-trace>` | — (extra) | Parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus activatable frames, folding `internalPatterns`-matching frames (`node_modules/`, `node:internal`, …) behind a count-labeled toggle; falls back to verbatim text when nothing parses |
+| `<lyra-trace-tree>` | — (extra) | Collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style) — kind icon, name, status, an inline duration bar on the shared trace time scale, optional tokens/cost columns; consumes the same `LyraSpan[]` as `<lyra-span-waterfall>` |
+| `<lyra-span-waterfall>` | — (extra) | Horizontal-timeline projection of the same `LyraSpan[]` `<lyra-trace-tree>` consumes — a time axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal event-history style) |
+| `<lyra-test-results>` | — (extra) | Pass/fail suite summary with per-status counts, status filter toggles, and per-test rows whose failures auto-expand by default and can host rich slotted detail (a diff or code block) alongside the plain failure message |
+| `<lyra-env-list>` | — (extra) | Masked key/value list for environment variables and secrets, with per-row reveal and copy; masking is presentational only, not a security boundary |
+| `<lyra-file-tree>` | — (extra) | File-explorer preset over `<lyra-tree>` + `<lyra-file-icon>` — path-keyed nodes with git-status/diff-count badges, lazy directory loading, and select/open events |
+| `<lyra-browser-frame>` | — (extra) | Presentational "agent computer" viewport — a screenshot/frame stream (or slotted live media), read-only URL display, action-ping overlays, and take-over/stop affordances; no automation transport, take-over is an event |
+| `<lyra-compare-panel>` | — (extra) | Side-by-side A/B output comparison with a winner vote (LMSYS-arena / LangSmith-pairwise style) — two slotted panes, a vote bar, synchronized reading |
+| `<lyra-rubric-form>` | — (extra) | Configurable annotation rubric (LangSmith annotation-queue style) — score/category/comment keys with a submit-and-next flow; each key routes to an existing sibling control (`<lyra-segmented>`/`<lyra-slider>`, `<lyra-select>`/`<lyra-checkbox-group>`, `<lyra-textarea>`) |
 | `<lyra-calendar>` | — (extra) | Responsive month calendar with event markers and agenda mode |
 | `<lyra-details>` + `<lyra-accordion>` + `<lyra-accordion-item>` | `wa-details` / `wa-accordion` | Native disclosure and coordinated accordion panels |
 | `<lyra-breadcrumb>` + `<lyra-breadcrumb-item>` | `wa-breadcrumb` | Responsive navigation trail |

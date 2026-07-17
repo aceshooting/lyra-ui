@@ -34,7 +34,7 @@ const threads: ChatThread[] = [
 
 export const Default: Story = {
   render: () =>
-    html`<div style="block-size:400px;inline-size:320px;border:1px solid #ddd;">
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lyra-color-border);">
       <lyra-thread-list
         searchable
         active-id="2"
@@ -46,21 +46,21 @@ export const Default: Story = {
 
 export const WithArchivedShown: Story = {
   render: () =>
-    html`<div style="block-size:400px;inline-size:320px;border:1px solid #ddd;">
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lyra-color-border);">
       <lyra-thread-list show-archived .threads=${threads}></lyra-thread-list>
     </div>`,
 };
 
 export const FlatUngrouped: Story = {
   render: () =>
-    html`<div style="block-size:400px;inline-size:320px;border:1px solid #ddd;">
+    html`<div style="block-size:400px;inline-size:320px;border:1px solid var(--lyra-color-border);">
       <lyra-thread-list grouping="none" .threads=${threads}></lyra-thread-list>
     </div>`,
 };
 
 export const SlottedMode: Story = {
   render: () => html`
-    <div style="block-size:200px;inline-size:320px;border:1px solid #ddd;">
+    <div style="block-size:200px;inline-size:320px;border:1px solid var(--lyra-color-border);">
       <lyra-thread-list>
         <lyra-conversation-item title="Manually composed row 1"></lyra-conversation-item>
         <lyra-conversation-item title="Manually composed row 2"></lyra-conversation-item>
@@ -71,14 +71,14 @@ export const SlottedMode: Story = {
 
 export const Empty: Story = {
   render: () =>
-    html`<div style="block-size:200px;inline-size:320px;border:1px solid #ddd;">
+    html`<div style="block-size:200px;inline-size:320px;border:1px solid var(--lyra-color-border);">
       <lyra-thread-list searchable .threads=${[]}></lyra-thread-list>
     </div>`,
 };
 
 export const Narrow320px: Story = {
   render: () =>
-    html`<div style="max-width:320px;block-size:300px;border:1px dashed #ccc;">
+    html`<div style="max-width:320px;block-size:300px;border:1px dashed var(--lyra-color-border);">
       <lyra-thread-list searchable .threads=${threads} .rowActions=${['pin', 'archive', 'delete']}></lyra-thread-list>
     </div>`,
 };

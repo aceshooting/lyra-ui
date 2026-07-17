@@ -21,7 +21,7 @@ export const styles = css`
     align-items: flex-start;
     gap: var(--lyra-space-2xs);
     flex: 0 0 auto;
-    max-inline-size: 16rem;
+    max-inline-size: var(--lyra-size-16rem);
     padding-inline: var(--lyra-space-m);
     padding-block: var(--lyra-space-xs);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);

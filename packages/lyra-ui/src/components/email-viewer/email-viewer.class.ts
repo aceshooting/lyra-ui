@@ -9,11 +9,14 @@ import { formatFileSize } from '../attachment-chip/attachment-chip.class.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 
-export interface ParsedEmailAttachment { filename: string; mimeType: string; size: number; }
+export interface ParsedEmailAttachment { filename: string; mimeType: string; size: number; content?: Uint8Array; }
 export interface ParsedEmail { from: string; to: string; subject: string; date: string; bodyHtml: string | null; bodyText: string | null; attachments: ParsedEmailAttachment[]; }
 type EmailFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; email: ParsedEmail } | { kind: 'error'; message: string };
 
-export interface LyraEmailViewerEventMap { 'lyra-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraEmailViewerEventMap {
+  'lyra-render-error': CustomEvent<{ error: unknown }>;
+  'lyra-attachment-open': CustomEvent<{ attachment: { filename: string; mimeType: string; content?: Uint8Array } }>;
+}
 
 interface Address { name?: string; address?: string; group?: Address[]; }
 function formatAddress(value: Address | undefined): string {
@@ -24,13 +27,66 @@ function formatAddress(value: Address | undefined): string {
 }
 function formatAddresses(values: Address[] | undefined): string { return (values ?? []).map(formatAddress).filter(Boolean).join(', '); }
 
+function normalizeAttachmentContent(content: ArrayBuffer | Uint8Array | string): Uint8Array {
+  if (content instanceof Uint8Array) return content;
+  if (content instanceof ArrayBuffer) return new Uint8Array(content);
+  return new TextEncoder().encode(content);
+}
+
+/** The maximal trailing run of lines that are empty or start with `>`, split off only when that
+ *  run contains at least 3 actual `>`-quoted lines (a short quote-looking tail -- padded by blank
+ *  separator lines to a longer raw run -- is left inline; blank lines alone never count toward the
+ *  threshold since they carry no quoted content). */
+function splitTrailingQuoteBlock(text: string): { visible: string; quoted: string } | null {
+  const lines = text.split(/\r\n|\r|\n/);
+  let start = lines.length;
+  let quotedLineCount = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i]!.trimStart().startsWith('>')) { start = i; quotedLineCount++; }
+    else if (lines[i]!.trim() === '') start = i;
+    else break;
+  }
+  if (quotedLineCount < 3) return null;
+  return { visible: lines.slice(0, start).join('\n'), quoted: lines.slice(start).join('\n') };
+}
+
+const QUOTE_SELECTOR = 'blockquote[type="cite" i], div.gmail_quote, div.yahoo_quoted, div[id^="divRplyFwdMsg"]';
+
+/** Marks top-level gmail/Outlook/yahoo-shaped quote blocks in an already-sanitized HTML body as
+ *  hidden and inserts a localized toggle button before each one. */
+function foldHtmlQuotes(html: string, localize: (key: string) => string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const blocks = doc.body.querySelectorAll(QUOTE_SELECTOR);
+  blocks.forEach((block, index) => {
+    block.setAttribute('part', 'quoted');
+    block.setAttribute('hidden', '');
+    block.setAttribute('data-quote-index', String(index));
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.setAttribute('part', 'quote-toggle');
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('data-quote-toggle', String(index));
+    button.textContent = localize('emailViewerShowQuoted');
+    block.before(button);
+  });
+  return doc.body.innerHTML;
+}
+
 /**
  * Parses `.eml` messages with the optional `postal-mime` peer and renders
  * their HTML body only after DOMPurify sanitization. Plain-text messages remain
- * useful without DOMPurify; attachments are listed as metadata, never opened.
+ * useful without DOMPurify. Attachment rows are real buttons that emit
+ * `lyra-attachment-open` with the attachment's decoded bytes -- this component itself never
+ * opens, downloads, or object-URLs the content; a host routes the event into e.g.
+ * `URL.createObjectURL(new Blob([content], { type: mimeType }))` -> `lyra-document-viewer` ->
+ * revoke on `lyra-close`. `fold-quotes` collapses trailing quoted-reply text/HTML behind a
+ * localized toggle.
  *
  * @customElement lyra-email-viewer
  * @event lyra-render-error - Fired when fetching or parsing the message fails.
+ * @event lyra-attachment-open - An attachment button was activated. `detail: { attachment:
+ *   { filename, mimeType, content? } }`. This component never opens, downloads, or object-URLs the
+ *   content itself — see the class doc's composition recipe.
  * @csspart base - The root container.
  * @csspart headers - Message metadata.
  * @csspart from-label - The localized sender label.
@@ -48,6 +104,9 @@ function formatAddresses(values: Address[] | undefined): string { return (values
  * @csspart attachments-label - The localized attachment heading.
  * @csspart attachment-list - The attachment list.
  * @csspart attachment-item - An attachment metadata item.
+ * @csspart attachment-button - An attachment's open button.
+ * @csspart quoted - A folded quoted-text block (hidden until expanded).
+ * @csspart quote-toggle - The show/hide-quoted-text toggle button.
  * @csspart error - The error region.
  * @csspart spinner - The loading region.
  */
@@ -62,7 +121,11 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+  /** Collapses trailing quoted-reply text/HTML behind a localized toggle. `false` (the default)
+   *  preserves today's exact body rendering. */
+  @property({ type: Boolean, attribute: 'fold-quotes' }) foldQuotes = false;
   @state() private fetchState: EmailFetchState = { kind: 'idle' };
+  @state() private textQuoteExpanded = false;
   private generation = 0;
 
   protected updated(changed: PropertyValues): void {
@@ -114,6 +177,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
         filename: attachment.filename || this.localize('documentPreviewGenericFile'),
         mimeType: attachment.mimeType ?? '',
         size: attachment.content instanceof ArrayBuffer || attachment.content instanceof Uint8Array ? attachment.content.byteLength : attachment.content.length,
+        content: normalizeAttachmentContent(attachment.content),
       })),
     };
   }
@@ -130,13 +194,46 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   private renderAttachments(attachments: ParsedEmailAttachment[]): TemplateResult | typeof nothing {
     if (!attachments.length) return nothing;
     return html`<div part="attachments"><span part="attachments-label">${this.localize('emailViewerAttachments')}</span><ul part="attachment-list">
-      ${attachments.map((attachment) => html`<li part="attachment-item"><span>${attachment.filename}</span><span>${formatFileSize(attachment.size)}</span></li>`)}
+      ${attachments.map((attachment) => html`<li part="attachment-item"><button
+        type="button"
+        part="attachment-button"
+        aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: attachment.filename })}
+        @click=${() => this.emit('lyra-attachment-open', { attachment: { filename: attachment.filename, mimeType: attachment.mimeType, content: attachment.content } })}
+      ><span>${attachment.filename}</span><span>${formatFileSize(attachment.size)}</span></button></li>`)}
     </ul></div>`;
   }
 
+  private renderTextBody(text: string): TemplateResult {
+    const split = this.foldQuotes ? splitTrailingQuoteBlock(text) : null;
+    if (!split) return html`<pre part="body-text">${text}</pre>`;
+    return html`
+      <pre part="body-text">${split.visible}</pre>
+      <button
+        type="button"
+        part="quote-toggle"
+        aria-expanded=${this.textQuoteExpanded ? 'true' : 'false'}
+        @click=${() => { this.textQuoteExpanded = !this.textQuoteExpanded; }}
+      >${this.localize(this.textQuoteExpanded ? 'emailViewerHideQuoted' : 'emailViewerShowQuoted')}</button>
+      <pre part="quoted" ?hidden=${!this.textQuoteExpanded}>${split.quoted}</pre>
+    `;
+  }
+
+  private onBodyClick = (e: MouseEvent): void => {
+    const target = e.composedPath().find((el): el is HTMLElement => el instanceof HTMLElement && el.hasAttribute('data-quote-toggle'));
+    if (!target) return;
+    const index = target.getAttribute('data-quote-toggle');
+    const block = this.renderRoot.querySelector<HTMLElement>(`[data-quote-index="${index}"]`);
+    if (!block) return;
+    const willExpand = block.hasAttribute('hidden');
+    if (willExpand) block.removeAttribute('hidden');
+    else block.setAttribute('hidden', '');
+    target.setAttribute('aria-expanded', String(willExpand));
+    target.textContent = this.localize(willExpand ? 'emailViewerHideQuoted' : 'emailViewerShowQuoted');
+  };
+
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`${this.renderHeaders(this.fetchState.email)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html">${unsafeHTML(this.fetchState.email.bodyHtml)}</div>` : html`<pre part="body-text">${this.fetchState.email.bodyText ?? ''}</pre>`}</div>${this.renderAttachments(this.fetchState.email.attachments)}`;
+      case 'loaded': return html`${this.renderHeaders(this.fetchState.email)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? foldHtmlQuotes(this.fetchState.email.bodyHtml, this.localize.bind(this)) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div>${this.renderAttachments(this.fetchState.email.attachments)}`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeEmail') })}</p>`;

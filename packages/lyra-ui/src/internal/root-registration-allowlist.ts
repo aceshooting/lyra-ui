@@ -184,6 +184,18 @@ export const ROOT_BARREL_TAGS = [
   'lyra-handoff-divider',
   'lyra-test-results',
   'lyra-av-player',
+  'lyra-xml-viewer',
+  'lyra-artifact-panel',
+  'lyra-browser-frame',
+  'lyra-chat-viewport',
+  'lyra-checkpoint',
+  'lyra-confirm-bar',
+  'lyra-notebook-viewer',
+  'lyra-suggestion-chips',
+  'lyra-thread-list',
+  'lyra-usage-badge',
+  'lyra-voice-picker',
+  'lyra-widget-renderer',
 ] as const;
 
 export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [
@@ -200,4 +212,5 @@ export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [
   'lyra-histogram',
   'lyra-map',
   'lyra-graph',
+  'lyra-geojson-view',
 ] as const;

@@ -13,4 +13,5 @@ registerDocumentRenderer('image/svg+xml', {
     element.name = file.name;
     return element;
   },
+  capabilities: { anchors: ['region'], search: false, textSelect: false },
 });

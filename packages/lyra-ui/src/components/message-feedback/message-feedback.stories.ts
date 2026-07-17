@@ -58,7 +58,7 @@ export const RecordedReadOnly: Story = {
  *  full-width by construction, so it fits with no horizontal overflow. */
 export const Narrow320px: Story = {
   render: () => html`
-    <div style="max-width:320px;border:1px dashed #ccc;padding:8px;">
+    <div style="max-width:320px;border:1px dashed var(--lyra-color-border);padding:8px;">
       <lyra-message-feedback
         .reasons=${[
           { id: 'wrong', label: 'Factually wrong' },

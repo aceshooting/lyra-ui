@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import { styles } from './json-viewer.styles.js';
 
 type JsonPathSegment = string | number;
@@ -20,6 +21,8 @@ interface SearchState {
    * pruned down to it whenever `data` changes.
    */
   paths: Set<string>;
+  /** Every match, in the same document-walk order as `keyMatches`/`valueMatches` were populated in (key before value at the same path). Backs the `searchNext()`/`searchPrevious()` cursor. */
+  orderedMatches: { pathKey: string; kind: 'key' | 'value' }[];
 }
 
 const EMPTY_SEARCH: SearchState = {
@@ -27,6 +30,7 @@ const EMPTY_SEARCH: SearchState = {
   valueMatches: new Set(),
   forceExpand: new Set(),
   paths: new Set(),
+  orderedMatches: [],
 };
 
 function isPlainContainer(value: unknown): value is Record<string, unknown> {
@@ -72,6 +76,7 @@ function formatPrimitive(value: unknown, type: JsonValueType): string {
 
 export interface LyraJsonViewerEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
+  'lyra-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
 }
 /**
  * `<lyra-json-viewer>` — a collapsible, copyable tree view for an arbitrary
@@ -86,11 +91,14 @@ export interface LyraJsonViewerEventMap {
  *
  * @customElement lyra-json-viewer
  * @event lyra-copy - `detail: { text }` -- fired by the top-level copy button or a per-node one. Fires even when `navigator.clipboard` is unavailable, so a consumer can still observe copy *intent*.
+ * @event lyra-search-change - Fired whenever the search query, match count, or active-match cursor
+ *   changes -- from `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()`, or a direct
+ *   `search`/`data` property write. `detail: { query, matchCount, activeIndex }`.
  * @csspart base - The root scroll container; respects `max-height`.
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.
  * @csspart key - An object property key or array index label.
- * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, and `data-match` while it matches `search`.
+ * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, `data-match` while it matches `search`, and `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position.
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
@@ -106,7 +114,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shows copy-to-clipboard affordances: one for the whole value, plus one per node. */
   @property({ type: Boolean, reflect: true }) copyable = false;
-  /** Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. */
+  /** Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
   @property() search = '';
 
   /**
@@ -118,6 +126,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    * accumulate one entry per path ever toggled for the life of the instance.
    */
   @state() private expandedOverrides = new Map<string, boolean>();
+
+  /** Index into `searchState.orderedMatches` of the current `searchNext()`/`searchPrevious()` cursor; `-1` before any navigation. */
+  @state() private activeSearchIndex = -1;
 
   /** Memoized result of the last `computeSearch()` walk -- see `willUpdate()`. */
   private searchState: SearchState = EMPTY_SEARCH;
@@ -209,6 +220,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const valueMatches = new Set<string>();
     const forceExpand = new Set<string>();
     const paths = new Set<string>();
+    const orderedMatches: { pathKey: string; kind: 'key' | 'value' }[] = [];
     const ancestors = new WeakSet<object>();
 
     const markAncestors = (path: JsonPathSegment[]): void => {
@@ -223,10 +235,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         let hit = false;
         if (keyLabel !== undefined && keyLabel.toLowerCase().includes(query)) {
           keyMatches.add(pathKey);
+          orderedMatches.push({ pathKey, kind: 'key' });
           hit = true;
         }
         if (type !== 'object' && type !== 'array' && formatPrimitive(value, type).toLowerCase().includes(query)) {
           valueMatches.add(pathKey);
+          orderedMatches.push({ pathKey, kind: 'value' });
           hit = true;
         }
         if (hit) markAncestors(path);
@@ -239,7 +253,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     };
 
     walk(this.data, []);
-    return { keyMatches, valueMatches, forceExpand, paths };
+    return { keyMatches, valueMatches, forceExpand, paths, orderedMatches };
   }
 
   private renderCopyButton(value: unknown, label: string | undefined): TemplateResult | typeof nothing {
@@ -284,6 +298,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const entries = isContainer ? entriesOf(value) : [];
     const hasEntries = entries.length > 0;
     const expanded = hasEntries && this.isExpanded(pathKey, depth, search.forceExpand);
+    const activeMatch = this.searchState.orderedMatches[this.activeSearchIndex];
     const indentStyle = `padding-inline-start:calc(${depth} * var(--lyra-space-l))`;
     const toggleLabel =
       keyLabel ??
@@ -330,7 +345,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           <span class="chevron">${chevronIcon()}</span>
         </button>
         ${keyLabel !== undefined
-          ? html`<span part="key" ?data-match=${search.keyMatches.has(pathKey)}>${keyLabel}</span
+          ? html`<span
+              part="key"
+              ?data-match=${search.keyMatches.has(pathKey)}
+              ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'}
+              >${keyLabel}</span
               ><span class="colon">:</span>`
           : nothing}
         ${isCircular
@@ -347,7 +366,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                   : nothing}
                 ${!expanded ? html`<span part="bracket">${closeBracket}</span>` : nothing}
               `
-            : html`<span part="value" data-type=${type} ?data-match=${search.valueMatches.has(pathKey)}
+            : html`<span
+                part="value"
+                data-type=${type}
+                ?data-match=${search.valueMatches.has(pathKey)}
+                ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value'}
                 >${formatPrimitive(value, type)}</span
               >`}
         ${this.renderCopyButton(value, toggleLabel)}
@@ -400,7 +423,68 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         if (pruned) this.expandedOverrides = pruned;
       }
       this.searchState = next;
+      if (this.hasUpdated) {
+        this.activeSearchIndex = -1;
+        this.emitSearchChange();
+      }
     }
+  }
+
+  private emitSearchChange(): void {
+    this.emit('lyra-search-change', {
+      query: this.search,
+      matchCount: this.searchState.orderedMatches.length,
+      activeIndex: this.activeSearchIndex,
+    });
+  }
+
+  /**
+   * Sets the declarative `search` property and awaits the recompute -- the resolved count is the
+   * number of matches (also `searchState.orderedMatches.length` / rendered `[data-match]` spans).
+   *
+   * Named `runSearch()` rather than `search()` -- unlike every sibling viewer's imperative search
+   * quartet (pdf/docx/csv/notebook/spreadsheet/ebook-viewer, av-player, terminal), `search` here is
+   * *already* a pre-existing public `@property()` string (declarative highlighting, predating this
+   * quartet) -- a method can't share a class member name with a property (Lit's reactive-property
+   * machinery throws at definition time: "declared as a reactive property but it's actually declared
+   * as a value on the prototype"), so the convenience method keeping the declarative `search` prop's
+   * name, type, and back-compat semantics fully untouched has to be named something else.
+   */
+  async runSearch(query: string): Promise<number> {
+    this.search = query;
+    await this.updateComplete;
+    return this.searchState.orderedMatches.length;
+  }
+
+  /** Advances the cursor to the next match (wrapping), scrolling it into view. Resolves `false` with no match to move to. */
+  async searchNext(): Promise<boolean> {
+    const total = this.searchState.orderedMatches.length;
+    if (total === 0) return false;
+    this.activeSearchIndex = (this.activeSearchIndex + 1) % total;
+    this.emitSearchChange();
+    await this.scrollActiveMatchIntoView();
+    return true;
+  }
+
+  /** Moves the cursor to the previous match (wrapping), scrolling it into view. Resolves `false` with no match to move to. */
+  async searchPrevious(): Promise<boolean> {
+    const total = this.searchState.orderedMatches.length;
+    if (total === 0) return false;
+    this.activeSearchIndex = (this.activeSearchIndex - 1 + total) % total;
+    this.emitSearchChange();
+    await this.scrollActiveMatchIntoView();
+    return true;
+  }
+
+  /** Resets `search` to `''`, clearing all matches and the cursor. */
+  clearSearch(): void {
+    this.search = '';
+  }
+
+  private async scrollActiveMatchIntoView(): Promise<void> {
+    await this.updateComplete;
+    const el = this.renderRoot.querySelector('[data-active]');
+    el?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
   }
 
   render(): TemplateResult {

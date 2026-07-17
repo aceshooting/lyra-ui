@@ -58,7 +58,7 @@ export const NoPreview: Story = {
  *  toggle without overflowing. */
 export const Narrow320: Story = {
   render: () => html`
-    <div style="max-inline-size: 320px; border: 1px dashed #ccc; padding: 8px;">
+    <div style="max-inline-size: 320px; border: 1px dashed var(--lyra-color-border); padding: 8px;">
       <lyra-voice-picker label="Voice" .catalog=${catalog}></lyra-voice-picker>
     </div>
   `,

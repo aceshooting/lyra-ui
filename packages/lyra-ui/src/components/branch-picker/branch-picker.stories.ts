@@ -37,7 +37,7 @@ export const SingleBranchRendersNothing: Story = {
 
 export const Narrow320px: Story = {
   render: () => html`
-    <div style="max-width:320px;border:1px dashed #ccc;padding:8px;">
+    <div style="max-width:320px;border:1px dashed var(--lyra-color-border);padding:8px;">
       <lyra-branch-picker index="1" count="12"></lyra-branch-picker>
     </div>
   `,

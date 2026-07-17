@@ -11,3 +11,9 @@ const src = `data:text/tab-separated-values,${encodeURIComponent(source)}`;
 
 export const Default: Story = { render: () => html`<lyra-dataset-viewer src=${src} name="People"></lyra-dataset-viewer>` };
 export const Empty: Story = { render: () => html`<lyra-dataset-viewer></lyra-dataset-viewer>` };
+
+/** A narrow host (320px), matching the library's baseline narrow-allocation check -- confirms the
+ *  sticky header row stays visible and legible above the virtualized body at that width. */
+export const Narrow320: Story = {
+  render: () => html`<div style="max-width:320px"><lyra-dataset-viewer src=${src} name="People"></lyra-dataset-viewer></div>`,
+};

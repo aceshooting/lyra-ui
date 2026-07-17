@@ -23,7 +23,7 @@ export const styles = css`
     border-color: var(--lyra-color-danger);
   }
   [part='heading'] {
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
     color: var(--lyra-color-text);
   }
   [part='tool-name'] {

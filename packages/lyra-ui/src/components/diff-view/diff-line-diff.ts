@@ -45,3 +45,40 @@ export function computeLineDiff(oldLines: string[], newLines: string[]): DiffOp[
   }
   return ops;
 }
+
+export interface DiffSplitRow {
+  left: DiffOp | null;
+  right: DiffOp | null;
+}
+
+/**
+ * Regroups an already-computed `DiffOp[]` (never re-diffs) into side-by-side rows: consecutive
+ * `remove`s buffer on the left, consecutive `add`s buffer on the right, and an `equal` op (or the
+ * end of the stream) flushes both buffers paired index-wise -- the k-th removed line beside the
+ * k-th added line, with the longer run's tail paired against `null` (rendered as an empty
+ * placeholder cell, never carrying a `+`/`-` prefix). An `equal` op renders identically on both
+ * sides.
+ */
+export function pairOpsForSplit(ops: DiffOp[]): DiffSplitRow[] {
+  const rows: DiffSplitRow[] = [];
+  let removeBuffer: DiffOp[] = [];
+  let addBuffer: DiffOp[] = [];
+  const flush = (): void => {
+    const max = Math.max(removeBuffer.length, addBuffer.length);
+    for (let i = 0; i < max; i++) {
+      rows.push({ left: removeBuffer[i] ?? null, right: addBuffer[i] ?? null });
+    }
+    removeBuffer = [];
+    addBuffer = [];
+  };
+  for (const op of ops) {
+    if (op.type === 'remove') removeBuffer.push(op);
+    else if (op.type === 'add') addBuffer.push(op);
+    else {
+      flush();
+      rows.push({ left: op, right: op });
+    }
+  }
+  flush();
+  return rows;
+}

@@ -793,3 +793,75 @@ describe('localization', () => {
     expect(error.textContent).to.equal("Une erreur s'est produite.");
   });
 });
+
+describe('zoomable (image format)', () => {
+  it('does not wrap in lyra-zoomable-frame by default', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+  });
+
+  it('wraps the image in lyra-zoomable-frame when zoomable is set', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview zoomable mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    await el.updateComplete;
+    const frame = el.shadowRoot!.querySelector('lyra-zoomable-frame');
+    expect(frame).to.exist;
+    expect(frame!.querySelector('img')).to.exist;
+  });
+});
+
+describe('region highlights (image format)', () => {
+  it('renders a focusable region-highlight and emits lyra-highlight-activate', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 20, height: 20 } } }];
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lyra-highlight-activate');
+    (el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement).click();
+    const event = (await listener) as CustomEvent<{ id: string }>;
+    expect(event.detail).to.deep.equal({ id: 'h1' });
+  });
+
+  it('scrollToAnchor() by id scrolls the matching region, not just the first one, when several are rendered', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
+      { id: 'h2', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 10, height: 10 } } },
+    ];
+    await el.updateComplete;
+    const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
+    const scrolled: string[] = [];
+    for (const region of regions) {
+      region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+    }
+    const ok = await el.scrollToAnchor('h2');
+    expect(ok).to.be.true;
+    expect(scrolled).to.deep.equal(['h2']);
+  });
+});
+
+describe('back-compat (image format)', () => {
+  it('image rendering is unchanged with zoomable off and highlights empty', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview mime-type="image/png" src="https://example.test/photo.png"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('img')).to.exist;
+    expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+  });
+
+  it('text and generic format dispatch are untouched', async () => {
+    const el = (await fixture(
+      html`<lyra-document-preview mime-type="text/plain" src="https://example.test/notes.txt"></lyra-document-preview>`,
+    )) as LyraDocumentPreview;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lyra-zoomable-frame')).to.not.exist;
+  });
+});

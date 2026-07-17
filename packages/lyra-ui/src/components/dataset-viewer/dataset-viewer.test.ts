@@ -1,10 +1,18 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './dataset-viewer.js';
 import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
+const GRID_DATASET = 'name,role\nAda,Mathematician\nGrace,Scientist\nAda,Programmer';
 function response(body: string): Response { return { ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(body) } as Response; }
+function fetchText(value: string): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve(response(value))) as typeof window.fetch; return () => { window.fetch = original; }; }
+/** Shrinks `DocumentAnchorTarget`'s retry loop so a permanently-unresolvable `scrollToAnchor()` call
+ *  resolves in milliseconds instead of waiting out the real 5s default timeout. */
+function shrinkAnchorRetry(el: LyraDatasetViewer): void {
+  (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+  (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+}
 
 describe('lyra-dataset-viewer', () => {
   it('renders an empty localized state by default', async () => {
@@ -12,51 +20,34 @@ describe('lyra-dataset-viewer', () => {
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No dataset to display.');
   });
   it('auto-detects tab-separated data and renders an accessible table', async () => {
-    const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response(TAB_DATA))) as typeof window.fetch;
+    const el = (await fixture(html`<lyra-dataset-viewer name="Data"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
     try {
-      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/a.tsv" name="Data"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
-      await aTimeout(20);
+      el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
       await el.updateComplete;
-      expect(Array.from(el.shadowRoot!.querySelectorAll('thead th')).map((th) => th.textContent)).to.deep.equal(['name', 'age', 'city']);
-      expect(el.shadowRoot!.querySelectorAll('tbody tr')).to.have.length(2);
-      expect(el.shadowRoot!.querySelector('caption')!.textContent).to.equal('Data: 2 rows');
-    } finally { window.fetch = original; }
+      expect(Array.from(el.shadowRoot!.querySelectorAll('[part="header-cell"]')).map((th) => th.textContent)).to.deep.equal(['name', 'age', 'city']);
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Data: 2 rows');
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-rowcount')).to.equal('3');
+    } finally { restore(); }
   });
   it('falls back to the count-only caption when name is unset', async () => {
-    const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response(TAB_DATA))) as typeof window.fetch;
+    const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
     try {
-      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/a.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
-      await aTimeout(20);
+      el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('caption')!.textContent).to.equal('2 rows');
-    } finally { window.fetch = original; }
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('2 rows');
+    } finally { restore(); }
   });
   it('surfaces its own localized diagnostic rather than the generic failure', async () => {
-    const original = window.fetch;
-    window.fetch = (() => Promise.resolve(response('name\tage\tcity'))) as typeof window.fetch;
+    const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText('name\tage\tcity');
     try {
-      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/empty.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      el.src = 'https://example.test/empty.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
       expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('This dataset has no rows.');
-    } finally { window.fetch = original; }
-  });
-  it('enforces a row cap well below the shared 10,000-row default, since it renders unvirtualized', async () => {
-    // This component renders every row into a real <table> in one synchronous pass rather than
-    // through <lyra-virtual-list> like csv-viewer/spreadsheet-viewer, so it enforces a much lower
-    // cap than the shared default -- 1,000 rows here should already be rejected.
-    const original = window.fetch;
-    const header = 'a\tb\n';
-    const body = Array.from({ length: 1_001 }, () => '1\t2').join('\n');
-    window.fetch = (() => Promise.resolve(response(header + body))) as typeof window.fetch;
-    try {
-      const el = (await fixture(html`<lyra-dataset-viewer src="https://example.test/big.tsv"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
-      await waitUntil(() => el.shadowRoot!.querySelector('[role="alert"]') !== null);
-      expect(el.shadowRoot!.querySelector('[role="alert"]')).to.exist;
-      expect(el.shadowRoot!.querySelector('[part="table"]')).to.not.exist;
-    } finally { window.fetch = original; }
+    } finally { restore(); }
   });
   it('rejects unsafe URLs', async () => {
     const el = (await fixture(html`<lyra-dataset-viewer src="javascript:alert(1)"></lyra-dataset-viewer>`)) as LyraDatasetViewer;
@@ -68,4 +59,202 @@ describe('lyra-dataset-viewer', () => {
     expect(findDocumentRenderer({ name: 'a.csv', mimeType: 'text/csv', src: 'x' })).to.not.exist;
   });
   it('is accessible', async () => { const el = await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`); await expect(el).to.be.accessible(); });
+
+  describe('virtualized table structure', () => {
+    it('maps to role=table / role=row / role=rowgroup with correct rowcount/rowindex', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        const table = el.shadowRoot!.querySelector('[part="table"]')!;
+        expect(table.getAttribute('role')).to.equal('table');
+        expect(table.getAttribute('aria-rowcount')).to.equal('4'); // 3 data rows + header
+        expect(table.getAttribute('aria-colcount')).to.equal('2');
+        expect(el.shadowRoot!.querySelector('[part="header-row"]')!.getAttribute('role')).to.equal('row');
+        expect(el.shadowRoot!.querySelector('[part="header-row"]')!.getAttribute('aria-rowindex')).to.equal('1');
+        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        expect(list.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('rowgroup');
+        await aTimeout(0);
+        const firstRow = list.shadowRoot!.querySelector('[part="row"]')!;
+        expect(firstRow.getAttribute('role')).to.equal('row');
+        expect(firstRow.getAttribute('aria-rowindex')).to.equal('2'); // first body row, offset by the header
+      } finally {
+        restore();
+      }
+    });
+
+    it('is accessible on the mapped table/rowgroup/row tree', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await expect(el).to.be.accessible();
+      } finally {
+        restore();
+      }
+    });
+
+    it('renders files above the old 1,000-row cap up to the shared 10k default', async () => {
+      const bigRows = Array.from({ length: 5000 }, (_unused, i) => `row${i},value${i}`).join('\n');
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(`name,val\n${bigRows}`);
+      try {
+        el.src = 'https://example.test/big.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+        expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-rowcount')).to.equal('5001');
+      } finally {
+        restore();
+      }
+    });
+
+    it('still errors above 10,000 rows', async () => {
+      const bigRows = Array.from({ length: 10001 }, (_unused, i) => `row${i},value${i}`).join('\n');
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(`name,val\n${bigRows}`);
+      try {
+        el.src = 'https://example.test/toobig.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  describe('cell-range anchor-target and search', () => {
+    it('resolves a cell-range anchor addressing the raw grid (header included)', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' })).to.be.true;
+      } finally {
+        restore();
+      }
+    });
+
+    it('resolves false for an anchor with a sheet set', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      shrinkAnchorRetry(el);
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', sheet: 'Sheet1', range: 'A1' })).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('finds search matches ordered row -> column', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.search('ada')).to.equal(2);
+      } finally {
+        restore();
+      }
+    });
+
+    it('searchNext/searchPrevious wrap, and clearSearch resets to 0/-1', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await el.search('ada');
+        let detail: { matchCount: number; activeIndex: number } | undefined;
+        el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+        expect(await el.searchNext()).to.be.true;
+        expect(detail!.activeIndex).to.equal(1);
+        expect(await el.searchNext()).to.be.true;
+        expect(detail!.activeIndex).to.equal(0); // wraps
+        expect(await el.searchPrevious()).to.be.true;
+        expect(detail!.activeIndex).to.equal(1); // wraps backward
+        const listener = oneEvent(el, 'lyra-search-change');
+        el.clearSearch();
+        const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+        expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+      } finally {
+        restore();
+      }
+    });
+
+    it('an empty query behaves like clearSearch and resolves 0', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        await el.search('ada');
+        expect(await el.search('   ')).to.equal(0);
+      } finally {
+        restore();
+      }
+    });
+
+    it('renders a focusable cell-highlight and emits lyra-highlight-activate', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement | null;
+        expect(highlighted).to.exist;
+        expect(highlighted!.getAttribute('tabindex')).to.equal('0');
+        const listener = oneEvent(el, 'lyra-highlight-activate');
+        highlighted!.click();
+        const event = (await listener) as CustomEvent<{ id: string }>;
+        expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('activates a highlighted cell via Enter/Space and never a plain cell', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+        expect(plain.hasAttribute('tabindex')).to.be.false;
+        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
+        const listener = oneEvent(el, 'lyra-highlight-activate');
+        highlighted.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+        const event = (await listener) as CustomEvent<{ id: string }>;
+        expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  describe('back-compat', () => {
+    it('::part(table) still matches, and no cell-highlight renders unset', async () => {
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part~="table"]')).to.exist;
+        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        expect(list.shadowRoot!.querySelectorAll('[part~="cell-highlight"]').length).to.equal(0);
+      } finally {
+        restore();
+      }
+    });
+  });
 });

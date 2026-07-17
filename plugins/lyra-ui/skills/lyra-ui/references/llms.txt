@@ -80,8 +80,12 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lyra-dock-panel`, `lyra-document-preview`, `lyra-document-viewer`, `lyra-svg-viewer`, `lyra-html-viewer`,
   `lyra-dataset-viewer`, `lyra-contact-viewer`, `lyra-pdf-viewer`, `lyra-spreadsheet-viewer`, `lyra-csv-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`, `lyra-archive-viewer`, `lyra-ebook-viewer`, `lyra-pptx-viewer`, `lyra-file-icon`, `lyra-media-card`, `lyra-attachment-trigger`,
   `lyra-kbd`, `lyra-result-card`/`lyra-result-field`, `lyra-avatar`, `lyra-card`, `lyra-stepper`,
-  `lyra-segmented`, `lyra-swatch-picker`, `lyra-diff-view`, `lyra-stack-trace`, `lyra-poll-status`,
-  `lyra-code-block-core` (needs the optional peer `shiki`).
+  `lyra-segmented`, `lyra-swatch-picker`, `lyra-diff-view`, `lyra-poll-status`,
+  `lyra-code-block-core` (needs the optional peer `shiki`), `lyra-chat-viewport`,
+  `lyra-suggestion-chips`, `lyra-thread-list`, `lyra-confirm-bar`, `lyra-checkpoint`,
+  `lyra-usage-badge`, `lyra-browser-frame`, `lyra-artifact-panel`, `lyra-widget-renderer`,
+  `lyra-voice-picker`, `lyra-notebook-viewer` (needs the optional peers `marked`/`dompurify`/`shiki`),
+  `lyra-xml-viewer`.
 
 ## Also useful
 

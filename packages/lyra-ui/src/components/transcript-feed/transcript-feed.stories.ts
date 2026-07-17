@@ -110,7 +110,7 @@ export const Empty: Story = {
 
 export const Narrow320: Story = {
   render: () => html`
-    <div style="max-inline-size: 320px; block-size: 200px; border: 1px dashed #ccc;">
+    <div style="max-inline-size: 320px; block-size: 200px; border: 1px dashed var(--lyra-color-border);">
       <lyra-transcript-feed .entries=${entries} show-timestamps></lyra-transcript-feed>
     </div>
   `,

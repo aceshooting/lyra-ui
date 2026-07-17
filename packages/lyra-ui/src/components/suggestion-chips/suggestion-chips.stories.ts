@@ -49,7 +49,7 @@ export const Empty: Story = {
 
 export const Narrow320px: Story = {
   render: () => html`
-    <div style="max-width:320px;border:1px dashed #ccc;padding:8px;">
+    <div style="max-width:320px;border:1px dashed var(--lyra-color-border);padding:8px;">
       <lyra-suggestion-chips .suggestions=${followUps}></lyra-suggestion-chips>
     </div>
   `,

@@ -5,7 +5,10 @@ import { fileIcon } from '../../internal/icons.js';
 import { srOnly } from '../../internal/a11y.js';
 import { safeFetchUrl, safeLinkHref, safeMediaSrc } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseText } from '../../internal/resource-loader.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import { styles } from './document-preview.styles.js';
+import '../zoomable-frame/zoomable-frame.js';
+import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 
 export type DocumentPreviewStatus = 'idle' | 'converting' | 'ready' | 'error';
 
@@ -67,6 +70,7 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
 export interface LyraDocumentPreviewEventMap {
   'lyra-render-error': CustomEvent<{ error: unknown }>;
   'lyra-download': CustomEvent<{ src: string; filename: string }>;
+  'lyra-highlight-activate': CustomEvent<{ id: string }>;
 }
 /**
  * `<lyra-document-preview>` — a format-dispatching viewer for one document/
@@ -144,6 +148,7 @@ export interface LyraDocumentPreviewEventMap {
  *   component's own `text/*`/`application/json` `fetch(src)` fails. Distinct
  *   from `status="error"`, which is entirely host-driven (see the class
  *   doc).
+ * @event lyra-highlight-activate - A region highlight was activated (image format only). `detail: { id }`.
  * @csspart base - The root container.
  * @csspart header - The row above the body, holding `filename`. Hidden entirely when `filename` is unset.
  * @csspart filename - The filename text.
@@ -151,6 +156,14 @@ export interface LyraDocumentPreviewEventMap {
  * @csspart spinner - The converting/loading indicator — indeterminate (`role="status"`) or, once numeric progress is known, a determinate `role="progressbar"`. Used both for `status="converting"` and for this component's own in-flight text fetch.
  * @csspart error - The error message region (`role="alert"`) — used both for `status="error"` and for a failed text fetch.
  * @csspart download-link - The `<a download>` affordance in the generic fallback. Only rendered when `src` is set and safe for link navigation.
+ * @csspart frame-viewport - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-content - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-controls - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-zoom-in - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-zoom-out - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart frame-reset - Forwarded from the internal `<lyra-zoomable-frame>` when `zoomable` (image format only).
+ * @csspart highlight-layer - The wrapper around every rendered region highlight (image format only).
+ * @csspart region-highlight - One region highlight (`data-tone`, `data-active`) (image format only).
  * @cssprop [--lyra-document-preview-max-height=none] - Maximum body block size before the preview scrolls internally.
  * @cssprop [--lyra-document-preview-font=var(--lyra-font-mono)] - Font used for plain-text previews.
  * @cssprop [--lyra-document-preview-spin-duration=0.8s] - Duration of one indeterminate loading-indicator rotation.
@@ -193,6 +206,17 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
    *  internally past this height instead of growing the page — same
    *  contract as `<lyra-json-viewer>`'s identically-named prop. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+
+  /** Wraps the rendered image (image format only) in an internal `<lyra-zoomable-frame>`. `false`
+   *  (the default) preserves today's exact DOM -- an inline thumbnail (e.g. in a chat stream) must
+   *  not unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
+  @property({ type: Boolean, reflect: true }) zoomable = false;
+
+  /** Display-only region highlights over the image-format preview (see the class doc's format-
+   *  dispatch scope -- text/generic formats never render these). */
+  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+  @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
+  readonly anchorKinds: LyraAnchor['kind'][] = ['region'];
 
   @state() private hasUnsupportedSlot = false;
   @state() private textFetch: TextFetchState = IDLE_TEXT_FETCH;
@@ -326,10 +350,69 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeImage') })}</p>`;
     const src = safeMediaSrc(this.src);
     if (src === null) return this.renderDownloadFallback();
-    return html`<img
-      src=${src}
-      alt=${this.alt ?? (this.filename || this.localize('documentPreviewAlt'))}
-    />`;
+    return this.renderZoomableWrapper(
+      html`<img src=${src} alt=${this.alt ?? (this.filename || this.localize('documentPreviewAlt'))} />`,
+    );
+  }
+
+  /** Wraps `content` in the internal `<lyra-zoomable-frame>` when `zoomable`; otherwise renders it
+   *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
+   *  way) unwrapped, preserving pre-`zoomable` DOM exactly. Mirrors `<lyra-svg-viewer>`'s identical
+   *  helper. */
+  private renderZoomableWrapper(content: TemplateResult): TemplateResult {
+    const inner = html`<div class="zoom-content">${content}${this.renderHighlightLayer()}</div>`;
+    if (!this.zoomable) return inner;
+    return html`<lyra-zoomable-frame
+      exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
+    >${inner}</lyra-zoomable-frame>`;
+  }
+
+  private renderHighlightLayer(): TemplateResult | typeof nothing {
+    const regionHighlights = this.highlights.filter(
+      (h): h is LyraHighlight & { anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } } } =>
+        h.anchor.kind === 'region',
+    );
+    if (!regionHighlights.length) return nothing;
+    return html`<div part="highlight-layer">
+      ${regionHighlights.map(
+        (h) => html`<div
+          part="region-highlight"
+          data-id=${h.id}
+          data-tone=${h.tone ?? 'accent'}
+          ?data-active=${h.id === this.activeHighlightId}
+          style="inset-inline-start:${h.anchor.rect.x}%;inset-block-start:${h.anchor.rect.y}%;inline-size:${h.anchor.rect.width}%;block-size:${h.anchor.rect.height}%"
+          tabindex="0"
+          role="button"
+          aria-label=${h.label || this.localize('viewerHighlightLabel')}
+          @click=${() => this.emit('lyra-highlight-activate', { id: h.id })}
+          @keydown=${(e: KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              this.emit('lyra-highlight-activate', { id: h.id });
+            }
+          }}
+        ></div>`,
+      )}
+    </div>`;
+  }
+
+  /** Scrolls a `region` highlight into view (image format only). See `<lyra-svg-viewer>`'s
+   *  identical method for the id/anchor-reference resolution and no-retry-loop rationale. */
+  async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+    const highlight =
+      typeof target === 'string'
+        ? this.highlights.find((h) => h.id === target)
+        : this.highlights.find((h) => h.anchor === target);
+    const anchor = highlight ? highlight.anchor : typeof target === 'string' ? undefined : target;
+    const ready = classifyFormat(this.mimeType) === 'image' && safeMediaSrc(this.src) !== null;
+    if (!anchor || anchor.kind !== 'region' || !ready) return false;
+    await this.updateComplete;
+    const region = highlight
+      ? this.renderRoot.querySelector(`[part="region-highlight"][data-id="${CSS.escape(highlight.id)}"]`)
+      : this.renderRoot.querySelector('[part="region-highlight"]');
+    const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+    region?.scrollIntoView({ behavior, block: 'center', inline: 'center' });
+    return true;
   }
 
   private renderDownloadFallback(): TemplateResult {

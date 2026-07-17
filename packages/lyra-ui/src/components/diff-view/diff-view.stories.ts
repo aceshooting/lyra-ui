@@ -38,3 +38,18 @@ export const Copyable: Story = {
     <lyra-diff-view copyable .oldText=${oldText} .newText=${newText} style="max-width: 32rem;"></lyra-diff-view>
   `,
 };
+
+export const Split: Story = {
+  render: () => html`<lyra-diff-view layout="split" .oldText=${oldText} .newText=${newText} style="max-width: 40rem;"></lyra-diff-view>`,
+};
+
+export const SplitNarrow: Story = {
+  render: () =>
+    html`<div style="max-width: 320px;">
+      <lyra-diff-view
+        layout="split"
+        .oldText=${'function add(a, b) {\n  return a + b;\n}'}
+        .newText=${'function add(a, b, c) {\n  return a + b + c;\n}'}
+      ></lyra-diff-view>
+    </div>`,
+};

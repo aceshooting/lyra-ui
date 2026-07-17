@@ -36,6 +36,44 @@ function namesFromTemplates(source) {
   for (const match of source.matchAll(/\bparts\.push\(\s*["']([^"']+)["']\s*\)/g)) {
     names.add(match[1]);
   }
+  // `exportparts="inner:outer, inner2:outer2"` re-exposes a shadow-nested child's own part under
+  // this component's own part namespace (e.g. <lyra-svg-viewer>'s internal <lyra-zoomable-frame>
+  // forwarding `viewport` as `frame-viewport`) -- the exposed (right-hand, or bare when there's no
+  // `:`) name is what a consumer's `::part(frame-viewport)` selector actually targets, so it counts
+  // as rendered even though no literal `part="frame-viewport"` attribute exists on this component's
+  // own template.
+  for (const match of source.matchAll(/\bexportparts\s*=\s*["']([^"']+)["']/g)) {
+    for (const mapping of match[1].split(',')) {
+      const [inner, outer] = mapping.split(':').map((part) => part.trim());
+      if (outer || inner) names.add(outer || inner);
+    }
+  }
+  // A single dynamic part name resolved by a ternary chain into a local `part` variable (e.g.
+  // `const part = interactive ? (isHighlighted ? 'line-button line-highlight' : 'line-button') :
+  // ...;` in <lyra-code-block-core>, or a `part: 'header-row' | 'data-row'` function parameter in
+  // <lyra-csv-viewer>) then gets applied via `part=${part}` in a template or, for the imperative
+  // <mark>-highlight path in <lyra-docx-viewer>/<lyra-markdown>, `mark.setAttribute('part', part)`
+  // -- neither shape is a literal `part="..."` attribute nor the `parts`/`parts.push` array pattern
+  // above, so pick up every quoted string literal (space-separated multi-part values included)
+  // from any declaration or parameter type named exactly `part`, matching this codebase's own
+  // naming convention for that variable.
+  for (const match of source.matchAll(/\b(?:const|let)\s+part\s*=([^;]+);/g)) {
+    for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) {
+      for (const name of literal[1].trim().split(/\s+/)) {
+        if (name) names.add(name);
+      }
+    }
+  }
+  for (const match of source.matchAll(/\bpart\s*:\s*((?:'[^']+'|"[^"]+")(?:\s*\|\s*(?:'[^']+'|"[^"]+"))*)/g)) {
+    for (const literal of match[1].matchAll(/["']([^"']+)["']/g)) names.add(literal[1]);
+  }
+  // `element.setAttribute('part', 'literal')` -- the imperative-DOM equivalent of a literal
+  // `part="literal"` template attribute, used by the shared <mark>-wrap highlight-painting
+  // fallback (see internal/text-highlights.js's adopting viewers) since that shared module can't
+  // emit a lit template attribute for a part name it doesn't itself own.
+  for (const match of source.matchAll(/\.setAttribute\(\s*["']part["']\s*,\s*["']([^"']+)["']\s*\)/g)) {
+    names.add(match[1]);
+  }
   return names;
 }
 

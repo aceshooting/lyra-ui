@@ -53,7 +53,7 @@ export const AlreadyDecided: Story = {
 
 export const Narrow320px: Story = {
   render: () => html`
-    <div style="max-width:320px;border:1px dashed #ccc;padding:8px;">
+    <div style="max-width:320px;border:1px dashed var(--lyra-color-border);padding:8px;">
       <lyra-confirm-bar tool-name="run_shell" .args=${{ command: 'npm test' }}></lyra-confirm-bar>
     </div>
   `,

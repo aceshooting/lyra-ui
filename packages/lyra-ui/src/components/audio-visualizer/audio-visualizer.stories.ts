@@ -31,7 +31,7 @@ export const WaveformWithLevel: Story = {
 
 export const Narrow320: Story = {
   render: () => html`
-    <div style="max-inline-size: 320px; border: 1px dashed #ccc; padding: 8px;">
+    <div style="max-inline-size: 320px; border: 1px dashed var(--lyra-color-border); padding: 8px;">
       <lyra-audio-visualizer state="listening" bar-count="8"></lyra-audio-visualizer>
     </div>
   `,

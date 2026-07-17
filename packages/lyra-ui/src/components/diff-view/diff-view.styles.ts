@@ -15,11 +15,27 @@ export const styles = css`
   pre {
     margin: 0;
     padding: var(--lyra-space-s);
+  }
+  .split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--lyra-space-s);
+    align-items: start;
+    padding: var(--lyra-space-s);
+  }
+  [part='side'] {
+    overflow-x: auto;
+    min-inline-size: 0;
+  }
+  [part='line'] {
+    /* Lives here (rather than on the ancestor pre element) so layout="split" -- whose lines sit
+       inside [part='side'], not a pre -- inherits the same monospace typography as the default
+       unified pre. font-family/font-size/line-height are all inheritable, so moving them here
+       from pre is visually identical for the unified layout (same computed values, just set
+       directly instead of inherited). */
     font-family: var(--lyra-diff-view-font);
     font-size: var(--lyra-font-size-sm);
     line-height: var(--lyra-line-height-snug);
-  }
-  [part='line'] {
     white-space: pre-wrap;
   }
   [part='line'][data-type='add'] {

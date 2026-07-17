@@ -2,6 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './sequence-strip.js';
 import type { SequenceStripCategory, SequenceStripItem } from './sequence-strip.class.js';
+import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const meta: Meta = {
   title: 'Sequence Strip',
@@ -12,9 +13,9 @@ export default meta;
 type Story = StoryObj;
 
 const categories: SequenceStripCategory[] = [
-  { key: 'text', color: '#4f46e5', label: 'Text' },
-  { key: 'tool', color: '#16a34a', label: 'Tool' },
-  { key: 'mixed', color: '#d97706', label: 'Mixed' },
+  { key: 'text', color: storyColor('chart1'), label: 'Text' },
+  { key: 'tool', color: storyColor('chart2'), label: 'Tool' },
+  { key: 'mixed', color: storyColor('chart3'), label: 'Mixed' },
 ];
 
 const items: SequenceStripItem[] = [

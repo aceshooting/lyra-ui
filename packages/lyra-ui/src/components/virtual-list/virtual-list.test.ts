@@ -824,3 +824,54 @@ it('renders valid group labels at their indexed row offsets', async () => {
   expect(groups.map((group) => group.textContent?.trim())).to.deep.equal(['First', 'Second']);
   expect(groups[1].style.transform).to.equal('translateY(80px)');
 });
+
+describe('itemRole / rowIndexOffset', () => {
+  it('defaults to listitem/list roles (unchanged from today)', async () => {
+    const el = (await fixture(html`<lyra-virtual-list style="height:100px"></lyra-virtual-list>`)) as LyraVirtualList;
+    el.items = ['a', 'b'];
+    el.renderItem = (item: unknown) => html`<span>${item}</span>`;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('list');
+    expect(el.shadowRoot!.querySelector('[part="row"]')!.getAttribute('role')).to.equal('listitem');
+  });
+
+  it('maps to table roles when item-role="row"', async () => {
+    const el = (await fixture(
+      html`<lyra-virtual-list style="height:100px" item-role="row" row-index-offset="1"></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    el.items = ['a', 'b'];
+    el.renderItem = (item: unknown) => html`<span>${item}</span>`;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('rowgroup');
+    const firstRow = el.shadowRoot!.querySelector('[part="row"]')!;
+    expect(firstRow.getAttribute('role')).to.equal('row');
+    expect(firstRow.getAttribute('aria-rowindex')).to.equal('2'); // index 0 + 1 (1-based) + offset 1
+    expect(firstRow.hasAttribute('aria-setsize')).to.be.false;
+    expect(firstRow.hasAttribute('aria-posinset')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="spacer"]')!.getAttribute('role')).to.equal('presentation');
+  });
+
+  it('keeps [part="base"] focusable (tabindex 0) in row mode', async () => {
+    const el = (await fixture(
+      html`<lyra-virtual-list style="height:100px" item-role="row"></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    el.items = ['a'];
+    el.renderItem = (item: unknown) => html`<span>${item}</span>`;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('resize-driven row observation still works in row mode (data-row-index, not aria-posinset)', async () => {
+    const el = (await fixture(
+      html`<lyra-virtual-list style="height:60px" item-role="row" row-height="auto"></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    el.items = ['a', 'b', 'c'];
+    el.renderItem = (item: unknown) => html`<span>${item}</span>`;
+    await el.updateComplete;
+    await aTimeout(50); // allow ResizeObserver to report real row heights and trigger a re-render
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.be.greaterThan(0);
+  });
+});

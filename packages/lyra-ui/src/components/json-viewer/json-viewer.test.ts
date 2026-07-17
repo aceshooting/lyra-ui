@@ -517,3 +517,89 @@ it('defaults to English "array"/"object" when no strings override is set', async
   const arrayToggle = arrayEl.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   expect(arrayToggle.getAttribute('aria-label')).to.contain('array');
 });
+
+describe('imperative search API', () => {
+  const SAMPLE = { name: 'Ada', role: 'Mathematician', team: { name: 'Analytical Engine', size: 3 } };
+
+  // NB: the convenience method is `runSearch()`, not `search()` -- `search` is already this
+  // component's pre-existing declarative `@property()` string (predating this quartet), and a
+  // method can't share a class member name with a property. See the JSDoc on `runSearch()` in
+  // json-viewer.class.ts for the full rationale.
+
+  it('runSearch() resolves the count equal to the rendered data-match span count', async () => {
+    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    const count = await el.runSearch('name');
+    await el.updateComplete;
+    expect(count).to.equal(el.shadowRoot!.querySelectorAll('[data-match]').length);
+    expect(count).to.equal(2); // "name" key at root and inside "team"
+  });
+
+  it('searchNext/searchPrevious move the cursor in document walk order (key before value at one path)', async () => {
+    const el = (await fixture(html`<lyra-json-viewer .data=${{ ada: 'ada' }}></lyra-json-viewer>`)) as LyraJsonViewer;
+    await el.runSearch('ada'); // matches the key "ada" AND its own value "ada" at the same path
+    let detail: { activeIndex: number } | undefined;
+    el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+    expect(await el.searchNext()).to.be.true;
+    expect(detail!.activeIndex).to.equal(0);
+    expect(await el.searchNext()).to.be.true;
+    expect(detail!.activeIndex).to.equal(1);
+    expect(await el.searchNext()).to.be.true;
+    expect(detail!.activeIndex).to.equal(0); // wraps
+  });
+
+  it('activeIndex starts at -1 before any navigation', async () => {
+    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    let detail: { activeIndex: number } | undefined;
+    el.addEventListener('lyra-search-change', (e) => (detail = (e as CustomEvent).detail));
+    await el.runSearch('name');
+    expect(detail!.activeIndex).to.equal(-1);
+  });
+
+  it('a user-collapsed ancestor keeps its override while the cursor still advances', async () => {
+    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE} collapsed-depth=${99}></lyra-json-viewer>`)) as LyraJsonViewer;
+    await el.runSearch('name');
+    // The "team" toggle button, force-expanded by the match -- user collapses it explicitly.
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
+    const teamToggle = toggles.find((t) => t.getAttribute('aria-expanded') === 'true');
+    teamToggle?.click();
+    await el.updateComplete;
+    expect(await el.searchNext()).to.be.true;
+    expect(await el.searchNext()).to.be.true; // still advances even though a match may now be hidden
+  });
+
+  it('emits exactly one lyra-search-change when data reshapes, resetting activeIndex to -1', async () => {
+    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    await el.runSearch('name');
+    await el.searchNext();
+    let callCount = 0;
+    let lastDetail: { activeIndex: number } | undefined;
+    el.addEventListener('lyra-search-change', (e) => {
+      callCount++;
+      lastDetail = (e as CustomEvent).detail;
+    });
+    el.data = { other: 'value' };
+    await el.updateComplete;
+    expect(callCount).to.equal(1);
+    expect(lastDetail!.activeIndex).to.equal(-1);
+  });
+
+  it('clearSearch() resets query/matchCount/activeIndex', async () => {
+    const el = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    await el.runSearch('name');
+    const listener = oneEvent(el, 'lyra-search-change');
+    el.clearSearch();
+    const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+    expect(event.detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+    expect(el.search).to.equal('');
+  });
+
+  it('back-compat: rendered DOM is unchanged until a cursor exists', async () => {
+    const before = (await fixture(html`<lyra-json-viewer .data=${SAMPLE} search="name"></lyra-json-viewer>`)) as LyraJsonViewer;
+    await before.updateComplete;
+    const beforeHtml = before.shadowRoot!.querySelector('[part="tree"]')!.innerHTML;
+    const after = (await fixture(html`<lyra-json-viewer .data=${SAMPLE}></lyra-json-viewer>`)) as LyraJsonViewer;
+    await after.runSearch('name');
+    await after.updateComplete;
+    expect(after.shadowRoot!.querySelector('[part="tree"]')!.innerHTML).to.equal(beforeHtml);
+  });
+});
