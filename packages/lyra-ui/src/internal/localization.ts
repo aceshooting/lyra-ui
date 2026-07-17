@@ -353,6 +353,7 @@ export type LyraMessageKey =
   | 'mediaCardVideoAttachment'
   | 'animatedImageDefaultAlt'
   | 'mentionSuggestions'
+  | 'suggestionsLabel'
   | 'map'
   | 'model'
   | 'selectModel'
@@ -961,6 +962,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   mediaCardVideoAttachment: 'Video attachment',
   animatedImageDefaultAlt: 'Animated image',
   mentionSuggestions: 'Suggestions',
+  suggestionsLabel: 'Suggested prompts',
   map: 'Map',
   model: 'Model',
   selectModel: 'Select a model…',
