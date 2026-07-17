@@ -464,7 +464,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomBehavior.scaleExtent([this.minZoom, this.maxZoom]);
     }
 
-    if (!(changed.has('simNodes') || changed.has('simLinks') || changed.has('nodeTypes'))) return;
+    if (!(changed.has('simNodes') || changed.has('simLinks') || changed.has('nodeTypes') || changed.has('showEdgeLabels'))) return;
 
     const nodeEls = Array.from(this.renderRoot.querySelectorAll('[part="node"]')) as SVGElement[];
     this.nodeEls = nodeEls;

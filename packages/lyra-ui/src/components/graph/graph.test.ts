@@ -600,6 +600,31 @@ describe('drawn edge labels (J2)', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="link-label"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelector('g')!.hasAttribute('data-edge-labels-hidden')).to.be.false;
   });
+
+  it('refreshes the cached linkLabelEls when showEdgeLabels toggles true post-mount (regression)', async () => {
+    // Flipping showEdgeLabels false -> true without reassigning nodes/links triggers a normal
+    // Lit re-render that creates the <text part="link-label"> element, but applyInteractions()'s
+    // node/link/label DOM cache must be refreshed for a showEdgeLabels-only change too -- or
+    // linkLabelEls stays stuck at its pre-toggle (all-null) snapshot and onTick() silently skips
+    // repositioning the label on every subsequent tick (e.g. a node drag) forever. See this
+    // file's nodeEls regression test above for the analogous nodeTypes-only case.
+    const el = await mountLabeled(false);
+    expect(el.shadowRoot!.querySelector('[part="link-label"]')).to.not.exist;
+
+    el.showEdgeLabels = true;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="link-label"]'), undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    const currentLabelEl = el.shadowRoot!.querySelector('[part="link-label"]');
+    // Compare identity as a boolean rather than handing two DOM elements straight to
+    // expect(...).to.equal(...) -- per this file's own testing conventions (see AGENTS.md), a
+    // *failing* element/element equality assertion can hang the whole file under wtr's
+    // Playwright reporter.
+    const cacheRefreshed = currentLabelEl === (el as any).linkLabelEls[0];
+    expect(cacheRefreshed).to.be.true;
+  });
 });
 
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
