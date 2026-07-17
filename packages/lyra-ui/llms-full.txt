@@ -2748,6 +2748,16 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
   mount (against d3-zoom's known identity transform) as well as on every subsequent pan/zoom, so
   labels never wrongly start visible before the first user gesture.
 
+**Selection & focus:** `selectionMode: 'none' | 'single' | 'multiple' = 'none'` (attribute
+`selection-mode`) gates click/keyboard selection; the component never mutates
+`selectedNodeIds: string[] = []` / `selectedLinkIds: string[] = []` (both attribute: false) itself,
+only emits `lyra-selection-change` (`detail: { nodeIds, linkIds }`) — the host assigns them back,
+mirroring `lyra-heatmap`'s `selectedCell` contract. `communities: GraphCommunity[] = []` (attribute:
+false) draws one translucent convex-hull blob per entry behind links/nodes. `focusId: string | null =
+null` (attribute `focus-id`) tracks a persistent focus ring (`[part="focus-halo"]`) around one node;
+`focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
+to a node, or to fit the whole graph), both resolving once the tween settles.
+
 ---
 
 ## `lyra-tree` / `lyra-tree-node`
@@ -5486,6 +5496,12 @@ The package root also exports `groupByRecency(items, options?)`, a DOM-free help
 non-empty Today/Yesterday/Previous 7 Days/Older buckets, preserves input order within each bucket,
 and accepts a timestamp extractor, reference date, and label overrides.
 
+**Methods:** `scrollToIndex(index, options?)` — the programmatic counterpart to `active-id`'s
+automatic scroll-into-view, for a host that needs to scroll to a specific row without changing which
+row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default — no scroll at all when
+already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
+`prefers-reduced-motion: reduce`. `index` is clamped to `0…items.length-1`.
+
 **Events:** `lyra-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
@@ -8109,6 +8125,13 @@ type. First-party invention.
 - `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
   the module-level registry is used when unset.
+- `alt: string = ''` — media alt text forwarded to the resolved renderer, for image-like renderers.
+- `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
+  target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
+  `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
+  badge) still re-fires.
+- `highlights: LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
+  renderer.
 
 **Events:**
 - `lyra-close` — `detail: DocumentViewerCloseReason`, the nested dialog's dismissal reason. The
@@ -8388,13 +8411,18 @@ Fetches a PDF and renders its pages with the optional `pdfjs-dist` peer. Pages a
 `lyra-virtual-list`, and PDF.js's selectable text layer is positioned over each rendered canvas.
 
 **Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
-`zoom: number = 1` is clamped to `0.25`–`4`.
+`zoom: number = 1` is clamped to `0.25`–`4`. `anchorKinds` is a readonly `['page', 'text-quote',
+'region']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Events:** `lyra-render-error` with `detail.error` when fetching, parsing, or rendering fails;
 `lyra-page-change` with `{ page, pageCount }`; and `lyra-zoom-change` with `{ zoom }`.
 
 **Methods:** `nextPage()`, `previousPage()`, `zoomIn()`, and `zoomOut()` update the corresponding
-controlled state within its supported range.
+controlled state within its supported range. `getPageText(page)` resolves the raw reading-order text
+of one page (per-page LRU-cached, 64 pages), rejecting on no loaded document or an out-of-range page.
+`renderPageThumbnail(page, canvas, options?)` renders `page` into a caller-owned `canvas` at
+`options.width` CSS px (default 96), devicePixelRatio-aware, resolving `false` when not ready or out
+of range.
 
 **CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `text-layer`,
 `spinner`, and `error`.
@@ -9249,3 +9277,298 @@ These apply across the whole library rather than to any one component:
 - **RTL.** Components generally rely on CSS logical properties to flip layout for free; `lyra-split`
   and `lyra-time-range` additionally consult `internal/rtl.ts`'s `isRtl()` to mirror the physical
   drag-direction/arrow-key math that logical properties alone don't cover.
+
+## `lyra-audio-visualizer`
+
+A presentational, canvas-drawn voice-activity visualization (bars or waveform) — the
+LiveKit-BarVisualizer counterpart for this library. Driven by a `MediaStream` (lazily wired to a
+WebAudio `AnalyserNode`), a numeric `level` for hosts that already compute levels (e.g.
+`<lyra-push-to-talk>`'s `lyra-level`), or `state` alone for an ambient animation when no real signal
+exists. A real signal (`stream` or `level`) always drives amplitude regardless of
+`prefers-reduced-motion`; only the signal-less ambient animation is throttled under reduced motion.
+
+**Properties:** `stream: MediaStream | null = null` (attribute: false), `level: number | null = null`,
+`state: 'idle' | 'listening' | 'thinking' | 'speaking' = 'idle'` (reflected), `variant: 'bars' |
+'waveform' = 'bars'` (reflected), `barCount: number = 5` (attribute `bar-count`), `gain: number = 1`,
+and `label: string = ''`.
+
+**Methods:** `refreshTheme()` re-reads themeable custom properties after a runtime theme change.
+
+**CSS parts:** `base` (the root wrapper) and `canvas` (the drawing surface, `aria-hidden`; the host
+itself carries `role="img"` and the accessible name).
+
+**Themeable custom properties:** `--lyra-audio-visualizer-color` (default `--lyra-color-brand` —
+active bar/waveform color) and `--lyra-audio-visualizer-quiet-color` (default
+`--lyra-color-brand-quiet` — inactive/idle color).
+
+## `lyra-branch-picker`
+
+The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it
+never mutates its own `index` — the same contract `<lyra-pagination>` already establishes for
+`page`. The host listens for `lyra-branch-change`, swaps the displayed branch content, and applies
+the new `index` back. Renders nothing at all while `count < 2`, so a host can bind it unconditionally
+on every message regardless of whether that message actually has multiple branches yet.
+
+**Properties:** `index: number = 0` (reflected) and `count: number = 1` (reflected) — the current
+0-based branch and the total branch count. `label: string = ''`.
+
+**Methods:** `focus()` and `blur()` forward to the group wrapper.
+
+**Events:** `lyra-branch-change` — a branch navigation was requested. `detail: { index }`, always a
+valid target (never past either bound); the consumer applies `index` after switching the displayed
+branch content.
+
+**CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`, and
+`position` (the visible "2 / 5" text).
+
+## `lyra-compare-panel`
+
+Side-by-side A/B output comparison with a winner vote (LMSYS-arena / LangSmith-pairwise style): two
+slotted panes, a vote bar, synchronized reading.
+
+**Properties:** `labelA: string = ''` (attribute `label-a`) and `labelB: string = ''` (attribute
+`label-b`) — pane headings. `vote: 'a' | 'b' | 'tie' | 'both-bad' | null = null` (reflected) — the
+recorded winner, host-writable to reflect a previously-recorded vote back. `itemId: string = ''`
+(attribute `item-id`) — an opaque id round-tripped through `lyra-vote`. `hideTie: boolean = false`
+(attribute `hide-tie`) and `hideBothBad: boolean = false` (attribute `hide-both-bad`) hide the
+corresponding vote button. `syncScroll: boolean = false` (attribute `sync-scroll`) links both panes'
+scroll position.
+
+**Slots:** `a` (the first output — any content, a chat message, markdown, a viewer), `b` (the second
+output), and `prompt` (optional shared-input header above both panes).
+
+**Events:** `lyra-vote` — `detail: { choice, itemId }`.
+
+**CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the
+`prompt` slot is empty), `panes` (the row, or under 640px column, wrapping both panes), `pane-a`,
+`pane-b` (each pane's labeled scroll region), `pane-header` (a pane's visible heading), `vote-bar`
+(the `role="group"` row of vote buttons), `vote-button` (one vote button), and `live-region` (the
+internal vote-announcement live region).
+
+## `lyra-highlight-layer`
+
+A presentational overlay that paints highlight rectangles (percent-of-box coordinates) over
+positioned content and owns their activation, active/flash styling, and keyboard access. `items`
+order is the caller's own reading order; the layer does not re-sort geometrically. Fills its nearest
+positioned ancestor.
+
+**Properties:** `items: HighlightLayerItem[] = []` (attribute: false), `activeId: string | null =
+null` (attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
+activation.
+
+**Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
+re-click of the same source citation).
+
+**Events:** `lyra-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
+`detail: { id }`.
+
+**CSS parts:** `base` (the absolutely-positioned overlay, inset 0) and `rect` (one highlight
+rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes).
+
+## `lyra-message-feedback`
+
+Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
+chips + a free-text comment) that opens as a disclosure directly below the thumbs. Emits; never
+persists — a host reflects a previously-recorded rating back via `value` (+ `disabled` for a
+read-only display). Activating the pressed thumb again toggles it off to `null` unless its own detail
+panel is currently open, in which case that click re-opens the panel instead.
+
+**Properties:** `value: 'up' | 'down' | null = null` (reflected), `reasons: MessageFeedbackReason[] =
+[]` (attribute: false, each `{ id, label }`), `commentable: boolean = false` (reflected) adds a
+free-text comment field, `detailFor: 'down' | 'both' = 'down'` (attribute `detail-for`) — which
+rating opens the detail panel, and `disabled: boolean = false` (reflected) for a read-only display.
+
+**Methods:** `focus()` focuses the thumb matching the current `value` (the up thumb when `null`);
+`blur()` blurs both thumbs.
+
+**Events:** `lyra-change` — `detail: { value }`, fired when a thumb's rating changes or clears.
+`lyra-submit` — `detail: { value, reasonIds, comment }`, fired by the panel's submit button.
+
+**CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
+`down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
+`commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
+`submit-button`.
+
+## `lyra-page-rail`
+
+A virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat
+markers. Two modes: **wired** (`viewer`/`for` supply a live page source, e.g. `<lyra-pdf-viewer>` —
+thumbnails render lazily as rows materialize, and the rail tracks page/count from the viewer's own
+events) and **mediated** (`page-count`/`page` are host-bound directly, rows render a placeholder
+glyph — still a fully functional pager). In wired mode the viewer's `page` is the single source of
+truth.
+
+**Properties:** `viewer: PageThumbnailSource | null = null` (attribute: false) — the wired viewer.
+`for: string = ''` — an id selector alternative to setting `viewer` directly. `pageCount: number = 0`
+(attribute `page-count`) and `page: number = 1` (reflected) — mediated-mode page state.
+`highlights: LyraHighlight[] = []` (attribute: false) — drives the per-page heat markers.
+`thumbWidth: number = 96` (attribute `thumb-width`) and `label: string = ''`.
+
+**Events:** `lyra-page-select` — a page row was activated (click, or Enter/Space on a focused row).
+`detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
+
+**CSS parts:** `base` (the rail), `pages` (the embedded `<lyra-virtual-list>`), `page` (one page
+button), `thumbnail` (the thumbnail canvas wrapper), `page-number` (the visible page number), `heat`
+(the heat-marker cluster), and `heat-dot` (one tone-colored heat marker, or the `+n` overflow
+marker).
+
+**Themeable custom properties:** `--lyra-page-rail-height` (default `var(--lyra-size-24rem)`) — block
+size of the virtualized rail.
+
+## `lyra-push-to-talk`
+
+A mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle: permission request,
+recording, optional chunked streaming, teardown. The one place in this library that touches the
+microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `mode="hold"` (the
+default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
+`aria-pressed`. Escape cancels the in-progress take in either mode.
+
+**Properties:** `mode: 'hold' | 'toggle' = 'hold'` (reflected), `timesliceMs: number = 0` (attribute
+`timeslice-ms`), `mimeType: string = ''` (attribute `mime-type`), `deviceId: string = ''` (attribute
+`device-id`), `audioConstraints?: MediaTrackConstraints` (attribute: false), `levelEvents: boolean =
+false` (attribute `level-events`), `maxDurationMs: number = 0` (attribute `max-duration-ms`),
+`showTimer: boolean = true` (attribute `show-timer`), `disabled: boolean = false` (reflected), and
+readonly `state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' = 'idle'` (reflected to
+`data-state`), and readonly `stream: MediaStream | null`.
+
+**Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
+the pointer/keyboard gestures).
+
+**Slots:** `icon` (replaces the default mic glyph) and `recording-icon` (replaces the default
+recording-state pulse glyph).
+
+**Events:** `lyra-record-start` (`detail: { stream }`), `lyra-record-chunk` (`detail: { blob }`, only
+when `timeslice-ms > 0`), `lyra-record-stop` (`detail: { blob, durationMs }`), `lyra-record-cancel`
+(no detail), `lyra-record-error` (`detail: { error }`), `lyra-level` (`detail: { level }`, opt-in via
+`level-events`), and `lyra-state-change` (`detail: { state }`).
+
+**CSS parts:** `trigger` (the capture button), `icon`, `pulse` (rendered only while recording),
+`timer` (the `M:SS` elapsed-time readout, only while recording and `show-timer`), and `status`
+(visible status text for the `requesting`/`denied`/`error`/unsupported states).
+
+## `lyra-rubric-form`
+
+A configurable annotation rubric (LangSmith annotation-queue style): score, category, and
+freeform-comment keys with a submit-and-next flow for working through an eval queue. Each
+`RubricKey.type` routes to an existing sibling control: `score` renders `<lyra-segmented>` or
+`<lyra-slider>`; `category` renders `<lyra-select>` or `<lyra-checkbox-group>` (`multiple`); `comment`
+renders `<lyra-textarea>`.
+
+**Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
+required?, min?, max?, step? }`), `value: RubricValue = {}` (attribute: false), `itemId: string = ''`
+(attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
+boolean = false`, and the shared form properties `name` and `disabled`. `errors: Record<string,
+string>` is the current per-key validation-message state.
+
+**Slots:** `actions` — extra host controls rendered in the footer beside Submit/Skip.
+
+**Events:** `lyra-input` (`detail: { value }`), `lyra-validity-change` (`detail: { valid, errors }`,
+fired only on an actual change), `lyra-submit` (`detail: { value, itemId }`), and `lyra-skip`
+(`detail: { itemId }`, `skippable` only).
+
+**CSS parts:** `base` (the outer wrapper), `field` (one key's wrapper), `label`, `description`,
+`scale` (the rendered score/category/comment control's wrapper), `error` (a field-level validation
+message), `footer`, `submit`, `skip` (only rendered when `skippable`), `empty` (shown when `keys` has
+no entries), and `unsupported` (the fallback note for a key whose `type` is outside the three
+supported ones).
+
+## `lyra-span-waterfall`
+
+The horizontal-timeline projection of the same `LyraSpan[]` `<lyra-trace-tree>` consumes: a time
+axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
+event-history style).
+
+**Properties:** `spans: LyraSpan[] = []` (attribute: false), `activeSpanId: string | null = null`
+(attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
+`viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
+window, `hideAxis: boolean = false` (attribute `hide-axis`), and `label: string = ''`.
+
+**Events:** `lyra-span-select` — `detail: { id }`, a bar/row was activated (click, Enter, Space).
+
+**CSS parts:** `base`, `axis` (the time-ruler row, hidden when `hideAxis`), `tick`, `tick-label`,
+`row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
+bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
+when `spans` is empty), and `live-region`.
+
+**Themeable custom properties:** `--lyra-span-waterfall-name-width` (default `8rem`) and
+`--lyra-span-waterfall-stripe-speed` (a `running` span's striped-bar animation duration; defaults to
+`--lyra-transition-ambient`).
+
+## `lyra-task-list`
+
+A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one
+level of nested sub-steps, embedded in the transcript. `items` is controlled and never mutated by this
+component. Unlike `<lyra-stepper>`'s single-`current` navigation, task-list is a read-only status
+report: several steps may be `running` at once, there is no selection, and status changes are
+announced through an internal `<lyra-live-region>`.
+
+**Properties:** `items: TaskItem[] = []` (attribute: false, each `{ id, label, status, detail?,
+children? }` where `status` is `'pending' | 'running' | 'success' | 'error'`), `label: string =
+'Tasks'`, `expanded: boolean = true` (reflected), and `collapsible: boolean = true`.
+
+**Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
+that item's label, typically a `<lyra-tool-call-chip>` or file `<lyra-chip>`.
+
+**Events:** `lyra-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
+expanded }`.
+
+**CSS parts:** `base`, `header` (a `<button>` when `collapsible`, a plain heading otherwise), `label`,
+`summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
+indicator, only rendered when `collapsible`), `body` (the list of items, `hidden` while collapsed),
+`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth`), `status-icon`, `item-label`,
+`item-detail`, and `item-children` (the nested `role="list"` wrapper around a top-level item's
+children).
+
+**Themeable custom properties:** `--lyra-task-list-spin` (default `1s linear`) — running-status icon
+spin animation duration/timing.
+
+## `lyra-terminal`
+
+A read-only ANSI console for streamed agent/tool output. Not a PTY: no stdin/keystroke handling, no
+cursor-addressed full-screen apps.
+
+**Properties:** `content: string = ''` — initial/replaceable buffer content, parsed for ANSI/SGR
+codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boolean = true`
+(reflected) — stick-to-bottom, `wrap: boolean = true` (reflected), `copyable: boolean = true`
+(reflected) and `downloadable: boolean = false` (reflected) toggle the toolbar buttons, `filename:
+string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
+`accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
+false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds` is a readonly
+`['page', 'text-quote', 'region']` for the shared anchor-target contract.
+
+**Methods:** `write(text)` appends ANSI-parsed text to the buffer. `clear()` empties the buffer.
+`scrollToBottom()` and `scrollToAnchor(anchor)` control scroll position. `search(query)`,
+`searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search. `getPlainText()`
+returns the SGR-stripped plain text of the whole buffer.
+
+**Events:** `lyra-copy` (`detail: { text }`), `lyra-download` (`detail: { filename }`),
+`lyra-follow-change` (`detail: { following }`), `lyra-search-change` (`detail: { query, matchCount,
+activeIndex }`), `lyra-highlight-activate` (`detail: { id }`), and `lyra-text-select` (`detail: {
+text, anchor, rects }`).
+
+**CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
+`download-button`, `viewport` (the `role="log"` scrollable region), `line` (one rendered line; carries
+`data-line-number`/`data-match`/`data-highlight-tone`), `jump-to-latest` (shown while `follow` is
+disengaged and new output has arrived), and `announcer` (the visually-hidden `role="status"` region
+used when `announce-output` is set).
+
+## `lyra-trace-tree`
+
+A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style): kind icon,
+name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
+columns. Consumes the same `LyraSpan[]` as `<lyra-span-waterfall>`.
+
+**Properties:** `spans: LyraSpan[] = []` (attribute: false), `activeSpanId: string | null = null`
+(attribute `active-span-id`), `label: string = ''`, `showTokens: boolean = false` (attribute
+`show-tokens`), `showCost: boolean = false` (attribute `show-cost`), and `hideBars: boolean = false`
+(attribute `hide-bars`).
+
+**Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
+
+**Events:** `lyra-span-select` (`detail: { id }`, a row was activated) and `lyra-span-toggle`
+(`detail: { id, expanded }`, a row was expanded or collapsed).
+
+**CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
+`showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
+`duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
+`bar`, `empty` (shown when `spans` is empty), and `live-region`.

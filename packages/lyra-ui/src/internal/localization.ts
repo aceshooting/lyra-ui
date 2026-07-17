@@ -526,7 +526,16 @@ export type LyraMessageKey =
   | 'audioVisualizerIdle'
   | 'audioVisualizerListening'
   | 'audioVisualizerThinking'
-  | 'audioVisualizerSpeaking';
+  | 'audioVisualizerSpeaking'
+  | 'fileTreeLabel'
+  | 'fileTreeDiffSummary'
+  | 'gitStatusAdded'
+  | 'gitStatusModified'
+  | 'gitStatusDeleted'
+  | 'gitStatusRenamed'
+  | 'gitStatusUntracked'
+  | 'gitStatusConflicted'
+  | 'gitStatusIgnored';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1054,6 +1063,15 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   audioVisualizerListening: 'Listening',
   audioVisualizerThinking: 'Thinking',
   audioVisualizerSpeaking: 'Speaking',
+  fileTreeLabel: 'Files',
+  fileTreeDiffSummary: '+{additions} -{deletions}',
+  gitStatusAdded: 'Added',
+  gitStatusModified: 'Modified',
+  gitStatusDeleted: 'Deleted',
+  gitStatusRenamed: 'Renamed',
+  gitStatusUntracked: 'Untracked',
+  gitStatusConflicted: 'Conflicted',
+  gitStatusIgnored: 'Ignored',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

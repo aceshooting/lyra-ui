@@ -78,6 +78,7 @@ import './components/html-viewer/html-viewer.js';
 import './components/dataset-viewer/dataset-viewer.js';
 import './components/contact-viewer/contact-viewer.js';
 import './components/pdf-viewer/pdf-viewer.js';
+import './components/image-viewer/image-viewer.js';
 import './components/spreadsheet-viewer/spreadsheet-viewer.js';
 import './components/csv-viewer/csv-viewer.js';
 import './components/docx-viewer/docx-viewer.js';
@@ -157,6 +158,7 @@ import './components/timeline/timeline.js';
 import './components/tour/tour.js';
 import './components/sequence-strip/sequence-strip.js';
 import './components/emoji-picker/emoji-picker.js';
+import './components/file-tree/file-tree.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -264,7 +266,9 @@ export type {
 } from './components/heatmap/heatmap.js';
 export { linearAlpha, sqrtStep } from './components/heatmap/heatmap-scale.js';
 export { LyraTree } from './components/tree/tree.js';
-export type { TreeItem } from './components/tree/tree.js';
+export type { TreeItem, TreeBadge } from './components/tree/tree.js';
+export { LyraFileTree } from './components/file-tree/file-tree.js';
+export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components/file-tree/file-tree.js';
 export { LyraTreeNode } from './components/tree/tree-node.js';
 export { LyraLiteChart } from './components/chart/lite-chart.js';
 export type {
