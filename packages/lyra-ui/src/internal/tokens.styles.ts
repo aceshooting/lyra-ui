@@ -79,6 +79,19 @@ export const tokens = css`
     --lyra-color-chart-6: var(--lyra-theme-color-chart-6, #f470b8);
     --lyra-color-chart-7: var(--lyra-theme-color-chart-7, #52d6e8);
     --lyra-color-chart-8: var(--lyra-theme-color-chart-8, #c9d1d9);
+    /* Ordered categorical fallback palette for typed graph nodes (GraphNodeType with no explicit
+       color) and Family K's graph-legend swatches, assigned by nodeTypes entry index % 8. A
+       separate, independently themeable ramp from --lyra-color-chart-* (same starting values,
+       own --lyra-theme-graph-cat-* retheme hook) so a consumer can recolor chart series and KG
+       entity types independently. */
+    --lyra-graph-cat-1: var(--lyra-theme-graph-cat-1, #8250df);
+    --lyra-graph-cat-2: var(--lyra-theme-graph-cat-2, #bf3989);
+    --lyra-graph-cat-3: var(--lyra-theme-graph-cat-3, #0a7d91);
+    --lyra-graph-cat-4: var(--lyra-theme-graph-cat-4, #57606a);
+    --lyra-graph-cat-5: var(--lyra-theme-graph-cat-5, #b083f5);
+    --lyra-graph-cat-6: var(--lyra-theme-graph-cat-6, #f470b8);
+    --lyra-graph-cat-7: var(--lyra-theme-graph-cat-7, #52d6e8);
+    --lyra-graph-cat-8: var(--lyra-theme-graph-cat-8, #c9d1d9);
     --lyra-layer-base: var(--lyra-theme-z-index-base, 0);
     --lyra-layer-content: var(--lyra-theme-z-index-content, 1);
     --lyra-layer-dropdown: var(--lyra-theme-z-index-dropdown, 900);
@@ -251,6 +264,14 @@ export const tokens = css`
       --lyra-color-chart-6: var(--lyra-theme-color-chart-6, #ff91c8);
       --lyra-color-chart-7: var(--lyra-theme-color-chart-7, #79e2ef);
       --lyra-color-chart-8: var(--lyra-theme-color-chart-8, #e4e7eb);
+      --lyra-graph-cat-1: var(--lyra-theme-graph-cat-1, #b58cff);
+      --lyra-graph-cat-2: var(--lyra-theme-graph-cat-2, #ff7ab2);
+      --lyra-graph-cat-3: var(--lyra-theme-graph-cat-3, #4fd1c5);
+      --lyra-graph-cat-4: var(--lyra-theme-graph-cat-4, #aab4c4);
+      --lyra-graph-cat-5: var(--lyra-theme-graph-cat-5, #d4a7ff);
+      --lyra-graph-cat-6: var(--lyra-theme-graph-cat-6, #ff91c8);
+      --lyra-graph-cat-7: var(--lyra-theme-graph-cat-7, #79e2ef);
+      --lyra-graph-cat-8: var(--lyra-theme-graph-cat-8, #e4e7eb);
     }
   }
 
@@ -307,6 +328,14 @@ export const tokens = css`
       --lyra-color-chart-6: CanvasText;
       --lyra-color-chart-7: Highlight;
       --lyra-color-chart-8: LinkText;
+      --lyra-graph-cat-1: Highlight;
+      --lyra-graph-cat-2: LinkText;
+      --lyra-graph-cat-3: CanvasText;
+      --lyra-graph-cat-4: Highlight;
+      --lyra-graph-cat-5: LinkText;
+      --lyra-graph-cat-6: CanvasText;
+      --lyra-graph-cat-7: Highlight;
+      --lyra-graph-cat-8: LinkText;
       --lyra-focus-ring-color: Highlight;
     }
   }

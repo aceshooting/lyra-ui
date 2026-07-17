@@ -145,6 +145,25 @@ it('provides light, dark, and forced-colors categorical chart palette values', (
   expect(forcedBlockMatch![1]).to.include('--lyra-color-chart-1: Highlight');
 });
 
+it('provides light, dark, and forced-colors categorical graph-node-type palette values, independently themeable from --lyra-color-chart-*', async () => {
+  const light = await probeVar('--lyra-graph-cat-1');
+  expect(light).to.match(/^#[0-9a-f]{6}$/i);
+  const darkBlockMatch = tokens.cssText.match(/@media \(prefers-color-scheme: dark\) \{[\s\S]*?\n {2}\}/);
+  expect(darkBlockMatch![0]).to.include('--lyra-graph-cat-1:');
+  const forcedBlockMatch = tokens.cssText.match(/@media \(forced-colors: active\) \{[\s\S]*?\n {2}\}/);
+  expect(forcedBlockMatch![0]).to.include('--lyra-graph-cat-1:');
+  // Independently themeable: overriding the chart bridge alone must not move the graph palette.
+  expect(tokens.cssText).to.include('--lyra-graph-cat-1: var(--lyra-theme-graph-cat-1,');
+  expect(tokens.cssText).not.to.include('--lyra-graph-cat-1: var(--lyra-theme-color-chart-1,');
+});
+
+it('keeps every graph-cat-N slot present for both light and dark', () => {
+  for (let i = 1; i <= 8; i++) {
+    expect(fallbackHex(`--lyra-graph-cat-${i}`, 'light')).to.match(/^#[0-9a-f]{6,8}$/i);
+    expect(fallbackHex(`--lyra-graph-cat-${i}`, 'dark')).to.match(/^#[0-9a-f]{6,8}$/i);
+  }
+});
+
 it('keeps every standalone light fallback semantic pair at WCAG AA contrast', () => {
   expectPaletteContrast('light');
 });

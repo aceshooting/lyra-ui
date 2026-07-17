@@ -20,6 +20,19 @@ export interface GraphNode {
   /** Clamped to [6, 24] (a non-finite/missing value uses the midpoint, 15) — never rendered smaller/larger. */
   radius?: number;
   color?: string;
+  /** Key into `nodeTypes` (by `GraphNodeType.id`) and `hiddenTypes`. Unknown/absent = untyped
+   *  (renders as a default circle with the token fill, but still participates in `hiddenTypes`
+   *  filtering by its raw string value even with no matching `nodeTypes` entry). */
+  type?: string;
+}
+
+/** One entry in `nodeTypes` — declares a node type's legend label, optional fill color (sanitized
+ *  like `GraphNode.color`), and rendered shape. */
+export interface GraphNodeType {
+  id: string;
+  label: string;
+  color?: string;
+  shape?: 'circle' | 'square' | 'diamond';
 }
 /** A link whose `target` id has no matching node renders as a short dashed stub off `source`'s
  *  own position instead of being silently dropped -- e.g. for a wiki-style `[[link]]` reference to
@@ -120,6 +133,33 @@ function normalizeLinkDash(dash: number[] | undefined): string | undefined {
   return dash.join(' ');
 }
 
+/** Assigns a typed node with no explicit color a slot from the ordered categorical fallback
+ *  palette, cycling every 8 entries (`--lyra-graph-cat-1`…`--lyra-graph-cat-8`). `index` is the
+ *  node's `GraphNodeType`'s position in `nodeTypes`, not the node's own index in `nodes`. */
+function categoricalPaletteColor(index: number): string {
+  return `var(--lyra-graph-cat-${(index % 8) + 1})`;
+}
+
+/** side = r * sqrt(pi), area-matched to a circle of radius r (side^2 = pi*r^2). Half-side is what
+ *  the path data actually needs, since both shapes are drawn centered on the origin and
+ *  positioned via a `transform="translate(x,y)"` per tick, never via absolute cx/cy. */
+function shapeHalfSide(r: number): number {
+  return (r * Math.sqrt(Math.PI)) / 2;
+}
+
+/** A square, centered on the origin, side ~= 1.772 * r (area-matched to the circle of radius r). */
+function squarePath(r: number): string {
+  const s = shapeHalfSide(r);
+  return `M ${-s} ${-s} L ${s} ${-s} L ${s} ${s} L ${-s} ${s} Z`;
+}
+
+/** The same square as `squarePath()`, rotated 45 degrees: same side length, vertices at the
+ *  half-diagonal distance (s * sqrt(2)) along each axis instead of the square's own corners. */
+function diamondPath(r: number): string {
+  const d = shapeHalfSide(r) * Math.SQRT2;
+  return `M 0 ${-d} L ${d} 0 L 0 ${d} L ${-d} 0 Z`;
+}
+
 export interface LyraGraphEventMap {
   'lyra-node-click': CustomEvent<{ id: string }>;
   'lyra-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
@@ -166,12 +206,20 @@ export interface LyraGraphEventMap {
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
  * @cssprop [--lyra-node-fill=var(--lyra-color-brand)] - Default node fill, overridden per-node by `GraphNode.color`.
  * @cssprop [--lyra-link-color=var(--lyra-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
+ * @cssprop [--lyra-graph-cat-1..8] - Ordered categorical fallback palette for a typed node with no
+ *   `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries).
+ *   Declared centrally in `tokens.styles.ts` so `<lyra-graph>` and Family K's `<lyra-graph-legend>`
+ *   resolve the identical default.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) nodes: GraphNode[] = [];
   @property({ attribute: false }) links: GraphLink[] = [];
+  /** Declares each `GraphNode.type` value's legend label, fill color, and shape. A typed node with
+   *  no matching entry here renders as untyped (default circle, token fill) but still participates
+   *  in `hiddenTypes` filtering by its raw `type` string. */
+  @property({ attribute: false }) nodeTypes: GraphNodeType[] = [];
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
@@ -226,7 +274,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  once per structural rebuild and written to directly by onTick() — this is
    *  what lets ticks update positions without going through Lit's reactive
    *  simNodes/simLinks properties (see rebuildSimulation()'s doc comment). */
-  private nodeEls: SVGCircleElement[] = [];
+  private nodeEls: SVGElement[] = [];
   private nodeLabelEls: (SVGTextElement | null)[] = [];
   private linkEls: SVGLineElement[] = [];
   /** Dangling-stub `<line>`s, index-aligned with `danglingLinks` -- cached separately from
@@ -275,6 +323,28 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private nodeRadius(n: GraphNode): number {
     const r = n.radius ?? (MIN_RADIUS + MAX_RADIUS) / 2;
     return Number.isFinite(r) ? Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, r)) : (MIN_RADIUS + MAX_RADIUS) / 2;
+  }
+
+  private resolveNodeType(node: GraphNode): GraphNodeType | undefined {
+    return node.type != null ? this.nodeTypes.find((t) => t.id === node.type) : undefined;
+  }
+
+  private nodeShape(node: GraphNode): 'circle' | 'square' | 'diamond' {
+    return this.resolveNodeType(node)?.shape ?? 'circle';
+  }
+
+  /** Resolution precedence: `node.color` (existing, most specific) > matched `GraphNodeType.color`
+   *  > the ordered categorical fallback palette by the type's index in `nodeTypes` > (returns
+   *  `undefined`, letting the untyped `--lyra-node-fill` token default apply). Both data-driven
+   *  color sources pass the existing `sanitizeNodeColor()`. */
+  private nodeFill(node: GraphNode): string | undefined {
+    const ownColor = sanitizeNodeColor(node.color);
+    if (ownColor) return ownColor;
+    const type = this.resolveNodeType(node);
+    if (!type) return undefined;
+    const typeColor = sanitizeNodeColor(type.color);
+    if (typeColor) return typeColor;
+    return categoricalPaletteColor(this.nodeTypes.indexOf(type));
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -376,7 +446,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
     if (!(changed.has('simNodes') || changed.has('simLinks'))) return;
 
-    const nodeEls = Array.from(this.renderRoot.querySelectorAll('[part="node"]')) as SVGCircleElement[];
+    const nodeEls = Array.from(this.renderRoot.querySelectorAll('[part="node"]')) as SVGElement[];
     this.nodeEls = nodeEls;
     this.nodeLabelEls = nodeEls.map(
       (el) => (el.parentElement?.querySelector('[part="label"]') as SVGTextElement | null) ?? null,
@@ -436,10 +506,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       target.y = (source.y ?? 0) + STUB_OFFSET_PX;
     }
     this.simNodes.forEach((n, i) => {
-      const circle = this.nodeEls[i];
-      if (circle) {
-        circle.setAttribute('cx', String(n.x ?? 0));
-        circle.setAttribute('cy', String(n.y ?? 0));
+      const el = this.nodeEls[i];
+      if (el) {
+        if (el.tagName === 'circle') {
+          el.setAttribute('cx', String(n.x ?? 0));
+          el.setAttribute('cy', String(n.y ?? 0));
+        } else {
+          el.setAttribute('transform', `translate(${n.x ?? 0},${n.y ?? 0})`);
+        }
       }
       const label = this.nodeLabelEls[i];
       if (label) {
@@ -606,7 +680,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private nodeAccessibleText(node: GraphNode): string {
-    return node.accessibleLabel || node.label || node.id;
+    let text = node.accessibleLabel || node.label || node.id;
+    const type = this.resolveNodeType(node);
+    if (type) text = this.localize('graphTypedNode', undefined, { label: text, type: type.label });
+    return text;
   }
 
   private linkAccessibleText(link: SimLink): string {
@@ -801,24 +878,50 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               ></line>`;
             })}
             ${this.simNodes.map((n, nodeIndex) => {
-              const fill = sanitizeNodeColor(n.color);
+              const shape = this.nodeShape(n);
+              const fill = this.nodeFill(n);
               const itemIndex = nodeIndex;
+              const tabindex = this.normalizedGraphItem() === itemIndex ? '0' : '-1';
+              const label = this.nodeAccessibleText(n);
+              // Unlike link styling below (which always renders style=${styleMap(...)}, even as
+              // an empty string), an untyped/unknown-type node must render with NO style
+              // attribute at all -- not just an empty one -- so hasAttribute('style') distinguishes
+              // "no fill override" from "fill override present" for consumers/tests probing the DOM.
+              const style = fill ? styleMap({ '--lyra-node-fill': fill }) : nothing;
+              const title = n.description ? svg`<title>${n.description}</title>` : nothing;
+              const shapeEl =
+                shape === 'circle'
+                  ? svg`<circle
+                      part="node"
+                      role="button"
+                      tabindex=${tabindex}
+                      aria-label=${label}
+                      r=${this.nodeRadius(n)}
+                      cx=${n.x ?? 0}
+                      cy=${n.y ?? 0}
+                      style=${style}
+                      @click=${() => this.onNodeClick(n)}
+                      @focus=${() => this.onGraphItemFocus(itemIndex)}
+                      @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
+                      @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
+                      @mouseleave=${(e: MouseEvent) => this.onNodeLeave(n, e)}
+                    >${title}</circle>`
+                  : svg`<path
+                      part="node"
+                      role="button"
+                      tabindex=${tabindex}
+                      aria-label=${label}
+                      d=${shape === 'square' ? squarePath(this.nodeRadius(n)) : diamondPath(this.nodeRadius(n))}
+                      transform="translate(${n.x ?? 0},${n.y ?? 0})"
+                      style=${style}
+                      @click=${() => this.onNodeClick(n)}
+                      @focus=${() => this.onGraphItemFocus(itemIndex)}
+                      @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
+                      @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
+                      @mouseleave=${(e: MouseEvent) => this.onNodeLeave(n, e)}
+                    >${title}</path>`;
               return svg`<g>
-                <circle
-                  part="node"
-                  role="button"
-                  tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
-                  aria-label=${this.nodeAccessibleText(n)}
-                  r=${this.nodeRadius(n)}
-                  cx=${n.x ?? 0}
-                  cy=${n.y ?? 0}
-                  style=${styleMap(fill ? { '--lyra-node-fill': fill } : {})}
-                  @click=${() => this.onNodeClick(n)}
-                  @focus=${() => this.onGraphItemFocus(itemIndex)}
-                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
-                  @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
-                  @mouseleave=${(e: MouseEvent) => this.onNodeLeave(n, e)}
-                >${n.description ? svg`<title>${n.description}</title>` : nothing}</circle>
+                ${shapeEl}
                 ${n.label
                   ? svg`<text part="label" aria-hidden="true" x=${(n.x ?? 0) + this.nodeRadius(n) + 2} y=${n.y ?? 0}>${n.label}</text>`
                   : ''}

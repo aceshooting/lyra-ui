@@ -290,6 +290,7 @@ export type LyraMessageKey =
   | 'graphNode'
   | 'graphLink'
   | 'graphDiagram'
+  | 'graphTypedNode'
   | 'heatmapValueLabel'
   | 'heatmapMatrixCellLabel'
   | 'heatmapCalendarLabel'
@@ -443,7 +444,10 @@ export type LyraMessageKey =
   | 'skipToContent'
   | 'tourSkip'
   | 'tourDone'
-  | 'tourStepOf';
+  | 'tourStepOf'
+  | 'emojiPickerSearchLabel'
+  | 'emojiPickerGridLabel'
+  | 'emojiPickerEmpty';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -741,6 +745,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphNode: 'Node {label}',
   graphLink: 'Link from {source} to {target}',
   graphDiagram: 'Node-link diagram with {nodeCount} nodes and {linkCount} links',
+  graphTypedNode: '{label} ({type})',
   heatmapValueLabel: 'value',
   heatmapMatrixCellLabel: 'Row {row}, Col {col}: {value}',
   heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
@@ -888,6 +893,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   tourSkip: 'Skip',
   tourDone: 'Done',
   tourStepOf: 'Step {current} of {total}',
+  emojiPickerSearchLabel: 'Search emoji',
+  emojiPickerGridLabel: 'Emoji',
+  emojiPickerEmpty: 'No emoji found',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

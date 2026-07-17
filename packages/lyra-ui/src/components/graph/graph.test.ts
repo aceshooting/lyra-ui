@@ -393,6 +393,105 @@ it('applies a per-node GraphNode.color as the actual rendered fill', async () =>
   expect(getComputedStyle(coloredEl).fill).to.not.equal(getComputedStyle(defaultEl).fill);
 });
 
+describe('node typing (J1)', () => {
+  const nodeTypes = [
+    { id: 'person', label: 'Person', shape: 'square' as const },
+    { id: 'doc', label: 'Document', color: '#112233', shape: 'diamond' as const },
+    { id: 'concept', label: 'Concept' }, // no color, no shape -> categorical fallback + circle
+  ];
+  const typedNodes = [
+    { id: 'a', label: 'A', type: 'person' },
+    { id: 'b', label: 'B', type: 'doc' },
+    { id: 'c', label: 'C', type: 'concept' },
+    { id: 'd', label: 'D', type: 'unknown-type' }, // falls back to untyped
+    { id: 'e', label: 'E', type: 'concept', color: '#ff0000' }, // node.color wins
+  ];
+  const typedLinks = [{ source: 'a', target: 'b' }];
+
+  async function mountTyped(): Promise<LyraGraph> {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodeTypes = nodeTypes;
+    el.nodes = typedNodes;
+    el.links = typedLinks;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 5, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    return el;
+  }
+
+  it('renders circle/square/diamond shape elements per nodeTypes entry, untyped/unknown-type as circle', async () => {
+    const el = await mountTyped();
+    const items = el.shadowRoot!.querySelectorAll('[part="node"]');
+    expect(items[0]!.tagName).to.equal('path'); // a: person -> square
+    expect(items[1]!.tagName).to.equal('path'); // b: doc -> diamond
+    expect(items[2]!.tagName).to.equal('circle'); // c: concept -> circle (no shape given)
+    expect(items[3]!.tagName).to.equal('circle'); // d: unknown-type -> untyped circle
+    expect(items[4]!.tagName).to.equal('circle'); // e: concept -> circle
+  });
+
+  it('resolves fill precedence: node.color > type.color > categorical palette by nodeTypes index > default token', async () => {
+    const el = await mountTyped();
+    const items = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    expect(items[1]!.getAttribute('style')).to.include('--lyra-node-fill:#112233'); // b: doc.color
+    expect(items[2]!.getAttribute('style') ?? '').to.include('--lyra-graph-cat-3'); // c: concept is nodeTypes[2]
+    expect(items[3]!.hasAttribute('style')).to.be.false; // d: unknown type -> no inline fill override
+    expect(items[4]!.getAttribute('style')).to.include('--lyra-node-fill:#ff0000'); // e: node.color wins over type
+  });
+
+  it('wraps the categorical index at the 9th nodeTypes entry (typeIndex % 8)', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodeTypes = Array.from({ length: 9 }, (_, i) => ({ id: `t${i}`, label: `T${i}` }));
+    el.nodes = [
+      { id: 'first', type: 't0' },
+      { id: 'ninth', type: 't8' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const items = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    expect(items[0]!.getAttribute('style')).to.include('--lyra-graph-cat-1'); // index 0 % 8 -> slot 1
+    expect(items[1]!.getAttribute('style')).to.include('--lyra-graph-cat-1'); // index 8 % 8 -> slot 1 again
+  });
+
+  it('positions square/diamond shapes via a per-tick transform, not cx/cy', async () => {
+    const el = await mountTyped();
+    const squareEl = el.shadowRoot!.querySelector('[part="node"]') as SVGPathElement;
+    await aTimeout(50);
+    expect(squareEl.getAttribute('transform')).to.match(/^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/);
+    expect(squareEl.hasAttribute('cx')).to.be.false;
+  });
+
+  it('wraps typed node spoken text via graphTypedNode', async () => {
+    const el = await mountTyped();
+    const items = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    expect(items[0]!.getAttribute('aria-label')).to.equal('A (Person)');
+    expect(items[2]!.getAttribute('aria-label')).to.equal('C (Concept)');
+    expect(items[3]!.getAttribute('aria-label')).to.equal('D'); // unknown type -> unwrapped
+  });
+
+  it('is accessible with typed, mixed-shape nodes', async () => {
+    const el = await mountTyped();
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: no type/nodeTypes set renders identical circles and unwrapped labels', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const items = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    expect(items.every((i) => i.tagName === 'circle')).to.be.true;
+    expect(items[0]!.getAttribute('aria-label')).to.equal('A');
+    expect(items[0]!.hasAttribute('cx')).to.be.true;
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [
