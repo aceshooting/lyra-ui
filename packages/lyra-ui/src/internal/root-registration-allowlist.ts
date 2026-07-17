@@ -126,6 +126,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-sparkline',
   'lyra-spinner',
   'lyra-split',
+  'lyra-swatch-picker',
   'lyra-stat',
   'lyra-stepper',
   'lyra-stream-status',
