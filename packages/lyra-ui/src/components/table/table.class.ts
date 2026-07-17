@@ -12,6 +12,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { isRtl } from '../../internal/rtl.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../internal/icons.js';
+import { minMax } from '../heatmap/heatmap-scale.js';
 import '../empty/empty.class.js';
 import '../pagination/pagination.js';
 import '../spinner/spinner.js';
@@ -71,6 +72,12 @@ export interface TableColumn<T> {
    *  background that a `cell()`-returned inner element can't paint into the cell's own padding.
    *  Omit for no per-cell style override (the default; unchanged output). */
   cellStyle?(row: T): Record<string, string> | undefined;
+  /** Numeric accessor backing the heat-tint background. A column that omits this is excluded from
+   *  tinting (e.g. a label column) — its presence on any column is the opt-in signal for heat-tint
+   *  mode as a whole, mirroring how `expandedContent` alone signals expand-mode (no separate
+   *  boolean). Returns `null`/`undefined` for a cell with no value: excluded from both the domain
+   *  computation and the tint (reads as "no data", not "zero"). */
+  heatValue?(row: T): number | null | undefined;
   /** Enables double-click inline editing for this cell. The table emits the
    *  proposed value and never mutates `row`; apply the change in the consumer
    *  and pass the updated `rows` back in. */
@@ -349,6 +356,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  response to `lyra-row-expand-toggle`, mirroring how `sortKey`/
    *  `selectedKey` already work. */
   @property({ attribute: false }) expandedKeys: Set<string | number> = new Set();
+  /** Overrides the auto-derived heat-tint domain (min/max of every `heatValue` result across every
+   *  currently-rendered row — post-sort, pre-pagination, the same rows `footer(rows)` already sees).
+   *  Unset computes the domain automatically from the data, spanning every `heatValue`-defining
+   *  column together (a single shared scale across the whole grid, not one scale per column). */
+  @property({ attribute: false }) heatTintScale?: { min?: number; max?: number };
   @property({ type: Boolean, attribute: 'has-more', reflect: true }) hasMore = false;
   @property({ attribute: 'more-label' }) moreLabel = '';
   @property({ attribute: 'empty-heading' }) emptyHeading = '';
@@ -638,6 +650,37 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       runningEnd += headerWidth(col.key);
     }
     return offsets;
+  }
+
+  /** `[lo, hi]` of every `heatValue` result across every matching row (post-sort, pre-pagination) and
+   *  every `heatValue`-defining column, or `null` when heat-tint mode is off or there's no usable
+   *  domain (no numeric values and no override). `heatTintScale` overrides either or both bounds. */
+  private computeHeatDomain(hasHeatTint: boolean): [number, number] | null {
+    if (!hasHeatTint) return null;
+    const values: number[] = [];
+    for (const entry of this.matchingEntries()) {
+      for (const col of this.columns) {
+        const v = col.heatValue?.(entry.row);
+        if (v != null && Number.isFinite(v)) values.push(v);
+      }
+    }
+    const auto = minMax(values);
+    const lo = this.heatTintScale?.min ?? auto?.[0];
+    const hi = this.heatTintScale?.max ?? auto?.[1];
+    if (lo === undefined || hi === undefined) return null;
+    return [lo, hi];
+  }
+
+  /** This cell's tint share as a CSS percentage string (e.g. `"42.00%"`), or `null` when the column
+   *  has no `heatValue`, the domain is unavailable, or this row's value is missing/non-finite. */
+  private heatShare(col: TableColumn<T>, row: T, domain: [number, number] | null): string | null {
+    if (!col.heatValue || !domain) return null;
+    const v = col.heatValue(row);
+    if (v == null || !Number.isFinite(v)) return null;
+    const [lo, hi] = domain;
+    const span = hi - lo || 1;
+    const t = Math.min(1, Math.max(0, (v - lo) / span));
+    return `${(t * 100).toFixed(2)}%`;
   }
 
   private applyStickyOffsets(): void {
@@ -934,6 +977,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const focusedRow = this.focusedRowKey();
     const hasColumnWidths = this.columns.some((col) => col.width);
     const hasExpand = Boolean(this.expandedContent);
+    const hasHeatTint = this.columns.some((col) => col.heatValue !== undefined);
+    const heatDomain = this.computeHeatDomain(hasHeatTint);
     const renderedEntries = this.renderedEntries();
     const hasPagination = this.normalizedPageSize > 0;
     const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
@@ -1048,16 +1093,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                               : nothing}
                           </td>`
                         : nothing}
-                      ${this.columns.map(
-                        (col) =>
-                          html`<td
+                      ${this.columns.map((col) => {
+                        const heatShare = this.heatShare(col, row, heatDomain);
+                        return html`<td
                             part="cell"
                             role="gridcell"
                             data-col-key=${col.key}
                             data-align=${col.align ?? 'start'}
                             data-priority=${col.priority ?? nothing}
                             data-sticky=${stickyDirection(col.sticky) ?? nothing}
-                            style=${col.cellStyle ? styleMap(col.cellStyle(row) ?? {}) : nothing}
+                            ?data-heat=${heatShare !== null}
+                            style=${styleMap({
+                              ...(col.cellStyle ? col.cellStyle(row) ?? {} : {}),
+                              ...(heatShare !== null ? { '--lyra-table-heat-t': heatShare } : {}),
+                            })}
                           >
                             ${this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key
                               ? html`<input
@@ -1079,8 +1128,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                                     this.onEditorKeyDown(event, encodeKey(key), col.key)}
                                 />`
                               : col.cell(row)}
-                          </td>`,
-                      )}
+                          </td>`;
+                      })}
                     </tr>`,
                     rowExpanded
                       ? html`<tr part="expanded-row" role="row">

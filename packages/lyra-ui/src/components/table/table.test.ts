@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './table.js';
 import '../select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
+import { styles } from './table.styles.js';
 
 interface Row {
   id: string;
@@ -1561,5 +1562,79 @@ describe('localization', () => {
     el.hasMore = true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="more-button"]')!.textContent).to.contain('Charger plus');
+  });
+});
+
+describe('heat-tint mode', () => {
+  const heatColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', cell: (r) => r.name },
+    { key: 'score', label: 'Score', align: 'end', heatValue: (r) => r.score, cell: (r) => r.score },
+  ];
+
+  it('renders no data-heat cells when no column defines heatValue (unchanged default)', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-heat]').length).to.equal(0);
+  });
+
+  it('computes --lyra-table-heat-t from the auto-derived min/max across all heatValue columns', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = heatColumns;
+    el.rows = rows; // Alpha score 3, Beta score 1 -> auto domain [1, 3]
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
+    expect(scoreCells.length).to.equal(2);
+    expect(scoreCells[0].style.getPropertyValue('--lyra-table-heat-t')).to.equal('100.00%'); // Alpha: (3-1)/(3-1)
+    expect(scoreCells[1].style.getPropertyValue('--lyra-table-heat-t')).to.equal('0.00%'); // Beta: (1-1)/2
+    expect(scoreCells.every((c) => c.hasAttribute('data-heat'))).to.be.true;
+    const nameCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="name"]')] as HTMLElement[];
+    expect(nameCells.every((c) => !c.hasAttribute('data-heat'))).to.be.true;
+  });
+
+  it('overrides the auto-derived domain with heatTintScale', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = heatColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.heatTintScale = { min: 0, max: 10 };
+    await el.updateComplete;
+    const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
+    expect(scoreCells[0].style.getPropertyValue('--lyra-table-heat-t')).to.equal('30.00%'); // Alpha: 3/10
+    expect(scoreCells[1].style.getPropertyValue('--lyra-table-heat-t')).to.equal('10.00%'); // Beta: 1/10
+  });
+
+  it('skips tinting a cell whose heatValue returns null (not clamped to 0)', async () => {
+    interface RowN {
+      id: string;
+      name: string;
+      score: number | null;
+    }
+    const nullRows: RowN[] = [
+      { id: 'a', name: 'Alpha', score: 3 },
+      { id: 'b', name: 'Beta', score: null },
+    ];
+    const nullCols: TableColumn<RowN>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      { key: 'score', label: 'Score', heatValue: (r) => r.score, cell: (r) => r.score ?? '' },
+    ];
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<RowN>;
+    el.columns = nullCols;
+    el.rows = nullRows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
+    expect(scoreCells[0].hasAttribute('data-heat')).to.be.true;
+    expect(scoreCells[1].hasAttribute('data-heat')).to.be.false;
+  });
+
+  it('declares the heat-tint ramp CSS with retheme-able tokens matching lyra-heatmap defaults', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('--lyra-table-heat-tint-lo: var(--lyra-color-brand-quiet);');
+    expect(css).to.include('--lyra-table-heat-tint-hi: var(--lyra-color-brand);');
+    expect(css).to.match(/\[part='cell'\]\[data-heat\]\s*\{[^}]*color-mix\(/);
   });
 });

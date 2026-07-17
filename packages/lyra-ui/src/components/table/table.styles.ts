@@ -4,6 +4,8 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
+    --lyra-table-heat-tint-lo: var(--lyra-color-brand-quiet);
+    --lyra-table-heat-tint-hi: var(--lyra-color-brand);
   }
   [part='base'] {
     overflow: auto;
@@ -166,6 +168,9 @@ export const styles = css`
   }
   [part='cell'][data-align='end'] {
     text-align: end;
+  }
+  [part='cell'][data-heat] {
+    background: color-mix(in srgb, var(--lyra-table-heat-tint-hi) var(--lyra-table-heat-t), var(--lyra-table-heat-tint-lo));
   }
   [part='expand-toggle-cell'] {
     padding: var(--lyra-space-s);
