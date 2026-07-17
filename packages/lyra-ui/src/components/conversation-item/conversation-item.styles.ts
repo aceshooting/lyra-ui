@@ -99,6 +99,16 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
     font-size: var(--lyra-font-size-sm);
   }
+  /* Needed because of the unconditional display: block above -- an author-origin declaration
+     always beats the UA stylesheet's [hidden] { display: none }, regardless of specificity, so
+     without this the ?hidden binding on [part='excerpt'] would be a visual no-op. Same reasoning
+     as [part='actions'][hidden] below, and mirrors lyra-timeline-item's identical
+     [part='timestamp'][hidden] / [part='description'][hidden] rules for its own slot-wins-over-
+     property parts. [part='meta'] doesn't need the same override -- it has no author display
+     declaration of its own, so the UA stylesheet's default [hidden] handling already applies. */
+  [part='excerpt'][hidden] {
+    display: none;
+  }
 
   [part='timestamp'] {
     flex: 0 0 auto;

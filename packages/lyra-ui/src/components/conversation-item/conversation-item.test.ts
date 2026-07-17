@@ -67,16 +67,67 @@ it('forwards a host aria-label onto the inner role="button" element instead of t
 });
 
 describe('excerpt', () => {
-  it('is not rendered when unset', async () => {
+  it('is hidden when unset', async () => {
     const el = (await fixture(html`<lyra-conversation-item title="A"></lyra-conversation-item>`)) as LyraConversationItem;
-    expect(el.shadowRoot!.querySelector('[part="excerpt"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hidden).to.be.true;
   });
 
   it('is rendered when set', async () => {
     const el = (await fixture(
       html`<lyra-conversation-item title="A" excerpt="Sure — I can open a PR for that."></lyra-conversation-item>`,
     )) as LyraConversationItem;
-    expect(el.shadowRoot!.querySelector('[part="excerpt"]')!.textContent).to.equal('Sure — I can open a PR for that.');
+    expect(el.shadowRoot!.querySelector('[part="excerpt"]')!.textContent!.trim()).to.equal(
+      'Sure — I can open a PR for that.',
+    );
+  });
+});
+
+describe('meta slot', () => {
+  it('hides the meta wrapper until something is slotted', async () => {
+    const el = (await fixture(html`<lyra-conversation-item></lyra-conversation-item>`)) as LyraConversationItem;
+    expect((el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
+  });
+
+  it('shows the meta wrapper once content is slotted', async () => {
+    const el = (await fixture(
+      html`<lyra-conversation-item><span slot="meta">3 requests</span></lyra-conversation-item>`,
+    )) as LyraConversationItem;
+    expect((el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="meta"] slot')!.assignedElements()[0].textContent).to.equal(
+      '3 requests',
+    );
+  });
+});
+
+describe('excerpt slot (wins over the excerpt property)', () => {
+  it('renders the excerpt property in [part="excerpt"] when no slot content is present (unchanged default)', async () => {
+    const el = (await fixture(
+      html`<lyra-conversation-item excerpt="plain preview text"></lyra-conversation-item>`,
+    )) as LyraConversationItem;
+    const excerptPart = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+    expect(excerptPart.hasAttribute('hidden')).to.be.false;
+    expect(excerptPart.textContent!.trim()).to.equal('plain preview text');
+  });
+
+  it('renders slotted content instead of the excerpt property when both are set', async () => {
+    const el = (await fixture(
+      html`<lyra-conversation-item excerpt="plain preview text"
+        ><mark slot="excerpt">highlighted</mark> hit</lyra-conversation-item
+      >`,
+    )) as LyraConversationItem;
+    const excerptPart = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+    expect(excerptPart.hasAttribute('hidden')).to.be.false;
+    expect(excerptPart.textContent!.trim()).to.not.include('plain preview text');
+    // The slotted <mark> is light DOM (a child of the host element), not a descendant of the
+    // shadow-tree excerptPart -- slot assignment doesn't reparent it, so it must be queried from
+    // `el`, not from `excerptPart`, mirroring the assignedElements()-based query the meta-slot test
+    // above uses for the same reason.
+    expect(el.querySelector('mark')!.textContent).to.equal('highlighted');
+  });
+
+  it('hides [part="excerpt"] entirely when neither the property nor the slot has content', async () => {
+    const el = (await fixture(html`<lyra-conversation-item></lyra-conversation-item>`)) as LyraConversationItem;
+    expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
   });
 });
 

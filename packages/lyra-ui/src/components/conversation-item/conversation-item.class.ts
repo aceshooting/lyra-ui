@@ -116,6 +116,14 @@ export interface LyraConversationItemEventMap {
  * @customElement lyra-conversation-item
  * @slot actions - Overflow/icon-button controls (for example a pin/delete
  * button or a `lyra-menu` trigger) rendered at the trailing edge of the row.
+ * @slot excerpt - Full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`
+ *   highlighting). Wins over the `excerpt` property whenever it has assigned content, even if
+ *   `excerpt` is also set. Only non-focusable content should be slotted here — see the `excerpt`
+ *   property's own doc for why.
+ * @slot meta - Small, non-focusable structured fields for the row (e.g. a day label, cost, request
+ *   count) rendered below the title/excerpt. Entirely app-supplied; this component computes none of
+ *   it. Only non-focusable content should be slotted here, for the same `nested-interactive` reason
+ *   as `excerpt`.
  * @event lyra-select - The row was activated: a click on `[part="option"]`
  * (i.e. outside the rename button and the `actions` slot), or Enter/Space
  * while it's focused -- in both cases only while not currently renaming. No
@@ -145,7 +153,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   /** The session's display title. */
   @property() title = '';
 
-  /** A short preview snippet of the last message. Omit for no excerpt line. */
+  /** A short preview snippet of the last message. Omit for no excerpt line. Ignored entirely when the
+   *  `excerpt` slot has assigned content — see that slot's own description. Only non-focusable
+   *  content should be slotted there: `role="button"` on `[part="option"]` forbids focusable
+   *  descendants (axe's `nested-interactive` rule); an interactive control belongs in the `actions`
+   *  slot instead. */
   @property() excerpt = '';
 
   /** When the session was last active. Accepts a `Date` or anything
@@ -185,12 +197,16 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   @state() private renaming = false;
   @state() private draftTitle = '';
   @state() private hasActionsSlot = false;
+  @state() private hasMetaSlot = false;
+  @state() private hasExcerptSlot = false;
 
   @query('[part="title-input"]') private titleInput?: HTMLInputElement;
 
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      this.hasMetaSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'meta');
+      this.hasExcerptSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'excerpt');
     }
     // `editable` documents that flipping it false can never leave a rename
     // committable -- without this, toggling it mid-edit would strand the
@@ -306,6 +322,14 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private onMetaSlotChange = (e: Event): void => {
+    this.hasMetaSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onExcerptSlotChange = (e: Event): void => {
+    this.hasExcerptSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
@@ -344,7 +368,13 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                   @blur=${this.onTitleInputBlur}
                 />`
               : html`<span part="title" title=${displayTitle}>${displayTitle}</span>`}
-            ${this.excerpt ? html`<span part="excerpt">${this.excerpt}</span>` : nothing}
+            <span part="excerpt" ?hidden=${!(this.hasExcerptSlot || this.excerpt)}>
+              <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
+              ${!this.hasExcerptSlot && this.excerpt ? this.excerpt : nothing}
+            </span>
+            <span part="meta" ?hidden=${!this.hasMetaSlot}>
+              <slot name="meta" @slotchange=${this.onMetaSlotChange}></slot>
+            </span>
           </div>
           ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
         </div>
