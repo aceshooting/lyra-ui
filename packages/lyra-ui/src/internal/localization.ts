@@ -434,6 +434,9 @@ export type LyraMessageKey =
   | 'pdfViewerCurrentZoom'
   | 'pdfViewerPreviousPage'
   | 'pdfViewerNextPage'
+  | 'anchorJumped'
+  | 'anchorJumpedToPage'
+  | 'anchorNotFound'
   | 'spreadsheetViewerUnavailable'
   | 'csvViewerUnavailable'
   | 'csvViewerLabel'
@@ -889,6 +892,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pdfViewerCurrentZoom: '{percent}%',
   pdfViewerPreviousPage: 'Previous page',
   pdfViewerNextPage: 'Next page',
+  anchorJumped: 'Jumped to highlighted passage.',
+  anchorJumpedToPage: 'Jumped to page {page}.',
+  anchorNotFound: 'Passage not found in this document.',
   skipToContent: 'Skip to content',
   tourSkip: 'Skip',
   tourDone: 'Done',
