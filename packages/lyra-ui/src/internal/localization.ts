@@ -639,7 +639,21 @@ export type LyraMessageKey =
   | 'browserFrameStatusIdle'
   | 'browserFrameStatusConnecting'
   | 'browserFrameStatusLive'
-  | 'browserFrameStatusStalled';
+  | 'browserFrameStatusStalled'
+  | 'notebookViewerLabel'
+  | 'notebookViewerInvalid'
+  | 'notebookViewerUnsupportedVersion'
+  | 'notebookViewerTooManyCells'
+  | 'notebookViewerInPrompt'
+  | 'notebookViewerInPromptEmpty'
+  | 'notebookViewerOutPrompt'
+  | 'notebookViewerCodeCell'
+  | 'notebookViewerMarkdownCell'
+  | 'notebookViewerRawCell'
+  | 'notebookViewerErrorOutput'
+  | 'notebookViewerShowAllOutput'
+  | 'notebookViewerCollapseOutput'
+  | 'notebookViewerUnrenderedOutput';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1280,6 +1294,20 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   browserFrameStatusConnecting: 'Connecting…',
   browserFrameStatusLive: 'Live',
   browserFrameStatusStalled: 'Stalled',
+  notebookViewerLabel: 'Notebook viewer',
+  notebookViewerInvalid: 'This file is not a valid Jupyter notebook.',
+  notebookViewerUnsupportedVersion: 'Notebook format {version} is not supported.',
+  notebookViewerTooManyCells: 'This notebook has too many cells to display.',
+  notebookViewerInPrompt: 'In [{count}]',
+  notebookViewerInPromptEmpty: 'In [ ]',
+  notebookViewerOutPrompt: 'Out [{count}]',
+  notebookViewerCodeCell: 'Code cell {index}',
+  notebookViewerMarkdownCell: 'Markdown cell {index}',
+  notebookViewerRawCell: 'Raw cell {index}',
+  notebookViewerErrorOutput: 'Error',
+  notebookViewerShowAllOutput: 'Show all output',
+  notebookViewerCollapseOutput: 'Collapse output',
+  notebookViewerUnrenderedOutput: 'This output type cannot be displayed.',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

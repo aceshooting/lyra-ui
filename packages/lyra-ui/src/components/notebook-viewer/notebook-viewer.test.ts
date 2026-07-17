@@ -21,6 +21,13 @@ const NOTEBOOK = {
   ],
 };
 
+/** Rendered cell content lives inside `<lyra-virtual-list>`'s own nested shadow root -- it composes
+ *  `renderItem()`'s TemplateResult into its own render output, so a `[part="cell"]` search has to
+ *  pierce that boundary rather than stopping at this component's own shadow root. */
+function rowRoot(el: LyraNotebookViewer): ShadowRoot {
+  return el.shadowRoot!.querySelector('lyra-virtual-list')!.shadowRoot!;
+}
+
 describe('defaults', () => {
   it('defaults to empty src/notebook/name, outputCollapseLines 40', async () => {
     const el = (await fixture(html`<lyra-notebook-viewer></lyra-notebook-viewer>`)) as LyraNotebookViewer;
@@ -39,8 +46,8 @@ describe('parsing and rendering', () => {
     expect(event.detail).to.deep.equal({ cellCount: 3, language: 'python' });
     // lyra-virtual-list measures its own viewport asynchronously (ResizeObserver), so its first
     // paint after this element's own updateComplete can still be an empty window.
-    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="cell"]').length > 0);
-    const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')];
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part="cell"]').length > 0);
+    const cells = [...rowRoot(el).querySelectorAll('[part="cell"]')];
     expect(cells.length).to.equal(3);
     expect(cells[0].getAttribute('data-cell-type')).to.equal('markdown');
     expect(cells[1].getAttribute('data-cell-type')).to.equal('code');
@@ -49,8 +56,8 @@ describe('parsing and rendering', () => {
 
   it('renders a markdown cell through lyra-markdown and a code cell through lyra-code-block', async () => {
     const el = (await fixture(html`<lyra-notebook-viewer .notebook=${NOTEBOOK}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="cell"]').length > 0);
-    const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')];
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part="cell"]').length > 0);
+    const cells = [...rowRoot(el).querySelectorAll('[part="cell"]')];
     expect(cells[0].querySelector('lyra-markdown')).to.exist;
     expect(cells[1].querySelector('lyra-code-block')).to.exist;
     expect((cells[1].querySelector('lyra-code-block') as HTMLElement).getAttribute('language')).to.equal('python');
@@ -58,8 +65,8 @@ describe('parsing and rendering', () => {
 
   it('renders a stream output tinted by stream name and a stdout/stderr data attribute', async () => {
     const el = (await fixture(html`<lyra-notebook-viewer .notebook=${NOTEBOOK}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => el.shadowRoot!.querySelector('[part="output"]') !== null);
-    const output = el.shadowRoot!.querySelector('[part="output"]')!;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output"]') !== null);
+    const output = rowRoot(el).querySelector('[part="output"]')!;
     expect(output.getAttribute('data-output-type')).to.equal('stream');
     expect(output.getAttribute('data-stream')).to.equal('stdout');
     expect(output.textContent).to.include('hi');
@@ -85,8 +92,8 @@ describe('parsing and rendering', () => {
   it('parses a JSON string passed to notebook, winning over src', async () => {
     const el = (await fixture(html`<lyra-notebook-viewer src="https://example.test/should-not-fetch.ipynb"></lyra-notebook-viewer>`)) as LyraNotebookViewer;
     el.notebook = JSON.stringify(NOTEBOOK);
-    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="cell"]').length > 0);
-    expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(3);
+    await waitUntil(() => (el.shadowRoot!.querySelector('lyra-virtual-list')?.shadowRoot?.querySelectorAll('[part="cell"]').length ?? 0) > 0);
+    expect(rowRoot(el).querySelectorAll('[part="cell"]').length).to.equal(3);
   });
 });
 
@@ -98,12 +105,12 @@ describe('output collapsing', () => {
       cells: [{ cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {}, outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText } }] }],
     };
     const el = (await fixture(html`<lyra-notebook-viewer .notebook=${notebook}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
-    await waitUntil(() => el.shadowRoot!.querySelector('[part="output-toggle"]') !== null);
-    const toggle = el.shadowRoot!.querySelector('[part="output-toggle"]') as HTMLButtonElement;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
+    const toggle = rowRoot(el).querySelector('[part="output-toggle"]') as HTMLButtonElement;
     expect(toggle).to.exist;
     toggle.click();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="output"]')!.textContent).to.include('line 59');
+    expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.include('line 59');
   });
 });
 
@@ -126,6 +133,10 @@ describe('search', () => {
 describe('node-path and fragment anchors', () => {
   it('scrollToAnchor resolves a node-path [cellIndex] and a fragment cell id', async () => {
     const el = (await fixture(html`<lyra-notebook-viewer .notebook=${NOTEBOOK}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
+    // Shrunk from the 5000ms/250ms defaults -- an anchor that never resolves (out-of-bounds index,
+    // an unsupported kind) otherwise retries for the full real timeout before settling false.
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     await el.updateComplete;
     expect(await el.scrollToAnchor({ kind: 'node-path', path: [1] })).to.be.true;
     expect(await el.scrollToAnchor({ kind: 'fragment', id: 'raw1' })).to.be.true;
@@ -138,16 +149,5 @@ describe('accessibility', () => {
   it('is accessible with a rendered notebook', async () => {
     const el = await fixture(html`<lyra-notebook-viewer name="demo.ipynb" .notebook=${NOTEBOOK}></lyra-notebook-viewer>`);
     await expect(el).to.be.accessible();
-  });
-});
-
-describe('DEBUG', () => {
-  it('debug loadState', async () => {
-    const el = (await fixture(html`<lyra-notebook-viewer .notebook=${NOTEBOOK}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
-    await el.updateComplete;
-    console.log('loadState', JSON.stringify((el as unknown as { loadState: unknown }).loadState));
-    console.log('shadow html', el.shadowRoot!.innerHTML.slice(0, 2000));
-    const vlist = el.shadowRoot!.querySelector('lyra-virtual-list') as unknown as { items: unknown[] } | null;
-    console.log('vlist items length', vlist ? vlist.items?.length : 'no vlist');
   });
 });

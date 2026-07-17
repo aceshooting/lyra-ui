@@ -9,6 +9,20 @@ async function nextFrame(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
+// In data mode, rendered rows live inside `lyra-virtual-list`'s own shadow root (a separate shadow
+// tree nested one level below `lyra-thread-list`'s), since `renderItem`'s returned content is
+// rendered by `lyra-virtual-list` into its own render root -- `querySelector(All)` never crosses a
+// shadow boundary, so reaching a row requires walking through `lyra-virtual-list`'s shadow root
+// explicitly rather than querying straight from the host's own `shadowRoot`.
+function dataRows(el: LyraThreadList): LyraConversationItem[] {
+  const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+  return [...list.shadowRoot!.querySelectorAll<LyraConversationItem>('lyra-conversation-item')];
+}
+
+function dataRow(el: LyraThreadList, id: string): LyraConversationItem {
+  return dataRows(el).find((r) => r.id === id)!;
+}
+
 // Every timestamp below is computed relative to the actual test-run time (never a hardcoded date) --
 // bucketFor()'s day-boundary math keys off the local calendar day, so a fixed-date fixture would
 // silently drift into the wrong bucket (or fail outright) on any day other than the one it was
@@ -75,8 +89,7 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const rows = [...el.shadowRoot!.querySelectorAll<LyraConversationItem>('lyra-conversation-item')];
-    const activeRow = rows.find((r) => r.id === 't1')!;
+    const activeRow = dataRow(el, 't1');
     expect(activeRow.active).to.be.true;
   });
 
@@ -86,7 +99,7 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const row = el.shadowRoot!.querySelector('lyra-conversation-item[id="t1"]') as LyraConversationItem;
+    const row = dataRow(el, 't1');
 
     const selectPromise = oneEvent(el, 'lyra-select');
     row.dispatchEvent(new CustomEvent('lyra-select', { bubbles: true, composed: true }));
@@ -105,13 +118,13 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    let row = el.shadowRoot!.querySelector('lyra-conversation-item[id="t1"]') as LyraConversationItem;
+    let row = dataRow(el, 't1');
     expect(row.editable).to.be.true;
 
     el.editable = false;
     await el.updateComplete;
     await nextFrame();
-    row = el.shadowRoot!.querySelector('lyra-conversation-item[id="t1"]') as LyraConversationItem;
+    row = dataRow(el, 't1');
     expect(row.editable).to.be.false; // regression guard for the ?editable=${false}-on-a-true-default trap
   });
 
@@ -121,7 +134,7 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const row = el.shadowRoot!.querySelector('lyra-conversation-item[id="t1"]') as LyraConversationItem;
+    const row = dataRow(el, 't1');
     const actionsSlot = row.querySelector('[slot="actions"]')!;
     const buttons = [...actionsSlot.querySelectorAll('button')];
     expect(buttons.length).to.equal(3);
@@ -145,9 +158,9 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const row = el.shadowRoot!.querySelector('lyra-conversation-item[id="p1"]') as LyraConversationItem;
+    const row = dataRow(el, 'p1');
     expect(row.querySelector('[slot="meta"]')).to.exist;
-    const unpinnedRow = el.shadowRoot!.querySelector('lyra-conversation-item[id="t1"]') as LyraConversationItem;
+    const unpinnedRow = dataRow(el, 't1');
     expect(unpinnedRow.querySelector('[slot="meta"]')).to.not.exist;
   });
 
@@ -226,7 +239,7 @@ describe('data mode', () => {
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
       await el.updateComplete;
-      const firstRow = el.shadowRoot!.querySelector('lyra-conversation-item') as LyraConversationItem;
+      const firstRow = dataRows(el)[0];
       expect(firstRow.shadowRoot!.activeElement).to.exist;
     });
   });
@@ -237,7 +250,7 @@ describe('data mode', () => {
     )) as LyraThreadList;
     await el.updateComplete;
     await nextFrame();
-    const rows = [...el.shadowRoot!.querySelectorAll<LyraConversationItem>('lyra-conversation-item')];
+    const rows = dataRows(el);
     const firstOption = rows[0].shadowRoot!.querySelector('[part="option"]') as HTMLElement;
     firstOption.focus();
 

@@ -83,18 +83,22 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
 
 /**
  * `<lyra-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with
- * pin/archive/delete/rename affordances. *Data mode* (non-empty `threads`) renders every row as a
- * `<lyra-conversation-item>` inside an internal `<lyra-virtual-list>` — virtualized by construction,
- * scroll position and per-row state survive a `threads` replacement. *Slotted mode* (empty `threads`)
- * renders host-supplied `<lyra-conversation-item>`s from the default slot as-is: no grouping,
- * virtualization, or row actions in that mode — those are data-mode-only by design (shadow DOM cannot
- * inject group headers between slotted children).
+ * pin/archive/delete/rename affordances. *Data mode* (non-empty `threads`, or empty `threads` with
+ * nothing slotted) renders every row as a `<lyra-conversation-item>` inside an internal
+ * `<lyra-virtual-list>` — virtualized by construction, scroll position and per-row state survive a
+ * `threads` replacement; zero rows renders the built-in empty state. *Slotted mode* (empty `threads`
+ * *and* real slotted content) renders host-supplied `<lyra-conversation-item>`s from the default slot
+ * as-is: no grouping, virtualization, or row actions in that mode — those are data-mode-only by design
+ * (shadow DOM cannot inject group headers between slotted children).
  *
  * No thread CRUD or persistence: every mutation (`lyra-thread-pin`/`-archive`/`-delete`/`-rename`) is
  * a controlled event carrying the *requested* new state — the host mutates `threads`.
  *
  * @customElement lyra-thread-list
- * @slot - Slotted mode only: host-supplied `lyra-conversation-item`s, rendered in order.
+ * @slot - Slotted mode only: host-supplied `lyra-conversation-item`s, rendered in order. Each
+ *   top-level assigned element that doesn't already carry an explicit `role` is given
+ *   `role="listitem"`, since `[part="list"]` is `role="list"` in this mode and `lyra-conversation-item`
+ *   deliberately doesn't self-apply that role (see its own class doc).
  * @slot empty - Replaces the built-in empty state.
  * @event lyra-select - `detail: { id }` -- a row was activated (data mode).
  * @event lyra-thread-pin - `detail: { id, pinned }` -- the *requested* new state (data mode).
@@ -112,7 +116,8 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static styles = [LyraElement.styles, styles];
 
-  /** Non-empty ⇒ data mode (the default slot is ignored). Empty ⇒ slotted mode. */
+  /** Non-empty ⇒ data mode (the default slot is ignored). Empty with no slotted content ⇒ data mode
+   *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. */
   @property({ attribute: false }) threads: ChatThread[] = [];
 
   /** Data mode: marks the matching row `active`/`aria-current` and scrolls it into view. */
@@ -147,19 +152,37 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @query('lyra-virtual-list') private virtualListEl?: LyraVirtualList;
   @query('lyra-live-region') private liveRegion?: LyraLiveRegion;
 
+  // Slotted mode is only for a host that's actually relying on it (real slotted content present)
+  // and hasn't also supplied `threads` -- empty `threads` with nothing slotted is still data mode,
+  // just with zero rows, so it renders the built-in empty state rather than a silently blank slot.
   private get dataMode(): boolean {
-    return this.threads.length > 0;
+    return this.threads.length > 0 || !this.hasDefaultSlotContent;
   }
 
   protected willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasEmptySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'empty');
-      this.hasDefaultSlotContent = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      const defaultSlotted = Array.from(this.children).filter((el) => !el.hasAttribute('slot'));
+      this.hasDefaultSlotContent = defaultSlotted.length > 0;
+      this.markAsListItems(defaultSlotted);
     }
     if (changed.has('threads') && this.threads.length > 0 && this.hasDefaultSlotContent) {
       console.warn(
         '[lyra-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
       );
+    }
+  }
+
+  // Slotted mode's `[part="list"]` carries `role="list"`, which ARIA requires to directly own only
+  // `role="listitem"` elements -- `lyra-conversation-item` deliberately does *not* self-apply that
+  // role (its own doc explains why: it's a plain activatable row usable standalone, not committed to
+  // list/listbox membership), so the container imposes it on whatever lands in the default slot
+  // instead, the same way `lyra-breadcrumb-item` self-applies `role="listitem"` for its own `role="list"`
+  // parent -- just applied from the outside here since the slotted element doesn't own that choice.
+  // Never overrides a role a consumer set explicitly.
+  private markAsListItems(elements: Element[]): void {
+    for (const el of elements) {
+      if (!el.hasAttribute('role')) el.setAttribute('role', 'listitem');
     }
   }
 
@@ -373,8 +396,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     `;
   };
 
-  private onDefaultSlotChange = (): void => {
-    this.hasDefaultSlotContent = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+  private onDefaultSlotChange = (e: Event): void => {
+    const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    this.markAsListItems(assigned);
+    this.hasDefaultSlotContent = assigned.length > 0;
   };
 
   private onEmptySlotChange = (e: Event): void => {
@@ -417,9 +442,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ${this.searchable ? this.renderSearch() : nothing}
         <div part="list" @keydown=${this.onListKeyDown}>
           ${showEmpty
-            ? html`<div part="empty">
-                ${this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')}
-              </div>`
+            ? html`<div part="empty">${
+                this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
+              }</div>`
             : html`<lyra-virtual-list
                 exportparts="group:group-header, row:row"
                 row-height="auto"
