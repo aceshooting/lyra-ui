@@ -48,6 +48,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-dropdown',
   'lyra-dropdown-item',
   'lyra-email-viewer',
+  'lyra-emoji-picker',
   'lyra-details',
   'lyra-accordion',
   'lyra-accordion-item',

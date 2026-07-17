@@ -156,11 +156,14 @@ import './components/timeline/timeline-item.js';
 import './components/timeline/timeline.js';
 import './components/tour/tour.js';
 import './components/sequence-strip/sequence-strip.js';
+import './components/emoji-picker/emoji-picker.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
 export { LyraSequenceStrip } from './components/sequence-strip/sequence-strip.js';
 export type { SequenceStripItem, SequenceStripCategory } from './components/sequence-strip/sequence-strip.js';
+export { LyraEmojiPicker } from './components/emoji-picker/emoji-picker.js';
+export type { EmojiPickerItem, EmojiPickerGroup } from './components/emoji-picker/emoji-picker.js';
 export { LyraToast } from './components/toast/toast.js';
 export type { ToastPlacement, ToastCreateOptions } from './components/toast/toast.js';
 export { LyraToastItem } from './components/toast/toast-item.js';

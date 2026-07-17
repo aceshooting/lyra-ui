@@ -92,3 +92,18 @@ describe('keyboard navigation', () => {
     expect(event.detail).to.deep.equal({ emoji: '😂' }); // second emoji, after one ArrowRight from index 0
   });
 });
+
+it('does not let a slow auto-load overwrite an explicitly-set groups value', async () => {
+  const el = (await fixture(html`<lyra-emoji-picker></lyra-emoji-picker>`)) as LyraEmojiPicker;
+  el.groups = groups; // set immediately, before any real network/import round-trip could resolve
+  await el.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 50)); // let any stray auto-load attempt settle
+  expect(el.groups).to.deep.equal(groups);
+});
+
+it('is accessible with groups populated', async () => {
+  const el = (await fixture(html`<lyra-emoji-picker></lyra-emoji-picker>`)) as LyraEmojiPicker;
+  el.groups = groups;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});

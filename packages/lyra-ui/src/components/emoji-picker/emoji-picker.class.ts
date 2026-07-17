@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated } from '../../internal/form-associated.js';
 import { nextId } from '../../internal/a11y.js';
 import { styles } from './emoji-picker.styles.js';
+import { loadEmojiDataCached } from './emoji-data-loader.js';
 
 export interface EmojiPickerItem {
   emoji: string;
@@ -55,6 +56,19 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  emoji data of its own. Empty (the default) renders no groups/emojis at all, just the search
    *  input and an empty state. See `emoji-data-loader.ts` for an optional convenience loader. */
   @property({ attribute: false }) groups: EmojiPickerGroup[] = [];
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    // Only auto-loads when the consumer hasn't already supplied groups directly -- an explicit
+    // `groups` (even an empty array set intentionally) always wins, matching the "consumer-supplied
+    // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
+    // <lyra-lite-chart>'s pointText falling back to a built-in template only when unset).
+    if (this.groups.length > 0) return;
+    void loadEmojiDataCached().then((loaded) => {
+      if (!this.isConnected || !loaded || this.groups.length > 0) return;
+      this.groups = loaded;
+    });
+  }
 
   @state() private queryText = '';
   @state() private activeIndex = 0;
