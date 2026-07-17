@@ -582,7 +582,12 @@ export type LyraMessageKey =
   | 'envListReveal'
   | 'envListHide'
   | 'envListValueHidden'
-  | 'envListCopy';
+  | 'envListCopy'
+  | 'voice'
+  | 'voicePickerNoVoices'
+  | 'voicePickerRequired'
+  | 'voicePickerPreview'
+  | 'voicePickerStopPreview';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1166,6 +1171,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   envListHide: 'Hide {name}',
   envListValueHidden: 'Value hidden',
   envListCopy: 'Copy {name}',
+  voice: 'Voice',
+  voicePickerNoVoices: 'No voices available',
+  voicePickerRequired: 'Please choose a voice.',
+  voicePickerPreview: 'Preview {name}',
+  voicePickerStopPreview: 'Stop preview',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
