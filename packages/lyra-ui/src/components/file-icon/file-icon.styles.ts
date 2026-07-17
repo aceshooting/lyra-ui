@@ -10,6 +10,10 @@ export const styles = css`
     inline-size: var(--lyra-file-icon-size, var(--lyra-size-2rem));
     block-size: var(--lyra-file-icon-size, var(--lyra-size-2rem));
     box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-inline: var(--lyra-space-2xs);
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     background: var(--lyra-color-brand-quiet);
