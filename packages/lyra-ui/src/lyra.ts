@@ -159,6 +159,7 @@ import './components/tour/tour.js';
 import './components/sequence-strip/sequence-strip.js';
 import './components/emoji-picker/emoji-picker.js';
 import './components/file-tree/file-tree.js';
+import './components/commit-card/commit-card.js';
 
 // …and the barrel re-exports classes, helpers, and types.
 export { LyraSparkline } from './components/sparkline/sparkline.js';
@@ -269,6 +270,8 @@ export { LyraTree } from './components/tree/tree.js';
 export type { TreeItem, TreeBadge } from './components/tree/tree.js';
 export { LyraFileTree } from './components/file-tree/file-tree.js';
 export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components/file-tree/file-tree.js';
+export { LyraCommitCard } from './components/commit-card/commit-card.js';
+export type { CommitFileChange, LyraCommitCardEventMap } from './components/commit-card/commit-card.js';
 export { LyraTreeNode } from './components/tree/tree-node.js';
 export { LyraLiteChart } from './components/chart/lite-chart.js';
 export type {

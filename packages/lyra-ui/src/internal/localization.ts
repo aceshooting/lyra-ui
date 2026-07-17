@@ -558,7 +558,12 @@ export type LyraMessageKey =
   | 'imageViewerAnnotationCancelled'
   | 'transcriptFeedLabel'
   | 'transcriptFeedEmpty'
-  | 'transcriptFeedInterim';
+  | 'transcriptFeedInterim'
+  | 'commitCardLabel'
+  | 'commitCardCopyHash'
+  | 'commitCardDiffSummary'
+  | 'commitCardShowFiles'
+  | 'commitCardHideFiles';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1118,6 +1123,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   transcriptFeedLabel: 'Transcript',
   transcriptFeedEmpty: 'No transcript yet',
   transcriptFeedInterim: 'Transcribing…',
+  commitCardLabel: 'Commit',
+  commitCardCopyHash: 'Copy commit hash',
+  commitCardDiffSummary: '+{additions} -{deletions} in {files} files',
+  commitCardShowFiles: 'Show {count} changed files',
+  commitCardHideFiles: 'Hide {count} changed files',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
