@@ -142,6 +142,32 @@ describe('lyra-button', () => {
     expect(css).to.include('--lyra-button-outlined-border: var(--lyra-color-border-strong);');
   });
 
+  it('supports appearance="quiet": muted border/text tokens, transparent until hover', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include("--lyra-button-quiet-border: var(--lyra-color-border);");
+    expect(css).to.include("--lyra-button-quiet-text: var(--lyra-color-text-quiet);");
+    expect(css).to.match(
+      /:host\(\[appearance='quiet'\]\) \[part='base'\]\s*\{[^}]*background:\s*transparent;[^}]*color:\s*var\(--lyra-button-quiet-text\);[^}]*border-color:\s*var\(--lyra-button-quiet-border\);/,
+    );
+    expect(css).to.match(
+      /:host\(\[appearance='quiet'\]\) \[part='base'\]:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--lyra-color-surface\);/,
+    );
+  });
+
+  it('keeps appearance="quiet"\'s text/border independent of variant (unlike outlined)', async () => {
+    const neutralEl = (await fixture(
+      html`<lyra-button appearance="quiet" variant="neutral">Save</lyra-button>`,
+    )) as LyraButton;
+    const dangerEl = (await fixture(
+      html`<lyra-button appearance="quiet" variant="danger">Save</lyra-button>`,
+    )) as LyraButton;
+    expect(dangerEl.getAttribute('appearance')).to.equal('quiet');
+    const neutralBase = neutralEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const dangerBase = dangerEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(neutralBase).color).to.equal(getComputedStyle(dangerBase).color);
+    expect(getComputedStyle(neutralBase).borderColor).to.equal(getComputedStyle(dangerBase).borderColor);
+  });
+
   it('ships a default :hover/:active treatment on [part="base"], disabled under reduced motion', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='base'\]:not\(:disabled\):hover\s*\{[^}]*filter:/);

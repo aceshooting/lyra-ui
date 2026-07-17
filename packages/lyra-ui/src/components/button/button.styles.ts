@@ -17,6 +17,8 @@ export const styles = css`
     --lyra-button-on-fill: var(--lyra-color-text);
     --lyra-button-border: var(--lyra-color-border);
     --lyra-button-outlined-border: var(--lyra-color-border-strong);
+    --lyra-button-quiet-border: var(--lyra-color-border);
+    --lyra-button-quiet-text: var(--lyra-color-text-quiet);
     /* appearance="accent"'s loud fill for the neutral variant -- every other variant's own
        --lyra-button-fill/-on-fill (below) already reads its semantic loud Lyra token, so those
        variants' accent-fill/-on-fill blocks reuse it. Only neutral needs a dedicated loud fill. */
@@ -86,6 +88,14 @@ export const styles = css`
     background: transparent;
     color: var(--lyra-button-accent);
     border-color: transparent;
+  }
+  :host([appearance='quiet']) [part='base'] {
+    background: transparent;
+    color: var(--lyra-button-quiet-text);
+    border-color: var(--lyra-button-quiet-border);
+  }
+  :host([appearance='quiet']) [part='base']:not(:disabled):hover {
+    background: var(--lyra-color-surface);
   }
   [part='base']:disabled {
     opacity: var(--lyra-opacity-disabled);

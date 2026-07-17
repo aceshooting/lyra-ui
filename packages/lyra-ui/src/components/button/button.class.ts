@@ -5,7 +5,7 @@ import { spinnerIcon } from '../../internal/icons.js';
 import { styles } from './button.styles.js';
 
 export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export type ButtonAppearance = 'accent' | 'filled' | 'outlined' | 'plain' | 'link';
+export type ButtonAppearance = 'accent' | 'filled' | 'outlined' | 'plain' | 'link' | 'quiet';
 export type ButtonSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type ButtonType = 'button' | 'submit' | 'reset';
 
@@ -59,7 +59,10 @@ export class LyraButton extends LyraElement {
    *  variant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or
    *  min-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)
    *  and inheriting the surrounding font — for a text link that flows inline in a sentence rather
-   *  than a button-shaped control. */
+   *  than a button-shaped control. `'quiet'` is a bordered, transparent-until-hover tier for a
+   *  toolbar-style icon+label action — its border/text read fixed `--lyra-color-border`/`--lyra-color-text-quiet`
+   *  tokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays
+   *  visually muted at rest. */
   @property({ reflect: true }) appearance: ButtonAppearance = 'filled';
   @property({ reflect: true }) size: ButtonSize = 'm';
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
