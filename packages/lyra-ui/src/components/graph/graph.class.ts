@@ -208,8 +208,8 @@ export interface LyraGraphEventMap {
  * @cssprop [--lyra-link-color=var(--lyra-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
  * @cssprop [--lyra-graph-cat-1..8] - Ordered categorical fallback palette for a typed node with no
  *   `GraphNodeType.color`, assigned by the type's index in `nodeTypes` (wraps every 8 entries).
- *   Declared centrally in `tokens.styles.ts` so `<lyra-graph>` and Family K's `<lyra-graph-legend>`
- *   resolve the identical default.
+ *   Declared centrally in `tokens.styles.ts` so `<lyra-graph>` and any future `<lyra-graph-legend>`-
+ *   style component resolve the identical default.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -444,7 +444,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.zoomBehavior.scaleExtent([this.minZoom, this.maxZoom]);
     }
 
-    if (!(changed.has('simNodes') || changed.has('simLinks'))) return;
+    if (!(changed.has('simNodes') || changed.has('simLinks') || changed.has('nodeTypes'))) return;
 
     const nodeEls = Array.from(this.renderRoot.querySelectorAll('[part="node"]')) as SVGElement[];
     this.nodeEls = nodeEls;

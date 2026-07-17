@@ -80,7 +80,7 @@ export const tokens = css`
     --lyra-color-chart-7: var(--lyra-theme-color-chart-7, #52d6e8);
     --lyra-color-chart-8: var(--lyra-theme-color-chart-8, #c9d1d9);
     /* Ordered categorical fallback palette for typed graph nodes (GraphNodeType with no explicit
-       color) and Family K's graph-legend swatches, assigned by nodeTypes entry index % 8. A
+       color) and any future graph-legend swatches, assigned by nodeTypes entry index % 8. A
        separate, independently themeable ramp from --lyra-color-chart-* (same starting values,
        own --lyra-theme-graph-cat-* retheme hook) so a consumer can recolor chart series and KG
        entity types independently. */

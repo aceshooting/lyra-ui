@@ -489,6 +489,40 @@ describe('node typing (J1)', () => {
     expect(items.every((i) => i.tagName === 'circle')).to.be.true;
     expect(items[0]!.getAttribute('aria-label')).to.equal('A');
     expect(items[0]!.hasAttribute('cx')).to.be.true;
+    expect(items[0]!.hasAttribute('style')).to.be.false;
+  });
+
+  it('refreshes the cached nodeEls when nodeTypes alone changes a shape post-mount (regression)', async () => {
+    // A consumer mutating nodeTypes without also reassigning nodes/links (e.g.
+    // flipping one type's shape from the default circle to 'square') swaps the
+    // rendered element (different tag = different DOM node) via Lit's own
+    // template diffing. applyInteractions()'s node/link/label DOM cache must
+    // be refreshed in that case too, or it keeps pointing at the stale,
+    // now-detached element -- see this file's guard in applyInteractions().
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodeTypes = [{ id: 'concept', label: 'Concept' }]; // no shape -> defaults to circle
+    el.nodes = [{ id: 'a', label: 'A', type: 'concept' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('[part="node"]')!.tagName).to.equal('circle');
+
+    // Mutate nodeTypes ALONE -- nodes/links are not reassigned.
+    el.nodeTypes = [{ id: 'concept', label: 'Concept', shape: 'square' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="node"]')?.tagName === 'path', undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    const currentNodeEl = el.shadowRoot!.querySelectorAll('[part="node"]')[0];
+    // Compare identity as a boolean rather than handing two DOM elements
+    // straight to expect(...).to.equal(...) -- per this file's own testing
+    // conventions (see AGENTS.md), a *failing* element/element equality
+    // assertion can hang the whole file under wtr's Playwright reporter.
+    const cacheRefreshed = currentNodeEl === (el as any).nodeEls[0];
+    expect(cacheRefreshed).to.be.true;
   });
 });
 
