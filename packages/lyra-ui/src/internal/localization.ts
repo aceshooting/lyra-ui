@@ -465,7 +465,17 @@ export type LyraMessageKey =
   | 'tokensIn'
   | 'tokensOut'
   | 'cost'
-  | 'duration';
+  | 'duration'
+  | 'pushToTalkRequesting'
+  | 'pushToTalkDenied'
+  | 'pushToTalkError'
+  | 'pushToTalkUnsupported'
+  | 'pushToTalkStarted'
+  | 'pushToTalkStopped'
+  | 'pushToTalkCancelled'
+  | 'pushToTalkHold'
+  | 'pushToTalkStart'
+  | 'pushToTalkStop';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -932,6 +942,16 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   tokensOut: 'Tokens out',
   cost: 'Cost',
   duration: 'Duration',
+  pushToTalkRequesting: 'Requesting microphone…',
+  pushToTalkDenied: 'Microphone access denied',
+  pushToTalkError: 'Recording failed',
+  pushToTalkUnsupported: 'Recording is not supported in this browser',
+  pushToTalkStarted: 'Recording started',
+  pushToTalkStopped: 'Recording stopped',
+  pushToTalkCancelled: 'Recording cancelled',
+  pushToTalkHold: 'Hold to talk',
+  pushToTalkStart: 'Start recording',
+  pushToTalkStop: 'Stop recording',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
