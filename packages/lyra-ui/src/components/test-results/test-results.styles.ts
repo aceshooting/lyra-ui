@@ -68,7 +68,7 @@ export const styles = css`
     font-size: var(--lyra-font-size-xs);
   }
   [part='test-status'] lyra-spinner {
-    --lyra-spinner-size: 1em;
+    --lyra-spinner-size: var(--lyra-size-1em);
   }
   [part='test-status'][data-status='passed'] { color: var(--lyra-color-success); }
   [part='test-status'][data-status='failed'] { color: var(--lyra-color-danger); }
