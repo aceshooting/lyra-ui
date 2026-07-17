@@ -23,15 +23,60 @@ export const DEFAULT_INTERNAL_PATTERNS: (string | RegExp)[] = [
   '/usr/lib/python',
 ];
 
-const V8_FRAME_WITH_FN = /^\s*at\s+(?:async\s+)?(?:new\s+)?(.+?)\s+\((.+):(\d+):(\d+)\)\s*$/;
-const V8_FRAME_BARE = /^\s*at\s+(?:async\s+)?(.+):(\d+):(\d+)\s*$/;
+// Only strips the leading "at [async] [new] " tokens -- deliberately has no way to fail once "at"
+// is found (everything after is optional/zero-width), so `\s+` always commits to its greedy match
+// with no backtracking possible. The former single-regex match of the whole frame let a lazy
+// function-name group and the file/line/col group both range over many repeated "(" occurrences
+// (e.g. "a (a (a (a..."), which is quadratic; see `matchV8FrameWithFn` below for the
+// backtracking-free replacement.
+const V8_FRAME_PREFIX = /^\s*at\s+(?:async\s+)?(?:new\s+)?/;
+const DIGITS_RE = /^\d+$/;
+// The function-name capture requires a non-whitespace first character (`\S.*`) so the preceding
+// `\s+` and the capture can't both claim the same run of spaces -- that ambiguity is what made the
+// original `(.+)` form polynomial-time on adversarial input (CodeQL js/polynomial-redos).
+const V8_FRAME_BARE = /^\s*at\s+(?:async\s+)?(\S.*):(\d+):(\d+)\s*$/;
 const FIREFOX_FRAME = /^([^\s@]*)@(.+):(\d+):(\d+)$/;
-const JS_CAUSE = /^\s*(?:Caused by:|\[cause\]:)\s*(.*)$/;
+const JS_CAUSE = /^\s*(?:Caused by:|\[cause\]:)(.*)$/;
 
 const PYTHON_HEADER = /^Traceback \(most recent call last\):\s*$/;
-const PYTHON_FRAME = /^\s*File "(.+)", line (\d+), in (.+?)\s*$/;
+// File-path capture excludes `"` (its own delimiter) so the boundary is unambiguous instead of
+// backtracking across every `"` in the line; the trailing function-name is trimmed in code below
+// rather than via a lazy `(.+?)\s*$`, which was the other polynomial-time spot CodeQL flagged.
+const PYTHON_FRAME = /^\s*File "([^"]+)", line (\d+), in (.+)$/;
 const PYTHON_CHAIN_SEPARATOR = /direct cause|During handling/;
-const PYTHON_EXC_TRAILER = /^\s*\S+(\.\S+)*:\s/;
+// Equivalent to the original `\S+(\.\S+)*:\s` -- `\S` already matches `.`, so the `(\.\S+)*`
+// group added no coverage, only exponential backtracking (CodeQL js/redos) on input like many
+// repetitions of "!.".
+const PYTHON_EXC_TRAILER = /^\s*\S+:\s/;
+
+interface V8FrameWithFn {
+  fn: string;
+  file: string;
+  line: string;
+  col: string;
+}
+
+/** Matches a V8 "at <fn> (<file>:<line>:<col>)" frame without regex backtracking: the location's
+ *  opening paren is found via `lastIndexOf` (it's always the rightmost one on a well-formed line),
+ *  and the trailing `:line:col` is split off the same way, so there is no ambiguous partition for
+ *  a backtracking engine to search across. */
+function matchV8FrameWithFn(line: string): V8FrameWithFn | null {
+  const prefixMatch = V8_FRAME_PREFIX.exec(line);
+  if (!prefixMatch) return null;
+  const rest = line.slice(prefixMatch[0].length).trimEnd();
+  const openParen = rest.length > 1 && rest.endsWith(')') ? rest.lastIndexOf('(') : -1;
+  if (openParen <= 0 || rest[openParen - 1] !== ' ') return null;
+  const fn = rest.slice(0, openParen - 1);
+  const inner = rest.slice(openParen + 1, -1);
+  const lastColon = inner.lastIndexOf(':');
+  const secondLastColon = lastColon === -1 ? -1 : inner.lastIndexOf(':', lastColon - 1);
+  if (fn.length === 0 || secondLastColon === -1) return null;
+  const file = inner.slice(0, secondLastColon);
+  const lineStr = inner.slice(secondLastColon + 1, lastColon);
+  const col = inner.slice(lastColon + 1);
+  if (!file || !DIGITS_RE.test(lineStr) || !DIGITS_RE.test(col)) return null;
+  return { fn, file, line: lineStr, col };
+}
 
 function isInternal(file: string | undefined, patterns: (string | RegExp)[]): boolean {
   if (!file) return false;
@@ -56,11 +101,11 @@ function parseJs(lines: string[], internalPatterns: (string | RegExp)[]): StackG
       sawFrame = false;
       continue;
     }
-    const withFn = V8_FRAME_WITH_FN.exec(line);
+    const withFn = matchV8FrameWithFn(line);
     const bare = !withFn ? V8_FRAME_BARE.exec(line) : null;
     const firefox = !withFn && !bare ? FIREFOX_FRAME.exec(line) : null;
     if (withFn) {
-      const [, fn, file, ln, col] = withFn;
+      const { fn, file, line: ln, col } = withFn;
       current.frames.push({
         functionName: fn,
         file,
@@ -124,7 +169,7 @@ function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): St
       const frame: StackFrame = {
         file,
         line: Number(ln),
-        functionName: fn,
+        functionName: fn.trimEnd(),
         internal: isInternal(file, internalPatterns),
         raw: line,
       };

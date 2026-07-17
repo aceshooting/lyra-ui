@@ -2,10 +2,11 @@ import type { LyraAnchor } from '../components/document-viewer/anchors.js';
 import { TEXT_QUOTE_CONTEXT_CHARS } from '../components/document-viewer/anchors.js';
 
 const SOFT_HYPHEN = '­';
-// Every Unicode whitespace character worth collapsing, including NBSP and the general-punctuation
-// space block -- a plain `\s` misses NBSP (` `) and the wider Unicode space runs a real
-// rendered document can contain.
-const WHITESPACE_CHAR_RE = /[\s   -     　]/u;
+// ECMAScript's `\s` already covers every Unicode Space_Separator code point plus NBSP and
+// ZWNBSP (see the WhiteSpace production in the spec), so it needs no custom character class --
+// an earlier hand-written range here (meant to add NBSP/wide Unicode spaces) had corrupted,
+// redundant endpoints that CodeQL flagged as an overly permissive range overlapping `\s`.
+const WHITESPACE_CHAR_RE = /\s/u;
 
 /** NFC-normalizes, strips soft hyphens, collapses every whitespace run to one ASCII space, and
  *  trims. The single normalization used for a whole standalone string -- an anchor's `quote`/
