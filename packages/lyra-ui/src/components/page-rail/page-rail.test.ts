@@ -108,6 +108,24 @@ describe('lyra-page-rail', () => {
     expect(viewer.renderCalls[0].width).to.equal(64);
   });
 
+  it('typing a digit jumps to that page in mediated mode', async () => {
+    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="12"></lyra-page-rail>`);
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '7', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page).to.equal(7);
+  });
+
+  it('ignores a typed digit that is out of range', async () => {
+    const el = await fixture<LyraPageRail>(html`<lyra-page-rail page-count="5"></lyra-page-rail>`);
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '9', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page).to.equal(1);
+  });
+
   it('registers lyra-virtual-list, lyra-skeleton, and lyra-file-icon as a side effect of importing page-rail.js (regression)', async () => {
     // Importing a composed sub-component's *.class.js module alone never calls defineElement --
     // only its real barrel (*.js) does. Rendering an un-registered dependency silently produces a

@@ -33,5 +33,5 @@ export const WiredToPdfViewer: Story = {
 };
 
 export const Narrow320: Story = {
-  render: () => html`<div style="width:320px;"><lyra-page-rail page-count="6" page="1"></lyra-page-rail></div>`,
+  render: () => html`<lyra-page-rail style="max-width: 320px;" page-count="6" page="1"></lyra-page-rail>`,
 };
