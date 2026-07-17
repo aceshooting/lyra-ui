@@ -57,6 +57,11 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  input and an empty state. See `emoji-data-loader.ts` for an optional convenience loader. */
   @property({ attribute: false }) groups: EmojiPickerGroup[] = [];
 
+  /** Injectable loader seam -- overridden directly by tests with a synchronous fake instead of
+   *  needing the real `emoji-picker-element-data` package to load in the test browser (mirrors
+   *  `LyraPdfViewer`'s `loadLibrary` field / `LyraQrCode`'s `loadLibrary` field). */
+  private loadGroups: () => Promise<EmojiPickerGroup[] | null> = loadEmojiDataCached;
+
   connectedCallback(): void {
     super.connectedCallback();
     // Only auto-loads when the consumer hasn't already supplied groups directly -- an explicit
@@ -64,7 +69,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
     // <lyra-lite-chart>'s pointText falling back to a built-in template only when unset).
     if (this.groups.length > 0) return;
-    void loadEmojiDataCached().then((loaded) => {
+    void this.loadGroups().then((loaded) => {
       if (!this.isConnected || !loaded || this.groups.length > 0) return;
       this.groups = loaded;
     });
