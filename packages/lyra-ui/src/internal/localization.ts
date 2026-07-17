@@ -5,6 +5,8 @@
  */
 export type LyraMessageKey =
   | 'noData'
+  | 'sequenceStripEmpty'
+  | 'sequenceStripCategoryCount'
   | 'noColumns'
   | 'loadMore'
   | 'tableFilterLabel'
@@ -447,6 +449,8 @@ export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record
 
 const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   noData: 'No data',
+  sequenceStripEmpty: 'No items',
+  sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'No columns configured',
   loadMore: 'Load more',
   tableFilterLabel: 'Filter rows',
