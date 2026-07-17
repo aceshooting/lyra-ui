@@ -233,7 +233,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  yet -- its offset is still estimate-based, so the scroll can land short of (or past) the real
    *  target. Consumed (and cleared) by `maybeCorrectPendingScroll()` the first time that row's real
    *  height arrives, issuing exactly one corrective re-scroll -- never more than one, so a
-   *  still-settling row can't cause repeated scroll jumps. */
+   *  still-settling row can't cause repeated scroll jumps. Only ever fires for `align: 'end'` (and
+   *  a downward-scrolling `align: 'auto'`): an offset is a function of every row *before* it, so
+   *  measuring the target row itself can never change an `align: 'start'` target position -- that
+   *  case has no self-correction. */
   private pendingScrollCorrection?: {
     key: VirtualListKey;
     align: 'start' | 'end' | 'auto';
@@ -544,8 +547,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *
    * In `row-height="auto"` mode a far-off target's offset can still be estimate-based (its own
    * height, and every row between it and the current viewport, may not have been measured yet) --
-   * once the target row's real height actually arrives, exactly one corrective re-scroll is issued
-   * so the final resting position is accurate, without oscillating on every subsequent measurement.
+   * for `align: 'end'` (and a downward-scrolling `align: 'auto'`), once the target row's real height
+   * actually arrives, exactly one corrective re-scroll is issued so the final resting position is
+   * accurate, without oscillating on every subsequent measurement. `align: 'start'` has no
+   * self-correction: a row's offset depends only on the rows before it, so measuring the target
+   * row's own height can never move that target position -- an `align: 'start'` jump against
+   * unmeasured intermediate rows may land short and stay there.
    */
   scrollToIndex(
     index: number,
