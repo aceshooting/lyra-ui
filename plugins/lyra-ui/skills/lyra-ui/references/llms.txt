@@ -80,7 +80,7 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lyra-dock-panel`, `lyra-document-preview`, `lyra-document-viewer`, `lyra-svg-viewer`, `lyra-html-viewer`,
   `lyra-dataset-viewer`, `lyra-contact-viewer`, `lyra-pdf-viewer`, `lyra-spreadsheet-viewer`, `lyra-csv-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`, `lyra-archive-viewer`, `lyra-ebook-viewer`, `lyra-pptx-viewer`, `lyra-file-icon`, `lyra-media-card`, `lyra-attachment-trigger`,
   `lyra-kbd`, `lyra-result-card`/`lyra-result-field`, `lyra-avatar`, `lyra-card`, `lyra-stepper`,
-  `lyra-segmented`, `lyra-swatch-picker`, `lyra-diff-view`, `lyra-poll-status`,
+  `lyra-segmented`, `lyra-swatch-picker`, `lyra-diff-view`, `lyra-stack-trace`, `lyra-poll-status`,
   `lyra-code-block-core` (needs the optional peer `shiki`).
 
 ## Also useful
