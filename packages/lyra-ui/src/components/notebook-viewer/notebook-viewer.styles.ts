@@ -4,6 +4,10 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
+    /* Makes the host a query container so the @container rule below reacts to this viewer's own
+       allocated width (a chat transcript, a split pane, a narrow dialog) instead of the page
+       viewport's -- a reusable primitive can be squeezed into a narrow panel on a wide desktop. */
+    container-type: inline-size;
   }
   [part='base'] {
     display: block;
@@ -58,12 +62,7 @@ export const styles = css`
     padding: var(--lyra-space-l);
     text-align: center;
   }
-  @media (min-width: 480px) {
-    [part='cell-gutter'] {
-      display: block;
-    }
-  }
-  @media (max-width: 479px) {
+  @container (max-width: 30rem) {
     [part='cell'] {
       grid-template-columns: 1fr;
     }

@@ -112,6 +112,10 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart search-input - The `<input type="search">`.
  * @csspart list - The list region.
  * @csspart empty - The empty/no-matches state.
+ * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
+ * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
+ * @csspart group-header - Exported from the internal `lyra-virtual-list`'s `group` part (data mode, `grouping="date"`).
+ * @csspart row - Exported from the internal `lyra-virtual-list`'s `row` part (data mode).
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static styles = [LyraElement.styles, styles];

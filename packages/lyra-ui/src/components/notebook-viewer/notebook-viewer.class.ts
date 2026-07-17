@@ -297,11 +297,17 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
 
   private renderTextOutput(index: number, text: string, tone?: 'danger'): TemplateResult {
     const lines = text.split('\n');
-    const expanded = this.expandedOutputs.has(index) || this.outputCollapseLines === 0 || lines.length <= this.outputCollapseLines;
+    const collapsible = this.outputCollapseLines > 0 && lines.length > this.outputCollapseLines;
+    const expanded = this.expandedOutputs.has(index) || !collapsible;
     const shown = expanded ? text : lines.slice(0, this.outputCollapseLines).join('\n');
     return html`<div part="output" data-output-type="stream" data-stream=${tone === 'danger' ? 'stderr' : 'stdout'}
-      >${shown}${!expanded
-        ? html`<button part="output-toggle" type="button" @click=${() => this.toggleOutput(index)}>${this.localize('notebookViewerShowAllOutput')}</button>`
+      >${shown}${collapsible
+        ? html`<button
+            part="output-toggle"
+            type="button"
+            aria-expanded=${expanded ? 'true' : 'false'}
+            @click=${() => this.toggleOutput(index)}
+          >${this.localize(expanded ? 'notebookViewerCollapseOutput' : 'notebookViewerShowAllOutput')}</button>`
         : nothing}</div
     >`;
   }

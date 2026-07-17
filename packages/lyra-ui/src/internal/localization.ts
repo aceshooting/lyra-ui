@@ -646,7 +646,6 @@ export type LyraMessageKey =
   | 'notebookViewerTooManyCells'
   | 'notebookViewerInPrompt'
   | 'notebookViewerInPromptEmpty'
-  | 'notebookViewerOutPrompt'
   | 'notebookViewerCodeCell'
   | 'notebookViewerMarkdownCell'
   | 'notebookViewerRawCell'
@@ -1300,7 +1299,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   notebookViewerTooManyCells: 'This notebook has too many cells to display.',
   notebookViewerInPrompt: 'In [{count}]',
   notebookViewerInPromptEmpty: 'In [ ]',
-  notebookViewerOutPrompt: 'Out [{count}]',
   notebookViewerCodeCell: 'Code cell {index}',
   notebookViewerMarkdownCell: 'Markdown cell {index}',
   notebookViewerRawCell: 'Raw cell {index}',

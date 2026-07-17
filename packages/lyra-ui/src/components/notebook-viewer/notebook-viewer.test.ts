@@ -112,6 +112,26 @@ describe('output collapsing', () => {
     await el.updateComplete;
     expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.include('line 59');
   });
+
+  it('re-collapses the output on a second toggle click and reflects aria-expanded both ways', async () => {
+    const longText = Array.from({ length: 60 }, (_v, i) => `line ${i}`).join('\n');
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, metadata: {}, outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText } }] }],
+    };
+    const el = (await fixture(html`<lyra-notebook-viewer .notebook=${notebook}></lyra-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelector('[part="output-toggle"]') !== null);
+    const toggle = rowRoot(el).querySelector('[part="output-toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+    expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.include('line 59');
+    toggle.click();
+    await el.updateComplete;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+    expect(rowRoot(el).querySelector('[part="output"]')!.textContent).to.not.include('line 59');
+  });
 });
 
 describe('search', () => {
