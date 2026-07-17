@@ -1,5 +1,55 @@
 # Changelog
 
+## 3.6.0
+
+### Minor Changes
+
+- 30db265: Nine new components:
+
+  - `lyra-animated-image` — a still/animated-GIF-style image that pauses on `prefers-reduced-motion`
+    and exposes a play/pause toggle.
+  - `lyra-animation` — declarative Web Animations API wrapper for a slotted target, with named
+    timing presets, `prefers-reduced-motion` handling, and `lyra-start`/`lyra-finish`/`lyra-cancel`
+    events.
+  - `lyra-avatar-group` — a stacked, overlapping set of avatars with a "+N" overflow indicator.
+  - `lyra-include` — fetches and renders external HTML/Markdown/plain-text content client-side, with
+    URL validation and DOMPurify sanitization.
+  - `lyra-known-date` — a form-associated day/month/year input for approximate or partial dates
+    (e.g. a birth date where only the year is known).
+  - `lyra-lightbox` — a full-screen, modal, click-to-enlarge image viewer with prev/next navigation
+    across an ordered set of images, built on the same shared overlay infrastructure as
+    `lyra-dialog`/`lyra-command-palette`.
+  - `lyra-qr-code` — renders a QR code from text/URL data, via the optional `qrcode` peer dependency
+    (same optional-peer pattern as the chart/map bundles).
+  - `lyra-random-content` — displays a randomly (or sequentially) chosen subset of its slotted
+    children, with optional autoplay.
+  - `lyra-timeline`/`lyra-timeline-item` — a vertical event timeline with per-item status/icon
+    markers.
+  - `lyra-tour` — a guided, multi-step product-tour overlay that highlights target elements in
+    sequence.
+
+### Patch Changes
+
+- e1aca7e: Shared-infrastructure hardening pass following a full-library audit:
+
+  - `lyra-contact-viewer` and `lyra-email-viewer` now expose a proper localized `aria-label` on their
+    root surface (previously had no naming mechanism at all); `lyra-calendar-viewer` gets the same
+    fallback chain's final localized tier.
+  - `lyra-stat`'s trend announcement now interpolates the percentage into one localized template
+    instead of concatenating separately-localized fragments (word order safe for non-English locales).
+  - Fixed a real bug in `lyra-model-settings-panel`'s `decimalPlaces` helper that returned `0` instead
+    of the correct precision for exponential-notation step values (e.g. `1e-7`); it now shares the
+    same exponential-aware implementation as `lyra-slider`/`lyra-time-range` via a new
+    `src/internal/numbers.ts` export instead of a diverging local copy.
+  - Deduplicated five other byte-identical/near-identical helpers that had drifted into 2-5 separate
+    component files each (`prefersReducedMotion`, canvas-context memoization, swatch-color
+    sanitization, slotted-content detection, and a title-attribute-stripping mixin) into single
+    `src/internal/` implementations.
+  - Removed an unused, never-adopted RTL helper (`rtlAwareSide`/`PhysicalSide`) from
+    `src/internal/rtl.ts`.
+  - Added missing accessibility test coverage for `lyra-icon-button` and the standalone `lyra-option`
+    element (previously the only two custom elements in the library with no axe check).
+
 ## 3.5.0
 
 ### Minor Changes
