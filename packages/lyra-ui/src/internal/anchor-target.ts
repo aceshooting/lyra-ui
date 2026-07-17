@@ -145,11 +145,11 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
     }
 
     async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-      // Bump the generation *before* cancelling the previous retry wait -- cancellation
-      // synchronously wakes up a suspended `resolveWithRetry()` loop from a superseded call, and
-      // that loop's very next step re-checks the generation. Bumping first guarantees that check
-      // always sees the new value, regardless of microtask ordering between this call's remaining
-      // synchronous setup and the woken-up loop's continuation.
+      // Bump the generation *before* cancelling the previous retry wait -- cancellation resolves
+      // a suspended `resolveWithRetry()` loop's pending Promise from a superseded call, scheduling
+      // that loop's continuation (a microtask) to re-check the generation next. Bumping first
+      // guarantees that check always sees the new value: it can only run after this call's own
+      // synchronous statements finish, by which point the bump has already happened either way.
       const generation = ++this.anchorGeneration;
       this.cancelAnchorRetry();
       await this.updateComplete;
