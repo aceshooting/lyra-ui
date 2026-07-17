@@ -7,6 +7,7 @@ export const styles = css`
        button follows it. The variable keeps the contract opt-out-able for
        compact inline compositions. */
     --lyra-button-width: 100%;
+    --lyra-button-size-2xs: var(--lyra-size-1-25rem);
     --lyra-button-size-xs: var(--lyra-size-1-5rem);
     --lyra-button-size-s: var(--lyra-size-1-75rem);
     --lyra-button-size-m: var(--lyra-size-2rem);
@@ -127,6 +128,12 @@ export const styles = css`
   [part='end'] {
     display: inline-flex;
     align-items: center;
+  }
+  :host([size='2xs']) [part='base'] {
+    padding-inline: var(--lyra-space-2xs);
+    padding-block: var(--lyra-space-2xs);
+    font-size: var(--lyra-font-size-2xs);
+    min-block-size: var(--lyra-button-size-2xs);
   }
   :host([size='xs']) [part='base'] {
     padding-inline: var(--lyra-space-xs);

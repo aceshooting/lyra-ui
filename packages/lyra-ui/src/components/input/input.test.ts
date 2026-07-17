@@ -227,4 +227,17 @@ describe('lyra-input', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='password-toggle'\]:hover\s*\{[^}]+\}/);
   });
+
+  it('supports size="2xs": tighter padding/font-size than xs, no min-block-size floor (matches xs\'s own contract)', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(
+      /:host\(\[size='2xs'\]\)\s*\{[^}]*--lyra-input-padding-block:\s*var\(--lyra-size-0-0625rem\);[^}]*--lyra-input-padding-inline:\s*var\(--lyra-space-2xs\);[^}]*--lyra-input-font-size:\s*var\(--lyra-font-size-2xs\);/,
+    );
+  });
+
+  it('reflects size="2xs" as a host attribute', async () => {
+    const el = (await fixture(html`<lyra-input size="2xs"></lyra-input>`)) as LyraInput;
+    expect(el.size).to.equal('2xs');
+    expect(el.getAttribute('size')).to.equal('2xs');
+  });
 });

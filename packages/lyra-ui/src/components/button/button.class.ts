@@ -6,7 +6,7 @@ import { styles } from './button.styles.js';
 
 export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 export type ButtonAppearance = 'accent' | 'filled' | 'outlined' | 'plain' | 'link' | 'quiet';
-export type ButtonSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+export type ButtonSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 export type ButtonType = 'button' | 'submit' | 'reset';
 
 /**
@@ -64,6 +64,9 @@ export class LyraButton extends LyraElement {
    *  tokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays
    *  visually muted at rest. */
   @property({ reflect: true }) appearance: ButtonAppearance = 'filled';
+  /** Visual size, `'2xs'`–`'xl'`. `'2xs'` is the tightest tier — a sub-`xs` size for dense,
+   *  toolbar-embedded controls (e.g. beside a native `<input type="search">` in a compact dialog
+   *  header). `'m'` (the default) is the standard size. */
   @property({ reflect: true }) size: ButtonSize = 'm';
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
    *  for why this component (not the shadow-internal `<button>`) owns that behavior. */

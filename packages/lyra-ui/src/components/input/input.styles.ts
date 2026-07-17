@@ -7,6 +7,11 @@ export const styles = css`
     --lyra-input-padding-inline: var(--lyra-space-s);
     --lyra-input-font-size: var(--lyra-font-size-md-sm);
   }
+  :host([size='2xs']) {
+    --lyra-input-padding-block: var(--lyra-size-0-0625rem);
+    --lyra-input-padding-inline: var(--lyra-space-2xs);
+    --lyra-input-font-size: var(--lyra-font-size-2xs);
+  }
   :host([size='xs']) {
     --lyra-input-padding-block: var(--lyra-size-0-125rem);
     --lyra-input-padding-inline: var(--lyra-space-xs);

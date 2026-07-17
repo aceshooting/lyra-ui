@@ -275,4 +275,18 @@ describe('lyra-button', () => {
     const el = await fixture(html`<lyra-button appearance="link" variant="brand">Retry</lyra-button>`);
     await expect(el).to.be.accessible();
   });
+
+  it('supports size="2xs": tighter than xs, with its own min-block-size token', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('--lyra-button-size-2xs: var(--lyra-size-1-25rem);');
+    expect(css).to.match(
+      /:host\(\[size='2xs'\]\) \[part='base'\]\s*\{[^}]*padding-inline:\s*var\(--lyra-space-2xs\);[^}]*padding-block:\s*var\(--lyra-space-2xs\);[^}]*font-size:\s*var\(--lyra-font-size-2xs\);[^}]*min-block-size:\s*var\(--lyra-button-size-2xs\);/,
+    );
+  });
+
+  it('reflects size="2xs" as a host attribute', async () => {
+    const el = (await fixture(html`<lyra-button size="2xs">Go</lyra-button>`)) as LyraButton;
+    expect(el.size).to.equal('2xs');
+    expect(el.getAttribute('size')).to.equal('2xs');
+  });
 });

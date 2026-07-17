@@ -7,7 +7,7 @@ import { eyeIcon, eyeOffIcon } from '../../internal/icons.js';
 import { styles } from './input.styles.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time';
-export type LyraInputSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 const spellcheckConverter = {
   fromAttribute: (value: string | null): boolean => value !== 'false',
@@ -63,7 +63,8 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   static styles = [LyraElement.styles, styles];
 
   @property() type: LyraInputType = 'text';
-  /** Visual size — same `xs`–`xl` scale as `lyra-select`/`lyra-combobox`'s own `size`. */
+  /** Visual size — same `2xs`–`xl` scale as `lyra-select`/`lyra-combobox`'s own `size`. `'2xs'` is
+   *  the tightest tier, for dense toolbar-embedded controls. */
   @property({ reflect: true }) size: LyraInputSize = 'm';
   @property() placeholder = '';
   @property() label = '';
