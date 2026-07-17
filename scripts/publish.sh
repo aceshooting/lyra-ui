@@ -7,9 +7,11 @@
 # -> (optionally) upgrade all workspace deps to latest -> ask which of the
 # packages with pending changesets to release this run -> consume changesets
 # for just those packages -> per-package lint/test/build/manifest -> print a
-# full review (versions, bump kind, tags, artifacts) and confirm -> pack +
-# npm publish each package -> commit -> tag each as "<name>@<version>" ->
-# push -> GitHub Release per package with its artifacts.
+# full review (versions, bump kind, tags, artifacts) and confirm -> pack ->
+# commit -> tag each as "<name>@<version>" -> push -> GitHub Release per
+# package with its artifacts. Creating that GitHub Release is what triggers
+# the actual `npm publish` -- it runs in .github/workflows/publish.yml, not
+# in this script, so it gets npm provenance (only possible from CI).
 #
 # Flags:
 #   --upgrade-deps   Run `pnpm -r up --latest` before the version bump (off by
@@ -107,11 +109,6 @@ GH_TOKEN="$(gh auth token --hostname "$GH_HOSTNAME" --user "$GH_ACCOUNT" 2>/dev/
   exit 1
 }
 export GH_TOKEN
-
-if ! npm whoami >/dev/null 2>&1; then
-  echo "Error: not logged in to npm. Run 'npm login' first." >&2
-  exit 1
-fi
 
 echo "Releasing as gh account: $(gh api user --jq .login)"
 
@@ -349,32 +346,25 @@ if [[ "$confirm" != "yes" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# From here on, each `npm publish` is live and CANNOT be unpublished after
-# ~72h (and unpublishing is discouraged even within that window). If
-# anything below fails, don't retry this script from the top.
+# From here on, each GitHub Release created below immediately triggers a real
+# `npm publish` in CI (.github/workflows/publish.yml, on `release: published`)
+# that CANNOT be undone after ~72h (and is discouraged even within that
+# window). If anything below fails, don't retry this script from the top for
+# packages already released.
 # ---------------------------------------------------------------------------
-PUBLISHED_DIRS=()
+RELEASED_DIRS=()
 publish_recovery_trap() {
   local exit_code=$?
   echo >&2
   echo "==> FAILED during release." >&2
-  if [[ "${#PUBLISHED_DIRS[@]}" -eq 0 ]]; then
-    echo "    Nothing was published to npm yet — fix the issue and re-run this script." >&2
+  if [[ "${#RELEASED_DIRS[@]}" -eq 0 ]]; then
+    echo "    No GitHub Release was created yet — fix the issue and re-run this script." >&2
   else
-    echo "    Already published to npm (do NOT re-run this script for these):" >&2
-    for dir in "${PUBLISHED_DIRS[@]}"; do
-      echo "      - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}" >&2
+    echo "    GitHub Release already created (npm publish is running/queued in CI now — do NOT re-run this script or recreate these releases):" >&2
+    for dir in "${RELEASED_DIRS[@]}"; do
+      echo "      - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]} (tag ${TAG[$dir]})" >&2
     done
-    echo "    Remaining manual steps:" >&2
-    echo "      - git add pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md packages/*/custom-elements.json .changeset" >&2
-    echo "      - git commit -m 'chore(release): ...'" >&2
-    for dir in "${PUBLISHED_DIRS[@]}"; do
-      git rev-parse "${TAG[$dir]}" >/dev/null 2>&1 || echo "      - git tag -a '${TAG[$dir]}' -m 'Release ${TAG[$dir]}'" >&2
-    done
-    echo "      - git push origin HEAD $(for dir in "${PUBLISHED_DIRS[@]}"; do printf "'%s' " "${TAG[$dir]}"; done)" >&2
-    for dir in "${PUBLISHED_DIRS[@]}"; do
-      echo "      - gh release create '${TAG[$dir]}' '${TARBALL_PATH[$dir]:-<tarball>}' '$dir/CHANGELOG.md' --title '${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}' --generate-notes" >&2
-    done
+    echo "    Watch it with: gh run list --workflow=publish.yml" >&2
   fi
   exit "$exit_code"
 }
@@ -392,18 +382,12 @@ for dir in "${RELEASE_DIRS[@]}"; do
   tarball_path="$dir/$stem-$new_version.tgz"
   if [[ ! -f "$tarball_path" ]]; then
     # Use `false` rather than `exit 1`: an explicit `exit` does NOT run the
-    # ERR trap in bash, which would silently skip the "already published to
-    # npm, don't re-run this script" recovery message once a prior package
-    # in this loop has already been published.
+    # ERR trap in bash, which would silently skip the recovery message once a
+    # prior package in this loop already has a GitHub Release.
     echo "Error: expected tarball not found at $tarball_path" >&2
     false
   fi
   TARBALL_PATH["$dir"]="$tarball_path"
-
-  echo
-  echo "==> [$name] Publishing $tarball_path to npm"
-  npm publish "$tarball_path" --access public
-  PUBLISHED_DIRS+=("$dir")
 done
 
 echo
@@ -452,16 +436,19 @@ for dir in "${RELEASE_DIRS[@]}"; do
     fi
   done
   echo
-  echo "==> [$name] Creating GitHub Release ${TAG[$dir]}"
+  echo "==> [$name] Creating GitHub Release ${TAG[$dir]} (this triggers npm publish in CI)"
   gh release create "${TAG[$dir]}" "${release_files[@]}" \
     --title "${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}" \
     --generate-notes
+  RELEASED_DIRS+=("$dir")
 done
 
 trap - ERR
 
 echo
-echo "Published, tagged, and released:"
+echo "Tagged and released — npm publish is now running in CI for:"
 for dir in "${RELEASE_DIRS[@]}"; do
   echo "  - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]} (tag ${TAG[$dir]})"
 done
+echo
+echo "Watch progress with: gh run list --workflow=publish.yml"
