@@ -1,0 +1,78 @@
+import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import { html } from 'lit';
+import type { LyraSpan } from './span.js';
+
+const spans: LyraSpan[] = [
+  { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 820, status: 'success' },
+  {
+    id: 'search',
+    parentId: 'root',
+    name: 'web_search',
+    kind: 'tool',
+    startMs: 20,
+    endMs: 260,
+    status: 'success',
+    tokensIn: 18,
+    tokensOut: 512,
+    costText: '$0.0031',
+    detail: 'Searching flights to Lisbon',
+  },
+  {
+    id: 'llm',
+    parentId: 'root',
+    name: 'gpt-turbo',
+    kind: 'llm',
+    startMs: 270,
+    endMs: 640,
+    status: 'success',
+    tokensIn: 640,
+    tokensOut: 210,
+    costText: '$0.0142',
+  },
+  { id: 'retrieve', parentId: 'llm', name: 'vector_lookup', kind: 'retriever', startMs: 300, endMs: 340, status: 'success' },
+  { id: 'draft', parentId: 'root', name: 'draft_itinerary', kind: 'tool', startMs: 650, status: 'running' },
+];
+
+const meta: Meta = {
+  title: 'Observability/Trace Tree',
+  component: 'lyra-trace-tree',
+  tags: ['autodocs'],
+};
+export default meta;
+type Story = StoryObj;
+
+export const Default: Story = {
+  render: () => html`<lyra-trace-tree style="max-width: 40rem" .spans=${spans}></lyra-trace-tree>`,
+};
+
+export const WithTokensAndCost: Story = {
+  render: () => html`<lyra-trace-tree style="max-width: 46rem" .spans=${spans} show-tokens show-cost></lyra-trace-tree>`,
+};
+
+export const SyncedWithSelection: Story = {
+  render: () => {
+    let selected = 'llm';
+    const getEl = () => document.getElementById('synced-trace-tree') as HTMLElement & { activeSpanId: string | null };
+    return html`
+      <lyra-trace-tree
+        id="synced-trace-tree"
+        style="max-width: 40rem"
+        .spans=${spans}
+        active-span-id=${selected}
+        @lyra-span-select=${(e: CustomEvent<{ id: string }>) => {
+          selected = e.detail.id;
+          getEl().activeSpanId = selected;
+        }}
+      ></lyra-trace-tree>
+    `;
+  },
+};
+
+export const Empty: Story = {
+  render: () => html`<lyra-trace-tree style="max-width: 40rem"></lyra-trace-tree>`,
+};
+
+/** 320px container — tokens/cost hide first, then the duration bar. */
+export const Narrow: Story = {
+  render: () => html`<lyra-trace-tree style="max-width: 320px" .spans=${spans} show-tokens show-cost></lyra-trace-tree>`,
+};

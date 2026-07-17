@@ -454,7 +454,18 @@ export type LyraMessageKey =
   | 'tourStepOf'
   | 'emojiPickerSearchLabel'
   | 'emojiPickerGridLabel'
-  | 'emojiPickerEmpty';
+  | 'emojiPickerEmpty'
+  | 'traceTree'
+  | 'spanKindAgent'
+  | 'spanKindLlm'
+  | 'spanKindTool'
+  | 'spanKindRetriever'
+  | 'spanKindEmbedding'
+  | 'spanKindOther'
+  | 'tokensIn'
+  | 'tokensOut'
+  | 'cost'
+  | 'duration';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -910,6 +921,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   emojiPickerSearchLabel: 'Search emoji',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'No emoji found',
+  traceTree: 'Trace tree',
+  spanKindAgent: 'Agent',
+  spanKindLlm: 'LLM',
+  spanKindTool: 'Tool',
+  spanKindRetriever: 'Retriever',
+  spanKindEmbedding: 'Embedding',
+  spanKindOther: 'Other',
+  tokensIn: 'Tokens in',
+  tokensOut: 'Tokens out',
+  cost: 'Cost',
+  duration: 'Duration',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
