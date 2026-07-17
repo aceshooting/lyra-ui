@@ -36,6 +36,9 @@ jobs:
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm readme:check
+      - run: ./package.sh
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
+      - run: pnpm skill:check
       - run: pnpm docs:build
       - run: pnpm storybook:check
       - run: pnpm storybook:check-theme
