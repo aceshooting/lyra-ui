@@ -2,6 +2,7 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { select } from 'd3-selection';
 import './graph.js';
 import type { LyraGraph } from './graph.js';
+import { layeredLayout } from '../../internal/layered-layout.js';
 
 const nodes = [
   { id: 'a', label: 'A' },
@@ -1454,6 +1455,163 @@ describe('community hulls (J6)', () => {
       timeout: NODE_COUNT_TIMEOUT,
     });
     expect(calls).to.equal(communities.length);
+  });
+});
+
+describe('layered layout (J7)', () => {
+  const chainLinks = [
+    { source: 'a', target: 'b' },
+    { source: 'b', target: 'c' },
+  ];
+
+  it('defaults layout to force (unchanged today behavior)', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    expect(el.layout).to.equal('force');
+  });
+
+  it('layout="layered" positions nodes deterministically, top-to-bottom by longest path, without a settle animation', async () => {
+    const el = (await fixture(html`<lyra-graph layout="layered" width="800" height="600"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+      { id: 'c', label: 'C' },
+    ];
+    el.links = chainLinks;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const b = el.simNodes.find((n) => n.id === 'b')!;
+    const c = el.simNodes.find((n) => n.id === 'c')!;
+    expect(a.y!).to.be.lessThan(b.y!);
+    expect(b.y!).to.be.lessThan(c.y!);
+  });
+
+  it('node drag is disabled in layered mode (no d3-drag bound)', async () => {
+    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [{ id: 'a', label: 'A' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    const before = { x: nodeEl.getAttribute('cx'), y: nodeEl.getAttribute('cy') };
+    // `view: window` matches a real user-dispatched event (jsdom/browsers leave it `null` on a
+    // bare synthetic MouseEvent) -- with no d3-drag bound to intercept and stop propagation, this
+    // mousedown now bubbles to the svg's own d3-zoom pan-start handler, which reads
+    // `event.view.document` internally and throws on a `null` view.
+    nodeEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 0, clientY: 0, view: window }));
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 100, view: window }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, view: window }));
+    await el.updateComplete;
+    expect(nodeEl.getAttribute('cx')).to.equal(before.x);
+    expect(nodeEl.getAttribute('cy')).to.equal(before.y);
+  });
+
+  it('linkDistance retunes the layer gap in layered mode', async () => {
+    const tight = (await fixture(
+      html`<lyra-graph layout="layered" link-distance="20" width="800" height="600"></lyra-graph>`,
+    )) as LyraGraph;
+    tight.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    tight.links = [{ source: 'a', target: 'b' }];
+    await tight.updateComplete;
+    await waitUntil(() => tight.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const gapBefore = tight.simNodes.find((n) => n.id === 'b')!.y! - tight.simNodes.find((n) => n.id === 'a')!.y!;
+    tight.linkDistance = 300;
+    await tight.updateComplete;
+    await waitUntil(
+      () => tight.simNodes.find((n) => n.id === 'b')!.y! - tight.simNodes.find((n) => n.id === 'a')!.y! !== gapBefore,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT },
+    );
+    const gapAfter = tight.simNodes.find((n) => n.id === 'b')!.y! - tight.simNodes.find((n) => n.id === 'a')!.y!;
+    expect(gapAfter).to.be.greaterThan(gapBefore);
+  });
+
+  it('keyboard roving/announcements are identical in layered mode', async () => {
+    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [{ source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const items = () => [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    items()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(items()[1]!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('both lyra-graph and the shared util produce the same node ordering (no forked algorithm)', async () => {
+    const el = (await fixture(html`<lyra-graph layout="layered" width="800" height="600"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [{ source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const direct = layeredLayout({
+      nodes: [
+        { id: 'a', width: 30, height: 30 },
+        { id: 'b', width: 30, height: 30 },
+      ],
+      edges: [{ source: 'a', target: 'b' }],
+      options: { gapX: 12, gapY: el.linkDistance },
+    });
+    const a = el.simNodes.find((n) => n.id === 'a')!;
+    const b = el.simNodes.find((n) => n.id === 'b')!;
+    // Same relative gap (component centers the drawing, so compare deltas, not absolute coords).
+    expect(b.y! - a.y!).to.be.closeTo(direct.get('b')!.y - direct.get('a')!.y, 0.01);
+  });
+
+  it('is accessible in layered mode', async () => {
+    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [{ id: 'a', label: 'A' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await expect(el).to.be.accessible();
+  });
+
+  it('hiddenTypes filtering announces graphNodesHidden in layered mode too, same as force mode', async () => {
+    const el = (await fixture(html`<lyra-graph layout="layered"></lyra-graph>`)) as LyraGraph;
+    el.hiddenTypes = ['person'];
+    el.nodes = [
+      { id: 'a', label: 'A', type: 'person' },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 of 2 nodes hidden');
+  });
+
+  it('existing graph usage unaffected: layout unset uses the untouched force-directed path', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect((el as unknown as { simulation?: unknown }).simulation).to.exist;
   });
 });
 

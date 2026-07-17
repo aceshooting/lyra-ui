@@ -10,6 +10,7 @@ import { getScratchCtx } from '../../internal/canvas.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
 import { convexHull, hullPathD, hullCentroidX, hullTopY, type HullPoint } from './graph-hull.js';
+import { layeredLayout } from '../../internal/layered-layout.js';
 import '../skeleton/skeleton.class.js';
 
 export interface GraphNode {
@@ -223,6 +224,10 @@ export interface LyraGraphEventMap {
  * `id`. A community with no currently-visible members (all its nodes hidden by `hiddenTypes`, or
  * simply empty) renders no hull.
  *
+ * `layout="layered"` swaps the d3-force simulation for a deterministic layered layout (see
+ * `src/internal/layered-layout.ts`) -- node drag is disabled in that mode, and `chargeStrength` is
+ * a documented no-op.
+ *
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
  * @event lyra-link-click - `detail: { source, target, id? }`.
@@ -289,6 +294,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** Renders one translucent hull per entry, behind links/nodes. Membership is the union of
    *  `memberIds` and every node whose `communityId` matches this entry's `id`. */
   @property({ attribute: false }) communities: GraphCommunity[] = [];
+  /** `'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a
+   *  deterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,
+   *  dependency-free util suitable for any future layered-diagram consumer) instead -- no settle
+   *  animation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a
+   *  documented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions
+   *  without a tween. */
+  @property() layout: 'force' | 'layered' = 'force';
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
@@ -485,6 +497,28 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.hiddenTypes.length) return this.nodes;
     const hidden = new Set(this.hiddenTypes);
     return this.nodes.filter((n) => n.type == null || !hidden.has(n.type));
+  }
+
+  /** Resolves `this.links` against an already-built `byId` node map: a link whose source isn't in
+   *  `byId` is dropped (hidden source, or a genuinely missing one); a link whose target isn't in
+   *  `byId` either stubs as a dangling link (target id doesn't exist in `this.nodes` at all) or is
+   *  dropped (target exists but is hidden by `hiddenTypes`). Shared by both the force and layered
+   *  layout paths in `rebuildSimulation()`. */
+  private resolveLinksAgainst(byId: Map<string, SimNode>): { resolved: SimLink[]; dangling: SimLink[] } {
+    const nodeExists = new Set(this.nodes.map((n) => n.id));
+    const resolved: SimLink[] = [];
+    const dangling: SimLink[] = [];
+    for (const l of this.links) {
+      const source = byId.get(l.source);
+      if (!source) continue;
+      const target = byId.get(l.target);
+      if (target) {
+        resolved.push({ ...l, source, target });
+      } else if (!nodeExists.has(l.target)) {
+        dangling.push({ ...l, source, target: { id: l.target, x: source.x, y: source.y } as SimNode, dangling: true });
+      }
+    }
+    return { resolved, dangling };
   }
 
   /** A community's currently-visible members -- the union of `memberIds` and every currently
@@ -735,7 +769,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // instead would set a reactive property *after* the update completed,
     // which Lit schedules as a whole extra update pass (a dev-mode warning,
     // and pointless work).
-    if (this.d3 && (changed.has('nodes') || changed.has('links') || changed.has('hiddenTypes'))) {
+    if (
+      this.d3 &&
+      (changed.has('nodes') ||
+        changed.has('links') ||
+        changed.has('hiddenTypes') ||
+        changed.has('layout') ||
+        (this.layout === 'layered' && changed.has('linkDistance')))
+    ) {
       this.rebuildSimulation();
     }
     // rebuildSimulation() above always reassigns simNodes, so checking it here (after that call)
@@ -892,33 +933,35 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.renderRoot.querySelectorAll('[part="community-label"]'),
     ) as SVGTextElement[];
 
-    nodeEls.forEach((el, i) => {
-      if (this.boundNodeEls.has(el)) return;
-      const n = this.simNodes[i];
-      if (!n) return;
-      this.boundNodeEls.add(el);
-      this.d3!.select<Element, SimNode>(el).call(
-        this.d3!.drag<Element, SimNode>()
-          .on('start', (event: OptionalPeerApi) => {
-            this.isDragging = true;
-            // Keep a node drag from also triggering the svg's own pan gesture.
-            (event.sourceEvent as Event | undefined)?.stopPropagation();
-            if (!event.active) this.simulation?.alphaTarget(0.3).restart();
-            n.fx = n.x;
-            n.fy = n.y;
-          })
-          .on('drag', (event: OptionalPeerApi) => {
-            n.fx = event.x;
-            n.fy = event.y;
-          })
-          .on('end', (event: OptionalPeerApi) => {
-            this.isDragging = false;
-            if (!event.active) this.simulation?.alphaTarget(0);
-            n.fx = null;
-            n.fy = null;
-          }),
-      );
-    });
+    if (this.layout !== 'layered') {
+      nodeEls.forEach((el, i) => {
+        if (this.boundNodeEls.has(el)) return;
+        const n = this.simNodes[i];
+        if (!n) return;
+        this.boundNodeEls.add(el);
+        this.d3!.select<Element, SimNode>(el).call(
+          this.d3!.drag<Element, SimNode>()
+            .on('start', (event: OptionalPeerApi) => {
+              this.isDragging = true;
+              // Keep a node drag from also triggering the svg's own pan gesture.
+              (event.sourceEvent as Event | undefined)?.stopPropagation();
+              if (!event.active) this.simulation?.alphaTarget(0.3).restart();
+              n.fx = n.x;
+              n.fy = n.y;
+            })
+            .on('drag', (event: OptionalPeerApi) => {
+              n.fx = event.x;
+              n.fy = event.y;
+            })
+            .on('end', (event: OptionalPeerApi) => {
+              this.isDragging = false;
+              if (!event.active) this.simulation?.alphaTarget(0);
+              n.fx = null;
+              n.fy = null;
+            }),
+        );
+      });
+    }
   }
 
   /**
@@ -1045,6 +1088,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // counterpart (genuinely new ids) get forceSimulation()'s default
     // fresh random start below.
     const visible = this.visibleNodes();
+
+    if (this.layout === 'layered') {
+      this.rebuildLayeredLayout(visible);
+      return;
+    }
+
     const prevById = new Map(this.simNodes.map((n) => [n.id, n]));
     const nodes: SimNode[] = visible.map((n) => {
       const prev = prevById.get(n.id);
@@ -1057,29 +1106,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       return remembered ? { ...n, x: remembered.x, y: remembered.y } : { ...n };
     });
     const byId = new Map(nodes.map((n) => [n.id, n]));
-    // Every node id that exists at all (including one currently hidden by hiddenTypes) --
-    // distinguishes "link target is hidden by hiddenTypes" (link dropped entirely, like any link
-    // with a hidden endpoint) from "link target genuinely doesn't exist anywhere in `this.nodes`"
-    // (link stubbed as a dangling stub, existing behavior, unchanged).
-    const nodeExists = new Set(this.nodes.map((n) => n.id));
-    const resolvedLinks: SimLink[] = [];
-    const danglingLinks: SimLink[] = [];
-    for (const l of this.links) {
-      const source = byId.get(l.source);
-      if (!source) continue; // source hidden or genuinely missing -- no real position to draw a stub from, dropped either way
-      const target = byId.get(l.target);
-      if (target) {
-        resolvedLinks.push({ ...l, source, target });
-      } else if (!nodeExists.has(l.target)) {
-        danglingLinks.push({
-          ...l,
-          source,
-          target: { id: l.target, x: source.x, y: source.y } as SimNode,
-          dangling: true,
-        });
-      }
-      // else: target exists but is currently hidden by hiddenTypes -- link dropped, not stubbed.
-    }
+    const { resolved: resolvedLinks, dangling: danglingLinks } = this.resolveLinksAgainst(byId);
     const links = resolvedLinks; // stubs never enter d3-force's own simulation input
     this.danglingLinks = danglingLinks;
 
@@ -1192,18 +1219,24 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (n.x != null && n.y != null) this.lastPositionById.set(n.id, { x: n.x, y: n.y });
     }
 
-    // Announce the hidden-node count from right here (not from willUpdate()/updated() gated on a
-    // 'hiddenTypes'/'nodes' PropertyValues diff) because this method itself is also invoked
-    // directly from connectedCallback() once the lazy d3 peer deps resolve -- a call that never
-    // goes through Lit's changed-property diffing at all. Computing it there instead would miss
-    // that path entirely: a graph mounted with hiddenTypes already set would compute this from a
-    // still-empty simNodes (0 settled nodes yet) on the property-driven pass, then never get a
-    // chance to correct it once the real simNodes became available. Only ever touches
-    // graphLiveText when there's something to say -- a node is currently hidden, or one just
-    // stopped being hidden -- so a consumer that never sets hiddenTypes keeps today's exact
-    // live-region output.
+    this.announceHiddenNodeCount(nodes.length);
+  }
+
+  /** Announces the current hidden-node count via the live region -- shared by both the force and
+   *  layered rebuild paths (each calls this with its own final visible-node count) so `hiddenTypes`
+   *  filtering announces identically regardless of `layout`. Called from right here (not from
+   *  willUpdate()/updated() gated on a 'hiddenTypes'/'nodes' PropertyValues diff) because
+   *  rebuildSimulation() itself is also invoked directly from connectedCallback() once the lazy d3
+   *  peer deps resolve -- a call that never goes through Lit's changed-property diffing at all.
+   *  Computing it there instead would miss that path entirely: a graph mounted with hiddenTypes
+   *  already set would compute this from a still-empty simNodes (0 settled nodes yet) on the
+   *  property-driven pass, then never get a chance to correct it once the real simNodes became
+   *  available. Only ever touches graphLiveText when there's something to say -- a node is
+   *  currently hidden, or one just stopped being hidden -- so a consumer that never sets
+   *  hiddenTypes keeps today's exact live-region output. */
+  private announceHiddenNodeCount(visibleNodeCount: number): void {
     const totalNodeCount = this.nodes.length;
-    const hiddenNodeCount = totalNodeCount - nodes.length;
+    const hiddenNodeCount = totalNodeCount - visibleNodeCount;
     if (totalNodeCount > 0 && (hiddenNodeCount > 0 || this.lastHiddenNodeCount > 0)) {
       this.graphLiveText = this.localize('graphNodesHidden', undefined, {
         hidden: hiddenNodeCount,
@@ -1211,6 +1244,51 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       });
     }
     this.lastHiddenNodeCount = hiddenNodeCount;
+  }
+
+  /** The `layout="layered"` path: computes final positions synchronously via the shared
+   *  `layeredLayout()` util (2r x 2r boxes, `gapY = linkDistance`, `gapX = 12`), centers the
+   *  drawing in `width` x `height`, and skips forceSimulation() entirely -- no `this.simulation`,
+   *  no ticking, no `prevById` carry-over (deterministic input -> output makes it unnecessary; a
+   *  structural change simply recomputes wholesale). `lyra-graph` never passes `fixedPositions`. */
+  private rebuildLayeredLayout(visible: GraphNode[]): void {
+    const boxes = visible.map((n) => {
+      const r = this.nodeRadius(n);
+      return { id: n.id, width: r * 2, height: r * 2 };
+    });
+    const visibleIds = new Set(visible.map((n) => n.id));
+    const edges = this.links
+      .filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target))
+      .map((l) => ({ source: l.source, target: l.target }));
+    const raw = layeredLayout({ nodes: boxes, edges, options: { gapX: 12, gapY: this.linkDistance } });
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of raw.values()) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y);
+      maxY = Math.max(maxY, p.y);
+    }
+    const offsetX = raw.size ? this.width / 2 - (minX + (maxX - minX) / 2) : this.width / 2;
+    const offsetY = raw.size ? this.height / 2 - (minY + (maxY - minY) / 2) : this.height / 2;
+
+    const nodes: SimNode[] = visible.map((n) => {
+      const p = raw.get(n.id);
+      return { ...n, x: (p?.x ?? this.width / 2) + offsetX, y: (p?.y ?? this.height / 2) + offsetY };
+    });
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const { resolved, dangling } = this.resolveLinksAgainst(byId);
+    this.danglingLinks = dangling;
+    this.simulation = undefined;
+    this.simNodes = nodes;
+    this.simLinks = resolved;
+    for (const n of nodes) {
+      if (n.x != null && n.y != null) this.lastPositionById.set(n.id, { x: n.x, y: n.y });
+    }
+    this.announceHiddenNodeCount(nodes.length);
   }
 
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {
