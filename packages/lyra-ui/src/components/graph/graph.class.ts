@@ -25,6 +25,11 @@ export interface GraphNode {
    *  (renders as a default circle with the token fill, but still participates in `hiddenTypes`
    *  filtering by its raw string value even with no matching `nodeTypes` entry). */
   type?: string;
+  /** Renders a "+" adornment (`part="expand-indicator"`) and marks the node expandable in spoken
+   *  text via `graphExpandableItem`. Controlled -- the component never clears this on its own; a
+   *  consumer flips it (or leaves it) after appending neighbors in response to a `lyra-node-expand`.
+   *  Does not gate the `lyra-node-expand` event itself, which fires for any node's double-activate. */
+  expandable?: boolean;
 }
 
 /** One entry in `nodeTypes` — declares a node type's legend label, optional fill color (sanitized
@@ -80,6 +85,9 @@ type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNod
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 const EDGE_LABEL_OFFSET_PX = 4; // perpendicular offset from the segment midpoint, in world px
 const EDGE_LABEL_LENGTH_GATE_RATIO = 0.85; // label hides when its measured width exceeds this * edge length
+const EXPAND_KEY_INTERVAL_MS = 500; // window for a double-Enter/Space to count as a double-activate
+const EXPAND_BADGE_R = 5; // world px, the "+" badge circle radius
+const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge, diagonally upper-right
 
 
 /**
@@ -170,6 +178,7 @@ export interface LyraGraphEventMap {
   'lyra-node-leave': CustomEvent<{ id: string }>;
   'lyra-link-enter': CustomEvent<{ source: string; target: string; id?: string }>;
   'lyra-link-leave': CustomEvent<{ source: string; target: string; id?: string }>;
+  'lyra-node-expand': CustomEvent<{ id: string }>;
 }
 /**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -198,6 +207,10 @@ export interface LyraGraphEventMap {
  *   suppression/`data-hovered` behavior as `lyra-node-enter`.
  * @event lyra-link-leave - The hover from `lyra-link-enter` ended. `detail: { source, target, id?
  *   }`.
+ * @event lyra-node-expand - A node was double-activated (native `dblclick`, or two Enter/Space
+ *   activations of the same focused node within 500ms). `detail: { id }`. Fires for any node
+ *   regardless of `GraphNode.expandable` -- that flag only controls the visual "+" affordance and
+ *   spoken "expandable" suffix.
  * @csspart base - The graph wrapper.
  * @csspart svg - The graph SVG.
  * @csspart node - A graph node.
@@ -205,6 +218,7 @@ export interface LyraGraphEventMap {
  * @csspart arrowhead - The marker used by directed graph links.
  * @csspart label - A node label.
  * @csspart link-label - A drawn edge label (only rendered when `showEdgeLabels` is set).
+ * @csspart expand-indicator - The "+" badge rendered on a node with `expandable: true`.
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
@@ -290,6 +304,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  simNodes/simLinks properties (see rebuildSimulation()'s doc comment). */
   private nodeEls: SVGElement[] = [];
   private nodeLabelEls: (SVGTextElement | null)[] = [];
+  private expandIndicatorEls: (SVGGElement | null)[] = [];
+  /** Tracks the index/time of the last Enter/Space activation, for double-Enter expand detection
+   *  (mirroring native dblclick semantics for keyboard users). */
+  private lastKeyActivateIndex: number | null = null;
+  private lastKeyActivateTime = 0;
   private linkEls: SVGLineElement[] = [];
   private linkLabelEls: (SVGTextElement | null)[] = [];
   /** Per-simLink-index flip cache for the length declutter gate -- `onTick()` only writes
@@ -478,6 +497,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.nodeLabelEls = nodeEls.map(
       (el) => (el.parentElement?.querySelector('[part="label"]') as SVGTextElement | null) ?? null,
     );
+    this.expandIndicatorEls = nodeEls.map(
+      (el) => (el.parentElement?.querySelector('[part="expand-indicator"]') as SVGGElement | null) ?? null,
+    );
     // Dangling stubs also carry part="link" (so they inherit the same themeable styling as a
     // real edge) -- excluded here explicitly so `linkEls` stays index-aligned with `simLinks`
     // rather than relying on stubs always sorting after real links in template/DOM order.
@@ -577,6 +599,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         }
       });
     }
+    this.simNodes.forEach((n, i) => {
+      const indicator = this.expandIndicatorEls[i];
+      if (indicator) indicator.setAttribute('transform', `translate(${n.x ?? 0},${n.y ?? 0})`);
+    });
     // Dangling stubs are excluded from d3-force's own simulation input (see
     // rebuildSimulation()'s "stubs never enter d3-force's own simulation input"), so the
     // synthetic target position the danglingLinks loop at the top of this method just
@@ -633,17 +659,42 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const links = resolvedLinks; // stubs never enter d3-force's own simulation input
     this.danglingLinks = danglingLinks;
 
-    // Give brand-new nodes (no carried-over position from prevById above) a
-    // deterministic starting x/y, keyed by node id, instead of leaving them
-    // for forceSimulation() below to randomize. Nodes that already have a
-    // position are left untouched — same "only randomize nodes without x/y"
-    // rule forceSimulation() itself follows — so an incremental update to a
+    const seedForSpawn = this.seed;
+
+    // Give a brand-new node with no carried-over position (from prevById above) a spawn point
+    // near an already-positioned neighbor instead of forceSimulation()'s eventual random start --
+    // expanded neighborhoods bloom around their origin instead of flying in from nowhere. Only
+    // touches nodes with no position yet, so it can't move anything already settled.
+    for (const n of nodes) {
+      if (n.x != null && n.y != null) continue;
+      const neighborLink = resolvedLinks.find((l) => {
+        const source = l.source as SimNode;
+        const target = l.target as SimNode;
+        return (source.id === n.id && target.x != null) || (target.id === n.id && source.x != null);
+      });
+      if (!neighborLink) continue;
+      const source = neighborLink.source as SimNode;
+      const target = neighborLink.target as SimNode;
+      const neighbor = source.id === n.id ? target : source;
+      const jitterRadius = this.linkDistance / 2;
+      const angle =
+        seedForSpawn != null
+          ? (hashNodeSeed(seedForSpawn, n.id) / 4294967296) * Math.PI * 2
+          : Math.random() * Math.PI * 2;
+      n.x = (neighbor.x ?? 0) + Math.cos(angle) * jitterRadius;
+      n.y = (neighbor.y ?? 0) + Math.sin(angle) * jitterRadius;
+    }
+
+    // Give any remaining brand-new nodes (no carried-over position from prevById above, and no
+    // already-positioned neighbor for the jitter spawn above to anchor to) a deterministic
+    // starting x/y, keyed by node id, instead of leaving them for forceSimulation() below to
+    // randomize. Nodes that already have a position are left untouched — same "only randomize
+    // nodes without x/y" rule forceSimulation() itself follows — so an incremental update to a
     // seeded, already-settled graph doesn't reshuffle existing nodes.
-    const seed = this.seed;
-    if (seed != null) {
+    if (seedForSpawn != null) {
       for (const n of nodes) {
         if (n.x != null && n.y != null) continue;
-        const rng = mulberry32(hashNodeSeed(seed, n.id));
+        const rng = mulberry32(hashNodeSeed(seedForSpawn, n.id));
         n.x = rng() * this.width;
         n.y = rng() * this.height;
       }
@@ -665,6 +716,24 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.simulation = simulation;
 
     if (prefersReducedMotion() || this.seed != null) {
+      // Pin every node that already had a carried-over position before this rebuild (fx/fy, the
+      // same mechanism a user drag uses) so introducing a new node/link can't visibly reposition
+      // it during this synchronous settle -- only a genuinely new node (no prior counterpart, per
+      // prevById above) is free to move while the simulation converges. A node whose fx/fy was
+      // already set (an active user drag concurrent with this rebuild) is left alone entirely --
+      // both the pin and the later release below only apply to a node this loop itself pinned, so
+      // a real in-progress drag's own fx/fy is never clobbered. Everything this loop does pin gets
+      // released again immediately below, so this has no lasting effect on a later user-initiated
+      // drag, nor on the live, async settle a non-seeded/non-reduced-motion graph still animates
+      // over ~300 frames.
+      const pinnedForSettle = new Set<string>();
+      for (const n of nodes) {
+        if (prevById.has(n.id) && n.x != null && n.y != null && n.fx == null && n.fy == null) {
+          n.fx = n.x;
+          n.fy = n.y;
+          pinnedForSettle.add(n.id);
+        }
+      }
       // Converge synchronously instead of animating the settle over ~300
       // rendered frames — the simulation is already stopped (alpha at
       // alphaMin) by the time the DOM for this rebuild is first painted.
@@ -674,6 +743,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // User-initiated motion (dragging a node) is unaffected.
       simulation.stop();
       while (simulation.alpha() > simulation.alphaMin()) simulation.tick();
+      for (const n of nodes) {
+        if (pinnedForSettle.has(n.id)) {
+          n.fx = null;
+          n.fy = null;
+        }
+      }
     }
 
     // Assign these SAME array/object references (not copies) exactly once
@@ -710,6 +785,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.emit('lyra-node-leave', { id: node.id });
   }
 
+  private onNodeDblClick(node: SimNode, e: MouseEvent): void {
+    // Stops the dblclick from also reaching the svg's own d3-zoom double-click-to-zoom-in
+    // listener -- background double-click (not on a node) keeps that default behavior.
+    e.stopPropagation();
+    this.emit('lyra-node-expand', { id: node.id });
+  }
+
   private onLinkEnter(link: SimLink, e: MouseEvent): void {
     if (this.isDragging || this.isPanning) return;
     (e.currentTarget as SVGElement).setAttribute('data-hovered', '');
@@ -730,6 +812,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     let text = node.accessibleLabel || node.label || node.id;
     const type = this.resolveNodeType(node);
     if (type) text = this.localize('graphTypedNode', undefined, { label: text, type: type.label });
+    if (node.expandable) text = this.localize('graphExpandableItem', undefined, { item: text });
     return text;
   }
 
@@ -877,6 +960,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       e.preventDefault();
       this.onGraphItemFocus(index);
       activate();
+      if (index < this.simNodes.length) {
+        const now = performance.now();
+        if (this.lastKeyActivateIndex === index && now - this.lastKeyActivateTime <= EXPAND_KEY_INTERVAL_MS) {
+          const node = this.simNodes[index];
+          if (node) this.emit('lyra-node-expand', { id: node.id });
+          this.lastKeyActivateIndex = null;
+        } else {
+          this.lastKeyActivateIndex = index;
+          this.lastKeyActivateTime = now;
+        }
+      }
       return;
     }
     const count = this.graphItemCount();
@@ -1006,6 +1100,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                       cy=${n.y ?? 0}
                       style=${style}
                       @click=${() => this.onNodeClick(n)}
+                      @dblclick=${(e: MouseEvent) => this.onNodeDblClick(n, e)}
                       @focus=${() => this.onGraphItemFocus(itemIndex)}
                       @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
                       @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
@@ -1020,6 +1115,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                       transform="translate(${n.x ?? 0},${n.y ?? 0})"
                       style=${style}
                       @click=${() => this.onNodeClick(n)}
+                      @dblclick=${(e: MouseEvent) => this.onNodeDblClick(n, e)}
                       @focus=${() => this.onGraphItemFocus(itemIndex)}
                       @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
                       @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
@@ -1029,6 +1125,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                 ${shapeEl}
                 ${n.label
                   ? svg`<text part="label" aria-hidden="true" x=${(n.x ?? 0) + this.nodeRadius(n) + 2} y=${n.y ?? 0}>${n.label}</text>`
+                  : ''}
+                ${n.expandable
+                  ? svg`<g part="expand-indicator" aria-hidden="true" transform="translate(${n.x ?? 0},${n.y ?? 0})">
+                      <circle r=${EXPAND_BADGE_R} cx=${this.nodeRadius(n) * EXPAND_BADGE_OFFSET} cy=${-this.nodeRadius(n) * EXPAND_BADGE_OFFSET}></circle>
+                      <path d="M ${this.nodeRadius(n) * EXPAND_BADGE_OFFSET - EXPAND_BADGE_R / 2} ${-this.nodeRadius(n) * EXPAND_BADGE_OFFSET} L ${this.nodeRadius(n) * EXPAND_BADGE_OFFSET + EXPAND_BADGE_R / 2} ${-this.nodeRadius(n) * EXPAND_BADGE_OFFSET} M ${this.nodeRadius(n) * EXPAND_BADGE_OFFSET} ${-this.nodeRadius(n) * EXPAND_BADGE_OFFSET - EXPAND_BADGE_R / 2} L ${this.nodeRadius(n) * EXPAND_BADGE_OFFSET} ${-this.nodeRadius(n) * EXPAND_BADGE_OFFSET + EXPAND_BADGE_R / 2}"></path>
+                    </g>`
                   : ''}
               </g>`;
             })}

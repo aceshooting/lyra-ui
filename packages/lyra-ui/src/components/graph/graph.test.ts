@@ -661,6 +661,168 @@ describe('drawn edge labels (J2)', () => {
   });
 });
 
+describe('expand affordance (J3)', () => {
+  it('dblclick on a node emits exactly one lyra-node-expand after two lyra-node-click events, and stops propagation', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    let clickCount = 0;
+    let expandDetail: { id: string } | undefined;
+    let expandCount = 0;
+    el.addEventListener('lyra-node-click', () => clickCount++);
+    el.addEventListener('lyra-node-expand', (e) => {
+      expandCount++;
+      expandDetail = (e as CustomEvent).detail;
+    });
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    nodeEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+    expect(clickCount).to.equal(2);
+    expect(expandCount).to.equal(1);
+    expect(expandDetail).to.deep.equal({ id: 'a' });
+  });
+
+  it('background dblclick (not on a node) still reaches the svg for d3-zoom default zoom-in (event not stopped)', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const g = el.shadowRoot!.querySelector('g') as SVGGElement;
+    expect(g.getAttribute('transform')).to.equal('');
+    // d3-zoom's own dblclick handler calls stopImmediatePropagation() on the matched element (see
+    // d3-zoom's `noevent()`), so a sibling listener added after the graph mounts would never
+    // observe the event either way -- assert the actual, observable effect instead (matching how
+    // this file's wheel-zoom test above verifies zoom took effect): d3-zoom's default
+    // double-click-to-zoom-in still applies its own scale transform, proving onNodeDblClick()'s
+    // own `stopPropagation()` (bound only on node elements) never reaches a background dblclick.
+    // Unlike the wheel handler, d3-zoom's dblclick handler animates the transform via a
+    // `.transition()` (its own default 250ms duration) rather than applying it synchronously, so
+    // this waits out that transition before reading the resulting attribute.
+    svgEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+    await aTimeout(350);
+    expect(g.getAttribute('transform')).to.match(/scale\(/);
+  });
+
+  it('double-Enter within 500ms on the same focused node emits lyra-node-expand; outside the window it does not', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    let expandCount = 0;
+    el.addEventListener('lyra-node-expand', () => expandCount++);
+    nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(expandCount).to.equal(1);
+
+    // Outside the window: reset by waiting past EXPAND_KEY_INTERVAL_MS.
+    await aTimeout(600);
+    nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(expandCount).to.equal(1); // first of a new pair, not yet a second
+  });
+
+  it('renders a "+" expand-indicator only for nodes with expandable: true, tracked per tick', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A', expandable: true },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelectorAll('[part="expand-indicator"]').length).to.equal(1);
+    const indicator = el.shadowRoot!.querySelector('[part="expand-indicator"]') as SVGGElement;
+    expect(indicator.getAttribute('aria-hidden')).to.equal('true');
+    await aTimeout(50);
+    expect(indicator.getAttribute('transform')).to.match(/^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/);
+  });
+
+  it('wraps expandable node spoken text via graphExpandableItem, composing with the J1 typed wrap', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodeTypes = [{ id: 'doc', label: 'Document' }];
+    el.nodes = [{ id: 'a', label: 'A', type: 'doc', expandable: true }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    expect(nodeEl.getAttribute('aria-label')).to.equal('A (Document), expandable');
+  });
+
+  it('a new node linked to an already-settled node spawns near that neighbor instead of a random position', async () => {
+    const el = (await fixture(html`<lyra-graph seed="7" link-distance="100"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [{ id: 'a', label: 'A' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const before = el.simNodes.find((n) => n.id === 'a')!;
+    const aX = before.x!;
+    const aY = before.y!;
+
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [{ source: 'a', target: 'b' }];
+    await el.updateComplete;
+    // Reduced-motion / seeded settles happen synchronously inside rebuildSimulation(), so the new
+    // node's spawn position is assigned before this await resolves; assert immediately.
+    const spawnedB = el.simNodes.find((n) => n.id === 'b')!;
+    const distance = Math.hypot(spawnedB.x! - aX, spawnedB.y! - aY);
+    // Within a small multiple of linkDistance/2 (the documented jitter radius) -- nowhere close to
+    // a fully random position across the whole width/height canvas.
+    expect(distance).to.be.lessThan(el.linkDistance);
+    // 'a' itself must not have moved (only nodes with no carried-over position are affected).
+    expect(el.simNodes.find((n) => n.id === 'a')!.x).to.equal(aX);
+    expect(el.simNodes.find((n) => n.id === 'a')!.y).to.equal(aY);
+  });
+
+  it('is accessible with an expandable node', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = [{ id: 'a', label: 'A', expandable: true }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: no expandable set never emits lyra-node-expand and renders no indicator', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelectorAll('[part="expand-indicator"]').length).to.equal(0);
+    let fired = false;
+    el.addEventListener('lyra-node-expand', () => (fired = true));
+    (el.shadowRoot!.querySelector('[part="node"]') as SVGElement).dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true }),
+    );
+    expect(fired).to.be.true; // dblclick always emits, regardless of `expandable` (an affordance flag, not a gate)
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [

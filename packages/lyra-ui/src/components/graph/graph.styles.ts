@@ -60,4 +60,14 @@ export const styles = css`
     color: var(--lyra-color-text-quiet);
     font-size: var(--lyra-font-size-md-sm);
   }
+  [part='expand-indicator'] circle {
+    fill: var(--lyra-color-surface);
+    stroke: var(--lyra-color-border-strong);
+    stroke-width: var(--lyra-size-1px);
+  }
+  [part='expand-indicator'] path {
+    stroke: var(--lyra-color-text);
+    stroke-width: var(--lyra-size-1px);
+    fill: none;
+  }
 `;

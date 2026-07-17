@@ -291,6 +291,7 @@ export type LyraMessageKey =
   | 'graphLink'
   | 'graphDiagram'
   | 'graphTypedNode'
+  | 'graphExpandableItem'
   | 'heatmapValueLabel'
   | 'heatmapMatrixCellLabel'
   | 'heatmapCalendarLabel'
@@ -749,6 +750,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphLink: 'Link from {source} to {target}',
   graphDiagram: 'Node-link diagram with {nodeCount} nodes and {linkCount} links',
   graphTypedNode: '{label} ({type})',
+  graphExpandableItem: '{item}, expandable',
   heatmapValueLabel: 'value',
   heatmapMatrixCellLabel: 'Row {row}, Col {col}: {value}',
   heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
