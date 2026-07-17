@@ -367,6 +367,11 @@ export type LyraMessageKey =
   | 'streamRecoverAnnounce'
   | 'streamStallClearedAnnounce'
   | 'thinkingPanelLabel'
+  | 'taskListLabel'
+  | 'taskListCompletedOfTotal'
+  | 'taskListStepStartedAnnounce'
+  | 'taskListStepCompletedAnnounce'
+  | 'taskListStepFailedAnnounce'
   | 'thoughtFor'
   | 'thinking'
   | 'rangeStart'
@@ -896,6 +901,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   streamRecoverAnnounce: 'Connection restored.',
   streamStallClearedAnnounce: 'No longer stalled.',
   thinkingPanelLabel: 'Thinking',
+  taskListLabel: 'Tasks',
+  taskListCompletedOfTotal: '{completed} of {total} completed',
+  taskListStepStartedAnnounce: 'Step started: {label}',
+  taskListStepCompletedAnnounce: 'Step completed: {label}',
+  taskListStepFailedAnnounce: 'Step failed: {label}',
   thoughtFor: 'Thought for {duration}',
   thinking: 'Thinking…',
   rangeStart: 'Range start',
