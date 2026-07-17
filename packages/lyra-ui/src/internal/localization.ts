@@ -509,6 +509,14 @@ export type LyraMessageKey =
   | 'rubricSubmit'
   | 'rubricSubmitAndNext'
   | 'rubricSkip'
+  | 'compareResponseA'
+  | 'compareResponseB'
+  | 'compareVoteLabel'
+  | 'compareVoteBetter'
+  | 'compareVoteTie'
+  | 'compareVoteBothBad'
+  | 'compareVoteRecorded'
+  | 'comparePanel'
   | 'audioVisualizerLabel'
   | 'audioVisualizerIdle'
   | 'audioVisualizerListening'
@@ -1023,6 +1031,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   rubricSubmit: 'Submit',
   rubricSubmitAndNext: 'Submit and next',
   rubricSkip: 'Skip',
+  compareResponseA: 'Response A',
+  compareResponseB: 'Response B',
+  compareVoteLabel: 'Vote',
+  compareVoteBetter: '{label} is better',
+  compareVoteTie: 'Tie',
+  compareVoteBothBad: 'Both are bad',
+  compareVoteRecorded: 'Vote recorded: {label}',
+  comparePanel: 'Comparison',
   audioVisualizerLabel: 'Voice activity: {state}',
   audioVisualizerIdle: 'Idle',
   audioVisualizerListening: 'Listening',
