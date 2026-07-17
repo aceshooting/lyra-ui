@@ -1,5 +1,5 @@
 ---
-description: Implement pending feature requests from docs/superpowers/feature_requests/ end to end — triage, plan, TDD implementation, verification, commit — then archive each request into docs/superpowers/plans/done/.
+description: Implement pending feature requests from docs/superpowers/feature_requests/ end to end — triage, plan, TDD implementation, verification, commit — then archive each request into docs/superpowers/done/.
 ---
 
 Feature-request implementation workflow for this monorepo. `$ARGUMENTS` is optional — a filename or
@@ -11,7 +11,7 @@ This follows the spec -> plan -> task-execution cycle documented in this repo's 
 ("Process for multi-step work"). Don't skip steps because a request "looks simple" — even the
 single-file requests already in this directory (Problem/Proposal/Acceptance-criteria shaped) still
 get a written plan and TDD, matching every completed request already sitting in
-`docs/superpowers/plans/done/`.
+`docs/superpowers/done/`.
 
 ## 1. Preflight
 
@@ -47,7 +47,7 @@ Read every selected feature request in full before touching any code.
 - Decide grouping: if multiple selected requests are genuinely independent, plan and land each one
   separately (its own plan file, its own commits, its own changesets). Only combine requests into one
   plan when they clearly overlap (same components, same underlying API) — matching the precedent in
-  `docs/superpowers/plans/done/2026-07-13-lyra-ui-feature-request-remediation-plan.md`, which bundled
+  `docs/superpowers/done/2026-07-13-lyra-ui-feature-request-remediation-plan.md`, which bundled
   six overlapping audit filings into one 29-task plan. If it's unclear which way to go, ask the user.
 
 ## 3. Write the plan
@@ -55,7 +55,7 @@ Read every selected feature request in full before touching any code.
 Use **superpowers:writing-plans** to turn each request (or combined group) into
 `docs/superpowers/plans/<today>-<slug>-plan.md` (today's date as `YYYY-MM-DD`; slug from the
 request's own filename/title). Read a recent completed plan first (e.g.
-`docs/superpowers/plans/done/2026-07-15-lyra-table-row-expansion.md`, or the larger remediation plan
+`docs/superpowers/done/2026-07-15-lyra-table-row-expansion.md`, or the larger remediation plan
 referenced above) and match its shape:
 
 - Numbered tasks, each with **Files**, **Interfaces**, and checkbox (`- [ ]`) steps.
@@ -121,11 +121,11 @@ after every other commit in this batch has landed.
 Only once the full gate in step 5 is green and every task for a request is committed:
 
 - Move that feature request from `docs/superpowers/feature_requests/<file>.md` to
-  `docs/superpowers/plans/done/<file>.md` — same filename, plain `mv` (not `git mv`; this directory
+  `docs/superpowers/done/<file>.md` — same filename, plain `mv` (not `git mv`; this directory
   is untracked, see `.git/info/exclude`). This matches existing precedent: prior completed requests
-  (e.g. `docs/superpowers/plans/done/2026-07-13-solarserver-migration-and-new-component-ideas-v1.md`)
+  (e.g. `docs/superpowers/done/2026-07-13-solarserver-migration-and-new-component-ideas-v1.md`)
   were moved there as-is once their work landed.
-- Move the plan file written in step 3 into `docs/superpowers/plans/done/` alongside it.
+- Move the plan file written in step 3 into `docs/superpowers/done/` alongside it.
 - Never move a request whose implementation isn't fully committed and verified — a half-finished
   request stays in `feature_requests/` so the next `/features` run picks up where this one left off.
 
