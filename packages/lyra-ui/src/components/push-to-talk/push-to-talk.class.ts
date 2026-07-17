@@ -191,6 +191,8 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         for (const track of stream.getTracks()) track.stop();
         this.cancelRequested = false;
         this.setState('idle');
+        this.emit('lyra-record-cancel');
+        this.announce(this.localize('pushToTalkCancelled'));
         return false;
       }
       this._stream = stream;
@@ -330,12 +332,19 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   };
   private onPointerUp = (): void => {
     if (this.mode !== 'hold') return;
-    this.stop();
+    this.releaseHold();
   };
   private onPointerCancel = (): void => {
     if (this.mode !== 'hold') return;
-    this.stop();
+    this.releaseHold();
   };
+  /** Ends a hold-mode press: stops an active take, or cancels a still-pending permission request
+   *  so recording never silently starts after the user already let go. Mirrors
+   *  disconnectedCallback()'s identical dual check. */
+  private releaseHold(): void {
+    if (this._state === 'requesting') this.cancel();
+    else this.stop();
+  }
 
   // -- Keyboard -----------------------------------------------------------
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -359,10 +368,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private onKeyUp = (e: KeyboardEvent): void => {
     if (this.mode !== 'hold') return;
     if (e.key !== 'Enter' && e.key !== ' ') return;
-    this.stop();
+    this.releaseHold();
   };
   private onBlur = (): void => {
-    if (this.mode === 'hold' && this._state === 'recording') this.stop();
+    if (this.mode === 'hold') this.releaseHold();
   };
 
   // -- Toggle mode ----------------------------------------------------------

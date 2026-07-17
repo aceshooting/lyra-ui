@@ -78,6 +78,24 @@ function stubSuccessfulCapture(): () => void {
   };
 }
 
+/** Stubs getUserMedia with a promise the test controls, to simulate a still-pending permission
+ *  prompt (state === 'requesting') and exercise release-while-requesting handling. */
+function stubDeferredCapture(): { restore: () => void; resolve: () => void } {
+  const original = navigator.mediaDevices.getUserMedia;
+  let resolveFn: () => void = () => {};
+  navigator.mediaDevices.getUserMedia = (() =>
+    new Promise<MediaStream>((resolve) => {
+      resolveFn = () => resolve(new FakeStream() as unknown as MediaStream);
+    })) as typeof navigator.mediaDevices.getUserMedia;
+  window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+  return {
+    restore: () => {
+      navigator.mediaDevices.getUserMedia = original;
+    },
+    resolve: () => resolveFn(),
+  };
+}
+
 function stubDeniedCapture(): () => void {
   const original = navigator.mediaDevices.getUserMedia;
   navigator.mediaDevices.getUserMedia = (async () => {
@@ -206,6 +224,46 @@ describe('hold mode', () => {
       const stopPromise = oneEvent(el, 'lyra-record-stop');
       btn.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
       await stopPromise;
+      expect(el.state).to.equal('idle');
+    } finally {
+      restore();
+    }
+  });
+
+  it('releasing (pointerup) while a permission request is still pending cancels it instead of letting recording start (regression)', async () => {
+    const { restore, resolve } = stubDeferredCapture();
+    try {
+      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const btn = trigger(el);
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      await el.updateComplete;
+      expect(el.state).to.equal('requesting');
+
+      btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+
+      const cancelPromise = oneEvent(el, 'lyra-record-cancel');
+      resolve();
+      await cancelPromise;
+      expect(el.state).to.equal('idle');
+    } finally {
+      restore();
+    }
+  });
+
+  it('releasing (Enter keyup) while a permission request is still pending cancels it instead of letting recording start (regression)', async () => {
+    const { restore, resolve } = stubDeferredCapture();
+    try {
+      const el = (await fixture(html`<lyra-push-to-talk></lyra-push-to-talk>`)) as LyraPushToTalk;
+      const btn = trigger(el);
+      btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await el.updateComplete;
+      expect(el.state).to.equal('requesting');
+
+      btn.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+
+      const cancelPromise = oneEvent(el, 'lyra-record-cancel');
+      resolve();
+      await cancelPromise;
       expect(el.state).to.equal('idle');
     } finally {
       restore();
