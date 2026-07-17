@@ -477,7 +477,10 @@ export type LyraMessageKey =
   | 'tokensIn'
   | 'tokensOut'
   | 'cost'
-  | 'duration';
+  | 'duration'
+  | 'spanWaterfall'
+  | 'spanStartedAtOffset'
+  | 'spanTokens';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -956,6 +959,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   tokensOut: 'Tokens out',
   cost: 'Cost',
   duration: 'Duration',
+  spanWaterfall: 'Span timeline',
+  spanStartedAtOffset: 'started at +{value}',
+  spanTokens: '{in} tokens in, {out} tokens out',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
