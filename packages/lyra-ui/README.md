@@ -1,12 +1,12 @@
+# Lyra UI
+
+[![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
+
 <p align="center">
   <a href="https://www.lyra-ui.com/">
     <img src="https://raw.githubusercontent.com/aceshooting/lyra-ui/main/.github/readme/lyra-mark.svg" width="112" height="112" alt="Lyra UI constellation logo" />
   </a>
 </p>
-
-# Lyra UI
-
-[![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
 
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.

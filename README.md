@@ -1,9 +1,3 @@
-<p align="center">
-  <a href="https://www.lyra-ui.com/">
-    <img src=".github/readme/lyra-mark.svg" width="112" height="112" alt="Lyra UI constellation logo" />
-  </a>
-</p>
-
 # Lyra UI (monorepo)
 
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
@@ -15,6 +9,12 @@
 [![CodeQL](https://github.com/aceshooting/lyra-ui/actions/workflows/codeql.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/aceshooting/lyra-ui/badge)](https://scorecard.dev/viewer/?uri=github.com/aceshooting/lyra-ui)
 [![docs](https://img.shields.io/badge/docs-storybook-ff4785)](https://aceshooting.github.io/lyra-ui/)
+
+<p align="center">
+  <a href="https://www.lyra-ui.com/">
+    <img src=".github/readme/lyra-mark.svg" width="112" height="112" alt="Lyra UI constellation logo" />
+  </a>
+</p>
 
 A pnpm workspace hosting `lyra-ui` and its optional companion packages.
 
