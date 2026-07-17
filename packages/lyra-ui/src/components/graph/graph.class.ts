@@ -1,5 +1,5 @@
 import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../internal/a11y.js';
@@ -10,6 +10,7 @@ import { getScratchCtx } from '../../internal/canvas.js';
 import { styles } from './graph.styles.js';
 import { loadD3, type D3Modules } from './graph-loader.js';
 import { convexHull, hullPathD, hullCentroidX, hullTopY, type HullPoint } from './graph-hull.js';
+import { drawGraphScene, drawPickingScene, pickColorToIndex, type CanvasCamera, type CanvasScene } from './graph-canvas.js';
 import { layeredLayout } from '../../internal/layered-layout.js';
 import '../skeleton/skeleton.class.js';
 
@@ -106,6 +107,7 @@ const EXPAND_BADGE_R = 5; // world px, the "+" badge circle radius
 const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge, diagonally upper-right
 const FOCUS_HALO_PADDING = 6; // world px added to the node's own radius for the halo ring
 const HULL_PADDING = 24; // world px; CSS mirrors this via stroke-width: 2 * --lyra-size-24px
+const CANVAS_NODE_LABEL_MIN_ZOOM = 0.5; // canvas-only declutter -- node labels draw only at/above this scale
 
 
 /**
@@ -228,6 +230,15 @@ export interface LyraGraphEventMap {
  * `src/internal/layered-layout.ts`) -- node drag is disabled in that mode, and `chargeStrength` is
  * a documented no-op.
  *
+ * `renderer="canvas"` swaps the per-node/per-link SVG DOM for a single DPR-aware `<canvas>` --
+ * every event/method/property behaves identically to `renderer="svg"` (the default), with hit-
+ * testing resolved via an offscreen color-picking canvas instead of DOM event targets. The
+ * documented trade-offs: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme
+ * via cssprops instead), no native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a
+ * drawn focus ring instead of a CSS one. Keyboard roving/announcements are preserved through an
+ * offscreen `part="cursor-item"` button per node/link/hull, driving the identical roving-tabindex
+ * logic as `renderer="svg"`.
+ *
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
  * @event lyra-link-click - `detail: { source, target, id? }`.
@@ -262,6 +273,10 @@ export interface LyraGraphEventMap {
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
+ * @csspart canvas - The single canvas surface (`renderer="canvas"` only).
+ * @csspart tooltip - The hover tooltip (`renderer="canvas"` only; the SVG `<title>` replacement).
+ * @csspart cursor-items - The container of offscreen keyboard-roving items (`renderer="canvas"` only).
+ * @csspart cursor-item - An offscreen keyboard-roving item (`renderer="canvas"`'s a11y virtual cursor).
  * @cssprop [--lyra-node-fill=var(--lyra-color-brand)] - Default node fill, overridden per-node by `GraphNode.color`.
  * @cssprop [--lyra-link-color=var(--lyra-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
  * @cssprop [--lyra-graph-cat-1..8] - Ordered categorical fallback palette for a typed node with no
@@ -301,6 +316,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  documented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions
    *  without a tween. */
   @property() layout: 'force' | 'layered' = 'force';
+  /** `'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to
+   *  a single `<canvas part="canvas">` -- the scale path (an honest ceiling for `'svg'`: dozens to
+   *  low hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced
+   *  by design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via
+   *  cssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/
+   *  props otherwise behave identically across renderers. Runtime changes tear down and rebuild
+   *  the surface; positions survive via `prevById`/`lastPositionById`. */
+  @property() renderer: 'svg' | 'canvas' = 'svg';
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
@@ -368,8 +391,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private chargeForce?: import('d3-force').ForceManyBody<SimNode>;
   private linkForce?: import('d3-force').ForceLink<SimNode, SimLink>;
   private d3?: D3Modules;
-  /** The `<svg>` currently wired up with d3-zoom (guards a one-time bind). */
-  private zoomedEl?: SVGSVGElement;
+  /** The `<svg>` (or, in `renderer="canvas"` mode, the `<canvas>`) currently wired up with d3-zoom
+   *  (guards a one-time bind per element). */
+  private zoomedEl?: SVGSVGElement | HTMLCanvasElement;
   /** The pan/zoom `<g>`, cached alongside `zoomedEl` so the zoom handler can
    *  write the transform straight to the DOM (see applyInteractions()) instead
    *  of round-tripping through a Lit reactive property on every pan/zoom event. */
@@ -377,7 +401,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** The live zoom behavior, kept so minZoom/maxZoom changes can retune its
    *  scaleExtent in place (see applyInteractions()) instead of requiring the
    *  `<svg>` to be rebound. */
-  private zoomBehavior?: import('d3-zoom').ZoomBehavior<SVGSVGElement, unknown>;
+  private zoomBehavior?: import('d3-zoom').ZoomBehavior<SVGSVGElement | HTMLCanvasElement, unknown>;
   /** Node `<circle>`s already wired up with d3-drag; cleared on every simulation rebuild
    *  so DOM elements Lit reuses across a rebuild get rebound to their fresh datum. */
   private boundNodeEls = new WeakSet<Element>();
@@ -400,6 +424,29 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private focusHaloEl?: SVGCircleElement;
   private communityHullEls: SVGPathElement[] = [];
   private communityLabelEls: SVGTextElement[] = [];
+  @query('canvas') private canvasEl?: HTMLCanvasElement;
+  private canvasCtx?: CanvasRenderingContext2D;
+  /** Offscreen, same-size, same-camera-transform canvas used only for hit-testing (see
+   *  `redrawPickCanvas()`/`hitTest()`) -- never attached to the DOM or painted to the screen. */
+  private pickCanvas?: HTMLCanvasElement;
+  private pickCtx?: CanvasRenderingContext2D | null;
+  private canvasResizeObserver?: ResizeObserver;
+  private canvasDprQuery?: MediaQueryList;
+  private canvasDrawRafId?: number;
+  private pickDirty = true;
+  private canvasCamera: CanvasCamera = { k: 1, x: 0, y: 0 };
+  private canvasTooltipEl?: HTMLDivElement;
+  /** Flat, index-aligned list matching `drawPickingScene()`'s own hulls-then-links-then-nodes pick
+   *  order -- rebuilt by `redrawPickCanvas()` alongside the pick canvas itself, so a pick color's
+   *  decoded index always maps back to the exact item it was drawn for. */
+  private pickItems: (
+    | { kind: 'hull'; entry: { community: GraphCommunity; members: SimNode[] } }
+    | { kind: 'link'; link: SimLink }
+    | { kind: 'node'; node: SimNode }
+  )[] = [];
+  private canvasDragNode?: SimNode;
+  private canvasPointerId?: number;
+  private canvasPointerDownAt?: { x: number; y: number };
   /** The in-flight `requestAnimationFrame` id for a camera tween (`focusNode()`/`fit()`), if any --
    *  canceled by a new tween request or a user pan/zoom gesture (see `applyInteractions()`'s zoom
    *  `'start'` handler). */
@@ -439,6 +486,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // the existing simulation in place instead.
     if (this.d3) {
       this.simulation?.restart();
+      // renderer="canvas" mode's own resize/DPR watchers are torn down by disconnectedCallback()
+      // below on every disconnect (including this reconnect) -- the <canvas> element itself
+      // survived the reparent along with the rest of this shadow tree (canvasEl === zoomedEl still
+      // holds), so re-arm them in place instead of waiting for a property-driven update that a bare
+      // reparent never triggers.
+      if (this.renderer === 'canvas' && this.canvasEl && this.canvasEl === this.zoomedEl) {
+        this.watchCanvasResize();
+        this.watchCanvasDpr();
+        this.markCanvasDirty();
+      }
       return;
     }
     void loadD3().then((mods) => {
@@ -455,6 +512,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.simulation?.stop();
+    this.canvasResizeObserver?.disconnect();
+    this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
+    if (this.canvasDrawRafId != null) {
+      cancelAnimationFrame(this.canvasDrawRafId);
+      this.canvasDrawRafId = undefined;
+    }
   }
 
   /**
@@ -715,6 +778,353 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
   }
 
+  // ---------------------------------------------------------------------------------------------
+  // renderer="canvas": surface setup, DPR/resize watching, scene building, and the static draw.
+  // ---------------------------------------------------------------------------------------------
+
+  private setUpCanvasSurface(): void {
+    this.canvasCtx = this.canvasEl!.getContext('2d') ?? undefined;
+    this.pickCanvas = document.createElement('canvas');
+    this.pickCtx = this.pickCanvas.getContext('2d', { willReadFrequently: true });
+    this.watchCanvasResize();
+    this.watchCanvasDpr();
+    this.canvasTooltipEl = (this.renderRoot.querySelector('[part="tooltip"]') as HTMLDivElement) ?? undefined;
+    // bindCanvasPointer() (which owns onCanvasDblClick) is bound BEFORE bindCanvasZoom() -- both
+    // end up with a 'dblclick' listener on this same <canvas>, and d3-zoom's own default
+    // double-click-to-zoom-in handler calls stopImmediatePropagation() unconditionally (see
+    // onCanvasDblClick()'s own comment). Registering first means onCanvasDblClick() runs first and
+    // gets the chance to itself stop the event (only when it actually hit a node) before d3-zoom's
+    // handler would otherwise suppress it from ever being observed at all.
+    this.bindCanvasPointer();
+    this.bindCanvasZoom();
+  }
+
+  private watchCanvasResize(): void {
+    this.canvasResizeObserver = new ResizeObserver(() => this.markCanvasDirty());
+    this.canvasResizeObserver.observe(this);
+  }
+
+  private watchCanvasDpr(): void {
+    // A MediaQueryList's `matches` is fixed at creation time, so crossing the DPR threshold it was
+    // built for means building a fresh one for the new ratio -- remove the previous instance's
+    // listener first, or it leaks (disconnectedCallback only ever cleans up whichever is current).
+    this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
+    this.canvasDprQuery = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    this.canvasDprQuery.addEventListener('change', this.onCanvasDprChange);
+  }
+
+  private onCanvasDprChange = (): void => {
+    this.watchCanvasDpr();
+    this.markCanvasDirty();
+  };
+
+  private markCanvasDirty(): void {
+    this.pickDirty = true;
+    this.scheduleCanvasDraw();
+  }
+
+  private scheduleCanvasDraw(): void {
+    if (this.canvasDrawRafId != null) return;
+    this.canvasDrawRafId = requestAnimationFrame(() => {
+      this.canvasDrawRafId = undefined;
+      this.drawCanvas();
+    });
+  }
+
+  /** Canvas 2D's `fillStyle`/`strokeStyle` don't accept a raw `var(--x)` string the way an inline
+   *  SVG `style` attribute does -- resolves it to the actual cascaded color via `getComputedStyle`
+   *  first (the same "canvas can't consume var() directly" resolution `<lyra-heatmap>` already
+   *  uses for its own canvas-drawn tokens). `value` untouched when it isn't a bare `var(...)` ref
+   *  (a literal `GraphNode.color`/`GraphLink.color` hex/rgb string already resolves fine as-is). */
+  private resolveCssColorValue(value: string, cs: CSSStyleDeclaration): string {
+    const match = value.match(/^var\((--[\w-]+)/);
+    if (!match) return value;
+    return cs.getPropertyValue(match[1]!).trim() || value;
+  }
+
+  private buildCanvasScene(cs: CSSStyleDeclaration): CanvasScene {
+    const hullFillDefault =
+      cs.getPropertyValue('--lyra-graph-hull-fill').trim() || cs.getPropertyValue('--lyra-color-brand').trim();
+    const hulls = this.visibleCommunities().map((entry) => ({
+      d: hullPathD(this.communityHull(entry.members)),
+      fill: sanitizeNodeColor(entry.community.color) ?? hullFillDefault,
+    }));
+    const linkColorDefault =
+      cs.getPropertyValue('--lyra-link-color').trim() || cs.getPropertyValue('--lyra-color-border').trim();
+    const links = this.simLinks.map((l) => {
+      const coords = this.linkCoordinates(l);
+      const own = sanitizeNodeColor(l.color);
+      return {
+        x1: coords.x1,
+        y1: coords.y1,
+        x2: coords.x2,
+        y2: coords.y2,
+        color: own ? this.resolveCssColorValue(own, cs) : linkColorDefault,
+        width: l.width ?? 1.5,
+        dash: l.dash,
+        directed: l.directed,
+        selected: this.isSelected('link', this.linkKey(l)),
+      };
+    });
+    const edgeLabels =
+      this.showEdgeLabels && this.canvasCamera.k >= this.edgeLabelMinZoom
+        ? this.simLinks
+            .filter((l) => l.label)
+            .map((l) => {
+              const pos = this.edgeLabelPosition(l);
+              const coords = this.linkCoordinates(l);
+              const edgeLength = Math.hypot(coords.x2 - coords.x1, coords.y2 - coords.y1);
+              const tooLong = this.edgeLabelWidth(l.label!) > edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
+              return { x: pos.x, y: pos.y, text: l.label!, tooLong };
+            })
+            .filter((l) => !l.tooLong)
+            .map(({ x, y, text }) => ({ x, y, text }))
+        : [];
+    const nodeFillDefault =
+      cs.getPropertyValue('--lyra-node-fill').trim() || cs.getPropertyValue('--lyra-color-brand').trim();
+    const nodes = this.simNodes.map((n) => {
+      const fill = this.nodeFill(n);
+      return {
+        x: n.x ?? 0,
+        y: n.y ?? 0,
+        r: this.nodeRadius(n),
+        shape: this.nodeShape(n),
+        fill: fill ? this.resolveCssColorValue(fill, cs) : nodeFillDefault,
+        selected: this.isSelected('node', n.id),
+      };
+    });
+    const nodeLabels = this.simNodes
+      .filter((n) => n.label)
+      .map((n) => ({ x: (n.x ?? 0) + this.nodeRadius(n) + 2, y: n.y ?? 0, text: n.label! }));
+    const focusNode = this.focusId != null ? this.simNodes.find((n) => n.id === this.focusId) : undefined;
+    const activeNode =
+      this.activeGraphItem >= 0 && this.activeGraphItem < this.simNodes.length
+        ? this.simNodes[this.activeGraphItem]
+        : undefined;
+    return {
+      hulls,
+      links,
+      edgeLabels,
+      nodes,
+      nodeLabels,
+      focusHalo: focusNode
+        ? { x: focusNode.x ?? 0, y: focusNode.y ?? 0, r: this.nodeRadius(focusNode) + FOCUS_HALO_PADDING }
+        : undefined,
+      keyboardFocusRing: activeNode
+        ? { x: activeNode.x ?? 0, y: activeNode.y ?? 0, r: this.nodeRadius(activeNode) + 4 }
+        : undefined,
+      showNodeLabels: this.canvasCamera.k >= CANVAS_NODE_LABEL_MIN_ZOOM,
+      haloColor:
+        cs.getPropertyValue('--lyra-graph-focus-halo-color').trim() || cs.getPropertyValue('--lyra-color-brand').trim(),
+      selectedColor:
+        cs.getPropertyValue('--lyra-graph-selected-color').trim() || cs.getPropertyValue('--lyra-color-success').trim(),
+      labelColor: cs.getPropertyValue('--lyra-color-text').trim(),
+      labelHaloColor:
+        cs.getPropertyValue('--lyra-graph-edge-label-halo').trim() || cs.getPropertyValue('--lyra-color-surface').trim(),
+      font: `${this.edgeLabelFontPx()}px ${cs.getPropertyValue('--lyra-font').trim() || 'sans-serif'}`,
+    };
+  }
+
+  /** Sizes the backing store to the canvas's own rendered CSS box (`clientWidth`/`clientHeight`,
+   *  themselves stretched to fill the host via `[part="base"]`/`[part="canvas"]`'s `100%` sizing)
+   *  times `devicePixelRatio`, only touching `width`/`height` when the target actually changed --
+   *  reassigning either unconditionally would implicitly clear the canvas and reset its transform
+   *  on every single draw, even a pure pan/zoom repaint. Mirrors `<lyra-heatmap>`'s own DPR-scaled
+   *  backing-store convention (`watchDpr()`/`onDprChange()`), adapted to `setTransform()` (an
+   *  absolute reset) rather than a relative `scale()`, since this canvas -- unlike heatmap's, which
+   *  always resizes its backing store on every draw -- only resizes conditionally. */
+  private drawCanvas(): void {
+    if (!this.canvasEl || !this.canvasCtx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = this.canvasEl.clientWidth || this.width;
+    const h = this.canvasEl.clientHeight || this.height;
+    const backingW = Math.round(w * dpr);
+    const backingH = Math.round(h * dpr);
+    if (this.canvasEl.width !== backingW || this.canvasEl.height !== backingH) {
+      this.canvasEl.width = backingW;
+      this.canvasEl.height = backingH;
+    }
+    const ctx = this.canvasCtx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    drawGraphScene(ctx, this.canvasCamera, this.buildCanvasScene(getComputedStyle(this)));
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // renderer="canvas": color-picking hit-testing, pointer interaction, and the hover tooltip.
+  // ---------------------------------------------------------------------------------------------
+
+  private rebuildPickItems(): void {
+    this.pickItems = [
+      ...this.visibleCommunities().map((entry) => ({ kind: 'hull' as const, entry })),
+      ...this.simLinks.map((link) => ({ kind: 'link' as const, link })),
+      ...this.simNodes.map((node) => ({ kind: 'node' as const, node })),
+    ];
+  }
+
+  private redrawPickCanvas(): void {
+    if (!this.pickCtx || !this.canvasEl || !this.pickCanvas) return;
+    if (this.pickCanvas.width !== this.canvasEl.width || this.pickCanvas.height !== this.canvasEl.height) {
+      this.pickCanvas.width = this.canvasEl.width;
+      this.pickCanvas.height = this.canvasEl.height;
+    }
+    this.rebuildPickItems();
+    const dpr = window.devicePixelRatio || 1;
+    this.pickCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawPickingScene(this.pickCtx, this.canvasCamera, {
+      hulls: this.pickItems
+        .filter((i): i is Extract<(typeof this.pickItems)[number], { kind: 'hull' }> => i.kind === 'hull')
+        .map((i) => ({ d: hullPathD(this.communityHull(i.entry.members)) })),
+      links: this.pickItems
+        .filter((i): i is Extract<(typeof this.pickItems)[number], { kind: 'link' }> => i.kind === 'link')
+        .map((i) => {
+          const c = this.linkCoordinates(i.link);
+          return { x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2, width: i.link.width ?? 1.5 };
+        }),
+      nodes: this.pickItems
+        .filter((i): i is Extract<(typeof this.pickItems)[number], { kind: 'node' }> => i.kind === 'node')
+        .map((i) => ({
+          x: i.node.x ?? 0,
+          y: i.node.y ?? 0,
+          r: this.nodeRadius(i.node) + 2,
+          shape: this.nodeShape(i.node),
+        })),
+    });
+    this.pickDirty = false;
+  }
+
+  private hitTest(clientX: number, clientY: number): (typeof this.pickItems)[number] | undefined {
+    if (!this.canvasEl || !this.pickCtx) return undefined;
+    if (this.pickDirty) this.redrawPickCanvas();
+    const rect = this.canvasEl.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const px = Math.round((clientX - rect.left) * dpr);
+    const py = Math.round((clientY - rect.top) * dpr);
+    if (px < 0 || py < 0 || px >= this.pickCtx.canvas.width || py >= this.pickCtx.canvas.height) return undefined;
+    const data = this.pickCtx.getImageData(px, py, 1, 1).data;
+    const index = pickColorToIndex(data[0]!, data[1]!, data[2]!);
+    return index >= 0 ? this.pickItems[index] : undefined;
+  }
+
+  private bindCanvasZoom(): void {
+    if (!this.d3 || !this.canvasEl) return;
+    this.zoomBehavior = this.d3
+      .zoom<HTMLCanvasElement, unknown>()
+      .scaleExtent([this.minZoom, this.maxZoom])
+      .on('start', () => {
+        // Same self-triggered-echo guard as the svg zoom bind's own 'start' handler above (see its
+        // comment) -- a camera tween's per-frame applyZoomTransform() call fires this synchronously,
+        // and without the guard cancelCameraTween() here would cancel that very tween on its own
+        // first frame.
+        if (this.isApplyingZoomTransform) return;
+        this.isPanning = true;
+        this.cancelCameraTween();
+      })
+      .on('zoom', (event: OptionalPeerApi) => {
+        this.canvasCamera = { k: event.transform.k, x: event.transform.x, y: event.transform.y };
+        this.markCanvasDirty();
+      })
+      .on('end', () => {
+        this.isPanning = false;
+      });
+    this.d3.select(this.canvasEl).call(this.zoomBehavior);
+  }
+
+  private bindCanvasPointer(): void {
+    const canvas = this.canvasEl!;
+    canvas.addEventListener('pointerdown', this.onCanvasPointerDown);
+    canvas.addEventListener('pointermove', this.onCanvasPointerMove);
+    canvas.addEventListener('pointerup', this.onCanvasPointerUp);
+    canvas.addEventListener('pointerleave', this.onCanvasPointerLeave);
+    canvas.addEventListener('dblclick', this.onCanvasDblClick);
+  }
+
+  private onCanvasPointerDown = (e: PointerEvent): void => {
+    if (e.button !== 0) return; // primary button only, matching native `click`'s own semantics
+    this.canvasPointerDownAt = { x: e.clientX, y: e.clientY };
+    if (this.layout === 'layered') return; // drag disabled in layered mode, same as svg mode
+    const hit = this.hitTest(e.clientX, e.clientY);
+    if (hit?.kind === 'node') {
+      this.canvasDragNode = hit.node;
+      this.canvasPointerId = e.pointerId;
+      this.canvasEl!.setPointerCapture(e.pointerId);
+      hit.node.fx = hit.node.x;
+      hit.node.fy = hit.node.y;
+      this.simulation?.alphaTarget(0.3).restart();
+    }
+  };
+
+  private onCanvasPointerMove = (e: PointerEvent): void => {
+    if (this.canvasDragNode && this.canvasPointerId === e.pointerId) {
+      const rect = this.canvasEl!.getBoundingClientRect();
+      this.canvasDragNode.fx = (e.clientX - rect.left - this.canvasCamera.x) / this.canvasCamera.k;
+      this.canvasDragNode.fy = (e.clientY - rect.top - this.canvasCamera.y) / this.canvasCamera.k;
+      this.markCanvasDirty();
+      return;
+    }
+    const hit = this.hitTest(e.clientX, e.clientY);
+    this.updateCanvasTooltip(hit, e.clientX, e.clientY);
+  };
+
+  private onCanvasPointerUp = (e: PointerEvent): void => {
+    // Starting a drag on a node (onCanvasPointerDown) and ending it here without ever crossing the
+    // move-distance threshold below is exactly a plain click -- release the drag state first, but
+    // keep going into the same click-vs-drag distance check every pointerup goes through, instead
+    // of returning early and silently swallowing the click. This mirrors svg mode, where a plain
+    // click on a node fires both d3-drag's own start/end (a no-op, since fx/fy never actually
+    // moved) and the browser's native `click` event -- the two aren't mutually exclusive there
+    // either.
+    if (this.canvasDragNode && this.canvasPointerId === e.pointerId) {
+      this.simulation?.alphaTarget(0);
+      this.canvasDragNode.fx = null;
+      this.canvasDragNode.fy = null;
+      this.canvasDragNode = undefined;
+      this.canvasPointerId = undefined;
+      this.markCanvasDirty();
+    }
+    const down = this.canvasPointerDownAt;
+    this.canvasPointerDownAt = undefined;
+    if (!down) return;
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return; // a pan/drag gesture, not a click
+    const hit = this.hitTest(e.clientX, e.clientY);
+    if (!hit) {
+      this.clearSelection();
+      return;
+    }
+    if (hit.kind === 'node') this.onNodeClick(hit.node, e);
+    else if (hit.kind === 'link') this.onLinkClick(hit.link, e);
+    else this.onCommunityClick(hit.entry.community);
+  };
+
+  private onCanvasPointerLeave = (): void => {
+    this.updateCanvasTooltip(undefined, 0, 0);
+  };
+
+  private onCanvasDblClick = (e: MouseEvent): void => {
+    const hit = this.hitTest(e.clientX, e.clientY);
+    if (hit?.kind !== 'node') return; // background dblclick still reaches d3-zoom's own zoom-in, same as svg mode
+    // d3-zoom's own default double-click-to-zoom-in handler is bound to this identical <canvas>
+    // element (not an ancestor, so plain stopPropagation() -- which only blocks *bubbling*, not a
+    // sibling listener on the very same target -- would not suppress it). Matches svg mode's own
+    // onNodeDblClick(), which stops the equivalent bubble-phase echo on the svg one level up.
+    e.stopImmediatePropagation();
+    this.emit('lyra-node-expand', { id: hit.node.id });
+  };
+
+  private updateCanvasTooltip(hit: (typeof this.pickItems)[number] | undefined, clientX: number, clientY: number): void {
+    if (!this.canvasTooltipEl) return;
+    if (!hit || hit.kind === 'hull') {
+      this.canvasTooltipEl.setAttribute('hidden', '');
+      return;
+    }
+    const rect = this.canvasEl!.getBoundingClientRect();
+    this.canvasTooltipEl.textContent =
+      hit.kind === 'node' ? this.nodeAccessibleText(hit.node) : this.linkAccessibleText(hit.link);
+    this.canvasTooltipEl.style.insetInlineStart = `${clientX - rect.left}px`;
+    this.canvasTooltipEl.style.insetBlockStart = `${clientY - rect.top}px`;
+    this.canvasTooltipEl.removeAttribute('hidden');
+  }
+
   private isSelected(kind: 'node' | 'link', id: string): boolean {
     return kind === 'node' ? this.selectedNodeIds.includes(id) : this.selectedLinkIds.includes(id);
   }
@@ -823,6 +1233,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // node/link querySelectorAll scan on that is equivalent to "structurally
     // changed" without needing a separate flag.
     this.applyInteractions(changed);
+    this.applyCanvasInteractions();
     if (this.focusId == null) {
       this.lastAppliedFocusId = null;
     } else if (this.focusId !== this.lastAppliedFocusId && this.simNodes.some((n) => n.id === this.focusId)) {
@@ -864,6 +1275,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    */
   private applyInteractions(changed: PropertyValues): void {
     if (!this.d3) return;
+    if (this.renderer !== 'svg') return;
 
     const svgEl = this.renderRoot.querySelector('svg');
     if (svgEl && svgEl !== this.zoomedEl) {
@@ -962,6 +1374,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         );
       });
     }
+  }
+
+  /** The `renderer="canvas"` twin of `applyInteractions()`'s svg zoom-bind branch -- binds d3-zoom
+   *  and the pointer/hit-testing handlers to the just-rendered `<canvas>` once (guarded by the same
+   *  `zoomedEl` field `applyInteractions()` uses, so `focusNode()`/`fit()`/`tweenCamera()` keep
+   *  working unmodified against whichever element -- svg or canvas -- is currently bound), then
+   *  marks the canvas dirty on every call so any structural/style-affecting change (new nodes/
+   *  links, a selection change, a hiddenTypes toggle, ...) schedules a fresh draw the same way a
+   *  Lit re-render already does for svg mode. */
+  private applyCanvasInteractions(): void {
+    if (this.renderer !== 'canvas' || !this.canvasEl) return;
+    if (this.canvasEl !== this.zoomedEl) {
+      this.zoomedEl = this.canvasEl;
+      this.setUpCanvasSurface();
+    }
+    this.markCanvasDirty();
   }
 
   /**
@@ -1064,6 +1492,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         labelEl.setAttribute('y', String(hullTopY(hull) - HULL_PADDING));
       }
     });
+    // renderer="canvas" mode has no DOM to write positions straight to (everything above this line
+    // no-ops there: nodeEls/linkEls/etc. are only ever populated by applyInteractions()'s svg-only
+    // branch) -- schedule a fresh draw off the same simulation tick instead, so the settle
+    // animation and a live node drag actually repaint the canvas rather than freezing at whatever
+    // was last drawn on mount.
+    if (this.renderer === 'canvas') this.markCanvasDirty();
   }
 
   private rebuildSimulation(): void {
@@ -1479,11 +1913,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.activeGraphItem = normalized;
     this.graphLiveText = this.graphItemAnnouncement(normalized);
     void this.updateComplete.then(() => {
-      const items = [
-        ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
-        ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
-        ...Array.from(this.renderRoot.querySelectorAll('[part="hull"]')),
-      ] as HTMLElement[];
+      // renderer="canvas" has no [part="node"]/[part="link"]/[part="hull"] elements at all -- the
+      // roving tab stop lives on the offscreen [part="cursor-item"] buttons instead (see render()),
+      // in the same flat nodes-then-links-then-hulls order.
+      const items = (
+        this.renderer === 'canvas'
+          ? Array.from(this.renderRoot.querySelectorAll('[part="cursor-item"]'))
+          : [
+              ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
+              ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
+              ...Array.from(this.renderRoot.querySelectorAll('[part="hull"]')),
+            ]
+      ) as HTMLElement[];
       items[normalized]?.focus();
     });
   }
@@ -1543,6 +1984,96 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     if (!this.nodes.length) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
+    }
+    if (this.renderer === 'canvas') {
+      return html`
+        <div part="base">
+          <canvas
+            part="canvas"
+            role="group"
+            aria-label=${this.accessibleLabel ||
+            this.localize('graphDiagram', undefined, {
+              nodeCount: this.simNodes.length,
+              linkCount: this.simLinks.length,
+            })}
+            tabindex=${this.graphItemCount() ? '-1' : '0'}
+          ></canvas>
+          <div part="tooltip" hidden></div>
+          <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            ${this.graphLiveText ||
+            (this.normalizedGraphItem() >= 0 ? this.graphItemAnnouncement(this.normalizedGraphItem()) : '')}
+          </div>
+          <ul part="data-list" class="sr-only" aria-label=${this.localize('graphDataList')}>
+            ${this.simNodes.map(
+              (node) => html`<li>${this.localize('graphNode', undefined, { label: this.nodeAccessibleText(node) })}</li>`,
+            )}
+            ${this.simLinks.map((link) => html`<li>${this.linkAccessibleText(link)}</li>`)}
+            ${this.visibleCommunities().map(
+              (entry) =>
+                html`<li>${this.localize('graphCommunity', undefined, {
+                  label: entry.community.label ?? entry.community.id,
+                  count: entry.members.length,
+                })}</li>`,
+            )}
+          </ul>
+          <div
+            part="cursor-items"
+            class="sr-only"
+            @keydown=${(e: KeyboardEvent) => {
+              // Escape-clears-selection lives here (not on the canvas itself) because keydown from
+              // a focused cursor-item bubbles up through this container, never through the canvas
+              // -- the cursor-items list is canvas's sibling, not its descendant. Mirrors the svg
+              // template's own root-level Escape handler; each cursor-item's own onGraphKeyDown()
+              // (Enter/Space/arrows/Home/End) leaves Escape unhandled the same way a node/link
+              // element does, so it bubbles here.
+              if (e.key === 'Escape') this.clearSelection();
+            }}
+          >
+            ${this.simNodes.map(
+              (n, i) => html`
+                <button
+                  part="cursor-item"
+                  tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
+                  aria-label=${this.nodeAccessibleText(n)}
+                  @focus=${() => this.onGraphItemFocus(i)}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, i, (ev) => this.onNodeClick(n, ev))}
+                  @click=${(e: MouseEvent) => this.onNodeClick(n, e)}
+                ></button>
+              `,
+            )}
+            ${this.simLinks.map((l, li) => {
+              const i = this.simNodes.length + li;
+              return html`
+                <button
+                  part="cursor-item"
+                  tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
+                  aria-label=${this.linkAccessibleText(l)}
+                  @focus=${() => this.onGraphItemFocus(i)}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, i, (ev) => this.onLinkClick(l, ev))}
+                  @click=${(e: MouseEvent) => this.onLinkClick(l, e)}
+                ></button>
+              `;
+            })}
+            ${this.visibleCommunities().map((entry, hi) => {
+              const i = this.simNodes.length + this.simLinks.length + hi;
+              const label = this.localize('graphCommunity', undefined, {
+                label: entry.community.label ?? entry.community.id,
+                count: entry.members.length,
+              });
+              return html`
+                <button
+                  part="cursor-item"
+                  tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
+                  aria-label=${label}
+                  @focus=${() => this.onGraphItemFocus(i)}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, i, () => this.onCommunityClick(entry.community))}
+                  @click=${() => this.onCommunityClick(entry.community)}
+                ></button>
+              `;
+            })}
+          </div>
+        </div>
+      `;
     }
     return html`
       <div part="base">

@@ -1615,6 +1615,205 @@ describe('layered layout (J7)', () => {
   });
 });
 
+describe('canvas renderer — static draw', () => {
+  async function mountCanvas(): Promise<LyraGraph> {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(50); // let the draw rAF fire
+    return el;
+  }
+
+  it('defaults renderer to svg', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    expect(el.renderer).to.equal('svg');
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  });
+
+  it('renderer="canvas" renders a canvas element instead of an svg, no [part="node"]/[part="link"] elements', async () => {
+    const el = await mountCanvas();
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect(el.shadowRoot!.querySelector('svg')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="node"]')).to.not.exist;
+  });
+
+  it('sizes the backing store to CSS size * devicePixelRatio', async () => {
+    const el = await mountCanvas();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const dpr = window.devicePixelRatio || 1;
+    expect(canvas.width).to.equal(Math.round(canvas.clientWidth * dpr));
+    expect(canvas.height).to.equal(Math.round(canvas.clientHeight * dpr));
+  });
+
+  it('every event/method/prop still works identically in canvas mode (selectionMode, hiddenTypes, showEdgeLabels)', async () => {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" show-edge-labels selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = [{ source: 'a', target: 'b', label: 'cites' }];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const ok = await el.focusNode('a');
+    expect(ok).to.be.true;
+  });
+
+  it('is accessible in canvas mode', async () => {
+    const el = await mountCanvas();
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: renderer unset renders the untouched svg path', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  });
+});
+
+describe('canvas renderer — interaction and a11y', () => {
+  async function mountCanvas(): Promise<LyraGraph> {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(400); // let the force layout settle so node positions are stable for hit-testing
+    return el;
+  }
+
+  it('clicking a node (via pointer hit-test) emits lyra-node-click, same detail shape as svg mode', async () => {
+    const el = await mountCanvas();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const target = el.simNodes[0]!;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = rect.left + target.x!;
+    const clientY = rect.top + target.y!;
+    let detail: { id: string } | undefined;
+    el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerId: 1 }));
+    canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX, clientY, pointerId: 1 }));
+    expect(detail).to.deep.equal({ id: target.id });
+  });
+
+  it('clicking empty canvas space with no hit clears the selection when selectionMode is set', async () => {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" selection-mode="single" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(400);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
+    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientX: rect.left + 399, clientY: rect.top + 299, pointerId: 2 }),
+    );
+    canvas.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true, clientX: rect.left + 399, clientY: rect.top + 299, pointerId: 2 }),
+    );
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
+  });
+
+  it('dblclick on a node emits lyra-node-expand in canvas mode too', async () => {
+    const el = await mountCanvas();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const target = el.simNodes[0]!;
+    const rect = canvas.getBoundingClientRect();
+    let detail: { id: string } | undefined;
+    el.addEventListener('lyra-node-expand', (e) => (detail = (e as CustomEvent).detail));
+    canvas.dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true, clientX: rect.left + target.x!, clientY: rect.top + target.y! }),
+    );
+    expect(detail).to.deep.equal({ id: target.id });
+  });
+
+  it('shows a hover tooltip with the item label on pointer hover, hides it off-item', async () => {
+    const el = await mountCanvas();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const target = el.simNodes[0]!;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: rect.left + target.x!,
+        clientY: rect.top + target.y!,
+        pointerId: 3,
+      }),
+    );
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hasAttribute('hidden')).to.be.false;
+    // nodeAccessibleText() is private -- read it via the same `unknown` cast this file already
+    // uses elsewhere for private-member assertions, to compute the exact expected label.
+    const expectedLabel = (el as unknown as { nodeAccessibleText: (n: unknown) => string }).nodeAccessibleText(target);
+    expect(tooltip.textContent).to.equal(expectedLabel);
+
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { bubbles: true, clientX: rect.left + 399, clientY: rect.top + 299, pointerId: 3 }),
+    );
+    expect(tooltip.hasAttribute('hidden')).to.be.true;
+  });
+
+  it('renders one offscreen cursor-item button per node/link, in the same roving order as svg mode, driving the same keyboard/announcement logic', async () => {
+    const el = await mountCanvas();
+    const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')] as HTMLButtonElement[];
+    expect(items).to.have.length(3); // 2 nodes + 1 link
+    expect(items.filter((i) => i.getAttribute('tabindex') === '0')).to.have.length(1);
+    items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect(items[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.not.equal('');
+  });
+
+  it('Enter/Space on a cursor-item activates the same click handler as pointer interaction', async () => {
+    const el = await mountCanvas();
+    const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')] as HTMLButtonElement[];
+    let detail: { id: string } | undefined;
+    el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
+    items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(detail).to.deep.equal({ id: el.simNodes[0]!.id });
+  });
+
+  it('is accessible with interactions and a selection applied in canvas mode', async () => {
+    const el = (await fixture(
+      html`<lyra-graph renderer="canvas" selection-mode="multiple" width="400" height="300" style="width:400px;height:300px"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await expect(el).to.be.accessible();
+  });
+
+  it('starts in the shared loading state before any renderer-specific markup, same as svg mode', () => {
+    // The existing peer-missing fallback (graph-loader.ts's console.warn path) is renderer-
+    // agnostic -- render()'s loading branch is checked before the renderer==='canvas' branch, and
+    // this.loading never resolves false without this.d3, so canvas mode shows the same loading
+    // skeleton, never a partially-initialized canvas. Asserted on the class-field default directly
+    // (rather than after an async fixture()+mount) because this file has, by this point, already
+    // resolved the module-level lazy d3 loader for earlier tests -- a fresh element's loadD3()
+    // .then() callback could plausibly settle before a later assertion runs, making "still loading
+    // right after mount" an unreliable thing to assert on here specifically.
+    const el = document.createElement('lyra-graph') as LyraGraph;
+    el.renderer = 'canvas';
+    expect((el as unknown as { loading: boolean }).loading).to.be.true;
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [

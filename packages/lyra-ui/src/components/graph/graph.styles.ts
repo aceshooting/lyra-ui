@@ -4,10 +4,45 @@ export const styles = css`
   :host {
     display: block;
   }
+  [part='base'] {
+    position: relative;
+    inline-size: 100%;
+    block-size: 100%;
+  }
   svg {
     display: block;
     inline-size: 100%;
     block-size: 100%;
+  }
+  [part='canvas'] {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    touch-action: none;
+  }
+  [part='canvas']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: var(--lyra-focus-ring-offset);
+  }
+  [part='tooltip'] {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    pointer-events: none;
+    background: var(--lyra-color-surface);
+    color: var(--lyra-color-text);
+    font-size: var(--lyra-font-size-2xs);
+    font-family: var(--lyra-font);
+    padding-block: var(--lyra-size-2px);
+    padding-inline: var(--lyra-size-6px);
+    border-radius: var(--lyra-radius-xs);
+    border: var(--lyra-size-1px) solid var(--lyra-color-border);
+    z-index: var(--lyra-layer-content);
+    transform: translate(var(--lyra-size-6px), calc(-100% - var(--lyra-size-6px)));
+    white-space: nowrap;
+  }
+  [part='tooltip'][hidden] {
+    display: none;
   }
   [part='link'] {
     stroke: var(--lyra-link-color, var(--lyra-color-border));
