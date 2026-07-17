@@ -463,6 +463,7 @@
     "epubjs": "^0.3.93",
     "ical.js": "^2.2.1",
     "jszip": "^3.10.1",
+    "katex": "^0.17.0",
     "libphonenumber-js": ">=1.11.0 <2",
     "mammoth": "^1.12.0",
     "maplibre-gl": "^5.24.0",
@@ -515,6 +516,9 @@
       "optional": true
     },
     "jszip": {
+      "optional": true
+    },
+    "katex": {
       "optional": true
     },
     "libphonenumber-js": {
@@ -576,6 +580,7 @@
     "epubjs": "^0.3.93",
     "ical.js": "^2.2.1",
     "jszip": "^3.10.1",
+    "katex": "^0.17.0",
     "libphonenumber-js": "^1.13.8",
     "mammoth": "^1.12.0",
     "maplibre-gl": "^5.24.0",

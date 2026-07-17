@@ -3,6 +3,13 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
+import { srOnly } from '../../internal/a11y.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
+import { Slugger } from '../../internal/slugger.js';
+import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../internal/anchor-target.js';
+import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../internal/text-quote.js';
+import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../internal/text-highlights.js';
+import type { LyraAnchor, LyraAnchorKind, LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { loadMarkdownDeps, getMarkdownDepsIfLoaded, type MarkdownDeps } from './markdown-loader.js';
 import {
   loadShikiHighlighter,
@@ -14,6 +21,7 @@ import {
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
 } from '../code-block/code-loader.js';
+import { getKatex, type KatexApi } from './katex-loader.js';
 import { styles } from './markdown.styles.js';
 
 const HTML_ESCAPES: Record<string, string> = {
@@ -57,6 +65,96 @@ interface PendingHighlight {
   code: string;
 }
 
+/** One entry of `getHeadingTree()`'s document-ordered outline. `level` already reflects
+ *  `heading-offset` -- it always matches the rendered `<h${level}>` tag, not the source `#` count. */
+export interface MarkdownHeadingItem {
+  id: string;
+  label: string;
+  level: number;
+}
+
+/** Every `LyraHighlightTone`, used to always call `HighlightHandle.setRanges()` once per tone on
+ *  every repaint (with an empty array for an unused tone) -- `setRanges()` replaces a tone's ranges
+ *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
+ *  clear whatever it painted last pass. */
+const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
+
+// -- math (KaTeX) -----------------------------------------------------------------------------
+
+/** Resolved once per page and reused by every `<lyra-markdown>` instance, mirroring
+ *  `markdown-loader.ts`'s own "warm cache" shape: `undefined` means no load has been kicked off
+ *  yet, `null` a load finished but the peer isn't installed, and it's set to `null` synchronously
+ *  the instant a load starts as an in-flight marker so a second concurrent instance never kicks off
+ *  a duplicate `getKatex()` call. */
+let resolvedKatex: KatexApi | null | undefined;
+
+/** Whether `getKatex()` has already been kicked off, module-wide -- kept separate from
+ *  `resolvedKatex` so "a load is in flight" and "a load finished and the peer is confirmed
+ *  missing" stay distinguishable (both would otherwise collapse to the same falsy `null`). */
+let katexLoadStarted = false;
+
+/** Test-only override bypassing the real dynamic `import('katex')` and the module cache above
+ *  entirely -- `undefined` (the default) defers to `resolvedKatex`. */
+let katexOverride: KatexApi | null | undefined;
+
+/** @internal Test-only seam: forces `math` rendering to behave as if `katex` resolved to `katex`
+ *  (or, with `null`, as if the optional peer failed to load). Pass `undefined` to restore the real
+ *  `getKatex()`-driven behavior. */
+export function __setKatexForTesting(katex: KatexApi | null | undefined): void {
+  katexOverride = katex;
+}
+
+function getKatexIfLoaded(): KatexApi | null {
+  return katexOverride !== undefined ? katexOverride : (resolvedKatex ?? null);
+}
+
+/** Whether the `katex` load has definitively finished with no peer available -- distinct from
+ *  `getKatexIfLoaded()` returning falsy, which also covers a load that's merely still in flight
+ *  (the state a math token's render-time literal fallback uses regardless of which case it is).
+ *  Used only to decide whether a literal fallback should also report `lyra-render-error`. */
+function isKatexConfirmedMissing(): boolean {
+  return (katexOverride !== undefined ? katexOverride : resolvedKatex) === null;
+}
+
+const MATH_BLOCK_RE = /^\$\$([^\n]+?)\$\$/;
+const MATH_INLINE_RE = /^\$((?:\\\$|[^$\s])(?:\\\$|[^$])*?)\$(?!\$)/;
+
+interface MathToken {
+  type: 'math';
+  raw: string;
+  tex: string;
+  display: boolean;
+}
+
+/** A marked inline-level extension recognizing `$...$` and `$$...$$` TeX. Tokenizing is
+ *  synchronous (matching marked's own parse pass); actual KaTeX rendering happens in `renderMath`
+ *  against whatever `getKatexIfLoaded()` already has resolved -- mirroring this component's
+ *  existing two-phase pattern for fenced-code highlighting (`code()` returns a plain placeholder
+ *  first; the real highlighted markup arrives one render later once shiki resolves). `renderer` is
+ *  bundled directly into this same extension object (not marked's separate top-level `.use({
+ *  renderer })` override hook -- that hook only recognizes the *built-in* renderer method names;
+ *  a custom token type introduced via `.use({ extensions })` supplies its own renderer the same way). */
+function mathExtension(renderMath: (token: MathToken) => string) {
+  return {
+    name: 'math',
+    level: 'inline' as const,
+    start(src: string): number | undefined {
+      const index = src.indexOf('$');
+      return index === -1 ? undefined : index;
+    },
+    tokenizer(src: string): MathToken | undefined {
+      const block = MATH_BLOCK_RE.exec(src);
+      if (block) return { type: 'math', raw: block[0], tex: block[1].trim(), display: true };
+      const inline = MATH_INLINE_RE.exec(src);
+      if (inline) return { type: 'math', raw: inline[0], tex: inline[1].replace(/\\\$/g, '$').trim(), display: false };
+      return undefined;
+    },
+    renderer(token: OptionalPeerApi): string {
+      return renderMath(token as MathToken);
+    },
+  };
+}
+
 /**
  * Rewrites shiki's generated `<pre>`/`<code>` hast nodes so the highlighted output keeps
  * `<lyra-markdown>`'s own `part="code-block"` hook and a `language-${lang}` class on `<code>` --
@@ -84,10 +182,13 @@ function markdownCodeTransformer(lang: string) {
   };
 }
 
-export interface LyraMarkdownEventMap {
+export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
   'lyra-render-error': CustomEvent<{ error: unknown }>;
   'lyra-link-click': CustomEvent<{ href: string; internal: boolean }>;
 }
+
+class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
+
 /**
  * `<lyra-markdown>` — sanitized Markdown-to-HTML rendering (GFM tables,
  * fenced code blocks, links, blockquotes) built on the optional peer
@@ -131,13 +232,36 @@ export interface LyraMarkdownEventMap {
  * once shiki resolves. No highlighting is attempted while `streaming` is `true` — it applies once a
  * stream settles, so there is no added per-chunk cost while content is still arriving.
  *
+ * When `heading-anchors` is set, every rendered heading's slug (computed via the shared
+ * GitHub-slugger-style `Slugger`) is stamped as its `id`; `getHeadingTree()` computes that same
+ * outline on every parse regardless of `heading-anchors`, so a host can build a table of contents
+ * even while ids aren't in the DOM yet. `scrollToAnchor()` (from the adopted `DocumentAnchorTarget`
+ * mixin) resolves `fragment` anchors against that outline and `text-quote` anchors via
+ * `internal/text-quote.ts`'s shared scope/resolve helpers; `highlights` re-resolve by quote after
+ * every render (never by node identity), so a highlight painted before a `streaming` update
+ * finishes still finds its quote once the matching text arrives. Highlight painting uses
+ * `internal/text-highlights.ts`'s `acquireHighlightHandle()` -- the CSS Custom Highlight API where
+ * the browser supports it (no DOM mutation at all), a `<mark>`-wrap fallback otherwise.
+ *
+ * `math` renders `$...$`/`$$...$$` TeX as MathML via the optional `katex` peer's
+ * `renderToString(tex, { output: 'mathml' })` -- MathML Core renders natively and accessibly in
+ * evergreen browsers with no extra stylesheet or webfont needing to cross the shadow boundary. A
+ * missing `katex` peer renders the literal, unparsed TeX source (delimiters included) and fires one
+ * `lyra-render-error`.
+ *
  * @customElement lyra-markdown
  * @event lyra-link-click - Fired (and the click prevented) when a rendered
  *   link's `href` starts with `internal-link-prefix`. `detail: { href:
  *   string, internal: true }`. Ordinary external links navigate normally
  *   (in `link-target`) and never fire this event.
  * @event lyra-render-error - Fired whenever rendering falls back to plain
- *   text. `detail: { error: unknown }`.
+ *   text, or `math` is set but the `katex` peer isn't installed. `detail: { error: unknown }`.
+ * @event lyra-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
+ * @event lyra-text-select - Fired on selection end inside the rendered content. `detail: { text,
+ *   anchor, rects }`; `anchor` is a `text-quote` `LyraAnchor` scoped to the rendered content, or
+ *   `null` if the selection couldn't be anchored.
+ * @event lyra-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ *   call is applied. `detail: { found }`.
  * @csspart content - The wrapper around the rendered (or plain-text
  *   fallback) output.
  * @csspart heading - Every rendered `<h1>`–`<h6>` (shifted by
@@ -150,9 +274,10 @@ export interface LyraMarkdownEventMap {
  * @csspart table - Every rendered `<table>`.
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
+ * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
  */
-export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
-  static styles = [LyraElement.styles, styles];
+export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
+  static styles = [LyraElement.styles, styles, srOnly];
 
   /** The Markdown source to render. */
   @property() content = '';
@@ -238,6 +363,25 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
    *  also set. */
   @property({ type: Boolean, attribute: 'languages-only' }) languagesOnly = false;
 
+  /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
+   *  same slugs regardless of this property -- it only controls whether the `id` attribute is
+   *  emitted into the rendered DOM. `false` (the default) preserves today's exact output.
+   *
+   *  When `sanitize` is also on (the default), a slug whose *value* collides with a real
+   *  `document` property name (e.g. a heading literally titled "Title", "Location", or "Forms"
+   *  slugs to `title`/`location`/`forms`) has its `id` silently stripped by DOMPurify's DOM-
+   *  clobbering protection (`SANITIZE_DOM`) -- `getHeadingTree()` still reports that heading's slug
+   *  either way, but `scrollToAnchor({ kind: 'fragment', id })` still resolves it correctly even
+   *  without a DOM `id` present, via its own position-based fallback lookup. */
+  @property({ type: Boolean, attribute: 'heading-anchors' }) headingAnchors = false;
+
+  /** Renders `$...$`/`$$...$$` TeX via the optional `katex` peer, as MathML. `false` (the
+   *  default) renders `$...$` literally, unparsed -- today's exact output. */
+  @property({ type: Boolean }) math = false;
+
+  /** Anchor kinds this component resolves via `scrollToAnchor()`. Readonly. */
+  readonly anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote'];
+
   // `null` covers both "the optional peers are still loading" and "a render
   // attempt just fell back after a failure" — the two states intentionally
   // look identical (plain text, see render()) since a consumer distinguishes
@@ -245,6 +389,23 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
   @state() private renderedHtml: string | null = null;
 
   private deps?: MarkdownDeps;
+
+  /** Document-ordered heading outline computed on every parse (see `getHeadingTree()`), regardless
+   *  of `headingAnchors`. */
+  private headingTree: MarkdownHeadingItem[] = [];
+
+  /** Lazily acquired the first time a highlight needs painting; released on disconnect. */
+  private highlightHandle?: HighlightHandle;
+
+  /** The most recently resolved `text-quote` highlight ranges, kept for `onContentClick()`'s
+   *  coordinate hit-test -- the CSS Custom Highlight API paints ranges without creating any DOM
+   *  element to attach a click listener to, so activation is resolved by comparing the click point
+   *  against each range's own `getClientRects()` instead, uniformly across both paint paths. */
+  private resolvedHighlightRanges: { id: string; range: Range }[] = [];
+
+  /** Guards `lyra-render-error` so a permanently-missing `katex` peer reports once per instance,
+   *  not on every subsequent re-render while `math` stays on. Reset whenever `math` toggles. */
+  private mathFailureReported = false;
 
   /** `(lang, code)` -> already-highlighted HTML, content-addressed (see `PendingHighlight`'s doc).
    *  Persists across renders of this instance; populated asynchronously by `highlightPending()`.
@@ -297,11 +458,31 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     });
   }
 
+  disconnectedCallback(): void {
+    super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
+    this.highlightHandle?.release();
+    this.highlightHandle = undefined;
+  }
+
+  /** Binds selection -> `lyra-text-select` once, on the stable `[part="content"]` wrapper --
+   *  re-renders only replace that wrapper's children via `unsafeHTML`, never the wrapper itself.
+   *  `bindTextSelection` is `protected` on the mixin's own narrowed return type (deliberately not
+   *  part of `LyraAnchorTarget`'s public surface -- see `anchor-target.ts`'s class doc), so it's
+   *  reached the same way that module's own tests do: through a cast, without declaring a no-op
+   *  passthrough override just to satisfy the type checker. */
+  protected firstUpdated(): void {
+    const contentRoot = this.renderRoot.querySelector('[part="content"]');
+    if (!contentRoot) return;
+    (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(contentRoot);
+  }
+
   // Runs before render (not updated()) so mutating the `renderedHtml` state
   // property below is absorbed into the *same* update cycle instead of
   // scheduling a second one -- Lit's documented pattern for deriving one
   // reactive property from a change to others.
   protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
+    if (changed.has('math')) this.mathFailureReported = false;
     if (!this.deps) {
       // Still loading the optional peers — the connectedCallback promise
       // above calls renderMarkdown() itself once they resolve, using
@@ -315,17 +496,23 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
       changed.has('linkTarget') ||
       changed.has('headingOffset') ||
       changed.has('escapeHtml') ||
-      changed.has('streaming')
+      changed.has('streaming') ||
+      changed.has('headingAnchors') ||
+      changed.has('math')
     ) {
       this.renderMarkdown();
     }
   }
 
-  protected updated(): void {
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (this.deps && !this.streaming) {
       this.removeAttribute('aria-busy');
     } else {
       this.setAttribute('aria-busy', 'true');
+    }
+    if (changed.has('renderedHtml') || changed.has('highlights') || changed.has('activeHighlightId')) {
+      this.repaintHighlights();
     }
   }
 
@@ -342,18 +529,30 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     }
 
     const pendingKeys: PendingHighlight[] = [];
+    const headingTree: MarkdownHeadingItem[] = [];
     let rawHtml: string;
+    let hadMathFallback: boolean;
     try {
-      rawHtml = this.parseMarkdown(deps.marked, pendingKeys);
+      const parsed = this.parseMarkdown(deps.marked, pendingKeys, headingTree);
+      rawHtml = parsed.html;
+      hadMathFallback = parsed.hadMathFallback;
     } catch (error) {
       this.applyFallback(error);
       return;
     }
+    this.headingTree = headingTree;
+    this.maybeLoadKatex();
+    // A math token rendering its literal fallback only means the `katex` peer is *confirmed*
+    // missing once loading has actually settled -- otherwise this is just the same one-microtask
+    // "still loading" window every other optional peer here has, and reporting it as an error
+    // would be a false positive.
+    const mathFailed = hadMathFallback && isKatexConfirmedMissing();
 
     if (!this.sanitize) {
       // Consumer explicitly opted out of sanitization — dompurify's
       // presence or absence is irrelevant to this path.
       this.renderedHtml = rawHtml;
+      if (mathFailed) this.reportMathFailure();
       this.maybeHighlightPending(pendingKeys);
       return;
     }
@@ -376,13 +575,51 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     // 'style' joins 'target' in the added-attribute allowlist -- shiki's per-token output carries
     // inline style="color:..." (theme colors), which isn't in DOMPurify's default attribute
     // allowlist any more than 'target' was.
-    this.renderedHtml = deps.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'style'] });
+    // `semantics`/`annotation` join the allowlist only when `math` is on -- the only KaTeX MathML
+    // output elements outside DOMPurify's default allowlist. `annotation-xml` is deliberately never
+    // added -- KaTeX's own MathML output never emits it, and DOMPurify's default allowlist already
+    // treats it as a namespace-switching element worth keeping stripped.
+    this.renderedHtml = deps.DOMPurify.sanitize(rawHtml, {
+      ADD_ATTR: ['target', 'style'],
+      ...(this.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
+    });
+    if (mathFailed) this.reportMathFailure();
     this.maybeHighlightPending(pendingKeys);
   }
 
   private applyFallback(error: unknown): void {
     this.renderedHtml = null;
     this.emit('lyra-render-error', { error });
+  }
+
+  /** Kicks off the shared `katex` load the first time `math` needs it and no attempt is already
+   *  in flight (module-scoped, so every `<lyra-markdown>` instance on the page shares one load --
+   *  mirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under
+   *  `__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never
+   *  race a real, unmocked `import('katex')` settling underneath it. */
+  private maybeLoadKatex(): void {
+    if (!this.math || katexLoadStarted || katexOverride !== undefined) return;
+    katexLoadStarted = true;
+    void getKatex().then((katex) => {
+      resolvedKatex = katex;
+      if (!this.isConnected) return;
+      this.renderMarkdown();
+    });
+  }
+
+  /** Fires `lyra-render-error` once per instance for a permanently-missing `katex` peer. Called
+   *  only once `renderMarkdown()` has confirmed the peer is actually missing (`katexOverride` or
+   *  the resolved module is `null`) -- a math token rendering its literal fallback while the load
+   *  is merely still in flight (the same one-microtask transient window every other optional peer
+   *  in this component has) never reports an error on its own. */
+  private reportMathFailure(): void {
+    if (this.mathFailureReported) return;
+    this.mathFailureReported = true;
+    this.emit('lyra-render-error', {
+      error: new Error(
+        '<lyra-markdown> needs the optional peer dependency `katex` to render math (the `math` property is set) — install it with `pnpm add katex`.',
+      ),
+    });
   }
 
   /** Kicks off async highlighting for `pendingKeys` (see `highlightPending()`) unless there's
@@ -455,7 +692,11 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     this.renderMarkdown();
   }
 
-  private parseMarkdown(marked: OptionalPeerApi, pendingKeys: PendingHighlight[]): string {
+  private parseMarkdown(
+    marked: OptionalPeerApi,
+    pendingKeys: PendingHighlight[],
+    headingTreeOut: MarkdownHeadingItem[],
+  ): { html: string; hadMathFallback: boolean } {
     // Falsy (`null` or `''`) means the consumer explicitly opted out of
     // target="..."/rel="..." on rendered links -- see the linkTarget doc.
     // The default '_blank' is already truthy, so this preserves today's
@@ -471,7 +712,33 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     const highlightCodeOption = this.highlightCode && !this.streaming;
     const highlightCache = this.highlightCache;
     const failedHighlightKeys = this.failedHighlightKeys;
+    const headingAnchorsOption = this.headingAnchors;
+    const slugger = new Slugger();
+    const mathOption = this.math;
+    const cachedKatex = mathOption ? getKatexIfLoaded() : null;
+    let hadMathFallback = false;
     const instance = new marked.Marked();
+    if (mathOption) {
+      instance.use({
+        extensions: [
+          mathExtension((token) => {
+            if (!cachedKatex) {
+              hadMathFallback = true;
+              return escapeHtml(token.display ? `$$${token.tex}$$` : `$${token.tex}$`);
+            }
+            try {
+              const mathml = cachedKatex.renderToString(token.tex, { output: 'mathml', throwOnError: false });
+              return `<span part="math" data-display="${token.display ? 'block' : 'inline'}">${mathml}</span>`;
+            } catch {
+              // throwOnError: false already handles a malformed-TeX render internally (KaTeX's own
+              // inline error form); this catch only guards against an unexpected non-KaTeX failure,
+              // e.g. a broken/incompatible peer version -- same literal fallback, no event fired.
+              return escapeHtml(token.display ? `$$${token.tex}$$` : `$${token.tex}$`);
+            }
+          }),
+        ],
+      });
+    }
     // A fresh renderer per parse (rather than a shared/cached one) so it
     // always closes over the *current* `linkTarget`/`headingOffset` — these
     // properties can change between renders, and marked's `.use()` otherwise
@@ -485,7 +752,13 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
           // since headingOffset is meant to be additive-only (0 is the only
           // documented non-positive value).
           const depth = Math.min(6, Math.max(1, token.depth + headingOffset));
-          return `<h${depth} part="heading">${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
+          // Rendered through the plain textRenderer so markup never leaks into the slug -- an
+          // inline <code>/<em> inside a heading collapses to plain text for slugging purposes.
+          const label = this.parser.parseInline(token.tokens, this.parser.textRenderer) as string;
+          const slug = slugger.slug(label);
+          headingTreeOut.push({ id: slug, label, level: depth });
+          const idAttr = headingAnchorsOption && slug ? ` id="${escapeHtml(slug)}"` : '';
+          return `<h${depth} part="heading"${idAttr}>${this.parser.parseInline(token.tokens)}</h${depth}>\n`;
         },
         paragraph(this: OptionalPeerApi, token: OptionalPeerApi) {
           return `<p part="paragraph">${this.parser.parseInline(token.tokens)}</p>\n`;
@@ -569,13 +842,140 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
         },
       },
     });
-    return instance.parse(this.content, { gfm: this.gfm, async: false });
+    return { html: instance.parse(this.content, { gfm: this.gfm, async: false }), hadMathFallback };
+  }
+
+  /** A document-ordered, flattened heading outline -- computed on every parse regardless of
+   *  `headingAnchors` (see that property's own doc). A caller building a table of contents can rely
+   *  on this even while `heading-anchors` is off. */
+  getHeadingTree(): MarkdownHeadingItem[] {
+    return [...this.headingTree];
+  }
+
+  private contentRoot(): Element | null {
+    return this.renderRoot.querySelector('[part="content"]');
+  }
+
+  // -- anchor-target: applyAnchor per kind -----------------------------------------------------
+
+  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+    const root = this.contentRoot();
+    if (!root) return false;
+    switch (anchor.kind) {
+      case 'fragment':
+        return this.applyFragmentAnchor(root, anchor);
+      case 'text-quote':
+        return this.applyTextQuoteAnchor(root, anchor);
+      default:
+        return false;
+    }
+  }
+
+  private applyFragmentAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'fragment' }>): boolean {
+    if (!anchor.id) return false;
+    const known = this.headingTree.some((h) => h.id === anchor.id);
+    if (!known) return false;
+    const el = root.querySelector(`#${CSS.escape(anchor.id)}`) ?? this.findHeadingByComputedId(root, anchor.id);
+    if (!el) return false;
+    el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+    return true;
+  }
+
+  /** `headingAnchors` may be off, so a target heading might carry no `id` attribute in the DOM --
+   *  re-derives the same slug order `getHeadingTree()` was built in and matches by position
+   *  instead of by attribute. */
+  private findHeadingByComputedId(root: Element, id: string): Element | null {
+    const index = this.headingTree.findIndex((h) => h.id === id);
+    if (index < 0) return null;
+    const headings = root.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    return headings[index] ?? null;
+  }
+
+  private applyTextQuoteAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'text-quote' }>): boolean {
+    const range = resolveTextQuote(scopeFromElement(root), anchor);
+    if (!range) return false;
+    const target = range.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range.startContainer.parentElement;
+    (target ?? root).scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    return true;
+  }
+
+  /** Overrides `DocumentAnchorTarget`'s default (whole render-root) selection scope, matching
+   *  `heading`'s slug computation and `applyTextQuoteAnchor()` above: only `[part="content"]` is a
+   *  meaningful text-quote scope, so a selection that somehow reaches outside it (there is no other
+   *  text in this component's shadow tree today, but the live region could grow one) never leaks
+   *  into a captured anchor. */
+  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
+    const root = this.contentRoot();
+    if (!root) return null;
+    return buildQuoteAnchor(range, scopeFromElement(root));
+  }
+
+  // -- highlight painting ------------------------------------------------------------------------
+
+  private ensureHighlightHandle(): HighlightHandle {
+    if (!this.highlightHandle) this.highlightHandle = acquireHighlightHandle(this, this.ownerDocument);
+    return this.highlightHandle;
+  }
+
+  /** Re-resolves every `text-quote` highlight against the current rendered content and repaints
+   *  via `acquireHighlightHandle()` -- resolution is always by quote text, never by node identity,
+   *  so a highlight set before its quote exists in `content` yet (e.g. mid-`streaming`) simply
+   *  paints nothing until a later render's text actually contains it. `fragment` highlights aren't
+   *  painted (there is no literal span of text to wrap/underline for a whole section). */
+  private repaintHighlights(): void {
+    this.resolvedHighlightRanges = [];
+    const root = this.contentRoot();
+    if (!root) return;
+    const handle = this.ensureHighlightHandle();
+    const scope = scopeFromElement(root);
+    const rangesByTone = new Map<LyraHighlightTone, Range[]>(HIGHLIGHT_TONES.map((tone) => [tone, []]));
+    let activeRange: Range | null = null;
+    for (const highlight of this.highlights) {
+      if (highlight.anchor.kind !== 'text-quote') continue;
+      const range = resolveTextQuote(scope, highlight.anchor);
+      if (!range) continue;
+      rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
+      this.resolvedHighlightRanges.push({ id: highlight.id, range });
+      if (highlight.id === this.activeHighlightId) activeRange = range;
+    }
+    for (const [tone, ranges] of rangesByTone) handle.setRanges(tone, ranges);
+    handle.setActive(activeRange);
+    if (!supportsCustomHighlights()) {
+      // The `<mark>`-wrap fallback creates real elements but carries no `part` of its own (the
+      // module is shared by every adopting viewer, so it can't know this component's part naming)
+      // -- stamped here so a consumer can still target `::part(highlight)` in browsers lacking the
+      // CSS Custom Highlight API. Nothing to stamp on the API path: no DOM element is created there.
+      for (const mark of root.querySelectorAll('mark[data-lyra-highlight-tone]')) {
+        if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
+      }
+    }
+  }
+
+  /** Hit-tests a click point against every currently-resolved highlight's `getClientRects()`,
+   *  topmost (last-resolved) first. The CSS Custom Highlight API paints ranges without creating any
+   *  DOM element to attach a click listener to, so this is the only activation path that works
+   *  identically on both paint paths -- mirrors `<lyra-pdf-viewer>`'s own coordinate-based
+   *  `onPageClick()` hit-test for the same reason (its own painted highlights sit under a text
+   *  layer that intercepts most pointer events). */
+  private hitTestHighlightAt(x: number, y: number): string | null {
+    for (let i = this.resolvedHighlightRanges.length - 1; i >= 0; i--) {
+      const { id, range } = this.resolvedHighlightRanges[i];
+      for (const rect of range.getClientRects()) {
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return id;
+      }
+    }
+    return null;
   }
 
   // A single delegated listener on the content wrapper (not one per <a>) —
   // the rendered markup is fully replaced on every content change, so a
   // per-anchor listener would need re-attaching on every render anyway.
   private onContentClick = (e: MouseEvent): void => {
+    const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
+    if (highlightId) {
+      this.emit<HighlightActivateDetail>('lyra-highlight-activate', { id: highlightId });
+      return;
+    }
     const prefix = this.internalLinkPrefix;
     if (!prefix) return;
     const anchor = e.composedPath().find((el): el is HTMLAnchorElement => el instanceof HTMLAnchorElement);
@@ -596,6 +996,7 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
       <div part="content" ?data-fallback=${isFallback} @click=${this.onContentClick}>
         ${isFallback ? this.content : unsafeHTML(this.renderedHtml)}
       </div>
+      ${this.renderAnchorLiveRegion()}
     `;
   }
 }

@@ -1,7 +1,22 @@
 import { fixture, fixtureSync, expect, html, waitUntil, oneEvent, aTimeout } from '@open-wc/testing';
 import './markdown.js';
-import type { LyraMarkdown } from './markdown.js';
+import type { LyraMarkdown, MarkdownHeadingItem } from './markdown.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
+import { supportsCustomHighlights } from '../../internal/text-highlights.js';
+import { __setKatexForTesting } from './markdown.class.js';
+
+/** Whether a `text-quote` highlight painted with `tone` is currently visible, via whichever paint
+ *  path this browser uses -- the CSS Custom Highlight API registers ranges with no DOM element to
+ *  query, so this checks the shared `CSS.highlights` registry directly there, and falls back to the
+ *  `<mark data-lyra-highlight-tone>` element the fallback path creates otherwise. Mirrors
+ *  `text-highlights.test.ts`'s own branching. */
+function highlightPainted(el: LyraMarkdown, tone = 'accent'): boolean {
+  if (supportsCustomHighlights()) {
+    const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { size: number }> } }).CSS.highlights;
+    return (registry.get(`lyra-highlight-${tone}`)?.size ?? 0) > 0;
+  }
+  return el.shadowRoot!.querySelector(`[part="content"] mark[data-lyra-highlight-tone="${tone}"]`) !== null;
+}
 
 const richSample = `# Heading
 
@@ -485,7 +500,7 @@ describe('paragraph/list/inline-code parts', () => {
   });
 });
 
-describe('highlightCode cache plumbing (Task 1 — no async loading yet)', () => {
+describe('highlightCode cache plumbing (no async loading yet)', () => {
   type Internals = {
     highlightCache: Map<string, string>;
   };
@@ -691,5 +706,333 @@ describe('languages (fine-grained shiki opt-in) — markdown', () => {
     await el.updateComplete;
     await aTimeout(500);
     expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+  });
+});
+
+describe('getHeadingTree / heading-anchors', () => {
+  it('computes the heading tree even when heading-anchors is off', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'# Title\n\n## Section One\n\n## Section One'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    const expected: MarkdownHeadingItem[] = [
+      { id: 'title', label: 'Title', level: 1 },
+      { id: 'section-one', label: 'Section One', level: 2 },
+      { id: 'section-one-1', label: 'Section One', level: 2 },
+    ];
+    expect(el.getHeadingTree()).to.deep.equal(expected);
+    expect(el.shadowRoot!.querySelector('h1')!.hasAttribute('id')).to.be.false;
+  });
+
+  it('stamps id attributes only when heading-anchors is on', async () => {
+    // "Getting Started" (not "Title") deliberately -- DOMPurify's default DOM-clobbering guard
+    // (SANITIZE_DOM) strips an id/name attribute whose *value* collides with a real `document`
+    // property name (e.g. slug "title" collides with `document.title`), so a heading literally
+    // titled "Title" would have its id silently stripped by sanitize=true (the default) -- see the
+    // headingAnchors property doc for this same interaction spelled out for consumers.
+    const el = (await fixture(
+      html`<lyra-markdown heading-anchors content=${'# Getting Started'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(el.shadowRoot!.querySelector('h1')!.getAttribute('id')).to.equal('getting-started');
+  });
+
+  it('a slug colliding with a real `document` property name (e.g. "title") loses its id under sanitize=true, the default -- DOMPurify DOM-clobbering protection', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown heading-anchors content=${'# Title'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(el.getHeadingTree()).to.deep.equal([{ id: 'title', label: 'Title', level: 1 }]);
+    expect(el.shadowRoot!.querySelector('h1')!.hasAttribute('id')).to.be.false;
+  });
+
+  it('reflects heading-offset in the tree level, matching the rendered tag', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown heading-offset="2" content=${'# Title'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(el.getHeadingTree()).to.deep.equal([{ id: 'title', label: 'Title', level: 3 }]);
+    expect(el.shadowRoot!.querySelector('h3')).to.exist;
+  });
+
+  it('strips inline markup from the slug/label via the plain-text renderer', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'# Hello **World**'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(el.getHeadingTree()).to.deep.equal([{ id: 'hello-world', label: 'Hello World', level: 1 }]);
+  });
+
+  it('getHeadingTree() returns a fresh array each call -- mutating the result cannot corrupt internal state', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'# Title'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    const tree = el.getHeadingTree();
+    tree.push({ id: 'injected', label: 'Injected', level: 1 });
+    expect(el.getHeadingTree()).to.have.length(1);
+  });
+});
+
+describe('scrollToAnchor (fragment)', () => {
+  it('scrolls to a heading by id even with heading-anchors off', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'# Title\n\nBody text.\n\n## Section One'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    let scrolled = false;
+    const heading = el.shadowRoot!.querySelector('h2') as HTMLElement;
+    heading.scrollIntoView = () => {
+      scrolled = true;
+    };
+    const result = await el.scrollToAnchor({ kind: 'fragment', id: 'section-one' });
+    expect(result).to.be.true;
+    expect(scrolled).to.be.true;
+  });
+
+  it('resolves false for an unknown fragment id', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'# Title'}></lyra-markdown>`)) as LyraMarkdown;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(await el.scrollToAnchor({ kind: 'fragment', id: 'does-not-exist' })).to.be.false;
+  });
+
+  it('reports its supported anchor kinds', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    expect(el.anchorKinds).to.deep.equal(['fragment', 'text-quote']);
+  });
+
+  it('resolves a fragment anchor via position even when DOMPurify stripped its id (a document-property-colliding slug)', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown heading-anchors content=${'# Title'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(el.shadowRoot!.querySelector('h1')!.hasAttribute('id'), 'precondition: DOMPurify stripped it').to.be.false;
+    let scrolled = false;
+    (el.shadowRoot!.querySelector('h1') as HTMLElement).scrollIntoView = () => {
+      scrolled = true;
+    };
+    expect(await el.scrollToAnchor({ kind: 'fragment', id: 'title' })).to.be.true;
+    expect(scrolled).to.be.true;
+  });
+});
+
+describe('scrollToAnchor / highlights (text-quote)', () => {
+  it('scrolls to a text-quote anchor', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    let scrolled = false;
+    const paragraph = el.shadowRoot!.querySelector('[part="paragraph"]') as HTMLElement;
+    paragraph.scrollIntoView = () => {
+      scrolled = true;
+    };
+    const result = await el.scrollToAnchor({ kind: 'text-quote', quote: 'brown fox' });
+    expect(result).to.be.true;
+    expect(scrolled).to.be.true;
+  });
+
+  it('resolves false for a text-quote anchor that matches nothing', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'Hello world'}></lyra-markdown>`)) as LyraMarkdown;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'nothing to see here' })).to.be.false;
+  });
+
+  it('paints a text-quote highlight (CSS Custom Highlight API, or a <mark> fallback)', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    expect(highlightPainted(el)).to.be.true;
+    if (!supportsCustomHighlights()) {
+      const mark = el.shadowRoot!.querySelector('[part="content"] mark[data-lyra-highlight-tone="accent"]')!;
+      expect(mark.textContent).to.equal('brown fox');
+      expect(mark.getAttribute('part')).to.equal('highlight');
+    }
+  });
+
+  it('paints with a non-default tone', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' }, tone: 'warning' }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    expect(highlightPainted(el, 'warning')).to.be.true;
+    expect(highlightPainted(el, 'accent')).to.be.false;
+  });
+
+  it('survives a streaming content re-render (resolution by quote, not node identity)', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'The quick '}></lyra-markdown>`)) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    expect(highlightPainted(el)).to.be.false;
+
+    el.content = 'The quick brown fox jumps.';
+    await el.updateComplete;
+    expect(highlightPainted(el)).to.be.true;
+  });
+
+  it('clears a previously-painted highlight once highlights is set back to empty', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    expect(highlightPainted(el)).to.be.true;
+
+    el.highlights = [];
+    await el.updateComplete;
+    expect(highlightPainted(el)).to.be.false;
+  });
+
+  it('emits lyra-highlight-activate when a painted highlight is clicked', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'Hello world'}></lyra-markdown>`)) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+
+    const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+    const textNode = paragraph.firstChild as Text;
+    const offset = textNode.data.indexOf('world');
+    const range = document.createRange();
+    range.setStart(textNode, offset);
+    range.setEnd(textNode, offset + 'world'.length);
+    const rect = range.getClientRects()[0];
+
+    const listener = oneEvent(el, 'lyra-highlight-activate');
+    paragraph.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        composed: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      }),
+    );
+    const event = await listener;
+    expect((event as CustomEvent).detail).to.deep.equal({ id: 'h1' });
+  });
+
+  it('does not activate a highlight, and falls through to normal link handling, on a click elsewhere in the content', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown internal-link-prefix="/docs/" content=${'Hello [world](/docs/world) and highlighted brown fox'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('a') !== null);
+    await el.updateComplete;
+
+    let highlightFired = false;
+    el.addEventListener('lyra-highlight-activate', () => (highlightFired = true));
+    const listener = oneEvent(el, 'lyra-link-click');
+    withNavigationBlocked(() => (el.shadowRoot!.querySelector('a') as HTMLElement).click());
+    const { detail } = await listener;
+    expect(detail).to.deep.equal({ href: '/docs/world', internal: true });
+    expect(highlightFired).to.be.false;
+  });
+
+  it('emits lyra-text-select with a text-quote anchor on selection', async () => {
+    const el = (await fixture(
+      html`<lyra-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+    const textNode = paragraph.firstChild!;
+    const range = document.createRange();
+    range.setStart(textNode, 10);
+    range.setEnd(textNode, 15);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const listener = oneEvent(el, 'lyra-text-select');
+    (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
+    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+    expect(event.detail.text).to.equal('brown');
+    selection.removeAllRanges();
+  });
+});
+
+describe('math (KaTeX)', () => {
+  afterEach(() => __setKatexForTesting(undefined));
+
+  it('renders raw delimited source and fires lyra-render-error when katex is confirmed missing', async () => {
+    __setKatexForTesting(null);
+    // fixtureSync() (not fixture()) so the `oneEvent()` listener attaches before the
+    // connectedCallback()-kicked-off async deps-loading microtask has any chance to run and fire
+    // the event first -- the same oneEvent()-vs-synchronous-dispatch race AGENTS.md's testing
+    // section warns about, one microtask hop removed.
+    const el = fixtureSync(html`<lyra-markdown math content=${'Energy: $E=mc^2$'}></lyra-markdown>`) as LyraMarkdown;
+    const listener = oneEvent(el, 'lyra-render-error');
+    const event = (await listener) as CustomEvent<{ error: unknown }>;
+    expect(event.detail.error).to.exist;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('$E=mc^2$');
+  });
+
+  it('fires lyra-render-error only once even after further re-renders', async () => {
+    __setKatexForTesting(null);
+    const el = fixtureSync(html`<lyra-markdown math content=${'$a$'}></lyra-markdown>`) as LyraMarkdown;
+    await oneEvent(el, 'lyra-render-error');
+    let firedAgain = false;
+    el.addEventListener('lyra-render-error', () => (firedAgain = true));
+    el.content = '$b$';
+    await el.updateComplete;
+    expect(firedAgain).to.be.false;
+  });
+
+  it('renders inline math as MathML via katex.renderToString when the peer is installed', async () => {
+    const fakeKatex = {
+      renderToString: (tex: string) =>
+        `<math><semantics><mrow><mi>${tex}</mi></mrow><annotation encoding="application/x-tex">${tex}</annotation></semantics></math>`,
+    };
+    __setKatexForTesting(fakeKatex as never);
+    const el = (await fixture(html`<lyra-markdown math content=${'$x$'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="math"]') !== null);
+    expect(el.shadowRoot!.querySelector('[part="math"]')!.getAttribute('data-display')).to.equal('inline');
+    expect(el.shadowRoot!.querySelector('annotation')).to.exist;
+  });
+
+  it('renders block math with data-display="block"', async () => {
+    const fakeKatex = { renderToString: (tex: string) => `<math><mi>${tex}</mi></math>` };
+    __setKatexForTesting(fakeKatex as never);
+    const el = (await fixture(html`<lyra-markdown math content=${'$$x^2$$'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="math"]') !== null);
+    expect(el.shadowRoot!.querySelector('[part="math"]')!.getAttribute('data-display')).to.equal('block');
+  });
+
+  it('leaves $ literal when math is off (default)', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'Cost: $5 not math'}></lyra-markdown>`)) as LyraMarkdown;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent).to.contain('$5');
+  });
+
+  it('defaults math to false', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    expect(el.math).to.be.false;
+  });
+});
+
+describe('back-compat', () => {
+  it('renders byte-identical output with heading-anchors, math, and highlights all unset', async () => {
+    const el = (await fixture(html`<lyra-markdown content=${'# Title\n\nBody.'}></lyra-markdown>`)) as LyraMarkdown;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
+    const withoutNewProps = el.shadowRoot!.querySelector('[part="content"]')!.innerHTML;
+
+    const el2 = (await fixture(
+      html`<lyra-markdown
+        content=${'# Title\n\nBody.'}
+        .headingAnchors=${false}
+        .math=${false}
+        .highlights=${[]}
+      ></lyra-markdown>`,
+    )) as LyraMarkdown;
+    await waitUntil(() => el2.shadowRoot!.querySelector('[part="heading"]') !== null);
+    expect(el2.shadowRoot!.querySelector('[part="content"]')!.innerHTML).to.equal(withoutNewProps);
   });
 });
