@@ -1648,6 +1648,28 @@ describe('heat-tint mode', () => {
     expect(css).to.include('--lyra-table-heat-tint-hi: var(--lyra-color-brand);');
     expect(css).to.match(/\[part='cell'\]\[data-heat\]\s*\{[^}]*color-mix\(/);
   });
+
+  it('applies both cellStyle and the heat-tint custom property to the same cell when both are set', async () => {
+    const bothColumns: TableColumn<Row>[] = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      {
+        key: 'score',
+        label: 'Score',
+        heatValue: (r) => r.score,
+        cellStyle: () => ({ 'font-style': 'italic' }),
+        cell: (r) => r.score,
+      },
+    ];
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = bothColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"][data-col-key="score"]') as HTMLElement;
+    expect(cell.style.fontStyle).to.equal('italic');
+    expect(cell.hasAttribute('data-heat')).to.be.true;
+    expect(cell.style.getPropertyValue('--lyra-table-heat-t')).to.not.equal('');
+  });
 });
 
 describe('rowTotal / grandTotal', () => {

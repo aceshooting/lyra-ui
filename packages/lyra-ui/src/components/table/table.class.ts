@@ -241,6 +241,15 @@ export interface LyraTableEventMap<T = unknown> {
  * `groupBy` inserts non-focusable group header rows before each group; use
  * `groupLabel` when the raw group key needs custom content.
  *
+ * `columns[].heatValue` opts a column into heat-tint mode: its numeric return value is normalized
+ * against a shared scale spanning every `heatValue`-defining column across every currently-rendered
+ * row (auto-derived, or overridden via `heatTintScale`) and painted as a `color-mix()` background via
+ * the retheme-able `--lyra-table-heat-tint-lo`/`-hi` custom properties (matching `lyra-heatmap`'s own
+ * ramp-token convention). `rowTotal`/`grandTotal` add a trailing column mirroring `expandedContent`'s
+ * leading one: `rowTotal(row)` renders per-row, `grandTotal(rows)` renders at its intersection with
+ * the footer row (only when a column also defines `footer`) — both share `footer`'s own
+ * "consumer computes/renders" contract rather than assuming addition.
+ *
  * @customElement lyra-table
  * @event lyra-sort - A sortable header was activated. `detail: { key }`.
  * @event lyra-row-click - A row was activated. `detail: { row }`.

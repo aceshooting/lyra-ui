@@ -223,3 +223,58 @@ export const ExpandableRowsWithOptOut: Story = {
       .expandedKeys=${new Set(['a'])}
     ></lyra-table>`,
 };
+
+interface PivotRow {
+  id: string;
+  project: string;
+  mon: number;
+  tue: number;
+  wed: number;
+}
+
+const pivotColumns: TableColumn<PivotRow>[] = [
+  { key: 'project', label: 'Project', cell: (r) => r.project },
+  {
+    key: 'mon',
+    label: 'Mon',
+    align: 'end',
+    heatValue: (r) => r.mon,
+    footer: (rs) => rs.reduce((sum, r) => sum + r.mon, 0),
+    cell: (r) => r.mon,
+  },
+  {
+    key: 'tue',
+    label: 'Tue',
+    align: 'end',
+    heatValue: (r) => r.tue,
+    footer: (rs) => rs.reduce((sum, r) => sum + r.tue, 0),
+    cell: (r) => r.tue,
+  },
+  {
+    key: 'wed',
+    label: 'Wed',
+    align: 'end',
+    heatValue: (r) => r.wed,
+    footer: (rs) => rs.reduce((sum, r) => sum + r.wed, 0),
+    cell: (r) => r.wed,
+  },
+];
+
+const pivotRows: PivotRow[] = [
+  { id: 'a', project: 'Alpha', mon: 2, tue: 5, wed: 1 },
+  { id: 'b', project: 'Beta', mon: 6, tue: 1, wed: 4 },
+  { id: 'c', project: 'Gamma', mon: 0, tue: 3, wed: 7 },
+];
+
+// Demonstrates heat-tint mode (a shared scale across every hour-bucket column) and rowTotal/grandTotal
+// together on a small entity x day-of-week pivot grid, mirroring cv-timesheet.ts's motivating shape.
+export const PivotWithTotalsAndHeatTint: Story = {
+  render: () =>
+    html`<lyra-table
+      .columns=${pivotColumns}
+      .rows=${pivotRows}
+      .rowKey=${(r: PivotRow) => r.id}
+      .rowTotal=${(r: PivotRow) => r.mon + r.tue + r.wed}
+      .grandTotal=${(rs: PivotRow[]) => rs.reduce((sum, r) => sum + r.mon + r.tue + r.wed, 0)}
+    ></lyra-table>`,
+};
