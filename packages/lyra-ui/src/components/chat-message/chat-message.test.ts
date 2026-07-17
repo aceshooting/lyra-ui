@@ -280,6 +280,42 @@ it('shows/hides the footer actions wrapper as actions content is added/removed v
   expect((el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement).hasAttribute('hidden')).to.be.false;
 });
 
+it('renders actions inside the footer, inside the bubble, by default (actionsOutsideBubble unset)', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message><button slot="actions">Copy</button>hi</lyra-chat-message>`,
+  )) as LyraChatMessage;
+  expect(el.actionsOutsideBubble).to.equal(false);
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  expect(bubble.contains(actions)).to.be.true;
+  expect(actions.closest('[part="footer"]')).to.exist;
+});
+
+it('renders actions as a sibling after the bubble when actionsOutsideBubble is set', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message actions-outside-bubble
+      ><button slot="actions">Copy</button>hi</lyra-chat-message
+    >`,
+  )) as LyraChatMessage;
+  expect(el.getAttribute('actions-outside-bubble')).to.equal('');
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  expect(bubble.contains(actions)).to.be.false;
+  expect(actions.previousElementSibling === bubble || bubble.nextElementSibling === actions).to.be.true;
+});
+
+it('keeps the footer hidden when actionsOutsideBubble is set and there is no status/timestamp, even with actions slotted', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message actions-outside-bubble
+      ><button slot="actions">Copy</button>hi</lyra-chat-message
+    >`,
+  )) as LyraChatMessage;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  expect(footer.hasAttribute('hidden')).to.be.true;
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  expect(actions.hasAttribute('hidden')).to.be.false;
+});
+
 it('shows attachments once slotted', async () => {
   const el = (await fixture(
     html`<lyra-chat-message><span slot="attachments">file.png</span>hi</lyra-chat-message>`,
@@ -364,6 +400,15 @@ it('is accessible fully populated: avatar, badges, attachments, actions, timesta
       <button slot="actions">Copy</button>
     </lyra-chat-message>
   `)) as LyraChatMessage;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible with actionsOutsideBubble set and actions populated', async () => {
+  const el = (await fixture(
+    html`<lyra-chat-message actions-outside-bubble
+      ><button slot="actions">Copy</button>hi</lyra-chat-message
+    >`,
+  )) as LyraChatMessage;
   await expect(el).to.be.accessible();
 });
 

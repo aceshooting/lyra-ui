@@ -142,6 +142,9 @@ export const styles = css`
     gap: var(--lyra-space-xs);
     margin-inline-start: auto;
   }
+  :host([actions-outside-bubble]) [part='actions'] {
+    margin-block-start: var(--lyra-space-2xs);
+  }
   [part='timestamp'] {
     white-space: nowrap;
   }

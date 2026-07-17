@@ -95,6 +95,11 @@ export interface LyraChatMessageEventMap {
  * attribute — `role="user"` would collide with `Element`'s own ARIA `role`
  * accessor and is not a valid ARIA role token to begin with.
  *
+ * `actionsOutsideBubble` allows the `actions` slot to render as a sibling
+ * immediately after the message bubble instead of nested inside the footer —
+ * useful for consumers whose action row (e.g., a hover-reveal copy button)
+ * must sit visually outside the bubble's chrome.
+ *
  * @customElement lyra-chat-message
  * @slot - The message body.
  * @slot avatar - An avatar/icon for the message author.
@@ -115,7 +120,7 @@ export interface LyraChatMessageEventMap {
  * @csspart status-text - The visible text twin of `status-indicator` — carries the state in text, not just color.
  * @csspart timestamp - The formatted `timestamp`, rendered in a `<time>` element.
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
- * @csspart actions - The wrapper around the `actions` slot.
+ * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actionsOutsideBubble` is set.
  * @cssprop [--lyra-chat-message-max-width=80%] - Maximum inline size of the message bubble.
  * @cssprop [--lyra-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
  *   and timing function.
@@ -161,6 +166,12 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  order move together (no CSS `order` trick), so reading/focus order
    *  always matches what's on screen. */
   @property({ attribute: 'attachments-position' }) attachmentsPosition: 'before' | 'after' = 'after';
+
+  /** Renders the `actions` slot's content as a sibling immediately after `[part="bubble"]` instead of
+   *  nested inside `[part="footer"]`'s own padding/background box — for a consumer whose action row
+   *  (e.g. a hover-reveal copy button) must sit visually outside the bubble's chrome. `false` (the
+   *  default) keeps today's exact DOM: actions render inside the footer, inside the bubble. */
+  @property({ type: Boolean, reflect: true, attribute: 'actions-outside-bubble' }) actionsOutsideBubble = false;
 
   @state() private hasAvatarSlot = false;
   @state() private hasBadgesSlot = false;
@@ -290,7 +301,10 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     const showHeader = this.hasAvatarSlot || this.hasBadgesSlot || this.collapsible;
     // `statusText` is already truthy whenever `status === 'failed'`, so it
     // alone covers that case here too.
-    const showFooter = Boolean(statusText) || Boolean(ts) || this.hasActionsSlot;
+    const showFooter = Boolean(statusText) || Boolean(ts) || (!this.actionsOutsideBubble && this.hasActionsSlot);
+    const actionsBlock = html`<span part="actions" ?hidden=${!this.hasActionsSlot}
+      ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
+    ></span>`;
     const attachmentsBlock = html`<div part="attachments" ?hidden=${!this.hasAttachmentsSlot}>
       <slot name="attachments" @slotchange=${this.onAttachmentsSlotChange}></slot>
     </div>`;
@@ -334,12 +348,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
                 ${retryIcon()}<span>${this.localize('retry')}</span>
               </button>`
             : nothing}
-          <span part="actions" ?hidden=${!this.hasActionsSlot}
-            ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
-          ></span>
+          ${this.actionsOutsideBubble ? nothing : actionsBlock}
         </div>
         <lyra-live-region></lyra-live-region>
       </div>
+      ${this.actionsOutsideBubble ? actionsBlock : nothing}
     `;
   }
 }
