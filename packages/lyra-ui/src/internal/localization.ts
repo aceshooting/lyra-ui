@@ -411,6 +411,11 @@ export type LyraMessageKey =
   | 'usageBadgeTotalTokensLabel'
   | 'usageBadgeCostLabel'
   | 'usageBadgeLatencyLabel'
+  | 'checkpointLabel'
+  | 'checkpointRestore'
+  | 'checkpointRestoreWithContext'
+  | 'checkpointRestoring'
+  | 'checkpointConfirmPrompt'
   | 'thoughtFor'
   | 'thinking'
   | 'rangeStart'
@@ -1079,6 +1084,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   usageBadgeTotalTokensLabel: 'Total tokens',
   usageBadgeCostLabel: 'Cost',
   usageBadgeLatencyLabel: 'Latency',
+  checkpointLabel: 'Checkpoint',
+  checkpointRestore: 'Restore',
+  checkpointRestoreWithContext: 'Restore conversation to {label}',
+  checkpointRestoring: 'Restoring…',
+  checkpointConfirmPrompt: 'Restore the conversation to this point?',
   thoughtFor: 'Thought for {duration}',
   thinking: 'Thinking…',
   rangeStart: 'Range start',
