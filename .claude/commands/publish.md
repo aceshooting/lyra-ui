@@ -120,10 +120,11 @@ introduce unrelated major-version bumps). It is fully interactive:
 - (only with `--upgrade-deps`) a dependency-diff confirmation → actually show the user the diff
   first; don't answer `yes` on their behalf.
 - The final `"Type 'yes' to publish the package(s) above to npm..."` review gate → **this is the
-  point of no return**: a real `npm publish`, which cannot be cleanly unpublished after ~72h. Only
-  answer this autonomously if the user has already told you, in this conversation, to publish
-  without a further check-in — otherwise stop here and show them the version/tag/publish review
-  the script printed, and wait for explicit confirmation.
+  point of no return**: answering "yes" creates a GitHub Release, which immediately triggers a real
+  `npm publish` in CI (`.github/workflows/publish.yml`) that cannot be cleanly unpublished after
+  ~72h. Only answer this autonomously if the user has already told you, in this conversation, to
+  publish without a further check-in — otherwise stop here and show them the version/tag/publish
+  review the script printed, and wait for explicit confirmation.
 
 Drive the interactive prompts with piped stdin once you know the exact answers, e.g.:
 
@@ -156,8 +157,13 @@ need to match what you actually intend to do.
   leaves the tagged release commit itself red in CI; the durable fix is to teach `scripts/publish.sh`
   to rewrite that line right after `pnpm changeset version` and stage `README.md` into the release
   commit. Until that exists, this step is the guard.
-- `npm view @aceshooting/lyra-ui version` (and `@aceshooting/lyra-flags` if it was released too) —
-  confirm it matches what was just published.
+- The actual `npm publish` now runs asynchronously in CI (`.github/workflows/publish.yml`), not
+  synchronously inside `scripts/publish.sh` — it typically takes 1-2 minutes after the script
+  finishes. Watch it with `gh run list --workflow=publish.yml --limit 5` (find the run for this
+  release's tag) and `gh run watch <run-id>` until it completes; if it fails, report the failure
+  immediately rather than assuming success because the local script exited cleanly.
+- Once the workflow run succeeds, `npm view @aceshooting/lyra-ui version` (and
+  `@aceshooting/lyra-flags` if it was released too) — confirm it matches what was just published.
 - `gh repo view aceshooting/lyra-ui --json description` — the GitHub repo's "About" description is
   **not** covered by `readme:check` or any other automated check (it lives in GitHub's own repo
   settings, not a file in this repo) and has gone stale before (it said "35 elements" while the
