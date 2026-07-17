@@ -177,8 +177,13 @@ import './components/trace-tree/trace-tree.js';
 import './components/activity-feed/activity-feed.js';
 import './components/message-actions/message-actions.js';
 import './components/transcript-feed/transcript-feed.js';
+import './components/env-list/env-list.js';
+import './components/handoff-divider/handoff-divider.js';
 
 // …and the barrel re-exports classes, helpers, and types.
+export { LyraEnvList } from './components/env-list/env-list.js';
+export type { EnvEntry, LyraEnvListEventMap } from './components/env-list/env-list.js';
+export { LyraHandoffDivider } from './components/handoff-divider/handoff-divider.js';
 export { LyraActivityFeed } from './components/activity-feed/activity-feed.js';
 export type {
   ActivityEntryTone,

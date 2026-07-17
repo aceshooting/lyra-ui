@@ -180,6 +180,8 @@ export const ROOT_BARREL_TAGS = [
   'lyra-message-actions',
   'lyra-transcript-feed',
   'lyra-stack-trace',
+  'lyra-env-list',
+  'lyra-handoff-divider',
   'lyra-test-results',
 ] as const;
 

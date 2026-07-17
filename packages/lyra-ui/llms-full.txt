@@ -4458,6 +4458,15 @@ while content is still arriving.
   `<lyra-code-block>`'s own `languagesOnly`: skips the default full-bundle loader entirely, so a
   fenced block whose language isn't in `languages` falls back to plain unhighlighted text rather
   than reaching for the full bundle. No effect unless `languages` is also set
+- `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
+  GitHub-slugger-style slug as `id` on every rendered heading.
+- `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
+  lazy-loaded the same way as `marked`/`dompurify`/`shiki`.
+- `anchorKinds: readonly ('fragment' | 'text-quote')[]` (readonly) — the anchor kinds this
+  component resolves for the shared anchor-target contract.
+
+**Methods:** `getHeadingTree()` returns the document-ordered heading outline (`{ level, text, slug
+}[]`) computed on every parse, regardless of `headingAnchors`.
 
 **Events:** `lyra-link-click` (`detail: { href: string, internal: true }`, fired — with the click
 prevented — when a rendered link's `href` starts with `internal-link-prefix`; ordinary external
@@ -9797,6 +9806,41 @@ only), `entry`, `speaker` (omitted for a row repeating the previous row's speake
 (`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
 an interim row), `jump-button` (shown only while `follow` is `false`), and `empty`.
 
+## `lyra-av-player`
+
+An audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to
+`currentTime`, `time-range` anchor/highlight support, an optional dependency-free waveform (peaks
+in, no in-component decoding), and playback-rate control. Owns recorded-media transcript sync —
+distinct from `<lyra-transcript-feed>` (live captions for an in-progress voice session) and
+`<lyra-playback>` (an index stepper, no media). Adopts `DocumentAnchorTarget` with
+`anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
+`<lyra-virtual-list>` the same way `lyra-pdf-viewer` virtualizes pages.
+
+**Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'` (attribute:
+false auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
+''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
+'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected), `rates: number[] =
+[0.75, 1, 1.25, 1.5, 2]` (attribute: false), `cues: LyraAvCue[] = []` (attribute: false), `peaks:
+number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: false).
+`LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
+'captions' | 'descriptions', srclang, label, default? }`.
+
+**Methods:** `play()`, `pause()`, and `toggle()` proxy the native media element. `seek(seconds)`
+sets `currentTime` and forces an immediate `lyra-time-change`. `search(query)` resolves the match
+count; `searchNext()`/`searchPrevious()` wrap; `clearSearch()` resets.
+
+**Events:** `lyra-play`, `lyra-pause`, `lyra-load` (`detail: { duration, kind }`), `lyra-time-change`
+(`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
+`lyra-rate-change` (`detail: { rate }`), `lyra-cue-change` (`detail: { id }`, `id` is `null` when no
+cue is active), `lyra-highlight-activate` (`detail: { id }`), `lyra-anchor-result` (`detail: {
+found }`), `lyra-search-change` (`detail: { query, matchCount, activeIndex }`), and
+`lyra-render-error` (`detail: { error }`).
+
+**CSS parts:** `base`, `media` (the native `<audio>`/`<video>` element), `toolbar`, `rate-select`,
+`timeline` (click-to-seek and arrow-key seeking), `timeline-marker` (one per `time-range` highlight;
+`data-tone`, `data-active`), `transcript` (the `<lyra-virtual-list>` itself), `cue` (`aria-current`,
+`data-match`, `data-active-match`), `cue-time`, `cue-speaker`, `cue-text`, and `error`.
+
 ## `lyra-test-results`
 
 A pass/fail suite summary with per-status counts, status filter toggles, and per-test rows whose
@@ -9818,3 +9862,35 @@ text once the row is expanded.
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
 (hidden while collapsed), and `failure-message`.
+
+## `lyra-env-list`
+
+A masked key/value list for environment variables and secrets, with per-row reveal and copy.
+Masking is presentational, not a security boundary: the real value sits in a DOM property
+regardless of mask state.
+
+**Properties:** `entries: EnvEntry[] = []` (attribute: false), `revealable: boolean = true`
+(reflected), `copyable: boolean = true` (reflected), and `label: string = ''`.
+
+**Events:** `lyra-reveal-change` (`detail: { name, revealed }`) and `lyra-copy` (`detail: { text }`,
+the real unmasked value).
+
+**CSS parts:** `base` (the `<dl>` root), `name` (the `<dt>` text), `value-cell` (the `<dd>` wrapping
+an entry's value text and buttons), `value` (carries `data-masked`), `reveal-button`, and
+`copy-button`.
+
+## `lyra-handoff-divider`
+
+A labeled semantic separator marking control transfer between agents in a transcript ("Transferred
+to Research Agent"), with an optional agent avatar. Purely presentational: no events, no
+interactivity, no restore semantics. The computed label is announced once, on first connect,
+through an internal `<lyra-live-region>`.
+
+**Properties:** `agent: string = ''`, `fromAgent: string = ''` (attribute `from-agent`), and `label:
+string = ''`.
+
+**Slots:** `avatar` — the incoming agent's `<lyra-avatar>` (or icon), hidden entirely while empty.
+
+**CSS parts:** `base` (the separator root, `role="separator"`), `line` (each of the two flanking
+rules), `chip` (the visual `aria-hidden` chip wrapping the avatar and label), `avatar` (wrapper
+around the `avatar` slot, only shown while the slot has content), and `label`.
