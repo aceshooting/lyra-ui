@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.7.0
+
+### Minor Changes
+
+- 05c9f9c: Add `appearance="link"` to `<lyra-button>`: a true inline-link tier that renders as zero-chrome underlined text — no padding, border, border-radius, or `min-block-size` floor — colored from the same `--lyra-button-accent` token `appearance="plain"` uses (so `variant` still selects the link color) and inheriting the surrounding font-size/weight so it flows within a sentence rather than as a button-shaped control. Previously the smallest `<lyra-button>` was still a padded, rounded, 24px-tall pill with a (transparent-but-present) border and no `text-decoration`, so an inline text link had to be hand-rolled; `appearance="link"` now covers that case directly. The notable design choice: the link rules are declared after the per-`size` rules so `font: inherit` and the zero padding/border/min-height win over whatever `size` is set, and the shared `[part='base']:focus-visible` outline is deliberately left intact.
+- 2ed831d: `<lyra-file-icon>` gains a `size` property (bytes, formatted via the same convention as `<lyra-attachment-chip>`) shown alongside its label, and exposes the raw MIME type as a `title` tooltip.
+- a5482d8: Add `<lyra-swatch-picker>`, a single-select picker over a small, fixed set of color swatches — the row-of-round-accent-color-buttons pattern apps hand-roll, generalized into a first-party component. It carries the WAI-ARIA APG `radiogroup` contract (`role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation on click or arrow-key move, cyclic Arrow/Home/End navigation), takes an `options: { value; color; label }[]` array plus a controlled `value`, and emits `lyra-change` (`detail: { value }`) only when the selection actually changes. It is distinct from `<lyra-color-picker>`'s freeform native color input: this picks exactly one of N designer-chosen named colors.
+
+  Notable design choice: the selection ring uses a dedicated `--lyra-swatch-picker-selected-color` token (defaulting to `--lyra-color-brand`) so it retheme independently of the focus ring, mirroring `<lyra-heatmap>`'s `--lyra-heatmap-selected-color`; each swatch's fill comes from its option's `color`, applied through a per-swatch custom property so a consumer's `::part(swatch)` background rule can still override it.
+
+### Patch Changes
+
+- f3a606f: Fix `<lyra-file-icon>`'s format badge overflowing its fixed size for multi-word localized labels (e.g. "Word document") — long badge text now truncates with an ellipsis instead of spilling outside the badge.
+- 64e6cb6: Document `<lyra-file-icon>`'s new `size` property and `size` csspart in `llms-full.txt`, and add the explicit-MIME-vs-filename-extension precedence test called for by the original feature request's acceptance criteria.
+- 0975bcd: Fix `<lyra-map>` throwing an unhandled error when the underlying maplibre-gl `Map` emits an `'error'` event (e.g. a tile/style source request failing) with no listener attached — maplibre-gl's `Evented` base rethrows in that case. The error is now caught and logged via `console.error` instead of surfacing as an uncaught exception.
+
 ## 3.6.0
 
 ### Minor Changes
