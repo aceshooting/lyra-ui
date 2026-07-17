@@ -197,6 +197,10 @@ export interface LyraGraphEventMap {
  * already-rendered graph is a no-op; nothing re-derives already-positioned
  * nodes' x/y from the new value.
  *
+ * `hiddenTypes` filters nodes/links by `GraphNode.type` without discarding position state --
+ * `lastPositionById` remembers every node's last settled x/y across a hide/show round-trip, so
+ * toggling a type off and back on restores each node where it was instead of re-randomizing it.
+ *
  * @customElement lyra-graph
  * @event lyra-node-click - `detail: { id }`.
  * @event lyra-link-click - `detail: { source, target, id? }`.
@@ -248,6 +252,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  no matching entry here renders as untyped (default circle, token fill) but still participates
    *  in `hiddenTypes` filtering by its raw `type` string. */
   @property({ attribute: false }) nodeTypes: GraphNodeType[] = [];
+  /** Hides every node whose raw `type` value is listed here (no matching `nodeTypes` entry
+   *  required), plus every link incident to a hidden node -- removed from the render, the
+   *  simulation input, the keyboard roving ring, the sr-only data list, and the accessible
+   *  diagram counts, as if absent. Positions round-trip via `lastPositionById`: toggling a type
+   *  off and back on restores each node where it was. */
+  @property({ attribute: false }) hiddenTypes: string[] = [];
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
@@ -294,6 +304,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
   private danglingLinks: SimLink[] = [];
+  /** Every node's last-known settled position, keyed by id, independent of current visibility --
+   *  consulted by `rebuildSimulation()` (after the existing carried-over-position map) so a
+   *  `hiddenTypes` toggle restores a node where it was instead of re-randomizing it. Pruned to ids
+   *  present in `this.nodes` (not just currently-visible ones) on every rebuild. */
+  private lastPositionById = new Map<string, { x: number; y: number }>();
+  /** The `hiddenNodeCount` computed by the most recent `rebuildSimulation()` -- lets that method
+   *  tell "nothing has ever been hidden" (never touch `graphLiveText`, so a consumer that never
+   *  sets `hiddenTypes` keeps today's exact live-region output) apart from "a hide was just
+   *  cleared" (still announce the resulting "0 of N" count). */
+  private lastHiddenNodeCount = 0;
   /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
   @state() private activeGraphItem = 0;
   @state() private graphLiveText = '';
@@ -424,6 +444,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const typeColor = sanitizeNodeColor(type.color);
     if (typeColor) return typeColor;
     return categoricalPaletteColor(this.nodeTypes.indexOf(type));
+  }
+
+  /** `this.nodes` filtered down to the ids `hiddenTypes` doesn't hide -- an untyped node (`type ==
+   *  null`) is never hidden, regardless of `hiddenTypes`' contents. */
+  private visibleNodes(): GraphNode[] {
+    if (!this.hiddenTypes.length) return this.nodes;
+    const hidden = new Set(this.hiddenTypes);
+    return this.nodes.filter((n) => n.type == null || !hidden.has(n.type));
   }
 
   private cameraTransitionMs(): number {
@@ -632,7 +660,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // instead would set a reactive property *after* the update completed,
     // which Lit schedules as a whole extra update pass (a dev-mode warning,
     // and pointless work).
-    if (this.d3 && (changed.has('nodes') || changed.has('links'))) {
+    if (this.d3 && (changed.has('nodes') || changed.has('links') || changed.has('hiddenTypes'))) {
       this.rebuildSimulation();
     }
     // Same reasoning as rebuildSimulation() above -- assigning graphLiveText from updated() would
@@ -650,7 +678,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     else this.removeAttribute('aria-busy');
 
     if (!this.d3) return;
-    if (!changed.has('nodes') && !changed.has('links')) {
+    if (!changed.has('nodes') && !changed.has('links') && !changed.has('hiddenTypes')) {
       // These two branches are independent (not else-if): a consumer can set
       // width/height and chargeStrength/linkDistance in the same reactive
       // update batch, and both retunes must apply — not just whichever branch
@@ -819,6 +847,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       target.x = (source.x ?? 0) + STUB_OFFSET_PX;
       target.y = (source.y ?? 0) + STUB_OFFSET_PX;
     }
+    // Keep the remembered-position cache current with a position captured mid-settle or mid-drag
+    // (not just the one snapshotted at the end of rebuildSimulation()) -- a hiddenTypes toggle
+    // that lands before the next structural rebuild should still restore a node to where it
+    // actually was, not an earlier, since-superseded snapshot. Plain Map writes, no DOM/no
+    // reactive-property touch, so this stays on the same cheap per-tick path as the rest of this
+    // method.
+    for (const n of this.simNodes) {
+      if (n.x != null && n.y != null) this.lastPositionById.set(n.id, { x: n.x, y: n.y });
+    }
     this.simNodes.forEach((n, i) => {
       const el = this.nodeEls[i];
       if (el) {
@@ -887,6 +924,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.simulation?.stop();
     this.boundNodeEls = new WeakSet();
 
+    // Prune remembered positions for ids no longer present in `this.nodes` at all (not merely
+    // hidden by hiddenTypes) -- otherwise this cache would grow forever across a long-lived,
+    // mutating graph instead of tracking only ids that could plausibly reappear.
+    const liveIds = new Set(this.nodes.map((n) => n.id));
+    for (const id of this.lastPositionById.keys()) {
+      if (!liveIds.has(id)) this.lastPositionById.delete(id);
+    }
+
     // Carry over each existing SimNode's settled position/velocity (and any
     // in-progress drag fx/fy) by id instead of starting every node fresh —
     // otherwise any structural nodes/links change (e.g. appending one new
@@ -895,21 +940,33 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // start settle animation from scratch. Only nodes with no previous
     // counterpart (genuinely new ids) get forceSimulation()'s default
     // fresh random start below.
+    const visible = this.visibleNodes();
     const prevById = new Map(this.simNodes.map((n) => [n.id, n]));
-    const nodes: SimNode[] = this.nodes.map((n) => {
+    const nodes: SimNode[] = visible.map((n) => {
       const prev = prevById.get(n.id);
-      return prev ? { ...prev, ...n } : { ...n };
+      if (prev) return { ...prev, ...n };
+      // A node hidden by hiddenTypes and now visible again has no prevById entry (it fell out of
+      // simNodes while hidden) but may still have a remembered settled position from before it was
+      // hidden -- restore that instead of leaving it for the neighbor-jitter/seed spawn logic below,
+      // or forceSimulation()'s own random start, to place it as if it were a brand-new node.
+      const remembered = this.lastPositionById.get(n.id);
+      return remembered ? { ...n, x: remembered.x, y: remembered.y } : { ...n };
     });
     const byId = new Map(nodes.map((n) => [n.id, n]));
+    // Every node id that exists at all (including one currently hidden by hiddenTypes) --
+    // distinguishes "link target is hidden by hiddenTypes" (link dropped entirely, like any link
+    // with a hidden endpoint) from "link target genuinely doesn't exist anywhere in `this.nodes`"
+    // (link stubbed as a dangling stub, existing behavior, unchanged).
+    const nodeExists = new Set(this.nodes.map((n) => n.id));
     const resolvedLinks: SimLink[] = [];
     const danglingLinks: SimLink[] = [];
     for (const l of this.links) {
       const source = byId.get(l.source);
-      if (!source) continue; // no real position to draw a stub from -- stays dropped, unchanged
+      if (!source) continue; // source hidden or genuinely missing -- no real position to draw a stub from, dropped either way
       const target = byId.get(l.target);
       if (target) {
         resolvedLinks.push({ ...l, source, target });
-      } else {
+      } else if (!nodeExists.has(l.target)) {
         danglingLinks.push({
           ...l,
           source,
@@ -917,6 +974,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           dangling: true,
         });
       }
+      // else: target exists but is currently hidden by hiddenTypes -- link dropped, not stubbed.
     }
     const links = resolvedLinks; // stubs never enter d3-force's own simulation input
     this.danglingLinks = danglingLinks;
@@ -978,19 +1036,21 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.simulation = simulation;
 
     if (prefersReducedMotion() || this.seed != null) {
-      // Pin every node that already had a carried-over position before this rebuild (fx/fy, the
-      // same mechanism a user drag uses) so introducing a new node/link can't visibly reposition
-      // it during this synchronous settle -- only a genuinely new node (no prior counterpart, per
-      // prevById above) is free to move while the simulation converges. A node whose fx/fy was
-      // already set (an active user drag concurrent with this rebuild) is left alone entirely --
-      // both the pin and the later release below only apply to a node this loop itself pinned, so
-      // a real in-progress drag's own fx/fy is never clobbered. Everything this loop does pin gets
-      // released again immediately below, so this has no lasting effect on a later user-initiated
-      // drag, nor on the live, async settle a non-seeded/non-reduced-motion graph still animates
-      // over ~300 frames.
+      // Pin every node that already had a known position before this rebuild -- either carried
+      // over directly (fx/fy, the same mechanism a user drag uses) or restored from
+      // lastPositionById after being hidden by hiddenTypes -- so introducing a new node/link can't
+      // visibly reposition it during this synchronous settle. Only a genuinely new node (no prior
+      // counterpart in either source) is free to move while the simulation converges. A node whose
+      // fx/fy was already set (an active user drag concurrent with this rebuild) is left alone
+      // entirely -- both the pin and the later release below only apply to a node this loop itself
+      // pinned, so a real in-progress drag's own fx/fy is never clobbered. Everything this loop
+      // does pin gets released again immediately below, so this has no lasting effect on a later
+      // user-initiated drag, nor on the live, async settle a non-seeded/non-reduced-motion graph
+      // still animates over ~300 frames.
       const pinnedForSettle = new Set<string>();
       for (const n of nodes) {
-        if (prevById.has(n.id) && n.x != null && n.y != null && n.fx == null && n.fy == null) {
+        const hadKnownPosition = prevById.has(n.id) || this.lastPositionById.has(n.id);
+        if (hadKnownPosition && n.x != null && n.y != null && n.fx == null && n.fy == null) {
           n.fx = n.x;
           n.fy = n.y;
           pinnedForSettle.add(n.id);
@@ -1023,6 +1083,30 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // re-render up to ~300 times on load and continuously while dragging.
     this.simNodes = nodes;
     this.simLinks = links;
+
+    for (const n of nodes) {
+      if (n.x != null && n.y != null) this.lastPositionById.set(n.id, { x: n.x, y: n.y });
+    }
+
+    // Announce the hidden-node count from right here (not from willUpdate()/updated() gated on a
+    // 'hiddenTypes'/'nodes' PropertyValues diff) because this method itself is also invoked
+    // directly from connectedCallback() once the lazy d3 peer deps resolve -- a call that never
+    // goes through Lit's changed-property diffing at all. Computing it there instead would miss
+    // that path entirely: a graph mounted with hiddenTypes already set would compute this from a
+    // still-empty simNodes (0 settled nodes yet) on the property-driven pass, then never get a
+    // chance to correct it once the real simNodes became available. Only ever touches
+    // graphLiveText when there's something to say -- a node is currently hidden, or one just
+    // stopped being hidden -- so a consumer that never sets hiddenTypes keeps today's exact
+    // live-region output.
+    const totalNodeCount = this.nodes.length;
+    const hiddenNodeCount = totalNodeCount - nodes.length;
+    if (totalNodeCount > 0 && (hiddenNodeCount > 0 || this.lastHiddenNodeCount > 0)) {
+      this.graphLiveText = this.localize('graphNodesHidden', undefined, {
+        hidden: hiddenNodeCount,
+        total: totalNodeCount,
+      });
+    }
+    this.lastHiddenNodeCount = hiddenNodeCount;
   }
 
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {

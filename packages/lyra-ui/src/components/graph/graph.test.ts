@@ -1125,6 +1125,186 @@ describe('selection (J4)', () => {
   });
 });
 
+describe('type filtering (J5)', () => {
+  const typedFilterNodes = [
+    { id: 'a', label: 'A', type: 'person' },
+    { id: 'b', label: 'B', type: 'doc' },
+    { id: 'c', label: 'C' }, // untyped -- never hidden by hiddenTypes
+  ];
+  const typedFilterLinks = [
+    { source: 'a', target: 'b' }, // incident to a hidden 'person' node when 'person' is hidden
+    { source: 'b', target: 'c' },
+  ];
+
+  async function mountFiltered(hiddenTypes: string[] = []): Promise<LyraGraph> {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.hiddenTypes = hiddenTypes;
+    el.nodes = typedFilterNodes;
+    el.links = typedFilterLinks;
+    await el.updateComplete;
+    const expectedVisible = typedFilterNodes.filter(
+      (n) => n.type == null || !hiddenTypes.includes(n.type),
+    ).length;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === expectedVisible,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT },
+    );
+    return el;
+  }
+
+  it('defaults hiddenTypes to empty and renders every node/link', async () => {
+    const el = await mountFiltered();
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(3);
+    expect(el.shadowRoot!.querySelectorAll('[part="link"]:not([data-dangling])').length).to.equal(2);
+  });
+
+  it('hides every node whose raw type is listed, plus incident links, from the DOM/simulation/data-list/aria counts', async () => {
+    const el = await mountFiltered(['person']);
+    const ids = el.simNodes.map((n) => n.id);
+    expect(ids).to.not.include('a');
+    expect(ids).to.have.members(['b', 'c']);
+    expect(el.simLinks.length).to.equal(1); // only b-c survives; a-b is incident to hidden 'a'
+    expect(el.shadowRoot!.querySelectorAll('[part="data-list"] li').length).to.equal(3); // 2 nodes + 1 link
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    expect(svgEl.getAttribute('aria-label')).to.match(/2 nodes/);
+  });
+
+  it('filters by a raw type string with no matching nodeTypes entry', async () => {
+    const el = await mountFiltered(['doc']);
+    expect(el.simNodes.map((n) => n.id)).to.have.members(['a', 'c']);
+  });
+
+  it('announces graphNodesHidden on change, including "0 of N" when cleared', async () => {
+    const el = await mountFiltered(['person']);
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 of 3 nodes hidden');
+    el.hiddenTypes = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('0 of 3 nodes hidden');
+  });
+
+  it('hide then re-show restores each node at its remembered settled position (distance ~ 0)', async () => {
+    const el = await mountFiltered();
+    await aTimeout(400); // let the force layout settle
+    const before = new Map(el.simNodes.map((n) => [n.id, { x: n.x!, y: n.y! }]));
+
+    el.hiddenTypes = ['person'];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    el.hiddenTypes = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const after = el.simNodes.find((n) => n.id === 'a')!;
+    const beforePos = before.get('a')!;
+    const distance = Math.hypot(after.x! - beforePos.x, after.y! - beforePos.y);
+    expect(distance).to.be.lessThan(1);
+  });
+
+  it('prunes the remembered-position cache when a node is removed from nodes entirely (not just hidden)', async () => {
+    const el = await mountFiltered();
+    await aTimeout(400);
+    el.nodes = typedFilterNodes.filter((n) => n.id !== 'a');
+    el.links = typedFilterLinks.filter((l) => l.source !== 'a' && l.target !== 'a');
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(
+      (el as unknown as { lastPositionById: Map<string, { x: number; y: number }> }).lastPositionById.has('a'),
+    ).to.be.false;
+  });
+
+  it('clamps the roving index when the active item is hidden', async () => {
+    const el = await mountFiltered();
+    (el.shadowRoot!.querySelector('[part="node"]') as SVGElement).dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    ); // no-op for focus, just mount interaction; roving index defaults to 0 ('a')
+    el.hiddenTypes = ['person']; // hides index 0's node
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const items = [
+      ...el.shadowRoot!.querySelectorAll('[part="node"]'),
+      ...el.shadowRoot!.querySelectorAll('[part="link"]'),
+    ] as SVGElement[];
+    expect(items.filter((i) => i.getAttribute('tabindex') === '0')).to.have.length(1);
+  });
+
+  it('is accessible with a type hidden', async () => {
+    const el = await mountFiltered(['person']);
+    await expect(el).to.be.accessible();
+  });
+
+  it('hides the persistent focus-halo when the focused node\'s type is hidden, and restores it when shown again', async () => {
+    const el = (await fixture(html`<lyra-graph focus-id="a"></lyra-graph>`)) as LyraGraph;
+    el.nodes = typedFilterNodes;
+    el.links = typedFilterLinks;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await aTimeout(400);
+    const halo = el.shadowRoot!.querySelector('[part="focus-halo"]') as SVGCircleElement;
+    expect(halo.hasAttribute('hidden')).to.be.false;
+
+    el.hiddenTypes = ['person'];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(halo.hasAttribute('hidden')).to.be.true;
+
+    el.hiddenTypes = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(halo.hasAttribute('hidden')).to.be.false;
+  });
+
+  it('does not let a selected/focused node id linger after its type is hidden -- it simply stops rendering, unmutated, and resumes if shown again', async () => {
+    const el = await mountFiltered();
+    el.selectionMode = 'single';
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    el.hiddenTypes = ['person'];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    // The controlled selectedNodeIds array is untouched by the component -- it's the host's to own.
+    expect(el.selectedNodeIds).to.deep.equal(['a']);
+    expect(el.shadowRoot!.querySelector('[data-selected]')).to.be.null; // hidden node can't render selected
+
+    el.hiddenTypes = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeA = el.shadowRoot!.querySelector('[data-selected]') as SVGElement;
+    expect(nodeA.getAttribute('aria-label')).to.contain('A');
+  });
+
+  it('existing graph usage unaffected: no hiddenTypes set renders every node/link exactly as before', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.shadowRoot!.querySelectorAll('[part="link"]:not([data-dangling])').length).to.equal(1);
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [
