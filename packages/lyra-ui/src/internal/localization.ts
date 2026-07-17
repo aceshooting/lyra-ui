@@ -563,7 +563,10 @@ export type LyraMessageKey =
   | 'commitCardCopyHash'
   | 'commitCardDiffSummary'
   | 'commitCardShowFiles'
-  | 'commitCardHideFiles';
+  | 'commitCardHideFiles'
+  | 'stackTraceLabel'
+  | 'stackTraceShowFrames'
+  | 'stackTraceHideFrames';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1128,6 +1131,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   commitCardDiffSummary: '+{additions} -{deletions} in {files} files',
   commitCardShowFiles: 'Show {count} changed files',
   commitCardHideFiles: 'Hide {count} changed files',
+  stackTraceLabel: 'Stack trace',
+  stackTraceShowFrames: 'Show {count} internal frames',
+  stackTraceHideFrames: 'Hide {count} internal frames',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

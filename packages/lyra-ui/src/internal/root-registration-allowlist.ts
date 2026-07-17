@@ -179,6 +179,7 @@ export const ROOT_BARREL_TAGS = [
   'lyra-activity-feed',
   'lyra-message-actions',
   'lyra-transcript-feed',
+  'lyra-stack-trace',
 ] as const;
 
 export const ROOT_BARREL_OPTIONAL_PEER_TAGS = [

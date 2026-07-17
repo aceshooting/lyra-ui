@@ -160,6 +160,7 @@ import './components/sequence-strip/sequence-strip.js';
 import './components/emoji-picker/emoji-picker.js';
 import './components/file-tree/file-tree.js';
 import './components/commit-card/commit-card.js';
+import './components/stack-trace/stack-trace.js';
 import './components/audio-visualizer/audio-visualizer.js';
 import './components/branch-picker/branch-picker.js';
 import './components/compare-panel/compare-panel.js';
@@ -324,6 +325,10 @@ export { LyraFileTree } from './components/file-tree/file-tree.js';
 export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components/file-tree/file-tree.js';
 export { LyraCommitCard } from './components/commit-card/commit-card.js';
 export type { CommitFileChange, LyraCommitCardEventMap } from './components/commit-card/commit-card.js';
+export { LyraStackTrace } from './components/stack-trace/stack-trace.js';
+export type { LyraStackTraceEventMap } from './components/stack-trace/stack-trace.js';
+export { parseStackTrace, DEFAULT_INTERNAL_PATTERNS } from './components/stack-trace/stack-trace-parse.js';
+export type { StackFrame, StackGroup } from './components/stack-trace/stack-trace-parse.js';
 export { LyraTreeNode } from './components/tree/tree-node.js';
 export { LyraLiteChart } from './components/chart/lite-chart.js';
 export type {
