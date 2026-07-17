@@ -438,6 +438,9 @@ export type LyraMessageKey =
   | 'anchorJumped'
   | 'anchorJumpedToPage'
   | 'anchorNotFound'
+  | 'highlightLayerLabel'
+  | 'highlightWithLabel'
+  | 'highlightOfTotal'
   | 'spreadsheetViewerUnavailable'
   | 'csvViewerUnavailable'
   | 'csvViewerLabel'
@@ -897,6 +900,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   anchorJumped: 'Jumped to highlighted passage.',
   anchorJumpedToPage: 'Jumped to page {page}.',
   anchorNotFound: 'Passage not found in this document.',
+  highlightLayerLabel: 'Highlights',
+  highlightWithLabel: 'Highlight: {label}',
+  highlightOfTotal: 'Highlight {index} of {total}',
   skipToContent: 'Skip to content',
   tourSkip: 'Skip',
   tourDone: 'Done',
