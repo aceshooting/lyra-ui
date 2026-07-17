@@ -622,6 +622,110 @@ it('re-applies the choropleth once the new style finishes loading after a mapSty
   expect(el.map!.getSource('style-reload')).to.exist;
 });
 
+describe('dataLayers', () => {
+  const POLY_LAYER = {
+    sourceId: 'zones',
+    geojson: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] },
+          properties: {},
+        },
+      ],
+    },
+  } as unknown as import('./map.js').GeoJsonDataLayer;
+
+  it('defaults to an empty array with zero behavior change', async () => {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    expect(el.dataLayers).to.deep.equal([]);
+  });
+
+  it('adds a source and fill/line/circle layers per entry once the style loads', async () => {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [POLY_LAYER];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'fill layer never added', {
+      timeout: 2000,
+    });
+
+    expect(el.map!.getSource('zones')).to.exist;
+    expect(el.map!.getLayer('zones-fill')).to.exist;
+    expect(el.map!.getLayer('zones-line')).to.exist;
+  });
+
+  it('removing an entry (dataLayers reassigned without it) removes its source/layers, leaking nothing', async () => {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [POLY_LAYER];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'fill layer never added', {
+      timeout: 2000,
+    });
+
+    el.dataLayers = [];
+    await el.updateComplete;
+
+    expect(el.map!.getSource('zones')).to.not.exist;
+    expect(el.map!.getLayer('zones-fill')).to.not.exist;
+    expect(el.map!.getLayer('zones-line')).to.not.exist;
+    expect(el.map!.getLayer('zones-circle')).to.not.exist;
+  });
+
+  it('updates existing source data in place when the same sourceId is reassigned with new geojson', async () => {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [POLY_LAYER];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(() => el.map!.getSource('zones') != null, 'source never added', { timeout: 2000 });
+
+    const source = el.map!.getSource('zones') as { setData: (g: unknown) => void };
+    let called = 0;
+    const originalSetData = source.setData.bind(source);
+    source.setData = (g: unknown) => {
+      called++;
+      originalSetData(g);
+    };
+
+    el.dataLayers = [{ ...POLY_LAYER, geojson: { type: 'FeatureCollection', features: [] } }];
+    await el.updateComplete;
+
+    expect(called).to.equal(1);
+    expect(el.map!.getSource('zones')).to.equal(source);
+  });
+
+  it('re-applies dataLayers after a mapStyle change (style.load handshake)', async () => {
+    const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [POLY_LAYER];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'fill layer never added', {
+      timeout: 2000,
+    });
+
+    // Same "demo" source id as RASTER_STYLE so the new style itself stays valid --
+    // only the raster layer's paint changes -- mirroring the sibling choropleth
+    // "re-applies the choropleth once the new style finishes loading" test above.
+    const NEXT_STYLE = {
+      ...RASTER_STYLE,
+      layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.9 } }],
+    };
+    el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+    await el.updateComplete;
+
+    await waitUntil(() => el.map!.getLayer('zones-fill') != null, 'dataLayers never re-applied', {
+      timeout: 2000,
+    });
+    expect(el.map!.getSource('zones')).to.exist;
+  });
+});
+
 it('adds a maplibregl.Marker per entry in markers', async () => {
   const el = (await fixture(html`<lyra-map></lyra-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -827,6 +931,11 @@ it('does not collide two id-less markers placed at the same coordinates', async 
   const instances = (el as unknown as { _markerInstances: Map<string, unknown> })._markerInstances;
   expect(instances.size).to.equal(2);
 });
+
+async function waitUntilMapLoaded(el: LyraMap): Promise<void> {
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+}
 
 function choropleth(sourceId: string, stops: [number, string][]) {
   return {

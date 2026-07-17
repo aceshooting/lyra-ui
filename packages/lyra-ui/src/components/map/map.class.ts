@@ -31,6 +31,15 @@ export interface ChoroplethLayer {
   stops: [number, string][];
 }
 
+/** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
+ *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lyra-*` tokens at
+ *  apply time, defaulting to `accent`. */
+export interface GeoJsonDataLayer {
+  sourceId: string;
+  geojson: Feature | FeatureCollection;
+  tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
+}
+
 export interface MapMarker {
   id?: string;
   lngLat: [number, number];
@@ -89,6 +98,26 @@ function choroplethFillOpacity(host: Element): number {
   return Number.isFinite(parsed) ? parsed : FALLBACK_FILL_OPACITY;
 }
 
+const TONE_TOKEN: Record<NonNullable<GeoJsonDataLayer['tone']>, string> = {
+  accent: '--lyra-color-brand',
+  success: '--lyra-color-success',
+  warning: '--lyra-color-warning',
+  danger: '--lyra-color-danger',
+  neutral: '--lyra-color-text-quiet',
+};
+
+/**
+ * Resolves a `GeoJsonDataLayer.tone` to a real color via the matching
+ * `--lyra-color-*` token, read at apply time (not property-set time) so a
+ * later retheme is picked up the next time `dataLayers` is (re)applied --
+ * same rationale as `choroplethFillOpacity()` above.
+ */
+function dataLayerColor(host: Element, tone: GeoJsonDataLayer['tone']): string {
+  const token = TONE_TOKEN[tone ?? 'accent'];
+  const raw = getComputedStyle(host).getPropertyValue(token).trim();
+  return raw || '#0969da';
+}
+
 export interface LyraMapEventMap {
   'lyra-map-load': CustomEvent<undefined>;
   'lyra-map-click': CustomEvent<{
@@ -97,9 +126,12 @@ export interface LyraMapEventMap {
   }>;
 }
 /**
- * `<lyra-map>` — a maplibre-gl wrapper with a declarative legend and
- * choropleth GeoJSON layer, plus a raw `map` escape hatch. Requires the
- * optional peer dep `maplibre-gl` (consumers also import its CSS once).
+ * `<lyra-map>` — a maplibre-gl wrapper with a declarative legend, choropleth
+ * GeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays
+ * (arbitrary shapes rendered as a source plus fill/line/circle layers,
+ * independent of `choropleth`'s field/stops color-interpolation), plus a raw
+ * `map` escape hatch. Requires the optional peer dep `maplibre-gl`
+ * (consumers also import its CSS once).
  *
  * The underlying `maplibregl.Map` — and the WebGL context it opens — isn't
  * constructed until this element is first visible in the viewport (tracked
@@ -132,6 +164,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) legend: LegendEntry[] = [];
   @property({ attribute: false }) choropleth?: ChoroplethLayer;
   @property({ attribute: false }) markers: MapMarker[] = [];
+  /** Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
+   *  source plus fill/line/circle layers. Defaults empty (zero behavior change). */
+  @property({ attribute: false }) dataLayers: GeoJsonDataLayer[] = [];
 
   /** Accessible name fallback for the map group. A host `aria-label` takes
    *  precedence when both are set; when neither is present, the group uses
@@ -167,6 +202,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // this class of bug entirely, but that would be a larger redesign.
   private _appliedChoroplethSourceId?: string;
   private _appliedFillLayerId?: string;
+  // Tracks currently-applied dataLayers sourceIds for clean removal on reassignment/disconnect --
+  // same rationale as `_appliedChoroplethSourceId` (a declarative light-DOM-children model would
+  // avoid this bookkeeping entirely, but that's a larger redesign than this bridge warrants).
+  private _appliedDataLayerIds = new Set<string>();
   // Cached once connectedCallback's loadMaplibre().then() resolves, and always
   // set before `_map` itself is (see that closure) -- so any code path gated
   // on `this._map` being truthy can rely on this being set too, without
@@ -242,6 +281,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._styleLoaded = false;
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
+    this._appliedDataLayerIds.clear();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
     for (const marker of this._markerInstances.values()) marker.remove();
@@ -280,6 +320,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._styleLoaded = true;
       this.applyChoropleth();
       this.applyMarkers();
+      this.applyDataLayers();
       this.emit('lyra-map-load');
     });
     this._map.on('click', (e: OptionalPeerApi) => {
@@ -320,11 +361,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // leave the choropleth (and `_styleLoaded`) never re-applied.
       this._map.once('style.load', () => {
         this._styleLoaded = true;
+        this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
         this.applyChoropleth();
+        this.applyDataLayers();
       });
       this._map.setStyle(this.mapStyle);
     } else if (changed.has('choropleth') && this._styleLoaded) {
       this.applyChoropleth();
+    } else if (changed.has('dataLayers') && this._styleLoaded) {
+      this.applyDataLayers();
     }
     if (changed.has('center') && this._map) this._map.setCenter(this.center);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.zoom);
@@ -401,6 +446,78 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
+  }
+
+  /**
+   * Applies every `dataLayers` entry as a GeoJSON source plus fill/line/circle
+   * layers, reusing an existing source/layer in place (via `setData()`/
+   * `setPaintProperty()`) when its id is already applied, and removing any
+   * previously-applied id no longer present in `dataLayers` -- mirrors
+   * `applyChoropleth()`'s add-or-update-in-place pattern above.
+   */
+  private applyDataLayers(): void {
+    if (!this._map) return;
+    const nextIds = new Set(this.dataLayers.map((l) => l.sourceId));
+    for (const id of this._appliedDataLayerIds) {
+      if (!nextIds.has(id)) this.removeDataLayer(id);
+    }
+    for (const layer of this.dataLayers) {
+      const { sourceId, geojson, tone } = layer;
+      const existingSource = this._map.getSource(sourceId) as OptionalPeerApi | undefined;
+      if (existingSource) {
+        existingSource.setData(geojson);
+      } else {
+        this._map.addSource(sourceId, { type: 'geojson', data: geojson });
+      }
+      const color = dataLayerColor(this, tone);
+      const fillId = `${sourceId}-fill`;
+      const lineId = `${sourceId}-line`;
+      const circleId = `${sourceId}-circle`;
+      if (!this._map.getLayer(fillId)) {
+        this._map.addLayer({
+          id: fillId,
+          type: 'fill',
+          source: sourceId,
+          filter: ['==', ['geometry-type'], 'Polygon'],
+          paint: { 'fill-color': color, 'fill-opacity': choroplethFillOpacity(this) },
+        });
+      } else {
+        this._map.setPaintProperty(fillId, 'fill-color', color);
+      }
+      if (!this._map.getLayer(lineId)) {
+        this._map.addLayer({
+          id: lineId,
+          type: 'line',
+          source: sourceId,
+          filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+          paint: { 'line-color': color, 'line-width': 2 },
+        });
+      } else {
+        this._map.setPaintProperty(lineId, 'line-color', color);
+      }
+      if (!this._map.getLayer(circleId)) {
+        this._map.addLayer({
+          id: circleId,
+          type: 'circle',
+          source: sourceId,
+          filter: ['==', ['geometry-type'], 'Point'],
+          paint: { 'circle-color': color, 'circle-radius': 5 },
+        });
+      } else {
+        this._map.setPaintProperty(circleId, 'circle-color', color);
+      }
+      this._appliedDataLayerIds.add(sourceId);
+    }
+  }
+
+  /** Removes one previously-applied `dataLayers` entry's source/layers, if present. */
+  private removeDataLayer(sourceId: string): void {
+    if (!this._map) return;
+    for (const layerId of [`${sourceId}-fill`, `${sourceId}-line`, `${sourceId}-circle`]) {
+      if (this._map.getLayer(layerId)) this._map.removeLayer(layerId);
+    }
+    if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
+    this._appliedDataLayerIds.delete(sourceId);
   }
 
   // Deliberately synchronous (no `await loadMaplibre()`): `_maplibreModule` is

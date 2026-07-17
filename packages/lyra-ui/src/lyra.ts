@@ -350,7 +350,7 @@ export type { HistogramBucket } from './components/chart/histogram-bin.js';
 export type { Series, LyraChartType } from './components/chart/chart.js';
 export type { BoxPlotSeries, BoxPlotPoint } from './components/chart/box-plot.js';
 export type { GraphNode, GraphLink } from './components/graph/graph.js';
-export type { LegendEntry, ChoroplethLayer, MapMarker } from './components/map/map.js';
+export type { LegendEntry, ChoroplethLayer, MapMarker, GeoJsonDataLayer } from './components/map/map.js';
 export { LyraFileInput } from './components/file-input/file-input.js';
 export type { RejectedFile } from './components/file-input/file-input.js';
 export { LyraPhoneInput, loadLibphonenumberAdapter } from './components/phone-input/phone-input.js';

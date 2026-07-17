@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { ChoroplethLayer, LegendEntry, MapMarker } from './map.js';
+import type { ChoroplethLayer, GeoJsonDataLayer, LegendEntry, MapMarker } from './map.js';
 import { storyColor } from '../../../../../.storybook/story-theme.js';
 
 const legend = (): LegendEntry[] => [
@@ -112,6 +112,53 @@ export const Choropleth: Story = {
           { color: storyColor('danger'), label: 'High' },
         ]}
         .choropleth=${choropleth}
+        .mapStyle=${RASTER_STYLE}
+      ></lyra-map>
+    `;
+  },
+};
+
+/**
+ * `dataLayers` renders arbitrary GeoJSON shapes (routes, zones, points of
+ * interest) as a source plus fill/line/circle layers, colored by an optional
+ * `tone` -- independent of `choropleth`, which requires a `field`/`stops`
+ * color ramp and can't display plain geometry.
+ */
+export const DataLayers: Story = {
+  render: () => {
+    const dataLayers: GeoJsonDataLayer[] = [
+      {
+        sourceId: 'route',
+        tone: 'success',
+        geojson: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [2.2945, 48.8584],
+              [2.3364, 48.8606],
+              [2.3522, 48.8566],
+            ],
+          },
+        },
+      },
+      {
+        sourceId: 'poi',
+        tone: 'danger',
+        geojson: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'Point', coordinates: [2.3522, 48.8566] },
+        },
+      },
+    ];
+    return html`
+      <lyra-map
+        style="height: 20rem"
+        center="[2.3522, 48.8566]"
+        zoom="12"
+        .dataLayers=${dataLayers}
         .mapStyle=${RASTER_STYLE}
       ></lyra-map>
     `;
