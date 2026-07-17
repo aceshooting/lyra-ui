@@ -175,7 +175,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this._itemId = next ?? '';
     if (old !== this._itemId) {
       this.touchedFields = new Set();
-      this.pendingFocusFirst = true;
+      // Only steal focus on a genuine item-to-item transition -- `hasUpdated`
+      // (inherited from ReactiveElement, and still reliably `false` here: it
+      // only flips to `true` inside the first `performUpdate()`, which can't
+      // have run yet for a property set during upgrade/initial-template
+      // commit) distinguishes that from the component's very first
+      // assignment, e.g. a consumer declaring `item-id="..."` directly in
+      // markup to use this as a single static form rather than a queue.
+      if (this.hasUpdated) this.pendingFocusFirst = true;
     }
     if (this._itemId) this.setAttribute('item-id', this._itemId);
     else this.removeAttribute('item-id');
@@ -438,6 +445,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         class="control"
         part="scale"
         ?disabled=${disabled}
+        ?required=${Boolean(k.required)}
         @lyra-change=${(e: CustomEvent<{ value: string[] }>) => this.setFieldValue(k.key, e.detail.value)}
       >
         ${options.map(
@@ -455,6 +463,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       part="scale"
       .value=${value}
       ?disabled=${disabled}
+      ?required=${Boolean(k.required)}
       @change=${(e: Event) => this.setFieldValue(k.key, (e.target as LyraSelect).value)}
     >
       ${options.map((opt) => html`<lyra-option value=${opt.value}>${opt.label ?? opt.value}</lyra-option>`)}
@@ -470,6 +479,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       placeholder=${k.placeholder ?? ''}
       .value=${value}
       ?disabled=${this.effectiveDisabled}
+      ?required=${Boolean(k.required)}
       @lyra-input=${(e: CustomEvent<{ value: string }>) => this.setFieldValue(k.key, e.detail.value)}
     ></lyra-textarea>`;
   }

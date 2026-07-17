@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { render } from 'lit';
 import './rubric-form.js';
 import type { LyraRubricForm, RubricKey } from './rubric-form.js';
 
@@ -127,6 +128,127 @@ describe('lyra-rubric-form', () => {
     el.itemId = 'item-2';
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')).to.not.exist;
+  });
+
+  it('forwards required to lyra-select, lyra-checkbox-group, and lyra-textarea, matching each sibling’s own required-driven aria state', async () => {
+    const keys: RubricKey[] = [
+      { key: 'category', type: 'category', required: true, options: [{ value: 'a' }] },
+      { key: 'optionalCategory', type: 'category', options: [{ value: 'a' }] },
+      { key: 'tags', type: 'category', multiple: true, required: true, options: [{ value: 'a' }, { value: 'b' }] },
+      { key: 'comment', type: 'comment', required: true },
+    ];
+    const el = (await fixture(html`<lyra-rubric-form .keys=${keys}></lyra-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[data-key="category"] lyra-select') as HTMLElement & { required: boolean };
+    const optionalSelect = el.shadowRoot!.querySelector('[data-key="optionalCategory"] lyra-select') as HTMLElement & {
+      required: boolean;
+    };
+    const group = el.shadowRoot!.querySelector('[data-key="tags"] lyra-checkbox-group') as HTMLElement & { required: boolean };
+    const textarea = el.shadowRoot!.querySelector('[data-key="comment"] lyra-textarea') as HTMLElement & { required: boolean };
+    expect(select.required).to.be.true;
+    expect(optionalSelect.required).to.be.false;
+    expect(group.required).to.be.true;
+    expect(textarea.required).to.be.true;
+  });
+
+  it('does not steal focus when item-id is set directly in initial markup (mount, not a real transition)', async () => {
+    const el = (await fixture(
+      html`<lyra-rubric-form item-id="item-1" .keys=${KEYS}></lyra-rubric-form>`,
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    // `=== null` (rather than a direct chai `.to.equal(node)` on a real
+    // element) throughout this focus-assertion block on purpose: comparing
+    // first to a plain boolean sidesteps chai ever needing to format a live
+    // custom element into a failure message.
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
+  });
+
+  it('does not arm the mount-time auto-focus for a property set before the component has ever updated (regression)', () => {
+    // The DOM-focus assertion above can't, by itself, distinguish "correctly
+    // skipped" from an unrelated, unavoidable one-tick gap: every sibling
+    // control this component renders (segmented/slider/select/textarea/
+    // checkbox-group) forwards `.focus()` into its own shadow DOM, which
+    // can't exist before that control's own first, async Lit update runs --
+    // so a focus *attempt* made at true first-render time is always a no-op
+    // regardless of this bug. Inspecting the private flag `set itemId()`
+    // uses to arm `focusFirstControl()` gives a direct, synchronous,
+    // race-free signal instead: it must still be `false` right after
+    // upgrade with `item-id` set in markup, before this component's first
+    // update has ever run.
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    try {
+      render(html`<lyra-rubric-form item-id="item-1" .keys=${KEYS}></lyra-rubric-form>`, container);
+      const el = container.querySelector('lyra-rubric-form') as unknown as { pendingFocusFirst: boolean };
+      expect(el.pendingFocusFirst).to.be.false;
+    } finally {
+      container.remove();
+    }
+  });
+
+  it('still focuses the first control on a genuine itemId transition after mount', async () => {
+    const el = (await fixture(html`<lyra-rubric-form .keys=${KEYS}></lyra-rubric-form>`)) as LyraRubricForm;
+    await el.updateComplete;
+    el.itemId = 'item-1';
+    await el.updateComplete;
+    const segmented = el.shadowRoot!.querySelector('[data-key="accuracy"] lyra-segmented');
+    expect(el.shadowRoot!.activeElement === segmented).to.be.true;
+    el.itemId = 'item-2';
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === segmented).to.be.true;
+  });
+
+  it('renders a .strings override for the empty-keys message', async () => {
+    const el = (await fixture(
+      html`<lyra-rubric-form .strings=${{ noData: 'Rien à évaluer' }}></lyra-rubric-form>`,
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Rien à évaluer');
+  });
+
+  it('localizes the required-field and unsupported-field-type messages via .strings, reaching the DOM', async () => {
+    const keys = [
+      { key: 'accuracy', type: 'score', min: 0, max: 5, step: 1, required: true },
+      { key: 'x', type: 'bogus' },
+    ] as unknown as RubricKey[];
+    const el = (await fixture(
+      html`<lyra-rubric-form
+        .keys=${keys}
+        .strings=${{
+          fieldRequired: 'Ce champ est requis.',
+          unsupportedFieldType: 'Type de champ non pris en charge : "{type}".',
+        }}
+      ></lyra-rubric-form>`,
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    el.reportValidity();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-key="accuracy"] [part="error"]')!.textContent).to.equal(
+      'Ce champ est requis.',
+    );
+    expect(el.shadowRoot!.querySelector('[part="unsupported"]')!.textContent).to.equal(
+      'Type de champ non pris en charge : "bogus".',
+    );
+  });
+
+  it('localizes the submit/submit-and-next/skip button labels via .strings', async () => {
+    const el = (await fixture(
+      html`<lyra-rubric-form
+        .keys=${KEYS}
+        skippable
+        .strings=${{
+          rubricSubmit: 'Envoyer',
+          rubricSubmitAndNext: 'Envoyer et suivant',
+          rubricSkip: 'Passer',
+        }}
+      ></lyra-rubric-form>`,
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="submit"]')!.textContent!.trim()).to.equal('Envoyer');
+    expect(el.shadowRoot!.querySelector('[part="skip"]')!.textContent!.trim()).to.equal('Passer');
+    el.hasNext = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="submit"]')!.textContent!.trim()).to.equal('Envoyer et suivant');
   });
 
   it('renders a visible unsupported-field note for a key outside the three types and marks the form invalid', async () => {
