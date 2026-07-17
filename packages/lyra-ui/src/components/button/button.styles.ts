@@ -148,6 +148,22 @@ export const styles = css`
     font-size: var(--lyra-font-size-lg);
     min-block-size: var(--lyra-button-size-xl);
   }
+  /* A true inline-link appearance: zero chrome (no padding, border, radius, or min-height floor),
+     underlined, colored from the same accent token "plain" uses, and inheriting the ambient font
+     so it flows within surrounding text. Declared after the size rules so it overrides the
+     per-size font-size/padding/min-block-size regardless of the active "size". */
+  :host([appearance='link']) [part='base'] {
+    inline-size: auto;
+    padding: 0;
+    border: 0;
+    min-block-size: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--lyra-button-accent);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: var(--lyra-size-0-15rem);
+  }
   [part='spinner'] {
     display: inline-flex;
     position: absolute;

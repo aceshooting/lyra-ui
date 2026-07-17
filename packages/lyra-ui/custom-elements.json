@@ -8267,7 +8267,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`.",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control.",
               "attribute": "appearance",
               "reflects": true
             },
@@ -8675,7 +8675,7 @@
                 "text": "ButtonAppearance"
               },
               "default": "'filled'",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`.",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control.",
               "fieldName": "appearance"
             },
             {

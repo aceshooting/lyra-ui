@@ -35,12 +35,36 @@ export const Variants: Story = {
 
 export const Appearances: Story = {
   render: () => html`
-    <div style="display: flex; gap: 0.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
       <lyra-button variant="brand" appearance="accent">Accent</lyra-button>
       <lyra-button variant="brand" appearance="filled">Filled</lyra-button>
       <lyra-button variant="brand" appearance="outlined">Outlined</lyra-button>
       <lyra-button variant="brand" appearance="plain">Plain</lyra-button>
+      <lyra-button variant="brand" appearance="link">Link</lyra-button>
     </div>
+  `,
+};
+
+export const Link: Story = {
+  name: 'Link (inline text)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A zero-chrome, underlined inline-text appearance: no padding, border, or min-height, ' +
+          'colored from the same accent token `plain` uses and inheriting the surrounding font, so ' +
+          'it flows within a sentence rather than rendering as a button-shaped control.',
+      },
+    },
+  },
+  render: () => html`
+    <p style="max-inline-size: 32rem;">
+      The message failed to send.
+      <lyra-button appearance="link" variant="brand">Retry</lyra-button>
+      or
+      <lyra-button appearance="link" variant="danger">cancel</lyra-button>
+      the request — both flow inline with this paragraph's font.
+    </p>
   `,
 };
 

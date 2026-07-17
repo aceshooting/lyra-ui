@@ -189,4 +189,64 @@ describe('lyra-button', () => {
     expect(css).to.include('inline-size: var(--lyra-button-width);');
     expect(css).to.include('--lyra-button-width: 100%;');
   });
+
+  it('renders appearance="link" as zero-chrome underlined inline text (no border, no padding, no min-height floor)', async () => {
+    const el = (await fixture(
+      html`<lyra-button appearance="link" variant="brand">Retry</lyra-button>`,
+    )) as LyraButton;
+    expect(el.getAttribute('appearance')).to.equal('link');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const cs = getComputedStyle(base);
+    // No border (the base rule's transparent-but-present border is dropped entirely).
+    expect(cs.borderTopWidth).to.equal('0px');
+    expect(cs.borderInlineStartWidth).to.equal('0px');
+    // Zero padding on every side, unlike every real "size".
+    expect(cs.paddingTop).to.equal('0px');
+    expect(cs.paddingBottom).to.equal('0px');
+    expect(cs.paddingLeft).to.equal('0px');
+    expect(cs.paddingRight).to.equal('0px');
+    // No enforced min-height floor.
+    expect(cs.minHeight).to.equal('0px');
+    // Transparent background and an underline.
+    expect(cs.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(cs.textDecorationLine).to.include('underline');
+  });
+
+  it('colors appearance="link" from the same accent token appearance="plain" uses', async () => {
+    const linkEl = (await fixture(
+      html`<lyra-button appearance="link" variant="brand">Retry</lyra-button>`,
+    )) as LyraButton;
+    const plainEl = (await fixture(
+      html`<lyra-button appearance="plain" variant="brand">Retry</lyra-button>`,
+    )) as LyraButton;
+    const linkBase = linkEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const plainBase = plainEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(linkBase).color).to.equal(getComputedStyle(plainBase).color);
+  });
+
+  it('inherits the ambient font-size for appearance="link" instead of forcing a per-size font-size', async () => {
+    const el = (await fixture(html`
+      <div style="font-size: 21px;">
+        <lyra-button appearance="link" size="m">Retry</lyra-button>
+      </div>
+    `)) as HTMLElement;
+    const button = el.querySelector('lyra-button') as LyraButton;
+    const base = button.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).fontSize).to.equal('21px');
+  });
+
+  it('declares the underline offset and keeps a focus-visible outline for appearance="link"', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/:host\(\[appearance='link'\]\) \[part='base'\][^}]*text-decoration: underline/);
+    expect(css).to.match(
+      /:host\(\[appearance='link'\]\) \[part='base'\][^}]*text-underline-offset: var\(--lyra-size-0-15rem\)/,
+    );
+    // The generic focus-visible rule still applies to the link appearance (it is not overridden).
+    expect(css).to.match(/\[part='base'\]:focus-visible\s*\{[^}]*outline:/);
+  });
+
+  it('is accessible as an inline link', async () => {
+    const el = await fixture(html`<lyra-button appearance="link" variant="brand">Retry</lyra-button>`);
+    await expect(el).to.be.accessible();
+  });
 });

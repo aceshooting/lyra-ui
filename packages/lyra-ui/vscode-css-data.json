@@ -254,6 +254,13 @@
       }
     },
     {
+      "name": "--lyra-file-icon-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-file-icon>`** (default: `var(--lyra-size-2rem)`) — Inline/block size of the format badge."
+      }
+    },
+    {
       "name": "--lyra-flag-aspect-ratio",
       "description": {
         "kind": "markdown",

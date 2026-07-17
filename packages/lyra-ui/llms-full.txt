@@ -740,10 +740,15 @@ shadow-internal native button doesn't participate in an ancestor form's submissi
 
 **Properties:**
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
-- `appearance: 'accent' | 'filled' | 'outlined' | 'plain' = 'filled'` (reflected) — `'accent'` is a
+- `appearance: 'accent' | 'filled' | 'outlined' | 'plain' | 'link' = 'filled'` (reflected) —
+  `'accent'` is a
   loud, high-contrast filled tier,
   distinct from `'filled'` for `variant="neutral"` specifically (`'filled'` reads the ambient
-  surface color there; `'accent'` reads a solid neutral fill)
+  surface color there; `'accent'` reads a solid neutral fill). `'link'` is a true inline-link tier:
+  zero chrome (no padding, border, border-radius, or `min-block-size` floor), underlined
+  (`text-underline-offset: var(--lyra-size-0-15rem)`), colored from `--lyra-button-accent` (the same token `'plain'`
+  uses, so `variant` still selects the link color) and inheriting the surrounding font-size/weight
+  — for a text link that flows within a sentence rather than a button-shaped control
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `type: 'button' | 'submit' | 'reset' = 'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
@@ -779,6 +784,7 @@ loud fill token), `--lyra-button-hover-brightness` (default `1.08`, the `:hover`
 <lyra-button variant="brand" appearance="filled">Save</lyra-button>
 <lyra-button variant="neutral" appearance="accent">Save</lyra-button>
 <lyra-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lyra-button>
+<p>The message failed. <lyra-button appearance="link" variant="brand">Retry</lyra-button></p>
 ```
 
 **Known gotchas:**

@@ -1104,7 +1104,7 @@
           "name": "appearance",
           "description": {
             "kind": "markdown",
-            "value": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`.\n\nType: `ButtonAppearance`  \nDefault: `'filled'`"
+            "value": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control.\n\nType: `ButtonAppearance`  \nDefault: `'filled'`"
           }
         },
         {
@@ -4004,7 +4004,7 @@
       "name": "lyra-file-icon",
       "description": {
         "kind": "markdown",
-        "value": "Displays a localized, tokenized file-type badge from a MIME type.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer presentation wrapper. |\n| `icon` | The format badge. |\n| `label` | The localized format label in `variant=\"label\"` mode. |"
+        "value": "Displays a localized, tokenized file-type badge from a MIME type.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer presentation wrapper. |\n| `icon` | The format badge. |\n| `label` | The localized format label in `variant=\"label\"` mode. |\n| `size` | The formatted `size`, shown alongside `label` in `variant=\"label\"` mode when `size` is known. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-file-icon-size` (default: `var(--lyra-size-2rem)`) — Inline/block size of the format badge."
       },
       "attributes": [
         {
@@ -4032,7 +4032,7 @@
           "name": "mime-type",
           "description": {
             "kind": "markdown",
-            "value": "MIME type used to resolve metadata.\n\nType: `string`  \nDefault: `''`"
+            "value": "MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
@@ -4040,6 +4040,13 @@
           "description": {
             "kind": "markdown",
             "value": "Optional filename used for fallback detection with an empty or generic MIME type.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "size",
+          "description": {
+            "kind": "markdown",
+            "value": "File size in bytes, shown alongside the label in `variant=\"label\"` mode. `0` (the default) renders no size — matches `<lyra-attachment-chip>`'s `size` convention.\n\nType: `number`  \nDefault: `0`"
           }
         },
         {

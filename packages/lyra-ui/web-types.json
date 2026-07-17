@@ -1271,7 +1271,7 @@
           "attributes": [
             {
               "name": "appearance",
-              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`.\n\nType: `ButtonAppearance`  \nDefault: `'filled'`",
+              "description": "`'filled'` (the default) reads `--lyra-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lyra-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lyra-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control.\n\nType: `ButtonAppearance`  \nDefault: `'filled'`",
               "value": {
                 "type": [
                   "ButtonAppearance"
@@ -4533,7 +4533,7 @@
         },
         {
           "name": "lyra-file-icon",
-          "description": "Displays a localized, tokenized file-type badge from a MIME type.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer presentation wrapper. |\n| `icon` | The format badge. |\n| `label` | The localized format label in `variant=\"label\"` mode. |",
+          "description": "Displays a localized, tokenized file-type badge from a MIME type.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer presentation wrapper. |\n| `icon` | The format badge. |\n| `label` | The localized format label in `variant=\"label\"` mode. |\n| `size` | The formatted `size`, shown alongside `label` in `variant=\"label\"` mode when `size` is known. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-file-icon-size` (default: `var(--lyra-size-2rem)`) — Inline/block size of the format badge.",
           "attributes": [
             {
               "name": "decorative",
@@ -4564,7 +4564,7 @@
             },
             {
               "name": "mime-type",
-              "description": "MIME type used to resolve metadata.\n\nType: `string`  \nDefault: `''`",
+              "description": "MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge.\n\nType: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
@@ -4577,6 +4577,15 @@
               "value": {
                 "type": [
                   "string"
+                ]
+              }
+            },
+            {
+              "name": "size",
+              "description": "File size in bytes, shown alongside the label in `variant=\"label\"` mode. `0` (the default) renders no size — matches `<lyra-attachment-chip>`'s `size` convention.\n\nType: `number`  \nDefault: `0`",
+              "value": {
+                "type": [
+                  "number"
                 ]
               }
             },
@@ -11890,6 +11899,10 @@
         {
           "name": "--lyra-empty-compact-padding",
           "description": "**`<lyra-empty>`** (default: `var(--lyra-space-xs)`) — Padding used in compact mode; accepts any padding shorthand (e.g. `8px 2px`)."
+        },
+        {
+          "name": "--lyra-file-icon-size",
+          "description": "**`<lyra-file-icon>`** (default: `var(--lyra-size-2rem)`) — Inline/block size of the format badge."
         },
         {
           "name": "--lyra-flag-aspect-ratio",
