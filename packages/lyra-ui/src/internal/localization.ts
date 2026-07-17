@@ -492,7 +492,10 @@ export type LyraMessageKey =
   | 'duration'
   | 'spanWaterfall'
   | 'spanStartedAtOffset'
-  | 'spanTokens';
+  | 'spanTokens'
+  | 'rubricSubmit'
+  | 'rubricSubmitAndNext'
+  | 'rubricSkip';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -986,6 +989,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   spanWaterfall: 'Span timeline',
   spanStartedAtOffset: 'started at +{value}',
   spanTokens: '{in} tokens in, {out} tokens out',
+  rubricSubmit: 'Submit',
+  rubricSubmitAndNext: 'Submit and next',
+  rubricSkip: 'Skip',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();
