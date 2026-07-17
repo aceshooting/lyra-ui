@@ -152,6 +152,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         void this.load();
       });
       this.pageHighlightItems.clear();
+      // getPageText() caches by page number alone -- without clearing it here, a page-1 lookup
+      // from the previous document would still resolve to a cache hit, silently returning stale
+      // text (and misdirecting any in-flight text-quote anchor scan) once the new document loads.
+      this.pageTextCache.clear();
     }
     if (changed.has('page') && this.loadState.kind === 'ready') {
       this.emit('lyra-page-change', { page: this.page, pageCount: this.loadState.pageCount });

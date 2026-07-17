@@ -369,6 +369,38 @@ describe('anchor-target adoption', () => {
     }
   });
 
+  it('getPageText does not return stale text from a previous document after src changes (regression)', async () => {
+    const el = (await fixture(html`<lyra-pdf-viewer></lyra-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/doc-a.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const textA = await el.getPageText(1);
+      expect(textA).to.contain('revenue');
+
+      const docB = {
+        numPages: 1,
+        getPage: (pageNumber: number) =>
+          Promise.resolve({
+            ...fakePage(pageNumber),
+            getTextContent: () =>
+              Promise.resolve({ items: [{ str: 'Completely', hasEOL: false }, { str: 'different', hasEOL: false }, { str: 'content.', hasEOL: false }] }),
+          }),
+      };
+      installFakeLoader(el, docB);
+      const loadPromise = oneEvent(el, 'lyra-load');
+      el.src = 'https://example.test/doc-b.pdf';
+      await loadPromise;
+
+      const textB = await el.getPageText(1);
+      expect(textB).to.contain('different');
+      expect(textB).to.not.contain('revenue');
+    } finally {
+      restore();
+    }
+  });
+
   it('getPageText shares an in-flight promise for concurrent calls to the same page', async () => {
     const el = (await fixture(html`<lyra-pdf-viewer></lyra-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
