@@ -36,8 +36,8 @@ composition without registration; for example, `components/empty/empty.class.js`
   `lyra-model-settings-panel`, `lyra-context-meter`, `lyra-dock-panel`, `lyra-document-preview`,
   `lyra-document-viewer`, `lyra-docx-viewer`, `lyra-email-viewer`, `lyra-calendar-viewer`, `lyra-archive-viewer`,
   `lyra-media-card`, `lyra-attachment-trigger`, `lyra-kbd`, `lyra-result-card`/`lyra-result-field`,
-  `lyra-avatar`, `lyra-card`, `lyra-stepper`, `lyra-segmented`, `lyra-diff-view`, `lyra-poll-status`,
-  `lyra-code-block-core` (needs the optional peer `shiki`)
+  `lyra-avatar`, `lyra-card`, `lyra-stepper`, `lyra-segmented`, `lyra-diff-view`, `lyra-stack-trace`,
+  `lyra-poll-status`, `lyra-code-block-core` (needs the optional peer `shiki`)
 - **Cross-cutting notes** — packaging notes that apply across the whole library
 
 ---
@@ -2656,6 +2656,17 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   drawn edge label is hidden (toggled via a `data-edge-labels-hidden` attribute on the zoomed `<g>`,
   not a Lit re-render, so it tracks pan/zoom smoothly). Ignored entirely when `showEdgeLabels` is
   `false`
+- `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
+  throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
+  layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
+  reversed only for layering, never mutating caller data): positions are computed synchronously
+  with no settle animation, sized from each node's own radius and spaced by `linkDistance` (the
+  layer gap) and a fixed 12px in-layer gap. Node drag is disabled in this mode (dragging would fight
+  a computed layout) and `chargeStrength` becomes a documented no-op; pan/zoom, keyboard roving,
+  `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
+  force mode. Switching `layout` at runtime repositions every node without a tween. The layering
+  algorithm itself lives in the standalone, dependency-free `layeredLayout()` export
+  (`@aceshooting/lyra-ui/internal/layered-layout`), reusable by any other layered-diagram consumer
 
 **Events:** `lyra-node-click` (`detail: { id }`), `lyra-link-click` (`detail: { source, target,
 id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller)
@@ -7152,6 +7163,72 @@ consumer can compute or unit-test the same alignment without instantiating the e
 
 ---
 
+## `lyra-stack-trace`
+
+Parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus
+activatable frames, splitting chained/caused-by errors (`Caused by:`, `[cause]:`, Python's "direct
+cause"/"During handling" separators) into separate groups. Frames matching `internalPatterns` fold
+behind a count-labeled toggle. Falls back to verbatim raw text when nothing parses. First-party
+invention (no Web Awesome equivalent).
+
+**Properties:**
+- `trace: string = ''` — the raw stack trace text to parse and render.
+- `collapseInternal: boolean = true` (attribute: `collapse-internal`) — folds runs of internal
+  frames behind a toggle.
+- `internalPatterns: (string | RegExp)[] = DEFAULT_INTERNAL_PATTERNS` (attribute: false) —
+  file-path substrings/`RegExp`s that mark a frame as internal.
+- `copyable: boolean = true` — shows a copy-to-clipboard button for the raw trace text.
+- `maxHeight: string = ''` (attribute: `max-height`) — caps the rendered block size and enables an
+  internal scrollbar once content exceeds it (any valid CSS length). Empty string (the default)
+  grows with content.
+
+**Events:**
+- `lyra-frame-select` (`detail: { file?: string; line?: number; column?: number; raw: string }`) —
+  a frame was activated. `column` is always undefined for Python frames, which carry no column
+  information.
+- `lyra-copy` (`detail: { text: string }`) — the raw, unparsed trace text, fired on copy-button
+  activation regardless of whether the clipboard write actually succeeded.
+
+**Slots:** none.
+
+**CSS parts:** `base` (the root wrapper; respects `max-height`), `message` (the leading error
+message text for a group), `group` (one chained-error group of frames), `frame` (a single frame
+button; carries `data-internal` for internal frames), `frame-function` (the frame's function
+name), `frame-location` (the frame's `file:line:col` text), `internal-toggle` (the collapse/expand
+toggle for a run of internal frames), `raw` (the verbatim fallback when zero structured frames
+parsed), `copy-button` (only rendered while `copyable`).
+
+**Themeable custom properties:** `--lyra-stack-trace-max-height` (default `none`),
+`--lyra-stack-trace-font` (default `var(--lyra-font-mono)`), plus shared tokens
+`--lyra-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lyra-radius`,
+`--lyra-border-width-thin`, `--lyra-space-xs`/`-s`/`-2xs`, `--lyra-font-size-sm`/`-xs`,
+`--lyra-font-weight-bold`/`-semibold`, `--lyra-focus-ring-*`.
+
+**Optional peer deps:** none.
+
+```html
+<lyra-stack-trace></lyra-stack-trace>
+<script type="module">
+  const stackTrace = document.querySelector('lyra-stack-trace');
+  stackTrace.trace = 'TypeError: boom\n    at doThing (/app/src/util.js:10:5)';
+  stackTrace.addEventListener('lyra-frame-select', (e) => console.log(e.detail.file, e.detail.line));
+</script>
+```
+
+The package root also exports the pure `parseStackTrace(trace: string, internalPatterns: (string |
+RegExp)[]): StackGroup[]` helper (plus `DEFAULT_INTERNAL_PATTERNS`, and the `StackFrame`/
+`StackGroup` types) — the same parsing function this component's own `willUpdate()` calls, exposed
+standalone so a consumer can parse or unit-test traces without instantiating the element at all.
+
+**Known gotchas:**
+- an internal-frame run only collapses behind the `internal-toggle` when it is two or more
+  consecutive internal frames; a single isolated internal frame renders as a normal `frame` button
+  (there is nothing useful to fold).
+- when `trace` doesn't match any of the supported formats, `parseStackTrace()` returns `[]` and the
+  component renders the text verbatim in a `raw` part instead of silently dropping content.
+
+---
+
 ## `lyra-tool-approval-dialog`
 
 A human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an
@@ -8422,7 +8499,12 @@ controlled state within its supported range. `getPageText(page)` resolves the ra
 of one page (per-page LRU-cached, 64 pages), rejecting on no loaded document or an out-of-range page.
 `renderPageThumbnail(page, canvas, options?)` renders `page` into a caller-owned `canvas` at
 `options.width` CSS px (default 96), devicePixelRatio-aware, resolving `false` when not ready or out
-of range.
+of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `true` once mounted (or
+`false` for an out-of-range value, without changing `page`). `getOutline()` resolves the document's
+table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none.
+`search(query)` resolves the match count across all pages (empty/whitespace query behaves like
+`clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
+resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
 **CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `text-layer`,
 `spinner`, and `error`.
@@ -9365,6 +9447,40 @@ re-click of the same source citation).
 **CSS parts:** `base` (the absolutely-positioned overlay, inset 0) and `rect` (one highlight
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes).
 
+## `lyra-message-actions`
+
+The per-message action toolbar for `lyra-chat-message`'s `actions` slot: opt-in built-ins (copy /
+regenerate / edit / feedback) that emit intent events, plus a default slot for custom controls (e.g.
+a slotted `lyra-branch-picker`). `role="toolbar"` with WAI-ARIA APG roving-tabindex; ArrowLeft/
+ArrowRight (RTL-aware) plus Home/End move focus across every stop — built-ins and slotted controls
+alike — via `.focus()`. Only the plain-button built-ins (`regenerate`/`edit`) get their `tabindex`
+toggled by this component itself; a composite child (`lyra-copy-button`, the `feedback` built-in, any
+slotted custom element) remains independently reachable via the page's native Tab order alongside the
+toolbar's single roving stop, since a shadow-root-internal focusable element can't be suppressed from
+outside its own component.
+
+**Properties:** `controls: MessageActionControl[] = []` (attribute: false, each `'copy' |
+'regenerate' | 'edit' | 'feedback'`) — which built-ins render, in that order. `copyText: string = ''`
+(attribute `copy-text`) — required for the `copy` built-in to render at all. `feedbackValue: 'up' |
+'down' | null = null` (attribute `feedback-value`) — forwarded to the embedded, thumbs-only
+`lyra-message-feedback` (its `reasons`/`commentable`/`detailFor` are never forwarded, so its detail
+panel never opens). `revealOnHover: boolean = false` (reflected, attribute `reveal-on-hover`) — hides
+the bar until the closest `lyra-chat-message` ancestor is hovered or a control inside has focus.
+`label: string = ''` — accessible name override for the toolbar.
+
+**Events:** `lyra-regenerate`/`lyra-edit` — a built-in was activated, no detail. `lyra-copy` —
+`detail: { text }`, surfaced by the embedded `lyra-copy-button` (bubbles/composed already, not
+re-emitted). `lyra-change`/`lyra-submit` — bubble unchanged from the embedded, thumbs-only
+`lyra-message-feedback`.
+
+**Slots:** default — additional controls (e.g. `lyra-copy-button`, `lyra-icon-button`,
+`lyra-branch-picker`) appended after the built-ins; they participate in the toolbar's arrow-key
+navigation.
+
+**CSS parts:** `base` (the toolbar, `role="toolbar"`), `copy-button` (the embedded
+`lyra-copy-button`), `regenerate-button`, `edit-button`, and `feedback` (the embedded
+`lyra-message-feedback`).
+
 ## `lyra-message-feedback`
 
 Thumbs up/down for one assistant message, with an optional inline detail step (categorical reason
@@ -9572,3 +9688,111 @@ columns. Consumes the same `LyraSpan[]` as `<lyra-span-waterfall>`.
 `showTokens`/`showCost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `showTokens`), `cost` (when `showCost`), `bar-track`,
 `bar`, `empty` (shown when `spans` is empty), and `live-region`.
+
+## `lyra-file-tree`
+
+A file-explorer preset over `<lyra-tree>` + `<lyra-file-icon>`: path-keyed nodes with
+git-status/diff-count badges, lazy directory loading, and select/open events.
+
+**Properties:** `nodes: FileTreeNode[] = []` (attribute: false), `selectedPath: string | null = null`
+(attribute `selected-path`), and `label: string = ''`.
+
+**Methods:** `setChildren(path, children)` supplies a lazily-loaded directory's children.
+`revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
+`true` once found. `expandAll()` and `collapseAll()` forward to the underlying `<lyra-tree>`.
+
+**Events:** `lyra-file-select` (`detail: { path, node }`, a row was activated), `lyra-file-open`
+(`detail: { path, node }`, Enter/click on an already-selected file row), and `lyra-load-children`
+(`detail: { path }`, a lazy unloaded directory expanded).
+
+**CSS parts:** `base` — the root wrapper.
+
+## `lyra-activity-feed`
+
+An append-only streaming log of granular agent actions ("Searching the web…", "Read
+src/index.ts"), collapsing to a localized "Completed N steps" summary once the run is over. Entries
+never change state once added — a step whose status mutates in place belongs to `<lyra-task-list>`
+instead. Implements the shared follow (stick-to-bottom) contract. At/above `virtualizeThreshold`
+entries, the body renders through an internal `<lyra-virtual-list>` instead of a plain keyed list.
+
+**Properties:** `entries: ActivityEntry[] = []` (attribute: false), `mode: 'live' | 'post-hoc' =
+'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
+`label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
+`formatTimestamp?: (date: Date) => string` (attribute: false), and `virtualizeThreshold: number =
+200` (attribute `virtualize-threshold`).
+
+**Events:** `lyra-toggle` (`detail: { expanded }`, the header was activated) and
+`lyra-follow-change` (`detail: { following }`, `follow` released or re-engaged).
+
+**CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`),
+`summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
+`data-tone`), `entry-icon`, `entry-text`, and `entry-timestamp` (only while `showTimestamps` and a
+valid `timestamp` is set).
+
+**Themeable custom properties:** `--lyra-activity-feed-max-height` (default `16rem`) — cap on how
+tall the expanded body grows before it scrolls internally.
+
+## `lyra-commit-card`
+
+A compact commit summary (subject, author/time, diffstat, per-file changes) that links file rows out
+to a diff view.
+
+**Properties:** `hash: string = ''`, `message: string = ''`, `author: string = ''`, `timestamp?:
+number` (attribute: false), `files: CommitFileChange[] = []` (attribute: false), `filesCollapsed:
+boolean = true` (attribute `files-collapsed`, reflected), and `copyable: boolean = true` (reflected).
+
+**Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
+
+**Events:** `lyra-file-select` (`detail: { path }`), `lyra-toggle` (`detail: { collapsed }`), and
+`lyra-copy` (`detail: { text }`, the full hash was copied).
+
+**CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
+`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-additions`,
+`file-deletions`, `copy-button`, and `actions`.
+
+## `lyra-image-viewer`
+
+A full pan/zoom raster-image viewer with labeled region highlights and opt-in region annotation, the
+landing surface for `region`-anchored citations. Distinct from `<lyra-svg-viewer>` (rendered SVG
+documents) and `<lyra-image-comparer>` (before/after slotted surfaces). Adopts `DocumentAnchorTarget`
+with `anchorKinds: ['region']` only — no text selection is bound.
+
+**Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`, `fit: 'contain' | 'width' |
+'actual' = 'contain'` (reflected), `zoom: number = 1` (reflected), `rotation: 0 | 90 | 180 | 270 = 0`
+(reflected), and `annotatable: boolean = false` (reflected).
+
+**Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
+the embedded zoomable-frame's zoom.
+
+**Events:** `lyra-load` (`detail: { naturalWidth, naturalHeight }`), `lyra-zoom-change` (`detail: {
+zoom }`), `lyra-rotation-change` (`detail: { rotation }`), `lyra-fit-change` (`detail: { fit }`),
+`lyra-highlight-activate` (`detail: { id }`), `lyra-annotation-create` (`detail: { anchor }`, kind
+`'region'`), `lyra-anchor-result` (`detail: { found }`), and `lyra-render-error` (`detail: { error
+}`).
+
+**CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
+embedded `lyra-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
+`data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+
+## `lyra-transcript-feed`
+
+Live captions for an in-progress voice session: speaker-grouped entries, interim-vs-final styling
+with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with release, the same
+`follow`/`lyra-follow-change` contract `<lyra-terminal>` uses. Live captions only — recorded-media
+transcript sync is a separate concern.
+
+**Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false), `follow: boolean = true`
+(reflected), `showTimestamps: boolean = false` (attribute `show-timestamps`), `formatTimestamp?:
+(epochMs: number) => string` (attribute: false), and `maxRenderedEntries: number = 0` (attribute
+`max-rendered-entries`).
+
+**Methods:** `scrollToBottom()` re-engages `follow` and scrolls to the latest entry.
+
+**Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
+
+**Events:** `lyra-follow-change` — `detail: { following }`, fires on every `follow` transition.
+
+**CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
+only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
+(`dir="auto"`), `timestamp` (only while `show-timestamps`), `interim` (present alongside `entry` on
+an interim row), `jump-button` (shown only while `follow` is `false`), and `empty`.

@@ -160,8 +160,60 @@ import './components/sequence-strip/sequence-strip.js';
 import './components/emoji-picker/emoji-picker.js';
 import './components/file-tree/file-tree.js';
 import './components/commit-card/commit-card.js';
+import './components/audio-visualizer/audio-visualizer.js';
+import './components/branch-picker/branch-picker.js';
+import './components/compare-panel/compare-panel.js';
+import './components/highlight-layer/highlight-layer.js';
+import './components/message-feedback/message-feedback.js';
+import './components/page-rail/page-rail.js';
+import './components/push-to-talk/push-to-talk.js';
+import './components/rubric-form/rubric-form.js';
+import './components/span-waterfall/span-waterfall.js';
+import './components/task-list/task-list.js';
+import './components/terminal/terminal.js';
+import './components/trace-tree/trace-tree.js';
+import './components/activity-feed/activity-feed.js';
+import './components/message-actions/message-actions.js';
+import './components/transcript-feed/transcript-feed.js';
 
 // …and the barrel re-exports classes, helpers, and types.
+export { LyraActivityFeed } from './components/activity-feed/activity-feed.js';
+export type {
+  ActivityEntryTone,
+  ActivityEntry,
+  ActivityFeedMode,
+  ActivityFeedToggleDetail,
+  ActivityFeedFollowChangeDetail,
+  LyraActivityFeedEventMap,
+} from './components/activity-feed/activity-feed.js';
+export { LyraMessageActions } from './components/message-actions/message-actions.js';
+export type { MessageActionControl, LyraMessageActionsEventMap } from './components/message-actions/message-actions.js';
+export { LyraTranscriptFeed } from './components/transcript-feed/transcript-feed.js';
+export type { LyraTranscriptEntry, LyraTranscriptFeedEventMap } from './components/transcript-feed/transcript-feed.js';
+export { LyraAudioVisualizer } from './components/audio-visualizer/audio-visualizer.js';
+export type { AudioVisualizerVariant, AudioVisualizerState } from './components/audio-visualizer/audio-visualizer.js';
+export { LyraBranchPicker } from './components/branch-picker/branch-picker.js';
+export type { LyraBranchPickerEventMap } from './components/branch-picker/branch-picker.js';
+export { LyraComparePanel } from './components/compare-panel/compare-panel.js';
+export type { CompareVote, LyraComparePanelEventMap } from './components/compare-panel/compare-panel.js';
+export { LyraHighlightLayer } from './components/highlight-layer/highlight-layer.js';
+export type { HighlightLayerItem, LyraHighlightLayerEventMap } from './components/highlight-layer/highlight-layer.js';
+export { LyraMessageFeedback } from './components/message-feedback/message-feedback.js';
+export type { MessageFeedbackReason, LyraMessageFeedbackEventMap } from './components/message-feedback/message-feedback.js';
+export { LyraPageRail } from './components/page-rail/page-rail.js';
+export type { PageThumbnailSource, LyraPageRailEventMap } from './components/page-rail/page-rail.js';
+export { LyraPushToTalk } from './components/push-to-talk/push-to-talk.js';
+export type { PushToTalkMode, PushToTalkState, LyraPushToTalkEventMap } from './components/push-to-talk/push-to-talk.js';
+export { LyraRubricForm } from './components/rubric-form/rubric-form.js';
+export type { RubricKeyOption, RubricKey, RubricValue, LyraRubricFormEventMap } from './components/rubric-form/rubric-form.js';
+export { LyraSpanWaterfall } from './components/span-waterfall/span-waterfall.js';
+export type { LyraSpan, LyraSpanWaterfallEventMap } from './components/span-waterfall/span-waterfall.js';
+export { LyraTaskList } from './components/task-list/task-list.js';
+export type { TaskStatus, TaskItem, TaskListToggleDetail, LyraTaskListEventMap } from './components/task-list/task-list.js';
+export { LyraTerminal } from './components/terminal/terminal.js';
+export type { TerminalCell, TerminalLine, LyraTerminalEventMap } from './components/terminal/terminal.js';
+export { LyraTraceTree } from './components/trace-tree/trace-tree.js';
+export type { LyraTraceTreeEventMap } from './components/trace-tree/trace-tree.js';
 export { LyraSparkline } from './components/sparkline/sparkline.js';
 export { LyraSequenceStrip } from './components/sequence-strip/sequence-strip.js';
 export type { SequenceStripItem, SequenceStripCategory } from './components/sequence-strip/sequence-strip.js';
