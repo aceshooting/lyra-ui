@@ -598,7 +598,9 @@ export type LyraMessageKey =
   | 'avPlayerTranscript'
   | 'avPlayerTimeline'
   | 'avPlayerPlaybackRate'
-  | 'avPlayerPosition';
+  | 'avPlayerPosition'
+  | 'attachmentTriggerAudio'
+  | 'attachmentMenuAudio';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -1198,6 +1200,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   avPlayerTimeline: 'Seek',
   avPlayerPlaybackRate: 'Playback speed',
   avPlayerPosition: '{current} of {duration}',
+  attachmentTriggerAudio: 'Record audio',
+  attachmentMenuAudio: 'Record audio',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

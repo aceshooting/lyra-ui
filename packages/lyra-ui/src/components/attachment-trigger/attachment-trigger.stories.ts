@@ -94,6 +94,18 @@ export const CameraOnly: Story = {
   `,
 };
 
+/** `audio` follows the exact same request-only pattern as `camera` —
+ *  activating it only fires `lyra-audio-request`, which the host handles
+ *  however it wants (typically opening `<lyra-push-to-talk>` in a popover). */
+export const AudioCapability: Story = {
+  render: () => html`<lyra-attachment-trigger .capabilities=${['audio']}></lyra-attachment-trigger>`,
+};
+
+export const AllCapabilities: Story = {
+  render: () =>
+    html`<lyra-attachment-trigger .capabilities=${['files', 'image', 'camera', 'audio']}></lyra-attachment-trigger>`,
+};
+
 export const Disabled: Story = {
   render: () => html`
     <div style="display:flex; gap:1rem; align-items:center;">

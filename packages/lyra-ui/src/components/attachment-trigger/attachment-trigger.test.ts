@@ -415,3 +415,83 @@ describe('trigger-button hover specificity', () => {
     }
   });
 });
+
+describe('audio capability', () => {
+  it('uses an audio-specific aria-label for a single audio capability and renders no hidden file input', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    el.capabilities = ['audio'];
+    await el.updateComplete;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Record audio');
+    expect(hiddenInput(el)).to.be.null;
+  });
+
+  it('clicking the single audio trigger fires lyra-audio-request with null detail, and never clicks a hidden input', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    el.capabilities = ['audio'];
+    await el.updateComplete;
+
+    setTimeout(() => trigger(el).click());
+    const ev = await oneEvent(el, 'lyra-audio-request');
+    expect(ev.detail).to.be.null;
+  });
+
+  it('renders an audio row alongside files/image/camera in the multi-capability menu, in order', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    el.capabilities = ['files', 'image', 'camera', 'audio'];
+    await el.updateComplete;
+    const items = menuItems(el);
+    expect(items.map((i) => i.value)).to.deep.equal(['files', 'image', 'camera', 'audio']);
+  });
+
+  it('selecting the audio menu item fires lyra-audio-request without touching the hidden input', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    el.capabilities = ['files', 'audio'];
+    await el.updateComplete;
+    const input = hiddenInput(el)!;
+    let inputClicked = false;
+    input.addEventListener('click', () => (inputClicked = true));
+
+    setTimeout(() => clickItem(menuItems(el).find((i) => i.value === 'audio')!));
+    await oneEvent(el, 'lyra-audio-request');
+    expect(inputClicked).to.be.false;
+  });
+
+  it('disabled suppresses the audio request from both the single trigger and a menu item', async () => {
+    const el = (await fixture(
+      html`<lyra-attachment-trigger disabled></lyra-attachment-trigger>`,
+    )) as LyraAttachmentTrigger;
+    el.capabilities = ['files', 'audio'];
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lyra-audio-request', () => (fired = true));
+    clickItem(menuItems(el).find((i) => i.value === 'audio')!);
+    expect(fired).to.be.false;
+  });
+
+  it('localizes the audio trigger/menu labels via this.localize()', async () => {
+    const el = (await fixture(html`
+      <lyra-attachment-trigger
+        .strings=${{ attachmentTriggerAudio: 'Enregistrer un message vocal', attachmentMenuAudio: 'Message vocal' }}
+      ></lyra-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    el.capabilities = ['audio'];
+    await el.updateComplete;
+    expect(trigger(el).getAttribute('aria-label')).to.equal('Enregistrer un message vocal');
+
+    el.capabilities = ['files', 'audio'];
+    await el.updateComplete;
+    const audioItem = menuItems(el).find((i) => i.value === 'audio')!;
+    expect(audioItem.textContent?.trim()).to.equal('Message vocal');
+  });
+
+  it('is accessible with a single audio capability and with audio in a multi-capability menu', async () => {
+    const el = (await fixture(html`<lyra-attachment-trigger></lyra-attachment-trigger>`)) as LyraAttachmentTrigger;
+    el.capabilities = ['audio'];
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+
+    el.capabilities = ['files', 'image', 'camera', 'audio'];
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

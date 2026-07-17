@@ -7,11 +7,11 @@ import type { MenuSelectDetail } from '../menu/menu.class.js';
 import '../menu/menu.class.js';
 import '../menu/menu-item.class.js';
 
-export type AttachmentCapability = 'files' | 'image' | 'camera';
+export type AttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
 
-/** The two capabilities that resolve to a real file selection (as opposed
- *  to `camera`, which never touches a file input -- see the class doc). */
-export type FileBackedCapability = Exclude<AttachmentCapability, 'camera'>;
+/** The capabilities that resolve to a real file selection (as opposed to `camera`/`audio`, which
+ *  never touch the hidden file input -- see the class doc). */
+export type FileBackedCapability = Exclude<AttachmentCapability, 'camera' | 'audio'>;
 
 export interface AttachmentPickDetail {
   capability: FileBackedCapability;
@@ -71,6 +71,18 @@ function cameraIcon(): SVGTemplateResult {
   `);
 }
 
+/** A mic glyph for the `audio` capability. Duplicated locally rather than shared -- this file's
+ *  own convention keeps one-off icons local to whichever component renders them, matching the
+ *  paperclip/image/camera glyphs above. */
+function audioIcon(): SVGTemplateResult {
+  return icon(svg`
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"></path>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+    <line x1="12" y1="19" x2="12" y2="23"></line>
+    <line x1="8" y1="23" x2="16" y2="23"></line>
+  `);
+}
+
 interface CapabilityMeta {
   /** Icon shown on the single-capability trigger button and next to the menu item. */
   icon: () => SVGTemplateResult;
@@ -84,10 +96,12 @@ const CAPABILITY_META: Record<AttachmentCapability, CapabilityMeta> = {
   files: { icon: paperclipIcon, triggerKey: 'attachmentTriggerFiles', menuKey: 'attachmentMenuFiles' },
   image: { icon: imageIcon, triggerKey: 'attachmentTriggerImage', menuKey: 'attachmentMenuImage' },
   camera: { icon: cameraIcon, triggerKey: 'attachmentTriggerCamera', menuKey: 'attachmentMenuCamera' },
+  audio: { icon: audioIcon, triggerKey: 'attachmentTriggerAudio', menuKey: 'attachmentMenuAudio' },
 };
 
 export interface LyraAttachmentTriggerEventMap {
   'lyra-camera-request': CustomEvent<undefined>;
+  'lyra-audio-request': CustomEvent<undefined>;
   'lyra-pick': CustomEvent<AttachmentPickDetail>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
@@ -103,7 +117,7 @@ export interface LyraAttachmentTriggerEventMap {
  *  - More than one: a small anchored menu ([part='menu'], composed from
  *    `<lyra-menu>`/`<lyra-menu-item>`) listing each capability as a row.
  *
- * Two of the three capabilities (`files`, `image`) are file-picker-backed:
+ * Two of the four capabilities (`files`, `image`) are file-picker-backed:
  * activating them opens a hidden native `<input type="file">` via a
  * synthetic `.click()`, and the resulting selection is re-emitted as
  * `lyra-pick`. `accept` is shared across both — `image` defaults it to
@@ -111,14 +125,15 @@ export interface LyraAttachmentTriggerEventMap {
  * `accept` as-is (empty means "any file type", matching a bare native
  * `<input type="file">` with no `accept` attribute).
  *
- * **`camera` is scope-limited by design.** This component does not
- * implement any camera capture UI itself — no `getUserMedia`, no
- * `<input capture>` — because that's entirely a host/browser concern with
+ * **`camera`/`audio` are scope-limited by design.** This component does not
+ * implement any camera or microphone capture UI itself — no `getUserMedia`,
+ * no `<input capture>` — because that's entirely a host/browser concern with
  * no single right answer (a desktop web app, a mobile PWA, and a native
- * wrapper all want different things here). Activating the `camera`
- * capability only fires `lyra-camera-request`; the host owns everything
- * from that point on (opening its own capture UI, then presumably handing
- * the resulting `File` back to something like `<lyra-attachment-chip>`).
+ * wrapper all want different things here). Activating `camera` fires
+ * `lyra-camera-request`; activating `audio` fires `lyra-audio-request`. The
+ * host owns everything from that point on — typically opening
+ * `<lyra-push-to-talk>` in a `<lyra-overlay>`/popover for `audio`, then
+ * handing the resulting blob to something like `<lyra-attachment-chip>`.
  *
  * @customElement lyra-attachment-trigger
  * @event lyra-pick - A file-backed capability's hidden file input produced a
@@ -130,6 +145,9 @@ export interface LyraAttachmentTriggerEventMap {
  * @event lyra-camera-request - The `camera` capability was activated. No
  * detail payload — see the class doc's scope note; the host implements the
  * actual capture flow.
+ * @event lyra-audio-request - The `audio` capability was activated. No
+ * detail payload — same request-only scope as `lyra-camera-request`; the
+ * host implements the actual recording flow (typically `<lyra-push-to-talk>`).
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
  * @csspart menu - The `<lyra-menu>` wrapper. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lyra-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
@@ -194,6 +212,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     if (this.disabled) return;
     if (capability === 'camera') {
       this.emit('lyra-camera-request');
+      return;
+    }
+    if (capability === 'audio') {
+      this.emit('lyra-audio-request');
       return;
     }
     this.pendingCapability = capability;
