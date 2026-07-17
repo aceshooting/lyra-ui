@@ -353,18 +353,31 @@ fi
 # packages already released.
 # ---------------------------------------------------------------------------
 RELEASED_DIRS=()
+TAGS_PUSHED=0
 publish_recovery_trap() {
   local exit_code=$?
   echo >&2
   echo "==> FAILED during release." >&2
-  if [[ "${#RELEASED_DIRS[@]}" -eq 0 ]]; then
-    echo "    No GitHub Release was created yet — fix the issue and re-run this script." >&2
+  if [[ "$TAGS_PUSHED" -eq 0 ]]; then
+    echo "    Nothing was committed/tagged/pushed yet — fix the issue and re-run this script." >&2
   else
-    echo "    GitHub Release already created (npm publish is running/queued in CI now — do NOT re-run this script or recreate these releases):" >&2
-    for dir in "${RELEASED_DIRS[@]}"; do
-      echo "      - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]} (tag ${TAG[$dir]})" >&2
+    echo "    Commit + tags are already pushed to origin — do NOT re-run this script from the top (the changesets that were consumed are already gone)." >&2
+    if [[ "${#RELEASED_DIRS[@]}" -gt 0 ]]; then
+      echo "    Already has a GitHub Release (npm publish is running/queued in CI — do NOT recreate these):" >&2
+      for dir in "${RELEASED_DIRS[@]}"; do
+        echo "      - ${PKG_NAME[$dir]}@${NEW_VERSION[$dir]} (tag ${TAG[$dir]})" >&2
+      done
+    fi
+    echo "    Still needs a GitHub Release (tag is pushed but no Release exists yet, so CI was never triggered for these):" >&2
+    for dir in "${RELEASE_DIRS[@]}"; do
+      released=0
+      for done_dir in "${RELEASED_DIRS[@]}"; do
+        [[ "$dir" == "$done_dir" ]] && released=1
+      done
+      [[ "$released" -eq 1 ]] && continue
+      echo "      - gh release create '${TAG[$dir]}' '${TARBALL_PATH[$dir]:-<tarball>}' '$dir/CHANGELOG.md' --title '${PKG_NAME[$dir]}@${NEW_VERSION[$dir]}' --generate-notes" >&2
     done
-    echo "    Watch it with: gh run list --workflow=publish.yml" >&2
+    echo "    Watch CI with: gh run list --workflow=publish.yml" >&2
   fi
   exit "$exit_code"
 }
@@ -419,6 +432,7 @@ done
 echo
 echo "==> Pushing commit and tags"
 git push origin HEAD "${tag_args[@]}"
+TAGS_PUSHED=1
 
 for dir in "${RELEASE_DIRS[@]}"; do
   name="${PKG_NAME[$dir]}"
