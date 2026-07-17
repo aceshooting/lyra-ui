@@ -365,6 +365,22 @@ export type LyraMessageKey =
   | 'selectValueMissing'
   | 'select'
   | 'sourceListDefaultLabel'
+  | 'threadListLabel'
+  | 'threadGroupPinned'
+  | 'threadGroupToday'
+  | 'threadGroupYesterday'
+  | 'threadGroupPrevious7Days'
+  | 'threadGroupPrevious30Days'
+  | 'threadGroupArchived'
+  | 'pinConversation'
+  | 'unpinConversation'
+  | 'archiveConversation'
+  | 'unarchiveConversation'
+  | 'deleteConversation'
+  | 'searchThreads'
+  | 'threadListMatchAnnounce'
+  | 'threadListMatchAnnouncePlural'
+  | 'threadListEmpty'
   | 'resizeDivider'
   | 'trendUnchanged'
   | 'trendIncreased'
@@ -387,6 +403,14 @@ export type LyraMessageKey =
   | 'handoffLabel'
   | 'handoffToAgent'
   | 'handoffFromToAgent'
+  | 'usageBadgeLabel'
+  | 'usageBadgeTokensIn'
+  | 'usageBadgeTokensOut'
+  | 'usageBadgeTokensInLabel'
+  | 'usageBadgeTokensOutLabel'
+  | 'usageBadgeTotalTokensLabel'
+  | 'usageBadgeCostLabel'
+  | 'usageBadgeLatencyLabel'
   | 'thoughtFor'
   | 'thinking'
   | 'rangeStart'
@@ -395,6 +419,10 @@ export type LyraMessageKey =
   | 'toolApprovalHeading'
   | 'toolApprovalGenericTool'
   | 'toolApprovalArgsLabel'
+  | 'confirmApproved'
+  | 'confirmDenied'
+  | 'confirmApprovedAnnounce'
+  | 'confirmDeniedAnnounce'
   | 'deny'
   | 'edit'
   | 'approve'
@@ -601,7 +629,17 @@ export type LyraMessageKey =
   | 'avPlayerPlaybackRate'
   | 'avPlayerPosition'
   | 'attachmentTriggerAudio'
-  | 'attachmentMenuAudio';
+  | 'attachmentMenuAudio'
+  | 'browserFrameLabel'
+  | 'browserFrameUrlLabel'
+  | 'browserFrameViewOf'
+  | 'browserFrameTakeOver'
+  | 'browserFrameHandBack'
+  | 'browserFrameStop'
+  | 'browserFrameStatusIdle'
+  | 'browserFrameStatusConnecting'
+  | 'browserFrameStatusLive'
+  | 'browserFrameStatusStalled';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -974,6 +1012,22 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   selectValueMissing: 'Please select an option.',
   select: 'Select',
   sourceListDefaultLabel: 'Sources',
+  threadListLabel: 'Conversations',
+  threadGroupPinned: 'Pinned',
+  threadGroupToday: 'Today',
+  threadGroupYesterday: 'Yesterday',
+  threadGroupPrevious7Days: 'Previous 7 days',
+  threadGroupPrevious30Days: 'Previous 30 days',
+  threadGroupArchived: 'Archived',
+  pinConversation: 'Pin conversation',
+  unpinConversation: 'Unpin conversation',
+  archiveConversation: 'Archive conversation',
+  unarchiveConversation: 'Unarchive conversation',
+  deleteConversation: 'Delete conversation',
+  searchThreads: 'Search conversations',
+  threadListMatchAnnounce: '{count} conversation found',
+  threadListMatchAnnouncePlural: '{count} conversations found',
+  threadListEmpty: 'No conversations yet',
   resizeDivider: 'Resize divider between panel {a} and panel {b}',
   trendUnchanged: 'unchanged',
   trendIncreased: 'increased {value}%',
@@ -996,6 +1050,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   handoffLabel: 'Agent handoff',
   handoffToAgent: 'Transferred to {agent}',
   handoffFromToAgent: 'Transferred from {from} to {to}',
+  usageBadgeLabel: 'Usage',
+  usageBadgeTokensIn: '{count} in',
+  usageBadgeTokensOut: '{count} out',
+  usageBadgeTokensInLabel: 'Input tokens',
+  usageBadgeTokensOutLabel: 'Output tokens',
+  usageBadgeTotalTokensLabel: 'Total tokens',
+  usageBadgeCostLabel: 'Cost',
+  usageBadgeLatencyLabel: 'Latency',
   thoughtFor: 'Thought for {duration}',
   thinking: 'Thinking…',
   rangeStart: 'Range start',
@@ -1004,6 +1066,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   toolApprovalHeading: 'Approve {tool} call?',
   toolApprovalGenericTool: 'tool',
   toolApprovalArgsLabel: 'Tool call arguments (JSON)',
+  confirmApproved: 'Approved',
+  confirmDenied: 'Denied',
+  confirmApprovedAnnounce: 'Action approved.',
+  confirmDeniedAnnounce: 'Action denied.',
   deny: 'Deny',
   edit: 'Edit',
   approve: 'Approve',
@@ -1204,6 +1270,16 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   avPlayerPosition: '{current} of {duration}',
   attachmentTriggerAudio: 'Record audio',
   attachmentMenuAudio: 'Record audio',
+  browserFrameLabel: 'Browser view',
+  browserFrameUrlLabel: 'Address',
+  browserFrameViewOf: 'Browser view of {url}',
+  browserFrameTakeOver: 'Take over',
+  browserFrameHandBack: 'Hand back',
+  browserFrameStop: 'Stop',
+  browserFrameStatusIdle: 'Idle',
+  browserFrameStatusConnecting: 'Connecting…',
+  browserFrameStatusLive: 'Live',
+  browserFrameStatusStalled: 'Stalled',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

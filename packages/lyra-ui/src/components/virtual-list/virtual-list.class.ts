@@ -659,8 +659,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         (group) => html`
           <div
             part="group"
-            role="heading"
-            aria-level="2"
             style=${styleMap({ transform: `translateY(${this.offsets[group.startIndex] ?? 0}px)` })}
           >
             ${group.label ?? String(group.key)}
