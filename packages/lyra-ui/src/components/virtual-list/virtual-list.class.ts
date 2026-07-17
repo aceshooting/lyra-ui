@@ -128,6 +128,10 @@ export interface LyraVirtualListEventMap {
  * the row window, so they remain available when the first row in a group is
  * outside the current overscanned range.
  *
+ * **Programmatic scrolling.** `scrollToIndex()` is the public counterpart to `active-id`'s automatic
+ * scroll-into-view -- used by `<lyra-chat-viewport>`'s virtual mode and any other host that needs to
+ * scroll to a specific row without also changing which row is "active."
+ *
  * @customElement lyra-virtual-list
  * @event lyra-load-more - Fired once per approach to the bottom of the list
  *   while `has-more` is true and `loading` is false. Deliberately does not
@@ -225,6 +229,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private lastEmittedEnd = -1;
   /** Re-armed whenever the window moves away from the end of `items` -- see the `lyra-load-more` event doc. */
   private loadMoreArmed = true;
+  /** Set by `scrollToIndex()` in `row-height="auto"` mode when the target row hasn't been measured
+   *  yet -- its offset is still estimate-based, so the scroll can land short of (or past) the real
+   *  target. Consumed (and cleared) by `maybeCorrectPendingScroll()` the first time that row's real
+   *  height arrives, issuing exactly one corrective re-scroll -- never more than one, so a
+   *  still-settling row can't cause repeated scroll jumps. */
+  private pendingScrollCorrection?: {
+    key: VirtualListKey;
+    align: 'start' | 'end' | 'auto';
+    behavior: 'auto' | 'smooth';
+  };
   private isFirstUpdate = true;
 
   private rowResizeObserver?: ResizeObserver;
@@ -263,6 +277,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       cancelAnimationFrame(this.scrollRafId);
       this.scrollRafId = undefined;
     }
+    this.pendingScrollCorrection = undefined;
     this.renderRoot.querySelector('[part="base"]')?.removeEventListener('scroll', this.onScroll);
   }
 
@@ -296,6 +311,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (changed.has('activeId') && !this.isFirstUpdate) this.scrollActiveIntoView();
     this.emitRangeChangeIfNeeded();
     this.maybeFireLoadMore();
+    this.maybeCorrectPendingScroll();
   }
 
   private parseRowHeight(value: string): number | null {
@@ -515,6 +531,65 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     else if (bottom > viewBottom) target = bottom - base.clientHeight;
     if (target === null) return;
     base.scrollTo({ top: Math.max(0, target), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }
+
+  /**
+   * Scrolls row `index` into view. `align` (default `'auto'`) chooses `'start'` (row's top edge
+   * flush with the viewport top), `'end'` (row's bottom edge flush with the viewport bottom), or
+   * `'auto'` (the same minimal-distance scroll `scrollActiveIntoView()` already uses for
+   * `active-id` -- no scroll at all when the row is already fully visible). `behavior` (default
+   * `'smooth'`) is forced to `'auto'` under `prefers-reduced-motion: reduce` regardless of what's
+   * passed. `index` is clamped to `0…items.length-1`; a call against an empty `items` array is a
+   * no-op.
+   *
+   * In `row-height="auto"` mode a far-off target's offset can still be estimate-based (its own
+   * height, and every row between it and the current viewport, may not have been measured yet) --
+   * once the target row's real height actually arrives, exactly one corrective re-scroll is issued
+   * so the final resting position is accurate, without oscillating on every subsequent measurement.
+   */
+  scrollToIndex(
+    index: number,
+    options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' },
+  ): void {
+    const n = this.items.length;
+    if (n === 0) return;
+    const clamped = Math.min(n - 1, Math.max(0, Math.trunc(index)));
+    const align = options?.align ?? 'auto';
+    const behavior: 'auto' | 'smooth' = prefersReducedMotion() ? 'auto' : (options?.behavior ?? 'smooth');
+    this.performScrollTo(clamped, align, behavior);
+    if (this.fixedRowHeight == null) {
+      const key = this.keyOf(this.items[clamped], clamped);
+      this.pendingScrollCorrection = this.measuredHeights.has(key) ? undefined : { key, align, behavior };
+    } else {
+      // Fixed row-height offsets are exact from the first render -- no
+      // measurement to wait for, so no correction is ever needed.
+      this.pendingScrollCorrection = undefined;
+    }
+  }
+
+  private performScrollTo(index: number, align: 'start' | 'end' | 'auto', behavior: 'auto' | 'smooth'): void {
+    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    if (!base) return;
+    const top = this.offsets[index] ?? 0;
+    const bottom = this.offsets[index + 1] ?? top;
+    const viewTop = base.scrollTop;
+    const viewBottom = viewTop + base.clientHeight;
+    let target: number | null = null;
+    if (align === 'start') target = top;
+    else if (align === 'end') target = bottom - base.clientHeight;
+    else if (top < viewTop) target = top;
+    else if (bottom > viewBottom) target = bottom - base.clientHeight;
+    if (target === null) return;
+    base.scrollTo({ top: Math.max(0, target), behavior });
+  }
+
+  private maybeCorrectPendingScroll(): void {
+    const pending = this.pendingScrollCorrection;
+    if (!pending || !this.measuredHeights.has(pending.key)) return;
+    this.pendingScrollCorrection = undefined;
+    const index = this.items.findIndex((item, i) => Object.is(this.keyOf(item, i), pending.key));
+    if (index < 0) return;
+    this.performScrollTo(index, pending.align, pending.behavior);
   }
 
   private emitRangeChangeIfNeeded(): void {

@@ -313,6 +313,157 @@ it('scrolls the matching row into view once active-id changes after mount', asyn
   }
 });
 
+it('scrollToIndex scrolls a fixed-row-height list to the requested row, honoring align', async () => {
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  el.scrollToIndex(20, { align: 'start', behavior: 'auto' });
+  await nextFrame();
+  expect(base.scrollTop).to.equal(800); // row 20's top edge: 20 * 40
+
+  el.scrollToIndex(0, { align: 'start', behavior: 'auto' });
+  await nextFrame();
+  el.scrollToIndex(20, { align: 'end', behavior: 'auto' });
+  await nextFrame();
+  // row 20's bottom edge (840) flush with the 200px viewport bottom.
+  expect(base.scrollTop).to.equal(640);
+});
+
+it('scrollToIndex with align "auto" only scrolls the minimal distance (no-op when already visible)', async () => {
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  el.scrollToIndex(2, { behavior: 'auto' }); // row 2's top (80px) is already within the 200px viewport
+  await nextFrame();
+  expect(base.scrollTop).to.equal(0);
+});
+
+it('scrollToIndex clamps an out-of-range index instead of throwing', async () => {
+  const items = Array.from({ length: 10 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      row-height="40"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  expect(() => el.scrollToIndex(999, { behavior: 'auto' })).to.not.throw();
+  expect(() => el.scrollToIndex(-5, { behavior: 'auto' })).to.not.throw();
+});
+
+it('scrollToIndex is a no-op against an empty items array', async () => {
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      .items=${[]}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  expect(() => el.scrollToIndex(0)).to.not.throw();
+});
+
+it('forces behavior "auto" under prefers-reduced-motion even when "smooth" is requested', async () => {
+  const originalMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(prefers-reduced-motion: reduce)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as typeof window.matchMedia;
+
+  try {
+    const items = Array.from({ length: 50 }, (_, i) => i);
+    const el = (await fixture(
+      html`<lyra-virtual-list
+        style="--lyra-virtual-list-height:200px"
+        row-height="40"
+        overscan="0"
+        .items=${items}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lyra-virtual-list>`,
+    )) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    el.scrollToIndex(20, { align: 'start', behavior: 'smooth' });
+    await nextFrame();
+    // Reduced motion forces an immediate jump -- scrollTop already landed
+    // synchronously rather than animating over several frames.
+    expect(base.scrollTop).to.equal(800);
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});
+
+it("in row-height='auto' mode, issues one corrective re-scroll once the target row's real height arrives", async () => {
+  const tallRender = () => html`<div style="block-size:100px;box-sizing:border-box;">row</div>`;
+  const items = Array.from({ length: 30 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lyra-virtual-list
+      style="--lyra-virtual-list-height:200px"
+      overscan="0"
+      .items=${items}
+      .renderItem=${tallRender}
+      .keyFunction=${numberKey}
+    ></lyra-virtual-list>`,
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  // Row 25 is far outside both the currently-rendered window and any
+  // measured offsets -- its estimate-based offset (DEFAULT_ROW_ESTIMATE_PX
+  // per row) undershoots its real 100px-tall offset substantially. `'end'`
+  // alignment is used because it targets the row's *bottom* edge
+  // (offsets[index + 1]), which is exactly the value that shifts once this
+  // row's own real height is measured -- unlike `'start'`, whose target is
+  // the row's top edge and depends only on the (here, never-rendered and so
+  // never re-measured) rows before it.
+  el.scrollToIndex(25, { align: 'end', behavior: 'auto' });
+  const estimateBasedTop = base.scrollTop;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  // Once row 25 actually renders and gets measured at 100px, the corrective
+  // re-scroll lands well past the estimate-based guess.
+  expect(base.scrollTop).to.be.greaterThan(estimateBasedTop);
+});
+
 it('emits lyra-visible-range-changed once the container is measured after mount', async () => {
   const el = document.createElement('lyra-virtual-list') as LyraVirtualList;
   el.setAttribute('style', '--lyra-virtual-list-height:200px');
