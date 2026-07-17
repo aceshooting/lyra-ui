@@ -40,9 +40,9 @@ export const TEXT_QUOTE_CONTEXT_CHARS = 32;
  *  relying on anchor/highlight/search/text-select support. */
 export interface AnchorTargetCapabilities {
   anchors?: LyraAnchorKind[];
-  /** Uniform in-document search (see the backbone's `search()`/`searchNext()`/`searchPrevious()`/
-   *  `clearSearch()` contract) -- Family H implements this on individual viewers; this flag lets a
-   *  registry entry declare it once that lands. */
+  /** Uniform in-document search (see the `search()`/`searchNext()`/`searchPrevious()`/
+   *  `clearSearch()` contract implemented per-viewer) -- this flag lets a registry entry declare
+   *  it once a given viewer supports it. */
   search?: boolean;
   /** Whether the viewer emits `lyra-text-select` on selection end. */
   textSelect?: boolean;

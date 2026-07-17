@@ -13,8 +13,7 @@ import {
 
 // Compile-time exhaustiveness check: if a new `LyraAnchor` variant is ever added without updating
 // this switch, TypeScript's `never` assignment fails the build -- this function's mere existence
-// (and the fact the whole package still compiles) is the "exhaustiveness switch compiles" test the
-// spec's Test focus calls for.
+// (and the fact the whole package still compiles) is what proves the exhaustiveness switch works.
 function describeAnchorKind(anchor: LyraAnchor): LyraAnchorKind {
   switch (anchor.kind) {
     case 'page':
