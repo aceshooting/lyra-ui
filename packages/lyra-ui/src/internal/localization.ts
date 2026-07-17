@@ -5,6 +5,9 @@
  */
 export type LyraMessageKey =
   | 'noData'
+  | 'jumpToLatest'
+  | 'terminalLabel'
+  | 'terminalDownload'
   | 'sequenceStripEmpty'
   | 'sequenceStripCategoryCount'
   | 'noColumns'
@@ -490,6 +493,9 @@ export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record
 
 const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   noData: 'No data',
+  jumpToLatest: 'Jump to latest',
+  terminalLabel: 'Terminal output',
+  terminalDownload: 'Download log',
   sequenceStripEmpty: 'No items',
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'No columns configured',
