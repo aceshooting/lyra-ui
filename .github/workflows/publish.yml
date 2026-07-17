@@ -1,0 +1,85 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to (re-)publish, e.g. lyra-ui@3.7.1'
+        required: true
+        type: string
+      dry_run:
+        description: 'Run npm publish --dry-run instead of a real publish'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          if [[ -z "$TAG" ]]; then
+            echo "::error::No tag resolved from the release event or workflow_dispatch input."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Resolve package from tag
+        id: pkg
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          DIR_NAME="${TAG%@*}"
+          DIR="packages/$DIR_NAME"
+          if [[ ! -f "$DIR/package.json" ]]; then
+            echo "::error::No package.json at '$DIR' (resolved from tag '$TAG')."
+            exit 1
+          fi
+          PKG_NAME="$(node -p "require('./$DIR/package.json').name")"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "name=$PKG_NAME" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update npm CLI (trusted publishing needs >=11.5.1)
+        run: npm i -g npm@latest
+
+      - name: Build package
+        run: pnpm --filter "${{ steps.pkg.outputs.name }}" run build
+
+      - name: Publish to npm
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
+            npm publish --access public --dry-run
+          else
+            npm publish --access public
+          fi
