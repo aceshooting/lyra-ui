@@ -378,6 +378,9 @@ export type LyraMessageKey =
   | 'activityFeedLabel'
   | 'activityFeedCompletedSteps'
   | 'activityFeedCompletedStep'
+  | 'handoffLabel'
+  | 'handoffToAgent'
+  | 'handoffFromToAgent'
   | 'thoughtFor'
   | 'thinking'
   | 'rangeStart'
@@ -960,6 +963,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   activityFeedLabel: 'Activity',
   activityFeedCompletedSteps: 'Completed {count} steps',
   activityFeedCompletedStep: 'Completed {count} step',
+  handoffLabel: 'Agent handoff',
+  handoffToAgent: 'Transferred to {agent}',
+  handoffFromToAgent: 'Transferred from {from} to {to}',
   thoughtFor: 'Thought for {duration}',
   thinking: 'Thinking…',
   rangeStart: 'Range start',
