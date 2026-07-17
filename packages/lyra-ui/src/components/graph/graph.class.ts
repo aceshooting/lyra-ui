@@ -88,6 +88,7 @@ const EDGE_LABEL_LENGTH_GATE_RATIO = 0.85; // label hides when its measured widt
 const EXPAND_KEY_INTERVAL_MS = 500; // window for a double-Enter/Space to count as a double-activate
 const EXPAND_BADGE_R = 5; // world px, the "+" badge circle radius
 const EXPAND_BADGE_OFFSET = Math.SQRT1_2; // places the badge at the node's edge, diagonally upper-right
+const FOCUS_HALO_PADDING = 6; // world px added to the node's own radius for the halo ring
 
 
 /**
@@ -179,6 +180,7 @@ export interface LyraGraphEventMap {
   'lyra-link-enter': CustomEvent<{ source: string; target: string; id?: string }>;
   'lyra-link-leave': CustomEvent<{ source: string; target: string; id?: string }>;
   'lyra-node-expand': CustomEvent<{ id: string }>;
+  'lyra-selection-change': CustomEvent<{ nodeIds: string[]; linkIds: string[] }>;
 }
 /**
  * `<lyra-graph>` — a force-directed node-link diagram with pan/zoom/drag.
@@ -211,6 +213,9 @@ export interface LyraGraphEventMap {
  *   activations of the same focused node within 500ms). `detail: { id }`. Fires for any node
  *   regardless of `GraphNode.expandable` -- that flag only controls the visual "+" affordance and
  *   spoken "expandable" suffix.
+ * @event lyra-selection-change - `detail: { nodeIds, linkIds }`. Fires when `selectionMode` is not
+ *   `'none'` and the user activates/clears a node or link. The component never assigns
+ *   `selectedNodeIds`/`selectedLinkIds` itself -- controlled, mirroring `lyra-heatmap.selectedCell`.
  * @csspart base - The graph wrapper.
  * @csspart svg - The graph SVG.
  * @csspart node - A graph node.
@@ -219,6 +224,7 @@ export interface LyraGraphEventMap {
  * @csspart label - A node label.
  * @csspart link-label - A drawn edge label (only rendered when `showEdgeLabels` is set).
  * @csspart expand-indicator - The "+" badge rendered on a node with `expandable: true`.
+ * @csspart focus-halo - The persistent ring tracking `focusId`'s node.
  * @csspart live-region - The current graph item announcement.
  * @csspart data-list - A visually hidden list alternative for graph data.
  * @csspart empty - The empty-state message, shown when `nodes` is empty.
@@ -230,6 +236,8 @@ export interface LyraGraphEventMap {
  *   style component resolve the identical default.
  * @cssprop [--lyra-graph-edge-label-halo=var(--lyra-color-surface)] - Legibility halo (`stroke`)
  *   behind a drawn edge label, painted under the fill via `paint-order: stroke`.
+ * @cssprop [--lyra-graph-focus-halo-color=var(--lyra-color-brand)] - `focus-halo` stroke color.
+ * @cssprop [--lyra-graph-selected-color=var(--lyra-color-success)] - Selected node/link stroke.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
@@ -265,6 +273,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  attribute toggled on the zoomed `<g>`, no Lit re-render). Ignored when `showEdgeLabels` is
    *  false. */
   @property({ type: Number, attribute: 'edge-label-min-zoom' }) edgeLabelMinZoom = 0.6;
+  /** Declaratively centers the camera on this node id once, the first time it resolves (on mount
+   *  or when the id first appears in `nodes`) -- does not re-center on later mutations, so it
+   *  can't fight a user's panning on a streaming graph. Renders a persistent halo
+   *  (`part="focus-halo"`) around the node while set. See `focusNode()` for the imperative twin. */
+  @property({ attribute: 'focus-id' }) focusId: string | null = null;
+  /** `'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,
+   *  no `lyra-selection-change`. Controlled, mirroring `lyra-heatmap.selectedCell`: the component
+   *  never mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns
+   *  them back. */
+  @property({ attribute: 'selection-mode' }) selectionMode: 'none' | 'single' | 'multiple' = 'none';
+  @property({ attribute: false }) selectedNodeIds: string[] = [];
+  @property({ attribute: false }) selectedLinkIds: string[] = [];
 
   private readonly arrowMarkerId = nextId('graph-arrow');
 
@@ -309,6 +329,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  (mirroring native dblclick semantics for keyboard users). */
   private lastKeyActivateIndex: number | null = null;
   private lastKeyActivateTime = 0;
+  /** The last `focusId` value `focusNode()` was auto-invoked for by `updated()`'s declarative
+   *  centering branch -- guards against re-centering on every update while `focusId` stays set
+   *  (see the `focusId` property doc for why it only ever centers once per value). Reset to `null`
+   *  whenever `focusId` itself is cleared, so the same id can center again later. */
+  private lastAppliedFocusId: string | null = null;
+  private focusHaloEl?: SVGCircleElement;
+  /** The in-flight `requestAnimationFrame` id for a camera tween (`focusNode()`/`fit()`), if any --
+   *  canceled by a new tween request or a user pan/zoom gesture (see `applyInteractions()`'s zoom
+   *  `'start'` handler). */
+  private cameraTweenId?: number;
   private linkEls: SVGLineElement[] = [];
   private linkLabelEls: (SVGTextElement | null)[] = [];
   /** Per-simLink-index flip cache for the length declutter gate -- `onTick()` only writes
@@ -385,6 +415,179 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return categoricalPaletteColor(this.nodeTypes.indexOf(type));
   }
 
+  private cameraTransitionMs(): number {
+    const parsed = parseFloat(getComputedStyle(this).getPropertyValue('--lyra-transition-base'));
+    return Number.isFinite(parsed) ? parsed : 180;
+  }
+
+  private cancelCameraTween(): void {
+    if (this.cameraTweenId != null) {
+      cancelAnimationFrame(this.cameraTweenId);
+      this.cameraTweenId = undefined;
+    }
+  }
+
+  private applyZoomTransform(transform: OptionalPeerApi): void {
+    if (!this.d3 || !this.zoomedEl || !this.zoomBehavior) return;
+    this.zoomBehavior.transform(this.d3.select(this.zoomedEl), transform);
+  }
+
+  /** Animates from the zoom behavior's current transform toward `computeTarget()`'s result via a
+   *  rAF tween that calls `zoomBehavior.transform()` every frame -- keeps d3-zoom's own internal
+   *  state consistent (so the next user pan doesn't jump), unlike writing the `<g>` transform
+   *  attribute directly. `computeTarget` is re-invoked on every single frame (not read once
+   *  up-front) so the tween keeps tracking a still-settling force simulation's live node positions
+   *  instead of tweening toward a stale snapshot from the moment the call was made --
+   *  `focusNode()`/`fit()` are just as likely to run while the graph is still animating its initial
+   *  layout as after it's settled. `prefers-reduced-motion` jumps straight to one write of the
+   *  then-current target. A concurrent call cancels the previous tween. */
+  private tweenCamera(computeTarget: () => OptionalPeerApi): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.d3 || !this.zoomedEl || !this.zoomBehavior) {
+        resolve();
+        return;
+      }
+      this.cancelCameraTween();
+      if (prefersReducedMotion()) {
+        this.applyZoomTransform(computeTarget());
+        resolve();
+        return;
+      }
+      const current = this.d3.zoomTransform(this.zoomedEl);
+      const duration = this.cameraTransitionMs();
+      const start = performance.now();
+      const startK = current.k as number;
+      const startX = current.x as number;
+      const startY = current.y as number;
+      const step = (now: number): void => {
+        const t = duration > 0 ? Math.min(1, (now - start) / duration) : 1;
+        const target = computeTarget();
+        const targetK = target.k as number;
+        const targetX = target.x as number;
+        const targetY = target.y as number;
+        this.applyZoomTransform(
+          this.d3!.zoomIdentity
+            .translate(startX + (targetX - startX) * t, startY + (targetY - startY) * t)
+            .scale(startK + (targetK - startK) * t),
+        );
+        if (t < 1) {
+          this.cameraTweenId = requestAnimationFrame(step);
+        } else {
+          this.cameraTweenId = undefined;
+          resolve();
+        }
+      };
+      this.cameraTweenId = requestAnimationFrame(step);
+    });
+  }
+
+  /** Animates the camera so `id` centers in the viewport (the `width` x `height` viewBox), at
+   *  `options.zoom` (clamped to `[minZoom, maxZoom]`) or the current scale when omitted. Resolves
+   *  `true` on arrival; `false` for an id with no matching entry in `simNodes` -- there's nothing
+   *  to center on. Announces `graphNodeFocused` through the existing live region. Does not move DOM
+   *  focus -- this is a camera operation, not a roving-focus one. */
+  async focusNode(id: string, options?: { zoom?: number }): Promise<boolean> {
+    const node = this.simNodes.find((n) => n.id === id);
+    if (!node || !this.d3 || !this.zoomedEl || !this.zoomBehavior) return false;
+    const current = this.d3.zoomTransform(this.zoomedEl);
+    const k = Math.min(this.maxZoom, Math.max(this.minZoom, options?.zoom ?? (current.k as number)));
+    await this.tweenCamera(() =>
+      this.d3!.zoomIdentity.translate(this.width / 2 - k * (node.x ?? 0), this.height / 2 - k * (node.y ?? 0)).scale(k),
+    );
+    this.graphLiveText = this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) });
+    return true;
+  }
+
+  /** Animates the camera to frame the bounding box of every currently visible node position (plus
+   *  each node's own radius) at the largest scale that fits within `width` x `height` minus
+   *  `padding` viewport-px on each side (clamped to `[minZoom, maxZoom]`). Silent -- no data
+   *  changed, so no announcement. A no-op with no visible nodes. */
+  fit(options?: { padding?: number }): void {
+    if (!this.d3 || !this.zoomedEl || !this.zoomBehavior || !this.simNodes.length) return;
+    const padding = options?.padding ?? 24;
+    void this.tweenCamera(() => {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const n of this.simNodes) {
+        const r = this.nodeRadius(n);
+        minX = Math.min(minX, (n.x ?? 0) - r);
+        maxX = Math.max(maxX, (n.x ?? 0) + r);
+        minY = Math.min(minY, (n.y ?? 0) - r);
+        maxY = Math.max(maxY, (n.y ?? 0) + r);
+      }
+      const boxW = Math.max(1, maxX - minX);
+      const boxH = Math.max(1, maxY - minY);
+      const availW = Math.max(1, this.width - padding * 2);
+      const availH = Math.max(1, this.height - padding * 2);
+      const k = Math.min(this.maxZoom, Math.max(this.minZoom, Math.min(availW / boxW, availH / boxH)));
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      return this.d3!.zoomIdentity.translate(this.width / 2 - k * cx, this.height / 2 - k * cy).scale(k);
+    });
+  }
+
+  private updateFocusHalo(): void {
+    if (!this.focusHaloEl) return;
+    const node = this.focusId != null ? this.simNodes.find((n) => n.id === this.focusId) : undefined;
+    if (node) {
+      this.focusHaloEl.setAttribute('cx', String(node.x ?? 0));
+      this.focusHaloEl.setAttribute('cy', String(node.y ?? 0));
+      this.focusHaloEl.setAttribute('r', String(this.nodeRadius(node) + FOCUS_HALO_PADDING));
+      this.focusHaloEl.removeAttribute('hidden');
+    } else {
+      this.focusHaloEl.setAttribute('hidden', '');
+    }
+  }
+
+  private isSelected(kind: 'node' | 'link', id: string): boolean {
+    return kind === 'node' ? this.selectedNodeIds.includes(id) : this.selectedLinkIds.includes(id);
+  }
+
+  private linkKey(link: SimLink): string {
+    const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
+    const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
+    return link.id ?? `${source}->${target}`;
+  }
+
+  /** Computes and emits the selection intent for activating `id`; never assigns
+   *  `selectedNodeIds`/`selectedLinkIds` itself -- see the class doc's controlled-selection note. */
+  private emitSelectionIntent(kind: 'node' | 'link', id: string, toggle: boolean): void {
+    if (this.selectionMode === 'none') return;
+    const selected = this.isSelected(kind, id);
+    if (this.selectionMode === 'single' || !toggle) {
+      if (this.selectionMode === 'single' && selected) {
+        this.emit('lyra-selection-change', { nodeIds: [], linkIds: [] });
+        return;
+      }
+      this.emit(
+        'lyra-selection-change',
+        kind === 'node' ? { nodeIds: [id], linkIds: [] } : { nodeIds: [], linkIds: [id] },
+      );
+      return;
+    }
+    const nodeIds =
+      kind === 'node'
+        ? selected
+          ? this.selectedNodeIds.filter((x) => x !== id)
+          : [...this.selectedNodeIds, id]
+        : this.selectedNodeIds;
+    const linkIds =
+      kind === 'link'
+        ? selected
+          ? this.selectedLinkIds.filter((x) => x !== id)
+          : [...this.selectedLinkIds, id]
+        : this.selectedLinkIds;
+    this.emit('lyra-selection-change', { nodeIds, linkIds });
+  }
+
+  private clearSelection(): void {
+    if (this.selectionMode === 'none') return;
+    if (!this.selectedNodeIds.length && !this.selectedLinkIds.length) return;
+    this.emit('lyra-selection-change', { nodeIds: [], linkIds: [] });
+  }
+
   protected willUpdate(changed: PropertyValues): void {
     // rebuildSimulation() (re)assigns the simNodes/simLinks reactive
     // properties — doing that from willUpdate() folds them into the render
@@ -394,6 +597,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // and pointless work).
     if (this.d3 && (changed.has('nodes') || changed.has('links'))) {
       this.rebuildSimulation();
+    }
+    // Same reasoning as rebuildSimulation() above -- assigning graphLiveText from updated() would
+    // schedule a whole extra update pass instead of landing in the render this update is already
+    // about to perform.
+    if (changed.has('selectedNodeIds') || changed.has('selectedLinkIds')) {
+      this.graphLiveText = this.localize('graphSelectionCount', undefined, {
+        count: this.selectedNodeIds.length + this.selectedLinkIds.length,
+      });
     }
   }
 
@@ -426,6 +637,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // node/link querySelectorAll scan on that is equivalent to "structurally
     // changed" without needing a separate flag.
     this.applyInteractions(changed);
+    if (this.focusId == null) {
+      this.lastAppliedFocusId = null;
+    } else if (this.focusId !== this.lastAppliedFocusId && this.simNodes.some((n) => n.id === this.focusId)) {
+      this.lastAppliedFocusId = this.focusId;
+      void this.focusNode(this.focusId);
+    }
+    this.updateFocusHalo();
   }
 
   /** Suppresses hover events/`data-hovered` while a node drag is in progress (tracked from the
@@ -465,11 +683,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (svgEl && svgEl !== this.zoomedEl) {
       this.zoomedEl = svgEl;
       this.gEl = this.renderRoot.querySelector('g') ?? undefined;
+      this.focusHaloEl = (this.renderRoot.querySelector('[part="focus-halo"]') as SVGCircleElement) ?? undefined;
       this.zoomBehavior = this.d3
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([this.minZoom, this.maxZoom])
         .on('start', () => {
           this.isPanning = true;
+          this.cancelCameraTween();
         })
         .on('zoom', (event: OptionalPeerApi) => {
           this.gEl?.setAttribute('transform', event.transform.toString());
@@ -618,6 +838,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       line.setAttribute('x2', String(coordinates.x2));
       line.setAttribute('y2', String(coordinates.y2));
     });
+    this.updateFocusHalo();
   }
 
   private rebuildSimulation(): void {
@@ -763,14 +984,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.simLinks = links;
   }
 
-  private onNodeClick(node: SimNode): void {
+  private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {
     this.emit('lyra-node-click', { id: node.id });
+    this.emitSelectionIntent('node', node.id, !!(e?.ctrlKey || e?.metaKey));
   }
 
-  private onLinkClick(link: SimLink): void {
+  private onLinkClick(link: SimLink, e?: MouseEvent | KeyboardEvent): void {
     const source = typeof link.source === 'object' ? (link.source as SimNode).id : String(link.source);
     const target = typeof link.target === 'object' ? (link.target as SimNode).id : String(link.target);
     this.emit('lyra-link-click', { source, target, ...(link.id ? { id: link.id } : {}) });
+    this.emitSelectionIntent('link', this.linkKey(link), !!(e?.ctrlKey || e?.metaKey));
   }
 
   private onNodeEnter(node: SimNode, e: MouseEvent): void {
@@ -955,11 +1178,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    * (`<lyra-tabs>`, `<lyra-slider>`, `<lyra-segmented>`) apply under RTL.
    * `ArrowDown`/`ArrowUp` always mean next/previous regardless of direction.
    */
-  private onGraphKeyDown(e: KeyboardEvent, index: number, activate: () => void): void {
+  private onGraphKeyDown(e: KeyboardEvent, index: number, activate: (e: KeyboardEvent) => void): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       this.onGraphItemFocus(index);
-      activate();
+      activate(e);
       if (index < this.simNodes.length) {
         const now = performance.now();
         if (this.lastKeyActivateIndex === index && now - this.lastKeyActivateTime <= EXPAND_KEY_INTERVAL_MS) {
@@ -1014,6 +1237,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           })}
           viewBox="0 0 ${this.width} ${this.height}"
           tabindex=${this.graphItemCount() ? '-1' : '0'}
+          @click=${(e: MouseEvent) => {
+            if (e.target === e.currentTarget) this.clearSelection();
+          }}
+          @keydown=${(e: KeyboardEvent) => {
+            if (e.key === 'Escape') this.clearSelection();
+          }}
         >
           <defs>
             <marker
@@ -1041,6 +1270,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   role="button"
                   tabindex=${this.normalizedGraphItem() === itemIndex ? '0' : '-1'}
                   aria-label=${this.linkAccessibleText(l)}
+                  aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('link', this.linkKey(l))) : nothing}
+                  ?data-selected=${this.isSelected('link', this.linkKey(l))}
                   stroke-width=${l.width ?? 1.5}
                   stroke-dasharray=${dash ?? nothing}
                   marker-end=${l.directed ? `url(#${this.arrowMarkerId})` : nothing}
@@ -1049,9 +1280,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   y1=${coordinates.y1}
                   x2=${coordinates.x2}
                   y2=${coordinates.y2}
-                  @click=${() => this.onLinkClick(l)}
+                  @click=${(e: MouseEvent) => this.onLinkClick(l, e)}
                   @focus=${() => this.onGraphItemFocus(itemIndex)}
-                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onLinkClick(l))}
+                  @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, (ev) => this.onLinkClick(l, ev))}
                   @mouseenter=${(e: MouseEvent) => this.onLinkEnter(l, e)}
                   @mouseleave=${(e: MouseEvent) => this.onLinkLeave(l, e)}
                 >${l.description || l.label ? svg`<title>${l.description || l.label}</title>` : nothing}</line>`;
@@ -1095,14 +1326,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                       role="button"
                       tabindex=${tabindex}
                       aria-label=${label}
+                      aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('node', n.id)) : nothing}
+                      ?data-selected=${this.isSelected('node', n.id)}
                       r=${this.nodeRadius(n)}
                       cx=${n.x ?? 0}
                       cy=${n.y ?? 0}
                       style=${style}
-                      @click=${() => this.onNodeClick(n)}
+                      @click=${(e: MouseEvent) => this.onNodeClick(n, e)}
                       @dblclick=${(e: MouseEvent) => this.onNodeDblClick(n, e)}
                       @focus=${() => this.onGraphItemFocus(itemIndex)}
-                      @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
+                      @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, (ev) => this.onNodeClick(n, ev))}
                       @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
                       @mouseleave=${(e: MouseEvent) => this.onNodeLeave(n, e)}
                     >${title}</circle>`
@@ -1111,13 +1344,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                       role="button"
                       tabindex=${tabindex}
                       aria-label=${label}
+                      aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('node', n.id)) : nothing}
+                      ?data-selected=${this.isSelected('node', n.id)}
                       d=${shape === 'square' ? squarePath(this.nodeRadius(n)) : diamondPath(this.nodeRadius(n))}
                       transform="translate(${n.x ?? 0},${n.y ?? 0})"
                       style=${style}
-                      @click=${() => this.onNodeClick(n)}
+                      @click=${(e: MouseEvent) => this.onNodeClick(n, e)}
                       @dblclick=${(e: MouseEvent) => this.onNodeDblClick(n, e)}
                       @focus=${() => this.onGraphItemFocus(itemIndex)}
-                      @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, () => this.onNodeClick(n))}
+                      @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, itemIndex, (ev) => this.onNodeClick(n, ev))}
                       @mouseenter=${(e: MouseEvent) => this.onNodeEnter(n, e)}
                       @mouseleave=${(e: MouseEvent) => this.onNodeLeave(n, e)}
                     >${title}</path>`;
@@ -1134,6 +1369,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   : ''}
               </g>`;
             })}
+            <circle part="focus-halo" aria-hidden="true" hidden r="0" cx="0" cy="0"></circle>
           </g>
         </svg>
         <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">

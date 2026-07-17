@@ -70,4 +70,18 @@ export const styles = css`
     stroke-width: var(--lyra-size-1px);
     fill: none;
   }
+  [part='focus-halo'] {
+    fill: none;
+    stroke: var(--lyra-graph-focus-halo-color, var(--lyra-color-brand));
+    stroke-width: var(--lyra-size-2px);
+    pointer-events: none;
+  }
+  [part='node'][data-selected] {
+    stroke: var(--lyra-graph-selected-color, var(--lyra-color-success));
+    stroke-width: var(--lyra-size-2px);
+  }
+  [part='link'][data-selected] {
+    stroke: var(--lyra-graph-selected-color, var(--lyra-color-success)) !important;
+    stroke-width: var(--lyra-size-3px);
+  }
 `;

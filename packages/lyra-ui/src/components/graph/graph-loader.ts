@@ -12,6 +12,12 @@ export interface D3Modules {
   forceCollide: <Node extends D3Module = D3Module>(radius?: number | ((node: Node) => number)) => D3Module;
   drag: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>() => D3Module;
   zoom: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>() => D3Module;
+  /** The identity transform (`k=1, x=0, y=0`) — the starting point for constructing an absolute
+   *  camera transform via `.translate(x, y).scale(k)`, used by `focusNode()`/`fit()`. */
+  zoomIdentity: D3Module;
+  /** Reads the transform currently bound to a DOM node via d3-zoom (its internal `__zoom`
+   *  datum) — used to read the current scale/position before tweening to a new one. */
+  zoomTransform: (node: Element) => D3Module;
   select: <Element extends D3Module = D3Module, Datum extends D3Module = D3Module>(node?: Element) => D3Module;
 }
 
@@ -43,6 +49,8 @@ export async function loadD3Modules(
       forceCollide: force.forceCollide,
       drag: dragMod.drag,
       zoom: zoomMod.zoom,
+      zoomIdentity: zoomMod.zoomIdentity,
+      zoomTransform: zoomMod.zoomTransform,
       select: selectionMod.select,
     };
   } catch (err) {

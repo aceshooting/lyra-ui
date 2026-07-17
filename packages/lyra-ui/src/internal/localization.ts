@@ -292,6 +292,8 @@ export type LyraMessageKey =
   | 'graphDiagram'
   | 'graphTypedNode'
   | 'graphExpandableItem'
+  | 'graphNodeFocused'
+  | 'graphSelectionCount'
   | 'heatmapValueLabel'
   | 'heatmapMatrixCellLabel'
   | 'heatmapCalendarLabel'
@@ -455,6 +457,16 @@ export type LyraMessageKey =
   | 'emojiPickerSearchLabel'
   | 'emojiPickerGridLabel'
   | 'emojiPickerEmpty'
+  | 'pushToTalkRequesting'
+  | 'pushToTalkDenied'
+  | 'pushToTalkError'
+  | 'pushToTalkUnsupported'
+  | 'pushToTalkStarted'
+  | 'pushToTalkStopped'
+  | 'pushToTalkCancelled'
+  | 'pushToTalkHold'
+  | 'pushToTalkStart'
+  | 'pushToTalkStop'
   | 'traceTree'
   | 'spanKindAgent'
   | 'spanKindLlm'
@@ -465,17 +477,7 @@ export type LyraMessageKey =
   | 'tokensIn'
   | 'tokensOut'
   | 'cost'
-  | 'duration'
-  | 'pushToTalkRequesting'
-  | 'pushToTalkDenied'
-  | 'pushToTalkError'
-  | 'pushToTalkUnsupported'
-  | 'pushToTalkStarted'
-  | 'pushToTalkStopped'
-  | 'pushToTalkCancelled'
-  | 'pushToTalkHold'
-  | 'pushToTalkStart'
-  | 'pushToTalkStop';
+  | 'duration';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -775,6 +777,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphDiagram: 'Node-link diagram with {nodeCount} nodes and {linkCount} links',
   graphTypedNode: '{label} ({type})',
   graphExpandableItem: '{item}, expandable',
+  graphNodeFocused: 'Centered on {label}',
+  graphSelectionCount: '{count} selected',
   heatmapValueLabel: 'value',
   heatmapMatrixCellLabel: 'Row {row}, Col {col}: {value}',
   heatmapCalendarLabel: 'Calendar heatmap of {days} days, {label} range {range}',
@@ -931,6 +935,16 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   emojiPickerSearchLabel: 'Search emoji',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'No emoji found',
+  pushToTalkRequesting: 'Requesting microphone…',
+  pushToTalkDenied: 'Microphone access denied',
+  pushToTalkError: 'Recording failed',
+  pushToTalkUnsupported: 'Recording is not supported in this browser',
+  pushToTalkStarted: 'Recording started',
+  pushToTalkStopped: 'Recording stopped',
+  pushToTalkCancelled: 'Recording cancelled',
+  pushToTalkHold: 'Hold to talk',
+  pushToTalkStart: 'Start recording',
+  pushToTalkStop: 'Stop recording',
   traceTree: 'Trace tree',
   spanKindAgent: 'Agent',
   spanKindLlm: 'LLM',
@@ -942,16 +956,6 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   tokensOut: 'Tokens out',
   cost: 'Cost',
   duration: 'Duration',
-  pushToTalkRequesting: 'Requesting microphone…',
-  pushToTalkDenied: 'Microphone access denied',
-  pushToTalkError: 'Recording failed',
-  pushToTalkUnsupported: 'Recording is not supported in this browser',
-  pushToTalkStarted: 'Recording started',
-  pushToTalkStopped: 'Recording stopped',
-  pushToTalkCancelled: 'Recording cancelled',
-  pushToTalkHold: 'Hold to talk',
-  pushToTalkStart: 'Start recording',
-  pushToTalkStop: 'Stop recording',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

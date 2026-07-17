@@ -823,6 +823,273 @@ describe('expand affordance (J3)', () => {
   });
 });
 
+describe('focus & fit (J4 camera)', () => {
+  async function mountWide(): Promise<LyraGraph> {
+    const el = (await fixture(
+      html`<lyra-graph width="800" height="600" min-zoom="0.1" max-zoom="8"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [{ source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    return el;
+  }
+
+  it('focusNode resolves false for an unknown id without moving the camera', async () => {
+    const el = await mountWide();
+    const result = await el.focusNode('does-not-exist');
+    expect(result).to.be.false;
+  });
+
+  it('focusNode resolves true and centers the requested node at the viewport center for the given zoom', async () => {
+    const el = await mountWide();
+    const target = el.simNodes.find((n) => n.id === 'a')!;
+    const ok = await el.focusNode('a', { zoom: 2 });
+    expect(ok).to.be.true;
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const match = transform.match(/translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/);
+    expect(match, `unexpected transform string: ${transform}`).to.exist;
+    const [, tx, ty, k] = match!.map(Number);
+    expect(k).to.be.closeTo(2, 0.01);
+    // The node's world position, transformed by (k, tx, ty), must land at the viewport center.
+    expect(k * target.x! + tx).to.be.closeTo(400, 1);
+    expect(k * target.y! + ty).to.be.closeTo(300, 1);
+  });
+
+  it('focusNode clamps an out-of-range zoom to minZoom/maxZoom', async () => {
+    const el = await mountWide();
+    await el.focusNode('a', { zoom: 100 });
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const k = Number(transform.match(/scale\(([-\d.]+)\)/)![1]);
+    expect(k).to.be.closeTo(8, 0.01); // max-zoom
+  });
+
+  it('focusNode announces graphNodeFocused via the live region', async () => {
+    const el = await mountWide();
+    await el.focusNode('a');
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('Centered on A');
+  });
+
+  it('jumps in a single transform write under prefers-reduced-motion (no rAF tween)', async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as typeof window.matchMedia;
+    try {
+      const el = await mountWide();
+      let rafCalls = 0;
+      const originalRaf = window.requestAnimationFrame;
+      window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+        rafCalls++;
+        return originalRaf(cb);
+      }) as typeof window.requestAnimationFrame;
+      try {
+        await el.focusNode('a');
+      } finally {
+        window.requestAnimationFrame = originalRaf;
+      }
+      expect(rafCalls).to.equal(0);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('fit() frames the bounding box of all visible node positions within width/height minus padding', async () => {
+    const el = await mountWide();
+    el.fit({ padding: 10 });
+    await aTimeout(400); // let the default (non-reduced-motion) tween settle
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
+    const match = transform.match(/translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/);
+    expect(match, `unexpected transform string: ${transform}`).to.exist;
+    const [, tx, ty, k] = match!.map(Number);
+    // Both nodes' world positions, transformed by (k, tx, ty), must land within [10, width/height-10].
+    for (const n of el.simNodes) {
+      const sx = k * n.x! + tx;
+      const sy = k * n.y! + ty;
+      expect(sx).to.be.within(-1, 801);
+      expect(sy).to.be.within(-1, 601);
+    }
+  });
+
+  it('focusId declaratively centers once when it first resolves, and does not fight later panning', async () => {
+    const el = (await fixture(
+      html`<lyra-graph width="800" height="600" focus-id="b"></lyra-graph>`,
+    )) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await aTimeout(400);
+    const halo = el.shadowRoot!.querySelector('[part="focus-halo"]') as SVGCircleElement;
+    expect(halo.hasAttribute('hidden')).to.be.false;
+    const target = el.simNodes.find((n) => n.id === 'b')!;
+    expect(Number(halo.getAttribute('cx'))).to.be.closeTo(target.x!, 0.5);
+  });
+
+  it('focus-halo is hidden when focusId is unset or unresolved', async () => {
+    const el = await mountWide();
+    const halo = el.shadowRoot!.querySelector('[part="focus-halo"]') as SVGCircleElement;
+    expect(halo.hasAttribute('hidden')).to.be.true;
+  });
+
+  it('is accessible with focusId set', async () => {
+    const el = (await fixture(html`<lyra-graph focus-id="a"></lyra-graph>`)) as LyraGraph;
+    el.nodes = [{ id: 'a', label: 'A' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: no focusId set never shows the halo and the transform stays untouched by mount', async () => {
+    const el = await mountWide();
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    expect(svgEl.querySelector('g')!.getAttribute('transform')).to.equal('');
+  });
+});
+
+describe('selection (J4)', () => {
+  async function mountSelectable(mode: 'single' | 'multiple'): Promise<LyraGraph> {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.selectionMode = mode;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    return el;
+  }
+
+  it('defaults selectionMode to none: no aria-pressed/data-selected, no lyra-selection-change on click', async () => {
+    const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    expect(nodeEl.hasAttribute('aria-pressed')).to.be.false;
+    let fired = false;
+    el.addEventListener('lyra-selection-change', () => (fired = true));
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(fired).to.be.false;
+  });
+
+  it('single mode: clicking an unselected node emits a replace intent; clicking it again emits clear', async () => {
+    const el = await mountSelectable('single');
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
+    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
+
+    el.selectedNodeIds = ['a']; // host reflects the controlled prop back, per the contract
+    await el.updateComplete;
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
+  });
+
+  it('multiple mode: plain click replaces; Ctrl/Meta-click toggles, preserving other selected ids', async () => {
+    const el = await mountSelectable('multiple');
+    const [nodeA, nodeB] = [...el.shadowRoot!.querySelectorAll('[part="node"]')] as SVGElement[];
+    let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
+    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+
+    nodeA!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
+
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    nodeB!.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
+    expect(detail).to.deep.equal({ nodeIds: ['a', 'b'], linkIds: [] });
+
+    el.selectedNodeIds = ['a', 'b'];
+    await el.updateComplete;
+    nodeA!.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }));
+    expect(detail).to.deep.equal({ nodeIds: ['b'], linkIds: [] });
+  });
+
+  it('Ctrl+Enter toggles in multiple mode the same way as Ctrl-click', async () => {
+    const el = await mountSelectable('multiple');
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
+    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    nodeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, ctrlKey: true }));
+    expect(detail).to.deep.equal({ nodeIds: ['a'], linkIds: [] });
+  });
+
+  it('background click and Escape clear the selection in multiple mode', async () => {
+    const el = await mountSelectable('multiple');
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    let detail: { nodeIds: string[]; linkIds: string[] } | undefined;
+    el.addEventListener('lyra-selection-change', (e) => (detail = (e as CustomEvent).detail));
+    const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
+    svgEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
+
+    detail = undefined;
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    svgEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(detail).to.deep.equal({ nodeIds: [], linkIds: [] });
+  });
+
+  it('reflects controlled selectedNodeIds/selectedLinkIds as data-selected + aria-pressed, and never self-mutates them', async () => {
+    const el = await mountSelectable('single');
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    expect(nodeEl.hasAttribute('data-selected')).to.be.true;
+    expect(nodeEl.getAttribute('aria-pressed')).to.equal('true');
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true })); // emits clear, but component doesn't self-apply
+    expect(el.selectedNodeIds).to.deep.equal(['a']); // unchanged -- host owns the prop
+  });
+
+  it('announces graphSelectionCount when the controlled props change', async () => {
+    const el = await mountSelectable('single');
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('1 selected');
+  });
+
+  it('is accessible with a selection applied', async () => {
+    const el = await mountSelectable('multiple');
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
+  it('existing graph usage unaffected: lyra-node-click/lyra-link-click still fire unchanged alongside selection', async () => {
+    const el = await mountSelectable('single');
+    const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
+    let clickDetail: { id: string } | undefined;
+    el.addEventListener('lyra-node-click', (e) => (clickDetail = (e as CustomEvent).detail));
+    nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(clickDetail).to.deep.equal({ id: 'a' });
+  });
+});
+
 it('does not let a GraphNode.color value inject extra CSS declarations via the node style attribute', async () => {
   const el = (await fixture(html`<lyra-graph></lyra-graph>`)) as LyraGraph;
   el.nodes = [

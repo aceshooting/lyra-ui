@@ -16,6 +16,12 @@ it('caches the module — a second call returns the same promise result', async 
   expect(a).to.equal(b);
 });
 
+it('exposes zoomIdentity and zoomTransform for programmatic camera control (focusNode/fit)', async () => {
+  const mods = await loadD3();
+  expect(mods!.zoomIdentity).to.exist;
+  expect(mods!.zoomTransform).to.exist;
+});
+
 describe('loadD3Modules (uncached, dependency-injectable)', () => {
   it('resolves null when any one of the four peer dependencies fails to load', async () => {
     const err = new Error('d3-force boom');
