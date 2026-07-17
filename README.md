@@ -39,6 +39,7 @@ a live example, source code, and API reference.
 - [Browser & Node support](#browser--node-support)
 - [Built with](#built-with)
 - [Documentation](#documentation)
+- [Claude Code plugin](#claude-code-plugin)
 - [Status](#status)
 - [License](#license)
 
@@ -214,6 +215,25 @@ for details.
   (short index) and [`llms-full.txt`](./packages/lyra-ui/llms-full.txt) (full API reference).
 - **Contributors working on this repo itself:** [`AGENTS.md`](./AGENTS.md) (AI agents) and
   [`CONTRIBUTING.md`](./CONTRIBUTING.md) (humans).
+
+## Claude Code plugin
+
+`@aceshooting/lyra-ui` ships a [Claude Code](https://claude.com/claude-code) plugin so Claude gets
+the exact component API (not a guess from training data) while working in a project that depends
+on this library, plus commands for migrating off Web Awesome/Shoelace and auditing lyra-ui usage.
+
+```bash
+# Via Claude Code's plugin marketplace
+/plugin marketplace add aceshooting/lyra-ui
+/plugin install lyra-ui@aceshooting
+```
+
+Prefer a standalone download (e.g. for claude.ai Skills, outside Claude Code's plugin system)?
+Grab [`skills/lyra-ui.skill`](./skills/lyra-ui.skill) directly from this repo.
+
+See [`plugins/lyra-ui`](./plugins/lyra-ui) for the plugin source, or
+[`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt) for the same component reference
+without Claude Code.
 
 ## Status
 
