@@ -484,3 +484,67 @@ describe('paragraph/list/inline-code parts', () => {
     expect(el.shadowRoot!.querySelector('script')).to.not.exist;
   });
 });
+
+describe('highlightCode cache plumbing (Task 1 — no async loading yet)', () => {
+  type Internals = {
+    highlightCache: Map<string, string>;
+  };
+  function internalsOf(el: LyraMarkdown): Internals {
+    return el as unknown as Internals;
+  }
+
+  it('defaults highlightCode to true, languages to undefined, languagesOnly to false', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    expect(el.highlightCode).to.be.true;
+    expect(el.languages).to.equal(undefined);
+    expect(el.languagesOnly).to.be.false;
+  });
+
+  it('renders a fenced code block plain (no cache entry yet) even with highlightCode true (unchanged default)', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre).to.exist;
+    expect(pre.querySelector('span')).to.not.exist; // no shiki spans -- still plain
+    expect(pre.querySelector('code')!.className).to.equal('language-ts');
+    expect(pre.querySelector('code')!.textContent).to.equal('const x = 1;\n');
+  });
+
+  it('uses a pre-populated cache entry on render, keyed by lang+code', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    internalsOf(el).highlightCache.set('ts\nconst x = 1;\n', '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n');
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre.querySelector('span')!.textContent).to.equal('FAKE HIGHLIGHTED');
+  });
+
+  it('never consults or benefits from the cache when highlightCode is false, even if pre-populated', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.highlightCode = false;
+    internalsOf(el).highlightCache.set('ts\nconst x = 1;\n', '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n');
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre.querySelector('span')).to.not.exist;
+  });
+
+  it('never consults the cache while streaming is true, even if pre-populated', async () => {
+    const el = (await fixture(html`<lyra-markdown streaming></lyra-markdown>`)) as LyraMarkdown;
+    internalsOf(el).highlightCache.set('ts\nconst x = 1;\n', '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n');
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre.querySelector('span')).to.not.exist;
+  });
+
+  it('skips the cache for a fenced block with no language tag, even with highlightCode true', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```\nplain text\n```';
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre.querySelector('code')!.className).to.equal('');
+    expect(pre.querySelector('code')!.textContent).to.equal('plain text\n');
+  });
+});

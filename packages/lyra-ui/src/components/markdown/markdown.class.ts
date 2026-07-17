@@ -4,6 +4,16 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
 import { loadMarkdownDeps, getMarkdownDepsIfLoaded, type MarkdownDeps } from './markdown-loader.js';
+import {
+  loadShikiHighlighter,
+  loadShikiLanguage,
+  loadShikiHighlighterCore,
+  normalizeShikiLanguage,
+  SHIKI_THEMES,
+  type ShikiHighlighter,
+  type ShikiHighlighterCore,
+  type ShikiLanguageInput,
+} from '../code-block/code-loader.js';
 import { styles } from './markdown.styles.js';
 
 const HTML_ESCAPES: Record<string, string> = {
@@ -35,6 +45,43 @@ function cleanHref(href: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** One pending fenced-code block discovered during a `parseMarkdown()` pass whose `(lang, code)`
+ *  pair wasn't already in `highlightCache` -- collected as a side effect of the `code()` renderer so
+ *  the caller (`renderMarkdown()`) knows what to highlight next, without a second pass over the
+ *  source. `key` is `highlightCache`'s own lookup key for this pair. */
+interface PendingHighlight {
+  key: string;
+  lang: string;
+  code: string;
+}
+
+/**
+ * Rewrites shiki's generated `<pre>`/`<code>` hast nodes so the highlighted output keeps
+ * `<lyra-markdown>`'s own `part="code-block"` hook and a `language-${lang}` class on `<code>` --
+ * matching today's plain-render output shape exactly, so existing consumer CSS targeting either
+ * keeps working whether or not a given block ended up highlighted. A separate, purpose-built
+ * function from `code-block.class.ts`'s own (private, non-exported) `partTransformer` -- that one
+ * targets `<lyra-code-block>`'s own `part="pre"`/`part="code"`/line-numbers contract, which doesn't
+ * apply here.
+ */
+function markdownCodeTransformer(lang: string) {
+  return {
+    name: 'lyra-markdown-code-block',
+    pre(node: OptionalPeerApi) {
+      node.properties.part = ['code-block'];
+      delete node.properties.tabindex;
+    },
+    code(node: OptionalPeerApi) {
+      const classes = Array.isArray(node.properties.class)
+        ? node.properties.class
+        : node.properties.class
+          ? [node.properties.class]
+          : [];
+      node.properties.class = [...classes, `language-${lang}`];
+    },
+  };
 }
 
 export interface LyraMarkdownEventMap {
@@ -163,6 +210,26 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
    *  Reflects so a consumer can also target `lyra-markdown[streaming]`. */
   @property({ type: Boolean, reflect: true }) streaming = false;
 
+  /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lyra-code-block>`
+   *  uses. `true` (the default) upgrades every fenced block from plain `<pre><code>` once the peer
+   *  is available -- a pure upgrade, not a behavior change gated on opt-in, since it's itself gated
+   *  transparently by whether `shiki` is installed at all (an app that never installs it sees
+   *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
+   *  installed. No effect while `streaming` is `true` -- see that property's own doc. */
+  @property({ type: Boolean, attribute: 'highlight-code' }) highlightCode = true;
+
+  /** Same shape and purpose as `<lyra-code-block>`'s own `languages` -- a fine-grained, explicit
+   *  language-grammar bundle scoping shiki's build output to just those grammars instead of its
+   *  full ~200-language bundle. Forwarded verbatim to `loadShikiHighlighterCore()`. Unset uses the
+   *  default full-bundle loader, unchanged from how `<lyra-code-block>` itself defaults. */
+  @property({ attribute: false }) languages?: Record<string, ShikiLanguageInput>;
+
+  /** Same purpose as `<lyra-code-block>`'s own `languagesOnly` -- skips the default full-bundle
+   *  loader entirely, so a fenced block whose language isn't in `languages` falls back to plain
+   *  unhighlighted text rather than reaching for the full bundle. No effect unless `languages` is
+   *  also set. */
+  @property({ type: Boolean, attribute: 'languages-only' }) languagesOnly = false;
+
   // `null` covers both "the optional peers are still loading" and "a render
   // attempt just fell back after a failure" — the two states intentionally
   // look identical (plain text, see render()) since a consumer distinguishes
@@ -170,6 +237,12 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
   @state() private renderedHtml: string | null = null;
 
   private deps?: MarkdownDeps;
+
+  /** `(lang, code)` -> already-highlighted HTML, content-addressed (see `PendingHighlight`'s doc).
+   *  Persists across renders of this instance; populated asynchronously by Task 2's
+   *  `highlightPending()`. Never consulted while `streaming` is `true` or `highlightCode` is
+   *  `false` -- both gates live in the `code()` renderer inside `parseMarkdown()`. */
+  private highlightCache = new Map<string, string>();
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -243,9 +316,10 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
       return;
     }
 
+    const pendingKeys: PendingHighlight[] = [];
     let rawHtml: string;
     try {
-      rawHtml = this.parseMarkdown(deps.marked);
+      rawHtml = this.parseMarkdown(deps.marked, pendingKeys);
     } catch (error) {
       this.applyFallback(error);
       return;
@@ -281,7 +355,7 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     this.emit('lyra-render-error', { error });
   }
 
-  private parseMarkdown(marked: OptionalPeerApi): string {
+  private parseMarkdown(marked: OptionalPeerApi, pendingKeys: PendingHighlight[]): string {
     // Falsy (`null` or `''`) means the consumer explicitly opted out of
     // target="..."/rel="..." on rendered links -- see the linkTarget doc.
     // The default '_blank' is already truthy, so this preserves today's
@@ -294,6 +368,8 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     // `linkTarget`/`headingOffset` are already captured as locals for the
     // same reason.
     const escapeHtmlOption = this.escapeHtml;
+    const highlightCodeOption = this.highlightCode && !this.streaming;
+    const highlightCache = this.highlightCache;
     const instance = new marked.Marked();
     // A fresh renderer per parse (rather than a shared/cached one) so it
     // always closes over the *current* `linkTarget`/`headingOffset` — these
@@ -326,6 +402,12 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
           const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
           const body = `${token.text.replace(/\n$/, '')}\n`;
           const text = token.escaped ? body : escapeHtml(body);
+          if (highlightCodeOption && lang) {
+            const key = `${lang}\n${body}`;
+            const cached = highlightCache.get(key);
+            if (cached !== undefined) return cached;
+            pendingKeys.push({ key, lang, code: body });
+          }
           const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
           return `<pre part="code-block"><code${cls}>${text}</code></pre>\n`;
         },
