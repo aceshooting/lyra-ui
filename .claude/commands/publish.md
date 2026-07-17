@@ -181,12 +181,15 @@ stops you here, same as every gate above.
 - **Preflight** — `git -C ../lyra-ui.com status --short`. If it isn't clean, stop and tell the user
   what's pending in that repo instead of touching it — the same rule as this file's own step 1,
   just applied to the sibling checkout instead of this one.
-- **Sync content** — follow `../lyra-ui.com/.claude/commands/update.md` end to end (its own steps
-  1–7): it refreshes the component manifest, diffs for new/removed/renamed tags, authors catalog
-  entries + all 8 locale translations for anything new, validates every existing entry against the
-  now-fresh `custom-elements.json`, then rebuilds derived stats (`pnpm sync-counts`,
-  `pnpm sync-bundle-size`, `pnpm check-i18n`, `pnpm build`). Stop and report on the first failure —
-  don't work around it, same rule as step 2 above.
+- **Sync content** — follow `../lyra-ui.com/.claude/commands/update.md`'s content-sync steps 1–7
+  (skip its own step 8, "Report" — this step's report below supersedes it): it refreshes the
+  component manifest, diffs for new/removed/renamed tags, authors catalog entries + all 8 locale
+  translations for anything new, validates every existing entry against the now-fresh
+  `custom-elements.json`, then rebuilds derived stats (`pnpm sync-counts`, `pnpm sync-bundle-size`,
+  `pnpm check-i18n`, `pnpm build`). Stop and report on the first failure — don't work around it,
+  same rule as step 2 above. Note `update.md`'s own "Out of scope" section says "don't commit or
+  push in this repo" — that's true when running `update.md` on its own, but this step deliberately
+  overrides it: the commit + push below is this file's job, not `update.md`'s.
 - **Commit + push** in `../lyra-ui.com`:
 
   ```bash
