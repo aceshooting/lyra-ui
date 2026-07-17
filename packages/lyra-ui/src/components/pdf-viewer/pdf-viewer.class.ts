@@ -820,10 +820,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         range.setStart(r.node, start - r.start);
         range.setEnd(r.node, end - r.start);
         const mark = document.createElement('mark');
-        mark.setAttribute(
-          'part',
-          match.matchIndex === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match',
-        );
+        const parts = ['search-match'];
+        if (match.matchIndex === this.searchActiveIndex) parts.push('search-match-active');
+        mark.setAttribute('part', parts.join(' '));
         try {
           range.surroundContents(mark);
         } catch {

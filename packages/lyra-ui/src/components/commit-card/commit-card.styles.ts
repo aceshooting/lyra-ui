@@ -10,7 +10,7 @@ export const styles = css`
     padding: var(--lyra-space-m);
   }
   [part='subject'] {
-    font-weight: 600;
+    font-weight: var(--lyra-font-weight-semibold);
   }
   [part='body'] {
     white-space: pre-wrap;

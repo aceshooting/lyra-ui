@@ -119,8 +119,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   }
 
   private renderEntry(entry: LyraTranscriptEntry, showSpeaker: boolean, interim: boolean): TemplateResult {
+    const parts = ['entry'];
+    if (interim) parts.push('interim');
     return html`
-      <div part=${interim ? 'entry interim' : 'entry'} ?data-interim=${interim}>
+      <div part=${parts.join(' ')} ?data-interim=${interim}>
         ${showSpeaker && entry.speaker ? html`<span part="speaker">${entry.speaker}</span>` : nothing}
         <span part="text" dir="auto">${entry.text}</span>
         ${interim ? html`<span class="sr-only">${this.localize('transcriptFeedInterim')}</span>` : nothing}

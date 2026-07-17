@@ -98,7 +98,7 @@ export const styles = css`
   }
   [part='highlight-label'] {
     position: absolute;
-    inset-block-start: -1.5em;
+    inset-block-start: calc(var(--lyra-size-1-5em) * -1);
     inset-inline-start: 0;
     font-size: var(--lyra-font-size-xs);
     color: var(--lyra-color-text);
