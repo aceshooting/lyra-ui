@@ -244,6 +244,22 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
    *  `false` -- both gates live in the `code()` renderer inside `parseMarkdown()`. */
   private highlightCache = new Map<string, string>();
 
+  /** Bumped on every `highlightPending()` call, including ones that end up not actually loading
+   *  anything -- guards against a newer `content`/`streaming` change superseding an older in-flight
+   *  highlight, exactly mirroring `<lyra-code-block>`'s own `highlightToken` field for the identical
+   *  race (an async grammar load resolving after a newer call already produced correct output). */
+  private highlightToken = 0;
+
+  /** Keys from `PendingHighlight` that failed to highlight -- peer missing, language unrecognized,
+   *  or tokenization threw. Once a key lands here, `code()` stops re-discovering it as pending on
+   *  every future render. Without this, a permanently-unhighlightable block (e.g. an unrecognized
+   *  language) would never get cached, so every `renderMarkdown()` pass -- including the one
+   *  `highlightPending()` itself triggers on completion -- would rediscover it as pending and retry
+   *  it again, forever. Mirrors `code-loader.ts`'s own `unsupportedLanguages` Set, which exists for
+   *  the identical reason one level down (a single unrecognized `language` value on
+   *  `<lyra-code-block>`). */
+  private failedHighlightKeys = new Set<string>();
+
   connectedCallback(): void {
     super.connectedCallback();
     if (this.eagerLoad) {
@@ -290,7 +306,8 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
       changed.has('gfm') ||
       changed.has('linkTarget') ||
       changed.has('headingOffset') ||
-      changed.has('escapeHtml')
+      changed.has('escapeHtml') ||
+      changed.has('streaming')
     ) {
       this.renderMarkdown();
     }
@@ -329,6 +346,7 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
       // Consumer explicitly opted out of sanitization — dompurify's
       // presence or absence is irrelevant to this path.
       this.renderedHtml = rawHtml;
+      this.maybeHighlightPending(pendingKeys);
       return;
     }
 
@@ -347,12 +365,85 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     // `part`/`rel`/`class`, which already are) — without ADD_ATTR here,
     // every rendered link's target="..." would be silently stripped even
     // though the anchor itself survives sanitization.
-    this.renderedHtml = deps.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target'] });
+    // 'style' joins 'target' in the added-attribute allowlist -- shiki's per-token output carries
+    // inline style="color:..." (theme colors), which isn't in DOMPurify's default attribute
+    // allowlist any more than 'target' was.
+    this.renderedHtml = deps.DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'style'] });
+    this.maybeHighlightPending(pendingKeys);
   }
 
   private applyFallback(error: unknown): void {
     this.renderedHtml = null;
     this.emit('lyra-render-error', { error });
+  }
+
+  /** Kicks off async highlighting for `pendingKeys` (see `highlightPending()`) unless there's
+   *  nothing to do, `highlightCode` is off, or `streaming` is on -- called from both of
+   *  `renderMarkdown()`'s exit points (the `sanitize=false` early return and the normal sanitized
+   *  path), since highlighting is independent of that decision. */
+  private maybeHighlightPending(pendingKeys: PendingHighlight[]): void {
+    if (pendingKeys.length === 0 || !this.highlightCode || this.streaming) return;
+    void this.highlightPending(pendingKeys);
+  }
+
+  /** Loads whatever shiki grammars `pendingKeys` need, tokenizes each pending block concurrently,
+   *  populates `highlightCache` with the results, then triggers one more `renderMarkdown()` pass so
+   *  the newly-cached entries actually reach the screen. A pending key whose language fails to load
+   *  is recorded in `failedHighlightKeys` (per `loadShikiLanguage()`'s existing "unrecognized
+   *  grammar" contract -- resolves `false`, never throws) -- it stays uncached, so `code()` keeps
+   *  emitting its plain fallback for it on every future render, and `code()` also stops
+   *  re-discovering it as pending (see `failedHighlightKeys`'s own doc for why that matters: without
+   *  it, the `renderMarkdown()` call at the end of this method would rediscover the same
+   *  permanently-uncacheable key as pending on every pass, forever). Does not block or delay any
+   *  other pending key -- each is tried independently via `Promise.all`. */
+  private async highlightPending(pendingKeys: PendingHighlight[]): Promise<void> {
+    const token = ++this.highlightToken;
+    const languages = this.languages;
+
+    const tokenizeOne = async (pending: PendingHighlight): Promise<void> => {
+      const normalizedLang = normalizeShikiLanguage(pending.lang);
+      let hl: ShikiHighlighter | ShikiHighlighterCore | null;
+      if (languages && (languages[normalizedLang] ?? languages[pending.lang])) {
+        hl = await loadShikiHighlighterCore(languages);
+      } else if (this.languagesOnly) {
+        // languagesOnly skips the default full-bundle loader entirely (mirrors <lyra-code-block>) --
+        // permanent for this key unless `languages`/`languagesOnly` themselves change.
+        this.failedHighlightKeys.add(pending.key);
+        return;
+      } else {
+        const base = await loadShikiHighlighter();
+        if (!base) {
+          // The shiki peer itself isn't installed -- permanent for every key using this default
+          // (non-languages) path until the page reloads.
+          this.failedHighlightKeys.add(pending.key);
+          return;
+        }
+        const ok = await loadShikiLanguage(base, pending.lang);
+        hl = ok ? base : null;
+      }
+      if (!hl) {
+        this.failedHighlightKeys.add(pending.key);
+        return;
+      }
+      try {
+        const html = hl.codeToHtml(pending.code, {
+          lang: normalizedLang,
+          themes: SHIKI_THEMES,
+          transformers: [markdownCodeTransformer(pending.lang)],
+        });
+        this.highlightCache.set(pending.key, `${html}\n`);
+      } catch {
+        this.failedHighlightKeys.add(pending.key);
+        // Tokenization failed for a reason other than an unrecognized grammar (already handled by
+        // loadShikiLanguage()'s own return value above) -- leave this key uncached, same effect as
+        // an unrecognized language: permanent plain fallback for this specific block.
+      }
+    };
+
+    await Promise.all(pendingKeys.map(tokenizeOne));
+
+    if (token !== this.highlightToken || !this.isConnected) return;
+    this.renderMarkdown();
   }
 
   private parseMarkdown(marked: OptionalPeerApi, pendingKeys: PendingHighlight[]): string {
@@ -370,6 +461,7 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
     const escapeHtmlOption = this.escapeHtml;
     const highlightCodeOption = this.highlightCode && !this.streaming;
     const highlightCache = this.highlightCache;
+    const failedHighlightKeys = this.failedHighlightKeys;
     const instance = new marked.Marked();
     // A fresh renderer per parse (rather than a shared/cached one) so it
     // always closes over the *current* `linkTarget`/`headingOffset` — these
@@ -406,7 +498,7 @@ export class LyraMarkdown extends LyraElement<LyraMarkdownEventMap> {
             const key = `${lang}\n${body}`;
             const cached = highlightCache.get(key);
             if (cached !== undefined) return cached;
-            pendingKeys.push({ key, lang, code: body });
+            if (!failedHighlightKeys.has(key)) pendingKeys.push({ key, lang, code: body });
           }
           const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
           return `<pre part="code-block"><code${cls}>${text}</code></pre>\n`;

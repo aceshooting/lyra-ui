@@ -548,3 +548,136 @@ describe('highlightCode cache plumbing (Task 1 — no async loading yet)', () =>
     expect(pre.querySelector('code')!.textContent).to.equal('plain text\n');
   });
 });
+
+describe('shiki highlighting (real peer)', () => {
+  it('renders plain on first paint, then upgrades to highlighted output once shiki resolves', async function () {
+    // This is the first real (unmocked) shiki cold load in this file -- the full `shiki` package
+    // import plus its typescript grammar. Mirrors code-block.test.ts's own first real-peer test,
+    // which documents the same 8-way default @web/test-runner concurrency + WASM+grammar load
+    // occasionally exceeding mocha's global 6000ms default under load; bumping this one test's own
+    // budget (rather than the shared config) keeps every later test in this describe fast, since
+    // `loadShikiHighlighter()`'s module-level singleton is warm for the rest of the suite afterward.
+    this.timeout(20_000);
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const preBefore = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(preBefore.querySelector('span')).to.not.exist;
+
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'never highlighted',
+      { timeout: 8000 },
+    );
+    const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+    expect(pre.getAttribute('part')).to.equal('code-block');
+    expect(pre.querySelector('code')!.className).to.include('language-ts');
+    // The highlighted code text (ignoring markup) still matches the source exactly.
+    expect(pre.textContent).to.include('const x = 1;');
+  });
+
+  it('does not highlight while streaming is true, and highlights once streaming flips to false', async () => {
+    const el = (await fixture(html`<lyra-markdown streaming></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    await aTimeout(300); // long enough that a wrongly-kicked-off highlight would have resolved
+    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+
+    el.streaming = false;
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'never highlighted after streaming ended',
+      { timeout: 8000 },
+    );
+  });
+
+  it('highlights two distinct fenced blocks in the same document, each with its own language', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```\n\n```python\nx = 1\n```';
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="code-block"] span').length > 0,
+      'never highlighted',
+      { timeout: 8000 },
+    );
+    const blocks = [...el.shadowRoot!.querySelectorAll('[part="code-block"]')] as HTMLElement[];
+    expect(blocks.length).to.equal(2);
+    expect(blocks[0].querySelector('code')!.className).to.include('language-ts');
+    expect(blocks[1].querySelector('code')!.className).to.include('language-python');
+  });
+
+  it('does not block or delay a valid language when another fenced block has an unrecognized one', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```\n\n```not-a-real-language-xyz\nhello\n```';
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'the valid-language block never highlighted',
+      { timeout: 8000 },
+    );
+    const blocks = [...el.shadowRoot!.querySelectorAll('[part="code-block"]')] as HTMLElement[];
+    expect(blocks[0].querySelector('span')).to.exist; // ts: highlighted
+    expect(blocks[1].querySelector('span')).to.not.exist; // unrecognized: stays plain
+    expect(blocks[1].querySelector('code')!.textContent).to.equal('hello\n');
+  });
+
+  it('discards a stale in-flight highlight superseded by a newer content change (highlightToken guard)', async () => {
+    type Internals = { highlightToken: number };
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    const tokenAfterFirst = (el as unknown as Internals).highlightToken;
+    el.content = '```ts\nconst x = 2;\n```';
+    await el.updateComplete;
+    expect((el as unknown as Internals).highlightToken).to.be.greaterThan(tokenAfterFirst);
+
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'never highlighted',
+      { timeout: 8000 },
+    );
+    // The final, current content is what ends up highlighted -- not the superseded first value.
+    expect(el.shadowRoot!.querySelector('[part="code-block"]')!.textContent).to.include('const x = 2;');
+  });
+
+  it('does not highlight when highlightCode is false, even after waiting', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.highlightCode = false;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    await aTimeout(500);
+    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+  });
+});
+
+describe('languages (fine-grained shiki opt-in) — markdown', () => {
+  it('highlights a language covered by `languages` via the fine-grained core highlighter', async function () {
+    // A distinct cold load from the describe above -- shiki/core + the oniguruma WASM engine,
+    // never warmed by loadShikiHighlighter()'s own singleton. Same rationale as that describe's
+    // this.timeout(20_000) override.
+    this.timeout(20_000);
+    const bashLang = await import('shiki/langs/bash.mjs').catch(() => null);
+    if (!bashLang) return; // shiki not installed in this environment -- covered elsewhere
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.languages = { bash: bashLang.default };
+    el.content = '```bash\necho hi\n```';
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      'never highlighted via languages',
+      { timeout: 8000 },
+    );
+    expect(el.shadowRoot!.querySelector('[part="code-block"] code')!.className).to.include('language-bash');
+  });
+
+  it('languagesOnly leaves an uncovered language plain instead of falling back to the full bundle', async () => {
+    const el = (await fixture(html`<lyra-markdown></lyra-markdown>`)) as LyraMarkdown;
+    el.languages = {};
+    el.languagesOnly = true;
+    el.content = '```ts\nconst x = 1;\n```';
+    await el.updateComplete;
+    await aTimeout(500);
+    expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+  });
+});
