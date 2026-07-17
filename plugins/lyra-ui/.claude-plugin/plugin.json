@@ -1,0 +1,12 @@
+{
+  "name": "lyra-ui",
+  "version": "0.1.0",
+  "description": "Teach Claude the @aceshooting/lyra-ui component API, theming/design-token conventions, and migration paths from Web Awesome and Shoelace.",
+  "author": {
+    "name": "Aceshooting"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/aceshooting/lyra-ui",
+  "keywords": ["lyra-ui", "web-components", "lit", "design-system", "web-awesome", "shoelace", "ui-library"],
+  "skills": "./skills/"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "aceshooting",
+  "license": "MIT",
+  "owner": {
+    "name": "Aceshooting"
+  },
+  "plugins": [
+    {
+      "name": "lyra-ui",
+      "source": "./plugins/lyra-ui",
+      "description": "Teach Claude the @aceshooting/lyra-ui component API, theming/design-token conventions, and migration paths from Web Awesome and Shoelace.",
+      "version": "0.1.0"
+    }
+  ]
+}
