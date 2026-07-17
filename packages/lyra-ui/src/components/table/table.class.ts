@@ -1095,6 +1095,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                         : nothing}
                       ${this.columns.map((col) => {
                         const heatShare = this.heatShare(col, row, heatDomain);
+                        const cellStyle = {
+                          ...(col.cellStyle ? col.cellStyle(row) ?? {} : {}),
+                          ...(heatShare !== null ? { '--lyra-table-heat-t': heatShare } : {}),
+                        };
                         return html`<td
                             part="cell"
                             role="gridcell"
@@ -1103,10 +1107,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                             data-priority=${col.priority ?? nothing}
                             data-sticky=${stickyDirection(col.sticky) ?? nothing}
                             ?data-heat=${heatShare !== null}
-                            style=${styleMap({
-                              ...(col.cellStyle ? col.cellStyle(row) ?? {} : {}),
-                              ...(heatShare !== null ? { '--lyra-table-heat-t': heatShare } : {}),
-                            })}
+                            style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
                           >
                             ${this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key
                               ? html`<input

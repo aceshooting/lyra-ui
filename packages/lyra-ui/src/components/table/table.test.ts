@@ -1580,6 +1580,17 @@ describe('heat-tint mode', () => {
     expect(el.shadowRoot!.querySelectorAll('[data-heat]').length).to.equal(0);
   });
 
+  it('does not add a style attribute to a plain cell with no cellStyle and no heatValue (regression: styleMap({}) previously left a stray style="")', async () => {
+    const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')] as HTMLElement[];
+    expect(cells.length).to.be.greaterThan(0);
+    expect(cells.every((c) => !c.hasAttribute('style'))).to.be.true;
+  });
+
   it('computes --lyra-table-heat-t from the auto-derived min/max across all heatValue columns', async () => {
     const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
     el.columns = heatColumns;
