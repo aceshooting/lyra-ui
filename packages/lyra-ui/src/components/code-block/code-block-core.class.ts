@@ -4,7 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
-import type { OptionalPeerApi } from '../../internal/optional-peer-types.js';
+import { prefersReducedMotion } from '../../internal/motion.js';
 import {
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
@@ -13,48 +13,25 @@ import {
   type ShikiLanguageInput,
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
-import { codeBlockToggleLabel, codeBlockCopyLabel, codeBlockBodyLabel } from './code-block-shared.js';
+import {
+  codeBlockToggleLabel,
+  codeBlockCopyLabel,
+  codeBlockBodyLabel,
+  codeBlockLineTransformer,
+  parseHighlightLines,
+} from './code-block-shared.js';
+import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import '../skeleton/skeleton.class.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
 const COPY_CONFIRM_MS = 1500;
 
-/**
- * Rewrites shiki's generated `<pre>`/`<code>` hast nodes so they carry this
- * component's own `part="pre"`/`part="code"` hooks — the same single-pass
- * "inject part attributes while rendering, not a second DOM walk after
- * insertion" approach `<lyra-markdown>`'s renderer override uses, applied
- * here via shiki's own transformer API instead of a custom marked renderer.
- * Also strips shiki's own default `tabindex="0"` from the `<pre>` — this
- * component's `[part="body"]` wrapper (see `render()`) is the single
- * scrollable/focusable region for the code area, and leaving shiki's own
- * tabindex in place would add a second, redundant tab stop over the same
- * scrollable content.
- */
-function partTransformer(lineNumbers: boolean) {
-  return {
-  name: 'lyra-code-block-parts',
-    pre(node: OptionalPeerApi) {
-      node.properties.part = ['pre'];
-      if (lineNumbers) {
-        const classes = Array.isArray(node.properties.class)
-          ? node.properties.class
-          : node.properties.class
-            ? [node.properties.class]
-            : [];
-        node.properties.class = [...classes, 'line-numbers'];
-      }
-      delete node.properties.tabindex;
-    },
-    code(node: OptionalPeerApi) {
-      node.properties.part = ['code'];
-    },
-  };
-}
-
 export interface LyraCodeBlockCoreEventMap {
   'lyra-copy': CustomEvent<{ text: string }>;
   'lyra-toggle': CustomEvent<{ collapsed: boolean }>;
+  'lyra-line-click': CustomEvent<{ line: number }>;
+  'lyra-highlight-activate': CustomEvent<{ id: string }>;
+  'lyra-text-select': CustomEvent<{ text: string; anchor: LyraAnchor; rects: DOMRect[] }>;
 }
 /**
  * `<lyra-code-block-core>` — a build-lean variant of `<lyra-code-block>` for
@@ -84,6 +61,14 @@ export interface LyraCodeBlockCoreEventMap {
  * the matching `accessibleLabel` property) is forwarded to the internal
  * focusable element that owns the named `group` role.
  *
+ * Adopts the `line-range` slice of this library's shared anchor-target contract, identical to
+ * `<lyra-code-block>`: `highlights`/`activeHighlightId` paint (and `highlight-lines` additionally
+ * marks) per-line emphasis in both the shiki and plain-text-fallback rendering paths identically,
+ * and `scrollToAnchor()` resolves a `line-range` anchor. `interactive-lines` is a separate, purely
+ * local affordance that turns the (`line-numbers`-gated) gutter into a keyboard-navigable,
+ * clickable roving-tabindex group emitting `lyra-line-click` — it doesn't require `highlights` to
+ * be set.
+ *
  * @customElement lyra-code-block-core
  * @event lyra-copy - The copy button was activated. `detail: { text }` is
  *   always the raw `code` value (never the highlighted HTML), and always
@@ -92,6 +77,13 @@ export interface LyraCodeBlockCoreEventMap {
  * @event lyra-toggle - The collapse/expand header button was activated.
  *   `detail: { collapsed }` — same event name and shape convention as
  *   `<lyra-thinking-panel>`'s own `lyra-toggle`.
+ * @event lyra-line-click - A gutter line number was activated (click, or Enter/Space while
+ *   focused) while `interactive-lines` is set. `detail: { line }`.
+ * @event lyra-highlight-activate - Declared for parity with this library's other anchor-target
+ *   viewers so a consumer can attach a listener without a type error; not currently emitted by
+ *   this component. `detail: { id }`.
+ * @event lyra-text-select - Fired when a text selection inside the code body ends. `detail: {
+ *   text, anchor, rects }`; `anchor` is a `line-range` anchor covering the selected lines.
  * @csspart base - The outer container.
  * @csspart header - The row above the code (filename/language/copy/toggle),
  *   present whenever there's anything to put in it.
@@ -107,6 +99,10 @@ export interface LyraCodeBlockCoreEventMap {
  * @csspart pre - The rendered `<pre>` — shiki's own in the highlighted path,
  *   this component's own plain one in the fallback path.
  * @csspart code - The rendered `<code>`, same split as `pre` above.
+ * @csspart line-highlight - A line marked by `highlight-lines` or a `line-range` entry in
+ *   `highlights`.
+ * @csspart line-button - A gutter line-number button, only rendered while `interactive-lines` and
+ *   `line-numbers` are both set.
  */
 export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -144,6 +140,27 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   /** Whether to display one-based line numbers beside the code. */
   @property({ type: Boolean, attribute: 'line-numbers', reflect: true }) lineNumbers = false;
+
+  /** Comma-separated 1-based inclusive line ranges (e.g. `"3-5,7"`) to visually emphasize.
+   *  Declarative sugar over `highlights` — merges with, and renders identically to, any
+   *  `line-range` entries in `highlights`. */
+  @property({ attribute: 'highlight-lines' }) highlightLines = '';
+
+  /** Turns the (`line-numbers`-gated) gutter into a roving-tabindex group of buttons emitting
+   *  `lyra-line-click`. Has no effect while `line-numbers` is unset. */
+  @property({ type: Boolean, attribute: 'interactive-lines' }) interactiveLines = false;
+
+  /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
+   *  here — every other `LyraAnchor` kind is ignored. */
+  @property({ attribute: false }) highlights: LyraHighlight[] = [];
+
+  /** The `highlights` entry, if any, currently treated as active (`data-active` on its lines). */
+  @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
+
+  /** Anchor kinds this component resolves via `scrollToAnchor()`. */
+  readonly anchorKinds: LyraAnchor['kind'][] = ['line-range'];
+
+  @state() private focusedLine = 1;
 
   /** Grammar definitions this instance can highlight, e.g. `{ json: jsonGrammar }` (import from
    *  `shiki/langs/<name>.mjs`). This component has no default/full-table fallback highlighter --
@@ -206,13 +223,126 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     return this.languages?.[language] ?? this.languages?.[this.language];
   }
 
+  /** The merged set of one-based line numbers to emphasize: `highlightLines` plus the `line-range`
+   *  slice of `highlights`. Shared by both the shiki transformer options and the plain-text
+   *  fallback path so their emphasis is always identical. */
+  private lineHighlightSet(): Set<number> {
+    const merged = parseHighlightLines(this.highlightLines);
+    for (const highlight of this.highlights) {
+      if (highlight.anchor.kind !== 'line-range') continue;
+      const end = highlight.anchor.end ?? highlight.anchor.start;
+      for (let n = highlight.anchor.start; n <= end; n++) merged.add(n);
+    }
+    return merged;
+  }
+
+  /** The line numbers covered by the `highlights` entry matching `activeHighlightId`, if any. */
+  private activeHighlightLineSet(): Set<number> {
+    const active = this.highlights.find((h) => h.id === this.activeHighlightId);
+    const result = new Set<number>();
+    if (!active || active.anchor.kind !== 'line-range') return result;
+    const end = active.anchor.end ?? active.anchor.start;
+    for (let n = active.anchor.start; n <= end; n++) result.add(n);
+    return result;
+  }
+
+  private lineCount(): number {
+    return this.code.split(/\r\n|\r|\n/).length;
+  }
+
+  /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
+   *  its start line into view within `[part="body"]`. Resolves `false` when the anchor isn't a
+   *  `line-range`, the id isn't found, or the start line is out of bounds. */
+  async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+    const anchor = typeof target === 'string' ? this.highlights.find((h) => h.id === target)?.anchor : target;
+    if (!anchor || anchor.kind !== 'line-range') return false;
+    if (anchor.start < 1 || anchor.start > this.lineCount()) return false;
+    await this.updateComplete;
+    const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
+    const lineEl = this.renderRoot.querySelector(`[data-line="${anchor.start}"]`) as HTMLElement | null;
+    if (!body || !lineEl) return false;
+    const offset = lineEl.offsetTop - body.clientHeight / 2;
+    body.scrollTo({ top: Math.max(0, offset), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    return true;
+  }
+
+  private onLineActivate(line: number): void {
+    this.focusedLine = line;
+    this.emit('lyra-line-click', { line });
+  }
+
+  // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
+  // renderPlainCode() while interactiveLines && lineNumbers are both set).
+  private onLineKeyDown = (e: KeyboardEvent, line: number): void => {
+    const total = this.lineCount();
+    let next: number | null = null;
+    if (e.key === 'ArrowDown') next = Math.min(total, line + 1);
+    else if (e.key === 'ArrowUp') next = Math.max(1, line - 1);
+    else if (e.key === 'Home') next = 1;
+    else if (e.key === 'End') next = total;
+    else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.onLineActivate(line);
+      return;
+    }
+    if (next === null || next === line) return;
+    e.preventDefault();
+    this.focusedLine = next;
+    this.updateComplete.then(() => {
+      this.renderRoot.querySelector<HTMLButtonElement>(`[data-line="${next}"]`)?.focus();
+    });
+  };
+
+  /** Anchors a text selection ending inside `[part="body"]` to the `line-range` it spans, so a
+   *  host can persist or otherwise act on it. Fires nothing when there's no active selection. */
+  private onBodyMouseUp = (): void => {
+    // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib
+    // types -- same shadow-scoped-selection precedent as <lyra-terminal>'s own onViewportPointerUp.
+    const shadowSelection = (
+      this.shadowRoot as unknown as { getSelection?: () => Selection | null } | null
+    )?.getSelection?.();
+    const selection = shadowSelection ?? window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+    const text = selection.toString();
+    if (!text.trim()) return;
+    const range = selection.getRangeAt(0);
+    const lineOf = (node: Node): number | null => {
+      const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
+      const lineEl = el?.closest('[data-line]');
+      const attr = lineEl?.getAttribute('data-line');
+      return attr === null || attr === undefined ? null : Number(attr);
+    };
+    const start = lineOf(range.startContainer);
+    const end = lineOf(range.endContainer);
+    if (start === null || end === null) return;
+    this.emit('lyra-text-select', {
+      text,
+      anchor: { kind: 'line-range', start: Math.min(start, end), end: Math.max(start, end) },
+      rects: Array.from(range.getClientRects()),
+    });
+  };
+
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
   // synchronous case -- language already loaded, see `syncHighlight()` --
   // into this same update cycle instead of scheduling a second one, Lit's
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lyra-markdown>'s `willUpdate` takes).
   protected willUpdate(changed: PropertyValues): void {
-    if (!(changed.has('code') || changed.has('language') || changed.has('languages'))) return;
+    // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
+    // options in tokenize() below -- any of them changing (even without code/language/languages
+    // changing) means the cached highlightedHtml needs recomputing to stay in sync.
+    if (
+      !(
+        changed.has('code') ||
+        changed.has('language') ||
+        changed.has('languages') ||
+        changed.has('highlightLines') ||
+        changed.has('highlights') ||
+        changed.has('activeHighlightId') ||
+        changed.has('lineNumbers')
+      )
+    )
+      return;
     if (this.shikiReady || this.preSuppliedGrammar()) {
       this.syncHighlight();
     }
@@ -285,7 +415,13 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
         // a --lyra-* token. See the dark-mode override in
         // code-block.styles.ts for how the dark half of this activates.
         themes: SHIKI_THEMES,
-        transformers: [partTransformer(this.lineNumbers)],
+        transformers: [
+          codeBlockLineTransformer({
+            lineNumbers: this.lineNumbers,
+            highlightedLines: this.lineHighlightSet(),
+            activeLines: this.activeHighlightLineSet(),
+          }),
+        ],
       });
     } catch {
       // Malformed input for this grammar, or any other shiki-internal
@@ -294,13 +430,62 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     }
   }
 
+  // Always splits into per-line spans/buttons (not just while lineNumbers is set) -- the per-line
+  // wrapper is what highlight-lines/highlights/interactive-lines attach to. .split() consumes each
+  // newline character, so a literal '\n' text node is re-inserted between lines to keep the
+  // non-line-numbered case's visual output (relying on [part='pre']'s white-space:pre) identical
+  // to the previous single-text-node rendering -- the line-numbered case's .line elements are
+  // already display:block (code-block.styles.ts) so that text node is inert there. interactiveLines
+  // only takes effect alongside lineNumbers -- the shiki-highlighted path doesn't render gutter
+  // buttons (see the class doc), only data-line/data-highlighted/data-active/part="line-highlight"
+  // from codeBlockLineTransformer above.
   private renderPlainCode(): TemplateResult {
-    if (!this.lineNumbers) return html`<code part="code">${this.code}</code>`;
-    return html`
-      <code part="code" class="line-numbered-code">
-        ${this.code.split(/\r\n|\r|\n/).map((line) => html`<span class="line">${line}</span>`)}
-      </code>
-    `;
+    const highlighted = this.lineHighlightSet();
+    const active = this.activeHighlightLineSet();
+    const lines = this.code.split(/\r\n|\r|\n/);
+    const interactive = this.interactiveLines && this.lineNumbers;
+    // The `>` sits on its own line right before the expression (and `</code` right after it,
+    // closing on the following line) so no incidental whitespace text node lands inside <code> --
+    // its textContent must be exactly the concatenated line text, matching the pre-existing
+    // single-text-node rendering this replaces.
+    return html`<code part="code" class=${this.lineNumbers ? 'line-numbered-code' : nothing}
+        >${lines.map((line, index) => {
+          const lineNumber = index + 1;
+          const isHighlighted = highlighted.has(lineNumber);
+          const isActive = active.has(lineNumber);
+          const part = interactive
+            ? isHighlighted
+              ? 'line-button line-highlight'
+              : 'line-button'
+            : isHighlighted
+              ? 'line-highlight'
+              : nothing;
+          const lineTemplate = interactive
+            ? html`<button
+                type="button"
+                class="line"
+                part=${part}
+                data-line=${lineNumber}
+                ?data-highlighted=${isHighlighted}
+                ?data-active=${isActive}
+                aria-label=${this.localize('codeBlockLineLabel', undefined, { line: lineNumber })}
+                tabindex=${this.focusedLine === lineNumber ? 0 : -1}
+                @click=${() => this.onLineActivate(lineNumber)}
+                @keydown=${(e: KeyboardEvent) => this.onLineKeyDown(e, lineNumber)}
+              >${line}</button>`
+            : html`<span
+                class="line"
+                part=${part}
+                data-line=${lineNumber}
+                ?data-highlighted=${isHighlighted}
+                ?data-active=${isActive}
+              >${line}</span>`;
+          // Only the non-line-numbered case needs the newline text node re-inserted -- the
+          // line-numbered case's .line elements are already display:block (code-block.styles.ts),
+          // and its own existing test asserts textContent has no embedded newlines between lines.
+          return index > 0 && !this.lineNumbers ? html`\n${lineTemplate}` : lineTemplate;
+        })}</code
+      >`;
   }
 
   private writeClipboard(text: string): void {
@@ -393,6 +578,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
           tabindex="0"
           ?hidden=${bodyHidden}
           style=${this.maxHeight ? `--lyra-code-block-max-height:${this.maxHeight}` : nothing}
+          @mouseup=${this.onBodyMouseUp}
         >
           ${showSkeleton
             ? html`<lyra-skeleton variant="rect"></lyra-skeleton>`

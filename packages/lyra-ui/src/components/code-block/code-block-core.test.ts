@@ -1,7 +1,13 @@
-import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block-core.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
+
+async function el2Ready(el: LyraCodeBlockCore): Promise<void> {
+  await el.updateComplete;
+  await aTimeout(0);
+  await el.updateComplete;
+}
 
 describe('lyra-code-block-core', () => {
   it('renders optional line numbers for plain code', async () => {
@@ -74,5 +80,111 @@ describe('lyra-code-block-core', () => {
     el.code = '{"a":1}';
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('highlight-lines', () => {
+  it('marks the specified lines with data-highlighted and part line-highlight', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb\nc\nd'} highlight-lines="2-3"></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await el.updateComplete;
+    const lines = [...el.shadowRoot!.querySelectorAll('[data-line]')];
+    expect(lines.map((l) => l.hasAttribute('data-highlighted'))).to.deep.equal([false, true, true, false]);
+    expect(lines[1]!.getAttribute('part')).to.equal('line-highlight');
+    expect(lines[0]!.hasAttribute('part')).to.be.false;
+  });
+
+  it('renders identically between the shiki and plain-text fallback paths for the same highlight-lines', async () => {
+    const plain = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb\nc'} highlight-lines="2"></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await el2Ready(plain);
+    const plainHighlighted = [...plain.shadowRoot!.querySelectorAll('[data-highlighted]')].length;
+    expect(plainHighlighted).to.equal(1);
+  });
+
+  it('back-compat: default render is byte-identical with highlight-lines/highlights/interactive-lines unset', async () => {
+    const before = (await fixture(html`<lyra-code-block-core code=${'a\nb'}></lyra-code-block-core>`)) as LyraCodeBlockCore;
+    await before.updateComplete;
+    const beforeHtml = before.shadowRoot!.querySelector('[part="body"]')!.innerHTML;
+    const after = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb'} .highlightLines=${''} .highlights=${[]} .interactiveLines=${false}></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await after.updateComplete;
+    expect(after.shadowRoot!.querySelector('[part="body"]')!.innerHTML).to.equal(beforeHtml);
+  });
+});
+
+describe('anchor-target (line-range)', () => {
+  it('scrolls to the start line of a line-range anchor', async () => {
+    const el = (await fixture(html`<lyra-code-block-core code=${'a\nb\nc\nd\ne'}></lyra-code-block-core>`)) as LyraCodeBlockCore;
+    await el.updateComplete;
+    let scrolled = false;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    body.scrollTo = () => {
+      scrolled = true;
+    };
+    const result = await el.scrollToAnchor({ kind: 'line-range', start: 3 });
+    expect(result).to.be.true;
+    expect(scrolled).to.be.true;
+  });
+
+  it('resolves false for a line past end-of-file', async () => {
+    const el = (await fixture(html`<lyra-code-block-core code=${'a\nb'}></lyra-code-block-core>`)) as LyraCodeBlockCore;
+    await el.updateComplete;
+    expect(await el.scrollToAnchor({ kind: 'line-range', start: 99 })).to.be.false;
+  });
+
+  it('renders a line-range highlight from the highlights array', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb\nc'}></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'line-range', start: 2, end: 2 } }];
+    await el.updateComplete;
+    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
+    expect(line2.hasAttribute('data-highlighted')).to.be.true;
+  });
+});
+
+describe('interactive-lines', () => {
+  it('renders gutter numbers as buttons with roving tabindex when line-numbers and interactive-lines are both set', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb\nc'} line-numbers interactive-lines></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await el.updateComplete;
+    const buttons = [...el.shadowRoot!.querySelectorAll('[part~="line-button"]')] as HTMLButtonElement[];
+    expect(buttons).to.have.lengthOf(3);
+    expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
+  });
+
+  it('emits lyra-line-click on Enter and on click', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb'} line-numbers interactive-lines></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lyra-line-click');
+    const first = el.shadowRoot!.querySelector('[data-line="1"]') as HTMLButtonElement;
+    first.click();
+    const event = (await listener) as CustomEvent<{ line: number }>;
+    expect(event.detail).to.deep.equal({ line: 1 });
+  });
+
+  it('moves focus with ArrowDown/ArrowUp/Home/End', async () => {
+    const el = (await fixture(
+      html`<lyra-code-block-core code=${'a\nb\nc'} line-numbers interactive-lines></lyra-code-block-core>`,
+    )) as LyraCodeBlockCore;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector('[data-line="1"]') as HTMLButtonElement;
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-line="2"]')!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('does not emit lyra-line-click while interactive-lines is off', async () => {
+    const el = (await fixture(html`<lyra-code-block-core code=${'a\nb'} line-numbers></lyra-code-block-core>`)) as LyraCodeBlockCore;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part~="line-button"]').length).to.equal(0);
   });
 });

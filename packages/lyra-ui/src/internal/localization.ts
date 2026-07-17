@@ -111,6 +111,7 @@ export type LyraMessageKey =
   | 'copiedToClipboard'
   | 'codeRegion'
   | 'codeRegionWithLanguage'
+  | 'codeBlockLineLabel'
   | 'copyDiff'
   | 'jsonArray'
   | 'jsonObject'
@@ -705,6 +706,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   copiedToClipboard: 'Copied! to clipboard',
   codeRegion: 'Code',
   codeRegionWithLanguage: '{language} code',
+  codeBlockLineLabel: 'Line {line}',
   copyDiff: 'Copy diff',
   jsonArray: 'array',
   jsonObject: 'object',

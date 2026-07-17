@@ -186,6 +186,40 @@ export const styles = css`
     text-align: end;
     user-select: none;
   }
+  /* A highlighted line, from either highlight-lines or a line-range entry in highlights --
+     stamped identically by codeBlockLineTransformer (shiki path) and renderPlainCode() (plain
+     path). See the dark-mode block below for why this needs its own !important there. */
+  [part='pre'] [data-highlighted] {
+    background: var(--lyra-color-warning-quiet);
+  }
+  /* The active highlight (highlights entry matching activeHighlightId) gets an outline on top of
+     any background -- inset so it doesn't add to the line's own box size. */
+  [part='pre'] [data-active] {
+    outline: var(--lyra-border-width-thin) solid var(--lyra-color-brand);
+    outline-offset: calc(-1 * var(--lyra-border-width-thin));
+  }
+  /* Native button reset for interactive-lines' gutter-button rendering (renderPlainCode() only --
+     the shiki-highlighted path doesn't render gutter buttons, see the class doc) -- an interactive
+     line's <button class="line"> must look like the plain <span class="line"> it replaces. */
+  [part='pre'] button.line {
+    display: block;
+    inline-size: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  [part='pre'] button.line:hover {
+    background: var(--lyra-color-brand-quiet);
+  }
+  [part='pre'] button.line:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: calc(-1 * var(--lyra-focus-ring-offset));
+  }
   /*
    * Activates shiki's "dual themes" dark variant. codeToHtml() (see
    * tokenize() in code-block.ts) renders every token with its *light* color
@@ -206,6 +240,13 @@ export const styles = css`
     [part='pre'] span {
       color: var(--shiki-dark, inherit) !important;
       background-color: var(--shiki-dark-bg, transparent) !important;
+    }
+    /* The line-highlight background above is a --lyra-* token, not shiki theme data, but a
+       highlighted line in the shiki path is still a span, matched (and !important-overridden) by
+       the dark-mode rule right above -- re-assert it here at matching specificity+importance so a
+       highlighted line stays visible in dark mode instead of silently losing its background. */
+    [part='pre'] [data-highlighted] {
+      background: var(--lyra-color-warning-quiet) !important;
     }
   }
   @media (prefers-reduced-motion: reduce) {
