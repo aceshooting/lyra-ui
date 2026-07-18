@@ -9610,7 +9610,7 @@ Enter/Space. `lyra-anchor-result` (`detail: { found }`) — fired after an `anch
 **CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell
 covered by a `highlights` entry), `rows`, `spinner`, and `error`.
 
-**Optional peer dependency:** install `xlsx` with `pnpm add xlsx`. The registry matches the official
+**Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
 Remote resources are capped at 25 MB, and each parsed sheet at 10,000 rows and 1,000 columns;
