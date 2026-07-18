@@ -805,8 +805,8 @@ form-associated via the same `FormAssociated` mixin as `lyra-textarea`. Ships th
 `size` scale as `lyra-select`/`lyra-combobox`.
 
 **Properties:**
-- `type: 'text' | 'password' | 'email' | 'number' | 'time' = 'text'`
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `type: 'text' | 'password' | 'email' | 'number' | 'time' | 'search' = 'text'`
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
 - `label: string = ''`
@@ -2788,7 +2788,13 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 `selection-mode`) gates click/keyboard selection; the component never mutates
 `selectedNodeIds: string[] = []` / `selectedLinkIds: string[] = []` (both attribute: false) itself,
 only emits `lyra-selection-change` (`detail: { nodeIds, linkIds }`) — the host assigns them back,
-mirroring `lyra-heatmap`'s `selectedCell` contract. `communities: GraphCommunity[] = []` (attribute:
+mirroring `lyra-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedLinkIds:
+string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
+selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
+`[part="node"]`/`[part="link"]` (themeable via `--lyra-graph-dimmed-opacity`); a host typically
+computes the set from a `lyra-node-enter`/`lyra-link-enter` hover (the complement of the hovered
+id's neighbor set) and assigns it back. Empty (the default) renders every node/link at full
+opacity, unchanged from today. `communities: GraphCommunity[] = []` (attribute:
 false) draws one translucent convex-hull blob per entry behind links/nodes. `focusId: string | null =
 null` (attribute `focus-id`) tracks a persistent focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
@@ -5410,6 +5416,65 @@ legible text in the meantime.
 - rendered output goes through `unsafeHTML`; with `sanitize="false"` the component renders whatever
   HTML `marked` produces from `content` completely unsanitized, so untrusted `content` must never be
   paired with `sanitize="false"`.
+
+---
+
+## `lyra-markdown-core`
+
+A build-lean sibling of `<lyra-markdown>` above, for a consumer whose `languages` map already covers
+every language it will ever render — mirrors `<lyra-code-block-core>`'s relationship to
+`<lyra-code-block>`. Where `<lyra-markdown>` unconditionally calls `loadShikiHighlighter()` — the
+default ~200-language dynamic-import table loader, whose bundled lookup table a bundler can't
+statically narrow away even when a consumer's `languagesOnly` flag makes it unreachable at runtime —
+this component's own module never imports or calls that function at all; it only ever calls
+`loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
+`markdown.js` gets a build genuinely free of shiki's full language table.
+
+A fenced code block whose language isn't a key in `languages` always renders the plain-text fallback
+— there is no default/full-table highlighter here to fall back to, the same default (not degraded)
+rendering path as `<lyra-code-block-core>`'s identical contract. Every other capability — GFM tables,
+links, blockquotes, images, heading anchors, `getHeadingTree()`, `fragment`/`text-quote` anchor-target
+support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lyra-highlight-activate`/
+`lyra-text-select`/`lyra-anchor-result` events), math via the optional `katex` peer, the sanitize/
+`escapeHtml`/streaming fallback matrix and known gotchas — is identical to `<lyra-markdown>`; see that
+section above for the full write-up of shared behavior. There is no `languagesOnly` property here —
+meaningless without a full-table fallback to gate, matching `<lyra-code-block-core>` having none
+either.
+
+**Properties:** `content: string = ''`, `sanitize: boolean = true`, `escapeHtml: boolean = false`
+(attribute `escape-html`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
+`link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
+`headingOffset: number = 0` (attribute `heading-offset`), `eagerLoad: boolean = false` (attribute
+`eager-load`), `streaming: boolean = false` (reflected), `highlightCode: boolean = true` (attribute
+`highlight-code`), `languages: Record<string, ShikiLanguageInput> = {}` (attribute: false) — required,
+unlike `<lyra-markdown>`'s optional `languages?:`; empty (the default) means every fenced block stays
+unhighlighted permanently, `headingAnchors: boolean = false` (attribute `heading-anchors`),
+`math: boolean = false`, `anchorKinds: readonly ('fragment' | 'text-quote')[]` (readonly).
+
+**Methods:** `getHeadingTree()` — same contract as `<lyra-markdown>`'s own.
+
+**Events:** `lyra-link-click`, `lyra-render-error`, `lyra-highlight-activate`, `lyra-text-select`,
+`lyra-anchor-result` — identical detail shapes to `<lyra-markdown>`'s own.
+
+**Slots:** none — content comes from the `content` property, not light-DOM children.
+
+**CSS parts:** `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`, `link`,
+`table`, `blockquote`, `img`, `math` — identical to `<lyra-markdown>`'s own parts.
+
+**Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lyra-markdown>`), `katex`
+(for `math`). Does *not* depend on the full `shiki` package's default entry point — only
+`shiki/core`/`shiki/engine/oniguruma`/`shiki/langs/*`, the same fine-grained subset
+`<lyra-code-block-core>` depends on.
+
+```html
+<lyra-markdown-core
+  content="# Report&#10;&#10;\`\`\`python&#10;print('hi')&#10;\`\`\`"
+  .languages=${{ python }}
+></lyra-markdown-core>
+<script type="module">
+  import python from 'shiki/langs/python.mjs';
+</script>
+```
 
 ---
 
@@ -10826,8 +10891,12 @@ entries, the body renders through an internal `<lyra-virtual-list>` instead of a
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false), `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label: string = 'Activity'`, `showTimestamps: boolean = false` (attribute `show-timestamps`),
-`formatTimestamp?: (date: Date) => string` (attribute: false), and `virtualizeThreshold: number =
-200` (attribute `virtualize-threshold`).
+`formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
+=> TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
+arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
+identically whether or not the feed is currently virtualized; fully replaces `[part="entry-text"]`
+rather than augmenting it, and `virtualizeThreshold: number = 200` (attribute
+`virtualize-threshold`).
 
 **Events:** `lyra-toggle` (`detail: { expanded }`, the header was activated) and
 `lyra-follow-change` (`detail: { following }`, `follow` released or re-engaged).
@@ -11103,7 +11172,10 @@ data mode only: built-in icon buttons rendered into each row's `actions` slot. `
 = false` (attribute `show-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `editable: boolean = true` (reflected) — forwarded to each data-mode row's inline
 rename. `label: string = ''` — accessible name for the list region, defaults to the localized
-`threadListLabel`.
+`threadListLabel`. `wrapRow?: (thread: ChatThread, row: TemplateResult) => TemplateResult` (attribute:
+false) — data mode only: wraps each row's built-in `lyra-conversation-item` with host-supplied content
+that has no home in the item's own `title`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
+icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
 
 **Slots:** default — slotted mode only: host-supplied `lyra-conversation-item`s, rendered in order.
 `empty` — replaces the built-in empty state.
@@ -11219,9 +11291,11 @@ Stop button) — this is static after the fact.
 non-negative integer, locale-formatted; segment omitted while unset/non-finite. `tokensOut?: number`
 (attribute `tokens-out`) — same rules. `costText: string = ''` (attribute `cost-text`) —
 pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. `latencyMs?: number` (attribute
-`latency-ms`) — formatted with the shared duration algorithm (`820 -> "820ms"`, `1500 -> "1.5s"`).
-`compact: boolean = false` — token counts render via `Intl.NumberFormat` `notation: 'compact'`; the
-tooltip always shows full grouped figures.
+`latency-ms`) — formatted with the shared duration algorithm (`820 -> "820ms"`, `1500 -> "1.5s"`), or
+`formatLatency` when set. `formatLatency?: (ms: number) => string` — overrides the built-in duration
+algorithm (which has no minutes/hours tier) in both the visible strip and the tooltip row; mirrors
+`lyra-activity-feed`'s `formatTimestamp` convention. `compact: boolean = false` — token counts render
+via `Intl.NumberFormat` `notation: 'compact'`; the tooltip always shows full grouped figures.
 
 **Slots:** default — extra rows appended below the built-in tooltip breakdown (e.g. cache-read
 tokens); the visible strip itself is prop-driven only.

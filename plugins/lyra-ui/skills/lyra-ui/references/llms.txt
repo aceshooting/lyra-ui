@@ -107,7 +107,8 @@ The catalog is grouped by capability; `llms-full.txt` follows the same consumer-
   `lyra-suggestion-chips`, `lyra-thread-list`, `lyra-confirm-bar`, `lyra-checkpoint`,
   `lyra-usage-badge`, `lyra-browser-frame`, `lyra-artifact-panel`, `lyra-widget-renderer`,
   `lyra-voice-picker`, `lyra-notebook-viewer` (needs the optional peers `marked`/`dompurify`/`shiki`),
-  `lyra-xml-viewer`.
+  `lyra-xml-viewer`, `lyra-markdown-core` (needs the optional peers `marked`/`dompurify`/`shiki`;
+  build-lean sibling of `lyra-markdown`, never references shiki's full ~200-language table).
 
 ## Also useful
 

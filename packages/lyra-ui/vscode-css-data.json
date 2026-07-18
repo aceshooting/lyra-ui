@@ -387,6 +387,13 @@
       }
     },
     {
+      "name": "--lyra-graph-dimmed-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-graph>`** (default: `1`) — Opacity applied to a node/link when `dimmedNodeIds`/`dimmedLinkIds` includes its id (both SVG and canvas renderers). `1` (the default) is a no-op -- an unset host sees no visual change."
+      }
+    },
+    {
       "name": "--lyra-graph-edge-label-halo",
       "description": {
         "kind": "markdown",
