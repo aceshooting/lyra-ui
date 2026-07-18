@@ -142,6 +142,40 @@ it('keeps a newly-added series visible instead of inheriting a stale hidden defa
   expect(chart.isDatasetVisible(1)).to.be.true;
 });
 
+it('does not restore visibility for a dataset index removed by a shrinking update', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [
+    { label: 'x', data: [1, 2] },
+    { label: 'y', data: [3, 4] },
+    { label: 'z', data: [5, 6] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.setDatasetVisibility(2, false); // simulate a user hiding the series that's about to be removed
+
+  // Removing a series is the mirror-image regression of the "growing" case above: the prior-visibility
+  // snapshot is taken against the chart's own PRIOR dataset count, which can be larger than the new,
+  // shrunk dataset list -- restoring visibility for an index the shrunk list no longer has would call
+  // setDatasetVisibility() for an out-of-range index, which Chart.js fabricates metadata for instead of
+  // throwing, rather than silently being a no-op.
+  const originalSetDatasetVisibility = chart.setDatasetVisibility.bind(chart);
+  const calledIndexes: number[] = [];
+  chart.setDatasetVisibility = (datasetIndex: number, visible: boolean) => {
+    calledIndexes.push(datasetIndex);
+    return originalSetDatasetVisibility(datasetIndex, visible);
+  };
+
+  el.datasets = [{ label: 'x', data: [9, 9] }]; // shrink from 3 datasets down to 1
+  await el.updateComplete;
+
+  expect(calledIndexes).to.not.include(2);
+  expect(calledIndexes).to.not.include(1);
+  expect(chart.isDatasetVisible(0)).to.be.true;
+});
+
 it('rebuilds (new Chart instance) when type changes', async () => {
   const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
   el.type = 'line';

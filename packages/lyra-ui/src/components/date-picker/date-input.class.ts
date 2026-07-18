@@ -24,6 +24,7 @@ import {
 import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.class.js';
 import './date-picker.class.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
@@ -31,7 +32,7 @@ import './date-picker.class.js';
  *  (commonly mm/dd/yyyy-biased) heuristics for an ambiguous separated date. */
 function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
   try {
-    const parts = new Intl.DateTimeFormat(locale || undefined, {
+    const parts = getDateTimeFormat(locale || undefined, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -351,9 +352,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return value;
   }
 
+  /** A single ISO date committed while in range mode -- the shape the nested
+   *  picker's `commit()` produces after only the first click of a range pick
+   *  (`from` set, `to` still null). This is a normal, transient in-progress
+   *  selection, not a malformed value: it just hasn't picked up its second
+   *  endpoint yet. */
+  private isIncompleteRangeValue(value: string): boolean {
+    return this.mode === 'range' && value !== '' && !value.includes('/');
+  }
+
   private valueDates(value: string): Date[] | null {
     const parts = value.split('/');
-    const expectedParts = this.mode === 'range' ? 2 : 1;
+    const expectedParts = this.mode === 'range' && parts.length === 2 ? 2 : 1;
     if (parts.length !== expectedParts) return null;
     const dates = parts.map((part) => this.parseStrictISO(part));
     return dates.some((date) => date === null) ? null : (dates as Date[]);
@@ -368,7 +378,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const flags: ValidityStateFlags = {};
     let underflowMessage = '';
     let overflowMessage = '';
-    if (this.required && this.value === '') flags.valueMissing = true;
+    const incompleteRange = this.isIncompleteRangeValue(this.value);
+    if (this.required && (this.value === '' || incompleteRange)) flags.valueMissing = true;
     if (this.typedBadInput) flags.badInput = true;
 
     if (this.value !== '') {

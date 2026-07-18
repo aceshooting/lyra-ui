@@ -11,6 +11,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { styles } from './generation-status.styles.js';
+import { getNumberFormat, getPluralRules } from '../../internal/intl-cache.js';
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
@@ -53,7 +54,7 @@ interface FormattedElapsed {
 function formatElapsed(ms: number, locale: string): FormattedElapsed {
   const totalSeconds = Math.max(0, ms) / 1000;
   if (totalSeconds < 59.95) {
-    const seconds = new Intl.NumberFormat(locale, {
+    const seconds = getNumberFormat(locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     }).format(Math.round(totalSeconds * 10) / 10);
@@ -62,7 +63,7 @@ function formatElapsed(ms: number, locale: string): FormattedElapsed {
   const wholeSeconds = Math.round(totalSeconds);
   const minutes = Math.floor(wholeSeconds / 60);
   const seconds = wholeSeconds % 60;
-  const numberFormat = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+  const numberFormat = getNumberFormat(locale, { maximumFractionDigits: 0 });
   return {
     key: 'elapsedMinutesSecondsTemplate',
     values: { minutes: numberFormat.format(minutes), seconds: numberFormat.format(seconds) },
@@ -73,7 +74,7 @@ function formatElapsed(ms: number, locale: string): FormattedElapsed {
  *  non-negative integer normalization. */
 function formatTokenCount(count: number, locale: string): { rounded: number; formatted: string } {
   const rounded = Math.max(0, Math.round(count));
-  return { rounded, formatted: new Intl.NumberFormat(locale).format(rounded) };
+  return { rounded, formatted: getNumberFormat(locale).format(rounded) };
 }
 
 /** `27.4` -> `"27"`; `3.2` -> `"3.2"`. Same shape as this file's
@@ -86,7 +87,7 @@ function formatTokenCount(count: number, locale: string): { rounded: number; for
 function formatThroughput(value: number, locale: string): string {
   const clamped = Math.max(0, value);
   const rounded = clamped < 10 ? Math.round(clamped * 10) / 10 : Math.round(clamped);
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: clamped < 10 ? 1 : 0 }).format(rounded);
+  return getNumberFormat(locale, { maximumFractionDigits: clamped < 10 ? 1 : 0 }).format(rounded);
 }
 
 /**
@@ -358,7 +359,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
     const elapsed = formatElapsed(this.elapsedMs, locale);
     const tokenCount = hasTokens ? formatTokenCount(validTokenCount!, locale) : undefined;
     const tokenMessageKey =
-      tokenCount && new Intl.PluralRules(locale).select(tokenCount.rounded) === 'one'
+      tokenCount && getPluralRules(locale).select(tokenCount.rounded) === 'one'
         ? 'generationStatusTokenCount'
         : 'generationStatusTokensCount';
 

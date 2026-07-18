@@ -6,10 +6,22 @@ import { prefersReducedMotion } from '../../internal/motion.js';
 import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { LyraVirtualList, type VirtualListRange } from '../virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
+import { getPluralRules } from '../../internal/intl-cache.js';
 
 export interface LyraChatViewportEventMap {
   'lyra-follow-change': CustomEvent<{ following: boolean }>;
 }
+
+/** Longest gap between a wheel/touchmove/keyboard "user is scrolling" gesture and the resulting
+ *  scroll (slotted mode) or `lyra-visible-range-changed` (virtual mode) event before the pending
+ *  intent flag it set is treated as stale rather than real. A gesture that actually moved
+ *  anything settles well within this window -- virtual mode's longest chain is one
+ *  `requestAnimationFrame` plus a Lit microtask update, on the order of a couple dozen
+ *  milliseconds. A gesture that changed nothing (e.g. wheel-down while already at the bottom, in
+ *  virtual mode) produces no such event to consume the flag itself, so without this expiry it
+ *  would sit stuck `true` until some later, unrelated event -- e.g. the next streamed append --
+ *  misattributes itself as user-caused and releases `follow`. */
+const USER_INTENT_MAX_AGE_MS = 500;
 
 /**
  * `<lyra-chat-viewport>` — the transcript scroll container: owns stick-to-bottom behavior while an
@@ -84,6 +96,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   @query('[part="content"]') private contentEl?: HTMLElement;
 
   private pendingUserIntent = false;
+  /** `performance.now()` timestamp of the last `markUserIntent()` call -- see
+   *  `USER_INTENT_MAX_AGE_MS` and `consumeUserIntent()`. */
+  private pendingUserIntentAt = 0;
   private scrollbarDragActive = false;
   private isMounting = true;
   private pendingScrollBehavior?: 'auto' | 'smooth';
@@ -128,6 +143,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.teardownObservers();
+    // Safety net for a drag still in progress (pointerdown fired, no matching pointerup yet) when
+    // this element is disconnected -- without this the window listener `onPointerDown` added would
+    // leak for the lifetime of the page.
+    window.removeEventListener('pointerup', this.onPointerUp);
   }
 
   firstUpdated(): void {
@@ -222,7 +241,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const count = this.unreadCount;
     if (count <= 0) return this.localize('jumpToLatest');
     const key =
-      new Intl.PluralRules(this.effectiveLocale).select(count) === 'one' ? 'newMessageCount' : 'newMessagesCount';
+      getPluralRules(this.effectiveLocale).select(count) === 'one' ? 'newMessageCount' : 'newMessagesCount';
     return this.localize(key, undefined, { count });
   }
 
@@ -251,14 +270,30 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   private markUserIntent = (): void => {
     this.pendingUserIntent = true;
+    this.pendingUserIntentAt = performance.now();
   };
+
+  /** Consumes the pending user-intent flag, treating it as real only if it's still fresh -- see
+   *  `USER_INTENT_MAX_AGE_MS`. Always clears the flag, whether fresh or stale. */
+  private consumeUserIntent(): boolean {
+    const fresh = this.pendingUserIntent && performance.now() - this.pendingUserIntentAt <= USER_INTENT_MAX_AGE_MS;
+    this.pendingUserIntent = false;
+    return fresh;
+  }
 
   private onPointerDown = (): void => {
     this.scrollbarDragActive = true;
+    // Dragging a native scrollbar thumb (or just holding the mouse button) can end with the
+    // pointer well outside `[part="scroll"]` -- the release target is wherever the cursor
+    // happens to be, not necessarily this element or one of its descendants. A listener bound
+    // only here would never see that pointerup, leaving this flag stuck `true` and letting a
+    // later, unrelated layout-shift scroll spuriously release `follow`.
+    window.addEventListener('pointerup', this.onPointerUp);
   };
 
   private onPointerUp = (): void => {
     this.scrollbarDragActive = false;
+    window.removeEventListener('pointerup', this.onPointerUp);
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -275,8 +310,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (!this.follow) this.follow = true;
       return;
     }
-    const userCaused = this.pendingUserIntent || this.scrollbarDragActive;
-    this.pendingUserIntent = false;
+    const userCaused = this.consumeUserIntent() || this.scrollbarDragActive;
     if (userCaused && this.follow) this.follow = false;
   };
 
@@ -290,8 +324,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (!this.follow) this.follow = true;
       return;
     }
-    const userCaused = this.pendingUserIntent || this.scrollbarDragActive;
-    this.pendingUserIntent = false;
+    const userCaused = this.consumeUserIntent() || this.scrollbarDragActive;
     if (userCaused) {
       if (this.follow) this.follow = false;
       return;
@@ -429,7 +462,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           @wheel=${this.markUserIntent}
           @touchmove=${this.markUserIntent}
           @pointerdown=${this.onPointerDown}
-          @pointerup=${this.onPointerUp}
           @keydown=${this.onKeyDown}
         >
           <div part="content">

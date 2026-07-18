@@ -6,6 +6,7 @@ import { safeFetchUrl } from '../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../internal/resource-loader.js';
 import { loadIcal } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 export interface ParsedCalendarEvent { uid: string; summary: string; start: Date | null; end: Date | null; location: string; description: string; }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
@@ -13,7 +14,7 @@ export interface LyraCalendarViewerEventMap { 'lyra-render-error': CustomEvent<{
 
 function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
   if (!start) return '';
-  const formatter = new Intl.DateTimeFormat(locale || undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const formatter = getDateTimeFormat(locale || undefined, { dateStyle: 'medium', timeStyle: 'short' });
   return end ? `${formatter.format(start)} – ${formatter.format(end)}` : formatter.format(start);
 }
 

@@ -1,4 +1,4 @@
-import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
+import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { tag } from '../../internal/prefix.js';
@@ -82,6 +82,10 @@ export class LyraFlowControls extends LyraElement {
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private lockObserver?: MutationObserver;
+  /** Watches the root for DOM changes while no canvas has resolved yet, so a `for` target or
+   *  ancestor `lyra-flow-canvas` that mounts after this element does still gets picked up instead
+   *  of leaving every button permanently disabled. Disconnected once a canvas resolves. */
+  private canvasWatcher?: MutationObserver;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -94,7 +98,29 @@ export class LyraFlowControls extends LyraElement {
     this.unsubscribe = undefined;
     this.lockObserver?.disconnect();
     this.lockObserver = undefined;
+    this.canvasWatcher?.disconnect();
+    this.canvasWatcher = undefined;
     this.canvasEl = undefined;
+  }
+
+  // Guarded by `hasUpdated` -- `connectedCallback()` already ran the initial `resolveAndAttach()`
+  // before the first render, so only a genuine runtime `for` change (never the first update, where
+  // `for` always appears in `changed` alongside every other reactive property) should redo it.
+  // Runs from `willUpdate()`, not `updated()`, so the reset lands in the render this same cycle
+  // produces instead of synchronously scheduling a second cycle from within `updated()`.
+  protected willUpdate(changed: PropertyValues): void {
+    if (this.hasUpdated && changed.has('for')) {
+      this.unsubscribe?.();
+      this.unsubscribe = undefined;
+      this.lockObserver?.disconnect();
+      this.lockObserver = undefined;
+      this.canvasWatcher?.disconnect();
+      this.canvasWatcher = undefined;
+      this.canvasEl = undefined;
+      this.snapshot = null;
+      this.locked = false;
+      this.resolveAndAttach();
+    }
   }
 
   private resolveCanvas(): FlowCanvasLike | null {
@@ -109,7 +135,12 @@ export class LyraFlowControls extends LyraElement {
 
   private resolveAndAttach(): void {
     const canvas = this.resolveCanvas();
-    if (!canvas) return;
+    if (!canvas) {
+      this.watchForCanvas();
+      return;
+    }
+    this.canvasWatcher?.disconnect();
+    this.canvasWatcher = undefined;
     this.canvasEl = canvas;
     this.locked = canvas.locked;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
@@ -119,6 +150,13 @@ export class LyraFlowControls extends LyraElement {
       this.locked = canvas.locked;
     });
     this.lockObserver.observe(canvas, { attributes: true, attributeFilter: ['locked'] });
+  }
+
+  private watchForCanvas(): void {
+    if (this.canvasWatcher) return;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    this.canvasWatcher = new MutationObserver(() => this.resolveAndAttach());
+    this.canvasWatcher.observe(root, { childList: true, subtree: true });
   }
 
   private toggleLock = (): void => {

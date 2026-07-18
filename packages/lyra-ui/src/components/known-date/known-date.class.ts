@@ -5,6 +5,7 @@ import { FormAssociated } from '../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../internal/anchored-validity.js';
 import { nextId } from '../../internal/a11y.js';
 import { styles } from './known-date.styles.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 export type LyraKnownDateSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type LyraKnownDateField = 'day' | 'month' | 'year';
@@ -42,7 +43,7 @@ function formatISO(date: Date): string {
  *  duplicated rather than imported. */
 function localeDateOrder(locale: string): LyraKnownDateField[] {
   try {
-    const parts = new Intl.DateTimeFormat(locale || undefined, {
+    const parts = getDateTimeFormat(locale || undefined, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

@@ -1,4 +1,4 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { tag } from '../../internal/prefix.js';
@@ -44,6 +44,16 @@ export class LyraFlowMinimap extends LyraElement {
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private dragState?: { pointerId: number; startClientX: number; startClientY: number; startViewport: { x: number; y: number; zoom: number } };
+  /** Set once an in-progress viewport drag actually moves. A completed pointer drag makes the
+   *  browser synthesize a `click` on the captured element afterward, which bubbles up into the
+   *  map's own `@click` (click-to-center) handler -- without this, releasing the viewport rect
+   *  after dragging it re-centers the map on the release point, undoing the drag. Consumed (reset
+   *  to `false`) the next time `onMapClick` runs, so a genuine click on the map still centers it. */
+  private justDraggedViewport = false;
+  /** Watches the root for DOM changes while no canvas has resolved yet, so a `for` target or
+   *  ancestor `lyra-flow-canvas` that mounts after this element does still gets picked up instead
+   *  of leaving this element permanently blank. Disconnected once a canvas resolves. */
+  private canvasWatcher?: MutationObserver;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -55,6 +65,8 @@ export class LyraFlowMinimap extends LyraElement {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.canvasEl = undefined;
+    this.canvasWatcher?.disconnect();
+    this.canvasWatcher = undefined;
     // If the element is removed mid-drag, nothing else ever detaches the window-level drag
     // listeners, so they are removed unconditionally here.
     this.dragState = undefined;
@@ -62,6 +74,23 @@ export class LyraFlowMinimap extends LyraElement {
     window.removeEventListener('pointerup', this.onViewportPointerUp);
     window.removeEventListener('pointercancel', this.onViewportPointerUp);
     window.removeEventListener('lostpointercapture', this.onViewportPointerUp);
+  }
+
+  // Guarded by `hasUpdated` -- `connectedCallback()` already ran the initial `resolveAndAttach()`
+  // before the first render, so only a genuine runtime `for` change (never the first update, where
+  // `for` always appears in `changed` alongside every other reactive property) should redo it.
+  // Runs from `willUpdate()`, not `updated()`, so `snapshot`'s reset lands in the render this same
+  // cycle produces instead of synchronously scheduling a second cycle from within `updated()`.
+  protected willUpdate(changed: PropertyValues): void {
+    if (this.hasUpdated && changed.has('for')) {
+      this.unsubscribe?.();
+      this.unsubscribe = undefined;
+      this.canvasWatcher?.disconnect();
+      this.canvasWatcher = undefined;
+      this.canvasEl = undefined;
+      this.snapshot = null;
+      this.resolveAndAttach();
+    }
   }
 
   private resolveCanvas(): FlowCanvasLike | null {
@@ -76,11 +105,23 @@ export class LyraFlowMinimap extends LyraElement {
 
   private resolveAndAttach(): void {
     const canvas = this.resolveCanvas();
-    if (!canvas) return;
+    if (!canvas) {
+      this.watchForCanvas();
+      return;
+    }
+    this.canvasWatcher?.disconnect();
+    this.canvasWatcher = undefined;
     this.canvasEl = canvas;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
       this.snapshot = snapshot;
     });
+  }
+
+  private watchForCanvas(): void {
+    if (this.canvasWatcher) return;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    this.canvasWatcher = new MutationObserver(() => this.resolveAndAttach());
+    this.canvasWatcher.observe(root, { childList: true, subtree: true });
   }
 
   private contentBounds(): { minX: number; minY: number; maxX: number; maxY: number } {
@@ -116,6 +157,10 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private onMapClick = (e: MouseEvent): void => {
+    if (this.justDraggedViewport) {
+      this.justDraggedViewport = false;
+      return;
+    }
     if (!this.canvasEl || !this.snapshot) return;
     const point = this.clientToContentPoint(e.currentTarget as SVGSVGElement, e.clientX, e.clientY);
     const { zoom, width, height } = this.snapshot.viewport;
@@ -146,6 +191,7 @@ export class LyraFlowMinimap extends LyraElement {
   private onViewportPointerMove = (e: PointerEvent): void => {
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId || !this.canvasEl) return;
+    this.justDraggedViewport = true;
     const svgEl = this.renderRoot.querySelector('[part="map"]') as SVGSVGElement | null;
     const ctm = svgEl?.getScreenCTM();
     if (!ctm) return;
@@ -188,6 +234,8 @@ export class LyraFlowMinimap extends LyraElement {
     const { x, y, zoom, width, height } = this.snapshot.viewport;
     const stepX = width * 0.1;
     const stepY = height * 0.1;
+    // policy-allow(rtl-arrow-keys): pans a 2-D spatial viewport in canvas coordinates; x always
+    // increases toward the physical right regardless of text direction, so the arrows stay physical.
     if (e.key === 'ArrowRight') {
       e.preventDefault();
       this.canvasEl.setViewport({ x: x - stepX, y, zoom });

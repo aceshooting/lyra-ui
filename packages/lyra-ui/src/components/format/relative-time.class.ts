@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './format.styles.js';
+import { getRelativeTimeFormat } from '../../internal/intl-cache.js';
 
 export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -34,7 +35,7 @@ export class LyraRelativeTime extends LyraElement {
     const divisors: Record<RelativeTimeUnit, number> = { year: 31_536_000, quarter: 7_884_000, month: 2_628_000, week: 604_800, day: 86_400, hour: 3_600, minute: 60, second: 1 };
     const selected = this.unit === 'auto' ? units.find((candidate) => Math.abs(seconds) >= divisors[candidate]) ?? 'second' : this.unit;
     const value = Math.round(seconds / divisors[selected]);
-    return new Intl.RelativeTimeFormat(this.effectiveLocale || undefined, { numeric: this.numeric }).format(value, selected);
+    return getRelativeTimeFormat(this.effectiveLocale || undefined, { numeric: this.numeric }).format(value, selected);
   }
   render(): TemplateResult { return html`${this.relative()}`; }
 }

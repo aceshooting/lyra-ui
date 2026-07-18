@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../internal/numbers.js';
 import { styles } from './format.styles.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 const UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'petabyte'] as const;
 const DEFAULT_UNIT_STEP = 1024;
@@ -51,7 +52,7 @@ export class LyraFormatBytes extends LyraElement {
       const step = this.safeUnitStep;
       const index = value === 0 ? 0 : Math.min(UNITS.length - 1, Math.floor(Math.log(Math.abs(value)) / Math.log(step)));
       const amount = value / step ** index;
-      text = new Intl.NumberFormat(this.effectiveLocale || undefined, {
+      text = getNumberFormat(this.effectiveLocale || undefined, {
         style: 'unit',
         unit: UNITS[index],
         unitDisplay: 'short',

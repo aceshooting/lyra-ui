@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
+import { formatISO } from '../date-picker/calendar-core.js';
 
 it('renders a month and emits date selections', async () => {
   const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
@@ -8,6 +9,48 @@ it('renders a month and emits date selections', async () => {
   const selected = oneEvent(el, 'lyra-date-select');
   (el.shadowRoot!.querySelector('[data-date="2026-07-15"]') as HTMLElement).click();
   expect((await selected).detail.date).to.equal('2026-07-15');
+});
+
+it('keeps exactly one focusable day after navigating the view away from any anchor date', async () => {
+  // Regression test: the roving tab stop was `focusedDate || value || today`
+  // with no fallback -- a visible month containing none of those three
+  // (e.g. three months forward from a fresh calendar with no selection and
+  // no prior keyboard focus) left zero cells with tabindex="0", making the
+  // whole grid keyboard-unreachable.
+  const el = (await fixture(html`<lyra-calendar></lyra-calendar>`)) as LyraCalendar;
+  await el.updateComplete;
+  const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLButtonElement;
+  for (let i = 0; i < 3; i++) {
+    next.click();
+    await el.updateComplete;
+  }
+  const focusable = el.shadowRoot!.querySelectorAll('[part="day"][tabindex="0"]');
+  expect(focusable, 'expected exactly one focusable day after navigating three months forward').to.have.length(1);
+  const now = new Date();
+  const expectedFirstOfMonth = formatISO(new Date(now.getFullYear(), now.getMonth() + 3, 1));
+  expect((focusable[0] as HTMLElement).dataset.date).to.equal(expectedFirstOfMonth);
+});
+
+it('rolls the view to the next month when ArrowDown moves focus past the bottom of the 6-week grid', async () => {
+  // Regression test: arrow-key navigation only advanced focusedDate, never
+  // viewDate -- moving past the grid's last rendered row (August 9, the
+  // trailing edge of the July grid: Jun 29 - Aug 9) left focusedDate
+  // pointing at a date with no matching cell anywhere on screen, a
+  // keyboard dead end.
+  const el = (await fixture(html`<lyra-calendar view-date="2026-07-01"></lyra-calendar>`)) as LyraCalendar;
+  await el.updateComplete;
+  const aug7 = el.shadowRoot!.querySelector('[data-date="2026-08-07"]') as HTMLElement;
+  aug7.focus();
+  aug7.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  const title = el.shadowRoot!.querySelector('[part="title"]')!.textContent!.toLowerCase();
+  expect(title, 'expected the view to have rolled forward to August').to.contain('august');
+
+  const focused = el.shadowRoot!.querySelector('[data-date="2026-08-14"]') as HTMLElement;
+  expect(focused, 'expected Aug 14 to be rendered once the view rolled to August').to.exist;
+  expect(focused.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(focused);
 });
 
 it('gives the previous/next month nav buttons the shared minimum hit area', async () => {

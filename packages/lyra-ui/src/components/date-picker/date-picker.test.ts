@@ -668,6 +668,42 @@ it('gives an outside-month day inside a selected range normal text contrast, not
   expect(overlapColor).to.not.equal(plainOutsideColor);
 });
 
+it('focuses the real (non-outside) copy of a date duplicated between two with-outside-days grids, not the greyed one', async () => {
+  // Regression test: with with-outside-days + months="2", a date near the
+  // seam between the two visible months renders twice -- once as a trailing
+  // outside day of month 1's grid, once as a real day of month 2's grid (or
+  // the mirror case at the leading edge). Both copies used to be eligible to
+  // compute focused=true, producing two tabindex="0" cells for the same
+  // date and leaving updated()'s post-navigation `.focus()` query to grab
+  // whichever copy came first in DOM order -- the greyed-out outside one.
+  const el = (await fixture(html`
+    <lyra-date-picker months="2" with-outside-days first-day-of-week="mon"></lyra-date-picker>
+  `)) as LyraDatePicker;
+  el.goToDate('2026-07-01');
+  await el.updateComplete;
+
+  // July's grid (Mon-first) runs Jun 29 - Aug 9, so Aug 5 also renders as a
+  // trailing outside day there, in addition to being a real day in August's
+  // own grid -- two [data-date="2026-08-05"] cells while both months stay
+  // on screen throughout (Jul 1 + 5 * 7 days = Aug 5, always inside the
+  // already-visible July/August window).
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  for (let i = 0; i < 5; i++) {
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  }
+  await el.updateComplete;
+
+  const copies = el.shadowRoot!.querySelectorAll('[data-date="2026-08-05"]');
+  expect(copies, 'expected the duplicated date to render in both month grids').to.have.length(2);
+
+  const focusable = el.shadowRoot!.querySelectorAll('[data-date="2026-08-05"][tabindex="0"]');
+  expect(focusable, 'expected exactly one focusable copy of the duplicated date').to.have.length(1);
+
+  const realCopy = focusable[0] as HTMLButtonElement;
+  expect(realCopy.getAttribute('part'), 'the focusable copy must be the real, non-outside day').to.not.contain('day-outside');
+  expect(el.shadowRoot!.activeElement, 'DOM focus should land on the real copy, not the greyed outside one').to.equal(realCopy);
+});
+
 it('clear() resets the value and emits input + change', async () => {
   const el = (await fixture(html`<lyra-date-picker value="2026-07-15"></lyra-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;
@@ -686,6 +722,39 @@ it('goToToday() navigates the view to the current month and focuses today', asyn
   const cell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
   expect(cell, 'expected today to be rendered after goToToday()').to.exist;
   expect(cell.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(cell);
+});
+
+it('goToToday() focuses today itself, not yesterday, when disable-future is set', async () => {
+  // Regression test: goToDate()/goToToday() kept the passed Date's
+  // time-of-day (goToToday() passes `new Date()`, whose hours/minutes are
+  // whatever the wall clock happens to be) while isDisabled() compares
+  // against a midnight-normalized `today` -- so any time after midnight
+  // made `focusedDate > today` true, misclassifying today itself as a
+  // disabled future date and bumping the roving focus back to yesterday.
+  const el = (await fixture(html`<lyra-date-picker disable-future></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  el.goToToday();
+  await el.updateComplete;
+
+  const today = new Date();
+  const cell = el.shadowRoot!.querySelector(`[data-date="${iso(today)}"]`) as HTMLButtonElement;
+  expect(cell, 'expected today to be rendered after goToToday()').to.exist;
+  expect(cell.disabled, 'today itself must remain selectable under disable-future').to.be.false;
+  expect(cell.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(cell);
+});
+
+it('goToDate() normalizes a Date argument carrying a time-of-day to local midnight', async () => {
+  const el = (await fixture(html`<lyra-date-picker disable-future></lyra-date-picker>`)) as LyraDatePicker;
+  await el.updateComplete;
+  const now = new Date();
+  const withTimeOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  el.goToDate(withTimeOfDay);
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector(`[data-date="${iso(now)}"]`) as HTMLButtonElement;
+  expect(cell.disabled).to.be.false;
   expect(el.shadowRoot!.activeElement).to.equal(cell);
 });
 

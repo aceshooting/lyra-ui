@@ -4,6 +4,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteRange } from '../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import type { GitStatus } from '../file-tree/file-tree.class.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 export interface CommitFileChange {
   path: string;
@@ -134,7 +135,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
           ${timestamp !== undefined
             ? html`<span part="time"
                 ><time datetime=${new Date(timestamp).toISOString()}
-                  >${new Intl.DateTimeFormat(this.effectiveLocale, {
+                  >${getDateTimeFormat(this.effectiveLocale, {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   }).format(new Date(timestamp))}</time

@@ -89,6 +89,49 @@ it('the default slot appends extra host buttons to the cluster', async () => {
   expect(el.querySelector('button')!.textContent).to.equal('Export');
 });
 
+it('re-resolves against a new for target when the for attribute changes at runtime', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lyra-flow-canvas id="wf1"></lyra-flow-canvas>
+      <lyra-flow-canvas id="wf2" min-zoom="1"></lyra-flow-canvas>
+      <lyra-flow-controls for="wf1"></lyra-flow-controls>
+    </div>
+  `)) as HTMLElement;
+  const canvas2 = root.querySelector('#wf2') as LyraFlowCanvas;
+  canvas2.nodes = nodes;
+  await canvas2.updateComplete;
+  const controls = root.querySelector('lyra-flow-controls') as LyraFlowControls;
+  await controls.updateComplete;
+  // Still pointed at wf1 (no nodes) -- clicking zoom-in should not touch wf2.
+  const zoomBeforeWf2 = canvas2.viewport.zoom;
+
+  controls.for = 'wf2';
+  await controls.updateComplete;
+  (controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).click();
+  expect(canvas2.viewport.zoom).to.be.greaterThan(zoomBeforeWf2);
+});
+
+it('resolves a for-target canvas that mounts into the document after the controls element itself', async () => {
+  const root = (await fixture(html`<div><lyra-flow-controls for="late-wf"></lyra-flow-controls></div>`)) as HTMLElement;
+  const controls = root.querySelector('lyra-flow-controls') as LyraFlowControls;
+  expect((controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).disabled).to.be.true;
+
+  const canvas = document.createElement('lyra-flow-canvas') as LyraFlowCanvas;
+  canvas.id = 'late-wf';
+  root.appendChild(canvas);
+  canvas.nodes = nodes;
+  await canvas.updateComplete;
+  // The retry itself is DOM-mutation-driven (a MutationObserver), not another render on the
+  // controls element, so give the observer's microtask a turn first; the button re-render then
+  // rides on the rAF-coalesced companion snapshot delivery (see flow-canvas.test.ts's own
+  // "registerCompanion delivers a FlowStructureSnapshot rAF-coalesced" case).
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => requestAnimationFrame(r));
+  await controls.updateComplete;
+
+  expect((controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).disabled).to.be.false;
+});
+
 it('is accessible with a resolved canvas', async () => {
   const wrapper = (await fixture(html`
     <lyra-flow-canvas><lyra-flow-controls slot="bottom-start"></lyra-flow-controls></lyra-flow-canvas>

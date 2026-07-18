@@ -225,8 +225,12 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   // d3-force is lazy-loaded and, with `seed` set, settles synchronously (see graph.class.ts's
   // rebuildSimulation()) rather than animating over ~300 rAF frames -- but that synchronous
   // settle plus the very first 30k-element DOM/canvas paint for 5,000 nodes/10,000 links still
-  // needs more headroom than mocha's 6s default, especially on a loaded CI worker.
-  this.timeout(30000);
+  // needs more headroom than mocha's 6s default, especially on a loaded CI worker. 30s is enough
+  // in isolation (~15s) but has been observed to time out under the full ~290-file suite's
+  // concurrent Chromium load; doubled for headroom rather than tightened, since this test's job
+  // is to catch a real regression in the benchmarked median, not to police wall-clock scheduling
+  // noise from unrelated files running at the same time.
+  this.timeout(60000);
   const GRAPH_NODE_COUNT = 5_000;
   const GRAPH_LINK_COUNT = 10_000;
   const host = (await fixture(

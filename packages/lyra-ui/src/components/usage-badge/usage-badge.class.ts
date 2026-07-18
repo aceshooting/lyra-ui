@@ -5,6 +5,7 @@ import { nextId } from '../../internal/a11y.js';
 import { place } from '../../internal/positioner.js';
 import { finiteCount, finiteRange } from '../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 interface FormattedDuration {
   key: 'durationMilliseconds' | 'durationSeconds';
@@ -131,10 +132,10 @@ export class LyraUsageBadge extends LyraElement {
   }
 
   private formatTokenCount(n: number): string {
-    return new Intl.NumberFormat(this.effectiveLocale, this.compact ? { notation: 'compact' } : {}).format(n);
+    return getNumberFormat(this.effectiveLocale, this.compact ? { notation: 'compact' } : {}).format(n);
   }
   private formatTokenCountFull(n: number): string {
-    return new Intl.NumberFormat(this.effectiveLocale).format(n);
+    return getNumberFormat(this.effectiveLocale).format(n);
   }
   private localizedDuration(ms: number): string {
     const d = formatDuration(ms);

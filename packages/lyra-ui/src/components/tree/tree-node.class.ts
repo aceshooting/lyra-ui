@@ -93,7 +93,10 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   }
 
   get hasChildren(): boolean {
-    return Boolean(this.item.children?.length);
+    // `item` is required in normal use (`<lyra-tree>` always assigns it), but a
+    // bare `document.createElement('lyra-tree-node')` reaches the first update
+    // with it unset — degrade to a leaf instead of throwing mid-lifecycle.
+    return Boolean(this.item?.children?.length);
   }
 
   protected willUpdate(): void {
@@ -103,7 +106,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     this.setAttribute('aria-posinset', String(this.posInSet));
     if (this.hasChildren) this.setAttribute('aria-expanded', String(this.expanded));
     else this.removeAttribute('aria-expanded');
-    if (this.item.accessibleLabel) this.setAttribute('aria-label', this.item.accessibleLabel);
+    if (this.item?.accessibleLabel) this.setAttribute('aria-label', this.item.accessibleLabel);
     else this.removeAttribute('aria-label');
     this.tabIndex = this.item?.id === this.activeId ? 0 : -1;
   }
@@ -162,6 +165,9 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   };
 
   render(): TemplateResult {
+    // No item yet (see `hasChildren`): render nothing rather than dereferencing
+    // `this.item` — the row appears as soon as the owner assigns the property.
+    if (!this.item) return html``;
     return html`
       <div part="row" style=${`--lyra-tree-depth:${this.depth}`} @click=${() => this.select()}>
         <button

@@ -60,8 +60,27 @@ it('header slot replaces the built-in heading row entirely', async () => {
   const el = (await fixture(
     html`<lyra-flow-node heading="Ignored"><span slot="header">Custom header</span></lyra-flow-node>`,
   )) as LyraFlowNode;
-  expect(el.shadowRoot!.querySelector('[part="heading"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.hasAttribute('hidden')).to.be.true;
   expect(el.shadowRoot!.querySelector('slot[name="header"]')).to.exist;
+});
+
+it('a header child appended after the initial render still replaces the built-in heading row', async () => {
+  const el = (await fixture(html`<lyra-flow-node heading="Ignored"></lyra-flow-node>`)) as LyraFlowNode;
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.hasAttribute('hidden')).to.be.false;
+
+  const span = document.createElement('span');
+  span.slot = 'header';
+  span.textContent = 'Custom header';
+  el.appendChild(span);
+  // slotchange fires asynchronously once the browser processes the newly assigned node.
+  await new Promise((r) => setTimeout(r, 0));
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.hasAttribute('hidden')).to.be.true;
+  const slot = el.shadowRoot!.querySelector('slot[name="header"]') as HTMLSlotElement;
+  const assigned = slot.assignedElements({ flatten: true });
+  expect(assigned.length).to.equal(1);
+  expect(assigned[0].textContent).to.equal('Custom header');
 });
 
 it('is accessible with a status, progress, and handles', async () => {

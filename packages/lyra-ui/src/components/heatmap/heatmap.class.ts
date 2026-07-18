@@ -8,6 +8,7 @@ import { getScratchCtx } from '../../internal/canvas.js';
 import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
+import { getDateTimeFormat, getNumberFormat } from '../../internal/intl-cache.js';
 
 const PAD_LEFT = 60;
 const PAD_TOP = 20;
@@ -39,6 +40,10 @@ const RING_LINE_WIDTH = 2;
 const FALLBACK_FOCUS_RING_COLOR = '#0969da';
 const FALLBACK_ANNOTATION_COLOR = '#cf222e';
 const FALLBACK_SELECTED_COLOR = '#1a7f37';
+// policy-allow(rtl-arrow-keys): the canvas grids are deliberately non-mirrored -- drawMatrix()/
+// columnXFor() always place column/week 0 at the physical left and [part='cells'] is pinned
+// `direction: ltr` in heatmap.styles.ts -- so arrow keys stay physical too; see
+// onMatrixKeyDown()/onCalendarKeyDown().
 const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const MS_PER_DAY = 86_400_000;
 
@@ -735,7 +740,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private formatNumericValue(value: number): string {
-    return new Intl.NumberFormat(this.effectiveLocale || undefined).format(value);
+    return getNumberFormat(this.effectiveLocale || undefined).format(value);
   }
 
   protected updated(changed: PropertyValues): void {
@@ -983,7 +988,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * (see `calendarCellText()`'s tooltip text for the same pattern).
    */
   private weekdayLabels(firstWeekStart: Date): string[] {
-    const formatter = new Intl.DateTimeFormat(this.effectiveLocale || undefined, { weekday: 'short', timeZone: 'UTC' });
+    const formatter = getDateTimeFormat(this.effectiveLocale || undefined, { weekday: 'short', timeZone: 'UTC' });
     const labels = ['', '', '', '', '', '', ''];
     for (const weekday of [1, 3, 5]) {
       const row = (weekday - this.firstDayOfWeek + 7) % 7;

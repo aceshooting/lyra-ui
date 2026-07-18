@@ -300,7 +300,15 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   goToDate(date: string | Date): void {
     const d = typeof date === 'string' ? parseISO(date) : date;
     if (!d || !Number.isFinite(d.getTime())) return;
-    const clamped = clampDate(new Date(d.getTime()), parseISO(this.min), parseISO(this.max));
+    // A `Date` argument (goToToday() passes `new Date()`) can carry a
+    // non-midnight time-of-day, but isDisabled()/normalizeFocusedDate()
+    // always compare against a midnight-normalized `today` -- leaving the
+    // time-of-day on `focusedDate` made `disableFuture` misclassify today
+    // itself as a future date any time after 00:00:00, bumping the roving
+    // focus back to yesterday. parseISO()-parsed strings are already
+    // midnight, so this only ever changes a `Date` argument's clock time.
+    const midnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const clamped = clampDate(midnight, parseISO(this.min), parseISO(this.max));
     this.viewDate = new Date(clamped.getFullYear(), clamped.getMonth(), 1);
     this.focusedDate = clamped;
     this.focusPending = true;
@@ -406,7 +414,14 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (this.focusPending && this.focusedDate) {
       this.focusPending = false;
       const iso = formatISO(this.focusedDate);
-      const cell = this.renderRoot.querySelector(`[data-date="${iso}"]`) as HTMLElement | null;
+      // Scoped to the one cell actually marked as the roving tab stop, not
+      // just any cell carrying this date -- withOutsideDays + months > 1 can
+      // render the same date twice (see renderDay()'s outsideDuplicate), and
+      // a bare [data-date] match would grab whichever copy comes first in
+      // DOM order (the greyed-out outside one) instead of the real day.
+      const cell = this.renderRoot.querySelector(
+        `[data-date="${iso}"][tabindex="0"]`,
+      ) as HTMLElement | null;
       cell?.focus();
     }
   }
@@ -444,6 +459,15 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const isEnd = to && isSameDay(date, to);
     const selected = this.effectiveMode === 'single' ? isStart : isStart || isEnd;
     const inRange = this.effectiveMode === 'range' && from && to && date > from && date < to;
+    // With withOutsideDays + months > 1, a date near the seam between two
+    // visible months renders twice: once as a trailing/leading outside day
+    // of one month's grid, once as the real day of the adjacent month's own
+    // grid (isVisibleDate() is true for it precisely in that case, since
+    // its own calendar month is itself one of the visible months). The
+    // outside copy must never be focus-eligible then -- only the true
+    // rendering counts -- or both copies could satisfy the checks below,
+    // producing two tabindex="0" cells for one date.
+    const outsideDuplicate = outside && this.isVisibleDate(date);
     // Falls back to the first *enabled* day across the visible month(s) (see
     // firstEnabledDate()) when there's neither a focusedDate nor a selection,
     // so the grid always has exactly one tabbable cell -- otherwise every
@@ -453,11 +477,13 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // than the 1st), which would land the sole tabindex="0" cell on a button
     // that can never actually receive focus.
     const focused =
-      this.focusedDate != null
-        ? isSameDay(date, this.focusedDate)
-        : isStart && !disabled
-          ? true
-          : !from && fallbackFocusDate != null && isSameDay(date, fallbackFocusDate);
+      outsideDuplicate
+        ? false
+        : this.focusedDate != null
+          ? isSameDay(date, this.focusedDate)
+          : isStart && !disabled
+            ? true
+            : !from && fallbackFocusDate != null && isSameDay(date, fallbackFocusDate);
 
     const parts = ['day'];
     if (outside) parts.push('day-outside');

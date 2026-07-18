@@ -9,6 +9,7 @@ import '../virtual-list/virtual-list.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.js';
 import { styles } from './thread-list.styles.js';
+import { getDateTimeFormat, getPluralRules } from '../../internal/intl-cache.js';
 
 export interface ChatThread {
   id: string;
@@ -237,7 +238,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       default: {
         const [, ym] = key.split(':');
         const [year, month] = ym!.split('-').map(Number);
-        return new Intl.DateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(
+        return getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(
           new Date(year!, month! - 1, 1),
         );
       }
@@ -287,7 +288,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private announceMatchCount(count: number): void {
     if (this.searchText.trim() === '') return;
     const key =
-      new Intl.PluralRules(this.effectiveLocale).select(count) === 'one'
+      getPluralRules(this.effectiveLocale).select(count) === 'one'
         ? 'threadListMatchAnnounce'
         : 'threadListMatchAnnouncePlural';
     this.liveRegion?.announce(this.localize(key, undefined, { count }));

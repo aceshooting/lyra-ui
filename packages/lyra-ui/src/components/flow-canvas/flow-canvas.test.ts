@@ -485,6 +485,63 @@ describe('selection & roving focus', () => {
     expect((el.shadowRoot!.querySelectorAll('[part="node"]')[1] as HTMLElement).getAttribute('tabindex')).to.equal('0');
   });
 
+  it('ArrowRight resolves the roving focus target by node id, not DOM order, when nodes are not spatially pre-sorted', async () => {
+    const el = (await fixture(html`<lyra-flow-canvas></lyra-flow-canvas>`)) as LyraFlowCanvas;
+    // `nodes` array/DOM order is [a, b], but "a" sits to the right of "b" -- roving nav order
+    // follows spatial position (b then a), which is the reverse of DOM order here.
+    el.nodes = [
+      { id: 'a', position: { x: 200, y: 0 } },
+      { id: 'b', position: { x: 0, y: 0 } },
+    ];
+    await el.updateComplete;
+    const aEl = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const bEl = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    expect(bEl.getAttribute('tabindex')).to.equal('0');
+    expect(aEl.getAttribute('tabindex')).to.equal('-1');
+
+    bEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    expect(aEl.getAttribute('tabindex')).to.equal('0');
+    expect(bEl.getAttribute('tabindex')).to.equal('-1');
+    expect(el.shadowRoot!.activeElement).to.equal(aEl);
+  });
+
+  it('focusNode() resolves the target element by id even when nodes are not spatially pre-sorted', async () => {
+    const el = (await fixture(html`<lyra-flow-canvas style="width:400px;height:300px"></lyra-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 200, y: 0 } },
+      { id: 'b', position: { x: 0, y: 0 } },
+    ];
+    await el.updateComplete;
+    el.focusNode('a');
+    await el.updateComplete;
+    const aEl = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    expect(aEl.getAttribute('tabindex')).to.equal('0');
+    expect(el.shadowRoot!.activeElement).to.equal(aEl);
+  });
+
+  it('excludes a dangling edge (missing source or target) from roving nav order and count', async () => {
+    const el = (await fixture(html`<lyra-flow-canvas></lyra-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes; // a @ x=0, b @ x=200
+    el.edges = [
+      { id: 'dangling', source: 'a', target: 'missing' },
+      { id: 'real', source: 'a', target: 'b' },
+    ];
+    await el.updateComplete;
+    const firstNode = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    // Two ArrowRight presses from the first node must reach the one real, focusable edge --
+    // a dangling edge still occupying a roving slot would strand the active index on a
+    // non-existent element for one extra keypress.
+    firstNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    const secondNode = el.shadowRoot!.querySelectorAll('[part="node"]')[1] as HTMLElement;
+    secondNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    const realEdgePath = el.shadowRoot!.querySelector('[data-edge-id="real"] [part="edge"]') as HTMLElement;
+    expect(realEdgePath.getAttribute('tabindex')).to.equal('0');
+  });
+
   it('is accessible with nodes, edges, and a selection', async () => {
     const el = (await fixture(html`<lyra-flow-canvas></lyra-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

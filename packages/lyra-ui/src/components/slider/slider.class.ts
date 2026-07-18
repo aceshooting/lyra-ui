@@ -114,7 +114,10 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
    *  as `aria-label` on the interactive `role="slider"` element. A plain
    *  `aria-label` attribute on the host itself is honored as a fallback when
-   *  this is left unset, matching `<lyra-checkbox>`/`<lyra-switch>`. */
+   *  this is left unset, matching `<lyra-checkbox>`/`<lyra-switch>`; with
+   *  neither, the localized generic `sliderLabel` message applies so the
+   *  focusable thumb is never nameless (the same pattern as
+   *  `<lyra-input>`/`<lyra-textarea>`'s built-in generic labels). */
   @property() label = '';
   /** Whether to render the current numeric value as visible text next to
    *  the track. Like `<lyra-markdown>`'s `sanitize`/`gfm`, this is a plain
@@ -440,7 +443,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     const pct = this.percentOf(num);
     const text = this.formatValue(num);
     const { lo, hi } = this.domain();
-    const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
+    const ariaLabel = this.label || this.getAttribute('aria-label') || this.localize('sliderLabel');
     return html`
       <div part="base" @pointerdown=${this.onBasePointerDown}>
         <div part="track"></div>

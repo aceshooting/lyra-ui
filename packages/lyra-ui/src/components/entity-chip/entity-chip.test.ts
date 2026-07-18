@@ -56,6 +56,11 @@ it('computes an accessible name including the (typeLabel-preferred) type when se
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Marie Curie, person');
 });
 
+it('falls back to the localized untitled-entity name when `label` is unset, so the button is never nameless', async () => {
+  const el = (await fixture(html`<lyra-entity-chip entity-id="e1"></lyra-entity-chip>`)) as LyraEntityChip;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Untitled entity');
+});
+
 it('reflects type as a host attribute for CSS theming', async () => {
   const el = (await fixture(html`<lyra-entity-chip type="person"></lyra-entity-chip>`)) as LyraEntityChip;
   expect(el.getAttribute('type')).to.equal('person');

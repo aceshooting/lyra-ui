@@ -4,6 +4,26 @@ import type { LyraTreeNode } from './tree-node.js';
 
 const item = { id: '1', label: 'Root' };
 
+// `item` is assigned by `<lyra-tree>` in normal use, but the tag is registered publicly, so a bare
+// `document.createElement('lyra-tree-node')` must complete its first update cycle (and later ones)
+// without dereferencing the missing item -- it renders as an empty leaf until `item` arrives.
+it('completes its lifecycle without an item, then renders once one is assigned', async () => {
+  const el = document.createElement('lyra-tree-node') as LyraTreeNode;
+  document.body.appendChild(el);
+  try {
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="row"]')).to.equal(null);
+    expect(el.getAttribute('role')).to.equal('treeitem');
+    expect(el.hasChildren).to.be.false;
+
+    el.item = item;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Root');
+  } finally {
+    el.remove();
+  }
+});
+
 // Regression tests for `depth`/`setSize`/`posInSet`: these feed `aria-level`/`aria-setsize`/
 // `aria-posinset` directly in `willUpdate()`. Per the ARIA spec those attributes must be positive
 // integers (aria-setsize additionally permits the `-1` "unknown" sentinel) -- a NaN/negative value

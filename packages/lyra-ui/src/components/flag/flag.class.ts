@@ -1,6 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
+import { getDisplayNames } from '../../internal/intl-cache.js';
 import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../skeleton/skeleton.class.js';
@@ -30,30 +31,20 @@ export async function loadFlagUrl(
 }
 
 /**
- * One `Intl.DisplayNames` instance per locale, shared across every `<lyra-flag>` on the page.
- * Constructing one is an ICU locale-data lookup, and `displayNameFor()` runs on every `render()`
- * pass for a flag without an explicit `label` (e.g. toggling `round`), not just on country/language
- * change -- multi-flag lists (language pickers, country lists) would otherwise pay this cost once
- * per element per render. Mirrors the module-level caching `flagUrlResolver` already gets above.
- */
-const displayNamesCache = new Map<string, Intl.DisplayNames>();
-
-/**
  * Resolves an ISO 3166-1 alpha-2 region code to a human-readable, localized
  * display name (e.g. `'FR'` -> `'France'`) via `Intl.DisplayNames`, for use as
  * the default accessible name (`alt`) instead of a bare code read
  * letter-by-letter by most screen readers. Falls back to the uppercase code
  * itself if `Intl.DisplayNames` throws (unrecognized region) or isn't
- * available in the current runtime.
+ * available in the current runtime. `displayNameFor()` runs on every
+ * `render()` pass for a flag without an explicit `label` (e.g. toggling
+ * `round`), not just on country/language change, so the instance comes from
+ * the shared per-locale `Intl` cache rather than a fresh ICU locale-data
+ * lookup each time.
  */
 function displayNameFor(code: string, locale: string): string {
   try {
-    let dn = displayNamesCache.get(locale);
-    if (!dn) {
-      dn = new Intl.DisplayNames([locale], { type: 'region' });
-      displayNamesCache.set(locale, dn);
-    }
-    return dn.of(code.toUpperCase()) ?? code.toUpperCase();
+    return getDisplayNames(locale, { type: 'region' }).of(code.toUpperCase()) ?? code.toUpperCase();
   } catch {
     return code.toUpperCase();
   }

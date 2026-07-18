@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 export type TimelineItemVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 
@@ -159,7 +160,7 @@ export class LyraTimelineItem extends LyraElement {
     // Intl-formatted absolute date/time -- caller/data formatting exempt from localize() routing per
     // AGENTS.md's i18n carve-out for Intl-formatted dates. Never hand-rolled.
     const absolute = ts
-      ? new Intl.DateTimeFormat(this.effectiveLocale || undefined, { dateStyle: 'long', timeStyle: 'short' }).format(
+      ? getDateTimeFormat(this.effectiveLocale || undefined, { dateStyle: 'long', timeStyle: 'short' }).format(
           ts,
         )
       : '';

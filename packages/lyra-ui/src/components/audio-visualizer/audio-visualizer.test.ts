@@ -177,6 +177,55 @@ describe('draw-loop scheduling', () => {
   });
 });
 
+describe('AudioContext resume on stream attach', () => {
+  // Real browsers can create a brand-new AudioContext already `suspended` under autoplay
+  // policy, and nothing spontaneously transitions it to `running` without an explicit
+  // `resume()` call. This fake starts `suspended` and only flips to `running` (and fires
+  // `statechange`, mirroring the real API) when `resume()` is actually called, so it catches a
+  // regression where `resume()` is only invoked on a reused context, never a freshly-created one.
+  class FakeAudioContext extends EventTarget {
+    state: 'suspended' | 'running' | 'closed' = 'suspended';
+    resumeCalls = 0;
+    createMediaStreamSource(_stream: unknown): { connect: () => void; disconnect: () => void } {
+      return { connect: () => {}, disconnect: () => {} };
+    }
+    createAnalyser(): { fftSize: number; frequencyBinCount: number; getByteTimeDomainData: () => void } {
+      return { fftSize: 256, frequencyBinCount: 128, getByteTimeDomainData: () => {} };
+    }
+    resume(): Promise<void> {
+      this.resumeCalls++;
+      this.state = 'running';
+      this.dispatchEvent(new Event('statechange'));
+      return Promise.resolve();
+    }
+    suspend(): Promise<void> {
+      this.state = 'suspended';
+      return Promise.resolve();
+    }
+    close(): Promise<void> {
+      this.state = 'closed';
+      return Promise.resolve();
+    }
+  }
+
+  it('resumes a freshly-created AudioContext when a stream is first attached, not only a reused one', async () => {
+    const original = window.AudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
+    try {
+      const el = (await fixture(html`<lyra-audio-visualizer></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
+      el.stream = {} as unknown as MediaStream;
+      await el.updateComplete;
+      const ctx = (el as unknown as { audioCtx?: FakeAudioContext }).audioCtx;
+      expect(ctx).to.exist;
+      expect(ctx!.resumeCalls).to.be.greaterThan(0);
+      expect(ctx!.state).to.equal('running');
+      expect((el as unknown as { hasLiveSignal: boolean }).hasLiveSignal).to.be.true;
+    } finally {
+      (window as unknown as { AudioContext: unknown }).AudioContext = original;
+    }
+  });
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lyra-audio-visualizer state="listening"></lyra-audio-visualizer>`)) as LyraAudioVisualizer;
   await expect(el).to.be.accessible();

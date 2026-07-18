@@ -8,6 +8,7 @@ import type { LyraMessageKey } from '../../internal/localization.js';
 import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../skeleton/skeleton.class.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 export interface Series {
   label: string;
@@ -611,8 +612,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');
+      // The mirror-image guard of the one above: a shrinking update can leave `priorVisibility`
+      // longer than the new dataset list, and Chart.js fabricates metadata for an out-of-range index
+      // instead of throwing -- skip any index the shrunk list no longer has instead of polluting
+      // internal per-dataset state for a series that's gone.
+      const currentDatasetCount = this.chart.data.datasets?.length ?? 0;
       let restoredHiddenState = false;
       priorVisibility.forEach((visible, i) => {
+        if (i >= currentDatasetCount) return;
         if (!visible) {
           this.chart!.setDatasetVisibility(i, false);
           restoredHiddenState = true;
@@ -660,7 +667,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private formatSummaryValue(value: number): string {
-    return new Intl.NumberFormat(this.effectiveLocale).format(value);
+    return getNumberFormat(this.effectiveLocale).format(value);
   }
 
   private accessibleName(fallback: string): string {

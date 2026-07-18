@@ -145,6 +145,74 @@ it('pointercancel ends a viewport drag so a later pointermove no longer pans the
   expect(changed).to.be.false;
 });
 
+it('swallows the browser-synthesized click that follows a viewport-rect drag, so releasing does not re-center', async () => {
+  const wrapper = (await fixture(html`
+    <lyra-flow-canvas style="width:400px;height:300px">
+      <lyra-flow-minimap slot="bottom-end"></lyra-flow-minimap>
+    </lyra-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as SVGElement;
+  (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {}; // synthetic pointerId throws otherwise
+
+  rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 30, clientY: 30 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 30, clientY: 30 }));
+
+  let changed = false;
+  wrapper.addEventListener('lyra-viewport-change', () => (changed = true));
+  // The browser fires a synthetic `click` on the captured element after pointerup when
+  // down/up targeted the same element -- it bubbles into the map's own click-to-center handler.
+  rect.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 30, clientY: 30 }));
+  expect(changed).to.be.false;
+});
+
+it('re-resolves against a new for target when the for attribute changes at runtime', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lyra-flow-canvas id="wf1"></lyra-flow-canvas>
+      <lyra-flow-canvas id="wf2"></lyra-flow-canvas>
+      <lyra-flow-minimap for="wf1"></lyra-flow-minimap>
+    </div>
+  `)) as HTMLElement;
+  const canvas2 = root.querySelector('#wf2') as LyraFlowCanvas;
+  canvas2.nodes = nodes;
+  await canvas2.updateComplete;
+  const minimap = root.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  // Not yet pointed at wf2, so nothing rendered from it.
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(0);
+
+  minimap.for = 'wf2';
+  await minimap.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('resolves a for-target canvas that mounts into the document after the minimap itself', async () => {
+  const root = (await fixture(html`<div><lyra-flow-minimap for="late-wf"></lyra-flow-minimap></div>`)) as HTMLElement;
+  const minimap = root.querySelector('lyra-flow-minimap') as LyraFlowMinimap;
+  expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
+
+  const canvas = document.createElement('lyra-flow-canvas') as LyraFlowCanvas;
+  canvas.id = 'late-wf';
+  root.appendChild(canvas);
+  canvas.nodes = nodes;
+  await canvas.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  // The retry itself is DOM-mutation-driven (a MutationObserver), not another render on the
+  // minimap, so give the observer's microtask a turn before checking.
+  await new Promise((r) => setTimeout(r, 0));
+  await minimap.updateComplete;
+
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
 it('unsubscribes from the canvas companion hook on disconnect', async () => {
   const wrapper = (await fixture(html`
     <lyra-flow-canvas>

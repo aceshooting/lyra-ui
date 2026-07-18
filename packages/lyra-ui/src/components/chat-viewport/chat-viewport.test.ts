@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './chat-viewport.js';
+import '../chat-message/chat-message.js';
 import '../virtual-list/virtual-list.js';
 import type { LyraChatViewport } from './chat-viewport.js';
 import type { LyraVirtualList } from '../virtual-list/virtual-list.class.js';
@@ -190,6 +191,32 @@ describe('slotted mode -- follow/release/re-engage state machine', () => {
     await el.updateComplete;
     await nextFrame();
     expect(fired).to.be.false;
+  });
+
+  it('clears scrollbarDragActive on a pointerup outside the scroll part, so a later layout-shift scroll away from the bottom does not spuriously release follow', async () => {
+    const el = (await fixture(
+      html`<lyra-chat-viewport style="block-size:100px"
+        >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lyra-chat-viewport
+      >`,
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+
+    // A scrollbar-drag start, then a release that lands outside [part="scroll"] entirely (e.g.
+    // the native scrollbar thumb, or the pointer having left the element mid-drag) -- dispatched
+    // directly on window, never bubbling through the scroll part.
+    scroll.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    window.dispatchEvent(new PointerEvent('pointerup'));
+
+    let fired = false;
+    el.addEventListener('lyra-follow-change', () => (fired = true));
+    // A layout shift moves the scroll position away from the bottom with no wheel/touch/keydown
+    // gesture, and -- assuming the drag above actually ended -- no active scrollbar drag either.
+    scroll.scrollTop = 0;
+    scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+    expect(fired, 'a stuck scrollbarDragActive flag would misattribute this as a user release').to.be.false;
+    expect(el.follow).to.be.true;
   });
 });
 
@@ -412,6 +439,27 @@ describe('virtual mode', () => {
     const ev = await eventPromise;
     expect(ev.detail).to.deep.equal({ following: true });
   });
+
+  it('does not misattribute a later append as user-caused after a wheel gesture that changed no visible range', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.querySelector('lyra-virtual-list') as LyraVirtualList;
+    const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    // A wheel-down gesture at the bottom that moves nothing: no scroll event follows, so nothing
+    // ever consumes the pending user-intent flag it set -- until it goes stale.
+    base.dispatchEvent(new WheelEvent('wheel', { bubbles: true, composed: true }));
+    await new Promise<void>((r) => setTimeout(r, 600));
+
+    let fired = false;
+    el.addEventListener('lyra-follow-change', () => (fired = true));
+    // Simulates the range event a later, unrelated append produces while not at the bottom --
+    // never actually user-caused.
+    list.dispatchEvent(new CustomEvent('lyra-visible-range-changed', { detail: { start: 10, end: 18 } }));
+    expect(fired, 'a stale pendingUserIntent would misattribute this as a user release').to.be.false;
+    expect(el.follow).to.be.true;
+  });
 });
 
 it('is accessible in slotted mode with an unread divider and a released follow', async () => {
@@ -422,5 +470,31 @@ it('is accessible in slotted mode with an unread divider and a released follow',
   )) as LyraChatViewport;
   el.follow = false;
   await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible populated with real chat messages, an unread divider, and a failed message', async () => {
+  // Populated-state axe check: a realistic chat surface — actual `<lyra-chat-message>`
+  // children (with timestamps, a failed status, and its retry button) plus the unread
+  // divider — renders a11y surface that plain placeholder rows never exercise. axe
+  // traverses into each message's shadow root, so this covers the composed tree. Assert
+  // the populated markers rendered before running axe.
+  const el = (await fixture(
+    html`<lyra-chat-viewport style="block-size:120px" unread-start-index="1" follow="false">
+      <lyra-chat-message data-role="user" .timestamp=${new Date('2024-05-01T10:00:00Z')}
+        >Hello there</lyra-chat-message
+      >
+      <lyra-chat-message data-role="assistant" .timestamp=${new Date('2024-05-01T10:00:05Z')}
+        >Hi! How can I help?</lyra-chat-message
+      >
+      <lyra-chat-message data-role="user" status="failed">Did this send?</lyra-chat-message>
+    </lyra-chat-viewport>`,
+  )) as LyraChatViewport;
+  el.follow = false;
+  await el.updateComplete;
+  await nextFrame();
+  expect(el.shadowRoot!.querySelector('[part="unread-divider"]')).to.exist;
+  const failed = el.querySelector('lyra-chat-message[status="failed"]')!;
+  expect(failed.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
   await expect(el).to.be.accessible();
 });

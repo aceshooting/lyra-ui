@@ -157,7 +157,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     // The outer element must stay a plain `role="cell"` so the ARIA table tree (table > row >
     // cell) remains valid; the activation affordance is a nested native <button>, which carries
     // the button role plus Enter/Space activation on its own, without disturbing that structure.
-    return html`<div part="cell cell-highlight" role="cell" ?data-active=${!!active}>
+    return html`<div part="cell cell-highlight" role="cell" ?data-active=${!!active} style=${active ? '--lyra-dataset-viewer-highlight-color: var(--lyra-color-warning, var(--lyra-color-brand))' : ''}>
       <button
         part="cell-highlight-action"
         type="button"

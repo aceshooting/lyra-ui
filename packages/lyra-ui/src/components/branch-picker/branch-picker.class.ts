@@ -7,6 +7,7 @@ import { finiteCount, finiteInteger } from '../../internal/numbers.js';
 import '../live-region/live-region.class.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import { styles } from './branch-picker.styles.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 export interface LyraBranchPickerEventMap {
   'lyra-branch-change': CustomEvent<{ index: number }>;
@@ -114,7 +115,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     if (count < 2) return html``;
     const index = this.normalizedIndex;
     const label = this.label || this.localize('branchPickerLabel');
-    const formatter = new Intl.NumberFormat(this.effectiveLocale);
+    const formatter = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="base" id=${this.groupId} role="group" aria-label=${label}>
         <button

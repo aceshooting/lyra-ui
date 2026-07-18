@@ -235,6 +235,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     // 2-D spatial box over image content, and "left" always means toward smaller x regardless of
     // text direction.
     switch (event.key) {
+      // policy-allow(rtl-arrow-keys): moves a 2-D spatial annotation box over image pixels; see above.
       case 'ArrowLeft':
         event.preventDefault();
         if (event.shiftKey) this.draft = { ...this.draft, width: clamp(this.draft.width - ARROW_STEP_PERCENT, MIN_REGION_PERCENT, 100 - this.draft.x) };

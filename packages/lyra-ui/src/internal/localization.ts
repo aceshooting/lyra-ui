@@ -344,6 +344,7 @@ export type LyraMessageKey =
   | 'breadcrumb'
   | 'timeline'
   | 'rating'
+  | 'sliderLabel'
   | 'feedbackPositive'
   | 'feedbackNegative'
   | 'feedbackReasonsLabel'
@@ -1109,6 +1110,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   breadcrumb: 'Breadcrumb',
   timeline: 'Timeline',
   rating: 'Rating',
+  sliderLabel: 'Slider',
   feedbackPositive: 'Good response',
   feedbackNegative: 'Bad response',
   feedbackReasonsLabel: 'Choose a reason',

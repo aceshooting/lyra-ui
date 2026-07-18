@@ -286,6 +286,25 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible with the listbox open, a keyboard-active option, and selected tags (multiple)', async () => {
+  // Populated-state axe check: selected-value tags with their remove buttons, and the
+  // aria-activedescendant wiring, only render in this state — the open-but-untouched axe
+  // test above exercises neither. Assert the populated markers rendered before running axe.
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.label = 'Fruit';
+  el.multiple = true;
+  el.value = ['a', 'b'];
+  el.open = true;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
+  expect(el.shadowRoot!.querySelector('[part="tag__remove-button"]')).to.exist;
+  expect(input.getAttribute('aria-activedescendant')).to.not.be.empty;
+  await expect(el).to.be.accessible();
+});
+
 it('blocks a required, empty combobox from submitting the form', async () => {
   const form = (await fixture(html`
     <form>

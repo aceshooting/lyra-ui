@@ -30,6 +30,7 @@ export const styles = css`
        derived from getBoundingClientRect(), and it targets these same physical properties. A
        logical inset-inline-start would compute to right under RTL, leaving both edges pinned
        (stretching the box) once the inline left lands on top of it. */
+    /* policy-allow(physical-css): must match the physical style.left the hover positioner writes. */
     left: 0;
     top: 0;
     pointer-events: none;

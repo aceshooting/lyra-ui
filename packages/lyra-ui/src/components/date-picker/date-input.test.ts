@@ -110,6 +110,42 @@ it('fires exactly one input event per range click, and one change once the range
   expect(changeCount).to.equal(1);
 });
 
+it('does not flag badInput for the half-completed range value produced by the first click of a range pick', async () => {
+  // Regression test: valueDates() required exactly 2 parts in range mode,
+  // so the single-part value the picker commits after only the first click
+  // of a range (a completely normal, transient state) tripped badInput
+  // until the second click completed the pair.
+  const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
+  el.show();
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector('lyra-date-picker') as LyraDatePicker;
+  await picker.updateComplete;
+  picker.goToDate('2026-07-01');
+  await picker.updateComplete;
+
+  (picker.shadowRoot!.querySelector('[data-date="2026-07-05"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  expect(el.value).to.equal('2026-07-05');
+  expect(el.internals.validity.badInput).to.be.false;
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('flags a required half-completed range value as valueMissing, not badInput', async () => {
+  const el = (await fixture(
+    html`<lyra-date-input mode="range" required></lyra-date-input>`,
+  )) as LyraDateInput;
+  el.value = '2026-07-05';
+
+  expect(el.internals.validity.badInput).to.be.false;
+  expect(el.internals.validity.valueMissing).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+
+  el.value = '2026-07-05/2026-07-10';
+  expect(el.internals.validity.valueMissing).to.be.false;
+  expect(el.checkValidity()).to.be.true;
+});
+
 it('auto-closes the popover once a range selection is completed, not just in single mode', async () => {
   const el = (await fixture(html`<lyra-date-input mode="range"></lyra-date-input>`)) as LyraDateInput;
   el.show();
@@ -451,10 +487,20 @@ describe('complete programmatic validity', () => {
       html`<lyra-date-input value="2026-07-15"></lyra-date-input>`,
     )) as LyraDateInput;
 
+    // A single-part value is a valid, incomplete range selection once in
+    // range mode -- the same shape the picker's first range click commits --
+    // not a malformed one.
     el.mode = 'range';
+    expect(el.internals.validity.badInput).to.be.false;
+    expect(el.checkValidity()).to.be.true;
+
+    // A two-part value genuinely is invalid back in single mode, and mode
+    // changes must still revalidate to catch that.
+    el.value = '2026-07-01/2026-07-15';
+    el.mode = 'single';
     expect(el.internals.validity.badInput).to.be.true;
 
-    el.mode = 'single';
+    el.mode = 'range';
     expect(el.checkValidity()).to.be.true;
   });
 

@@ -556,6 +556,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // per-category pre-pass rather than a per-segment computation.
     const stackedSqrt = this.stacked && this.scale === 'sqrt';
     const domainMax = hi > 0 ? hi : 1;
+    // Mirrors domainMax's fallback, but for the negative side: the magnitude of the domain's own
+    // negative floor, or 1 when there's no negative extent at all (unused in that case).
+    const negDomainMax = lo < 0 ? -lo : 1;
+    // The zero line's pixel position on the LINEAR domain, independent of `this.scale` -- unlike
+    // `barValueToY(0, ...)`, whose sqrt branch always maps value 0 to the plot's bottom edge
+    // regardless of `lo` (correct only when lo === 0, i.e. no negative values in the domain). Both
+    // the plain-stacked and stackedSqrt branches below anchor their positive/negative stacks here,
+    // matching renderGrid()'s own zero gridline position.
+    const zeroY = plotY + plotH - ((0 - lo) / (hi - lo || 1)) * plotH;
+    // Available pixel room on each side of the zero line -- the positive stack's compressed height is
+    // scaled against posAvailH (not the full plotH) so it stops at the zero line instead of bleeding
+    // into the negative side's own region, and likewise for the negative stack against negAvailH.
+    const posAvailH = zeroY - plotY;
+    const negAvailH = plotY + plotH - zeroY;
     const posTotals: number[] = [];
     const negTotals: number[] = [];
     if (stackedSqrt) {
@@ -588,15 +602,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       // from wherever the previous (possibly minBarHeight-floored) segment actually ended on screen,
       // not from re-deriving position from cumulative value -- this is what makes a floored segment's
       // inflation "push" the next segment instead of being silently overdrawn by it.
-      const zeroY = this.barValueToY(0, plotY, plotH, lo, hi);
       let posPixelTop = zeroY;
       let negPixelBottom = zeroY;
-      // sqrt-compressed pixel height of this category's positive/negative
-      // stack total, computed once per category (not per segment) -- see
-      // barValueToY()'s doc comment for why this differs from the old,
-      // buggy per-segment-cumulative-position sqrt.
-      const posCompressedH = stackedSqrt ? Math.sqrt(Math.min(domainMax, posTotals[i]!) / domainMax) * plotH : 0;
-      const negCompressedH = stackedSqrt ? Math.sqrt(Math.min(domainMax, -negTotals[i]!) / domainMax) * plotH : 0;
+      // sqrt-compressed pixel height of this category's positive/negative stack total, computed once
+      // per category (not per segment) -- see barValueToY()'s doc comment for why this differs from
+      // the old, buggy per-segment-cumulative-position sqrt. Scaled against each side's own available
+      // room (posAvailH/negAvailH), not the full plotH, so the compressed stack stops at the zero line.
+      const posCompressedH = stackedSqrt ? Math.sqrt(Math.min(domainMax, posTotals[i]!) / domainMax) * posAvailH : 0;
+      const negCompressedH = stackedSqrt
+        ? Math.sqrt(Math.min(negDomainMax, -negTotals[i]!) / negDomainMax) * negAvailH
+        : 0;
       this.datasets.forEach((s, di) => {
         const v = s.data[i];
         if (v == null || !Number.isFinite(v)) return;
@@ -615,15 +630,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             const total = posTotals[i]!;
             const shareLo = total > 0 ? stackPos / total : 0;
             const shareHi = total > 0 ? (stackPos + v) / total : 0;
-            y1 = plotY + plotH - shareHi * posCompressedH;
-            y2 = plotY + plotH - shareLo * posCompressedH;
+            y1 = zeroY - shareHi * posCompressedH;
+            y2 = zeroY - shareLo * posCompressedH;
             stackPos += v;
           } else {
             const total = -negTotals[i]!;
             const shareLo = total > 0 ? -stackNeg / total : 0;
             const shareHi = total > 0 ? (-stackNeg - v) / total : 0;
-            y1 = plotY + plotH + shareLo * negCompressedH;
-            y2 = plotY + plotH + shareHi * negCompressedH;
+            y1 = zeroY + shareLo * negCompressedH;
+            y2 = zeroY + shareHi * negCompressedH;
             stackNeg += v;
           }
         } else if (this.stacked) {

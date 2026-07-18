@@ -89,6 +89,20 @@ it('sets aria-label on the thumb from the label prop, falling back to a forwarde
   expect(thumb2.getAttribute('aria-label')).to.equal('Forwarded label');
 });
 
+it('falls back to the localized generic slider label when neither `label` nor a host aria-label is set', async () => {
+  const el = (await fixture(html`<lyra-slider></lyra-slider>`)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(thumb.getAttribute('aria-label')).to.equal('Slider');
+});
+
+it('resolves the generic slider label through the strings override', async () => {
+  const el = (await fixture(
+    html`<lyra-slider .strings=${{ sliderLabel: 'Curseur' }}></lyra-slider>`,
+  )) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(thumb.getAttribute('aria-label')).to.equal('Curseur');
+});
+
 it('moves by one step on ArrowRight/ArrowUp and emits lyra-input on keydown, lyra-change on keyup', async () => {
   const el = (await fixture(
     html`<lyra-slider min="0" max="100" value="20" step="5"></lyra-slider>`,

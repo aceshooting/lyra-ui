@@ -507,6 +507,23 @@ it('is accessible while open with a slotted heading', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible while open with a heading, closable close button, and footer actions', async () => {
+  // Populated-state axe check: the header row and the icon-only close button only exist in
+  // this state, so an axe pass on the default render proves nothing about them. Assert the
+  // populated chrome actually rendered before running axe, so the test can't silently pass
+  // against a fixture that never reached the intended state.
+  const el = (await fixture(
+    html`<lyra-dialog heading="Delete item?" open closable
+      >Are you sure?
+      <div slot="footer"><button>Cancel</button><button>Delete</button></div></lyra-dialog
+    >`,
+  )) as LyraDialog;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="header"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="close-button"]')).to.exist;
+  await expect(el).to.be.accessible();
+});
+
 describe('stacked dialogs', () => {
   it('closes only the topmost dialog on Escape, leaving dialogs beneath it open', async () => {
     const bottom = (await fixture(html`<lyra-dialog label="Bottom" open>bottom body</lyra-dialog>`)) as LyraDialog;

@@ -135,8 +135,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   /** Media URL; validated with `safeMediaSrc` before it ever reaches the `<audio>`/`<video>` `src`. */
   @property() src = '';
-  /** Accessible name of `[part="base"]`; a host `aria-label` wins, then the localized
-   *  `avPlayerLabel` fallback. */
+  /** Accessible name of `[part="base"]` and of the native `[part="media"]` element (the actual
+   *  keyboard tab stop, which would otherwise be nameless); a host `aria-label` wins, then the
+   *  localized `avPlayerLabel` fallback. */
   @property() name = '';
   /** Forces `audio`/`video` rendering, overriding the `mime-type`-based auto-detection. */
   @property() kind?: AvKind;
@@ -420,6 +421,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private onTimelineKeyDown = (event: KeyboardEvent): void => {
     const delta = event.shiftKey ? 15 : 5;
     switch (event.key) {
+      // policy-allow(rtl-arrow-keys): the time axis never mirrors -- [part='timeline'] is pinned
+      // `direction: ltr` in av-player.styles.ts, matching native media controls -- so seek arrows
+      // track the physical strip (left rewinds, right advances) in any text direction.
       case 'ArrowLeft':
         event.preventDefault();
         this.seek(Math.max(0, this.currentTime - delta));
@@ -444,6 +448,16 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         return;
     }
   };
+
+  /** `[part="rate-select"]`'s `<option>` values -- `rates`, plus the current `playbackRate` spliced
+   *  in (numerically sorted) when it isn't already one of them. A native `<select>` shows its first
+   *  option whenever no `<option>` carries `selected` at all, so a `playbackRate` set outside the
+   *  offered `rates` list (a caller-driven value, or a rate offered by an earlier `rates` array that
+   *  has since been narrowed) would otherwise display a rate that doesn't match `playbackRate`. */
+  private rateOptions(): number[] {
+    if (this.rates.includes(this.playbackRate)) return this.rates;
+    return [...this.rates, this.playbackRate].sort((a, b) => a - b);
+  }
 
   private renderCue = (cue: unknown, index: number): TemplateResult => {
     const c = cue as LyraAvCue;
@@ -487,6 +501,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         ? html`<audio
             part="media"
             controls
+            aria-label=${label}
             src=${safeSrc ?? ''}
             ?loop=${this.loop}
             ?muted=${this.muted}
@@ -502,6 +517,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         : html`<video
             part="media"
             controls
+            aria-label=${label}
             src=${safeSrc ?? ''}
             poster=${this.poster || nothing}
             ?loop=${this.loop}
@@ -522,7 +538,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           aria-label=${this.localize('avPlayerPlaybackRate')}
           @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
         >
-          ${this.rates.map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${rate}x</option>`)}
+          ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${rate}x</option>`)}
         </select>
       </div>
       <div

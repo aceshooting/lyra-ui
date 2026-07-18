@@ -189,9 +189,11 @@ export class LyraAudioVisualizer extends LyraElement {
         // `resume()`/`suspend()` settle asynchronously, and the parked draw loop only animates while
         // the context reports `running` — restart it once the transition lands.
         this.audioCtx.addEventListener('statechange', this.onAudioCtxStateChange);
-      } else {
-        void this.audioCtx.resume().catch(() => {});
       }
+      // Autoplay policy can hand back a brand-new context already `suspended`, and nothing
+      // spontaneously transitions it to `running` without an explicit `resume()` call — so this
+      // must run on every attach, not only when reusing a context created by a prior attach.
+      void this.audioCtx.resume().catch(() => {});
       this.sourceNode?.disconnect();
       this.sourceNode = this.audioCtx.createMediaStreamSource(this.stream);
       this.analyser = this.audioCtx.createAnalyser();

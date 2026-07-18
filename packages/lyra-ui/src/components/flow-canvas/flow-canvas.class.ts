@@ -914,15 +914,24 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     });
   }
 
+  /** Edges `renderEdges()` actually draws a focusable `[part="edge"]` path for -- a missing source
+   *  node drops the edge entirely and a missing target renders a non-focusable dangling stub, so
+   *  neither has a roving-nav element to land on. Excluding both here keeps roving indices/count in
+   *  sync with what's really focusable in the DOM. */
+  private focusableEdges(): FlowEdge[] {
+    const nodeIds = new Set(this.nodes.map((n) => n.id));
+    return this.edges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
+  }
+
   private rovingItems(): { kind: 'node' | 'edge'; id: string }[] {
     return [
       ...this.spatialNodeOrder().map((n) => ({ kind: 'node' as const, id: n.id })),
-      ...this.edges.map((e) => ({ kind: 'edge' as const, id: e.id })),
+      ...this.focusableEdges().map((e) => ({ kind: 'edge' as const, id: e.id })),
     ];
   }
 
   private itemCount(): number {
-    return this.nodes.length + this.edges.length;
+    return this.nodes.length + this.focusableEdges().length;
   }
 
   private normalizedItemIndex(index = this.activeItemIndex): number {
@@ -966,12 +975,18 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (normalized < 0) return;
     this.activeItemIndex = normalized;
     this.announceItem(normalized);
+    // `rovingItems()` is spatially ordered, but node wrappers render in `nodes` array order (see
+    // `renderNodes()`'s `repeat()`) and don't generally match -- resolving the target element BY ID
+    // instead of by its position in a DOM-order query keeps the focused element in sync with the
+    // announced one even when `nodes`/`edges` aren't pre-sorted spatially.
+    const item = this.rovingItems()[normalized];
+    if (!item) return;
     void this.updateComplete.then(() => {
-      const items = [
-        ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
-        ...Array.from(this.renderRoot.querySelectorAll('[part="edge"]')),
-      ] as HTMLElement[];
-      items[normalized]?.focus();
+      const el =
+        item.kind === 'node'
+          ? this.renderRoot.querySelector(`[part="node"][data-node-id="${CSS.escape(item.id)}"]`)
+          : this.renderRoot.querySelector(`[data-edge-id="${CSS.escape(item.id)}"] [part="edge"]`);
+      (el as HTMLElement | null)?.focus();
     });
   }
 
@@ -1271,9 +1286,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return null;
   }
 
-  /** Simplified duplicate check: any existing edge between the two nodes counts as a duplicate,
-   *  regardless of which handles it uses -- the finer-grained "exact duplicate edge" rule from the
-   *  spec collapses to this for the common case of one edge per node pair. */
+  /** Simplified duplicate check: an edge already existing from this gesture's source to the hovered
+   *  node counts as a duplicate target, regardless of which handles it uses -- checked in the
+   *  source -> target direction only, since edges are directed and a reverse edge (hovered -> source)
+   *  represents a different relationship, not a duplicate of this one. Matches
+   *  `eligibleConnectTargets()`'s equivalent one-directional rule for the keyboard connect flow. */
   private isInvalidConnectTarget(hoveredId: string): boolean {
     if (!this.connectState) return false;
     if (hoveredId === this.connectState.sourceId) return true;

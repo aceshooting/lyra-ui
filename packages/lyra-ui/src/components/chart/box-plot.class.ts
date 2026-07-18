@@ -7,6 +7,7 @@ import { prefersReducedMotion } from '../../internal/motion.js';
 import { loadChartJs } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../skeleton/skeleton.class.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 export interface BoxPlotPoint {
   min: number;
@@ -278,8 +279,8 @@ export class LyraBoxPlot extends LyraElement {
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
         count: series.data.length,
-        min: new Intl.NumberFormat(this.effectiveLocale).format(Math.min(...medians)),
-        max: new Intl.NumberFormat(this.effectiveLocale).format(Math.max(...medians)),
+        min: getNumberFormat(this.effectiveLocale).format(Math.min(...medians)),
+        max: getNumberFormat(this.effectiveLocale).format(Math.max(...medians)),
         trend,
       });
     });

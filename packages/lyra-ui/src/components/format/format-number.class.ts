@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber } from '../../internal/numbers.js';
 import { styles } from './format.styles.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 /** `Intl.NumberFormat`'s own accepted range for `minimumFractionDigits`/`maximumFractionDigits` —
  *  a non-finite value, or one outside `[0, 100]`, makes its constructor throw a `RangeError`,
@@ -53,7 +54,7 @@ export class LyraFormatNumber extends LyraElement {
     // Guaranteed finite by the check below; routed through the shared helper anyway so this call
     // can never see a non-finite value even if the guard changes shape.
     const text = Number.isFinite(this.value)
-      ? new Intl.NumberFormat(this.effectiveLocale || undefined, options).format(finiteNumber(this.value, 0))
+      ? getNumberFormat(this.effectiveLocale || undefined, options).format(finiteNumber(this.value, 0))
       : '';
     return html`${text || html`<slot></slot>`}`;
   }

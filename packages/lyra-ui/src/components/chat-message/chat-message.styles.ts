@@ -149,11 +149,19 @@ export const styles = css`
     white-space: nowrap;
   }
   /* [part='timestamp']/[part='actions'] inherit the footer's own quiet
-     text color by default; against the danger-quiet bubble background a
-     'failed' message gets underneath it, that muted color's contrast ratio
-     drops below 4.5:1 (verified via axe's color-contrast rule), so the
-     whole footer switches to the same --lyra-color-danger already used for
-     [part='status-text'] instead. */
+     text color by default; against the brand-quiet bubble background a
+     user-role message gets, that muted color's contrast ratio drops below
+     4.5:1 (verified via axe's color-contrast rule — same failure mode as
+     the failed-state rule below), so the footer falls back to the bubble's
+     own full text color there instead. Declared before the failed-state
+     rule so an equal-specificity failed user message still gets the danger
+     footer that matches its danger-quiet background. */
+  :host([data-role='user']) [part='footer'] {
+    color: var(--lyra-color-text);
+  }
+  /* Same contrast reasoning against the danger-quiet bubble background a
+     'failed' message gets underneath it, so the whole footer switches to
+     the same --lyra-color-danger already used for [part='status-text']. */
   :host([status='failed']) [part='footer'] {
     color: var(--lyra-color-danger);
   }

@@ -2,6 +2,7 @@ import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { styles } from './format.styles.js';
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
 
 /**
  * `<lyra-format-date>` — locale-aware `Intl.DateTimeFormat` output.
@@ -22,7 +23,7 @@ export class LyraFormatDate extends LyraElement {
     const options: Intl.DateTimeFormatOptions = this.dateStyle || this.timeStyle
       ? { dateStyle: this.dateStyle, timeStyle: this.timeStyle }
       : { year: this.year, month: this.month, day: this.day };
-    const text = Number.isNaN(value.getTime()) ? '' : new Intl.DateTimeFormat(this.effectiveLocale || undefined, options).format(value);
+    const text = Number.isNaN(value.getTime()) ? '' : getDateTimeFormat(this.effectiveLocale || undefined, options).format(value);
     return html`${text || html`<slot></slot>`}`;
   }
 }

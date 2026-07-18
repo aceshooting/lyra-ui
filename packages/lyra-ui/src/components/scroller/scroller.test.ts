@@ -31,10 +31,16 @@ describe('<lyra-scroller>', () => {
 
   it('renders a labeled native scroll viewport', async () => {
     const el = await fixture<LyraScroller>(html`<lyra-scroller label="Recent items"><span>Content</span></lyra-scroller>`);
+    // The role and accessible name live on [part="viewport"] — the element that
+    // actually scrolls and carries tabindex="0" — so the keyboard tab stop is a
+    // named region (same placement as lyra-terminal's scrollable viewport), not
+    // an unnamed focusable inside a labeled wrapper.
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
+    expect(viewport.getAttribute('role')).to.equal('region');
+    expect(viewport.getAttribute('aria-label')).to.equal('Recent items');
+    expect(viewport.getAttribute('tabindex')).to.equal('0');
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('region');
-    expect(base.getAttribute('aria-label')).to.equal('Recent items');
-    expect(el.shadowRoot!.querySelector('[part="viewport"]')).to.exist;
+    expect(base.hasAttribute('role')).to.be.false;
   });
 
   it('supports optional navigation controls', async () => {

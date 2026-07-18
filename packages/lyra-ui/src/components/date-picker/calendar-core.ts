@@ -1,3 +1,5 @@
+import { getDateTimeFormat } from '../../internal/intl-cache.js';
+
 export type WeekdayFormat = 'narrow' | 'short' | 'long';
 export type CalendarMode = 'single' | 'range';
 
@@ -29,9 +31,9 @@ export function dateTimeFormat(
   options: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
   try {
-    return new Intl.DateTimeFormat(typeof locale === 'string' && locale ? locale : undefined, options);
+    return getDateTimeFormat(typeof locale === 'string' && locale ? locale : undefined, options);
   } catch {
-    return new Intl.DateTimeFormat(undefined, options);
+    return getDateTimeFormat(undefined, options);
   }
 }
 

@@ -172,7 +172,11 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
         <button
           part="base"
           type="button"
-          aria-label=${this.getAttribute('aria-label') || this.accessibleLabel}
+          aria-label=${this.getAttribute('aria-label') ||
+          this.accessibleLabel ||
+          /* `label` unset: never leave the button nameless — same degenerate-state
+             fallback `lyra-entity-card` uses for its title. */
+          this.localize('untitledEntity')}
           aria-describedby=${this.hasPreviewSlot ? this.popoverId : nothing}
           @click=${this.onClick}
           @dblclick=${this.onDblClick}

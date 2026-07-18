@@ -5,6 +5,7 @@ import { chevronIcon } from '../../internal/icons.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteCount, finiteInteger } from '../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
+import { getNumberFormat } from '../../internal/intl-cache.js';
 
 export type LyraPaginationSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 
@@ -114,7 +115,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private formatNumber(value: number): string {
-    return new Intl.NumberFormat(this.effectiveLocale).format(value);
+    return getNumberFormat(this.effectiveLocale).format(value);
   }
 
   private summaryText(): string {

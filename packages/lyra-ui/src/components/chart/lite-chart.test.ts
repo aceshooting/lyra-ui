@@ -1227,6 +1227,53 @@ describe('scale="sqrt" stacked proportionality', () => {
     expect(shares[2]).to.be.closeTo(0.8, 0.01);
   });
 
+  it('anchors a negative segment at the zero line, not the plot bottom edge', async () => {
+    // A single positive series pinned at the domain max and a single negative series pinned at the
+    // domain min is a degenerate/saturating case: each segment occupies its entire available side of
+    // the zero line, so scale="sqrt" must render byte-for-byte the same geometry as scale="linear" --
+    // any divergence means the sqrt branch is anchoring from the wrong reference point (the plot's
+    // bottom edge instead of the real zero line), which pushes the negative segment off the bottom of
+    // the plot and the positive segment down into the negative segment's own region.
+    const labels = ['only'];
+    const datasets = [
+      { label: 'A', data: [80] },
+      { label: 'B', data: [-20] },
+    ];
+    const linearEl = (await fixture(html`
+      <lyra-lite-chart type="bar" stacked scale="linear" begin-at-zero .labels=${labels} .datasets=${datasets}></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    (linearEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+    (linearEl as unknown as { plotHeight: number }).plotHeight = 150;
+    await linearEl.updateComplete;
+    const sqrtEl = (await fixture(html`
+      <lyra-lite-chart type="bar" stacked scale="sqrt" begin-at-zero .labels=${labels} .datasets=${datasets}></lyra-lite-chart>
+    `)) as LyraLiteChart;
+    (sqrtEl as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+    (sqrtEl as unknown as { plotHeight: number }).plotHeight = 150;
+    await sqrtEl.updateComplete;
+
+    const linearBars = linearEl.shadowRoot!.querySelectorAll('[part="bar"]');
+    const sqrtBars = sqrtEl.shadowRoot!.querySelectorAll('[part="bar"]');
+    expect(linearBars).to.have.length(2);
+    expect(sqrtBars).to.have.length(2);
+
+    for (let i = 0; i < 2; i++) {
+      const linearY = Number(linearBars[i]!.getAttribute('y'));
+      const linearH = Number(linearBars[i]!.getAttribute('height'));
+      const sqrtY = Number(sqrtBars[i]!.getAttribute('y'));
+      const sqrtH = Number(sqrtBars[i]!.getAttribute('height'));
+      expect(sqrtY).to.be.closeTo(linearY, 0.5);
+      expect(sqrtH).to.be.closeTo(linearH, 0.5);
+    }
+
+    // The negative bar must not extend past the plot's own bottom edge -- both segments' plot-area
+    // bottom edge is the same (the domain's own lo boundary), so the negative segment's rendered
+    // bottom edge should match between scale modes too, not overshoot further down under "sqrt".
+    const linearBottom = Number(linearBars[1]!.getAttribute('y')) + Number(linearBars[1]!.getAttribute('height'));
+    const sqrtBottom = Number(sqrtBars[1]!.getAttribute('y')) + Number(sqrtBars[1]!.getAttribute('height'));
+    expect(sqrtBottom).to.be.closeTo(linearBottom, 0.5);
+  });
+
   it('non-stacked scale="sqrt" is unaffected (already proportional, single segment per bar)', async () => {
     const el = (await fixture(html`
       <lyra-lite-chart

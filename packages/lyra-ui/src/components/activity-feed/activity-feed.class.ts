@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { nextId } from '../../internal/a11y.js';
 import { chevronIcon } from '../../internal/icons.js';
-import { getDateTimeFormat } from '../../internal/intl-cache.js';
+import { getDateTimeFormat, getPluralRules } from '../../internal/intl-cache.js';
 import { finiteCount } from '../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.js';
@@ -224,7 +224,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private completedStepsSummary(): string {
     const count = this.entries.length;
     const key =
-      new Intl.PluralRules(this.effectiveLocale).select(count) === 'one'
+      getPluralRules(this.effectiveLocale).select(count) === 'one'
         ? 'activityFeedCompletedStep'
         : 'activityFeedCompletedSteps';
     return this.localize(key, undefined, { count });

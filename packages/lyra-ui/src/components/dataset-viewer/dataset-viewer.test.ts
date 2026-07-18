@@ -96,6 +96,28 @@ describe('lyra-dataset-viewer', () => {
       }
     });
 
+    it('is accessible with cell-range highlights painting their focusable action buttons', async () => {
+      // Populated-state axe check: the `cell-highlight` cells and their nested
+      // `cell-highlight-action` buttons only render once `highlights` resolve against a loaded
+      // grid — no highlight-free axe run can see them. Assert the highlight actually rendered
+      // (inside the nested virtual-list shadow root, which axe also traverses) before running axe.
+      const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.highlights = [
+          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2:B2' }, label: 'First data row' },
+        ];
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        const list = el.shadowRoot!.querySelector('lyra-virtual-list')!;
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
+        expect(list.shadowRoot!.querySelector('[part="cell-highlight-action"]')).to.exist;
+        await expect(el).to.be.accessible();
+      } finally {
+        restore();
+      }
+    });
+
     it('renders files above the old 1,000-row cap up to the shared 10k default', async () => {
       const bigRows = Array.from({ length: 5000 }, (_unused, i) => `row${i},value${i}`).join('\n');
       const el = (await fixture(html`<lyra-dataset-viewer></lyra-dataset-viewer>`)) as LyraDatasetViewer;

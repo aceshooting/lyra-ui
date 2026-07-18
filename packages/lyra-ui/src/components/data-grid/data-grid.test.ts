@@ -14,6 +14,34 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible with populated rows, a sorted sortable column, and a selected row', async () => {
+  // Populated-state axe check: the header buttons, aria-sort, gridcells, and the
+  // aria-selected row only exist once data is present — the empty-state axe test above
+  // exercises none of them. Assert the populated markers rendered before running axe.
+  const columns: DataGridColumn[] = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'count', label: 'Count' },
+  ];
+  const rows = [
+    { name: 'Alpha', count: 2 },
+    { name: 'Beta', count: 5 },
+  ];
+  const el = (await fixture(
+    html`<lyra-data-grid
+      .columns=${columns}
+      .rows=${rows}
+      .sortKey=${'name'}
+      .sortDirection=${'descending'}
+      .selectedKey=${1}
+      aria-label="Results"
+    ></lyra-data-grid>`,
+  )) as LyraDataGrid;
+  expect(el.shadowRoot!.querySelectorAll('[role="gridcell"]')).to.have.length(4);
+  expect(el.shadowRoot!.querySelector('[aria-sort="descending"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[aria-selected="true"]')).to.exist;
+  await expect(el).to.be.accessible();
+});
+
 it('renders aria-selected="true"/"false" on rows matching the selected-state contract', async () => {
   const columns: DataGridColumn[] = [{ key: 'name', label: 'Name' }];
   const rows = [{ name: 'Alpha' }, { name: 'Beta' }];

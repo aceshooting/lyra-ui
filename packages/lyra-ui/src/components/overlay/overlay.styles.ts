@@ -19,6 +19,9 @@ export const styles = css`
        properties here sidestep that entirely, matching what JS always sets. */
     position: fixed;
     top: 0;
+    /* policy-allow(physical-css): must stay the same physical property positioner.ts's place()
+       overwrites via style.left; inset-inline-start would leave right:0 active under RTL and the
+       over-constrained resolution would discard the JS-written left (see the comment above). */
     left: 0;
     z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-popover));
     max-inline-size: min(var(--lyra-overlay-max-inline-size, var(--lyra-size-20rem)), var(--lyra-positioner-available-inline-size, var(--lyra-size-20rem)));
@@ -40,6 +43,7 @@ export const tooltipStyles = css`
   :host { display: inline-block; }
   /* position: fixed from the start, same reasoning as overlay [part='popup'] above -- see its
      comment. Physical top/left there too, for the same RTL over-constraint reason. */
+  /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */
   [part='popup'] { position: fixed; top: 0; left: 0; z-index: var(--lyra-overlay-stack-index, var(--lyra-layer-popover)); max-inline-size: var(--lyra-tooltip-max-inline-size, var(--lyra-size-20rem)); padding: var(--lyra-space-xs) var(--lyra-space-s); border-radius: var(--lyra-radius-xs); background: var(--lyra-tooltip-background, var(--lyra-color-neutral)); color: var(--lyra-tooltip-color, var(--lyra-color-on-neutral)); font-size: var(--lyra-font-size-sm); line-height: var(--lyra-line-height-compact); box-shadow: var(--lyra-shadow); }
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
   [part='popup'] { opacity: 1; transition: opacity var(--lyra-transition-fast), visibility var(--lyra-transition-fast); }

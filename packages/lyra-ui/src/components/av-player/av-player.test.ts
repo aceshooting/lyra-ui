@@ -80,6 +80,14 @@ describe('playback controls', () => {
     el.playbackRate = 2;
     expect((await eventPromise).detail).to.deep.equal({ rate: 2 });
   });
+
+  it('rate-select reflects the actual playbackRate even when it is not one of the offered rates (regression)', async () => {
+    const el = (await fixture(html`<lyra-av-player src=${MP3_SRC} .rates=${[1, 1.5, 2]}></lyra-av-player>`)) as LyraAvPlayer;
+    el.playbackRate = 1.75;
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
+    expect(select.value).to.equal('1.75');
+  });
 });
 
 describe('cues and transcript', () => {
@@ -137,6 +145,57 @@ describe('search', () => {
     const eventPromise = oneEvent(el, 'lyra-search-change');
     el.clearSearch();
     expect((await eventPromise).detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+  });
+});
+
+describe('search highlighting', () => {
+  it('reaches the DOM: data-match on every match, data-active-match only on the active one, cleared by clearSearch()', async () => {
+    const el = (await fixture(html`<lyra-av-player src=${MP3_SRC} .cues=${CUES}></lyra-av-player>`)) as LyraAvPlayer;
+    await el.search('host');
+    await el.updateComplete;
+    let rows = cueRows(el);
+    expect(rows[0].hasAttribute('data-match')).to.be.true;
+    expect(rows[0].hasAttribute('data-active-match')).to.be.true;
+    expect(rows[1].hasAttribute('data-match')).to.be.true;
+    expect(rows[1].hasAttribute('data-active-match')).to.be.false;
+    expect(rows[2].hasAttribute('data-match')).to.be.false;
+
+    el.searchNext();
+    await el.updateComplete;
+    rows = cueRows(el);
+    expect(rows[0].hasAttribute('data-active-match'), 'active match moved off row 0').to.be.false;
+    expect(rows[1].hasAttribute('data-active-match'), 'active match moved onto row 1').to.be.true;
+
+    el.clearSearch();
+    await el.updateComplete;
+    rows = cueRows(el);
+    expect(rows.some((row) => row.hasAttribute('data-match'))).to.be.false;
+    expect(rows.some((row) => row.hasAttribute('data-active-match'))).to.be.false;
+  });
+});
+
+describe('timeline marker RTL positioning', () => {
+  it('keeps a time-range marker pinned to the physical start (left) edge under a RTL ancestor', async () => {
+    const el = (await fixture(
+      html`<lyra-av-player
+        dir="rtl"
+        src=${MP3_SRC}
+        .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 10, end: 20 } }]}
+      ></lyra-av-player>`,
+    )) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    const marker = el.shadowRoot!.querySelector('[part="timeline-marker"]') as HTMLElement;
+    const timelineRect = timeline.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    // start=10/duration=100 -> 10% in from the physical left edge, not the right, regardless of the
+    // RTL ancestor -- the timeline's own `direction: ltr` pins its logical-inset children physically.
+    const distFromLeft = markerRect.left - timelineRect.left;
+    const distFromRight = timelineRect.right - markerRect.right;
+    expect(distFromLeft).to.be.lessThan(distFromRight);
   });
 });
 
@@ -223,6 +282,16 @@ describe('accessibility', () => {
   it('is accessible with cues and peaks set', async () => {
     const el = await fixture(html`<lyra-av-player src=${MP3_SRC} name="Episode 1" .cues=${CUES} .peaks=${[0.2, 0.6, 0.4]}></lyra-av-player>`);
     await expect(el).to.be.accessible();
+  });
+
+  it('names the native media element (the keyboard tab stop), not just [part="base"]', async () => {
+    const named = (await fixture(html`<lyra-av-player src=${MP3_SRC} name="Episode 1"></lyra-av-player>`)) as LyraAvPlayer;
+    expect(mediaEl(named).getAttribute('aria-label')).to.equal('Episode 1');
+
+    // With no name/aria-label, the localized default still applies to the media element.
+    const unnamed = (await fixture(html`<lyra-av-player></lyra-av-player>`)) as LyraAvPlayer;
+    const label = mediaEl(unnamed).getAttribute('aria-label');
+    expect(label).to.be.a('string').and.to.not.equal('');
   });
 });
 

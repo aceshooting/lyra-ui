@@ -73,6 +73,13 @@ Firefox/WebKit on Node 20/22. Read the workflow file directly rather than trusti
 here, which will drift as steps are added — reproduce a CI failure locally by running the same
 commands in the same order.
 
+Three more package-local gates exist alongside those (again, defer to `ci.yml` and
+`package.json#scripts` for when each actually runs): `node scripts/check-source-policy.mjs` fails
+on banned source patterns (including the `localize()` literal-fallback mistake described under
+i18n below); `node scripts/check-bundle-size.mjs` bundles the published entry points after a
+build and fails on gzip-size regressions against `scripts/bundle-budgets.json`; and
+`pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
+
 ## Coding conventions (every component follows these — deviating needs a strong reason)
 
 - **Extend `LyraElement`** (`src/internal/lyra-element.ts`), not `LitElement` directly. It
@@ -104,12 +111,16 @@ commands in the same order.
   class export; a matching side-effectful entry point registers the tag. `src/lyra.ts` is the
   barrel — side-effect imports for every component (registers all tags) plus named
   re-exports of classes/types/helpers. `package.json#exports` maps `.`, `./components/*`,
-  `./internal/*`; `sideEffects` is scoped to component modules — both compiled
-  (`**/components/**/*.js`) and source (`**/components/**/*.ts`) — and the barrel, again both
-  compiled (`./dist/lyra.js`) and source (`./src/lyra.ts`). The `.ts` patterns matter because
+  `./internal/*`; `sideEffects` is an explicit enumerated array, not
+  globs — every registration module is listed individually, in both its compiled
+  (`./dist/components/<name>/<name>.js`) and source (`./src/components/<name>/<name>.ts`) forms,
+  alongside the barrel (`./dist/lyra.js` + `./src/lyra.ts`) and `./dist/theme.css`. A new
+  component's registration module therefore needs BOTH entries added by hand;
+  `scripts/check-side-effects.mjs` (in `pnpm lint`'s contract-policy chain) fails when either
+  form is missing or duplicated. The `.ts` entries matter because
   Storybook's production build (`pnpm docs:build`, i.e. the live docs site) imports `src/*.ts`
-  directly rather than `dist/`; without them Rollup can't match those source files against the
-  side-effects globs and tree-shakes away every side-effect-only component import, so no
+  directly rather than `dist/`; without them Rollup treats those source files as side-effect-free
+  and tree-shakes away every side-effect-only component import, so no
   `<lyra-*>` element ever registers on the deployed site. Keep new components' plain class
   modules free of top-level side effects or tree-shaking breaks for every consumer.
 - **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
@@ -168,9 +179,12 @@ opt-in per component — so treat a gap in any of them as a bug, not a missing f
   `this.localize('previousMonth', this.previousLabel === 'Previous month' ? undefined : this.previousLabel)`.
   Passing `this.someProp` unconditionally has the same bug as a literal — it always short-circuits
   the registry unless the prop happens to be empty/`undefined`. This is the single easiest-to-introduce
-  regression in the library and nothing in `scripts/` catches it — no policy script greps for
-  `this.localize('key', 'literal'` — so it is enforced by code review only. Watch for it explicitly
-  when reviewing a `localize()` call site, don't assume a CI gate already exists.
+  regression in the library. `scripts/check-source-policy.mjs` greps for the
+  `this.localize('key', 'literal'` shape and fails on it, but it is a pattern-matcher, not a
+  semantic check — a fallback that *looks* conditional but is actually unconditional (e.g. passing
+  `this.someProp` straight through), or any variant the grep can't see, still slips past it. Watch
+  for the bug explicitly when reviewing a `localize()` call site rather than assuming the gate
+  caught everything.
 - Interpolate via the 3rd `values` argument with `{placeholder}` syntax matching the
   `DEFAULT_STRINGS` template, e.g. `this.localize('showMoreCount', undefined, { count })` for
   `'Show {count} more'` — never string-concatenate translated text with data.
@@ -336,6 +350,38 @@ in an existing component and as a release blocker for a new component.
   hangs — always set up the `oneEvent()` listener *before* triggering the dispatch.
 - Every component gets at least one `it('is accessible', ...)` axe check in addition to
   behavior tests.
+- **Run axe against populated/open states, not just the empty default render.** The DOM carrying
+  most a11y risk — open dialog chrome, data rows, an expanded listbox, highlight/overlay layers,
+  status footers — often doesn't exist in a freshly-constructed component, so an axe pass on the
+  default render proves nothing about it. Two traps make an empty-state pass extra hollow: the
+  chai assertion surfaces only axe *violations* and silently discards `incomplete` ("needs
+  review") results (e.g. a prohibited `aria-label` on a role-less element is a hard violation
+  only while that element has no text content), and a fixture that never actually reached the
+  intended state passes vacuously. So: build the populated state, assert the state-specific
+  part/element actually rendered, then `await expect(el).to.be.accessible()` — see the populated
+  axe test in `src/components/data-grid/data-grid.test.ts` for the pattern.
+- **Adversarial fixtures.** Happy-path fixtures hide recurring bug classes; each interaction
+  shape below gets its matching hostile fixture:
+  - Keyboard activation (Enter/Space) is asserted to act on the element that actually has
+    focus, not on a hover-synced active index — hover moving an internal index otherwise
+    silently redirects keyboard activation to the wrong item.
+  - Direction-sensitive arrow-key handling gets a `dir="rtl"` fixture assertion — an LTR-only
+    test passes even when the RTL arrow swap is missing or inverted.
+  - Order-dependent components get an UNSORTED-input fixture — a pre-sorted fixture cannot tell
+    "sorts correctly" apart from "assumes sorted input".
+  - Reference-following components (idrefs, item keys, anchor targets) get a dangling-reference
+    fixture — a missing target must degrade gracefully, not throw or emit broken ARIA wiring.
+  - Roving-tabindex components get a fixture where the data shrinks below the focused index —
+    the roving index must clamp, or the tab stop lands on an item that no longer exists.
+  - Pointer-gesture components get a pointercancel-path test — real devices interrupt drags
+    (touch scrolling, palm rejection), and an interrupted gesture must not leave stuck state.
+  - Global reconnect/leak coverage lives in `src/lifecycle-contracts.test.ts`, but a component
+    with nontrivial post-reconnect behavior still needs its own assertion — the global suite
+    proves reconnect doesn't leak or throw, not that component-specific state resumes correctly.
+- **A red test is reproducible, not noise:** the runner retries each failed test once (mocha
+  `retries` in `web-test-runner.config.js`), so a failure that reaches the report already failed
+  twice in a row. Flaky tests get fixed, or explicitly quarantined with a tracked reason — never
+  re-run until green and shrugged at.
 - For a role/control inside shadow DOM, assert accessible-name/state attributes on the actual
   semantic descendant as well as running axe. Include the false state for stateful ARIA and prove
   that any public host naming path reaches that descendant.
