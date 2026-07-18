@@ -153,10 +153,17 @@ describe('item icon', () => {
       /\[part='segment'\]:hover:not\(\[aria-disabled='true'\]\):not\(\[aria-checked='true'\]\)\s*\{[^}]+\}/,
     );
   });
+
+  it('adds a static, themeable edge fade to the scroll container', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.include('-webkit-mask-image: linear-gradient');
+    expect(css).to.include('mask-image: linear-gradient');
+    expect(css).to.include('var(--lyra-scroll-fade-size)');
+  });
 });
 
 describe('narrow allocation', () => {
-  it('wraps the button row onto multiple lines rather than overflowing a 320px container', async () => {
+  it('keeps a long button row horizontally scrollable inside a 320px container', async () => {
     // `parentNode` is an open-wc fixture option -- the fixture wrapper appends it under
     // `document.body` itself and the global afterEach fixtureCleanup removes it, so this
     // test must not append/remove it manually (that would double-remove the node).
@@ -178,9 +185,10 @@ describe('narrow allocation', () => {
     await el.updateComplete;
 
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(base).flexWrap).to.equal('wrap');
-    // The host's own box must not overflow the 320px allocation -- it can only
-    // stay within it if the row actually wraps instead of forcing one long line.
+    expect(getComputedStyle(base).flexWrap).to.equal('nowrap');
+    expect(getComputedStyle(base).overflowX).to.equal('auto');
+    // The host's own box must not overflow the 320px allocation; the row itself
+    // owns horizontal scrolling for long translated labels.
     expect((el as HTMLElement).getBoundingClientRect().width).to.be.at.most(320);
   });
 });

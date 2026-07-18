@@ -75,12 +75,15 @@ it('emits lyra-node-click when a node is activated', async () => {
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
     timeout: NODE_COUNT_TIMEOUT,
   });
-  let detail: { id: string } | undefined;
+  let detail: { id: string; x: number; y: number } | undefined;
   el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
     new MouseEvent('click', { bubbles: true }),
   );
   expect(detail).to.exist;
+  expect(detail!.id).to.equal('a');
+  expect(detail!.x).to.be.a('number');
+  expect(detail!.y).to.be.a('number');
 });
 
 it('emits lyra-link-click with the source/target ids when a link is activated', async () => {
@@ -97,6 +100,22 @@ it('emits lyra-link-click with the source/target ids when a link is activated', 
     new MouseEvent('click', { bubbles: true }),
   );
   expect(detail).to.deep.equal({ source: 'a', target: 'b' });
+});
+
+it('exposes resolved node coordinates for click-anchored overlays', async () => {
+  const el = (await fixture(html`<lyra-graph seed="7"></lyra-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = links;
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const position = el.getNodePosition('a');
+  expect(position).to.exist;
+  expect(position!.x).to.be.a('number');
+  expect(position!.y).to.be.a('number');
+  expect(el.getNodePosition('missing')).to.be.undefined;
 });
 
 describe('hover events', () => {
@@ -299,12 +318,14 @@ it('emits lyra-node-click when a node is activated via keyboard (Enter/Space)', 
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
     timeout: NODE_COUNT_TIMEOUT,
   });
-  let detail: { id: string } | undefined;
+  let detail: { id: string; x: number; y: number } | undefined;
   el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
   (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
     new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
   );
-  expect(detail).to.deep.equal({ id: 'a' });
+  expect(detail?.id).to.equal('a');
+  expect(detail?.x).to.be.a('number');
+  expect(detail?.y).to.be.a('number');
 });
 
 it('emits lyra-link-click when a link is activated via keyboard (Enter/Space)', async () => {
@@ -1129,10 +1150,12 @@ describe('selection (J4)', () => {
   it('existing graph usage unaffected: lyra-node-click/lyra-link-click still fire unchanged alongside selection', async () => {
     const el = await mountSelectable('single');
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
-    let clickDetail: { id: string } | undefined;
+    let clickDetail: { id: string; x: number; y: number } | undefined;
     el.addEventListener('lyra-node-click', (e) => (clickDetail = (e as CustomEvent).detail));
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(clickDetail).to.deep.equal({ id: 'a' });
+    expect(clickDetail?.id).to.equal('a');
+    expect(clickDetail?.x).to.be.a('number');
+    expect(clickDetail?.y).to.be.a('number');
   });
 });
 
@@ -1396,7 +1419,7 @@ describe('community hulls (J6)', () => {
   it('click and Enter/Space on a hull emit lyra-community-click', async () => {
     const el = await mountHulls();
     const hull = el.shadowRoot!.querySelector('[part="hull"]') as SVGPathElement;
-    let detail: { id: string } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener('lyra-community-click', (e) => (detail = (e as CustomEvent).detail));
     hull.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ id: 'team-1' });
@@ -1719,11 +1742,13 @@ describe('canvas renderer — interaction and a11y', () => {
     const rect = canvas.getBoundingClientRect();
     const clientX = rect.left + target.x!;
     const clientY = rect.top + target.y!;
-    let detail: { id: string } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
     canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerId: 1 }));
     canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX, clientY, pointerId: 1 }));
-    expect(detail).to.deep.equal({ id: target.id });
+    expect(detail?.id).to.equal(target.id);
+    expect(detail?.x).to.be.a('number');
+    expect(detail?.y).to.be.a('number');
   });
 
   it('clicking empty canvas space with no hit clears the selection when selectionMode is set', async () => {
@@ -1759,6 +1784,7 @@ describe('canvas renderer — interaction and a11y', () => {
     canvas.dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true, clientX: rect.left + target.x!, clientY: rect.top + target.y! }),
     );
+    expect(detail?.id).to.equal(target.id);
     expect(detail).to.deep.equal({ id: target.id });
   });
 
@@ -1852,10 +1878,12 @@ describe('canvas renderer — interaction and a11y', () => {
   it('Enter/Space on a cursor-item activates the same click handler as pointer interaction', async () => {
     const el = await mountCanvas();
     const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')] as HTMLButtonElement[];
-    let detail: { id: string } | undefined;
+    let detail: { id: string; x: number; y: number } | undefined;
     el.addEventListener('lyra-node-click', (e) => (detail = (e as CustomEvent).detail));
     items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect(detail).to.deep.equal({ id: el.simNodes[0]!.id });
+    expect(detail?.id).to.equal(el.simNodes[0]!.id);
+    expect(detail?.x).to.be.a('number');
+    expect(detail?.y).to.be.a('number');
   });
 
   it('is accessible with interactions and a selection applied in canvas mode', async () => {

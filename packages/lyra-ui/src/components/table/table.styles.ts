@@ -6,6 +6,8 @@ export const styles = css`
     inline-size: 100%;
     --lyra-table-heat-tint-lo: var(--lyra-color-brand-quiet);
     --lyra-table-heat-tint-hi: var(--lyra-color-brand);
+    --lyra-table-resize-min-width: var(--lyra-size-3rem);
+    --lyra-table-resize-handle-opacity: 0.12;
   }
   [part='base'] {
     overflow: auto;
@@ -87,6 +89,26 @@ export const styles = css`
     border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     cursor: default;
     white-space: nowrap;
+  }
+  [part='header-cell'][data-resizable] {
+    padding-inline-end: calc(var(--lyra-space-s) + var(--lyra-size-0-5rem));
+  }
+  [part='resize-handle'] {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: var(--lyra-size-0-5rem);
+    cursor: col-resize;
+    touch-action: none;
+  }
+  [part='resize-handle']:hover,
+  [part='resize-handle']:focus-visible {
+    background: var(--lyra-color-brand);
+    opacity: var(--lyra-table-resize-handle-opacity);
+  }
+  [part='resize-handle']:focus-visible {
+    outline: var(--lyra-focus-ring-width) solid var(--lyra-focus-ring-color);
+    outline-offset: calc(-1 * var(--lyra-focus-ring-offset));
   }
   [part='header-cell'][aria-sort]:not([aria-sort='none']),
   [part='header-cell'][data-sortable] {

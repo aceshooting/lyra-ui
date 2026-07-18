@@ -194,7 +194,7 @@ function diamondPath(r: number): string {
 }
 
 export interface LyraGraphEventMap {
-  'lyra-node-click': CustomEvent<{ id: string }>;
+  'lyra-node-click': CustomEvent<{ id: string; x: number; y: number }>;
   'lyra-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
   'lyra-node-enter': CustomEvent<{ id: string }>;
   'lyra-node-leave': CustomEvent<{ id: string }>;
@@ -242,7 +242,8 @@ export interface LyraGraphEventMap {
  * logic as `renderer="svg"`.
  *
  * @customElement lyra-graph
- * @event lyra-node-click - `detail: { id }`.
+ * @event lyra-node-click - `detail: { id, x, y }`, where `x` and `y` are the
+ *   node's current coordinates in the graph's local drawing space.
  * @event lyra-link-click - `detail: { source, target, id? }`.
  * @event lyra-node-enter - A node was hovered. `detail: { id }`. Suppressed while dragging or
  *   panning. Also toggles a `data-hovered` attribute on that node's `[part="node"]` element for
@@ -1240,14 +1241,34 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private onCanvasDblClick = (e: MouseEvent): void => {
     const hit = this.hitTest(e.clientX, e.clientY);
-    if (hit?.kind !== 'node') return; // background dblclick still reaches d3-zoom's own zoom-in, same as svg mode
+    const node = hit?.kind === 'node' ? hit.node : this.nodeAtCanvasPoint(e.clientX, e.clientY);
+    if (!node) return; // background dblclick still reaches d3-zoom's own zoom-in, same as svg mode
     // d3-zoom's own default double-click-to-zoom-in handler is bound to this identical <canvas>
     // element (not an ancestor, so plain stopPropagation() -- which only blocks *bubbling*, not a
     // sibling listener on the very same target -- would not suppress it). Matches svg mode's own
     // onNodeDblClick(), which stops the equivalent bubble-phase echo on the svg one level up.
     e.stopImmediatePropagation();
-    this.emit('lyra-node-expand', { id: hit.node.id });
+    this.emit('lyra-node-expand', { id: node.id });
   };
+
+  /** Geometric fallback for dblclick: browsers can deliver the event before the offscreen pick
+   * canvas has painted the latest frame, while the simulation coordinates are already current. */
+  private nodeAtCanvasPoint(clientX: number, clientY: number): SimNode | undefined {
+    if (!this.canvasEl) return undefined;
+    const rect = this.canvasEl.getBoundingClientRect();
+    const worldX = (clientX - rect.left - this.canvasCamera.x) / this.canvasCamera.k;
+    const worldY = (clientY - rect.top - this.canvasCamera.y) / this.canvasCamera.k;
+    let closest: SimNode | undefined;
+    let closestDistance = Infinity;
+    for (const node of this.simNodes) {
+      const distance = Math.hypot((node.x ?? 0) - worldX, (node.y ?? 0) - worldY);
+      if (distance <= this.nodeRadius(node) + 2 / this.canvasCamera.k && distance < closestDistance) {
+        closest = node;
+        closestDistance = distance;
+      }
+    }
+    return closest;
+  }
 
   private updateCanvasTooltip(hit: (typeof this.pickItems)[number] | undefined, clientX: number, clientY: number): void {
     if (!this.canvasTooltipEl) return;
@@ -1872,8 +1893,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {
-    this.emit('lyra-node-click', { id: node.id });
+    this.emit('lyra-node-click', { id: node.id, x: node.x ?? 0, y: node.y ?? 0 });
     this.emitSelectionIntent('node', node.id, !!(e?.ctrlKey || e?.metaKey));
+  }
+
+  /** Returns a node's current position in the graph's local drawing space. */
+  getNodePosition(id: string): { x: number; y: number } | undefined {
+    const node = this.simNodes.find((candidate) => candidate.id === id);
+    if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return undefined;
+    return { x: node.x!, y: node.y! };
   }
 
   private onLinkClick(link: SimLink, e?: MouseEvent | KeyboardEvent): void {

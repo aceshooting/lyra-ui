@@ -58,6 +58,7 @@ export interface LyraTabsEventMap {
  * @csspart tab - A single tab button.
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
+ * @cssprop [--lyra-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
  */
 export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   static styles = [LyraElement.styles, styles];

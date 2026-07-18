@@ -79,6 +79,29 @@ export const Default: Story = {
   `,
 };
 
+export const ClickPosition: Story = {
+  render: () => {
+    const report = (event: CustomEvent<{ id: string; x: number; y: number }>) => {
+      const output = (event.currentTarget as HTMLElement).parentElement?.querySelector('output');
+      if (output) output.textContent = `${event.detail.id}: (${event.detail.x.toFixed(1)}, ${event.detail.y.toFixed(1)})`;
+    };
+    return html`
+      <div>
+        <lyra-graph
+          width="480"
+          height="320"
+          style="height: 20rem"
+          seed="42"
+          .nodes=${nodes}
+          .links=${links}
+          @lyra-node-click=${report}
+        ></lyra-graph>
+        <output>Click a node to inspect its local position.</output>
+      </div>
+    `;
+  },
+};
+
 export const TunedForces: Story = {
   render: () => html`
     <lyra-graph

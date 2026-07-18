@@ -26,6 +26,36 @@ export const Default: Story = {
   },
 };
 
+export const DoughnutCenterAndAutoLegend: Story = {
+  name: 'Doughnut center overlay with auto legend',
+  render: () => html`
+    <lyra-doughnut-chart
+      type="doughnut"
+      height="18rem"
+      style="inline-size: 24rem; max-inline-size: 100%;"
+      legend
+      legend-position="auto"
+      .labels=${['Completed', 'Remaining']}
+      .datasets=${[{ label: 'Work', data: [72, 28], color: ['var(--lyra-color-success)', 'var(--lyra-color-border)'] }]}
+    >
+      <strong slot="center">72%</strong>
+    </lyra-doughnut-chart>
+  `,
+};
+
+export const FormattedValues: Story = {
+  render: () => html`
+    <lyra-chart
+      type="bar"
+      legend
+      valueFormatter=${(value: number, context: string) =>
+        context === 'tooltip' ? `$${value.toFixed(2)}` : value.toLocaleString()}
+      .labels=${['Q1', 'Q2', 'Q3']}
+      .datasets=${[{ label: 'Revenue', data: [1200, 1900, 1400] }]}
+    ></lyra-chart>
+  `,
+};
+
 /** Narrow-allocation and long-content evidence for charts embedded in panels and dialogs. */
 export const NarrowLongContent: Story = {
   name: 'Narrow (320px) with long content',

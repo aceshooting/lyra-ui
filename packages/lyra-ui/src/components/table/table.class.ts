@@ -52,6 +52,9 @@ export interface TableColumn<T> {
   /** CSS length for this column's minimum width (e.g. '80px'). Has no effect unless at least one
    *  column in the table also defines `width` (see `width`'s own doc). */
   minWidth?: string;
+  /** Enables pointer-driven resizing from this column's header. The table keeps the live width
+   *  internally and emits `lyra-column-resize` on every drag step. */
+  resizable?: boolean;
   sortable?: boolean;
   align?: 'start' | 'end';
   /** Responsive priority — `undefined` (the default) means "always visible".
@@ -96,7 +99,7 @@ export interface TableColumn<T> {
  *  bubbling up through one — must not be re-interpreted as row/column
  *  activation by the table's own delegated listeners. */
 const INTERACTIVE_SELECTOR =
-  'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
+  'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
 
 /** Normalizes TableColumn.sticky's legacy boolean form (`true` == `'start'`,
  *  today's only supported direction) alongside the `'start'`/`'end'` union --
@@ -170,6 +173,7 @@ export interface LyraTableEventMap<T = unknown> {
   'lyra-filter-change': CustomEvent<{ text: string }>;
   'lyra-page-change': CustomEvent<{ page: number }>;
   'lyra-cell-edit': CustomEvent<{ row: T; key: string; value: string | number }>;
+  'lyra-column-resize': CustomEvent<{ key: string; width: number }>;
 }
 /**
  * `<lyra-table>` — a presentational, sort/select-aware data table.
@@ -269,6 +273,8 @@ export interface LyraTableEventMap<T = unknown> {
  * @event lyra-filter-change - The filter field changed. `detail: { text }`.
  * @event lyra-page-change - A pagination control requested a page. `detail: { page }`.
  * @event lyra-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
+ * @event lyra-column-resize - A resizable column changed width during a pointer drag. `detail:
+ *   { key, width }`, where `width` is in CSS pixels.
  * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
  *   bubbling and composed (unlike the native event, which is neither).
  * @event blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
@@ -277,6 +283,7 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart table - The `<table role="grid">` element.
  * @csspart head - The `<thead>` element.
  * @csspart header-cell - Each `<th>` header cell.
+ * @csspart resize-handle - The pointer resize handle in a `resizable` column header.
  * @csspart row - Each body `<tr>`.
  * @csspart cell - Each body `<td>`.
  * @csspart row-total-cell - Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only
@@ -304,6 +311,9 @@ export interface LyraTableEventMap<T = unknown> {
  * @csspart filter-label - The `<label>` wrapping the filter input.
  * @csspart loading - The loading-state wrapper.
  * @csspart pagination - The optional pagination component.
+ * @cssprop [--lyra-table-resize-min-width=var(--lyra-size-3rem)] - Default minimum width for a
+ *   resizable column without an explicit pixel `minWidth`.
+ * @cssprop [--lyra-table-resize-handle-opacity=0.12] - Hover/focus opacity of the resize handle.
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   static styles = [LyraElement.styles, styles];
@@ -422,6 +432,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  `selectedKey` (if it matches a row) or the first row. */
   @state() private activeRowKey: string | null = null;
   @state() private editingCell: { rowKey: string; columnKey: string } | null = null;
+  @state() private resizedColumnWidths = new Map<string, number>();
+
+  private resizeState?: {
+    key: string;
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+    handle: HTMLElement;
+  };
 
   private rowsByKey = new Map<string, { row: T; index: number }>();
   private columnsByKey = new Map<string, TableColumn<T>>();
@@ -441,6 +461,69 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  whenever this no longer matches the live element. */
   private observedBase?: Element;
   private readonly observedHeaders = new Set<Element>();
+
+  private parsePixelLength(value: string | undefined): number | undefined {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+    if (!trimmed.endsWith('px')) return undefined;
+    const parsed = Number.parseFloat(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private minimumResizeWidth(column: TableColumn<T>): number {
+    const explicit = this.parsePixelLength(column.minWidth);
+    if (explicit !== undefined) return Math.max(0, explicit);
+    const themed = Number.parseFloat(
+      getComputedStyle(this).getPropertyValue('--lyra-table-resize-min-width'),
+    );
+    return Number.isFinite(themed) ? Math.max(0, themed) : 48;
+  }
+
+  private renderedColumnWidth(column: TableColumn<T>): string | undefined {
+    const resized = this.resizedColumnWidths.get(column.key);
+    return resized === undefined ? column.width : `${resized}px`;
+  }
+
+  private onResizePointerDown = (event: PointerEvent): void => {
+    const handle = event.currentTarget as HTMLElement;
+    const key = handle.dataset.colKey;
+    const column = key ? this.columnsByKey.get(key) : undefined;
+    const header = handle.closest('th[data-col-key]') as HTMLElement | null;
+    if (!key || !column || !header) return;
+    this.resizeState = {
+      key,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: header.getBoundingClientRect().width,
+      minWidth: this.minimumResizeWidth(column),
+      handle,
+    };
+    event.preventDefault();
+    event.stopPropagation();
+    handle.setPointerCapture?.(event.pointerId);
+    window.addEventListener('pointermove', this.onResizePointerMove);
+    window.addEventListener('pointerup', this.onResizePointerEnd);
+    window.addEventListener('pointercancel', this.onResizePointerEnd);
+  };
+
+  private onResizePointerMove = (event: PointerEvent): void => {
+    const state = this.resizeState;
+    if (!state || event.pointerId !== state.pointerId) return;
+    const delta = isRtl(this) ? state.startX - event.clientX : event.clientX - state.startX;
+    const width = Math.max(state.minWidth, state.startWidth + delta);
+    if (this.resizedColumnWidths.get(state.key) === width) return;
+    this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(state.key, width);
+    this.emit('lyra-column-resize', { key: state.key, width });
+  };
+
+  private onResizePointerEnd = (event: PointerEvent): void => {
+    if (!this.resizeState || event.pointerId !== this.resizeState.pointerId) return;
+    this.resizeState.handle.releasePointerCapture?.(event.pointerId);
+    this.resizeState = undefined;
+    window.removeEventListener('pointermove', this.onResizePointerMove);
+    window.removeEventListener('pointerup', this.onResizePointerEnd);
+    window.removeEventListener('pointercancel', this.onResizePointerEnd);
+  };
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -468,6 +551,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    window.removeEventListener('pointermove', this.onResizePointerMove);
+    window.removeEventListener('pointerup', this.onResizePointerEnd);
+    window.removeEventListener('pointercancel', this.onResizePointerEnd);
+    this.resizeState = undefined;
     this.resizeObserver?.disconnect();
     this.observedBase = undefined;
     this.observedHeaders.clear();
@@ -1047,7 +1134,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
     const focusedCol = this.focusedColKey();
     const focusedRow = this.focusedRowKey();
-    const hasColumnWidths = this.columns.some((col) => col.width);
+    const hasColumnWidths = this.columns.some((col) => col.width || this.resizedColumnWidths.has(col.key));
     const hasExpand = Boolean(this.expandedContent);
     const hasHeatTint = this.columns.some((col) => col.heatValue !== undefined);
     const heatDomain = this.computeHeatDomain(hasHeatTint);
@@ -1077,7 +1164,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               ${hasExpand ? html`<col style=${styleMap({ 'inline-size': 'var(--lyra-icon-button-size)' })} />` : nothing}
               ${this.columns.map(
                 (col) =>
-                  html`<col style=${styleMap({ 'inline-size': col.width, 'min-inline-size': col.minWidth })} />`,
+                  html`<col style=${styleMap({
+                    'inline-size': this.renderedColumnWidth(col),
+                    'min-inline-size': col.minWidth,
+                  })} />`,
               )}
               ${hasRowTotal ? html`<col />` : nothing}
             </colgroup>
@@ -1097,11 +1187,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     data-align=${col.align ?? 'start'}
                     data-priority=${col.priority ?? nothing}
                     data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                    data-resizable=${col.resizable ? '' : nothing}
                     ?data-sortable=${col.sortable}
                     aria-sort=${col.sortable ? ariaSort : nothing}
                     tabindex=${col.key === focusedCol ? '0' : '-1'}
                   >
                     ${col.headerCell ? col.headerCell(col) : col.label}
+                    ${col.resizable
+                      ? html`<span
+                          part="resize-handle"
+                          data-col-key=${col.key}
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label=${this.localize('resizeColumn', undefined, { label: col.label })}
+                          @pointerdown=${this.onResizePointerDown}
+                        ></span>`
+                      : nothing}
                     ${active
                       ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true"
                           >${chevronIcon()}</span

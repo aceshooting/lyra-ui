@@ -82,3 +82,23 @@ export const ChangeEvent: Story = {
     </div>
   `,
 };
+
+export const ScrollableOverflow: Story = {
+  name: 'Scrollable overflow with edge fades',
+  render: () => html`
+    <div style="inline-size: 375px; max-inline-size: 100%;">
+      <lyra-tabs>
+        ${[
+          ['overview', 'Overview'],
+          ['activity', 'Activity history'],
+          ['artifacts', 'Generated artifacts'],
+          ['evaluations', 'Evaluations'],
+          ['settings', 'Workspace settings'],
+          ['permissions', 'Permissions and access'],
+        ].map(
+          ([id, label]) => html`<div slot=${id} label=${label} style="padding: 0.75rem 0;">${label} panel</div>`,
+        )}
+      </lyra-tabs>
+    </div>
+  `,
+};

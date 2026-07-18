@@ -35,6 +35,7 @@ export interface LyraSegmentedEventMap {
  * @csspart segment-icon - Optional leading visual supplied by the item's `icon` field; content
  *   may have a natural aspect ratio and is not restricted to a square icon.
  * @csspart segment-label - The segment's label text.
+ * @cssprop [--lyra-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static styles = [LyraElement.styles, styles];

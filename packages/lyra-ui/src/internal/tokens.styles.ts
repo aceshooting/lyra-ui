@@ -195,6 +195,7 @@ export const tokens = css`
     --lyra-size-38rem: var(--lyra-theme-size-38rem, 38rem);
     --lyra-size-3px: var(--lyra-theme-size-3px, 3px);
     --lyra-size-3rem: var(--lyra-theme-size-3rem, 3rem);
+    --lyra-scroll-fade-size: var(--lyra-theme-scroll-fade-size, 2rem);
     --lyra-size-3ch: var(--lyra-theme-size-3ch, 3ch);
     --lyra-size-3-5em: var(--lyra-theme-size-3-5em, 3.5em);
     --lyra-size-48rem: var(--lyra-theme-size-48rem, 48rem);

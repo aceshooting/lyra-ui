@@ -702,6 +702,20 @@
       }
     },
     {
+      "name": "--lyra-table-resize-handle-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-table>`** (default: `0.12`) — Hover/focus opacity of the resize handle."
+      }
+    },
+    {
+      "name": "--lyra-table-resize-min-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lyra-table>`** (default: `var(--lyra-size-3rem)`) — Default minimum width for a resizable column without an explicit pixel `minWidth`."
+      }
+    },
+    {
       "name": "--lyra-task-list-spin",
       "description": {
         "kind": "markdown",

@@ -49,6 +49,28 @@ it('defaults an unspecified segment tone to neutral and carries the given tone t
   expect(segments[1].getAttribute('data-tone')).to.equal('danger');
 });
 
+it('accepts an arbitrary safe color per segment without changing semantic tone behavior', async () => {
+  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  el.segments = [
+    { label: 'features', value: 25, tone: 'brand', color: '#123456' },
+    { label: 'bugs', value: 25, tone: 'danger', color: 'oklch(60% 0.2 30)' },
+  ];
+  await el.updateComplete;
+
+  const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
+  expect((segments[0] as HTMLElement).style.getPropertyValue('--lyra-context-meter-segment-color')).to.equal('#123456');
+  expect((segments[1] as HTMLElement).style.getPropertyValue('--lyra-context-meter-segment-color')).to.equal('oklch(60% 0.2 30)');
+  expect(segments[0].getAttribute('data-tone')).to.equal('brand');
+});
+
+it('rejects unsafe arbitrary segment colors', async () => {
+  const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
+  el.segments = [{ label: 'bad', value: 10, color: 'url(https://example.test/x)' }];
+  await el.updateComplete;
+
+  expect((el.shadowRoot!.querySelector('[part="segment"]') as HTMLElement).style.getPropertyValue('--lyra-context-meter-segment-color')).to.equal('');
+});
+
 it('clamps a segments array that sums to more than total instead of overflowing past 100%', async () => {
   const el = (await fixture(html`<lyra-context-meter total="100"></lyra-context-meter>`)) as LyraContextMeter;
   el.segments = [

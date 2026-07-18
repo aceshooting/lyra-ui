@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { finiteNumber } from '../../internal/numbers.js';
+import { sanitizeSwatchColor } from '../../internal/safe-css.js';
 import { styles } from './context-meter.styles.js';
 
 export type ContextMeterTone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -13,6 +14,8 @@ export interface ContextMeterSegment {
   /** Absolute quantity (e.g. tokens), not a pre-computed percentage. */
   value: number;
   tone?: ContextMeterTone;
+  /** Optional arbitrary CSS color. When set, it takes precedence over `tone`. */
+  color?: string;
 }
 
 interface RatioSegment {
@@ -50,7 +53,8 @@ function formatCount(n: number, locale: string): string {
  * @customElement lyra-context-meter
  * @csspart base - The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`).
  * @csspart track - The unfilled/empty capacity track.
- * @csspart segment - One occupied segment. Carries `data-tone` for styling.
+ * @csspart segment - One occupied segment. Carries `data-tone` for styling and
+ *   `--lyra-context-meter-segment-color` when `color` is set.
  * @csspart label - The visible caption, when `label` is set.
  */
 export class LyraContextMeter extends LyraElement {
@@ -150,6 +154,10 @@ export class LyraContextMeter extends LyraElement {
     });
   }
 
+  private segmentColor(segment: ContextMeterSegment): string | undefined {
+    return segment.color ? sanitizeSwatchColor(segment.color) : undefined;
+  }
+
   private renderBar(): TemplateResult {
     const ratios = this.ratios();
     return html`
@@ -162,7 +170,12 @@ export class LyraContextMeter extends LyraElement {
                 part="segment"
                 data-tone=${segment.tone ?? 'neutral'}
                 title=${this.segmentTitle(segment)}
-                style=${styleMap({ flexBasis: `${(ratio * 100).toFixed(4)}%` })}
+                style=${styleMap({
+                  flexBasis: `${(ratio * 100).toFixed(4)}%`,
+                  ...(this.segmentColor(segment)
+                    ? { '--lyra-context-meter-segment-color': this.segmentColor(segment)! }
+                    : {}),
+                })}
               ></span>
             `,
           )}
@@ -182,6 +195,11 @@ export class LyraContextMeter extends LyraElement {
         <circle
           part="segment"
           data-tone=${segment.tone ?? 'neutral'}
+          style=${styleMap(
+            this.segmentColor(segment)
+              ? { '--lyra-context-meter-segment-color': this.segmentColor(segment)! }
+              : {},
+          )}
           cx=${CENTER}
           cy=${CENTER}
           r=${RADIUS}

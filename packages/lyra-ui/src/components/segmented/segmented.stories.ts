@@ -101,7 +101,7 @@ export const AccessibleName: Story = {
 /** Narrow-allocation evidence: a five-item row (and long, translated-style labels) reflowing
  *  inside a 320px panel/dialog/split-pane rather than overflowing it. */
 export const NarrowLongContent: Story = {
-  name: 'Narrow (320px) with long content',
+  name: 'Narrow (320px) with scrollable long content',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lyra-segmented
@@ -112,6 +112,26 @@ export const NarrowLongContent: Story = {
           { value: 'pending', label: 'Ausstehende Elemente' },
           { value: 'archived', label: 'Archivierte Elemente' },
           { value: 'deleted', label: 'Gelöschte Elemente' },
+        ]}
+        value="active"
+      ></lyra-segmented>
+    </div>
+  `,
+};
+
+export const ScrollableOverflow: Story = {
+  name: 'Scrollable overflow with edge fades',
+  render: () => html`
+    <div style="inline-size: 375px; max-inline-size: 100%;">
+      <lyra-segmented
+        label="Filters"
+        .items=${[
+          { value: 'all', label: 'All conversations' },
+          { value: 'active', label: 'Active conversations' },
+          { value: 'waiting', label: 'Waiting for review' },
+          { value: 'archived', label: 'Archived conversations' },
+          { value: 'assigned', label: 'Assigned to me' },
+          { value: 'mentions', label: 'Mentions and replies' },
         ]}
         value="active"
       ></lyra-segmented>

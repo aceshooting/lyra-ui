@@ -1,6 +1,7 @@
 import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
 import './tabs.js';
 import type { LyraTabs } from './tabs.js';
+import { styles } from './tabs.styles.js';
 
 const basic = () => html`
   <lyra-tabs>
@@ -26,6 +27,13 @@ it('never scrolls vertically -- overflow-x:auto alone lets the y axis compute to
   const el = (await fixture(basic())) as LyraTabs;
   const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
   expect(getComputedStyle(tablist).overflowY).to.equal('hidden');
+});
+
+it('adds a static, themeable edge fade to the scroll container', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include('-webkit-mask-image: linear-gradient');
+  expect(css).to.include('mask-image: linear-gradient');
+  expect(css).to.include('var(--lyra-scroll-fade-size)');
 });
 
 it('is accessible with no panel children (empty state)', async () => {

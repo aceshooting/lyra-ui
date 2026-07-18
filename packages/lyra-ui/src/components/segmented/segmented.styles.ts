@@ -5,18 +5,36 @@ export const styles = css`
     display: inline-flex;
     /* Lets the host shrink below its row's max-content width when it's a flex/grid
        item in a consumer's own narrow layout -- the default min-width:auto for flex
-       items would otherwise force the row wide regardless of [part='base']'s
-       flex-wrap below. */
+       items would otherwise force the scroll container wide. */
     min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: inline-flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
     min-inline-size: 0;
     border: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     border-radius: var(--lyra-radius);
     padding: var(--lyra-size-0-125rem);
     gap: var(--lyra-size-0-125rem);
+    /* This is intentionally static: the edge fade is a low-cost affordance for an overflowing
+       row and does not need scroll-position JavaScript or observers. */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lyra-color-shadow) var(--lyra-scroll-fade-size),
+      var(--lyra-color-shadow) calc(100% - var(--lyra-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lyra-color-shadow) var(--lyra-scroll-fade-size),
+      var(--lyra-color-shadow) calc(100% - var(--lyra-scroll-fade-size)),
+      transparent
+    );
   }
   [part='segment'] {
     min-inline-size: 0;

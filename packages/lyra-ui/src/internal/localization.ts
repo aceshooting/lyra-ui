@@ -54,6 +54,7 @@ export type LyraMessageKey =
   | 'closeNavigation'
   | 'openNavigation'
   | 'resizeNavigation'
+  | 'resizeColumn'
   | 'copy'
   | 'copyJson'
   | 'copied'
@@ -813,6 +814,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   closeNavigation: 'Close navigation',
   openNavigation: 'Open navigation',
   resizeNavigation: 'Resize navigation',
+  resizeColumn: 'Resize {label} column',
   copy: 'Copy',
   copyJson: 'Copy JSON to clipboard',
   copied: 'Copied!',

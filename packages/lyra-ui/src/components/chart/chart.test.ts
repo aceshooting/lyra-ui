@@ -1,5 +1,6 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './chart.js';
+import './doughnut-chart.js';
 import type { LyraChart } from './chart.js';
 import { styles } from './chart.styles.js';
 
@@ -740,6 +741,47 @@ it('resolves grid/tick/legend/tooltip colors from custom --lyra-chart-* values s
   expect(config.options.plugins.tooltip.backgroundColor).to.equal('rgb(10, 11, 12)');
   expect(config.options.plugins.tooltip.titleColor).to.equal('rgb(13, 14, 15)');
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
+});
+
+it('configures a fixed or auto-responsive legend position', async () => {
+  const el = (await fixture(html`<lyra-chart></lyra-chart>`)) as LyraChart;
+  el.legend = true;
+  el.legendPosition = 'left';
+  expect((el as any).buildConfig().options.plugins.legend.position).to.equal('left');
+
+  el.legendPosition = 'auto';
+  (el as any).autoLegendPosition = 'bottom';
+  expect((el as any).buildConfig().options.plugins.legend.position).to.equal('bottom');
+});
+
+it('applies one valueFormatter to numeric ticks, tooltips, and legend values', async () => {
+  const el = (await fixture(html`<lyra-chart type="bar"></lyra-chart>`)) as LyraChart;
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+  el.legend = true;
+  el.valueFormatter = (value, context) => `${context}:${value}`;
+
+  const config = (el as any).buildConfig();
+  expect(config.options.scales.y.ticks.callback(10)).to.equal('tick:10');
+  expect(config.options.plugins.tooltip.label({ parsed: { y: 20 }, dataset: { label: 'Revenue' } })).to.equal(
+    'Revenue: tooltip:20',
+  );
+  const labels = config.options.plugins.legend.labels.generateLabels({
+    data: { datasets: [{ label: 'Revenue', data: [10, 20] }] },
+  });
+  expect(labels[0].text).to.equal('Revenue: legend:30');
+});
+
+it('positions the center slot from chart-area geometry', async () => {
+  const el = (await fixture(html`
+    <lyra-doughnut-chart><span slot="center">Total</span></lyra-doughnut-chart>
+  `)) as LyraChart;
+  (el as any).resolvedChartArea = { left: 20, top: 10, right: 180, bottom: 170, width: 160, height: 160 };
+  await el.requestUpdate();
+  const center = el.shadowRoot!.querySelector('[part="center"]') as HTMLElement;
+  expect(center.style.left).to.equal('100px');
+  expect(center.style.top).to.equal('90px');
+  expect(el.chartArea?.width).to.equal(160);
 });
 
 it('refreshTheme() forces a redraw that re-reads the --lyra-chart-* tokens after an out-of-band computed-style change', async () => {

@@ -16,6 +16,21 @@ export const styles = css`
     border-block-end: var(--lyra-border-width-thin) solid var(--lyra-color-border);
     overflow-x: auto;
     overflow-y: hidden;
+    /* Static edge affordance: scrolling remains native and no scroll listener is needed. */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lyra-color-shadow) var(--lyra-scroll-fade-size),
+      var(--lyra-color-shadow) calc(100% - var(--lyra-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lyra-color-shadow) var(--lyra-scroll-fade-size),
+      var(--lyra-color-shadow) calc(100% - var(--lyra-scroll-fade-size)),
+      transparent
+    );
   }
   [part='tab'] {
     appearance: none;

@@ -1462,7 +1462,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 
 **Properties:**
 - `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
-  minWidth?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
+  minWidth?, resizable?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
   'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
@@ -1483,6 +1483,8 @@ own "consumer computes/renders" contract rather than assuming addition.
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
   no per-cell style override (the default, unchanged output); `editable` enables double-click
   editing, `editValue` supplies the editor value, and `editType` selects `text` or `number`
+  `resizable` adds a pointer-driven `[part='resize-handle']` and emits `lyra-column-resize` with the
+  live width in CSS pixels; an explicit pixel `minWidth` is respected.
 - `columnsHidden: boolean = false` (attribute `columns-hidden`, reflected) — computed/read-only: true
   when a `priority` column is *actually* hidden right now by the `@container` breakpoints above, or
   `showAllColumns` force-visible mode is currently active. Measured via a `ResizeObserver` on
@@ -1570,7 +1572,7 @@ own "consumer computes/renders" contract rather than assuming addition.
 `lyra-selection-change` (`detail: { keys }`) when selection is enabled, `lyra-filter-change`
 (`detail: { text }`), and `lyra-page-change` (`detail: { page }`) from the controlled
 filter/pagination surfaces, and `lyra-cell-edit` (`detail: { row, key, value }`) for editable
-columns
+columns, and `lyra-column-resize` (`detail: { key, width }`) on every resize drag step
 
 **Slots:** none — content comes entirely from `columns`/`rows`.
 
@@ -1582,12 +1584,14 @@ column defines `footer`), `footer-row`, `footer-cell`, `row-total-cell` (each bo
 cell, holding `grandTotal`, is a `footer-cell` instead, matching every other footer cell),
 `expand-toggle-cell`, `row-expand-toggle`,
 `row-expand-icon`, `expanded-row`, `expanded-cell`, `filter-label`, `filter`, `loading`, and
-`pagination`, `cell-editor`, `group-row`, and `group-cell`
+`pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle`
 
 **Themeable custom properties:** `--lyra-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lyra-table-heat-tint-lo` (default `var(--lyra-color-brand-quiet)`) and
 `--lyra-table-heat-tint-hi` (default `var(--lyra-color-brand)`) — the `color-mix()` ramp endpoints
-for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`.
+for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
+`--lyra-table-resize-min-width` (default `var(--lyra-size-3rem)`) and
+`--lyra-table-resize-handle-opacity` (default `0.12`) control resizable-column behavior.
 
 **Optional peer deps:** none.
 
@@ -2675,7 +2679,12 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
   button per node/link/hull.
 
-**Events:** `lyra-node-click` (`detail: { id }`), `lyra-link-click` (`detail: { source, target,
+**Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
+camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
+`undefined` when the id is not currently simulated.
+
+**Events:** `lyra-node-click` (`detail: { id, x, y }`, where `x` and `y` are the clicked node's current
+local drawing coordinates), `lyra-link-click` (`detail: { source, target,
 id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), `lyra-node-enter`/
 `lyra-node-leave` (`detail: { id }`, hover start/end, suppressed while dragging/panning),
 `lyra-link-enter`/`lyra-link-leave` (`detail: { source, target, id? }`, same hover contract),
@@ -3737,6 +3746,12 @@ Chart.js wrapper every other `lyra-*-chart` tag subclasses; supports both a simp
   noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number; type?:
   'line'|'bar' }`
 - `legend: boolean = false`
+- `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — places the
+  legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
+  that allocation width
+- `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric tick, tooltip,
+  and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or `'legend'`
+  context
 - `area: boolean = false`
 - `zoom: boolean = false`
 - `height: string = '280px'`
@@ -3758,6 +3773,9 @@ Chart.js wrapper every other `lyra-*-chart` tag subclasses; supports both a simp
   localized data/trend summary
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
+- `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
+  canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
+  drawn
 
 **Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`
 (forces a redraw so the `--lyra-chart-*` tokens below are re-read from the current computed style —
@@ -3769,9 +3787,11 @@ the escape hatch for a consumer's own theme-toggle handler to call when it flips
 a data point/segment, for any chart type, not just bar; `detail: { datasetIndex: number, index:
 number, label: string | undefined, value: unknown }`)
 
-**Slots:** `data-table` — an optional consumer-provided accessible table alternative.
+**Slots:** `data-table` — an optional consumer-provided accessible table alternative; `center` —
+optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`
+**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center` (the
+chart-area-centered wrapper for the `center` slot)
 
 **Themeable custom properties:** `--lyra-chart-height` (set programmatically on the host from the
 `height` property — must be read from the host, not a shadow-tree descendant, since custom
@@ -8809,8 +8829,9 @@ used" summary.
 
 **Properties:**
 - `segments: ContextMeterSegment[] = []` (attribute: false, JS-only) — `{ label: string; value:
-  number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral' }[]`. `value` is an *absolute*
+  number; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; color?: string }[]`. `value` is an *absolute*
   quantity measured against `total`, never a pre-computed percentage.
+  `color`, when supplied, is a sanitized arbitrary CSS color that takes precedence over `tone`.
 - `total: number = 0` — the full capacity segments are measured against (e.g. a model's context
   window size).
 - `variant: 'ring' | 'bar' = 'bar'` (reflected)
@@ -8825,9 +8846,11 @@ A host `aria-label` overrides the generated meter summary and is preserved acros
 **Slots:** none.
 
 **CSS parts:** `base` (a `<div>` for `bar`, an `<svg>` for `ring`), `track` (the unfilled/empty
-capacity), `segment` (one occupied segment — carries `data-tone` for styling), `label`
+capacity), `segment` (one occupied segment — carries `data-tone` and, for custom colors,
+`--lyra-context-meter-segment-color`), `label`
 
-**Themeable custom properties:** no component-specific custom properties; consumes shared tokens
+**Themeable custom properties:** `--lyra-context-meter-segment-color` is set per segment when its
+`color` field is supplied; otherwise the component consumes shared tokens
 `--lyra-space-xs`, `--lyra-color-text-quiet`, `--lyra-font`, `--lyra-radius`, `--lyra-color-border`,
 `--lyra-color-surface` (the bar variant's inter-segment seam), `--lyra-color-brand`,
 `--lyra-color-success`, `--lyra-color-warning`, `--lyra-color-danger`, `--lyra-transition-base`.

@@ -37,6 +37,31 @@ it('renders header labels and a row per item, keyed by rowKey', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(2);
 });
 
+it('resizes a resizable column through its native pointer handle and emits live widths', async () => {
+  const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    columns[1]!,
+  ];
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  expect(handle.getAttribute('aria-label')).to.equal('Resize Name column');
+  let detail: { key: string; width: number } | undefined;
+  el.addEventListener('lyra-column-resize', (event) => (detail = (event as CustomEvent).detail));
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 140 }));
+  await el.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 140 }));
+
+  expect(detail?.key).to.equal('name');
+  expect(detail?.width).to.be.greaterThan(80);
+  expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal(`${detail!.width}px`);
+});
+
 it('opens an editable cell on double-click and emits a typed edit intent', async () => {
   const el = (await fixture(html`<lyra-table></lyra-table>`)) as LyraTable<Row>;
   el.columns = editableColumns;

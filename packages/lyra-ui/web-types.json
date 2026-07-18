@@ -1146,7 +1146,7 @@
         },
         {
           "name": "lyra-bar-chart",
-          "description": "`<lyra-bar-chart>` — `<lyra-chart>` with `type` locked to `\"bar\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-bar-chart>` — `<lyra-chart>` with `type` locked to `\"bar\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -1208,6 +1208,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -1514,7 +1523,7 @@
         },
         {
           "name": "lyra-bubble-chart",
-          "description": "`<lyra-bubble-chart>` — `<lyra-chart>` with `type` locked to `\"bubble\"`. Feed\npoints via `Series.points`, each needing an `x`/`y`/`r` (radius) triple —\ncast the array through `as unknown as Series['points']` (or a local\n`BubblePoint` type) when constructing it, since `Series.points` itself is\ntyped as `{ x; y; label? }[]` with no `r` field.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-bubble-chart>` — `<lyra-chart>` with `type` locked to `\"bubble\"`. Feed\npoints via `Series.points`, each needing an `x`/`y`/`r` (radius) triple —\ncast the array through `as unknown as Series['points']` (or a local\n`BubblePoint` type) when constructing it, since `Series.points` itself is\ntyped as `{ x; y; label? }[]` with no `r` field.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -1576,6 +1585,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -2042,7 +2060,7 @@
         },
         {
           "name": "lyra-chart",
-          "description": "`<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag\nsubclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.\n\n**API mirror note:** the real `wa-chart` docs page\n(https://webawesome.com/docs/components/chart/) documents a `config:\nChartJS['config']` property alongside its simplified attributes — \"a\nflexible wrapper around Chart.js\" supporting *both* simplified attributes\nand full Chart.js configuration passthrough, not a `data`/`options` prop\npair. `lyra-chart` mirrors that dual surface: the `Series`-based\n`datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes\nbelow are the simplified surface (compatible with WA's `type`, `xLabel`,\n`yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional\n`config` property is the raw-passthrough escape hatch — a\n`Partial<ChartConfiguration>` deep-merged over the generated config in\n`buildConfig()`, mirroring WA's `config` property without discarding the\n`Series` shape the rest of this component family (subclasses, box-plot,\nhistogram) is built on.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-chart>` — the core Chart.js wrapper every other `lyra-*-chart` tag\nsubclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.\n\n**API mirror note:** the real `wa-chart` docs page\n(https://webawesome.com/docs/components/chart/) documents a `config:\nChartJS['config']` property alongside its simplified attributes — \"a\nflexible wrapper around Chart.js\" supporting *both* simplified attributes\nand full Chart.js configuration passthrough, not a `data`/`options` prop\npair. `lyra-chart` mirrors that dual surface: the `Series`-based\n`datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes\nbelow are the simplified surface (compatible with WA's `type`, `xLabel`,\n`yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional\n`config` property is the raw-passthrough escape hatch — a\n`Partial<ChartConfiguration>` deep-merged over the generated config in\n`buildConfig()`, mirroring WA's `config` property without discarding the\n`Series` shape the rest of this component family (subclasses, box-plot,\nhistogram) is built on.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -2104,6 +2122,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -3792,7 +3819,7 @@
         },
         {
           "name": "lyra-context-meter",
-          "description": "`<lyra-context-meter>` — a segmented occupancy meter (bar or ring) for\nshowing how a fixed capacity (a model's context window, a token budget,\nany consumable quota) is divided across labeled categories. First-party\ninvention; no equivalent exists in Web Awesome.\n\nPure data visualization: it renders `segments`/`total` as given and never\ncomputes token counts, costs, or any other domain-specific estimate\nitself — the one exception is the plain arithmetic sum of the segment\nvalues used to build the accessible \"X of Y used\" summary below.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`). |\n| `label` | The visible caption, when `label` is set. |\n| `segment` | One occupied segment. Carries `data-tone` for styling. |\n| `track` | The unfilled/empty capacity track. |",
+          "description": "`<lyra-context-meter>` — a segmented occupancy meter (bar or ring) for\nshowing how a fixed capacity (a model's context window, a token budget,\nany consumable quota) is divided across labeled categories. First-party\ninvention; no equivalent exists in Web Awesome.\n\nPure data visualization: it renders `segments`/`total` as given and never\ncomputes token counts, costs, or any other domain-specific estimate\nitself — the one exception is the plain arithmetic sum of the segment\nvalues used to build the accessible \"X of Y used\" summary below.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The component's root wrapper (a `<div>` for `bar`, an `<svg>` for `ring`). |\n| `label` | The visible caption, when `label` is set. |\n| `segment` | One occupied segment. Carries `data-tone` for styling and `--lyra-context-meter-segment-color` when `color` is set. |\n| `track` | The unfilled/empty capacity track. |",
           "attributes": [
             {
               "name": "label",
@@ -4881,7 +4908,7 @@
         },
         {
           "name": "lyra-doughnut-chart",
-          "description": "`<lyra-doughnut-chart>` — `<lyra-chart>` with `type` locked to `\"doughnut\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-doughnut-chart>` — `<lyra-chart>` with `type` locked to `\"doughnut\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -4943,6 +4970,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -6645,7 +6681,7 @@
         },
         {
           "name": "lyra-histogram",
-          "description": "`<lyra-histogram>` — bins `values` into `bins` equal-width buckets and\nrenders them as a bar chart. Chart.js has no built-in histogram\ncontroller; this composes `binValues()` with the plain `bar` type.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-histogram>` — bins `values` into `bins` equal-width buckets and\nrenders them as a bar chart. Chart.js has no built-in histogram\ncontroller; this composes `binValues()` with the plain `bar` type.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -6725,6 +6761,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -7564,7 +7609,7 @@
         },
         {
           "name": "lyra-line-chart",
-          "description": "`<lyra-line-chart>` — `<lyra-chart>` with `type` locked to `\"line\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-line-chart>` — `<lyra-chart>` with `type` locked to `\"line\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -7626,6 +7671,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -9483,7 +9537,7 @@
         },
         {
           "name": "lyra-pie-chart",
-          "description": "`<lyra-pie-chart>` — `<lyra-chart>` with `type` locked to `\"pie\"`. Single-series:\none `Series` with `data: number[]` and `color: string[]` as the slice palette.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-pie-chart>` — `<lyra-chart>` with `type` locked to `\"pie\"`. Single-series:\none `Series` with `data: number[]` and `color: string[]` as the slice palette.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -9545,6 +9599,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -9693,7 +9756,7 @@
         },
         {
           "name": "lyra-polar-area-chart",
-          "description": "`<lyra-polar-area-chart>` — `<lyra-chart>` with `type` locked to `\"polarArea\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-polar-area-chart>` — `<lyra-chart>` with `type` locked to `\"polarArea\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -9755,6 +9818,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -10254,7 +10326,7 @@
         },
         {
           "name": "lyra-radar-chart",
-          "description": "`<lyra-radar-chart>` — `<lyra-chart>` with `type` locked to `\"radar\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-radar-chart>` — `<lyra-chart>` with `type` locked to `\"radar\"`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -10316,6 +10388,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -10912,7 +10993,7 @@
         },
         {
           "name": "lyra-scatter-chart",
-          "description": "`<lyra-scatter-chart>` — `<lyra-chart>` with `type` locked to `\"scatter\"`. Feed\npoints via `Series.points`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
+          "description": "`<lyra-scatter-chart>` — `<lyra-chart>` with `type` locked to `\"scatter\"`. Feed\npoints via `Series.points`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |",
           "attributes": [
             {
               "name": "accessible-description",
@@ -10974,6 +11055,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "legend-position",
+              "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
+              "value": {
+                "type": [
+                  "LyraChartLegendPosition"
                 ]
               }
             },
@@ -12223,7 +12313,7 @@
         },
         {
           "name": "lyra-table",
-          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.\n\n`expandedContent` (a table-level `(row: T) => unknown`, not a per-column\nhook, since the resulting panel spans every column via `colspan`) makes\nevery row render a leading chevron-toggle cell before its data columns.\n`canExpand` optionally gates which rows actually get an interactive\ntoggle — a row that fails it still gets a blank leading cell for column\nalignment. Which rows are currently open is fully consumer-owned via\n`expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/\n`keyOf()`) — the table only reads it and emits `lyra-row-expand-toggle`\non activation, mirroring `sortKey`/`selectedKey`'s existing\npresentational-only convention.\n\nSelection is opt-in through the `selectionMode` property. Use `single` or\n`multiple` to self-manage row selection; the default `none` remains\npresentational. `selectedKeys` contains the raw keys selected in multiple\nmode.\n\n`filterable` adds a compact search field above the grid. `filterText` is\ncontrolled and emits `lyra-filter-change`; `filter` can provide a typed\npredicate, otherwise the row is matched against its JSON representation.\n`pageSize` enables controlled pagination through the existing\n`<lyra-pagination>` primitive. Client mode slices `rows`; server mode\nrenders the supplied page unchanged while using `totalItems` for the\nnavigation summary. `loading` keeps the table shell busy and renders an\nindeterminate spinner.\nColumns with `editable: true` open a native text/number editor on\ndouble-click and emit `lyra-cell-edit`; row mutation remains consumer-owned.\n`spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`\n(the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.\n`groupBy` inserts non-focusable group header rows before each group; use\n`groupLabel` when the raw group key needs custom content.\n\n`columns[].heatValue` opts a column into heat-tint mode: its numeric return value is normalized\nagainst a shared scale spanning every `heatValue`-defining column across every currently-rendered\nrow (auto-derived, or overridden via `heatTintScale`) and painted as a `color-mix()` background via\nthe retheme-able `--lyra-table-heat-tint-lo`/`-hi` custom properties (matching `lyra-heatmap`'s own\nramp-token convention). `rowTotal`/`grandTotal` add a trailing column mirroring `expandedContent`'s\nleading one: `rowTotal(row)` renders per-row, `grandTotal(rows)` renders at its intersection with\nthe footer row (only when a column also defines `footer`) — both share `footer`'s own\n\"consumer computes/renders\" contract rather than assuming addition.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper around the `<table>` and its footer controls. |\n| `cell` | Each body `<td>`. |\n| `cell-editor` | The native inline cell editor, shown after a double-click on an editable cell. |\n| `expand-toggle-cell` | Each row's (and the header's) leading chevron-toggle cell, rendered only when `expandedContent` is set. |\n| `expanded-cell` | The single `colspan`-spanning `<td>` inside `expanded-row`, containing `expandedContent(row)`. |\n| `expanded-row` | The full-width panel `<tr>` rendered beneath a row whose key is in `expandedKeys`. |\n| `filter` | The optional row-filter input. |\n| `filter-label` | The `<label>` wrapping the filter input. |\n| `foot` | The `<tfoot>`, only rendered when at least one column defines `footer`. |\n| `footer-cell` | A single footer cell. |\n| `footer-row` | The single footer row. |\n| `group-cell` | The full-width group header cell. |\n| `group-row` | A non-focusable group header row. |\n| `head` | The `<thead>` element. |\n| `header-cell` | Each `<th>` header cell. |\n| `loading` | The loading-state wrapper. |\n| `more-button` | The \"load more\" control, shown when `hasMore` is true. |\n| `pagination` | The optional pagination component. |\n| `reveal-columns-button` | The button that toggles `priority`-hidden columns back into view. |\n| `row` | Each body `<tr>`. |\n| `row-expand-icon` | The chevron icon inside `row-expand-toggle`. |\n| `row-expand-toggle` | The `<button>` inside `expand-toggle-cell`, absent for a row that fails `canExpand`. |\n| `row-total-cell` | Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set. The corresponding footer-row cell (holding `grandTotal`) is a `footer-cell` instead, matching every other footer cell. |\n| `sort-icon` | The chevron shown in the active sortable column's header cell. |\n| `table` | The `<table role=\"grid\">` element. |",
+          "description": "`<lyra-table>` — a presentational, sort/select-aware data table.\n\nHeader/row activation is delegated: one `click` and one `keydown`\nlistener on `<table>` resolve the target via `closest('[data-col-key]'\n| '[data-row-key]')` and a key→object lookup map, instead of allocating\nfresh per-column/per-row closures on every render. Both listeners guard\nagainst nested interactive `cell()` content first (see\n`INTERACTIVE_SELECTOR`) so a button/link/input inside a cell owns its own\nactivation instead of triggering `lyra-row-click`.\n\nKeyboard focus follows a roving-tabindex pattern (one `tabindex=\"0\"` stop\namong the header cells, one among the body rows — see `focusedColKey()` /\n`focusedRowKey()`), matching this repo's other `role=\"grid\"`/composite\nwidgets. Left/Right/Home/End move within the header row; Up/Down/Home/End\nmove within the body; Down from the header enters the body's roving stop,\nand Up from the body's first row returns to the header's roving stop.\nEnter/Space still only sort/activate (see `activateColumn()` /\n`activateRow()`).\n\nSet `aria-label` on the host to give the `role=\"grid\"` element an\naccessible name; it's forwarded into the shadow DOM's `<table>`.\n\n`columns[].priority` ('medium' | 'low') hides that column under\n`[part='base']`'s `@container` breakpoints; `[part='reveal-columns-button']`\nforces them all back into view. Rather than a *static* check of whether any\ncolumn merely declares a `priority`, the button (and the public\n`columnsHidden` property, see below) reflects whether a `priority` column\nis *actually* hidden right now — measured via `ResizeObserver` on\n`[part='base']` plus a post-render DOM check — or the public `showAllColumns`\nforce-visible mode is currently active (so there's still a way to toggle\nit back off). `showAllColumns` defaults to `false` and toggles itself on\n`[part='reveal-columns-button']` activation with no external wiring\nrequired, but is also settable up front (property or the reflected\n`show-all-columns` attribute) to restore a previously-persisted\npreference, and readable back — directly or via the `lyra-columns-revealed`\nevent — to persist the current one. `columns[].sticky` pins a column's\nheader/cells to the inline-start (default/`true`) or inline-end (`'end'`)\nedge while the table scrolls horizontally.\n\n`expandedContent` (a table-level `(row: T) => unknown`, not a per-column\nhook, since the resulting panel spans every column via `colspan`) makes\nevery row render a leading chevron-toggle cell before its data columns.\n`canExpand` optionally gates which rows actually get an interactive\ntoggle — a row that fails it still gets a blank leading cell for column\nalignment. Which rows are currently open is fully consumer-owned via\n`expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/\n`keyOf()`) — the table only reads it and emits `lyra-row-expand-toggle`\non activation, mirroring `sortKey`/`selectedKey`'s existing\npresentational-only convention.\n\nSelection is opt-in through the `selectionMode` property. Use `single` or\n`multiple` to self-manage row selection; the default `none` remains\npresentational. `selectedKeys` contains the raw keys selected in multiple\nmode.\n\n`filterable` adds a compact search field above the grid. `filterText` is\ncontrolled and emits `lyra-filter-change`; `filter` can provide a typed\npredicate, otherwise the row is matched against its JSON representation.\n`pageSize` enables controlled pagination through the existing\n`<lyra-pagination>` primitive. Client mode slices `rows`; server mode\nrenders the supplied page unchanged while using `totalItems` for the\nnavigation summary. `loading` keeps the table shell busy and renders an\nindeterminate spinner.\nColumns with `editable: true` open a native text/number editor on\ndouble-click and emit `lyra-cell-edit`; row mutation remains consumer-owned.\n`spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`\n(the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.\n`groupBy` inserts non-focusable group header rows before each group; use\n`groupLabel` when the raw group key needs custom content.\n\n`columns[].heatValue` opts a column into heat-tint mode: its numeric return value is normalized\nagainst a shared scale spanning every `heatValue`-defining column across every currently-rendered\nrow (auto-derived, or overridden via `heatTintScale`) and painted as a `color-mix()` background via\nthe retheme-able `--lyra-table-heat-tint-lo`/`-hi` custom properties (matching `lyra-heatmap`'s own\nramp-token convention). `rowTotal`/`grandTotal` add a trailing column mirroring `expandedContent`'s\nleading one: `rowTotal(row)` renders per-row, `grandTotal(rows)` renders at its intersection with\nthe footer row (only when a column also defines `footer`) — both share `footer`'s own\n\"consumer computes/renders\" contract rather than assuming addition.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper around the `<table>` and its footer controls. |\n| `cell` | Each body `<td>`. |\n| `cell-editor` | The native inline cell editor, shown after a double-click on an editable cell. |\n| `expand-toggle-cell` | Each row's (and the header's) leading chevron-toggle cell, rendered only when `expandedContent` is set. |\n| `expanded-cell` | The single `colspan`-spanning `<td>` inside `expanded-row`, containing `expandedContent(row)`. |\n| `expanded-row` | The full-width panel `<tr>` rendered beneath a row whose key is in `expandedKeys`. |\n| `filter` | The optional row-filter input. |\n| `filter-label` | The `<label>` wrapping the filter input. |\n| `foot` | The `<tfoot>`, only rendered when at least one column defines `footer`. |\n| `footer-cell` | A single footer cell. |\n| `footer-row` | The single footer row. |\n| `group-cell` | The full-width group header cell. |\n| `group-row` | A non-focusable group header row. |\n| `head` | The `<thead>` element. |\n| `header-cell` | Each `<th>` header cell. |\n| `loading` | The loading-state wrapper. |\n| `more-button` | The \"load more\" control, shown when `hasMore` is true. |\n| `pagination` | The optional pagination component. |\n| `resize-handle` | The pointer resize handle in a `resizable` column header. |\n| `reveal-columns-button` | The button that toggles `priority`-hidden columns back into view. |\n| `row` | Each body `<tr>`. |\n| `row-expand-icon` | The chevron icon inside `row-expand-toggle`. |\n| `row-expand-toggle` | The `<button>` inside `expand-toggle-cell`, absent for a row that fails `canExpand`. |\n| `row-total-cell` | Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only when `rowTotal` is set. The corresponding footer-row cell (holding `grandTotal`) is a `footer-cell` instead, matching every other footer cell. |\n| `sort-icon` | The chevron shown in the active sortable column's header cell. |\n| `table` | The `<table role=\"grid\">` element. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lyra-table-resize-min-width` (default: `var(--lyra-size-3rem)`) — Default minimum width for a resizable column without an explicit pixel `minWidth`.\n- `--lyra-table-resize-handle-opacity` (default: `0.12`) — Hover/focus opacity of the resize handle.",
           "attributes": [
             {
               "name": "autocapitalize",
@@ -15137,6 +15227,14 @@
         {
           "name": "--lyra-swatch-picker-shine-duration",
           "description": "**`<lyra-swatch-picker>`** (default: `0s`) — Duration of a rhythmic brighten-and-settle \"shine\" on the selected swatch. `0s` (the default) is a no-op -- today's static look for every existing consumer. Set a real duration (e.g. 1.6s) for a pulsing shine; disabled outright under `prefers-reduced-motion: reduce`. Independent of `--lyra-swatch-picker-selected-blur` (a separate `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works identically for a plain color circle and an icon swatch alike."
+        },
+        {
+          "name": "--lyra-table-resize-handle-opacity",
+          "description": "**`<lyra-table>`** (default: `0.12`) — Hover/focus opacity of the resize handle."
+        },
+        {
+          "name": "--lyra-table-resize-min-width",
+          "description": "**`<lyra-table>`** (default: `var(--lyra-size-3rem)`) — Default minimum width for a resizable column without an explicit pixel `minWidth`."
         },
         {
           "name": "--lyra-task-list-spin",

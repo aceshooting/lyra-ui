@@ -33,6 +33,12 @@ export const styles = css`
     inline-size: 100% !important;
     block-size: 100% !important;
   }
+  [part='center'] {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    text-align: center;
+  }
   [part='reset-zoom-button'] {
     position: absolute;
     inset-block-start: var(--lyra-space-xs);

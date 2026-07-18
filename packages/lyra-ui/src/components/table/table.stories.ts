@@ -31,6 +31,19 @@ export const Default: Story = {
   render: () => html`<lyra-table .columns=${columns} .rows=${rows}></lyra-table>`,
 };
 
+export const ResizableColumns: Story = {
+  render: () => html`
+    <lyra-table
+      .columns=${[
+        { ...columns[0]!, width: '12rem', minWidth: '8rem', resizable: true },
+        { ...columns[1]!, resizable: true },
+      ]}
+      .rows=${rows}
+      @lyra-column-resize=${(event: CustomEvent) => console.log(event.detail)}
+    ></lyra-table>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<lyra-table .columns=${columns} .rows=${[]}></lyra-table>`,
 };

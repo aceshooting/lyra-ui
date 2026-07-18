@@ -29,6 +29,17 @@ export const Bar: Story = {
   },
 };
 
+export const ArbitraryCategoryColors: Story = {
+  render: () => html`<lyra-context-meter total="100" label="Release categories"></lyra-context-meter>`,
+  play: async ({ canvasElement }) => {
+    withSegments(canvasElement.querySelector('lyra-context-meter')!, [
+      { label: 'Features', value: 28, color: 'var(--lyra-color-brand)' },
+      { label: 'Bug fixes', value: 20, color: 'var(--lyra-color-danger)' },
+      { label: 'Tests', value: 12, color: 'oklch(60% 0.18 145)' },
+    ]);
+  },
+};
+
 export const Ring: Story = {
   render: () => html`
     <lyra-context-meter variant="ring" total="131072" label="Context"></lyra-context-meter>
