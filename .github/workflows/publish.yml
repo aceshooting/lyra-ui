@@ -125,9 +125,24 @@ jobs:
 
       - name: Publish to npm
         working-directory: ${{ steps.pkg.outputs.dir }}
+        env:
+          TARBALL: ${{ steps.release_asset.outputs.path }}
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
+            # No release tarball was downloaded for this path (the download step above is
+            # gated on the same condition being false) -- pack fresh from source. Harmless for
+            # a dry run, which writes nothing to the registry either way.
             npm publish --access public --dry-run
           else
-            npm publish --access public
+            # Publish the exact tarball already built by `pnpm pack` (scripts/publish.sh) and
+            # already provenance-attested above, instead of letting `npm publish` re-pack from
+            # this directory's live package.json. Re-packing here would matter: `pnpm pack`
+            # rewrites `workspace:*` peer/dev dependency specifiers (e.g.
+            # "@aceshooting/lyra-flags": "workspace:^1.4.0") to a real published semver range,
+            # but plain `npm pack`/`npm publish` treat `workspace:` as an opaque string and
+            # publish it verbatim -- breaking peer-dependency resolution for every consumer,
+            # even one with a correctly matching version installed. Publishing the pre-built
+            # tarball also guarantees the artifact npm registers is bit-for-bit the one that
+            # was just attested, not a second, separately-packed one.
+            npm publish "$TARBALL" --access public
           fi
