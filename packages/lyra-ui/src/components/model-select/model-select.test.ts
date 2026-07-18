@@ -8,6 +8,35 @@ const OBJECT_CATALOG = [
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
 ];
 
+let originalWarn: typeof console.warn;
+let scheduledUpdateWarnings: unknown[][];
+
+beforeEach(() => {
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  if (globalWarnings) {
+    [...globalWarnings]
+      .filter((warning) => warning.includes('scheduled an update'))
+      .forEach((warning) => globalWarnings.delete(warning));
+  }
+  originalWarn = console.warn;
+  scheduledUpdateWarnings = [];
+  console.warn = (...args: unknown[]) => {
+    if (args.map(String).some((message) => message.includes('scheduled an update'))) {
+      scheduledUpdateWarnings.push(args);
+      return;
+    }
+    originalWarn(...args);
+  };
+});
+
+afterEach(function () {
+  console.warn = originalWarn;
+  expect(
+    scheduledUpdateWarnings,
+    `${this.currentTest?.title ?? 'model-select'} should not schedule a redundant update`,
+  ).to.be.empty;
+});
+
 function trigger(el: LyraModelSelect): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
 }

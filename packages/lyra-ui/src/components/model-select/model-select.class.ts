@@ -177,6 +177,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private _name = '';
   private _disabled = false;
   private _required = false;
+  // Replacing the currently focused trigger/input during a mode switch fires
+  // `blur` synchronously while Lit is rendering. That structural blur must not
+  // mutate reactive touched/open state from inside the active update cycle.
+  private suppressControlBlur = false;
   // What `form.reset()` restores to — captured from the `value` *content
   // attribute* only, mirroring native `<input>`/`FormAssociated`'s
   // `_defaultValue` (see internal/form-associated.ts). There's no child
@@ -221,6 +225,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   }
 
   protected willUpdate(): void {
+    if (this.hasUpdated) {
+      const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
+      this.suppressControlBlur = renderedClosedMode !== this.closedMode;
+    }
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -400,6 +408,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
+    this.suppressControlBlur = false;
   }
 
   private commitValue(next: string): void {
@@ -442,6 +451,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (): void => {
+    if (this.suppressControlBlur) return;
     this.touched = true;
     this.hide();
   };
@@ -516,6 +526,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.show();
   };
   private onInputBlur = (): void => {
+    if (this.suppressControlBlur) return;
     this.touched = true;
     this.hide();
     // Same re-dispatch reasoning as onInputFocus above.
